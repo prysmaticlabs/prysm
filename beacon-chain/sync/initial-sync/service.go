@@ -71,6 +71,29 @@ func WithVerifierWaiter(viw *verification.InitializerWaiter) Option {
 	}
 }
 
+// WithSyncChecker registers the initial sync service
+// in the checker.
+func WithSyncChecker(checker *SyncChecker) Option {
+	return func(service *Service) {
+		checker.Svc = service
+	}
+}
+
+// SyncChecker allows other services to check the current status of
+// initial-sync and use that internally in their service.
+type SyncChecker struct {
+	Svc *Service
+}
+
+// Synced returns the status of the service.
+func (s *SyncChecker) Synced() bool {
+	if s.Svc == nil {
+		log.Warn("Calling sync checker with a nil service initialized")
+		return false
+	}
+	return s.Svc.Synced()
+}
+
 // NewService configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewService(ctx context.Context, cfg *Config, opts ...Option) *Service {

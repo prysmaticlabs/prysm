@@ -9,9 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -20,14 +18,14 @@ import (
 func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMessage *ethpb.SyncCommitteeMessage) error {
 	const endpoint = "/eth/v1/beacon/pool/sync_committees"
 
-	jsonSyncCommitteeMessage := &shared.SyncCommitteeMessage{
+	jsonSyncCommitteeMessage := &structs.SyncCommitteeMessage{
 		Slot:            strconv.FormatUint(uint64(syncMessage.Slot), 10),
 		BeaconBlockRoot: hexutil.Encode(syncMessage.BlockRoot),
 		ValidatorIndex:  strconv.FormatUint(uint64(syncMessage.ValidatorIndex), 10),
 		Signature:       hexutil.Encode(syncMessage.Signature),
 	}
 
-	marshalledJsonSyncCommitteeMessage, err := json.Marshal([]*shared.SyncCommitteeMessage{jsonSyncCommitteeMessage})
+	marshalledJsonSyncCommitteeMessage, err := json.Marshal([]*structs.SyncCommitteeMessage{jsonSyncCommitteeMessage})
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal sync committee message")
 	}
@@ -37,7 +35,7 @@ func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMe
 
 func (c *beaconApiValidatorClient) getSyncMessageBlockRoot(ctx context.Context) (*ethpb.SyncMessageBlockRootResponse, error) {
 	// Get head beacon block root.
-	var resp beacon.BlockRootResponse
+	var resp structs.BlockRootResponse
 	if err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/blocks/head/root", &resp); err != nil {
 		return nil, err
 	}
@@ -84,7 +82,7 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 
 	url := buildURL("/eth/v1/validator/sync_committee_contribution", params)
 
-	var resp validator.ProduceSyncCommitteeContributionResponse
+	var resp structs.ProduceSyncCommitteeContributionResponse
 	if err = c.jsonRestHandler.Get(ctx, url, &resp); err != nil {
 		return nil, err
 	}
@@ -123,7 +121,7 @@ func (c *beaconApiValidatorClient) getSyncSubcommitteeIndex(ctx context.Context,
 	return &ethpb.SyncSubcommitteeIndexResponse{Indices: indices}, nil
 }
 
-func convertSyncContributionJsonToProto(contribution *shared.SyncCommitteeContribution) (*ethpb.SyncCommitteeContribution, error) {
+func convertSyncContributionJsonToProto(contribution *structs.SyncCommitteeContribution) (*ethpb.SyncCommitteeContribution, error) {
 	if contribution == nil {
 		return nil, errors.New("sync committee contribution is nil")
 	}

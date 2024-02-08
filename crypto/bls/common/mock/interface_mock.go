@@ -12,30 +12,30 @@ import (
 )
 
 // MockSecretKey is a mock of SecretKey interface.
-type SecretKey struct {
+type MockSecretKey struct {
 	ctrl     *gomock.Controller
-	recorder *SecretKeyMockRecorder
+	recorder *MockSecretKeyMockRecorder
 }
 
 // MockSecretKeyMockRecorder is the mock recorder for MockSecretKey.
-type SecretKeyMockRecorder struct {
-	mock *SecretKey
+type MockSecretKeyMockRecorder struct {
+	mock *MockSecretKey
 }
 
-// NewSecretKey creates a new mock instance.
-func NewSecretKey(ctrl *gomock.Controller) *SecretKey {
-	mock := &SecretKey{ctrl: ctrl}
-	mock.recorder = &SecretKeyMockRecorder{mock}
+// NewMockSecretKey creates a new mock instance.
+func NewMockSecretKey(ctrl *gomock.Controller) *MockSecretKey {
+	mock := &MockSecretKey{ctrl: ctrl}
+	mock.recorder = &MockSecretKeyMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *SecretKey) EXPECT() *SecretKeyMockRecorder {
+func (m *MockSecretKey) EXPECT() *MockSecretKeyMockRecorder {
 	return m.recorder
 }
 
 // Marshal mocks base method.
-func (m *SecretKey) Marshal() []byte {
+func (m *MockSecretKey) Marshal() []byte {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Marshal")
 	ret0, _ := ret[0].([]byte)
@@ -43,13 +43,13 @@ func (m *SecretKey) Marshal() []byte {
 }
 
 // Marshal indicates an expected call of Marshal.
-func (mr *SecretKeyMockRecorder) Marshal() *gomock.Call {
+func (mr *MockSecretKeyMockRecorder) Marshal() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Marshal", reflect.TypeOf((*SecretKey)(nil).Marshal))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Marshal", reflect.TypeOf((*MockSecretKey)(nil).Marshal))
 }
 
 // PublicKey mocks base method.
-func (m *SecretKey) PublicKey() common.PublicKey {
+func (m *MockSecretKey) PublicKey() common.PublicKey {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PublicKey")
 	ret0, _ := ret[0].(common.PublicKey)
@@ -57,13 +57,13 @@ func (m *SecretKey) PublicKey() common.PublicKey {
 }
 
 // PublicKey indicates an expected call of PublicKey.
-func (mr *SecretKeyMockRecorder) PublicKey() *gomock.Call {
+func (mr *MockSecretKeyMockRecorder) PublicKey() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicKey", reflect.TypeOf((*SecretKey)(nil).PublicKey))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicKey", reflect.TypeOf((*MockSecretKey)(nil).PublicKey))
 }
 
 // Sign mocks base method.
-func (m *SecretKey) Sign(msg []byte) common.Signature {
+func (m *MockSecretKey) Sign(msg []byte) common.Signature {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Sign", msg)
 	ret0, _ := ret[0].(common.Signature)
@@ -71,36 +71,36 @@ func (m *SecretKey) Sign(msg []byte) common.Signature {
 }
 
 // Sign indicates an expected call of Sign.
-func (mr *SecretKeyMockRecorder) Sign(msg interface{}) *gomock.Call {
+func (mr *MockSecretKeyMockRecorder) Sign(msg interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sign", reflect.TypeOf((*SecretKey)(nil).Sign), msg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sign", reflect.TypeOf((*MockSecretKey)(nil).Sign), msg)
 }
 
 // MockPublicKey is a mock of PublicKey interface.
-type PublicKey struct {
+type MockPublicKey struct {
 	ctrl     *gomock.Controller
-	recorder *PublicKeyMockRecorder
+	recorder *MockPublicKeyMockRecorder
 }
 
 // MockPublicKeyMockRecorder is the mock recorder for MockPublicKey.
-type PublicKeyMockRecorder struct {
-	mock *PublicKey
+type MockPublicKeyMockRecorder struct {
+	mock *MockPublicKey
 }
 
-// NewPublicKey creates a new mock instance.
-func NewPublicKey(ctrl *gomock.Controller) *PublicKey {
-	mock := &PublicKey{ctrl: ctrl}
-	mock.recorder = &PublicKeyMockRecorder{mock}
+// NewMockPublicKey creates a new mock instance.
+func NewMockPublicKey(ctrl *gomock.Controller) *MockPublicKey {
+	mock := &MockPublicKey{ctrl: ctrl}
+	mock.recorder = &MockPublicKeyMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *PublicKey) EXPECT() *PublicKeyMockRecorder {
+func (m *MockPublicKey) EXPECT() *MockPublicKeyMockRecorder {
 	return m.recorder
 }
 
 // Aggregate mocks base method.
-func (m *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
+func (m *MockPublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Aggregate", p2)
 	ret0, _ := ret[0].(common.PublicKey)
@@ -108,13 +108,13 @@ func (m *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
 }
 
 // Aggregate indicates an expected call of Aggregate.
-func (mr *PublicKeyMockRecorder) Aggregate(p2 interface{}) *gomock.Call {
+func (mr *MockPublicKeyMockRecorder) Aggregate(p2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Aggregate", reflect.TypeOf((*PublicKey)(nil).Aggregate), p2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Aggregate", reflect.TypeOf((*MockPublicKey)(nil).Aggregate), p2)
 }
 
 // Copy mocks base method.
-func (m *PublicKey) Copy() common.PublicKey {
+func (m *MockPublicKey) Copy() common.PublicKey {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Copy")
 	ret0, _ := ret[0].(common.PublicKey)
@@ -122,13 +122,13 @@ func (m *PublicKey) Copy() common.PublicKey {
 }
 
 // Copy indicates an expected call of Copy.
-func (mr *PublicKeyMockRecorder) Copy() *gomock.Call {
+func (mr *MockPublicKeyMockRecorder) Copy() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Copy", reflect.TypeOf((*PublicKey)(nil).Copy))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Copy", reflect.TypeOf((*MockPublicKey)(nil).Copy))
 }
 
 // Equals mocks base method.
-func (m *PublicKey) Equals(p2 common.PublicKey) bool {
+func (m *MockPublicKey) Equals(p2 common.PublicKey) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Equals", p2)
 	ret0, _ := ret[0].(bool)
@@ -136,13 +136,13 @@ func (m *PublicKey) Equals(p2 common.PublicKey) bool {
 }
 
 // Equals indicates an expected call of Equals.
-func (mr *PublicKeyMockRecorder) Equals(p2 interface{}) *gomock.Call {
+func (mr *MockPublicKeyMockRecorder) Equals(p2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Equals", reflect.TypeOf((*PublicKey)(nil).Equals), p2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Equals", reflect.TypeOf((*MockPublicKey)(nil).Equals), p2)
 }
 
 // IsInfinite mocks base method.
-func (m *PublicKey) IsInfinite() bool {
+func (m *MockPublicKey) IsInfinite() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsInfinite")
 	ret0, _ := ret[0].(bool)
@@ -150,13 +150,13 @@ func (m *PublicKey) IsInfinite() bool {
 }
 
 // IsInfinite indicates an expected call of IsInfinite.
-func (mr *PublicKeyMockRecorder) IsInfinite() *gomock.Call {
+func (mr *MockPublicKeyMockRecorder) IsInfinite() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsInfinite", reflect.TypeOf((*PublicKey)(nil).IsInfinite))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsInfinite", reflect.TypeOf((*MockPublicKey)(nil).IsInfinite))
 }
 
 // Marshal mocks base method.
-func (m *PublicKey) Marshal() []byte {
+func (m *MockPublicKey) Marshal() []byte {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Marshal")
 	ret0, _ := ret[0].([]byte)
@@ -164,36 +164,36 @@ func (m *PublicKey) Marshal() []byte {
 }
 
 // Marshal indicates an expected call of Marshal.
-func (mr *PublicKeyMockRecorder) Marshal() *gomock.Call {
+func (mr *MockPublicKeyMockRecorder) Marshal() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Marshal", reflect.TypeOf((*PublicKey)(nil).Marshal))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Marshal", reflect.TypeOf((*MockPublicKey)(nil).Marshal))
 }
 
 // MockSignature is a mock of Signature interface.
-type Signature struct {
+type MockSignature struct {
 	ctrl     *gomock.Controller
-	recorder *SignatureMockRecorder
+	recorder *MockSignatureMockRecorder
 }
 
 // MockSignatureMockRecorder is the mock recorder for MockSignature.
-type SignatureMockRecorder struct {
-	mock *Signature
+type MockSignatureMockRecorder struct {
+	mock *MockSignature
 }
 
-// NewSignature creates a new mock instance.
-func NewSignature(ctrl *gomock.Controller) *Signature {
-	mock := &Signature{ctrl: ctrl}
-	mock.recorder = &SignatureMockRecorder{mock}
+// NewMockSignature creates a new mock instance.
+func NewMockSignature(ctrl *gomock.Controller) *MockSignature {
+	mock := &MockSignature{ctrl: ctrl}
+	mock.recorder = &MockSignatureMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Signature) EXPECT() *SignatureMockRecorder {
+func (m *MockSignature) EXPECT() *MockSignatureMockRecorder {
 	return m.recorder
 }
 
 // AggregateVerify mocks base method.
-func (m *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte) bool {
+func (m *MockSignature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AggregateVerify", pubKeys, msgs)
 	ret0, _ := ret[0].(bool)
@@ -201,13 +201,13 @@ func (m *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte)
 }
 
 // AggregateVerify indicates an expected call of AggregateVerify.
-func (mr *SignatureMockRecorder) AggregateVerify(pubKeys, msgs interface{}) *gomock.Call {
+func (mr *MockSignatureMockRecorder) AggregateVerify(pubKeys, msgs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AggregateVerify", reflect.TypeOf((*Signature)(nil).AggregateVerify), pubKeys, msgs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AggregateVerify", reflect.TypeOf((*MockSignature)(nil).AggregateVerify), pubKeys, msgs)
 }
 
 // Copy mocks base method.
-func (m *Signature) Copy() common.Signature {
+func (m *MockSignature) Copy() common.Signature {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Copy")
 	ret0, _ := ret[0].(common.Signature)
@@ -215,13 +215,13 @@ func (m *Signature) Copy() common.Signature {
 }
 
 // Copy indicates an expected call of Copy.
-func (mr *SignatureMockRecorder) Copy() *gomock.Call {
+func (mr *MockSignatureMockRecorder) Copy() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Copy", reflect.TypeOf((*Signature)(nil).Copy))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Copy", reflect.TypeOf((*MockSignature)(nil).Copy))
 }
 
 // Eth2FastAggregateVerify mocks base method.
-func (m *Signature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
+func (m *MockSignature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Eth2FastAggregateVerify", pubKeys, msg)
 	ret0, _ := ret[0].(bool)
@@ -229,13 +229,13 @@ func (m *Signature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]
 }
 
 // Eth2FastAggregateVerify indicates an expected call of Eth2FastAggregateVerify.
-func (mr *SignatureMockRecorder) Eth2FastAggregateVerify(pubKeys, msg interface{}) *gomock.Call {
+func (mr *MockSignatureMockRecorder) Eth2FastAggregateVerify(pubKeys, msg interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eth2FastAggregateVerify", reflect.TypeOf((*Signature)(nil).Eth2FastAggregateVerify), pubKeys, msg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eth2FastAggregateVerify", reflect.TypeOf((*MockSignature)(nil).Eth2FastAggregateVerify), pubKeys, msg)
 }
 
 // FastAggregateVerify mocks base method.
-func (m *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
+func (m *MockSignature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FastAggregateVerify", pubKeys, msg)
 	ret0, _ := ret[0].(bool)
@@ -243,13 +243,13 @@ func (m *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte
 }
 
 // FastAggregateVerify indicates an expected call of FastAggregateVerify.
-func (mr *SignatureMockRecorder) FastAggregateVerify(pubKeys, msg interface{}) *gomock.Call {
+func (mr *MockSignatureMockRecorder) FastAggregateVerify(pubKeys, msg interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FastAggregateVerify", reflect.TypeOf((*Signature)(nil).FastAggregateVerify), pubKeys, msg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FastAggregateVerify", reflect.TypeOf((*MockSignature)(nil).FastAggregateVerify), pubKeys, msg)
 }
 
 // Marshal mocks base method.
-func (m *Signature) Marshal() []byte {
+func (m *MockSignature) Marshal() []byte {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Marshal")
 	ret0, _ := ret[0].([]byte)
@@ -257,13 +257,13 @@ func (m *Signature) Marshal() []byte {
 }
 
 // Marshal indicates an expected call of Marshal.
-func (mr *SignatureMockRecorder) Marshal() *gomock.Call {
+func (mr *MockSignatureMockRecorder) Marshal() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Marshal", reflect.TypeOf((*Signature)(nil).Marshal))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Marshal", reflect.TypeOf((*MockSignature)(nil).Marshal))
 }
 
 // Verify mocks base method.
-func (m *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
+func (m *MockSignature) Verify(pubKey common.PublicKey, msg []byte) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Verify", pubKey, msg)
 	ret0, _ := ret[0].(bool)
@@ -271,7 +271,7 @@ func (m *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 }
 
 // Verify indicates an expected call of Verify.
-func (mr *SignatureMockRecorder) Verify(pubKey, msg interface{}) *gomock.Call {
+func (mr *MockSignatureMockRecorder) Verify(pubKey, msg interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*Signature)(nil).Verify), pubKey, msg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockSignature)(nil).Verify), pubKey, msg)
 }

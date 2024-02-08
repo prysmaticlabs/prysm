@@ -12,10 +12,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	rewardtesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
@@ -35,10 +34,10 @@ func TestProduceBlockV2(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &blockchainTesting.ChainService{}
 	syncChecker := &mockSync.Sync{IsSyncing: false}
-	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &rewards.BlockRewards{Total: "10"}}
+	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &structs.BlockRewards{Total: "10"}}
 
 	t.Run("Phase 0", func(t *testing.T) {
-		var block *shared.SignedBeaconBlock
+		var block *structs.SignedBeaconBlock
 		err = json.Unmarshal([]byte(rpctesting.Phase0Block), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -70,7 +69,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.Equal(t, "phase0", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Altair", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockAltair
+		var block *structs.SignedBeaconBlockAltair
 		err = json.Unmarshal([]byte(rpctesting.AltairBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -97,13 +96,13 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "altair", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockBellatrix
+		var block *structs.SignedBeaconBlockBellatrix
 		err = json.Unmarshal([]byte(rpctesting.BellatrixBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -134,13 +133,13 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockBellatrix
+		var block *structs.SignedBlindedBeaconBlockBellatrix
 		err = json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &block)
 		require.NoError(t, err)
 
@@ -172,7 +171,7 @@ func TestProduceBlockV2(t *testing.T) {
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
 	})
 	t.Run("Capella", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockCapella
+		var block *structs.SignedBeaconBlockCapella
 		err = json.Unmarshal([]byte(rpctesting.CapellaBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -203,13 +202,13 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockCapella
+		var block *structs.SignedBlindedBeaconBlockCapella
 		err = json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &block)
 		require.NoError(t, err)
 
@@ -241,7 +240,7 @@ func TestProduceBlockV2(t *testing.T) {
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockContentsDeneb
+		var block *structs.SignedBeaconBlockContentsDeneb
 		err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.ToUnsigned())
@@ -272,13 +271,13 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockDeneb
+		var block *structs.SignedBlindedBeaconBlockDeneb
 		err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 
@@ -375,10 +374,10 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &blockchainTesting.ChainService{}
 	syncChecker := &mockSync.Sync{IsSyncing: false}
-	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &rewards.BlockRewards{Total: "10"}}
+	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &structs.BlockRewards{Total: "10"}}
 
 	t.Run("Phase 0", func(t *testing.T) {
-		var block *shared.SignedBeaconBlock
+		var block *structs.SignedBeaconBlock
 		err = json.Unmarshal([]byte(rpctesting.Phase0Block), &block)
 		require.NoError(t, err)
 
@@ -413,7 +412,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.Equal(t, "phase0", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Altair", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockAltair
+		var block *structs.SignedBeaconBlockAltair
 		err = json.Unmarshal([]byte(rpctesting.AltairBlock), &block)
 		require.NoError(t, err)
 
@@ -450,7 +449,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.Equal(t, "altair", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockBellatrix
+		var block *structs.SignedBeaconBlockBellatrix
 		err = json.Unmarshal([]byte(rpctesting.BellatrixBlock), &block)
 		require.NoError(t, err)
 
@@ -487,7 +486,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockBellatrix
+		var block *structs.SignedBlindedBeaconBlockBellatrix
 		err = json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &block)
 		require.NoError(t, err)
 
@@ -520,7 +519,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
 	})
 	t.Run("Capella", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockCapella
+		var block *structs.SignedBeaconBlockCapella
 		err = json.Unmarshal([]byte(rpctesting.CapellaBlock), &block)
 		require.NoError(t, err)
 
@@ -557,7 +556,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockCapella
+		var block *structs.SignedBlindedBeaconBlockCapella
 		err = json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &block)
 		require.NoError(t, err)
 
@@ -593,7 +592,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockContentsDeneb
+		var block *structs.SignedBeaconBlockContentsDeneb
 		err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
 
@@ -630,7 +629,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockDeneb
+		var block *structs.SignedBlindedBeaconBlockDeneb
 		err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 
@@ -674,10 +673,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &blockchainTesting.ChainService{}
 	syncChecker := &mockSync.Sync{IsSyncing: false}
-	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &rewards.BlockRewards{Total: "10"}}
+	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &structs.BlockRewards{Total: "10"}}
 
 	t.Run("Phase 0", func(t *testing.T) {
-		var block *shared.SignedBeaconBlock
+		var block *structs.SignedBeaconBlock
 		err = json.Unmarshal([]byte(rpctesting.Phase0Block), &block)
 		require.NoError(t, err)
 
@@ -707,7 +706,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		assert.StringContains(t, "Prepared block is not blinded", e.Message)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockAltair
+		var block *structs.SignedBeaconBlockAltair
 		err = json.Unmarshal([]byte(rpctesting.AltairBlock), &block)
 		require.NoError(t, err)
 
@@ -739,7 +738,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		assert.StringContains(t, "Prepared block is not blinded", e.Message)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockBellatrix
+		var block *structs.SignedBeaconBlockBellatrix
 		err = json.Unmarshal([]byte(rpctesting.BellatrixBlock), &block)
 		require.NoError(t, err)
 
@@ -771,7 +770,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		assert.StringContains(t, "Prepared block is not blinded", e.Message)
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockBellatrix
+		var block *structs.SignedBlindedBeaconBlockBellatrix
 		err = json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -802,13 +801,13 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Capella", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockCapella
+		var block *structs.SignedBeaconBlockCapella
 		err = json.Unmarshal([]byte(rpctesting.CapellaBlock), &block)
 		require.NoError(t, err)
 
@@ -840,7 +839,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		assert.StringContains(t, "Prepared block is not blinded", e.Message)
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockCapella
+		var block *structs.SignedBlindedBeaconBlockCapella
 		err = json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -871,13 +870,13 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockContentsDeneb
+		var block *structs.SignedBeaconBlockContentsDeneb
 		err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
 
@@ -909,7 +908,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		assert.StringContains(t, "Prepared block is not blinded", e.Message)
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockDeneb
+		var block *structs.SignedBlindedBeaconBlockDeneb
 		err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -940,7 +939,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
@@ -1011,10 +1010,10 @@ func TestProduceBlockV3(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &blockchainTesting.ChainService{}
 	syncChecker := &mockSync.Sync{IsSyncing: false}
-	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &rewards.BlockRewards{Total: "10"}}
+	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &structs.BlockRewards{Total: "10"}}
 
 	t.Run("Phase 0", func(t *testing.T) {
-		var block *shared.SignedBeaconBlock
+		var block *structs.SignedBeaconBlock
 		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -1047,7 +1046,7 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, "", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Altair", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockAltair
+		var block *structs.SignedBeaconBlockAltair
 		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &block)
 
 		require.NoError(t, err)
@@ -1074,16 +1073,16 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "altair", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockBellatrix
+		var block *structs.SignedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -1112,16 +1111,16 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockBellatrix
+		var block *structs.SignedBlindedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -1150,16 +1149,16 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Capella", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockCapella
+		var block *structs.SignedBeaconBlockCapella
 		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -1188,16 +1187,16 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockCapella
+		var block *structs.SignedBlindedBeaconBlockCapella
 		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -1226,16 +1225,16 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockContentsDeneb
+		var block *structs.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.ToUnsigned())
@@ -1264,16 +1263,16 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockDeneb
+		var block *structs.SignedBlindedBeaconBlockDeneb
 		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
@@ -1302,13 +1301,13 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("invalid query parameter slot empty", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1375,10 +1374,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &blockchainTesting.ChainService{}
 	syncChecker := &mockSync.Sync{IsSyncing: false}
-	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &rewards.BlockRewards{Total: "10"}}
+	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &structs.BlockRewards{Total: "10"}}
 
 	t.Run("Phase 0", func(t *testing.T) {
-		var block *shared.SignedBeaconBlock
+		var block *structs.SignedBeaconBlock
 		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1414,7 +1413,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Altair", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockAltair
+		var block *structs.SignedBeaconBlockAltair
 		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1449,10 +1448,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "altair", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockBellatrix
+		var block *structs.SignedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1491,10 +1490,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockBellatrix
+		var block *structs.SignedBlindedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1532,10 +1531,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Capella", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockCapella
+		var block *structs.SignedBeaconBlockCapella
 		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1573,10 +1572,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockCapella
+		var block *structs.SignedBlindedBeaconBlockCapella
 		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1614,10 +1613,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		var block *shared.SignedBeaconBlockContentsDeneb
+		var block *structs.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1655,10 +1654,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockDeneb
+		var block *structs.SignedBlindedBeaconBlockDeneb
 		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1696,6 +1695,6 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 }

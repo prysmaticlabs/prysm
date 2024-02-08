@@ -1,9 +1,7 @@
-package events
+package structs
 
 import (
 	"encoding/json"
-
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 )
 
 type HeadEvent struct {
@@ -23,13 +21,13 @@ type BlockEvent struct {
 }
 
 type AggregatedAttEventSource struct {
-	Aggregate *shared.Attestation `json:"aggregate"`
+	Aggregate *Attestation `json:"aggregate"`
 }
 
 type UnaggregatedAttEventSource struct {
-	AggregationBits string                  `json:"aggregation_bits"`
-	Data            *shared.AttestationData `json:"data"`
-	Signature       string                  `json:"signature"`
+	AggregationBits string           `json:"aggregation_bits"`
+	Data            *AttestationData `json:"data"`
+	Signature       string           `json:"signature"`
 }
 
 type FinalizedCheckpointEvent struct {
@@ -71,18 +69,18 @@ type PayloadAttributesV1 struct {
 }
 
 type PayloadAttributesV2 struct {
-	Timestamp             string               `json:"timestamp"`
-	PrevRandao            string               `json:"prev_randao"`
-	SuggestedFeeRecipient string               `json:"suggested_fee_recipient"`
-	Withdrawals           []*shared.Withdrawal `json:"withdrawals"`
+	Timestamp             string        `json:"timestamp"`
+	PrevRandao            string        `json:"prev_randao"`
+	SuggestedFeeRecipient string        `json:"suggested_fee_recipient"`
+	Withdrawals           []*Withdrawal `json:"withdrawals"`
 }
 
 type PayloadAttributesV3 struct {
-	Timestamp             string               `json:"timestamp"`
-	PrevRandao            string               `json:"prev_randao"`
-	SuggestedFeeRecipient string               `json:"suggested_fee_recipient"`
-	Withdrawals           []*shared.Withdrawal `json:"withdrawals"`
-	ParentBeaconBlockRoot string               `json:"parent_beacon_block_root"`
+	Timestamp             string        `json:"timestamp"`
+	PrevRandao            string        `json:"prev_randao"`
+	SuggestedFeeRecipient string        `json:"suggested_fee_recipient"`
+	Withdrawals           []*Withdrawal `json:"withdrawals"`
+	ParentBeaconBlockRoot string        `json:"parent_beacon_block_root"`
 }
 
 type BlobSidecarEvent struct {
@@ -99,11 +97,11 @@ type LightClientFinalityUpdateEvent struct {
 }
 
 type LightClientFinalityUpdate struct {
-	AttestedHeader  *shared.BeaconBlockHeader `json:"attested_header"`
-	FinalizedHeader *shared.BeaconBlockHeader `json:"finalized_header"`
-	FinalityBranch  []string                  `json:"finality_branch"`
-	SyncAggregate   *shared.SyncAggregate     `json:"sync_aggregate"`
-	SignatureSlot   string                    `json:"signature_slot"`
+	AttestedHeader  *BeaconBlockHeader `json:"attested_header"`
+	FinalizedHeader *BeaconBlockHeader `json:"finalized_header"`
+	FinalityBranch  []string           `json:"finality_branch"`
+	SyncAggregate   *SyncAggregate     `json:"sync_aggregate"`
+	SignatureSlot   string             `json:"signature_slot"`
 }
 
 type LightClientOptimisticUpdateEvent struct {
@@ -112,7 +110,7 @@ type LightClientOptimisticUpdateEvent struct {
 }
 
 type LightClientOptimisticUpdate struct {
-	AttestedHeader *shared.BeaconBlockHeader `json:"attested_header"`
-	SyncAggregate  *shared.SyncAggregate     `json:"sync_aggregate"`
-	SignatureSlot  string                    `json:"signature_slot"`
+	AttestedHeader *BeaconBlockHeader `json:"attested_header"`
+	SyncAggregate  *SyncAggregate     `json:"sync_aggregate"`
+	SignatureSlot  string             `json:"signature_slot"`
 }

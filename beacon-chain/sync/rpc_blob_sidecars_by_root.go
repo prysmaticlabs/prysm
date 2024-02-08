@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -80,7 +82,10 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 		sc, err := s.cfg.blobStorage.Get(root, idx)
 		if err != nil {
 			if db.IsNotFound(err) {
-				log.WithError(err).Debugf("BlobSidecar not found in db, root=%x, index=%d", root, idx)
+				log.WithError(err).WithFields(logrus.Fields{
+					"root":  fmt.Sprintf("%#x", root),
+					"index": idx,
+				}).Debugf("Peer requested blob sidecar by root not found in db")
 				continue
 			}
 			log.WithError(err).Errorf("unexpected db error retrieving BlobSidecar, root=%x, index=%d", root, idx)

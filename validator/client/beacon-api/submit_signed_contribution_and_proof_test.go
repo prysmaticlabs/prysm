@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -22,11 +22,11 @@ func TestSubmitSignedContributionAndProof_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonContributionAndProofs := []shared.SignedContributionAndProof{
+	jsonContributionAndProofs := []structs.SignedContributionAndProof{
 		{
-			Message: &shared.ContributionAndProof{
+			Message: &structs.ContributionAndProof{
 				AggregatorIndex: "1",
-				Contribution: &shared.SyncCommitteeContribution{
+				Contribution: &structs.SyncCommitteeContribution{
 					Slot:              "2",
 					BeaconBlockRoot:   hexutil.Encode([]byte{3}),
 					SubcommitteeIndex: "4",
