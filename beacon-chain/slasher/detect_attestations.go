@@ -18,6 +18,8 @@ import (
 func (s *Service) checkSlashableAttestations(
 	ctx context.Context, currentEpoch primitives.Epoch, atts []*slashertypes.IndexedAttestationWrapper,
 ) ([]*ethpb.AttesterSlashing, error) {
+	totalStart := time.Now()
+
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 
 	// Double votes
@@ -36,11 +38,10 @@ func (s *Service) checkSlashableAttestations(
 	groupedByValidatorChunkIndexAtts := s.groupByValidatorChunkIndex(atts)
 	log.WithField("numBatches", len(groupedByValidatorChunkIndexAtts)).Debug("Batching attestations by validator chunk index")
 	groupsCount := len(groupedByValidatorChunkIndexAtts)
-	batchDurations := make([]time.Duration, 0, len(groupedByValidatorChunkIndexAtts))
+
+	surroundStart := time.Now()
 
 	for validatorChunkIndex, attestations := range groupedByValidatorChunkIndexAtts {
-		innerStart := time.Now()
-
 		// The fact that we use always slashertypes.MinSpan is probably the root cause of
 		// https://github.com/prysmaticlabs/prysm/issues/13591
 		attSlashings, err := s.checkSurrounds(ctx, attestations, slashertypes.MinSpan, currentEpoch, validatorChunkIndex)
@@ -54,24 +55,19 @@ func (s *Service) checkSlashableAttestations(
 		for _, idx := range indices {
 			s.latestEpochWrittenForValidator[idx] = currentEpoch
 		}
-
-		batchDurations = append(batchDurations, time.Since(innerStart))
 	}
 
-	// Elapsed time computation
-	totalBatchDuration := time.Duration(0)
-	for _, batchDuration := range batchDurations {
-		totalBatchDuration += batchDuration
-	}
+	surroundElapsed := time.Since(surroundStart)
+	totalElapsed := time.Since(totalStart)
 
 	fields := logrus.Fields{
 		"numAttestations":                 len(atts),
 		"numBatchesByValidatorChunkIndex": groupsCount,
-		"elapsed":                         totalBatchDuration,
+		"elapsed":                         totalElapsed,
 	}
 
 	if groupsCount > 0 {
-		avgProcessingTimePerBatch := totalBatchDuration / time.Duration(groupsCount)
+		avgProcessingTimePerBatch := surroundElapsed / time.Duration(groupsCount)
 		fields["avgBatchProcessingTime"] = avgProcessingTimePerBatch
 	}
 
