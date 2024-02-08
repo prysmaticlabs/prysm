@@ -360,11 +360,11 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 	var validatorActivated bool
 	for _, status := range statuses {
 		fields := logrus.Fields{
-			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
+			"pubkey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
 			"status": status.status.Status.String(),
 		}
 		if status.index != nonexistentIndex {
-			fields["index"] = status.index
+			fields["validatorIndex"] = status.index
 		}
 		log := log.WithFields(fields)
 		if v.emitAccountMetrics {
@@ -447,7 +447,7 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.WithField("keys", len(pubkeys)).Info("Running doppelganger check")
+	log.WithField("keyCount", len(pubkeys)).Info("Running doppelganger check")
 	// Exit early if no validating pub keys are found.
 	if len(pubkeys) == 0 {
 		return nil
@@ -562,7 +562,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 			filteredKeys = append(filteredKeys, pubKey)
 		} else {
 			log.WithField(
-				"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
+				"pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
 			).Warn("Not including slashable public key from slashing protection import " +
 				"in request to update validator duties")
 		}
@@ -967,14 +967,14 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 		isAttester := len(attesterKeys[i]) > 0
 		if isAttester {
 			slotLog = slotLog.WithFields(logrus.Fields{
-				"slot":          epochStartSlot + i,
-				"slotInEpoch":   (epochStartSlot + i) % params.BeaconConfig().SlotsPerEpoch,
-				"attesterCount": len(attesterKeys[i]),
-				"pubkeys":       attesterKeys[i],
+				"slot":            epochStartSlot + i,
+				"slotInEpoch":     (epochStartSlot + i) % params.BeaconConfig().SlotsPerEpoch,
+				"attesterCount":   len(attesterKeys[i]),
+				"attesterPubkeys": attesterKeys[i],
 			})
 		}
 		if durationTillDuty > 0 {
-			slotLog = slotLog.WithField("timeTillDuty", durationTillDuty)
+			slotLog = slotLog.WithField("timeUntilDuty", durationTillDuty)
 		}
 		if isProposer || isAttester {
 			slotLog.Infof("Duties schedule")
@@ -1030,8 +1030,8 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}
 	if len(proposerReqs) != len(pubkeys) {
 		log.WithFields(logrus.Fields{
-			"pubkeysCount":             len(pubkeys),
-			"proposerSettingsReqCount": len(proposerReqs),
+			"pubkeysCount":                 len(pubkeys),
+			"proposerSettingsRequestCount": len(proposerReqs),
 		}).Debugln("Request count did not match included validator count. Only keys that have been activated will be included in the request.")
 	}
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
@@ -1095,9 +1095,9 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 			filteredKeys = append(filteredKeys, bytesutil.ToBytes48(resp.PublicKeys[i]))
 		} else {
 			log.WithFields(logrus.Fields{
-				"publickey": hexutil.Encode(resp.PublicKeys[i]),
-				"status":    status.Status.String(),
-			}).Debugf("skipping non active status key.")
+				"pubkey": hexutil.Encode(resp.PublicKeys[i]),
+				"status": status.Status.String(),
+			}).Debugf("Skipping non-active status key.")
 		}
 	}
 

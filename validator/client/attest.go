@@ -54,7 +54,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 	defer lock.Unlock()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
+	log := log.WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
 	duty, err := v.duty(pubKey)
 	if err != nil {
 		log.WithError(err).Error("Could not fetch validator assignment")
@@ -293,14 +293,14 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot primitive
 
 func attestationLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {
 	return logrus.Fields{
-		"attesterPublicKey": fmt.Sprintf("%#x", pubKey),
-		"attestationSlot":   indexedAtt.Data.Slot,
-		"committeeIndex":    indexedAtt.Data.CommitteeIndex,
-		"beaconBlockRoot":   fmt.Sprintf("%#x", indexedAtt.Data.BeaconBlockRoot),
-		"sourceEpoch":       indexedAtt.Data.Source.Epoch,
-		"sourceRoot":        fmt.Sprintf("%#x", indexedAtt.Data.Source.Root),
-		"targetEpoch":       indexedAtt.Data.Target.Epoch,
-		"targetRoot":        fmt.Sprintf("%#x", indexedAtt.Data.Target.Root),
-		"signature":         fmt.Sprintf("%#x", indexedAtt.Signature),
+		"pubkey":         fmt.Sprintf("%#x", pubKey),
+		"slot":           indexedAtt.Data.Slot,
+		"committeeIndex": indexedAtt.Data.CommitteeIndex,
+		"blockRoot":      fmt.Sprintf("%#x", indexedAtt.Data.BeaconBlockRoot),
+		"sourceEpoch":    indexedAtt.Data.Source.Epoch,
+		"sourceRoot":     fmt.Sprintf("%#x", indexedAtt.Data.Source.Root),
+		"targetEpoch":    indexedAtt.Data.Target.Epoch,
+		"targetRoot":     fmt.Sprintf("%#x", indexedAtt.Data.Target.Root),
+		"signature":      fmt.Sprintf("%#x", indexedAtt.Signature),
 	}
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "validator")
+var log = logrus.WithField("prefix", "client")
 
 type submittedAttData struct {
 	beaconBlockRoot []byte
@@ -104,7 +104,7 @@ func (v *validator) LogSubmittedAtts(slot primitives.Slot) {
 			"slot":             slot,
 			"committeeIndices": committees,
 			"pubkeys":          pubkeys,
-			"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.beaconBlockRoot)),
+			"blockRoot":        fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.beaconBlockRoot)),
 			"sourceEpoch":      attLog.data.source.Epoch,
 			"sourceRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.source.Root)),
 			"targetEpoch":      attLog.data.target.Epoch,
@@ -124,7 +124,7 @@ func (v *validator) LogSubmittedAtts(slot primitives.Slot) {
 			"slot":             slot,
 			"committeeIndices": committees,
 			"pubkeys":          pubkeys,
-			"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.beaconBlockRoot)),
+			"blockRoot":        fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.beaconBlockRoot)),
 			"sourceEpoch":      attLog.data.source.Epoch,
 			"sourceRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.source.Root)),
 			"targetEpoch":      attLog.data.target.Epoch,
