@@ -89,16 +89,6 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 	return nil
 }
 
-// getVotingSource returns the voting source if we were to make an FFG vote for this node in the currentEpoch
-func (n *Node) getVotingSource(currentEpoch primitives.Epoch) primitives.Epoch {
-	// If the block is from a past epoch, then return the unrealized justified epoch
-	if slots.ToEpoch(n.slot) < currentEpoch {
-		return n.unrealizedJustifiedEpoch
-	}
-	// Otherwise return the justified epoch
-	return n.justifiedEpoch
-}
-
 // viableForHead returns true if the node is viable to head.
 // Any node with different finalized or justified epoch than
 // the ones in fork choice store should not be viable to head.
@@ -106,8 +96,10 @@ func (n *Node) viableForHead(justifiedEpoch, currentEpoch primitives.Epoch) bool
 	if justifiedEpoch == 0 {
 		return true
 	}
-	votingSource := n.getVotingSource(currentEpoch)
-	return votingSource == justifiedEpoch || votingSource+2 >= currentEpoch
+	// We use n.justifiedEpoch as the voting source because:
+	//   1. if this node is from current epoch, n.justifiedEpoch is the realized justification epoch.
+	//   2. if this node is from a previous epoch, n.justifiedEpoch has already been updated to the unrealized justification epoch.
+	return n.justifiedEpoch == justifiedEpoch || n.justifiedEpoch+2 >= currentEpoch
 }
 
 func (n *Node) leadsToViableHead(justifiedEpoch, currentEpoch primitives.Epoch) bool {
