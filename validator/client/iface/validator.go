@@ -52,7 +52,7 @@ type Validator interface {
 	SubmitAggregateAndProof(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
 	SubmitSyncCommitteeMessage(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
 	SubmitSignedContributionAndProof(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
-	LogSubmittedAtts()
+	LogSubmittedAtts(slot primitives.Slot)
 	LogSubmittedSyncCommitteeMessages()
 	UpdateDomainDataCaches(ctx context.Context, slot primitives.Slot)
 	WaitForKeymanagerInitialization(ctx context.Context) error

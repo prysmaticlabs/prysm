@@ -75,7 +75,8 @@ type validator struct {
 	slashableKeysLock                  sync.RWMutex
 	eipImportBlacklistedPublicKeys     map[[fieldparams.BLSPubkeyLength]byte]bool
 	walletInitializedFeed              *event.Feed
-	submittedAtts                      map[[32]byte]*submittedAtt
+	submittedAtts                      map[submittedAttKey]*submittedAtt
+	submittedAggregates                map[submittedAttKey]*submittedAtt
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
 	dutiesLock                         sync.RWMutex
 	duties                             *ethpb.DutiesResponse
@@ -398,8 +399,7 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 		case ethpb.ValidatorStatus_ACTIVE, ethpb.ValidatorStatus_EXITING:
 			validatorActivated = true
 			log.WithFields(logrus.Fields{
-				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
-				"index":     status.index,
+				"index": status.index,
 			}).Info("Validator activated")
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
@@ -967,10 +967,10 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 		isAttester := len(attesterKeys[i]) > 0
 		if isAttester {
 			slotLog = slotLog.WithFields(logrus.Fields{
-				"slot":            epochStartSlot + i,
-				"slotInEpoch":     (epochStartSlot + i) % params.BeaconConfig().SlotsPerEpoch,
-				"attesterCount":   len(attesterKeys[i]),
-				"attesterPubkeys": attesterKeys[i],
+				"slot":          epochStartSlot + i,
+				"slotInEpoch":   (epochStartSlot + i) % params.BeaconConfig().SlotsPerEpoch,
+				"attesterCount": len(attesterKeys[i]),
+				"pubkeys":       attesterKeys[i],
 			})
 		}
 		if durationTillDuty > 0 {

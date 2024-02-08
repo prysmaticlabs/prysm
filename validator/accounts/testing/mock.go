@@ -154,7 +154,7 @@ func (_ *Validator) SubmitSignedContributionAndProof(_ context.Context, _ primit
 	panic("implement me")
 }
 
-func (_ *Validator) LogSubmittedAtts() {
+func (_ *Validator) LogSubmittedAtts(_ primitives.Slot) {
 	panic("implement me")
 }
 

@@ -3,11 +3,11 @@ package client
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/async"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
@@ -153,7 +153,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		return
 	}
 
-	if err := v.saveSubmittedAtt(data, duty.PublicKey); err != nil {
+	if err := v.saveSubmittedAtt(data, pubKey[:], false); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
@@ -225,25 +225,6 @@ func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.Att
 		return nil, [32]byte{}, err
 	}
 	return domain, root, nil
-}
-
-// saveSubmittedAtt saves the submitted attestation data along with the attester's pubkey.
-// The purpose of this is to display combined attesting logs for all keys managed by the validator client.
-func (v *validator) saveSubmittedAtt(data *ethpb.AttestationData, pubkey []byte) error {
-	v.attLogsLock.Lock()
-	defer v.attLogsLock.Unlock()
-
-	r, err := data.HashTreeRoot()
-	if err != nil {
-		return err
-	}
-
-	if v.submittedAtts[r] == nil {
-		v.submittedAtts[r] = &submittedAtt{data, [][]byte{}, [][]byte{}}
-	}
-	v.submittedAtts[r] = &submittedAtt{data, append(v.submittedAtts[r].attesterPubkeys, pubkey), [][]byte{}}
-
-	return nil
 }
 
 // highestSlot returns the highest slot with a valid block seen by the validator

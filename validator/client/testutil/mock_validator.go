@@ -182,7 +182,7 @@ func (*FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ primitives
 }
 
 // LogSubmittedAtts for mocking.
-func (*FakeValidator) LogSubmittedAtts() {}
+func (*FakeValidator) LogSubmittedAtts(_ primitives.Slot) {}
 
 // UpdateDomainDataCaches for mocking.
 func (*FakeValidator) UpdateDomainDataCaches(context.Context, primitives.Slot) {}
