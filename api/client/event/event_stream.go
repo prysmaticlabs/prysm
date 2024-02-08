@@ -123,13 +123,15 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 				eventType, data = "", ""
 				continue
 			}
-
-			if line[0:7] == "event: " {
+			et, ok := strings.CutPrefix(line, "event: ")
+			if ok {
 				// Extract event type from the "event" field
-				eventType = line[7:]
-			} else if line[0:6] == "data: " {
+				eventType = et
+			}
+			d, ok := strings.CutPrefix(line, "data: ")
+			if ok {
 				// Extract data from the "data" field
-				data = line[6:]
+				data = d
 			}
 		}
 	}

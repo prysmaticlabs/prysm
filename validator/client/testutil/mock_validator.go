@@ -297,5 +297,5 @@ func (fv *FakeValidator) NodeIsHealthy(_ context.Context) bool {
 }
 
 func (fv *FakeValidator) NodeHealthTracker() *beacon.NodeHealth {
-	return beacon.NewNodeHealthTracker()
+	return beacon.NewNodeHealth()
 }

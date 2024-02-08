@@ -41,7 +41,7 @@ func TestNodeHealth_UpdateNodeHealth(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := NewNodeHealthTracker()
+			n := NewNodeHealth()
 			n.isHealthy = tt.initial // Set initial health status
 			n.UpdateNodeHealth(tt.newStatus)
 
@@ -67,7 +67,7 @@ func TestNodeHealth_UpdateNodeHealth(t *testing.T) {
 }
 
 func TestNodeHealth_Concurrency(t *testing.T) {
-	n := NewNodeHealthTracker()
+	n := NewNodeHealth()
 	var wg sync.WaitGroup
 
 	// Number of goroutines to spawn for both reading and writing

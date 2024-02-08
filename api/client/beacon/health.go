@@ -5,12 +5,12 @@ import (
 )
 
 type NodeHealth struct {
-	isHealthy     bool
-	HealthCh      chan bool
-	isHealthyLock sync.RWMutex
+	isHealthy bool
+	HealthCh  chan bool
+	sync.RWMutex
 }
 
-func NewNodeHealthTracker() *NodeHealth {
+func NewNodeHealth() *NodeHealth {
 	return &NodeHealth{
 		isHealthy: true, // just default it to true
 		HealthCh:  make(chan bool, 1),
@@ -18,25 +18,25 @@ func NewNodeHealthTracker() *NodeHealth {
 }
 
 func (n *NodeHealth) IsHealthy() bool {
-	n.isHealthyLock.RLock()
-	defer n.isHealthyLock.RUnlock()
+	n.RLock()
+	defer n.RUnlock()
 	return n.isHealthy
 }
 
 func (n *NodeHealth) UpdateNodeHealth(newStatus bool) {
-	n.isHealthyLock.RLock()
+	n.RLock()
 	isStatusChanged := newStatus != n.isHealthy
-	n.isHealthyLock.RUnlock()
+	n.RUnlock()
 
 	if isStatusChanged {
-		n.isHealthyLock.Lock()
+		n.Lock()
 		// Double-check the condition to ensure it hasn't changed since the first check.
 		if newStatus != n.isHealthy {
 			n.isHealthy = newStatus
-			n.isHealthyLock.Unlock() // It's better to unlock as soon as the protected section is over.
+			n.Unlock() // It's better to unlock as soon as the protected section is over.
 			n.HealthCh <- newStatus
 		} else {
-			n.isHealthyLock.Unlock()
+			n.Unlock()
 		}
 	}
 }

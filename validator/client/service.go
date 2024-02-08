@@ -202,7 +202,7 @@ func (v *ValidatorService) Start() {
 
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
 
-	nodeHealth := beacon.NewNodeHealthTracker()
+	nodeHealth := beacon.NewNodeHealth()
 
 	valStruct := &validator{
 		validatorClient:                validatorClient,

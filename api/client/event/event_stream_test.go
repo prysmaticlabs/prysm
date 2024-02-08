@@ -38,9 +38,7 @@ func TestNewEventStream(t *testing.T) {
 	}
 }
 
-func TestEventHandler(t *testing.T) {
-	//logHook := logtest.NewGlobal()
-
+func TestEventStream(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/eth/v1/events", func(w http.ResponseWriter, r *http.Request) {
 		flusher, ok := w.(http.Flusher)
