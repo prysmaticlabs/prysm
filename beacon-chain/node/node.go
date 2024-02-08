@@ -122,6 +122,7 @@ type BeaconNode struct {
 	BlobStorage             *filesystem.BlobStorage
 	blobRetentionEpochs     primitives.Epoch
 	verifyInitWaiter        *verification.InitializerWaiter
+	syncChecker             *initialsync.SyncChecker
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -194,6 +195,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	beacon.initialSyncComplete = make(chan struct{})
+	beacon.syncChecker = &initialsync.SyncChecker{}
 	for _, opt := range opts {
 		if err := opt(beacon); err != nil {
 			return nil, err
@@ -676,6 +678,7 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		blockchain.WithBlobStorage(b.BlobStorage),
 		blockchain.WithTrackedValidatorsCache(b.trackedValidatorsCache),
 		blockchain.WithPayloadIDCache(b.payloadIDCache),
+		blockchain.WithSyncChecker(b.syncChecker),
 	)
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
@@ -769,6 +772,7 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 
 	opts := []initialsync.Option{
 		initialsync.WithVerifierWaiter(b.verifyInitWaiter),
+		initialsync.WithSyncChecker(b.syncChecker),
 	}
 	is := initialsync.NewService(b.ctx, &initialsync.Config{
 		DB:                  b.db,
@@ -914,7 +918,6 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		ExitPool:                      b.exitPool,
 		SlashingsPool:                 b.slashingsPool,
 		BLSChangesPool:                b.blsToExecPool,
-		SlashingChecker:               slasherService,
 		SyncCommitteeObjectPool:       b.syncCommitteePool,
 		ExecutionChainService:         web3Service,
 		ExecutionChainInfoFetcher:     web3Service,
