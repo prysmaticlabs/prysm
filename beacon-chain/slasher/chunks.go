@@ -521,8 +521,8 @@ func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) pr
 //	first_epoch(chunkIndex(startEpoch)+1)
 //	first_epoch(chunkIndex(3)+1)
 //	first_epoch(1 + 1)
-//	first_epoch(6)
-//	4
+//	first_epoch(2)
+//	6
 func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch {
 	return m.params.firstEpoch(m.params.chunkIndex(startEpoch) + 1)
 }
