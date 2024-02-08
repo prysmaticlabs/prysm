@@ -78,7 +78,7 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 	if err != nil {
 		eventsChannel <- &Event{
 			EventType: EventConnectionError,
-			Data:      []byte(errors.Wrap(err, "Failed to create HTTP request").Error()),
+			Data:      []byte(errors.Wrap(err, "failed to create HTTP request").Error()),
 		}
 	}
 	req.Header.Set("Accept", api.EventStreamMediaType)
