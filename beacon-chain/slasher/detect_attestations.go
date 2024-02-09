@@ -1,6 +1,7 @@
 package slasher
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -145,11 +146,26 @@ func (s *Service) checkDoubleVotes(
 	doubleVoteSlashings := make([]*ethpb.AttesterSlashing, 0)
 	for _, doubleVote := range doubleVotes {
 		doubleVotesTotal.Inc()
-		doubleVoteSlashings = append(doubleVoteSlashings, &ethpb.AttesterSlashing{
-			Attestation_1: doubleVote.PrevAttestationWrapper.IndexedAttestation,
-			Attestation_2: doubleVote.AttestationWrapper.IndexedAttestation,
-		})
+
+		wrapper_1 := doubleVote.PrevAttestationWrapper
+		wrapper_2 := doubleVote.AttestationWrapper
+
+		slashing := &ethpb.AttesterSlashing{
+			Attestation_1: wrapper_1.IndexedAttestation,
+			Attestation_2: wrapper_2.IndexedAttestation,
+		}
+
+		// Ensure the attestation with the lower data root is the first attestation.
+		if bytes.Compare(wrapper_1.DataRoot[:], wrapper_2.DataRoot[:]) > 0 {
+			slashing = &ethpb.AttesterSlashing{
+				Attestation_1: wrapper_2.IndexedAttestation,
+				Attestation_2: wrapper_1.IndexedAttestation,
+			}
+		}
+
+		doubleVoteSlashings = append(doubleVoteSlashings, slashing)
 	}
+
 	return doubleVoteSlashings, nil
 }
 
