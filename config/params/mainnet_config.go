@@ -23,7 +23,10 @@ const (
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 	// Bellatrix Fork Epoch for mainnet config.
 	mainnetBellatrixForkEpoch = 144896 // Sept 6, 2022, 11:34:47am UTC
-	mainnetDenebForkEpoch     = math.MaxUint64
+	// Capella Fork Epoch for mainnet config.
+	mainnetCapellaForkEpoch = 194048 // April 12, 2023, 22:27:35 UTC
+	// Deneb Fork Epoch for mainnet config.
+	mainnetDenebForkEpoch = 269568 // March 13, 2024, 13:55:35 UTC
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -202,9 +205,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
-	CapellaForkEpoch:     194048,
+	CapellaForkEpoch:     mainnetCapellaForkEpoch,
 	DenebForkVersion:     []byte{4, 0, 0, 0},
-	DenebForkEpoch:       math.MaxUint64,
+	DenebForkEpoch:       mainnetDenebForkEpoch,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
