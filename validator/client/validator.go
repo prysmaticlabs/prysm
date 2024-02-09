@@ -1057,7 +1057,7 @@ func (v *validator) StartEventStream(ctx context.Context, topics []string, event
 
 func (v *validator) ProcessEvent(event *eventClient.Event) error {
 	if event == nil || event.Data == nil {
-		log.Warn("received empty event")
+		log.Warn("Received empty event")
 		return nil
 	}
 	switch event.EventType {
