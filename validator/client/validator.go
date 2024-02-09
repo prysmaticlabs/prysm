@@ -1051,7 +1051,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 }
 
 func (v *validator) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *eventClient.Event) {
-	log.Infof("starting event stream for topics %v...", topics)
+	log.Infof("Starting event stream for topics %v...", topics)
 	v.validatorClient.StartEventStream(ctx, topics, eventsChannel)
 }
 
