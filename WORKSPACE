@@ -329,7 +329,7 @@ filegroup(
 )
     """,
     sha256 = "77e7e3ed65e33b7bb19d30131f4c2bb39e4dfeb188ab9ae84651c3cc7600131d",
-    strip_prefix = "eth2-networks-934c948e69205dcf2deb87e4ae6cc140c335f94d", 
+    strip_prefix = "eth2-networks-934c948e69205dcf2deb87e4ae6cc140c335f94d",
     url = "https://github.com/eth-clients/eth2-networks/archive/934c948e69205dcf2deb87e4ae6cc140c335f94d.tar.gz",
 )
 
