@@ -189,10 +189,10 @@ func (s *Store) CheckAttesterDoubleVotes(
 
 					// Build the proof of double vote.
 					slashAtt := &slashertypes.AttesterDoubleVote{
-						ValidatorIndex:         primitives.ValidatorIndex(valIdx),
-						Target:                 attToProcess.IndexedAttestation.Data.Target.Epoch,
-						PrevAttestationWrapper: existingAttRecord,
-						AttestationWrapper:     attToProcess,
+						ValidatorIndex: primitives.ValidatorIndex(valIdx),
+						Target:         attToProcess.IndexedAttestation.Data.Target.Epoch,
+						Wrapper_1:      existingAttRecord,
+						Wrapper_2:      attToProcess,
 					}
 
 					localDoubleVotes = append(localDoubleVotes, slashAtt)

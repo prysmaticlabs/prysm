@@ -93,28 +93,28 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 
 	wanted := []*slashertypes.AttesterDoubleVote{
 		{
-			ValidatorIndex:         0,
-			Target:                 3,
-			PrevAttestationWrapper: createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
-			AttestationWrapper:     createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{2}),
+			ValidatorIndex: 0,
+			Target:         3,
+			Wrapper_1:      createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
+			Wrapper_2:      createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{2}),
 		},
 		{
-			ValidatorIndex:         1,
-			Target:                 3,
-			PrevAttestationWrapper: createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
-			AttestationWrapper:     createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{2}),
+			ValidatorIndex: 1,
+			Target:         3,
+			Wrapper_1:      createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
+			Wrapper_2:      createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{2}),
 		},
 		{
-			ValidatorIndex:         2,
-			Target:                 4,
-			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{3}),
-			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{4}),
+			ValidatorIndex: 2,
+			Target:         4,
+			Wrapper_1:      createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{3}),
+			Wrapper_2:      createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{4}),
 		},
 		{
-			ValidatorIndex:         3,
-			Target:                 4,
-			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{3}),
-			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{4}),
+			ValidatorIndex: 3,
+			Target:         4,
+			Wrapper_1:      createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{3}),
+			Wrapper_2:      createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{4}),
 		},
 	}
 	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts)
@@ -126,8 +126,8 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 	for i, double := range doubleVotes {
 		require.DeepEqual(t, wanted[i].ValidatorIndex, double.ValidatorIndex)
 		require.DeepEqual(t, wanted[i].Target, double.Target)
-		require.DeepEqual(t, wanted[i].PrevAttestationWrapper, double.PrevAttestationWrapper)
-		require.DeepEqual(t, wanted[i].AttestationWrapper, double.AttestationWrapper)
+		require.DeepEqual(t, wanted[i].Wrapper_1, double.Wrapper_1)
+		require.DeepEqual(t, wanted[i].Wrapper_2, double.Wrapper_2)
 	}
 }
 

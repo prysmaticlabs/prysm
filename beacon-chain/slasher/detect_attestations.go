@@ -166,8 +166,8 @@ func (s *Service) checkDoubleVotes(
 	for _, doubleVote := range doubleVotes {
 		doubleVotesTotal.Inc()
 
-		wrapper_1 := doubleVote.PrevAttestationWrapper
-		wrapper_2 := doubleVote.AttestationWrapper
+		wrapper_1 := doubleVote.Wrapper_1
+		wrapper_2 := doubleVote.Wrapper_2
 
 		slashing := &ethpb.AttesterSlashing{
 			Attestation_1: wrapper_1.IndexedAttestation,
