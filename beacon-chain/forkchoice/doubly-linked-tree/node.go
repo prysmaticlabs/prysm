@@ -88,7 +88,7 @@ func (n *Node) isOneConfirmed(currentSlot primitives.Slot, committeeWeight uint6
 	}
 	proposerBoostWeight := float64(committeeWeight*params.BeaconConfig().ProposerScoreBoost) / 100
 	maxPossibleSupport := n.getMaxPossibleSupport(currentSlot, committeeWeight)
-	safeThreshold := float64(maxPossibleSupport+proposerBoostWeight) / 2
+	safeThreshold := (maxPossibleSupport + proposerBoostWeight) / 2
 	return float64(n.voteOnlyWeight) > safeThreshold
 }
 
