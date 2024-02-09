@@ -382,7 +382,7 @@ func (s *Service) Start() {
 	}
 
 	// update the tracked validator cache before starting servers
-	if err := updateTrackValidatorCacheWithProposerSettings(s.ctx, s.cfg.ChainInfoFetcher, s.cfg.ProposerSettings, s.cfg.TrackedValidatorsCache); err != nil {
+	if err := updateTrackValidatorCacheWithProposerSettings(s.ctx, s.cfg.SyncService, s.cfg.ChainInfoFetcher, s.cfg.ProposerSettings, s.cfg.TrackedValidatorsCache); err != nil {
 		log.WithError(err).Errorf("Could NOT update tracked validator cache with proposer settings")
 	}
 
@@ -612,12 +612,19 @@ func (s *Service) Start() {
 	}()
 }
 
-func updateTrackValidatorCacheWithProposerSettings(ctx context.Context, chain blockchain.ChainInfoFetcher, settings *proposersettings.ProposerSettingsPayload, tackedValidatorCache *cache.TrackedValidatorsCache) error {
-	if settings != nil && settings.ProposerConfig != nil {
+func updateTrackValidatorCacheWithProposerSettings(ctx context.Context, syncChecker chainSync.Checker, chain blockchain.ChainInfoFetcher, settings *proposersettings.ProposerSettingsPayload, tackedValidatorCache *cache.TrackedValidatorsCache) error {
+	if settings == nil {
+		return nil
+	}
+	if !syncChecker.Synced() {
+		log.Warning("proposer cache is updating while the chain is not fully synced, using head state for validator information")
+	}
+	if settings.ProposerConfig != nil {
 		st, err := chain.HeadState(ctx)
 		if err != nil {
 			return err
 		}
+		builderSettingsProvided := false
 		for key, option := range settings.ProposerConfig {
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
@@ -638,9 +645,16 @@ func updateTrackValidatorCacheWithProposerSettings(ctx context.Context, chain bl
 				Index:        validatorIndex,
 				FeeRecipient: primitives.ExecutionAddress(common.HexToAddress(option.FeeRecipient).Bytes()),
 			})
+			if option.Builder != nil {
+				builderSettingsProvided = true
+			}
 		}
+		if builderSettingsProvided {
+			log.Warning("builder settings will be ignored. please provide proposer settings in the validator client to register validators")
+		}
+		return nil
 	}
-	if settings != nil && settings.ProposerConfig == nil && settings.DefaultConfig != nil {
+	if settings.DefaultConfig != nil {
 		if settings.DefaultConfig.FeeRecipient == "" {
 			return errors.New("default fee recipient cannot be empty")
 		}
@@ -650,6 +664,10 @@ func updateTrackValidatorCacheWithProposerSettings(ctx context.Context, chain bl
 		if err := proposer.WarnNonChecksummedAddress(settings.DefaultConfig.FeeRecipient); err != nil {
 			return err
 		}
+		if settings.DefaultConfig.Builder != nil {
+			log.Warning("builder settings will be ignored. please provide proposer settings in the validator client to register validators")
+		}
+		log.Warning("no public keys provided, proposer cache is not updated from proposer settings file")
 		params.BeaconConfig().DefaultFeeRecipient = common.HexToAddress(settings.DefaultConfig.FeeRecipient)
 	}
 	return nil
