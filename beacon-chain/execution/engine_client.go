@@ -493,7 +493,12 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 		return result, nil
 	}
 	err := s.rpcClient.CallContext(ctx, &result, GetPayloadBodiesByHashV1, executionBlockHashes)
-
+	if err != nil {
+		return nil, handleRPCError(err)
+	}
+	if len(result) != len(executionBlockHashes) {
+		return nil, fmt.Errorf("mismatch of payloads retrieved from the execution client: %d vs %d", len(result), len(executionBlockHashes))
+	}
 	for i, item := range result {
 		if item == nil {
 			result[i] = &pb.ExecutionPayloadBodyV1{
@@ -502,11 +507,7 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 			}
 		}
 	}
-
-	if len(result) != len(executionBlockHashes) {
-		return nil, fmt.Errorf("mismatch of payloads retrieved from the execution client: %d vs %d", len(result), len(executionBlockHashes))
-	}
-	return result, handleRPCError(err)
+	return result, nil
 }
 
 // GetPayloadBodiesByRange returns the relevant payload bodies for the provided range.

@@ -2233,7 +2233,7 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 
 		bRoot := [32]byte{}
 		copy(bRoot[:], "hash")
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot})
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot, bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 2, len(results))
 
