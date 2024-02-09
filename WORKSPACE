@@ -328,9 +328,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "2701e1e1a3ec10c673fe7dbdbbe6f02c8ae8c922aebbf6e720d8c72d5458aafe",
-    strip_prefix = "eth2-networks-7b4897888cebef23801540236f73123e21774954",
-    url = "https://github.com/eth-clients/eth2-networks/archive/7b4897888cebef23801540236f73123e21774954.tar.gz",
+    sha256 = "77e7e3ed65e33b7bb19d30131f4c2bb39e4dfeb188ab9ae84651c3cc7600131d",
+    strip_prefix = "eth2-networks-934c948e69205dcf2deb87e4ae6cc140c335f94d", 
+    url = "https://github.com/eth-clients/eth2-networks/archive/934c948e69205dcf2deb87e4ae6cc140c335f94d.tar.gz",
 )
 
 http_archive(
