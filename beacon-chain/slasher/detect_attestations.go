@@ -39,6 +39,13 @@ func (s *Service) checkSlashableAttestations(
 		slashings[root] = slashing
 	}
 
+	// Save the attestation records to our database.
+	// If multiple attestations are provided for the same validator index + target epoch combination,
+	// then the first (validator index + target epoch) => signing root) link is kept into the database.
+	if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(ctx, atts); err != nil {
+		return nil, errors.Wrap(err, couldNotSaveAttRecord)
+	}
+
 	// Surrounding / surrounded votes
 	groupedByValidatorChunkIndexAtts := s.groupByValidatorChunkIndex(atts)
 	log.WithField("numBatches", len(groupedByValidatorChunkIndexAtts)).Debug("Batching attestations by validator chunk index")
@@ -148,20 +155,76 @@ func (s *Service) checkSurrounds(
 
 // Check for double votes in our database given a list of incoming attestations.
 func (s *Service) checkDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
+	ctx context.Context, incomingAttWrappers []*slashertypes.IndexedAttestationWrapper,
 ) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotesOnDisk")
 	defer span.End()
 
-	doubleVotes, err := s.serviceCfg.Database.CheckAttesterDoubleVotes(
-		ctx, attestations,
-	)
+	type attestationInfo struct {
+		validatorIndex uint64
+		epoch          primitives.Epoch
+	}
+
+	slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
+
+	// Check each incoming attestation for double votes against other incoming attestations.
+	existingAttWrappers := make(map[attestationInfo]*slashertypes.IndexedAttestationWrapper)
+
+	for _, incomingAttWrapper := range incomingAttWrappers {
+		targetEpoch := incomingAttWrapper.IndexedAttestation.Data.Target.Epoch
+
+		for _, validatorIndex := range incomingAttWrapper.IndexedAttestation.AttestingIndices {
+			info := attestationInfo{
+				validatorIndex: validatorIndex,
+				epoch:          targetEpoch,
+			}
+
+			existingAttWrapper, ok := existingAttWrappers[info]
+			if !ok {
+				// This is the first attestation for this `validator index x epoch` combination.
+				// There is no double vote. This attestation is memoized for future checks.
+				existingAttWrappers[info] = incomingAttWrapper
+				continue
+			}
+
+			if existingAttWrapper.DataRoot == incomingAttWrapper.DataRoot {
+				// Both attestations are the same, this is not a double vote.
+				continue
+			}
+
+			// There is two different attestations for the same `validator index x epoch` combination.
+			// This is a double vote.
+			doubleVotesTotal.Inc()
+
+			slashing := &ethpb.AttesterSlashing{
+				Attestation_1: existingAttWrapper.IndexedAttestation,
+				Attestation_2: incomingAttWrapper.IndexedAttestation,
+			}
+
+			// Ensure the attestation with the lower data root is the first attestation.
+			// It will be useful for comparing with other double votes.
+			if bytes.Compare(existingAttWrapper.DataRoot[:], incomingAttWrapper.DataRoot[:]) > 0 {
+				slashing = &ethpb.AttesterSlashing{
+					Attestation_1: incomingAttWrapper.IndexedAttestation,
+					Attestation_2: existingAttWrapper.IndexedAttestation,
+				}
+			}
+
+			root, err := slashing.HashTreeRoot()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not hash tree root for attester slashing")
+			}
+
+			slashings[root] = slashing
+		}
+	}
+
+	// Check each incoming attestation for double votes against the database.
+	doubleVotes, err := s.serviceCfg.Database.CheckAttesterDoubleVotes(ctx, incomingAttWrappers)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve potential double votes from disk")
 	}
-
-	slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
 
 	for _, doubleVote := range doubleVotes {
 		doubleVotesTotal.Inc()

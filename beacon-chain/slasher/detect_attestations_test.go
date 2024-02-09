@@ -69,31 +69,30 @@ func Test_processAttestations(t *testing.T) {
 				},
 			},
 		},
-		// Uncomment when https://github.com/prysmaticlabs/prysm/issues/13590 is fixed
-		// {
-		// 	name: "Same target with different signing roots - two steps",
-		// 	steps: []*step{
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
-		// 			},
-		// 			expectedSlashingsInfo: nil,
-		// 		},
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
-		// 			},
-		// 			expectedSlashingsInfo: []*slashingInfo{
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
-		// 					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
+		{
+			name: "Same target with different signing roots - two steps",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+					},
+					expectedSlashingsInfo: nil,
+				},
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
+					},
+					expectedSlashingsInfo: []*slashingInfo{
+						{
+							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
+						},
+					},
+				},
+			},
+		},
 		{
 			name: "Same target with same signing roots - single step",
 			steps: []*step{
@@ -273,31 +272,30 @@ func Test_processAttestations(t *testing.T) {
 				},
 			},
 		},
-		// Uncomment when https://github.com/prysmaticlabs/prysm/issues/13590 is fixed
-		// {
-		// 	name: "Detects double vote, (source 1, target 2), (source 0, target 2) - two steps",
-		// 	steps: []*step{
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 			},
-		// 			expectedSlashingsInfo: nil,
-		// 		},
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 			},
-		// 			expectedSlashingsInfo: []*slashingInfo{
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 					attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
+		{
+			name: "Detects double vote, (source 1, target 2), (source 0, target 2) - two steps",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: nil,
+				},
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: []*slashingInfo{
+						{
+							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+					},
+				},
+			},
+		},
 		{
 			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index - single step",
 			steps: []*step{
