@@ -1075,7 +1075,7 @@ func (v *validator) ProcessEvent(event *eventClient.Event) error {
 		}
 		uintSlot, err := strconv.ParseUint(head.Slot, 10, 64)
 		if err != nil {
-			log.Error(errors.Wrap(err, "failed to parse slot"))
+			log.WithError(err).Error("Failed to parse slot")
 			return nil
 		}
 		v.setHighestSlot(primitives.Slot(uintSlot))
