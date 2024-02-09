@@ -32,13 +32,13 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 				validatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
-				createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
+				createAttestationWrapperEmptySig(t, 0, 0, []uint64{0, 1}, nil),
+				createAttestationWrapperEmptySig(t, 0, 0, []uint64{0, 1}, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
-					createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
+					createAttestationWrapperEmptySig(t, 0, 0, []uint64{0, 1}, nil),
+					createAttestationWrapperEmptySig(t, 0, 0, []uint64{0, 1}, nil),
 				},
 			},
 		},
@@ -48,17 +48,17 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 				validatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
+				createAttestationWrapperEmptySig(t, 0, 0, []uint64{0, 2, 4}, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
+					createAttestationWrapperEmptySig(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 				1: {
-					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
+					createAttestationWrapperEmptySig(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 				2: {
-					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
+					createAttestationWrapperEmptySig(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 			},
 		},
@@ -95,13 +95,13 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				historyLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 0, 0, nil, nil),
-				createAttestationWrapper(t, 1, 0, nil, nil),
+				createAttestationWrapperEmptySig(t, 0, 0, nil, nil),
+				createAttestationWrapperEmptySig(t, 1, 0, nil, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(t, 0, 0, nil, nil),
-					createAttestationWrapper(t, 1, 0, nil, nil),
+					createAttestationWrapperEmptySig(t, 0, 0, nil, nil),
+					createAttestationWrapperEmptySig(t, 1, 0, nil, nil),
 				},
 			},
 		},
@@ -112,17 +112,17 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				historyLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 0, 0, nil, nil),
-				createAttestationWrapper(t, 1, 0, nil, nil),
-				createAttestationWrapper(t, 2, 0, nil, nil),
+				createAttestationWrapperEmptySig(t, 0, 0, nil, nil),
+				createAttestationWrapperEmptySig(t, 1, 0, nil, nil),
+				createAttestationWrapperEmptySig(t, 2, 0, nil, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(t, 0, 0, nil, nil),
-					createAttestationWrapper(t, 1, 0, nil, nil),
+					createAttestationWrapperEmptySig(t, 0, 0, nil, nil),
+					createAttestationWrapperEmptySig(t, 1, 0, nil, nil),
 				},
 				1: {
-					createAttestationWrapper(t, 2, 0, nil, nil),
+					createAttestationWrapperEmptySig(t, 2, 0, nil, nil),
 				},
 			},
 		},
@@ -207,7 +207,7 @@ func TestService_filterAttestations(t *testing.T) {
 		{
 			name: "Source > target gets dropped",
 			input: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 1, 0, []uint64{1}, make([]byte, 32)),
+				createAttestationWrapperEmptySig(t, 1, 0, []uint64{1}, make([]byte, 32)),
 			},
 			inputEpoch:    0,
 			wantedDropped: 1,
@@ -215,33 +215,33 @@ func TestService_filterAttestations(t *testing.T) {
 		{
 			name: "Source < target is valid",
 			input: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 0, 1, []uint64{1}, make([]byte, 32)),
+				createAttestationWrapperEmptySig(t, 0, 1, []uint64{1}, make([]byte, 32)),
 			},
 			inputEpoch: 1,
 			wantedValid: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 0, 1, []uint64{1}, make([]byte, 32)),
+				createAttestationWrapperEmptySig(t, 0, 1, []uint64{1}, make([]byte, 32)),
 			},
 			wantedDropped: 0,
 		},
 		{
 			name: "Source == target is valid",
 			input: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 0, 0, []uint64{1}, make([]byte, 32)),
+				createAttestationWrapperEmptySig(t, 0, 0, []uint64{1}, make([]byte, 32)),
 			},
 			inputEpoch: 1,
 			wantedValid: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 0, 0, []uint64{1}, make([]byte, 32)),
+				createAttestationWrapperEmptySig(t, 0, 0, []uint64{1}, make([]byte, 32)),
 			},
 			wantedDropped: 0,
 		},
 		{
 			name: "Attestation from the future is deferred",
 			input: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 0, 2, []uint64{1}, make([]byte, 32)),
+				createAttestationWrapperEmptySig(t, 0, 2, []uint64{1}, make([]byte, 32)),
 			},
 			inputEpoch: 1,
 			wantedDeferred: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(t, 0, 2, []uint64{1}, make([]byte, 32)),
+				createAttestationWrapperEmptySig(t, 0, 2, []uint64{1}, make([]byte, 32)),
 			},
 			wantedDropped: 0,
 		},
@@ -271,22 +271,22 @@ func Test_logSlashingEvent(t *testing.T) {
 		{
 			name: "Surrounding vote",
 			slashing: &ethpb.AttesterSlashing{
-				Attestation_1: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation_2: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 		},
 		{
 			name: "Surrounded vote",
 			slashing: &ethpb.AttesterSlashing{
-				Attestation_1: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation_2: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 		},
 		{
 			name: "Double vote",
 			slashing: &ethpb.AttesterSlashing{
-				Attestation_1: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation_2: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 		},
 	}

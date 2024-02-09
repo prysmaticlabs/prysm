@@ -82,7 +82,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 			},
 		}
 
-		err = s.processAttesterSlashings(ctx, slashings)
+		_, err = s.processAttesterSlashings(ctx, slashings)
 		require.NoError(tt, err)
 		require.LogsContain(tt, hook, "Invalid signature")
 	})
@@ -101,7 +101,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 			},
 		}
 
-		err = s.processAttesterSlashings(ctx, slashings)
+		_, err = s.processAttesterSlashings(ctx, slashings)
 		require.NoError(tt, err)
 		require.LogsContain(tt, hook, "Invalid signature")
 	})
@@ -120,7 +120,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 			},
 		}
 
-		err = s.processAttesterSlashings(ctx, slashings)
+		_, err = s.processAttesterSlashings(ctx, slashings)
 		require.NoError(tt, err)
 		require.LogsDoNotContain(tt, hook, "Invalid signature")
 	})
