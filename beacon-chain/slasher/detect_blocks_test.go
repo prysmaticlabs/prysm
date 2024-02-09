@@ -22,94 +22,139 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+type wrapped struct {
+	slot             primitives.Slot
+	signedBlkHeaders []*slashertypes.SignedBlockHeaderWrapper
+}
+
 func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
-	hook := logTest.NewGlobal()
-	slasherDB := dbtest.SetupSlasherDB(t)
-	beaconDB := dbtest.SetupDB(t)
-	ctx, cancel := context.WithCancel(context.Background())
-
-	beaconState, err := util.NewBeaconState()
-	require.NoError(t, err)
-
-	// Initialize validators in the state.
-	numVals := params.BeaconConfig().MinGenesisActiveValidatorCount
-	validators := make([]*ethpb.Validator, numVals)
-	privKeys := make([]bls.SecretKey, numVals)
-	for i := range validators {
-		privKey, err := bls.RandKey()
-		require.NoError(t, err)
-		privKeys[i] = privKey
-		validators[i] = &ethpb.Validator{
-			PublicKey:             privKey.PublicKey().Marshal(),
-			WithdrawalCredentials: make([]byte, 32),
-		}
-	}
-	err = beaconState.SetValidators(validators)
-	require.NoError(t, err)
-	domain, err := signing.Domain(
-		beaconState.Fork(),
-		0,
-		params.BeaconConfig().DomainBeaconProposer,
-		beaconState.GenesisValidatorsRoot(),
-	)
-	require.NoError(t, err)
-
-	mockChain := &mock.ChainService{
-		State: beaconState,
-	}
-	s := &Service{
-		serviceCfg: &ServiceConfig{
-			Database:             slasherDB,
-			StateNotifier:        &mock.MockStateNotifier{},
-			HeadStateFetcher:     mockChain,
-			StateGen:             stategen.New(beaconDB, doublylinkedtree.New()),
-			SlashingPoolInserter: &slashingsmock.PoolMock{},
-			ClockWaiter:          startup.NewClockSynchronizer(),
+	testCases := []struct {
+		name  string
+		wraps []wrapped
+	}{
+		{
+			name: "detects double proposals in the same batch",
+			wraps: []wrapped{
+				{
+					4,
+					[]*slashertypes.SignedBlockHeaderWrapper{
+						createProposalWrapper(t, 4, 1, []byte{1}),
+						createProposalWrapper(t, 4, 1, []byte{1}),
+						createProposalWrapper(t, 4, 1, []byte{1}),
+						createProposalWrapper(t, 4, 1, []byte{2}),
+					},
+				},
+			},
 		},
-		params:    DefaultParams(),
-		blksQueue: newBlocksQueue(),
+		{
+			name: "detects double proposals in the different batches",
+			wraps: []wrapped{
+				{
+					5,
+					[]*slashertypes.SignedBlockHeaderWrapper{
+						createProposalWrapper(t, 4, 1, []byte{1}),
+						createProposalWrapper(t, 5, 1, []byte{1}),
+					},
+				},
+				{
+					6,
+					[]*slashertypes.SignedBlockHeaderWrapper{
+						createProposalWrapper(t, 4, 1, []byte{2}),
+					},
+				},
+			},
+		},
 	}
 
-	parentRoot := bytesutil.ToBytes32([]byte("parent"))
-	err = s.serviceCfg.StateGen.SaveState(ctx, parentRoot, beaconState)
-	require.NoError(t, err)
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			hook := logTest.NewGlobal()
+			beaconDB := dbtest.SetupDB(t)
+			slasherDB := dbtest.SetupSlasherDB(t)
+			ctx, cancel := context.WithCancel(context.Background())
 
-	currentSlotChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
-	go func() {
-		s.processQueuedBlocks(ctx, currentSlotChan)
-		exitChan <- struct{}{}
-	}()
+			beaconState, err := util.NewBeaconState()
+			require.NoError(t, err)
 
-	signedBlkHeaders := []*slashertypes.SignedBlockHeaderWrapper{
-		createProposalWrapper(t, 4, 1, []byte{1}),
-		createProposalWrapper(t, 4, 1, []byte{1}),
-		createProposalWrapper(t, 4, 1, []byte{1}),
-		createProposalWrapper(t, 4, 1, []byte{2}),
+			// Initialize validators in the state.
+			numVals := params.BeaconConfig().MinGenesisActiveValidatorCount
+			validators := make([]*ethpb.Validator, numVals)
+			privKeys := make([]bls.SecretKey, numVals)
+			for i := range validators {
+				privKey, err := bls.RandKey()
+				require.NoError(t, err)
+				privKeys[i] = privKey
+				validators[i] = &ethpb.Validator{
+					PublicKey:             privKey.PublicKey().Marshal(),
+					WithdrawalCredentials: make([]byte, 32),
+				}
+			}
+			err = beaconState.SetValidators(validators)
+			require.NoError(t, err)
+			domain, err := signing.Domain(
+				beaconState.Fork(),
+				0,
+				params.BeaconConfig().DomainBeaconProposer,
+				beaconState.GenesisValidatorsRoot(),
+			)
+			require.NoError(t, err)
+
+			mockChain := &mock.ChainService{
+				State: beaconState,
+			}
+			s := &Service{
+				serviceCfg: &ServiceConfig{
+					Database:             slasherDB,
+					StateNotifier:        &mock.MockStateNotifier{},
+					HeadStateFetcher:     mockChain,
+					StateGen:             stategen.New(beaconDB, doublylinkedtree.New()),
+					SlashingPoolInserter: &slashingsmock.PoolMock{},
+					ClockWaiter:          startup.NewClockSynchronizer(),
+				},
+				params:    DefaultParams(),
+				blksQueue: newBlocksQueue(),
+			}
+
+			parentRoot := bytesutil.ToBytes32([]byte("parent"))
+			err = s.serviceCfg.StateGen.SaveState(ctx, parentRoot, beaconState)
+			require.NoError(t, err)
+
+			currentSlotChan := make(chan primitives.Slot)
+			s.wg.Add(1)
+			go func() {
+				s.processQueuedBlocks(ctx, currentSlotChan)
+			}()
+
+			for _, wrap := range tt.wraps {
+				// Add valid signatures to the block headers we are testing.
+				for _, proposalWrapper := range wrap.signedBlkHeaders {
+					proposalWrapper.SignedBeaconBlockHeader.Header.ParentRoot = parentRoot[:]
+					headerHtr, err := proposalWrapper.SignedBeaconBlockHeader.Header.HashTreeRoot()
+					require.NoError(t, err)
+
+					container := &ethpb.SigningData{
+						ObjectRoot: headerHtr[:],
+						Domain:     domain,
+					}
+
+					signingRoot, err := container.HashTreeRoot()
+					require.NoError(t, err)
+
+					privKey := privKeys[proposalWrapper.SignedBeaconBlockHeader.Header.ProposerIndex]
+					proposalWrapper.SignedBeaconBlockHeader.Signature = privKey.Sign(signingRoot[:]).Marshal()
+				}
+
+				s.blksQueue.extend(wrap.signedBlkHeaders)
+
+				currentSlot := primitives.Slot(4)
+				currentSlotChan <- currentSlot
+			}
+
+			cancel()
+			s.wg.Wait()
+			require.LogsContain(t, hook, "Proposer slashing detected")
+		})
 	}
-
-	// Add valid signatures to the block headers we are testing.
-	for _, proposalWrapper := range signedBlkHeaders {
-		proposalWrapper.SignedBeaconBlockHeader.Header.ParentRoot = parentRoot[:]
-		headerHtr, err := proposalWrapper.SignedBeaconBlockHeader.Header.HashTreeRoot()
-		require.NoError(t, err)
-		container := &ethpb.SigningData{
-			ObjectRoot: headerHtr[:],
-			Domain:     domain,
-		}
-		signingRoot, err := container.HashTreeRoot()
-		require.NoError(t, err)
-		privKey := privKeys[proposalWrapper.SignedBeaconBlockHeader.Header.ProposerIndex]
-		proposalWrapper.SignedBeaconBlockHeader.Signature = privKey.Sign(signingRoot[:]).Marshal()
-	}
-
-	s.blksQueue.extend(signedBlkHeaders)
-
-	currentSlot := primitives.Slot(4)
-	currentSlotChan <- currentSlot
-	cancel()
-	<-exitChan
-	require.LogsContain(t, hook, "Proposer slashing detected")
 }
 
 func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
@@ -137,10 +182,9 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 		blksQueue: newBlocksQueue(),
 	}
 	currentSlotChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.processQueuedBlocks(ctx, currentSlotChan)
-		exitChan <- struct{}{}
 	}()
 	s.blksQueue.extend([]*slashertypes.SignedBlockHeaderWrapper{
 		createProposalWrapper(t, 4, 1, []byte{1}),
@@ -148,7 +192,7 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	})
 	currentSlotChan <- currentSlot
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	require.LogsDoNotContain(t, hook, "Proposer slashing detected")
 }
 

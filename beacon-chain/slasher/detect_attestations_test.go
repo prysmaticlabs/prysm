@@ -30,10 +30,32 @@ func Test_processQueuedAttestations(t *testing.T) {
 		currentEpoch     primitives.Epoch
 	}
 	tests := []struct {
-		name                 string
-		args                 args
-		shouldNotBeSlashable bool
+		name              string
+		args              args
+		shouldBeSlashable bool
 	}{
+		{
+			name: "Same target with different signing roots",
+			args: args{
+				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{1}),
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{2}),
+				},
+				currentEpoch: 4,
+			},
+			shouldBeSlashable: true,
+		},
+		{
+			name: "Same target with same signing roots",
+			args: args{
+				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{1}),
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{1}),
+				},
+				currentEpoch: 4,
+			},
+			shouldBeSlashable: false,
+		},
 		{
 			name: "Detects surrounding vote (source 1, target 2), (source 0, target 3)",
 			args: args{
@@ -43,6 +65,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
+			shouldBeSlashable: true,
 		},
 		{
 			name: "Detects surrounding vote (source 50, target 51), (source 0, target 1000)",
@@ -53,6 +76,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 1000,
 			},
+			shouldBeSlashable: true,
 		},
 		{
 			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
@@ -63,6 +87,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
+			shouldBeSlashable: true,
 		},
 		{
 			name: "Detects double vote, (source 1, target 2), (source 0, target 2)",
@@ -73,6 +98,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
+			shouldBeSlashable: true,
 		},
 		{
 			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index",
@@ -83,7 +109,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, surrounded but non-overlapping attesting indices within same validator chunk index",
@@ -94,7 +120,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, surrounding but non-overlapping attesting indices in different validator chunk index",
@@ -111,7 +137,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, surrounded but non-overlapping attesting indices in different validator chunk index",
@@ -128,7 +154,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, (source 1, target 2), (source 2, target 3)",
@@ -139,7 +165,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, (source 0, target 3), (source 2, target 4)",
@@ -150,7 +176,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, (source 0, target 2), (source 0, target 3)",
@@ -161,7 +187,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, (source 0, target 3), (source 0, target 2)",
@@ -172,7 +198,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 	}
 	for _, tt := range tests {
@@ -246,21 +272,24 @@ func Test_processQueuedAttestations(t *testing.T) {
 			s.genesisTime = genesisTime
 
 			currentSlotChan := make(chan primitives.Slot)
-			exitChan := make(chan struct{})
+			s.wg.Add(1)
 			go func() {
 				s.processQueuedAttestations(ctx, currentSlotChan)
-				exitChan <- struct{}{}
 			}()
 			s.attsQueue.extend(tt.args.attestationQueue)
 			currentSlotChan <- slot
 			time.Sleep(time.Millisecond * 200)
 			cancel()
-			<-exitChan
-			if tt.shouldNotBeSlashable {
-				require.LogsDoNotContain(t, hook, "Attester slashing detected")
-			} else {
+			s.wg.Wait()
+			if tt.shouldBeSlashable {
 				require.LogsContain(t, hook, "Attester slashing detected")
+			} else {
+				require.LogsDoNotContain(t, hook, "Attester slashing detected")
 			}
+
+			require.LogsDoNotContain(t, hook, couldNotSaveAttRecord)
+			require.LogsDoNotContain(t, hook, couldNotCheckSlashableAtt)
+			require.LogsDoNotContain(t, hook, couldNotProcessAttesterSlashings)
 		})
 	}
 }
@@ -304,10 +333,9 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 	s.genesisTime = genesisTime
 
 	currentSlotChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.processQueuedAttestations(ctx, currentSlotChan)
-		exitChan <- struct{}{}
 	}()
 
 	for i := startEpoch; i <= endEpoch; i++ {
@@ -331,7 +359,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 200)
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	require.LogsDoNotContain(t, hook, "Slashable offenses found")
 	require.LogsDoNotContain(t, hook, "Could not detect")
 }
@@ -370,10 +398,9 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	s.genesisTime = genesisTime
 
 	currentSlotChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.processQueuedAttestations(ctx, currentSlotChan)
-		exitChan <- struct{}{}
 	}()
 
 	// We create two attestations fully spanning chunk indices 0 and chunk 1
@@ -392,7 +419,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 200)
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	require.LogsDoNotContain(t, hook, "Slashable offenses found")
 	require.LogsDoNotContain(t, hook, "Could not detect")
 }
@@ -593,44 +620,6 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	require.NotNil(t, slashing)
 }
 
-func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
-	slasherDB := dbtest.SetupSlasherDB(t)
-	ctx := context.Background()
-	// For a list of input attestations, check that we can
-	// indeed check there could exist a double vote offense
-	// within the list with respect to other entries in the list.
-	atts := []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapper(t, 0, 1, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
-	}
-	srv, err := New(context.Background(),
-		&ServiceConfig{
-			Database:      slasherDB,
-			StateNotifier: &mock.MockStateNotifier{},
-			ClockWaiter:   startup.NewClockSynchronizer(),
-		})
-	require.NoError(t, err)
-
-	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
-	cur1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
-	prev2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
-	cur2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
-	wanted := []*ethpb.AttesterSlashing{
-		{
-			Attestation_1: prev1.IndexedAttestation,
-			Attestation_2: cur1.IndexedAttestation,
-		},
-		{
-			Attestation_1: prev2.IndexedAttestation,
-			Attestation_2: cur2.IndexedAttestation,
-		},
-	}
-	slashings, err := srv.checkDoubleVotes(ctx, atts)
-	require.NoError(t, err)
-	require.DeepEqual(t, wanted, slashings)
-}
-
 func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx := context.Background()
@@ -787,16 +776,15 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	tickerChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.processQueuedAttestations(ctx, tickerChan)
-		exitChan <- struct{}{}
 	}()
 
 	// Send a value over the ticker.
 	tickerChan <- 1
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	assert.LogsContain(t, hook, "Processing queued")
 }
 

@@ -170,8 +170,8 @@ func (s *Server) Start() {
 		}
 		opts = append(opts, grpc.Creds(creds))
 		log.WithFields(logrus.Fields{
-			"crt-path": s.withCert,
-			"key-path": s.withKey,
+			"certPath": s.withCert,
+			"keyPath":  s.withKey,
 		}).Info("Loaded TLS certificates")
 	}
 	s.grpcServer = grpc.NewServer(opts...)

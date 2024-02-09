@@ -227,8 +227,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	logFields["validationTime"] = validationTime
 	log.WithFields(logFields).Debug("Received block")
 
-	blockArrivalGossipSummary.Observe(float64(sinceSlotStartTime))
-	blockVerificationGossipSummary.Observe(float64(validationTime))
+	blockArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
+	blockVerificationGossipSummary.Observe(float64(validationTime.Milliseconds()))
 	return pubsub.ValidationAccept, nil
 }
 

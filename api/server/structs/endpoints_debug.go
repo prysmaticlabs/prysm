@@ -1,9 +1,7 @@
-package debug
+package structs
 
 import (
 	"encoding/json"
-
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 )
 
 type GetBeaconStateV2Response struct {
@@ -24,18 +22,18 @@ type ForkChoiceHead struct {
 }
 
 type GetForkChoiceDumpResponse struct {
-	JustifiedCheckpoint *shared.Checkpoint       `json:"justified_checkpoint"`
-	FinalizedCheckpoint *shared.Checkpoint       `json:"finalized_checkpoint"`
+	JustifiedCheckpoint *Checkpoint              `json:"justified_checkpoint"`
+	FinalizedCheckpoint *Checkpoint              `json:"finalized_checkpoint"`
 	ForkChoiceNodes     []*ForkChoiceNode        `json:"fork_choice_nodes"`
 	ExtraData           *ForkChoiceDumpExtraData `json:"extra_data"`
 }
 
 type ForkChoiceDumpExtraData struct {
-	UnrealizedJustifiedCheckpoint *shared.Checkpoint `json:"unrealized_justified_checkpoint"`
-	UnrealizedFinalizedCheckpoint *shared.Checkpoint `json:"unrealized_finalized_checkpoint"`
-	ProposerBoostRoot             string             `json:"proposer_boost_root"`
-	PreviousProposerBoostRoot     string             `json:"previous_proposer_boost_root"`
-	HeadRoot                      string             `json:"head_root"`
+	UnrealizedJustifiedCheckpoint *Checkpoint `json:"unrealized_justified_checkpoint"`
+	UnrealizedFinalizedCheckpoint *Checkpoint `json:"unrealized_finalized_checkpoint"`
+	ProposerBoostRoot             string      `json:"proposer_boost_root"`
+	PreviousProposerBoostRoot     string      `json:"previous_proposer_boost_root"`
+	HeadRoot                      string      `json:"head_root"`
 }
 
 type ForkChoiceNode struct {

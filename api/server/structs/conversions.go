@@ -1,4 +1,4 @@
-package shared
+package structs
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ var errNilValue = errors.New("nil value")
 
 func ValidatorFromConsensus(v *eth.Validator) *Validator {
 	return &Validator{
-		PublicKey:                  hexutil.Encode(v.PublicKey),
+		Pubkey:                     hexutil.Encode(v.PublicKey),
 		WithdrawalCredentials:      hexutil.Encode(v.WithdrawalCredentials),
 		EffectiveBalance:           fmt.Sprintf("%d", v.EffectiveBalance),
 		Slashed:                    v.Slashed,
@@ -1073,4 +1073,18 @@ func sszBytesToUint256String(b []byte) (string, error) {
 		return "", fmt.Errorf("%s is not a valid Uint256", bi.String())
 	}
 	return bi.String(), nil
+}
+
+func DepositSnapshotFromConsensus(ds *eth.DepositSnapshot) *DepositSnapshot {
+	finalized := make([]string, 0, len(ds.Finalized))
+	for _, f := range ds.Finalized {
+		finalized = append(finalized, hexutil.Encode(f))
+	}
+	return &DepositSnapshot{
+		Finalized:            finalized,
+		DepositRoot:          hexutil.Encode(ds.DepositRoot),
+		DepositCount:         fmt.Sprintf("%d", ds.DepositCount),
+		ExecutionBlockHash:   hexutil.Encode(ds.ExecutionHash),
+		ExecutionBlockHeight: fmt.Sprintf("%d", ds.ExecutionDepth),
+	}
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -26,14 +26,14 @@ func TestProposeBeaconBlock_Altair(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = altairBlock
 
-	jsonAltairBlock := &shared.SignedBeaconBlockAltair{
+	jsonAltairBlock := &structs.SignedBeaconBlockAltair{
 		Signature: hexutil.Encode(altairBlock.Altair.Signature),
-		Message: &shared.BeaconBlockAltair{
+		Message: &structs.BeaconBlockAltair{
 			ParentRoot:    hexutil.Encode(altairBlock.Altair.Block.ParentRoot),
 			ProposerIndex: uint64ToString(altairBlock.Altair.Block.ProposerIndex),
 			Slot:          uint64ToString(altairBlock.Altair.Block.Slot),
 			StateRoot:     hexutil.Encode(altairBlock.Altair.Block.StateRoot),
-			Body: &shared.BeaconBlockBodyAltair{
+			Body: &structs.BeaconBlockBodyAltair{
 				Attestations:      jsonifyAttestations(altairBlock.Altair.Block.Body.Attestations),
 				AttesterSlashings: jsonifyAttesterSlashings(altairBlock.Altair.Block.Body.AttesterSlashings),
 				Deposits:          jsonifyDeposits(altairBlock.Altair.Block.Body.Deposits),
@@ -42,7 +42,7 @@ func TestProposeBeaconBlock_Altair(t *testing.T) {
 				ProposerSlashings: jsonifyProposerSlashings(altairBlock.Altair.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(altairBlock.Altair.Block.Body.RandaoReveal),
 				VoluntaryExits:    JsonifySignedVoluntaryExits(altairBlock.Altair.Block.Body.VoluntaryExits),
-				SyncAggregate: &shared.SyncAggregate{
+				SyncAggregate: &structs.SyncAggregate{
 					SyncCommitteeBits:      hexutil.Encode(altairBlock.Altair.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(altairBlock.Altair.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},

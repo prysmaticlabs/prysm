@@ -9,19 +9,17 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 type dutiesProvider interface {
-	GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.AttesterDuty, error)
-	GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error)
-	GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.SyncCommitteeDuty, error)
-	GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*shared.Committee, error)
+	GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*structs.AttesterDuty, error)
+	GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*structs.ProposerDuty, error)
+	GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*structs.SyncCommitteeDuty, error)
+	GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*structs.Committee, error)
 }
 
 type beaconApiDutiesProvider struct {
@@ -82,14 +80,14 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		return nil, errors.Wrapf(err, "failed to get attester duties for epoch `%d`", epoch)
 	}
 
-	var syncDuties []*validator.SyncCommitteeDuty
+	var syncDuties []*structs.SyncCommitteeDuty
 	if fetchSyncDuties {
 		if syncDuties, err = c.dutiesProvider.GetSyncDuties(ctx, epoch, multipleValidatorStatus.Indices); err != nil {
 			return nil, errors.Wrapf(err, "failed to get sync duties for epoch `%d`", epoch)
 		}
 	}
 
-	var proposerDuties []*validator.ProposerDuty
+	var proposerDuties []*structs.ProposerDuty
 	if proposerDuties, err = c.dutiesProvider.GetProposerDuties(ctx, epoch); err != nil {
 		return nil, errors.Wrapf(err, "failed to get proposer duties for epoch `%d`", epoch)
 	}
@@ -213,12 +211,12 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 }
 
 // GetCommittees retrieves the committees for the given epoch
-func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*shared.Committee, error) {
+func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*structs.Committee, error) {
 	committeeParams := url.Values{}
 	committeeParams.Add("epoch", strconv.FormatUint(uint64(epoch), 10))
 	committeesRequest := buildURL("/eth/v1/beacon/states/head/committees", committeeParams)
 
-	var stateCommittees beacon.GetCommitteesResponse
+	var stateCommittees structs.GetCommitteesResponse
 	if err := c.jsonRestHandler.Get(ctx, committeesRequest, &stateCommittees); err != nil {
 		return nil, err
 	}
@@ -237,7 +235,7 @@ func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch primit
 }
 
 // GetAttesterDuties retrieves the attester duties for the given epoch and validatorIndices
-func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.AttesterDuty, error) {
+func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*structs.AttesterDuty, error) {
 	jsonValidatorIndices := make([]string, len(validatorIndices))
 	for index, validatorIndex := range validatorIndices {
 		jsonValidatorIndices[index] = strconv.FormatUint(uint64(validatorIndex), 10)
@@ -248,7 +246,7 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch pr
 		return nil, errors.Wrap(err, "failed to marshal validator indices")
 	}
 
-	attesterDuties := &validator.GetAttesterDutiesResponse{}
+	attesterDuties := &structs.GetAttesterDutiesResponse{}
 	if err = c.jsonRestHandler.Post(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/duties/attester/%d", epoch),
@@ -269,8 +267,8 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch pr
 }
 
 // GetProposerDuties retrieves the proposer duties for the given epoch
-func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error) {
-	proposerDuties := validator.GetProposerDutiesResponse{}
+func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*structs.ProposerDuty, error) {
+	proposerDuties := structs.GetProposerDutiesResponse{}
 	if err := c.jsonRestHandler.Get(ctx, fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), &proposerDuties); err != nil {
 		return nil, err
 	}
@@ -289,7 +287,7 @@ func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch pr
 }
 
 // GetSyncDuties retrieves the sync committee duties for the given epoch and validatorIndices
-func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.SyncCommitteeDuty, error) {
+func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*structs.SyncCommitteeDuty, error) {
 	jsonValidatorIndices := make([]string, len(validatorIndices))
 	for index, validatorIndex := range validatorIndices {
 		jsonValidatorIndices[index] = strconv.FormatUint(uint64(validatorIndex), 10)
@@ -300,7 +298,7 @@ func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch primit
 		return nil, errors.Wrap(err, "failed to marshal validator indices")
 	}
 
-	syncDuties := validator.GetSyncCommitteeDutiesResponse{}
+	syncDuties := structs.GetSyncCommitteeDutiesResponse{}
 	if err = c.jsonRestHandler.Post(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/duties/sync/%d", epoch),

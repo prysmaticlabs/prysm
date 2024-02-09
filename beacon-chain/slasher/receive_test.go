@@ -32,10 +32,9 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	indexedAttsChan := make(chan *ethpb.IndexedAttestation)
 	defer close(indexedAttsChan)
 
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.receiveAttestations(ctx, indexedAttsChan)
-		exitChan <- struct{}{}
 	}()
 	firstIndices := []uint64{1, 2, 3}
 	secondIndices := []uint64{4, 5, 6}
@@ -44,7 +43,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	indexedAttsChan <- att1.IndexedAttestation
 	indexedAttsChan <- att2.IndexedAttestation
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	wanted := []*slashertypes.IndexedAttestationWrapper{
 		att1,
 		att2,
@@ -216,11 +215,9 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	indexedAttsChan := make(chan *ethpb.IndexedAttestation)
 	defer close(indexedAttsChan)
 
-	exitChan := make(chan struct{})
-	defer close(exitChan)
+	s.wg.Add(1)
 	go func() {
 		s.receiveAttestations(ctx, indexedAttsChan)
-		exitChan <- struct{}{}
 	}()
 	firstIndices := []uint64{1, 2, 3}
 	secondIndices := []uint64{4, 5, 6}
@@ -233,7 +230,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 		AttestingIndices: secondIndices,
 	}
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	// Expect only a single, valid attestation was added to the queue.
 	require.Equal(t, 1, s.attsQueue.size())
 	wanted := []*slashertypes.IndexedAttestationWrapper{
@@ -254,10 +251,9 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 	}
 	beaconBlockHeadersChan := make(chan *ethpb.SignedBeaconBlockHeader)
 	defer close(beaconBlockHeadersChan)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.receiveBlocks(ctx, beaconBlockHeadersChan)
-		exitChan <- struct{}{}
 	}()
 
 	block1 := createProposalWrapper(t, 0, 1, nil).SignedBeaconBlockHeader
@@ -265,7 +261,7 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 	beaconBlockHeadersChan <- block1
 	beaconBlockHeadersChan <- block2
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	wanted := []*slashertypes.SignedBlockHeaderWrapper{
 		createProposalWrapper(t, 0, block1.Header.ProposerIndex, nil),
 		createProposalWrapper(t, 0, block2.Header.ProposerIndex, nil),
@@ -301,15 +297,14 @@ func TestService_processQueuedBlocks(t *testing.T) {
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	tickerChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.processQueuedBlocks(ctx, tickerChan)
-		exitChan <- struct{}{}
 	}()
 
 	// Send a value over the ticker.
 	tickerChan <- 0
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	assert.LogsContain(t, hook, "Processing queued")
 }

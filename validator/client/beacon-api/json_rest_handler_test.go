@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -21,8 +21,8 @@ import (
 func TestGet(t *testing.T) {
 	ctx := context.Background()
 	const endpoint = "/example/rest/api/endpoint"
-	genesisJson := &beacon.GetGenesisResponse{
-		Data: &beacon.Genesis{
+	genesisJson := &structs.GetGenesisResponse{
+		Data: &structs.Genesis{
 			GenesisTime:           "123",
 			GenesisValidatorsRoot: "0x456",
 			GenesisForkVersion:    "0x789",
@@ -44,7 +44,7 @@ func TestGet(t *testing.T) {
 		HttpClient: http.Client{Timeout: time.Second * 5},
 		Host:       server.URL,
 	}
-	resp := &beacon.GetGenesisResponse{}
+	resp := &structs.GetGenesisResponse{}
 	require.NoError(t, jsonRestHandler.Get(ctx, endpoint+"?arg1=abc&arg2=def", resp))
 	assert.DeepEqual(t, genesisJson, resp)
 }
@@ -55,8 +55,8 @@ func TestPost(t *testing.T) {
 	dataBytes := []byte{1, 2, 3, 4, 5}
 	headers := map[string]string{"foo": "bar"}
 
-	genesisJson := &beacon.GetGenesisResponse{
-		Data: &beacon.Genesis{
+	genesisJson := &structs.GetGenesisResponse{
+		Data: &structs.Genesis{
 			GenesisTime:           "123",
 			GenesisValidatorsRoot: "0x456",
 			GenesisForkVersion:    "0x789",
@@ -90,7 +90,7 @@ func TestPost(t *testing.T) {
 		HttpClient: http.Client{Timeout: time.Second * 5},
 		Host:       server.URL,
 	}
-	resp := &beacon.GetGenesisResponse{}
+	resp := &structs.GetGenesisResponse{}
 	require.NoError(t, jsonRestHandler.Post(ctx, endpoint, headers, bytes.NewBuffer(dataBytes), resp))
 	assert.DeepEqual(t, genesisJson, resp)
 }

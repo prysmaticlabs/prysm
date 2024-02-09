@@ -52,12 +52,12 @@ func (s *Service) groupByChunkIndex(
 // This function returns a list of valid attestations, a list of attestations that are
 // valid in the future, and the number of attestations dropped.
 func (s *Service) filterAttestations(
-	atts []*slashertypes.IndexedAttestationWrapper, currentEpoch primitives.Epoch,
+	attWrappers []*slashertypes.IndexedAttestationWrapper, currentEpoch primitives.Epoch,
 ) (valid, validInFuture []*slashertypes.IndexedAttestationWrapper, numDropped int) {
-	valid = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
-	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
+	valid = make([]*slashertypes.IndexedAttestationWrapper, 0, len(attWrappers))
+	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(attWrappers))
 
-	for _, attWrapper := range atts {
+	for _, attWrapper := range attWrappers {
 		if attWrapper == nil || !validateAttestationIntegrity(attWrapper.IndexedAttestation) {
 			numDropped++
 			continue
@@ -73,18 +73,19 @@ func (s *Service) filterAttestations(
 		// If an attestations's target epoch is in the future, we defer processing for later.
 		if attWrapper.IndexedAttestation.Data.Target.Epoch > currentEpoch {
 			validInFuture = append(validInFuture, attWrapper)
-		} else {
-			valid = append(valid, attWrapper)
+			continue
 		}
+
+		// The attestation is valid.
+		valid = append(valid, attWrapper)
 	}
 	return
 }
 
 // Validates the attestation data integrity, ensuring we have no nil values for
-// source, epoch, and that the source epoch of the attestation must be less than
-// the target epoch, which is a precondition for performing slashing detection.
-// This function also checks the attestation source epoch is within the history size
-// we keep track of for slashing detection.
+// source and target epochs, and that the source epoch of the attestation must
+// be less than the target epoch, which is a precondition for performing slashing
+// detection (except for the genesis epoch).
 func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 	// If an attestation is malformed, we drop it.
 	if att == nil ||

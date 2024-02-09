@@ -53,13 +53,25 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 	v.aggregatedSlotCommitteeIDCache.Add(k, true)
 	v.aggregatedSlotCommitteeIDCacheLock.Unlock()
 
-	slotSig, err := v.signSlotWithSelectionProof(ctx, pubKey, slot)
-	if err != nil {
-		log.WithError(err).Error("Could not sign slot")
-		if v.emitAccountMetrics {
-			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+	var slotSig []byte
+	if v.distributed {
+		slotSig, err = v.getAttSelection(attSelectionKey{slot: slot, index: duty.ValidatorIndex})
+		if err != nil {
+			log.WithError(err).Error("Could not find aggregated selection proof")
+			if v.emitAccountMetrics {
+				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
 		}
-		return
+	} else {
+		slotSig, err = v.signSlotWithSelectionProof(ctx, pubKey, slot)
+		if err != nil {
+			log.WithError(err).Error("Could not sign slot")
+			if v.emitAccountMetrics {
+				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
 	}
 
 	// As specified in spec, an aggregator should wait until two thirds of the way through slot
@@ -112,7 +124,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 		return
 	}
 
-	if err := v.addIndicesToLog(duty); err != nil {
+	if err := v.saveSubmittedAtt(res.AggregateAndProof.Aggregate.Data, pubKey[:], true); err != nil {
 		log.WithError(err).Error("Could not add aggregator indices to logs")
 		if v.emitAccountMetrics {
 			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
@@ -203,17 +215,4 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 	}
 
 	return sig.Marshal(), nil
-}
-
-func (v *validator) addIndicesToLog(duty *ethpb.DutiesResponse_Duty) error {
-	v.attLogsLock.Lock()
-	defer v.attLogsLock.Unlock()
-
-	for _, log := range v.attLogs {
-		if duty.CommitteeIndex == log.data.CommitteeIndex {
-			log.aggregatorIndices = append(log.aggregatorIndices, duty.ValidatorIndex)
-		}
-	}
-
-	return nil
 }

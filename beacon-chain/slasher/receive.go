@@ -12,10 +12,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	couldNotSaveAttRecord            = "Could not save attestation records to DB"
+	couldNotCheckSlashableAtt        = "Could not check slashable attestations"
+	couldNotProcessAttesterSlashings = "Could not process attester slashings"
+)
+
 // Receive indexed attestations from some source event feed,
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
 func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan *ethpb.IndexedAttestation) {
+	defer s.wg.Done()
+
 	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(indexedAttsChan)
 	defer sub.Unsubscribe()
 	for {
@@ -45,6 +53,8 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 
 // Receive beacon blocks from some source event feed,
 func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan *ethpb.SignedBeaconBlockHeader) {
+	defer s.wg.Done()
+
 	sub := s.serviceCfg.BeaconBlockHeadersFeed.Subscribe(beaconBlockHeadersChan)
 	defer sub.Unsubscribe()
 	for {
@@ -77,6 +87,8 @@ func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan
 // This grouping will allow us to perform detection on batches of attestations
 // per validator chunk index which can be done concurrently.
 func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan primitives.Slot) {
+	defer s.wg.Done()
+
 	for {
 		select {
 		case currentSlot := <-slotTicker:
@@ -101,24 +113,26 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			}).Info("Processing queued attestations for slashing detection")
 
 			// Save the attestation records to our database.
+			// If multiple attestations are provided for the same validator index + target epoch combination,
+			// then last (validator index + target epoch) => signing root) link is kept into the database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, validAtts,
 			); err != nil {
-				log.WithError(err).Error("Could not save attestation records to DB")
+				log.WithError(err).Error(couldNotSaveAttRecord)
 				continue
 			}
 
 			// Check for slashings.
 			slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAtts)
 			if err != nil {
-				log.WithError(err).Error("Could not check slashable attestations")
+				log.WithError(err).Error(couldNotCheckSlashableAtt)
 				continue
 			}
 
 			// Process attester slashings by verifying their signatures, submitting
 			// to the beacon node's operations pool, and logging them.
 			if err := s.processAttesterSlashings(ctx, slashings); err != nil {
-				log.WithError(err).Error("Could not process attester slashings")
+				log.WithError(err).Error(couldNotProcessAttesterSlashings)
 				continue
 			}
 
@@ -132,6 +146,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 // Process queued blocks every time an epoch ticker fires. We retrieve
 // these blocks from a queue, then perform double proposal detection.
 func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan primitives.Slot) {
+	defer s.wg.Done()
+
 	for {
 		select {
 		case currentSlot := <-slotTicker:
@@ -172,6 +188,8 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan pri
 
 // Prunes slasher data on each slot tick to prevent unnecessary build-up of disk space usage.
 func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan primitives.Slot) {
+	defer s.wg.Done()
+
 	for {
 		select {
 		case <-slotTicker:

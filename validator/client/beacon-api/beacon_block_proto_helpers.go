@@ -5,13 +5,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-func convertProposerSlashingsToProto(jsonProposerSlashings []*shared.ProposerSlashing) ([]*ethpb.ProposerSlashing, error) {
+func convertProposerSlashingsToProto(jsonProposerSlashings []*structs.ProposerSlashing) ([]*ethpb.ProposerSlashing, error) {
 	proposerSlashings := make([]*ethpb.ProposerSlashing, len(jsonProposerSlashings))
 
 	for index, jsonProposerSlashing := range jsonProposerSlashings {
@@ -38,7 +38,7 @@ func convertProposerSlashingsToProto(jsonProposerSlashings []*shared.ProposerSla
 	return proposerSlashings, nil
 }
 
-func convertProposerSlashingSignedHeaderToProto(signedHeader *shared.SignedBeaconBlockHeader) (*ethpb.SignedBeaconBlockHeader, error) {
+func convertProposerSlashingSignedHeaderToProto(signedHeader *structs.SignedBeaconBlockHeader) (*ethpb.SignedBeaconBlockHeader, error) {
 	if signedHeader == nil {
 		return nil, errors.New("signed header is nil")
 	}
@@ -89,7 +89,7 @@ func convertProposerSlashingSignedHeaderToProto(signedHeader *shared.SignedBeaco
 	}, nil
 }
 
-func convertAttesterSlashingsToProto(jsonAttesterSlashings []*shared.AttesterSlashing) ([]*ethpb.AttesterSlashing, error) {
+func convertAttesterSlashingsToProto(jsonAttesterSlashings []*structs.AttesterSlashing) ([]*ethpb.AttesterSlashing, error) {
 	attesterSlashings := make([]*ethpb.AttesterSlashing, len(jsonAttesterSlashings))
 
 	for index, jsonAttesterSlashing := range jsonAttesterSlashings {
@@ -116,7 +116,7 @@ func convertAttesterSlashingsToProto(jsonAttesterSlashings []*shared.AttesterSla
 	return attesterSlashings, nil
 }
 
-func convertIndexedAttestationToProto(jsonAttestation *shared.IndexedAttestation) (*ethpb.IndexedAttestation, error) {
+func convertIndexedAttestationToProto(jsonAttestation *structs.IndexedAttestation) (*ethpb.IndexedAttestation, error) {
 	if jsonAttestation == nil {
 		return nil, errors.New("indexed attestation is nil")
 	}
@@ -149,7 +149,7 @@ func convertIndexedAttestationToProto(jsonAttestation *shared.IndexedAttestation
 	}, nil
 }
 
-func convertCheckpointToProto(jsonCheckpoint *shared.Checkpoint) (*ethpb.Checkpoint, error) {
+func convertCheckpointToProto(jsonCheckpoint *structs.Checkpoint) (*ethpb.Checkpoint, error) {
 	if jsonCheckpoint == nil {
 		return nil, errors.New("checkpoint is nil")
 	}
@@ -170,7 +170,7 @@ func convertCheckpointToProto(jsonCheckpoint *shared.Checkpoint) (*ethpb.Checkpo
 	}, nil
 }
 
-func convertAttestationToProto(jsonAttestation *shared.Attestation) (*ethpb.Attestation, error) {
+func convertAttestationToProto(jsonAttestation *structs.Attestation) (*ethpb.Attestation, error) {
 	if jsonAttestation == nil {
 		return nil, errors.New("json attestation is nil")
 	}
@@ -197,7 +197,7 @@ func convertAttestationToProto(jsonAttestation *shared.Attestation) (*ethpb.Atte
 	}, nil
 }
 
-func convertAttestationsToProto(jsonAttestations []*shared.Attestation) ([]*ethpb.Attestation, error) {
+func convertAttestationsToProto(jsonAttestations []*structs.Attestation) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	for index, jsonAttestation := range jsonAttestations {
 		if jsonAttestation == nil {
@@ -215,7 +215,7 @@ func convertAttestationsToProto(jsonAttestations []*shared.Attestation) ([]*ethp
 	return attestations, nil
 }
 
-func convertAttestationDataToProto(jsonAttestationData *shared.AttestationData) (*ethpb.AttestationData, error) {
+func convertAttestationDataToProto(jsonAttestationData *structs.AttestationData) (*ethpb.AttestationData, error) {
 	if jsonAttestationData == nil {
 		return nil, errors.New("attestation data is nil")
 	}
@@ -254,7 +254,7 @@ func convertAttestationDataToProto(jsonAttestationData *shared.AttestationData) 
 	}, nil
 }
 
-func convertDepositsToProto(jsonDeposits []*shared.Deposit) ([]*ethpb.Deposit, error) {
+func convertDepositsToProto(jsonDeposits []*structs.Deposit) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(jsonDeposits))
 
 	for depositIndex, jsonDeposit := range jsonDeposits {
@@ -310,7 +310,7 @@ func convertDepositsToProto(jsonDeposits []*shared.Deposit) ([]*ethpb.Deposit, e
 	return deposits, nil
 }
 
-func convertVoluntaryExitsToProto(jsonVoluntaryExits []*shared.SignedVoluntaryExit) ([]*ethpb.SignedVoluntaryExit, error) {
+func convertVoluntaryExitsToProto(jsonVoluntaryExits []*structs.SignedVoluntaryExit) ([]*ethpb.SignedVoluntaryExit, error) {
 	attestingIndices := make([]*ethpb.SignedVoluntaryExit, len(jsonVoluntaryExits))
 
 	for index, jsonVoluntaryExit := range jsonVoluntaryExits {
@@ -364,7 +364,7 @@ func convertTransactionsToProto(jsonTransactions []string) ([][]byte, error) {
 	return transactions, nil
 }
 
-func convertWithdrawalsToProto(jsonWithdrawals []*shared.Withdrawal) ([]*enginev1.Withdrawal, error) {
+func convertWithdrawalsToProto(jsonWithdrawals []*structs.Withdrawal) ([]*enginev1.Withdrawal, error) {
 	withdrawals := make([]*enginev1.Withdrawal, len(jsonWithdrawals))
 
 	for index, jsonWithdrawal := range jsonWithdrawals {
@@ -403,7 +403,7 @@ func convertWithdrawalsToProto(jsonWithdrawals []*shared.Withdrawal) ([]*enginev
 	return withdrawals, nil
 }
 
-func convertBlsToExecutionChangesToProto(jsonSignedBlsToExecutionChanges []*shared.SignedBLSToExecutionChange) ([]*ethpb.SignedBLSToExecutionChange, error) {
+func convertBlsToExecutionChangesToProto(jsonSignedBlsToExecutionChanges []*structs.SignedBLSToExecutionChange) ([]*ethpb.SignedBLSToExecutionChange, error) {
 	signedBlsToExecutionChanges := make([]*ethpb.SignedBLSToExecutionChange, len(jsonSignedBlsToExecutionChanges))
 
 	for index, jsonBlsToExecutionChange := range jsonSignedBlsToExecutionChanges {

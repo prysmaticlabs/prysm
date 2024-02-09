@@ -12,11 +12,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableReorgLateBlocks = &cli.BoolFlag{
-		Name:   "enable-reorg-late-blocks",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedDisableGossipBatchAggregation = &cli.BoolFlag{
 		Name:   "disable-gossip-batch-aggregation",
 		Usage:  deprecatedUsage,
@@ -63,12 +58,21 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableEIP4881 = &cli.BoolFlag{
+		Name:   "enable-eip-4881",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedVerboseSigVerification = &cli.BoolFlag{
+		Name:   "enable-verbose-sig-verification",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
-	deprecatedEnableReorgLateBlocks,
 	deprecatedDisableGossipBatchAggregation,
 	deprecatedBuildBlockParallel,
 	deprecatedEnableRegistrationCache,
@@ -78,6 +82,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableReorgLateBlocks,
 	deprecatedDisableOptionalEngineMethods,
 	deprecatedDisableAggregateParallel,
+	deprecatedEnableEIP4881,
+	deprecatedVerboseSigVerification,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
