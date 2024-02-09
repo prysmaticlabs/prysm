@@ -157,7 +157,7 @@ func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *emp
 }
 
 func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *event.Event) {
-	ctx, span := trace.StartSpan(ctx, "validator.jsonClient.StartEventStream")
+	ctx, span := trace.StartSpan(ctx, "validator.beaconApiClient.StartEventStream")
 	defer span.End()
 	eventStream, err := event.NewEventStream(ctx, c.jsonRestHandler.GetHttpClient(), c.jsonRestHandler.GetHost(), topics)
 	if err != nil {
