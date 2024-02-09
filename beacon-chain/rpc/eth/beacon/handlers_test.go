@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
@@ -3615,5 +3616,66 @@ func TestGetGenesis(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)
+	})
+}
+
+func TestGetDepositSnapshot(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	mockTrie := depositsnapshot.NewDepositTree()
+	deposits := [][32]byte{
+		bytesutil.ToBytes32([]byte{1}),
+		bytesutil.ToBytes32([]byte{2}),
+		bytesutil.ToBytes32([]byte{3}),
+	}
+	finalized := 2
+	for _, leaf := range deposits {
+		err := mockTrie.Insert(leaf[:], 0)
+		require.NoError(t, err)
+	}
+	err := mockTrie.Finalize(1, deposits[1], 1)
+	require.NoError(t, err)
+	err = mockTrie.Finalize(2, deposits[2], 2)
+	require.NoError(t, err)
+
+	snapshot, err := mockTrie.GetSnapshot()
+	require.NoError(t, err)
+	root, err := snapshot.CalculateRoot()
+	require.NoError(t, err)
+	chainData := &eth.ETH1ChainData{
+		DepositSnapshot: snapshot.ToProto(),
+	}
+	err = beaconDB.SaveExecutionChainData(context.Background(), chainData)
+	require.NoError(t, err)
+	s := Server{
+		BeaconDB: beaconDB,
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/deposit_snapshot", nil)
+	writer := httptest.NewRecorder()
+	t.Run("JSON response", func(t *testing.T) {
+		writer.Body = &bytes.Buffer{}
+		s.GetDepositSnapshot(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetDepositSnapshotResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp.Data)
+
+		assert.Equal(t, hexutil.Encode(root[:]), resp.Data.DepositRoot)
+		assert.Equal(t, hexutil.Encode(deposits[2][:]), resp.Data.ExecutionBlockHash)
+		assert.Equal(t, strconv.Itoa(mockTrie.NumOfItems()), resp.Data.DepositCount)
+		assert.Equal(t, finalized, len(resp.Data.Finalized))
+	})
+	t.Run("SSZ response", func(t *testing.T) {
+		writer.Body = &bytes.Buffer{}
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		s.GetDepositSnapshot(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &eth.DepositSnapshot{}
+		require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
+
+		assert.Equal(t, hexutil.Encode(root[:]), hexutil.Encode(resp.DepositRoot))
+		assert.Equal(t, hexutil.Encode(deposits[2][:]), hexutil.Encode(resp.ExecutionHash))
+		assert.Equal(t, uint64(mockTrie.NumOfItems()), resp.DepositCount)
+		assert.Equal(t, finalized, len(resp.Finalized))
 	})
 }

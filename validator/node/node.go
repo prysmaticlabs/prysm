@@ -832,7 +832,7 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 	gatewayHost := c.cliCtx.String(flags.GRPCGatewayHost.Name)
 	if gatewayHost != flags.DefaultGatewayHost {
-		log.WithField("web-host", gatewayHost).Warn(
+		log.WithField("webHost", gatewayHost).Warn(
 			"You are using a non-default web host. Web traffic is served by HTTP, so be wary of " +
 				"changing this parameter if you are exposing this host to the Internet!",
 		)
