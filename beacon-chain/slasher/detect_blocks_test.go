@@ -204,7 +204,7 @@ func createProposalWrapper(t *testing.T, slot primitives.Slot, proposerIndex pri
 		StateRoot:     bytesutil.PadTo(signingRoot, 32),
 		BodyRoot:      params.BeaconConfig().ZeroHash[:],
 	}
-	signRoot, err := header.HashTreeRoot()
+	headerRoot, err := header.HashTreeRoot()
 	require.NoError(t, err)
 	fakeSig := make([]byte, 96)
 	copy(fakeSig, "hello")
@@ -213,6 +213,6 @@ func createProposalWrapper(t *testing.T, slot primitives.Slot, proposerIndex pri
 			Header:    header,
 			Signature: fakeSig,
 		},
-		SigningRoot: signRoot,
+		HeaderRoot: headerRoot,
 	}
 }
