@@ -84,7 +84,7 @@ func run(ctx context.Context, v iface.Validator) {
 				log.Info("event stream reconnecting...")
 				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
 				if err != nil {
-					log.WithError(err).Error("failed to re initialize validator and get head slot")
+					log.WithError(err).Error("Failed to re initialize validator and get head slot")
 					beaconHealthTracker.HealthCh <- false
 					continue
 				}
