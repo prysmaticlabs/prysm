@@ -1055,35 +1055,28 @@ func (v *validator) StartEventStream(ctx context.Context, topics []string, event
 	v.validatorClient.StartEventStream(ctx, topics, eventsChannel)
 }
 
-func (v *validator) ProcessEvent(event *eventClient.Event) error {
+func (v *validator) ProcessEvent(event *eventClient.Event) {
 	if event == nil || event.Data == nil {
 		log.Warn("Received empty event")
-		return nil
 	}
 	switch event.EventType {
-	case eventClient.EventConnectionError:
-		return errors.New(string(event.Data))
-	case eventClient.EventError:
-		log.Error(string(event.Data))
-		return nil // skip restart if it's not a connection error
+	case eventClient.EventConnectionError, eventClient.EventError:
+		log.WithError(errors.New(string(event.Data))).Warn("event stream interrupted...")
 	case eventClient.EventHead:
 		log.Debug("Received head event")
 		head := &structs.HeadEvent{}
 		if err := json.Unmarshal(event.Data, head); err != nil {
 			log.WithError(err).Error("Failed to unmarshal head Event into JSON")
-			return nil
 		}
 		uintSlot, err := strconv.ParseUint(head.Slot, 10, 64)
 		if err != nil {
 			log.WithError(err).Error("Failed to parse slot")
-			return nil
 		}
 		v.setHighestSlot(primitives.Slot(uintSlot))
 	default:
 		// just keep going and log the error
 		log.Warnf("Received an unknown event type of %s with contents %s", event.EventType, string(event.Data))
 	}
-	return nil
 }
 
 func (v *validator) EventStreamIsRunning() bool {
@@ -1094,7 +1087,11 @@ func (v *validator) NodeIsHealthy(ctx context.Context) bool {
 	return v.nodeClient.IsHealthy(ctx)
 }
 
-func (v *validator) NodeHealthTracker() *beacon.NodeHealth {
+func (v *validator) NodeHealthTracker(ctx context.Context) *beacon.NodeHealth {
+	if v.beaconNodeHealth == nil {
+		sts := v.NodeIsHealthy(ctx)
+		v.beaconNodeHealth = beacon.NewNodeHealth(sts)
+	}
 	return v.beaconNodeHealth
 }
 

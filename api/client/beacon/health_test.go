@@ -18,7 +18,7 @@ func TestNodeHealth_IsHealthy(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			n := &NodeHealth{
 				isHealthy: tt.isHealthy,
-				HealthCh:  make(chan bool, 1),
+				healthCh:  make(chan bool, 1),
 			}
 			if got := n.IsHealthy(); got != tt.want {
 				t.Errorf("IsHealthy() = %v, want %v", got, tt.want)
@@ -41,7 +41,7 @@ func TestNodeHealth_UpdateNodeHealth(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := NewNodeHealth()
+			n := NewNodeHealth(tt.initial)
 			n.isHealthy = tt.initial // Set initial health status
 			n.UpdateNodeHealth(tt.newStatus)
 
@@ -51,7 +51,7 @@ func TestNodeHealth_UpdateNodeHealth(t *testing.T) {
 			}
 
 			select {
-			case status := <-n.HealthCh:
+			case status := <-n.HealthUpdates():
 				if !tt.shouldSend {
 					t.Errorf("UpdateNodeHealth() unexpectedly sent status %v to HealthCh", status)
 				} else if status != tt.newStatus {
@@ -67,14 +67,14 @@ func TestNodeHealth_UpdateNodeHealth(t *testing.T) {
 }
 
 func TestNodeHealth_Concurrency(t *testing.T) {
-	n := NewNodeHealth()
+	n := NewNodeHealth(true)
 	var wg sync.WaitGroup
 
 	// Number of goroutines to spawn for both reading and writing
 	numGoroutines := 6
 
 	go func() {
-		for range n.HealthCh {
+		for range n.HealthUpdates() {
 			// Consume values to avoid blocking on channel send.
 		}
 	}()

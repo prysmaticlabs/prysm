@@ -47,7 +47,7 @@ func run(ctx context.Context, v iface.Validator) {
 	eventsChannel := make(chan *event.Event, 1)
 	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
 
-	beaconHealthTracker := v.NodeHealthTracker()
+	beaconHealthTracker := v.NodeHealthTracker(ctx)
 	runHealthCheckRoutine(ctx, v)
 
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
@@ -79,27 +79,24 @@ func run(ctx context.Context, v iface.Validator) {
 			sub.Unsubscribe()
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
-		case isHealthyAgain := <-beaconHealthTracker.HealthCh:
+		case isHealthyAgain := <-beaconHealthTracker.HealthUpdates():
 			if isHealthyAgain {
-				log.Info("event stream reconnecting...")
 				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
 				if err != nil {
 					log.WithError(err).Error("Failed to re initialize validator and get head slot")
-					beaconHealthTracker.HealthCh <- false
+					beaconHealthTracker.UpdateNodeHealth(false)
 					continue
 				}
 				if err := v.UpdateDuties(ctx, headSlot); err != nil {
 					handleAssignmentError(err, headSlot)
-					beaconHealthTracker.HealthCh <- false
+					beaconHealthTracker.UpdateNodeHealth(false)
 					continue
 				}
+				log.Info("event stream reconnecting...")
 				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
 			}
 		case e := <-eventsChannel:
-			if eventErr := v.ProcessEvent(e); eventErr != nil {
-				// maybe have a delay before trying again
-				log.WithError(eventErr).Warn("event stream interrupted...")
-			}
+			v.ProcessEvent(e)
 		case slot := <-v.NextSlot():
 			if !beaconHealthTracker.IsHealthy() {
 				continue
@@ -304,7 +301,7 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 
 func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
 	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-	tracker := v.NodeHealthTracker()
+	tracker := v.NodeHealthTracker(ctx)
 	go func() {
 		for {
 			select {

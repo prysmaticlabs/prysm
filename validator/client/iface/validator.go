@@ -62,10 +62,10 @@ type Validator interface {
 	ProposerSettings() *validatorserviceconfig.ProposerSettings
 	SetProposerSettings(context.Context, *validatorserviceconfig.ProposerSettings) error
 	StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *event.Event)
-	ProcessEvent(event *event.Event) error
+	ProcessEvent(event *event.Event)
 	EventStreamIsRunning() bool
 	NodeIsHealthy(ctx context.Context) bool
-	NodeHealthTracker() *beacon.NodeHealth
+	NodeHealthTracker(ctx context.Context) *beacon.NodeHealth
 }
 
 // SigningFunc interface defines a type for the a function that signs a message

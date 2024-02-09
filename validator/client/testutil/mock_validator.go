@@ -281,21 +281,19 @@ func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *valida
 	return nil
 }
 
-func (fv *FakeValidator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
+func (*FakeValidator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
 }
 
-func (fv *FakeValidator) ProcessEvent(_ *event.Event) error {
-	return nil
-}
+func (*FakeValidator) ProcessEvent(_ *event.Event) {}
 
-func (fv *FakeValidator) EventStreamIsRunning() bool {
+func (*FakeValidator) EventStreamIsRunning() bool {
 	return true
 }
 
-func (fv *FakeValidator) NodeIsHealthy(_ context.Context) bool {
+func (*FakeValidator) NodeIsHealthy(_ context.Context) bool {
 	return true
 }
 
-func (fv *FakeValidator) NodeHealthTracker() *beacon.NodeHealth {
-	return beacon.NewNodeHealth()
+func (*FakeValidator) NodeHealthTracker(_ context.Context) *beacon.NodeHealth {
+	return beacon.NewNodeHealth(true)
 }

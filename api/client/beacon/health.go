@@ -6,15 +6,20 @@ import (
 
 type NodeHealth struct {
 	isHealthy bool
-	HealthCh  chan bool
+	healthCh  chan bool
 	sync.RWMutex
 }
 
-func NewNodeHealth() *NodeHealth {
+func NewNodeHealth(initialStatus bool) *NodeHealth {
 	return &NodeHealth{
-		isHealthy: true, // just default it to true
-		HealthCh:  make(chan bool, 1),
+		isHealthy: initialStatus, // just default it to true
+		healthCh:  make(chan bool, 1),
 	}
+}
+
+// HealthUpdates provides a read-only channel for health updates.
+func (n *NodeHealth) HealthUpdates() <-chan bool {
+	return n.healthCh
 }
 
 func (n *NodeHealth) IsHealthy() bool {
@@ -34,7 +39,7 @@ func (n *NodeHealth) UpdateNodeHealth(newStatus bool) {
 		if newStatus != n.isHealthy {
 			n.isHealthy = newStatus
 			n.Unlock() // It's better to unlock as soon as the protected section is over.
-			n.HealthCh <- newStatus
+			n.healthCh <- newStatus
 		} else {
 			n.Unlock()
 		}

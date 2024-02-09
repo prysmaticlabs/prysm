@@ -215,22 +215,22 @@ func (m *Validator) SetProposerSettings(_ context.Context, settings *validatorse
 	return nil
 }
 
-func (_ *Validator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
+func (*Validator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
 	panic("implement me")
 }
 
-func (_ *Validator) ProcessEvent(event *event.Event) error {
+func (*Validator) ProcessEvent(event *event.Event) {
 	panic("implement me")
 }
 
-func (_ *Validator) EventStreamIsRunning() bool {
+func (*Validator) EventStreamIsRunning() bool {
 	panic("implement me")
 }
 
-func (_ *Validator) NodeIsHealthy(_ context.Context) bool {
+func (*Validator) NodeIsHealthy(_ context.Context) bool {
 	panic("implement me")
 }
 
-func (_ *Validator) NodeHealthTracker() *beacon.NodeHealth {
+func (*Validator) NodeHealthTracker(_ context.Context) *beacon.NodeHealth {
 	panic("implement me")
 }
