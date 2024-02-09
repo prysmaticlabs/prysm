@@ -3,6 +3,7 @@ package kv
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -84,10 +85,12 @@ func (s *Store) view(fn func(*bolt.Tx) error) error {
 
 // ClearDB removes any previously stored data at the configured data directory.
 func (s *Store) ClearDB() error {
+	if err := s.Close(); err != nil {
+		return fmt.Errorf("failed to close db: %w", err)
+	}
 	if _, err := os.Stat(s.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	prometheus.Unregister(createBoltCollector(s.db))
 	return os.Remove(filepath.Join(s.databasePath, ProtectionDbFileName))
 }
 

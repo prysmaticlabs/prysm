@@ -427,9 +427,6 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	}
 	if clearDBConfirmed || forceClearDB {
 		log.Warning("Removing database")
-		if err := d.Close(); err != nil {
-			return errors.Wrap(err, "could not close db prior to clearing")
-		}
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
@@ -531,9 +528,6 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	}
 	if clearDBConfirmed || forceClearDB {
 		log.Warning("Removing database")
-		if err := d.Close(); err != nil {
-			return errors.Wrap(err, "could not close db prior to clearing")
-		}
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
