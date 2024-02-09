@@ -112,7 +112,6 @@ func compareConfigs(t *testing.T, expected, actual *BeaconChainConfig) {
 	require.DeepEqual(t, expected.ShardCommitteePeriod, actual.ShardCommitteePeriod)
 	require.DeepEqual(t, expected.MinEpochsToInactivityPenalty, actual.MinEpochsToInactivityPenalty)
 	require.DeepEqual(t, expected.Eth1FollowDistance, actual.Eth1FollowDistance)
-	require.DeepEqual(t, expected.DeprecatedSafeSlotsToUpdateJustified, actual.DeprecatedSafeSlotsToUpdateJustified)
 	require.DeepEqual(t, expected.SecondsPerETH1Block, actual.SecondsPerETH1Block)
 	require.DeepEqual(t, expected.ProposerScoreBoost, actual.ProposerScoreBoost)
 	require.DeepEqual(t, expected.IntervalsPerSlot, actual.IntervalsPerSlot)

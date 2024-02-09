@@ -63,7 +63,6 @@ func (c beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.Dutie
 	}
 
 	return &ethpb.DutiesResponse{
-		Duties:             currentEpochDuties,
 		CurrentEpochDuties: currentEpochDuties,
 		NextEpochDuties:    nextEpochDuties,
 	}, nil

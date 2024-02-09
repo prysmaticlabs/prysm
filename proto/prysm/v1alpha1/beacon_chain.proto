@@ -59,26 +59,6 @@ service BeaconChain {
         };
     }
 
-    // Server-side stream of attestations as they are received by
-    // the beacon chain node.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-    rpc StreamAttestations(google.protobuf.Empty) returns (stream Attestation) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations/stream"
-        };
-    }
-
-    // Server-side stream of indexed attestations as they are received by
-    // the beacon chain node.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-    rpc StreamIndexedAttestations(google.protobuf.Empty) returns (stream IndexedAttestation) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations/indexed/stream"
-        };
-    }
-
     // Retrieve attestations from pool.
     //
     // The server returns a list of attestations that have been seen but not
@@ -104,29 +84,6 @@ service BeaconChain {
     rpc ListBeaconBlocks(ListBlocksRequest) returns (ListBeaconBlocksResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha2/beacon/blocks"
-        };
-    }
-
-    // Server-side stream of all signed blocks as they are received by
-    // the beacon chain node.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-    rpc StreamBlocks(StreamBlocksRequest) returns (stream SignedBeaconBlock) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/blocks/stream"
-        };
-    }
-
-    // Server-side stream of information about the head of the beacon chain
-    // from the view of the beacon chain node.
-    //
-    // This includes the head block slot and root as well as information about
-    // the most recent finalized and justified slots.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-    rpc StreamChainHead(google.protobuf.Empty) returns (stream ChainHead) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/chainhead/stream"
         };
     }
 
@@ -240,16 +197,6 @@ service BeaconChain {
         };
     }
 
-    // Server-side stream of validator information at each epoch.
-    // DEPRECATED: Streaming Validator Info is no longer supported.
-    // The Beacon API /eth/v1/beacon/states/{state_id}/validators will provide validator info in unstreamed format.
-    rpc StreamValidatorsInfo(stream ValidatorChangeSet) returns (stream ValidatorInfo) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/validators/info/stream"
-        };
-    }
-
     // Submit an attester slashing object to the beacon node.
     rpc SubmitAttesterSlashing(AttesterSlashing) returns (SubmitSlashingResponse) {
         option (google.api.http) = {
@@ -270,27 +217,6 @@ service BeaconChain {
             get: "/eth/v1alpha1/beacon/individual_votes"
         };
     }
-}
-
-// SetAction defines the type of action that should be applied to the keys in a validator change set.
-enum SetAction {
-    // ADD_VALIDATOR_KEYS adds to the existing keys.
-    ADD_VALIDATOR_KEYS = 0;
-    // REMOVE_VALIDATOR_KEYS removes from the existing keys.
-    REMOVE_VALIDATOR_KEYS = 1;
-    // SET_VALIDATOR_KEYS overwrites the existing keys.
-    SET_VALIDATOR_KEYS = 2;
-}
-
-// ValidatorChangeSet updates the server's list of keys on which to operate.
-// DEPRECATED: This message's endpoint is superseded by the /eth/v1/events Beacon API endpoint
-message ValidatorChangeSet {
-    option deprecated = true;
-    // Action (add/remove/set).
-    SetAction action = 1;
-
-    // 48 byte BLS public keys of validators on which the operation occurs.
-    repeated bytes public_keys = 2;
 }
 
 // Request for indexed attestations by target epoch.
@@ -667,7 +593,7 @@ message ActiveSetChanges {
 
 message ValidatorPerformanceRequest {
     // A list of 48 byte validator public keys.
-    repeated bytes public_keys = 1 [deprecated = true];
+    repeated bytes public_keys = 1;
     // A list of validator indices to retrieve performance by their indices.
     repeated uint64 indices = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
 }
@@ -679,11 +605,11 @@ message ValidatorPerformanceResponse {
     // The slot of when validator's attestation got included in the chain at previous epoch, the slot
     // is mapped 1-to-1 with the request's public keys.
     // Deprecated: This field can no longer be fetched from the beacon state after the Altair hard fork.
-    repeated uint64 inclusion_slots = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
+    repeated uint64 inclusion_slots = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
     // The distance of when validator submitted and got included in the chain, the distance
     // is mapped 1-to-1 with the request's public keys.
     // Deprecated: This field can no longer be fetched from the beacon state after the Altair hard fork.
-    repeated uint64 inclusion_distances = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
+    repeated uint64 inclusion_distances = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
     // Whether the list of validator recently correctly voted for source at previous epoch, the result
     // is mapped 1-to-1 with the request's public keys.
     repeated bool correctly_voted_source = 4;
@@ -719,11 +645,11 @@ message ValidatorQueue {
 
     // Ordered list of 48 byte public keys awaiting activation. 0th index is the
     // next key to be processed.
-    repeated bytes activation_public_keys = 2 [(ethereum.eth.ext.ssz_size) = "?,48", deprecated = true];
+    repeated bytes activation_public_keys = 2 [(ethereum.eth.ext.ssz_size) = "?,48"];
 
     // Ordered list of public keys awaiting exit. 0th index is the next key to
     // be processed.
-    repeated bytes exit_public_keys = 3 [(ethereum.eth.ext.ssz_size) = "?,48", deprecated = true];
+    repeated bytes exit_public_keys = 3 [(ethereum.eth.ext.ssz_size) = "?,48"];
 
     // Ordered list of validator indices awaiting activation. 0th item in the list is the
     // next validator index to be processed.
@@ -777,7 +703,7 @@ message ValidatorAssignments {
         repeated uint64 proposer_slots = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
 
         // 48 byte BLS public key.
-        bytes public_key = 5 [(ethereum.eth.ext.ssz_size) = "48", deprecated = true];
+        bytes public_key = 5 [(ethereum.eth.ext.ssz_size) = "48"];
 
         // Validator index in the beacon state.
         uint64 validator_index = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
@@ -809,9 +735,7 @@ message GetValidatorParticipationRequest {
     }
 }
 
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ValidatorParticipationResponse {
-    option deprecated = true;
     // Epoch which this message is applicable.
     uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
 
@@ -896,9 +820,9 @@ message IndividualVotesRespond {
         // The current effective balance of the validator.
         uint64 current_epoch_effective_balance_gwei = 13;
         // The slots of when the validator's attestation got included in the block. Only available in phase0.
-        uint64 inclusion_slot = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
+        uint64 inclusion_slot = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
         // How many slots have passed until the validator's attestation got included in the block. Only available in phase0.
-        uint64 inclusion_distance = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
+        uint64 inclusion_distance = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
         // The inactivity score of the validator tracks validator participation. [New in Altair]
         uint64 inactivity_score = 16;
     }
