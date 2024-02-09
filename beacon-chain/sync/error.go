@@ -3,9 +3,11 @@ package sync
 import (
 	"bytes"
 	"errors"
+	"io"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
+	multiplex "github.com/libp2p/go-mplex"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
@@ -98,7 +100,7 @@ func readStatusCodeNoDeadline(stream network.Stream, encoding encoder.NetworkEnc
 func isValidStreamError(err error) bool {
 	// check the error message itself as well as libp2p doesn't currently
 	// return the correct error type from Close{Read,Write,}.
-	return err != nil && !errors.Is(err, network.ErrReset) && err.Error() != network.ErrReset.Error()
+	return err != nil && !isUnwantedError(err)
 }
 
 func closeStream(stream network.Stream, log *logrus.Entry) {
@@ -129,4 +131,13 @@ func closeStreamAndWait(stream network.Stream, log *logrus.Entry) {
 	_ = _err
 	_err = stream.Close()
 	_ = _err
+}
+
+func isUnwantedError(err error) bool {
+	for _, e := range []error{network.ErrReset, multiplex.ErrShutdown, io.EOF, types.ErrIODeadline} {
+		if errors.Is(err, e) || err.Error() == e.Error() {
+			return true
+		}
+	}
+	return false
 }
