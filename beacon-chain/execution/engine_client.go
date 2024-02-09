@@ -502,6 +502,10 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 			}
 		}
 	}
+
+	if len(result) != len(executionBlockHashes) {
+		return nil, fmt.Errorf("mismatch of payloads retrieved from the execution client: %d vs %d", len(result), len(executionBlockHashes))
+	}
 	return result, handleRPCError(err)
 }
 
@@ -649,10 +653,6 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 	payloadBodies, err = s.GetPayloadBodiesByHash(ctx, executionHashes)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch payload bodies by hash %#x: %v", executionHashes, err)
-	}
-
-	if len(payloadBodies) != len(executionHashes) {
-		return nil, fmt.Errorf("mismatch of payloads retrieved from the execution client: %d vs %d", len(payloadBodies), len(executionHashes))
 	}
 
 	// For each valid payload, we reconstruct the full block from it with the
