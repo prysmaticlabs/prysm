@@ -1070,7 +1070,7 @@ func (v *validator) ProcessEvent(event *eventClient.Event) error {
 		log.Debug("Received head event")
 		head := &structs.HeadEvent{}
 		if err := json.Unmarshal(event.Data, head); err != nil {
-			log.Error(errors.Wrap(err, "failed to unmarshal head Event into JSON").Error())
+			log.WithError(err).Error("Failed to unmarshal head Event into JSON")
 			return nil
 		}
 		uintSlot, err := strconv.ParseUint(head.Slot, 10, 64)
