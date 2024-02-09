@@ -181,7 +181,7 @@ func (s *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 		return err
 	}
 	// Do not return an error for ping requests.
-	if err := s.sendPingRequest(ctx, id); err != nil {
+	if err := s.sendPingRequest(ctx, id); err != nil && !isUnwantedError(err) {
 		log.WithError(err).Debug("Could not ping peer")
 	}
 	return nil
@@ -235,7 +235,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		resp, err := s.generateErrorResponse(respCode, err.Error())
 		if err != nil {
 			log.WithError(err).Debug("Could not generate a response error")
-		} else if _, err := stream.Write(resp); err != nil {
+		} else if _, err := stream.Write(resp); err != nil && !isUnwantedError(err) {
 			// The peer may already be ignoring us, as we disagree on fork version, so log this as debug only.
 			log.WithError(err).Debug("Could not write to stream")
 		}
@@ -273,7 +273,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 		HeadSlot:       s.cfg.chain.HeadSlot(),
 	}
 
-	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil && !isUnwantedError(err) {
 		log.WithError(err).Debug("Could not write to stream")
 	}
 	_, err = s.cfg.p2p.Encoding().EncodeWithMaxLength(stream, resp)
