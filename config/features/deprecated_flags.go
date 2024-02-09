@@ -17,12 +17,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedBuildBlockParallel = &cli.BoolFlag{
-		Name:   "build-block-parallel",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-
 	deprecatedEnableRegistrationCache = &cli.BoolFlag{
 		Name:   "enable-registration-cache",
 		Usage:  deprecatedUsage,
@@ -69,7 +63,6 @@ var (
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedDisableGossipBatchAggregation,
-	deprecatedBuildBlockParallel,
 	deprecatedEnableRegistrationCache,
 	deprecatedEnableOptionalEngineMethods,
 	deprecatedDisableBuildBlockParallel,
