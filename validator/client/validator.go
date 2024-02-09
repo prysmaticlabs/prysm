@@ -1067,7 +1067,7 @@ func (v *validator) ProcessEvent(event *eventClient.Event) error {
 		log.Error(string(event.Data))
 		return nil // skip restart if it's not a connection error
 	case eventClient.EventHead:
-		log.Debug("received head event")
+		log.Debug("Received head event")
 		head := &structs.HeadEvent{}
 		if err := json.Unmarshal(event.Data, head); err != nil {
 			log.Error(errors.Wrap(err, "failed to unmarshal head Event into JSON").Error())
