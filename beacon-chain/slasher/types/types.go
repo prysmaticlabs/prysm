@@ -15,10 +15,10 @@ const (
 )
 
 // IndexedAttestationWrapper contains an indexed attestation with its
-// signing root to reduce duplicated computation.
+// data root to reduce duplicated computation.
 type IndexedAttestationWrapper struct {
 	IndexedAttestation *ethpb.IndexedAttestation
-	SigningRoot        [32]byte
+	DataRoot           [32]byte
 }
 
 // AttesterDoubleVote represents a double vote instance
@@ -39,10 +39,10 @@ type DoubleBlockProposal struct {
 }
 
 // SignedBlockHeaderWrapper contains an signed beacon block header with its
-// signing root to reduce duplicated computation.
+// header root to reduce duplicated computation.
 type SignedBlockHeaderWrapper struct {
 	SignedBeaconBlockHeader *ethpb.SignedBeaconBlockHeader
-	SigningRoot             [32]byte
+	HeaderRoot              [32]byte
 }
 
 // AttestedEpochForValidator encapsulates a previously attested epoch

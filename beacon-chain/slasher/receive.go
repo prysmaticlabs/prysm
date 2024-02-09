@@ -32,14 +32,14 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
-			signingRoot, err := att.Data.HashTreeRoot()
+			dataRoot, err := att.Data.HashTreeRoot()
 			if err != nil {
 				log.WithError(err).Error("Could not get hash tree root of attestation")
 				continue
 			}
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
 				IndexedAttestation: att,
-				SigningRoot:        signingRoot,
+				DataRoot:           dataRoot,
 			}
 			s.attsQueue.push(attWrapper)
 		case err := <-sub.Err():
@@ -63,14 +63,14 @@ func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan
 			if !validateBlockHeaderIntegrity(blockHeader) {
 				continue
 			}
-			signingRoot, err := blockHeader.Header.HashTreeRoot()
+			headerRoot, err := blockHeader.Header.HashTreeRoot()
 			if err != nil {
 				log.WithError(err).Error("Could not get hash tree root of signed block header")
 				continue
 			}
 			wrappedProposal := &slashertypes.SignedBlockHeaderWrapper{
 				SignedBeaconBlockHeader: blockHeader,
-				SigningRoot:             signingRoot,
+				HeaderRoot:              headerRoot,
 			}
 			s.blksQueue.push(wrappedProposal)
 		case err := <-sub.Err():
@@ -92,55 +92,76 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 	for {
 		select {
 		case currentSlot := <-slotTicker:
+			// Retrieve all attestations from the queue.
 			attestations := s.attsQueue.dequeue()
-			currentEpoch := slots.ToEpoch(currentSlot)
-			// We take all the attestations in the queue and filter out
-			// those which are valid now and valid in the future.
-			validAtts, validInFuture, numDropped := s.filterAttestations(attestations, currentEpoch)
 
-			deferredAttestationsTotal.Add(float64(len(validInFuture)))
-			droppedAttestationsTotal.Add(float64(numDropped))
-
-			// We add back those attestations that are valid in the future to the queue.
-			s.attsQueue.extend(validInFuture)
-
-			log.WithFields(logrus.Fields{
-				"currentSlot":     currentSlot,
-				"currentEpoch":    currentEpoch,
-				"numValidAtts":    len(validAtts),
-				"numDeferredAtts": len(validInFuture),
-				"numDroppedAtts":  numDropped,
-			}).Info("Processing queued attestations for slashing detection")
-
-			// Save the attestation records to our database.
-			// If multiple attestations are provided for the same validator index + target epoch combination,
-			// then last (validator index + target epoch) => signing root) link is kept into the database.
-			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
-				ctx, validAtts,
-			); err != nil {
-				log.WithError(err).Error(couldNotSaveAttRecord)
-				continue
-			}
-
-			// Check for slashings.
-			slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAtts)
-			if err != nil {
-				log.WithError(err).Error(couldNotCheckSlashableAtt)
-				continue
-			}
-
-			// Process attester slashings by verifying their signatures, submitting
-			// to the beacon node's operations pool, and logging them.
-			if err := s.processAttesterSlashings(ctx, slashings); err != nil {
-				log.WithError(err).Error(couldNotProcessAttesterSlashings)
-				continue
-			}
-
-			processedAttestationsTotal.Add(float64(len(validAtts)))
+			// Process the retrieved attestations.
+			s.processAttestations(ctx, attestations, currentSlot)
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+func (s *Service) processAttestations(
+	ctx context.Context,
+	attestations []*slashertypes.IndexedAttestationWrapper,
+	currentSlot primitives.Slot,
+) []*ethpb.AttesterSlashing {
+	// Get the current epoch from the current slot.
+	currentEpoch := slots.ToEpoch(currentSlot)
+
+	// Take all the attestations in the queue and filter out
+	// those which are valid now and valid in the future.
+	validAttestations, validInFutureAttestations, numDropped := s.filterAttestations(attestations, currentEpoch)
+
+	// Increase corresponding prometheus metrics.
+	deferredAttestationsTotal.Add(float64(len(validInFutureAttestations)))
+	droppedAttestationsTotal.Add(float64(numDropped))
+	processedAttestationsTotal.Add(float64(len(validAttestations)))
+
+	// We add back those attestations that are valid in the future to the queue.
+	s.attsQueue.extend(validInFutureAttestations)
+
+	// Compute some counts.
+	queuedAttestationsCount := s.attsQueue.size()
+	validAttestationsCount := len(validAttestations)
+	validInFutureAttestationsCount := len(validInFutureAttestations)
+
+	// Log useful infrormation
+	log.WithFields(logrus.Fields{
+		"currentSlot":     currentSlot,
+		"currentEpoch":    currentEpoch,
+		"numValidAtts":    validAttestationsCount,
+		"numDeferredAtts": validInFutureAttestationsCount,
+		"numDroppedAtts":  numDropped,
+		"attsQueueSize":   queuedAttestationsCount,
+	}).Info("Processing queued attestations for slashing detection")
+
+	// Save the attestation records to our database.
+	// If multiple attestations are provided for the same validator index + target epoch combination,
+	// then the first (validator index + target epoch) => signing root) link is kept into the database.
+	if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(ctx, validAttestations); err != nil {
+		log.WithError(err).Error(couldNotSaveAttRecord)
+		return nil
+	}
+
+	// Check for attestatinos slashings (double, sourrounding, surrounded votes).
+	slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAttestations)
+	if err != nil {
+		log.WithError(err).Error(couldNotCheckSlashableAtt)
+		return nil
+	}
+
+	// Process attester slashings by verifying their signatures, submitting
+	// to the beacon node's operations pool, and logging them.
+	processedAttesterSlashings, err := s.processAttesterSlashings(ctx, slashings)
+	if err != nil {
+		log.WithError(err).Error(couldNotProcessAttesterSlashings)
+		return nil
+	}
+
+	return processedAttesterSlashings
 }
 
 // Process queued blocks every time an epoch ticker fires. We retrieve
