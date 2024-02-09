@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -107,7 +108,7 @@ func (s *Service) processAttestations(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
 	currentSlot primitives.Slot,
-) []*ethpb.AttesterSlashing {
+) map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing {
 	// Get the current epoch from the current slot.
 	currentEpoch := slots.ToEpoch(currentSlot)
 
