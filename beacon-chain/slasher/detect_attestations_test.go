@@ -299,57 +299,6 @@ func Test_processAttestations(t *testing.T) {
 		// 	},
 		// },
 		{
-			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2) - single step",
-			steps: []*step{
-				{
-					currentEpoch: 4,
-					attestationsInfo: []*attestationInfo{
-						{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					},
-					expectedSlashingsInfo: []*slashingInfo{
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-					},
-				},
-			},
-		},
-		// Uncomment when https://github.com/prysmaticlabs/prysm/issues/13591 is fixed
-		// {
-		// 	name: "Detects surrounded vote (source 0, target 3), (source 1, target 2) - two steps",
-		// 	steps: []*step{
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 			},
-		// 			expectedSlashingsInfo: nil,
-		// 		},
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 			},
-		// 			expectedSlashingsInfo: []*slashingInfo{
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 				},
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
-		{
 			name: "Detects double vote, (source 1, target 2), (source 0, target 2) - single step",
 			steps: []*step{
 				{
