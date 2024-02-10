@@ -231,8 +231,8 @@ func (s *Service) Start() {
 		return nil
 	})
 	s.cfg.p2p.AddPingMethod(s.sendPingRequest)
-	s.processPendingBlocksQueue()
-	s.processPendingAttsQueue()
+	go s.processPendingBlocksQueue()
+	go s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
 	s.resyncIfBehind()
 
