@@ -213,6 +213,9 @@ func NewKVStore(ctx context.Context, dirPath string, opts ...KVStoreOption) (*St
 
 // ClearDB removes the previously stored database in the data directory.
 func (s *Store) ClearDB() error {
+	if err := s.Close(); err != nil {
+		return fmt.Errorf("failed to close db: %w", err)
+	}
 	if _, err := os.Stat(s.databasePath); os.IsNotExist(err) {
 		return nil
 	}

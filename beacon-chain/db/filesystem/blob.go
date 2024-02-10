@@ -228,6 +228,20 @@ func (bs *BlobStorage) Indices(root [32]byte) ([fieldparams.MaxBlobsPerBlock]boo
 	return mask, nil
 }
 
+// Clear deletes all files on the filesystem.
+func (bs *BlobStorage) Clear() error {
+	dirs, err := listDir(bs.fs, ".")
+	if err != nil {
+		return err
+	}
+	for _, dir := range dirs {
+		if err := bs.fs.RemoveAll(dir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type blobNamer struct {
 	root  [32]byte
 	index uint64

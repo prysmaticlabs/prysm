@@ -88,6 +88,19 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		_, err = bs.Get(expected.BlockRoot(), expected.Index)
 		require.ErrorContains(t, "file does not exist", err)
 	})
+
+	t.Run("clear", func(t *testing.T) {
+		blob := testSidecars[0]
+		b := NewEphemeralBlobStorage(t)
+		require.NoError(t, b.Save(blob))
+		res, err := b.Get(blob.BlockRoot(), blob.Index)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.NoError(t, b.Clear())
+		// After clearing, the blob should not exist in the db.
+		_, err = b.Get(blob.BlockRoot(), blob.Index)
+		require.ErrorIs(t, err, os.ErrNotExist)
+	})
 }
 
 // pollUntil polls a condition function until it returns true or a timeout is reached.
