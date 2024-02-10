@@ -12,16 +12,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedDisableGossipBatchAggregation = &cli.BoolFlag{
-		Name:   "disable-gossip-batch-aggregation",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedEnableRegistrationCache = &cli.BoolFlag{
-		Name:   "enable-registration-cache",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedEnableOptionalEngineMethods = &cli.BoolFlag{
 		Name:   "enable-optional-engine-methods",
 		Usage:  deprecatedUsage,
@@ -62,8 +52,6 @@ var (
 // Deprecated flags for both the beacon node and validator client.
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
-	deprecatedDisableGossipBatchAggregation,
-	deprecatedEnableRegistrationCache,
 	deprecatedEnableOptionalEngineMethods,
 	deprecatedDisableBuildBlockParallel,
 	deprecatedDisableReorgLateBlocks,
