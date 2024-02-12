@@ -1061,7 +1061,7 @@ func (v *validator) ProcessEvent(event *eventClient.Event) {
 	}
 	switch event.EventType {
 	case eventClient.EventConnectionError, eventClient.EventError:
-		log.WithError(errors.New(string(event.Data))).Warn("event stream interrupted...")
+		log.WithError(errors.New(string(event.Data))).Warn("Event stream interrupted")
 	case eventClient.EventHead:
 		log.Debug("Received head event")
 		head := &structs.HeadEvent{}
