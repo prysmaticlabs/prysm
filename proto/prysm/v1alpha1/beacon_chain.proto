@@ -185,6 +185,7 @@ service BeaconChain {
     // validator attestations. This endpoint allows for retrieval of genesis
     // information via a boolean query filter.
     rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipationResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/eth/v1alpha1/validators/participation"
         };
@@ -593,7 +594,7 @@ message ActiveSetChanges {
 
 message ValidatorPerformanceRequest {
     // A list of 48 byte validator public keys.
-    repeated bytes public_keys = 1;
+    repeated bytes public_keys = 1 [deprecated = true];
     // A list of validator indices to retrieve performance by their indices.
     repeated uint64 indices = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
 }
@@ -605,11 +606,11 @@ message ValidatorPerformanceResponse {
     // The slot of when validator's attestation got included in the chain at previous epoch, the slot
     // is mapped 1-to-1 with the request's public keys.
     // Deprecated: This field can no longer be fetched from the beacon state after the Altair hard fork.
-    repeated uint64 inclusion_slots = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    repeated uint64 inclusion_slots = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
     // The distance of when validator submitted and got included in the chain, the distance
     // is mapped 1-to-1 with the request's public keys.
     // Deprecated: This field can no longer be fetched from the beacon state after the Altair hard fork.
-    repeated uint64 inclusion_distances = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    repeated uint64 inclusion_distances = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
     // Whether the list of validator recently correctly voted for source at previous epoch, the result
     // is mapped 1-to-1 with the request's public keys.
     repeated bool correctly_voted_source = 4;
@@ -645,11 +646,11 @@ message ValidatorQueue {
 
     // Ordered list of 48 byte public keys awaiting activation. 0th index is the
     // next key to be processed.
-    repeated bytes activation_public_keys = 2 [(ethereum.eth.ext.ssz_size) = "?,48"];
+    repeated bytes activation_public_keys = 2 [(ethereum.eth.ext.ssz_size) = "?,48", deprecated = true];
 
     // Ordered list of public keys awaiting exit. 0th index is the next key to
     // be processed.
-    repeated bytes exit_public_keys = 3 [(ethereum.eth.ext.ssz_size) = "?,48"];
+    repeated bytes exit_public_keys = 3 [(ethereum.eth.ext.ssz_size) = "?,48", deprecated = true];
 
     // Ordered list of validator indices awaiting activation. 0th item in the list is the
     // next validator index to be processed.
@@ -703,7 +704,7 @@ message ValidatorAssignments {
         repeated uint64 proposer_slots = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
 
         // 48 byte BLS public key.
-        bytes public_key = 5 [(ethereum.eth.ext.ssz_size) = "48"];
+        bytes public_key = 5 [(ethereum.eth.ext.ssz_size) = "48", deprecated = true];
 
         // Validator index in the beacon state.
         uint64 validator_index = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
@@ -736,6 +737,7 @@ message GetValidatorParticipationRequest {
 }
 
 message ValidatorParticipationResponse {
+    option deprecated = true;
     // Epoch which this message is applicable.
     uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
 
@@ -820,9 +822,9 @@ message IndividualVotesRespond {
         // The current effective balance of the validator.
         uint64 current_epoch_effective_balance_gwei = 13;
         // The slots of when the validator's attestation got included in the block. Only available in phase0.
-        uint64 inclusion_slot = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+        uint64 inclusion_slot = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
         // How many slots have passed until the validator's attestation got included in the block. Only available in phase0.
-        uint64 inclusion_distance = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+        uint64 inclusion_distance = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
         // The inactivity score of the validator tracks validator participation. [New in Altair]
         uint64 inactivity_score = 16;
     }
