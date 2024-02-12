@@ -82,12 +82,14 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 			return ctx.Err()
 		}
 
+		encodedIndex := encodeValidatorIndex(valIndex)
+
 		encodedEpoch, err := epoch.MarshalSSZ()
 		if err != nil {
 			return err
 		}
 
-		encodedIndexes = append(encodedIndexes, encodeValidatorIndex(valIndex))
+		encodedIndexes = append(encodedIndexes, encodedIndex)
 		encodedEpochs = append(encodedEpochs, encodedEpoch)
 	}
 
