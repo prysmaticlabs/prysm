@@ -69,8 +69,25 @@ func TestStartEventStream(t *testing.T) {
 			},
 		},
 		{
-			name:   "Unsupported topics warning",
+			name:   "no head produces error",
 			topics: []string{"unsupportedTopic"},
+			prepare: func() {
+				stream := mock2.NewMockBeaconNodeValidator_StreamSlotsClient(ctrl)
+				beaconNodeValidatorClient.EXPECT().StreamSlots(gomock.Any(),
+					&eth.StreamSlotsRequest{VerifiedOnly: true}).Return(stream, nil)
+				stream.EXPECT().Context().Return(ctx).AnyTimes()
+				stream.EXPECT().Recv().Return(
+					&eth.StreamSlotsResponse{Slot: 123},
+					nil,
+				).AnyTimes()
+			},
+			verify: func(t *testing.T, event *eventClient.Event) {
+				require.Equal(t, event.EventType, eventClient.EventConnectionError)
+			},
+		},
+		{
+			name:   "Unsupported topics warning",
+			topics: []string{"head", "unsupportedTopic"},
 			prepare: func() {
 				stream := mock2.NewMockBeaconNodeValidator_StreamSlotsClient(ctrl)
 				beaconNodeValidatorClient.EXPECT().StreamSlots(gomock.Any(),
