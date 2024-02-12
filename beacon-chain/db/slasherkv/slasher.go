@@ -46,8 +46,7 @@ func (s *Store) LastEpochWrittenForValidators(
 		for i, encodedIndex := range encodedIndexes {
 			var epoch primitives.Epoch
 
-			epochBytes := bkt.Get(encodedIndex)
-			if epochBytes != nil {
+			if epochBytes := bkt.Get(encodedIndex); epochBytes != nil {
 				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
 					return err
 				}
