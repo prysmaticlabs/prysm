@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	apigateway "github.com/prysmaticlabs/prysm/v4/api/gateway"
 	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
@@ -334,6 +335,8 @@ func newRouter(cliCtx *cli.Context) *mux.Router {
 		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
 	}
 	r := mux.NewRouter()
+	r.Path("/metrics").Handler(promhttp.Handler())
+	r.Use(server.PrometheusHandler) // Apply as the first middleware so that metrics such as latency take other middleware into account.
 	r.Use(server.NormalizeQueryValuesHandler)
 	r.Use(server.CorsHandler(allowedOrigins))
 	return r
