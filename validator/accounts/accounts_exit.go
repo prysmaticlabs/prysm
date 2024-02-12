@@ -154,9 +154,14 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
 		for i, key := range rawExitedKeys {
 			var baseUrl string
-			if params.BeaconConfig().ConfigName == params.PraterName || params.BeaconConfig().ConfigName == params.GoerliName {
+			switch params.BeaconConfig().ConfigName {
+			case params.PraterName, params.GoerliName:
 				baseUrl = "https://goerli.beaconcha.in/validator/"
-			} else {
+			case params.HoleskyName:
+				baseUrl = "https://holesky.beaconcha.in/validator/"
+			case params.SepoliaName:
+				baseUrl = "https://sepolia.beaconcha.in/validator/"
+			default:
 				baseUrl = "https://beaconcha.in/validator/"
 			}
 			// Remove '0x' prefix
