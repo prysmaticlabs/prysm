@@ -31,9 +31,9 @@ import (
 )
 
 type mocks struct {
-	coordinator *validatormock.MockCoordinator
-	nodeClient  *validatormock.MockNodeClient
-	signfunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
+	validatorClient *validatormock.MockValidatorClient
+	nodeClient      *validatormock.MockNodeClient
+	signfunc        func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
 type mockSignature struct{}
@@ -75,8 +75,8 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		coordinator: validatormock.NewMockCoordinator(ctrl),
-		nodeClient:  validatormock.NewMockNodeClient(ctrl),
+		validatorClient: validatormock.NewMockValidatorClient(ctrl),
+		nodeClient:      validatormock.NewMockNodeClient(ctrl),
 		signfunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
@@ -86,7 +86,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	validator := &validator{
 		db:                             valDB,
 		km:                             newMockKeymanager(t, keypair{pub: pubKey, pri: validatorKey}),
-		coordinator:                    m.coordinator,
+		validatorClient:                m.validatorClient,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -113,7 +113,7 @@ func TestProposeBlock_DomainDataFailed(t *testing.T) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	m.coordinator.EXPECT().DomainData(
+	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(nil /*response*/, errors.New("uh oh"))
@@ -129,7 +129,7 @@ func TestProposeBlock_DomainDataIsNil(t *testing.T) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	m.coordinator.EXPECT().DomainData(
+	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(nil /*response*/, nil)
@@ -171,12 +171,12 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-			m.coordinator.EXPECT().DomainData(
+			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.coordinator.EXPECT().GetBeaconBlock(
+			m.validatorClient.EXPECT().GetBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 			).Return(nil /*response*/, errors.New("uh oh"))
@@ -226,22 +226,22 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-			m.coordinator.EXPECT().DomainData(
+			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.coordinator.EXPECT().GetBeaconBlock(
+			m.validatorClient.EXPECT().GetBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 			).Return(tt.block, nil /*err*/)
 
-			m.coordinator.EXPECT().DomainData(
+			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.coordinator.EXPECT().ProposeBeaconBlock(
+			m.validatorClient.EXPECT().ProposeBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
 			).Return(nil /*response*/, errors.New("uh oh"))
@@ -329,27 +329,27 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 			err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, dummyRoot[:])
 			require.NoError(t, err)
 
-			m.coordinator.EXPECT().DomainData(
+			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
 			).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.coordinator.EXPECT().GetBeaconBlock(
+			m.validatorClient.EXPECT().GetBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 			).Return(tt.blocks[0], nil /*err*/)
 
-			m.coordinator.EXPECT().GetBeaconBlock(
+			m.validatorClient.EXPECT().GetBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 			).Return(tt.blocks[1], nil /*err*/)
 
-			m.coordinator.EXPECT().DomainData(
+			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
 			).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.coordinator.EXPECT().ProposeBeaconBlock(
+			m.validatorClient.EXPECT().ProposeBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
 			).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
@@ -375,7 +375,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, dummyRoot[:])
 	require.NoError(t, err)
 
-	m.coordinator.EXPECT().DomainData(
+	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
@@ -383,7 +383,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	testBlock := util.NewBeaconBlock()
 	farFuture := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod + 9))
 	testBlock.Block.Slot = farFuture
-	m.coordinator.EXPECT().GetBeaconBlock(
+	m.validatorClient.EXPECT().GetBeaconBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 	).Return(&ethpb.GenericBeaconBlock{
@@ -397,7 +397,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	var blockGraffiti [32]byte
 	copy(blockGraffiti[:], "someothergraffiti")
 	secondTestBlock.Block.Body.Graffiti = blockGraffiti[:]
-	m.coordinator.EXPECT().GetBeaconBlock(
+	m.validatorClient.EXPECT().GetBeaconBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 	).Return(&ethpb.GenericBeaconBlock{
@@ -405,12 +405,12 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 			Phase0: secondTestBlock.Block,
 		},
 	}, nil /*err*/)
-	m.coordinator.EXPECT().DomainData(
+	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.coordinator.EXPECT().ProposeBeaconBlock(
+	m.validatorClient.EXPECT().ProposeBeaconBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
@@ -450,14 +450,14 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 			err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, []byte{})
 			require.NoError(t, err)
 
-			m.coordinator.EXPECT().DomainData(
+			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
 			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 			blk := util.NewBeaconBlock()
 			blk.Block.Slot = slot
-			m.coordinator.EXPECT().GetBeaconBlock(
+			m.validatorClient.EXPECT().GetBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 			).Return(&ethpb.GenericBeaconBlock{
@@ -466,12 +466,12 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 				},
 			}, nil /*err*/)
 
-			m.coordinator.EXPECT().DomainData(
+			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
 			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.coordinator.EXPECT().ProposeBeaconBlock(
+			m.validatorClient.EXPECT().ProposeBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
 			).Times(2).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
@@ -481,7 +481,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 
 			blk2 := util.NewBeaconBlock()
 			blk2.Block.Slot = tt.pastSlot
-			m.coordinator.EXPECT().GetBeaconBlock(
+			m.validatorClient.EXPECT().GetBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 			).Return(&ethpb.GenericBeaconBlock{
@@ -620,12 +620,12 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 
 			validator.graffiti = graffiti
 
-			m.coordinator.EXPECT().DomainData(
+			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.coordinator.EXPECT().GetBeaconBlock(
+			m.validatorClient.EXPECT().GetBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 			).DoAndReturn(func(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
@@ -634,7 +634,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				return tt.block, nil
 			})
 
-			m.coordinator.EXPECT().DomainData(
+			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
@@ -642,7 +642,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			var sentBlock interfaces.ReadOnlySignedBeaconBlock
 			var err error
 
-			m.coordinator.EXPECT().ProposeBeaconBlock(
+			m.validatorClient.EXPECT().ProposeBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
 			).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
@@ -664,14 +664,14 @@ func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
 	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	m.coordinator.EXPECT().ValidatorIndex(
+	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("uh oh"))
 
 	err := ProposeExit(
 		context.Background(),
-		m.coordinator,
+		m.validatorClient,
 		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 		params.BeaconConfig().GenesisEpoch,
@@ -685,17 +685,17 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("uh oh"))
 
 	err := ProposeExit(
 		context.Background(),
-		m.coordinator,
+		m.validatorClient,
 		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 		params.BeaconConfig().GenesisEpoch,
@@ -710,17 +710,17 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(nil, nil)
 
 	err := ProposeExit(
 		context.Background(),
-		m.coordinator,
+		m.validatorClient,
 		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 		params.BeaconConfig().GenesisEpoch,
@@ -734,21 +734,21 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
 		Return(nil, errors.New("uh oh"))
 
 	err := ProposeExit(
 		context.Background(),
-		m.coordinator,
+		m.validatorClient,
 		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 		params.BeaconConfig().GenesisEpoch,
@@ -762,21 +762,21 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 	_, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
 		Return(&ethpb.ProposeExitResponse{}, nil)
 
 	assert.NoError(t, ProposeExit(
 		context.Background(),
-		m.coordinator,
+		m.validatorClient,
 		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 		params.BeaconConfig().GenesisEpoch,
@@ -788,7 +788,7 @@ func TestSignBlock(t *testing.T) {
 	defer finish()
 
 	proposerDomain := make([]byte, 32)
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
 	ctx := context.Background()
@@ -823,7 +823,7 @@ func TestSignAltairBlock(t *testing.T) {
 
 	kp := testKeyFromBytes(t, []byte{1})
 	proposerDomain := make([]byte, 32)
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
 	ctx := context.Background()
@@ -849,7 +849,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 	defer finish()
 
 	proposerDomain := make([]byte, 32)
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
 
@@ -876,7 +876,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 func TestGetGraffiti_Ok(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		coordinator: validatormock.NewMockCoordinator(ctrl),
+		validatorClient: validatormock.NewMockValidatorClient(ctrl),
 	}
 	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
 	tests := []struct {
@@ -900,7 +900,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 		},
 		{name: "use default file graffiti",
 			v: &validator{
-				coordinator: m.coordinator,
+				validatorClient: m.validatorClient,
 				graffitiStruct: &graffiti.Graffiti{
 					Default: "c",
 				},
@@ -909,7 +909,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 		},
 		{name: "use random file graffiti",
 			v: &validator{
-				coordinator: m.coordinator,
+				validatorClient: m.validatorClient,
 				graffitiStruct: &graffiti.Graffiti{
 					Random:  []string{"d"},
 					Default: "c",
@@ -919,7 +919,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 		},
 		{name: "use validator file graffiti, has validator",
 			v: &validator{
-				coordinator: m.coordinator,
+				validatorClient: m.validatorClient,
 				graffitiStruct: &graffiti.Graffiti{
 					Random:  []string{"d"},
 					Default: "c",
@@ -933,8 +933,8 @@ func TestGetGraffiti_Ok(t *testing.T) {
 		},
 		{name: "use validator file graffiti, none specified",
 			v: &validator{
-				coordinator:    m.coordinator,
-				graffitiStruct: &graffiti.Graffiti{},
+				validatorClient: m.validatorClient,
+				graffitiStruct:  &graffiti.Graffiti{},
 			},
 			want: []byte{},
 		},
@@ -943,7 +943,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if !strings.Contains(tt.name, "use default cli graffiti") {
-				m.coordinator.EXPECT().
+				m.validatorClient.EXPECT().
 					ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
 					Return(&ethpb.ValidatorIndexResponse{Index: 2}, nil)
 			}
@@ -959,16 +959,16 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		coordinator: validatormock.NewMockCoordinator(ctrl),
+		validatorClient: validatormock.NewMockValidatorClient(ctrl),
 	}
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
 		Times(5).
 		Return(&ethpb.ValidatorIndexResponse{Index: 2}, nil)
 
 	v := &validator{
-		db:          valDB,
-		coordinator: m.coordinator,
+		db:              valDB,
+		validatorClient: m.validatorClient,
 		graffitiStruct: &graffiti.Graffiti{
 			Ordered: []string{"a", "b", "c"},
 			Default: "d",

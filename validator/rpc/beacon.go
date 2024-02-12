@@ -60,7 +60,7 @@ func (s *Server) registerBeaconClient() error {
 	}
 	s.chainClient = beaconChainClientFactory.NewChainClient(conn, restHandler)
 	s.nodeClient = nodeClientFactory.NewNodeClient(conn, restHandler)
-	s.coordinator = validatorClientFactory.NewValidatorClient(conn, restHandler)
+	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn, restHandler)
 
 	return nil
 }

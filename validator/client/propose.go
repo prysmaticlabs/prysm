@@ -73,7 +73,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	}
 
 	// Request block from beacon node
-	b, err := v.coordinator.GetBeaconBlock(ctx, &ethpb.BlockRequest{
+	b, err := v.validatorClient.GetBeaconBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
 		Graffiti:     g,
@@ -148,7 +148,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		}
 	}
 
-	blkResp, err := v.coordinator.ProposeBeaconBlock(ctx, genericSignedBlock)
+	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, genericSignedBlock)
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to propose block")
 		if v.emitAccountMetrics {
@@ -224,7 +224,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 // The exit is signed by the validator before being sent to the beacon node for broadcasting.
 func ProposeExit(
 	ctx context.Context,
-	coord iface.Coordinator,
+	validatorClient iface.ValidatorClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
 	epoch primitives.Epoch,
@@ -232,11 +232,11 @@ func ProposeExit(
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
 	defer span.End()
 
-	signedExit, err := CreateSignedVoluntaryExit(ctx, coord, signer, pubKey, epoch)
+	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, signer, pubKey, epoch)
 	if err != nil {
 		return errors.Wrap(err, "failed to create signed voluntary exit")
 	}
-	exitResp, err := coord.ProposeExit(ctx, signedExit)
+	exitResp, err := validatorClient.ProposeExit(ctx, signedExit)
 	if err != nil {
 		return errors.Wrap(err, "failed to propose voluntary exit")
 	}
@@ -256,7 +256,7 @@ func CurrentEpoch(genesisTime *timestamp.Timestamp) (primitives.Epoch, error) {
 
 func CreateSignedVoluntaryExit(
 	ctx context.Context,
-	coord iface.Coordinator,
+	validatorClient iface.ValidatorClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
 	epoch primitives.Epoch,
@@ -264,7 +264,7 @@ func CreateSignedVoluntaryExit(
 	ctx, span := trace.StartSpan(ctx, "validator.CreateSignedVoluntaryExit")
 	defer span.End()
 
-	indexResponse, err := coord.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
+	indexResponse, err := validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
 	if err != nil {
 		return nil, errors.Wrap(err, "gRPC call to get validator index failed")
 	}
@@ -273,7 +273,7 @@ func CreateSignedVoluntaryExit(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve slot")
 	}
-	sig, err := signVoluntaryExit(ctx, coord, signer, pubKey, exit, slot)
+	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign voluntary exit")
 	}
@@ -345,7 +345,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 // Sign voluntary exit with proposer domain and private key.
 func signVoluntaryExit(
 	ctx context.Context,
-	coord iface.Coordinator,
+	validatorClient iface.ValidatorClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
 	exit *ethpb.VoluntaryExit,
@@ -356,7 +356,7 @@ func signVoluntaryExit(
 		Domain: params.BeaconConfig().DomainVoluntaryExit[:],
 	}
 
-	domain, err := coord.DomainData(ctx, req)
+	domain, err := validatorClient.DomainData(ctx, req)
 	if err != nil {
 		return nil, errors.Wrap(err, domainDataErr)
 	}
@@ -394,7 +394,7 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 	}
 
 	// When specified, individual validator specified graffiti takes the second priority.
-	idx, err := v.coordinator.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
+	idx, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
 	if err != nil {
 		return nil, err
 	}

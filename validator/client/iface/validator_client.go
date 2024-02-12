@@ -62,7 +62,7 @@ func (b *BeaconCommitteeSelection) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-type Coordinator interface {
+type ValidatorClient interface {
 	GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error)
 	DomainData(ctx context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error)
 	WaitForChainStart(ctx context.Context, in *empty.Empty) (*ethpb.ChainStartResponse, error)

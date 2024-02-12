@@ -79,7 +79,7 @@ type validator struct {
 	graffiti                           []byte
 	graffitiStruct                     *graffiti.Graffiti
 	graffitiOrderedIndex               uint64
-	coordinator                        iface.Coordinator
+	validatorClient                    iface.ValidatorClient
 	chainClient                        iface.ChainClient
 	nodeClient                         iface.NodeClient
 	prysmChainClient                   iface.PrysmChainClient
@@ -250,7 +250,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	// First, check if the beacon chain has started.
 	log.Info("Syncing with beacon node to align on chain genesis info")
 
-	chainStartRes, err := v.coordinator.WaitForChainStart(ctx, &emptypb.Empty{})
+	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	if err == io.EOF {
 		return iface.ErrConnectionIssue
 	}
@@ -342,7 +342,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 // slots from the beacon node when it imports a block. Upon receiving a slot, the service
 // broadcasts it to a feed for other usages to subscribe to.
 func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChan chan<- error) {
-	stream, err := v.coordinator.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
+	stream, err := v.validatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve slots stream, " + iface.ErrConnectionIssue.Error())
 		connectionErrorChan <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
@@ -494,7 +494,7 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 				SignedRoot: r.SigningRoot,
 			})
 	}
-	resp, err := v.coordinator.CheckDoppelGanger(ctx, req)
+	resp, err := v.validatorClient.CheckDoppelGanger(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -588,7 +588,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	}
 
 	// If duties is nil it means we have had no prior duties and just started up.
-	resp, err := v.coordinator.GetDuties(ctx, req)
+	resp, err := v.validatorClient.GetDuties(ctx, req)
 	if err != nil {
 		v.dutiesLock.Lock()
 		v.duties = nil // Clear assignments so we know to retry the request.
@@ -697,7 +697,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, duties *ethpb.Duties
 		}
 	}
 
-	_, err := v.coordinator.SubscribeCommitteeSubnets(ctx,
+	_, err := v.validatorClient.SubscribeCommitteeSubnets(ctx,
 		&ethpb.CommitteeSubnetsSubscribeRequest{
 			Slots:        subscribeSlots,
 			CommitteeIds: subscribeCommitteeIndices,
@@ -830,7 +830,7 @@ func (v *validator) isAggregator(
 //	modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //	return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
 func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) (bool, error) {
-	res, err := v.coordinator.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+	res, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
 		Slot:      slot,
 	})
@@ -906,7 +906,7 @@ func (v *validator) domainData(ctx context.Context, epoch primitives.Epoch, doma
 		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
 	}
 
-	res, err := v.coordinator.DomainData(ctx, req)
+	res, err := v.validatorClient.DomainData(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -1061,25 +1061,25 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 			"proposerSettingsReqCount": len(proposerReqs),
 		}).Debugln("Request count did not match included validator count. Only keys that have been activated will be included in the request.")
 	}
-	if _, err := v.coordinator.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
+	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
 		Recipients: proposerReqs,
 	}); err != nil {
 		return err
 	}
 
 	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
-	if err := SubmitValidatorRegistrations(ctx, v.coordinator, signedRegReqs, v.validatorsRegBatchSize); err != nil {
+	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorsRegBatchSize); err != nil {
 		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
 	return nil
 }
 
 func (v *validator) StartEventStream(ctx context.Context) error {
-	return v.coordinator.StartEventStream(ctx)
+	return v.validatorClient.StartEventStream(ctx)
 }
 
 func (v *validator) EventStreamIsRunning() bool {
-	return v.coordinator.EventStreamIsRunning()
+	return v.validatorClient.EventStreamIsRunning()
 }
 
 func (v *validator) NodeIsHealthy(ctx context.Context) bool {
@@ -1105,7 +1105,7 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 		copiedk := k
 		statusRequestKeys = append(statusRequestKeys, copiedk[:])
 	}
-	resp, err := v.coordinator.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
+	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: statusRequestKeys,
 	})
 	if err != nil {
@@ -1248,7 +1248,7 @@ func (v *validator) buildSignedRegReqs(
 }
 
 func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool, error) {
-	resp, err := v.coordinator.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey[:]})
+	resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey[:]})
 	switch {
 	case status.Code(err) == codes.NotFound:
 		log.Debugf("Could not find validator index for public key %#x. "+
@@ -1307,7 +1307,7 @@ func (v *validator) getAggregatedSelectionProofs(ctx context.Context, duties *et
 		})
 	}
 
-	resp, err := v.coordinator.GetAggregatedSelections(ctx, req)
+	resp, err := v.validatorClient.GetAggregatedSelections(ctx, req)
 	if err != nil {
 		return err
 	}

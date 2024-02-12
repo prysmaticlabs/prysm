@@ -142,7 +142,7 @@ func (grpcValidatorClient) GetAggregatedSelections(context.Context, []iface.Beac
 	return nil, iface.ErrNotSupported
 }
 
-func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.Coordinator {
+func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
 	return &grpcValidatorClient{ethpb.NewBeaconNodeValidatorClient(cc)}
 }
 

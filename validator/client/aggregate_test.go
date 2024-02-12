@@ -48,12 +48,12 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 		},
 	}
 
-	m.coordinator.EXPECT().DomainData(
+	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.coordinator.EXPECT().SubmitAggregateSelectionProof(
+	m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
 	).Return(&ethpb.AggregateSelectionResponse{
@@ -66,7 +66,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 		},
 	}, nil)
 
-	m.coordinator.EXPECT().DomainData(
+	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: nil}, errors.New("bad domain root"))
@@ -87,12 +87,12 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 		},
 	}
 
-	m.coordinator.EXPECT().DomainData(
+	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.coordinator.EXPECT().SubmitAggregateSelectionProof(
+	m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
 	).Return(&ethpb.AggregateSelectionResponse{
@@ -105,12 +105,12 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 		},
 	}, nil)
 
-	m.coordinator.EXPECT().DomainData(
+	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.coordinator.EXPECT().SubmitSignedAggregateSelectionProof(
+	m.validatorClient.EXPECT().SubmitSignedAggregateSelectionProof(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.SignedAggregateSubmitRequest{}),
 	).Return(&ethpb.SignedAggregateSubmitResponse{AttestationDataRoot: make([]byte, 32)}, nil)
@@ -149,7 +149,7 @@ func TestSubmitAggregateAndProof_Distributed(t *testing.T) {
 		ValidatorIndex: validatorIdx,
 	}
 
-	m.coordinator.EXPECT().SubmitAggregateSelectionProof(
+	m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
 	).Return(&ethpb.AggregateSelectionResponse{
@@ -162,12 +162,12 @@ func TestSubmitAggregateAndProof_Distributed(t *testing.T) {
 		},
 	}, nil)
 
-	m.coordinator.EXPECT().DomainData(
+	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.coordinator.EXPECT().SubmitSignedAggregateSelectionProof(
+	m.validatorClient.EXPECT().SubmitSignedAggregateSelectionProof(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.SignedAggregateSubmitRequest{}),
 	).Return(&ethpb.SignedAggregateSubmitResponse{AttestationDataRoot: make([]byte, 32)}, nil)
@@ -211,7 +211,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	m.coordinator.EXPECT().DomainData(
+	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		&ethpb.DomainRequest{Epoch: 0, Domain: params.BeaconConfig().DomainAggregateAndProof[:]},
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)

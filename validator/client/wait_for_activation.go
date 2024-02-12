@@ -67,7 +67,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 		}
 	}
 
-	stream, err := v.coordinator.WaitForActivation(ctx, &ethpb.ValidatorActivationRequest{
+	stream, err := v.validatorClient.WaitForActivation(ctx, &ethpb.ValidatorActivationRequest{
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	})
 	if err != nil {

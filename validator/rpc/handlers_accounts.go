@@ -257,7 +257,7 @@ func (s *Server) VoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		pubKeys[i] = byteskey
 	}
 	cfg := accounts.PerformExitCfg{
-		Coordinator:      s.coordinator,
+		ValidatorClient:  s.beaconNodeValidatorClient,
 		NodeClient:       s.nodeClient,
 		Keymanager:       km,
 		RawPubKeys:       pubKeys,

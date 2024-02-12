@@ -52,36 +52,36 @@ type Config struct {
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	host                   string
-	port                   string
-	grpcGatewayHost        string
-	grpcGatewayPort        int
-	listener               net.Listener
-	grpcMaxCallRecvMsgSize int
-	grpcRetries            uint
-	grpcRetryDelay         time.Duration
-	grpcHeaders            []string
-	grpcServer             *grpc.Server
-	jwtSecret              []byte
-	coordinator            iface.Coordinator
-	chainClient            iface.ChainClient
-	nodeClient             iface.NodeClient
-	healthClient           ethpb.HealthClient
-	beaconNodeEndpoint     string
-	beaconApiEndpoint      string
-	beaconApiTimeout       time.Duration
-	beaconNodeCert         string
-	db                     db.Database
-	walletDir              string
-	wallet                 *wallet.Wallet
-	walletInitializedFeed  *event.Feed
-	walletInitialized      bool
-	validatorService       *client.ValidatorService
-	router                 *mux.Router
-	logStreamer            logs.Streamer
-	logStreamerBufferSize  int
+	ctx                       context.Context
+	cancel                    context.CancelFunc
+	host                      string
+	port                      string
+	grpcGatewayHost           string
+	grpcGatewayPort           int
+	listener                  net.Listener
+	grpcMaxCallRecvMsgSize    int
+	grpcRetries               uint
+	grpcRetryDelay            time.Duration
+	grpcHeaders               []string
+	grpcServer                *grpc.Server
+	jwtSecret                 []byte
+	beaconNodeValidatorClient iface.ValidatorClient
+	chainClient               iface.ChainClient
+	nodeClient                iface.NodeClient
+	healthClient              ethpb.HealthClient
+	beaconNodeEndpoint        string
+	beaconApiEndpoint         string
+	beaconApiTimeout          time.Duration
+	beaconNodeCert            string
+	db                        db.Database
+	walletDir                 string
+	wallet                    *wallet.Wallet
+	walletInitializedFeed     *event.Feed
+	walletInitialized         bool
+	validatorService          *client.ValidatorService
+	router                    *mux.Router
+	logStreamer               logs.Streamer
+	logStreamerBufferSize     int
 }
 
 // NewServer instantiates a new gRPC server.

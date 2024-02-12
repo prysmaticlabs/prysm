@@ -22,7 +22,7 @@ func TestSubmitValidatorRegistrations(t *testing.T) {
 
 	ctx := context.Background()
 	validatorRegsBatchSize := 2
-	require.NoError(t, nil, SubmitValidatorRegistrations(ctx, m.coordinator, []*ethpb.SignedValidatorRegistrationV1{}, validatorRegsBatchSize))
+	require.NoError(t, nil, SubmitValidatorRegistrations(ctx, m.validatorClient, []*ethpb.SignedValidatorRegistrationV1{}, validatorRegsBatchSize))
 
 	regs := [...]*ethpb.ValidatorRegistrationV1{
 		{
@@ -46,7 +46,7 @@ func TestSubmitValidatorRegistrations(t *testing.T) {
 	}
 
 	gomock.InOrder(
-		m.coordinator.EXPECT().
+		m.validatorClient.EXPECT().
 			SubmitValidatorRegistrations(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
 				Messages: []*ethpb.SignedValidatorRegistrationV1{
 					{
@@ -61,7 +61,7 @@ func TestSubmitValidatorRegistrations(t *testing.T) {
 			}).
 			Return(nil, nil),
 
-		m.coordinator.EXPECT().
+		m.validatorClient.EXPECT().
 			SubmitValidatorRegistrations(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
 				Messages: []*ethpb.SignedValidatorRegistrationV1{
 					{
@@ -74,7 +74,7 @@ func TestSubmitValidatorRegistrations(t *testing.T) {
 	)
 
 	require.NoError(t, nil, SubmitValidatorRegistrations(
-		ctx, m.coordinator,
+		ctx, m.validatorClient,
 		[]*ethpb.SignedValidatorRegistrationV1{
 			{
 				Message:   regs[0],
@@ -106,7 +106,7 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
 
-	m.coordinator.EXPECT().
+	m.validatorClient.EXPECT().
 		SubmitValidatorRegistrations(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
 			Messages: []*ethpb.SignedValidatorRegistrationV1{
 				{Message: reg,
@@ -114,7 +114,7 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 			},
 		}).
 		Return(nil, errors.New("could not sign"))
-	require.ErrorContains(t, "could not sign", SubmitValidatorRegistrations(ctx, m.coordinator, []*ethpb.SignedValidatorRegistrationV1{
+	require.ErrorContains(t, "could not sign", SubmitValidatorRegistrations(ctx, m.validatorClient, []*ethpb.SignedValidatorRegistrationV1{
 		{Message: reg,
 			Signature: params.BeaconConfig().ZeroHash[:]},
 	}, validatorRegsBatchSize))

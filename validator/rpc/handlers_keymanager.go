@@ -361,7 +361,7 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 	sve, err := client.CreateSignedVoluntaryExit(
 		ctx,
-		s.coordinator,
+		s.beaconNodeValidatorClient,
 		km.Sign,
 		pubkey,
 		epoch,

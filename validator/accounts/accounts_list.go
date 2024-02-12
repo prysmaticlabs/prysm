@@ -30,7 +30,7 @@ func (acm *CLIManager) List(ctx context.Context) error {
 		})
 }
 
-func listValidatorIndices(ctx context.Context, km keymanager.IKeymanager, coord iface.Coordinator) error {
+func listValidatorIndices(ctx context.Context, km keymanager.IKeymanager, client iface.ValidatorClient) error {
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get validating public keys")
@@ -40,7 +40,7 @@ func listValidatorIndices(ctx context.Context, km keymanager.IKeymanager, coord 
 		pks = append(pks, pubKeys[i][:])
 	}
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
-	resp, err := coord.MultipleValidatorStatus(ctx, req)
+	resp, err := client.MultipleValidatorStatus(ctx, req)
 	if err != nil {
 		return errors.Wrap(err, "could not request validator indices")
 	}

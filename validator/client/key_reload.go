@@ -22,7 +22,7 @@ func (v *validator) HandleKeyReload(ctx context.Context, currentKeys [][fieldpar
 	for i := range currentKeys {
 		statusRequestKeys[i] = currentKeys[i][:]
 	}
-	resp, err := v.coordinator.MultipleValidatorStatus(ctx, &eth.MultipleValidatorStatusRequest{
+	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &eth.MultipleValidatorStatusRequest{
 		PublicKeys: statusRequestKeys,
 	})
 	if err != nil {

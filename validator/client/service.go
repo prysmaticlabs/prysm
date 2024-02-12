@@ -186,7 +186,7 @@ func (v *ValidatorService) Start() {
 		graffiti:                       v.graffiti,
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
-		coordinator:                    validatorClient,
+		validatorClient:                validatorClient,
 		chainClient:                    beaconChainClientFactory.NewChainClient(v.conn, restHandler),
 		nodeClient:                     nodeClientFactory.NewNodeClient(v.conn, restHandler),
 		prysmChainClient:               beaconChainClientFactory.NewPrysmChainClient(v.conn, restHandler),

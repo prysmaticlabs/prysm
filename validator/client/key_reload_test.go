@@ -28,11 +28,11 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 		inactive := randKeypair(t)
 		active := randKeypair(t)
 
-		coord := validatormock.NewMockCoordinator(ctrl)
+		client := validatormock.NewMockValidatorClient(ctrl)
 		chainClient := validatormock.NewMockChainClient(ctrl)
 		prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 		v := validator{
-			coordinator:      coord,
+			validatorClient:  client,
 			km:               newMockKeymanager(t, inactive),
 			genesisTime:      1,
 			chainClient:      chainClient,
@@ -42,7 +42,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactive.pub[:], active.pub[:]})
 		resp.Statuses[0].Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		resp.Statuses[1].Status = ethpb.ValidatorStatus_ACTIVE
-		coord.EXPECT().MultipleValidatorStatus(
+		client.EXPECT().MultipleValidatorStatus(
 			gomock.Any(),
 			&ethpb.MultipleValidatorStatusRequest{
 				PublicKeys: [][]byte{inactive.pub[:], active.pub[:]},
@@ -64,12 +64,12 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 	t.Run("no active", func(t *testing.T) {
 		hook := logTest.NewGlobal()
 
-		coord := validatormock.NewMockCoordinator(ctrl)
+		client := validatormock.NewMockValidatorClient(ctrl)
 		chainClient := validatormock.NewMockChainClient(ctrl)
 		prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 		kp := randKeypair(t)
 		v := validator{
-			coordinator:      coord,
+			validatorClient:  client,
 			km:               newMockKeymanager(t, kp),
 			genesisTime:      1,
 			chainClient:      chainClient,
@@ -78,7 +78,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{kp.pub[:]})
 		resp.Statuses[0].Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
-		coord.EXPECT().MultipleValidatorStatus(
+		client.EXPECT().MultipleValidatorStatus(
 			gomock.Any(),
 			&ethpb.MultipleValidatorStatusRequest{
 				PublicKeys: [][]byte{kp.pub[:]},
@@ -99,14 +99,14 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 
 	t.Run("error when getting status", func(t *testing.T) {
 		kp := randKeypair(t)
-		coord := validatormock.NewMockCoordinator(ctrl)
+		client := validatormock.NewMockValidatorClient(ctrl)
 		v := validator{
-			coordinator: coord,
-			km:          newMockKeymanager(t, kp),
-			genesisTime: 1,
+			validatorClient: client,
+			km:              newMockKeymanager(t, kp),
+			genesisTime:     1,
 		}
 
-		coord.EXPECT().MultipleValidatorStatus(
+		client.EXPECT().MultipleValidatorStatus(
 			gomock.Any(),
 			&ethpb.MultipleValidatorStatusRequest{
 				PublicKeys: [][]byte{kp.pub[:]},
