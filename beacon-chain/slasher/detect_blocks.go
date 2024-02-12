@@ -37,7 +37,7 @@ func (s *Service) detectProposerSlashings(
 		}
 
 		// If we have seen this proposal before, we check if it is a double proposal.
-		if isDoubleProposal(incomingProposal.SigningRoot, existingProposal.SigningRoot) {
+		if isDoubleProposal(incomingProposal.HeaderRoot, existingProposal.HeaderRoot) {
 			doubleProposalsTotal.Inc()
 
 			slashing := &ethpb.ProposerSlashing{

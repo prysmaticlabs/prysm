@@ -12,8 +12,8 @@ func Test_attestationsQueue(t *testing.T) {
 	t.Run("push_and_dequeue", func(tt *testing.T) {
 		attQueue := newAttestationsQueue()
 		wantedAtts := []*slashertypes.IndexedAttestationWrapper{
-			createAttestationWrapper(t, 0, 1, []uint64{1}, make([]byte, 32)),
-			createAttestationWrapper(t, 1, 2, []uint64{1}, make([]byte, 32)),
+			createAttestationWrapperEmptySig(t, 0, 1, []uint64{1}, make([]byte, 32)),
+			createAttestationWrapperEmptySig(t, 1, 2, []uint64{1}, make([]byte, 32)),
 		}
 		attQueue.push(wantedAtts[0])
 		attQueue.push(wantedAtts[1])
@@ -27,8 +27,8 @@ func Test_attestationsQueue(t *testing.T) {
 	t.Run("extend_and_dequeue", func(tt *testing.T) {
 		attQueue := newAttestationsQueue()
 		wantedAtts := []*slashertypes.IndexedAttestationWrapper{
-			createAttestationWrapper(t, 0, 1, []uint64{1}, make([]byte, 32)),
-			createAttestationWrapper(t, 1, 2, []uint64{1}, make([]byte, 32)),
+			createAttestationWrapperEmptySig(t, 0, 1, []uint64{1}, make([]byte, 32)),
+			createAttestationWrapperEmptySig(t, 1, 2, []uint64{1}, make([]byte, 32)),
 		}
 		attQueue.extend(wantedAtts)
 		require.DeepEqual(t, 2, attQueue.size())

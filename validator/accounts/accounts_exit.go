@@ -171,7 +171,7 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 		info := fmt.Sprintf("Voluntary exit was successful for the accounts listed. "+
 			"URLs where you can track each validator's exit:\n"+strings.Repeat("%s\n", len(ifaceKeys)), ifaceKeys...)
 
-		log.WithField("publicKeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
+		log.WithField("pubkeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
 	} else {
 		log.Info("No successful voluntary exits")
 	}
