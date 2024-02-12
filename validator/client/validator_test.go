@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/config/proposer"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	validatorType "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -1402,7 +1402,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1422,22 +1422,22 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
 					},
 				}).Return(nil, nil)
-				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				config[keys[0]] = &proposer.ProposerOption{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 40000000,
 					},
 				}
-				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &proposer.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					DefaultConfig: &proposer.ProposerOption{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress(defaultFeeHex),
 						},
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						BuilderConfig: &proposer.BuilderConfig{
 							Enabled:  true,
 							GasLimit: 35000000,
 						},
@@ -1484,7 +1484,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1504,22 +1504,22 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
 					},
 				}).Return(nil, nil)
-				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				config[keys[0]] = &proposer.ProposerOption{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 40000000,
 					},
 				}
-				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &proposer.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					DefaultConfig: &proposer.ProposerOption{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress(defaultFeeHex),
 						},
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						BuilderConfig: &proposer.BuilderConfig{
 							Enabled:  false,
 							GasLimit: 35000000,
 						},
@@ -1562,7 +1562,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1582,15 +1582,15 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
 					},
 				}).Return(nil, nil)
-				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				config[keys[0]] = &proposer.ProposerOption{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
 				}
-				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &proposer.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					DefaultConfig: &proposer.ProposerOption{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress(defaultFeeHex),
 						},
 					},
@@ -1630,13 +1630,13 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &proposer.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					DefaultConfig: &proposer.ProposerOption{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress(defaultFeeHex),
 						},
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						BuilderConfig: &proposer.BuilderConfig{
 							Enabled:  true,
 							GasLimit: validatorType.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
@@ -1691,13 +1691,13 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &proposer.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					DefaultConfig: &proposer.ProposerOption{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress(defaultFeeHex),
 						},
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						BuilderConfig: &proposer.BuilderConfig{
 							Enabled:  true,
 							GasLimit: 40000000,
 						},
@@ -1755,7 +1755,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1773,15 +1773,15 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						{FeeRecipient: common.HexToAddress("0x0").Bytes(), ValidatorIndex: 1},
 					},
 				}).Return(nil, nil)
-				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				config[keys[0]] = &proposer.ProposerOption{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: common.Address{},
 					},
 				}
-				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &proposer.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					DefaultConfig: &proposer.ProposerOption{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress(defaultFeeHex),
 						},
 					},
@@ -1807,7 +1807,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1816,15 +1816,15 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					gomock.Any(), // ctx
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
 				).Return(nil, errors.New("could not find validator index for public key"))
-				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				config[keys[0]] = &proposer.ProposerOption{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
 				}
-				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &proposer.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					DefaultConfig: &proposer.ProposerOption{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress(defaultFeeHex),
 						},
 					},
@@ -1850,7 +1850,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1864,22 +1864,22 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						PublicKeys: [][]byte{keys[0][:]},
 					}, nil)
 
-				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				config[keys[0]] = &proposer.ProposerOption{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: common.Address{},
 					},
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 40000000,
 					},
 				}
-				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &proposer.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					DefaultConfig: &proposer.ProposerOption{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress(defaultFeeHex),
 						},
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						BuilderConfig: &proposer.BuilderConfig{
 							Enabled:  true,
 							GasLimit: 40000000,
 						},
@@ -2015,26 +2015,26 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 		}, nil)
 	v := validator{
 		validatorClient: client,
-		proposerSettings: &validatorserviceconfig.ProposerSettings{
+		proposerSettings: &proposer.ProposerSettings{
 			DefaultConfig: nil,
-			ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			ProposeConfig: map[[48]byte]*proposer.ProposerOption{
 				pubkey1: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient1,
 					},
 				},
 				pubkey2: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient2,
 					},
 				},
 				pubkey3: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient3,
 					},
 				},
 				pubkey4: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient4,
 					},
 				},
@@ -2158,30 +2158,30 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 
 	v := validator{
 		validatorClient: client,
-		proposerSettings: &validatorserviceconfig.ProposerSettings{
-			DefaultConfig: &validatorserviceconfig.ProposerOption{
-				FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+		proposerSettings: &proposer.ProposerSettings{
+			DefaultConfig: &proposer.ProposerOption{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: defaultFeeRecipient,
 				},
 			},
-			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.ProposerOption{
 				pubkey1: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient1,
 					},
 				},
 				pubkey2: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient2,
 					},
 				},
 				pubkey3: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient3,
 					},
 				},
 				pubkey8: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient8,
 					},
 				},
@@ -2265,38 +2265,38 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	v := validator{
 		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
 		validatorClient:              client,
-		proposerSettings: &validatorserviceconfig.ProposerSettings{
-			DefaultConfig: &validatorserviceconfig.ProposerOption{
-				FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+		proposerSettings: &proposer.ProposerSettings{
+			DefaultConfig: &proposer.ProposerOption{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: defaultFeeRecipient,
 				},
-				BuilderConfig: &validatorserviceconfig.BuilderConfig{
+				BuilderConfig: &proposer.BuilderConfig{
 					Enabled:  false,
 					GasLimit: 9999,
 				},
 			},
-			ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			ProposeConfig: map[[48]byte]*proposer.ProposerOption{
 				pubkey1: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient1,
 					},
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 1111,
 					},
 				},
 				pubkey2: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient2,
 					},
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  false,
 						GasLimit: 2222,
 					},
 				},
 				pubkey3: {
 					FeeRecipientConfig: nil,
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 3333,
 					},
@@ -2350,38 +2350,38 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	v := validator{
 		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
 		validatorClient:              client,
-		proposerSettings: &validatorserviceconfig.ProposerSettings{
-			DefaultConfig: &validatorserviceconfig.ProposerOption{
-				FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+		proposerSettings: &proposer.ProposerSettings{
+			DefaultConfig: &proposer.ProposerOption{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: defaultFeeRecipient,
 				},
-				BuilderConfig: &validatorserviceconfig.BuilderConfig{
+				BuilderConfig: &proposer.BuilderConfig{
 					Enabled:  true,
 					GasLimit: 9999,
 				},
 			},
-			ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			ProposeConfig: map[[48]byte]*proposer.ProposerOption{
 				pubkey1: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient1,
 					},
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 1111,
 					},
 				},
 				pubkey2: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient2,
 					},
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  false,
 						GasLimit: 2222,
 					},
 				},
 				pubkey3: {
 					FeeRecipientConfig: nil,
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 3333,
 					},
@@ -2428,12 +2428,12 @@ func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
 	v := validator{
 		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
 		validatorClient:              client,
-		proposerSettings: &validatorserviceconfig.ProposerSettings{
-			DefaultConfig: &validatorserviceconfig.ProposerOption{
-				FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+		proposerSettings: &proposer.ProposerSettings{
+			DefaultConfig: &proposer.ProposerOption{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: defaultFeeRecipient,
 				},
-				BuilderConfig: &validatorserviceconfig.BuilderConfig{
+				BuilderConfig: &proposer.BuilderConfig{
 					Enabled:  true,
 					GasLimit: 9999,
 				},
@@ -2472,22 +2472,22 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
 		validatorClient:              client,
 		genesisTime:                  uint64(time.Now().UTC().Unix() + 1000),
-		proposerSettings: &validatorserviceconfig.ProposerSettings{
-			DefaultConfig: &validatorserviceconfig.ProposerOption{
-				FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+		proposerSettings: &proposer.ProposerSettings{
+			DefaultConfig: &proposer.ProposerOption{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: defaultFeeRecipient,
 				},
-				BuilderConfig: &validatorserviceconfig.BuilderConfig{
+				BuilderConfig: &proposer.BuilderConfig{
 					Enabled:  true,
 					GasLimit: 9999,
 				},
 			},
-			ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			ProposeConfig: map[[48]byte]*proposer.ProposerOption{
 				pubkey1: {
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient1,
 					},
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 1111,
 					},

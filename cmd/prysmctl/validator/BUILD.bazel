@@ -26,7 +26,7 @@ go_library(
         "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",
         "//io/prompt:go_default_library",
-        "//proto/prysm/v1alpha1/validator-client:go_default_library",
+        "//proto/prysm/config:go_default_library",
         "//runtime/tos:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",

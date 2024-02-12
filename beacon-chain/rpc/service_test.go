@@ -5,11 +5,15 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/blob"
@@ -24,9 +28,15 @@ import (
 	nodeprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/node"
 	validatorprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	proposersettings "github.com/prysmaticlabs/prysm/v4/proto/prysm/config"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -253,4 +263,168 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	require.LogsContain(t, hook, "listening on port")
 	require.LogsContain(t, hook, "You are using an insecure gRPC server")
 	assert.NoError(t, rpcService.Stop())
+}
+
+func Test_updateTrackValidatorCacheWithProposerSettings(t *testing.T) {
+	tests := []struct {
+		name   string
+		setup  func() (sync.Checker, blockchain.ChainInfoFetcher, *proposersettings.ProposerSettingsPayload)
+		verify func(t *testing.T, settings *proposersettings.ProposerSettingsPayload, tackedValidatorCache *cache.TrackedValidatorsCache, err error)
+	}{
+		{
+			name: "proposer settings empty",
+			setup: func() (sync.Checker, blockchain.ChainInfoFetcher, *proposersettings.ProposerSettingsPayload) {
+				key := "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c"
+				pubkey1decoded, err := hexutil.Decode(key)
+				require.NoError(t, err)
+				st, err := util.NewBeaconStateDeneb(util.FillRootsNaturalOptDeneb, func(state *ethpbalpha.BeaconStateDeneb) error {
+					state.Validators = []*ethpbalpha.Validator{{
+						PublicKey:                  pubkey1decoded,
+						WithdrawalCredentials:      bytesutil.PadTo([]byte("withdrawalcredentials"), 32),
+						EffectiveBalance:           9,
+						Slashed:                    true,
+						ActivationEligibilityEpoch: 10,
+						ActivationEpoch:            11,
+						ExitEpoch:                  12,
+						WithdrawableEpoch:          13,
+					}}
+					return nil
+				})
+				require.NoError(t, err)
+				return &mockSync.Sync{IsSynced: true},
+					&mock.ChainService{
+						State: st,
+					}, nil
+			},
+			verify: func(t *testing.T, settings *proposersettings.ProposerSettingsPayload, tackedValidatorCache *cache.TrackedValidatorsCache, err error) {
+				require.NoError(t, err)
+				_, ok := tackedValidatorCache.Validator(0)
+				require.Equal(t, ok, false)
+			},
+		},
+		{
+			name: "proposer settings filled and chain is synced",
+			setup: func() (sync.Checker, blockchain.ChainInfoFetcher, *proposersettings.ProposerSettingsPayload) {
+				key := "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c"
+				pubkey1decoded, err := hexutil.Decode(key)
+				require.NoError(t, err)
+				st, err := util.NewBeaconStateDeneb(util.FillRootsNaturalOptDeneb, func(state *ethpbalpha.BeaconStateDeneb) error {
+					state.Validators = []*ethpbalpha.Validator{{
+						PublicKey:                  pubkey1decoded,
+						WithdrawalCredentials:      bytesutil.PadTo([]byte("withdrawalcredentials"), 32),
+						EffectiveBalance:           9,
+						Slashed:                    true,
+						ActivationEligibilityEpoch: 10,
+						ActivationEpoch:            11,
+						ExitEpoch:                  12,
+						WithdrawableEpoch:          13,
+					}}
+					return nil
+				})
+				require.NoError(t, err)
+				return &mockSync.Sync{IsSynced: true},
+					&mock.ChainService{
+						State: st,
+					},
+					&proposersettings.ProposerSettingsPayload{
+						ProposerConfig: map[string]*proposersettings.ProposerOptionPayload{
+							key: {
+								FeeRecipient: "0x967646dCD8d34F4E02204faeDcbAe0cC96fB9245",
+							},
+						},
+					}
+			},
+			verify: func(t *testing.T, settings *proposersettings.ProposerSettingsPayload, tackedValidatorCache *cache.TrackedValidatorsCache, err error) {
+				require.NoError(t, err)
+				tr, ok := tackedValidatorCache.Validator(0)
+				require.Equal(t, ok, true)
+				require.StringContains(t, strings.ToLower(hexutil.Encode(tr.FeeRecipient[:])), strings.ToLower("0x967646dCD8d34F4E02204faeDcbAe0cC96fB9245"))
+			},
+		},
+		{
+			name: "proposer settings filled with non active or non matching key and chain is synced",
+			setup: func() (sync.Checker, blockchain.ChainInfoFetcher, *proposersettings.ProposerSettingsPayload) {
+				key := "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c"
+
+				key2 := "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44b"
+				pubkey2decoded, err := hexutil.Decode(key2)
+				require.NoError(t, err)
+				st, err := util.NewBeaconStateDeneb(util.FillRootsNaturalOptDeneb, func(state *ethpbalpha.BeaconStateDeneb) error {
+					state.Validators = []*ethpbalpha.Validator{{
+						PublicKey:                  pubkey2decoded,
+						WithdrawalCredentials:      bytesutil.PadTo([]byte("withdrawalcredentials"), 32),
+						EffectiveBalance:           9,
+						Slashed:                    true,
+						ActivationEligibilityEpoch: 10,
+						ActivationEpoch:            11,
+						ExitEpoch:                  12,
+						WithdrawableEpoch:          13,
+					}}
+					return nil
+				})
+				require.NoError(t, err)
+				return &mockSync.Sync{IsSynced: true},
+					&mock.ChainService{
+						State: st,
+					},
+					&proposersettings.ProposerSettingsPayload{
+						ProposerConfig: map[string]*proposersettings.ProposerOptionPayload{
+							key: {
+								FeeRecipient: "0x967646dCD8d34F4E02204faeDcbAe0cC96fB9245",
+							},
+						},
+					}
+			},
+			verify: func(t *testing.T, settings *proposersettings.ProposerSettingsPayload, tackedValidatorCache *cache.TrackedValidatorsCache, err error) {
+				require.NoError(t, err)
+				_, ok := tackedValidatorCache.Validator(0)
+				require.Equal(t, ok, false)
+			},
+		},
+		{
+			name: "default proposer settings filled and chain is synced",
+			setup: func() (sync.Checker, blockchain.ChainInfoFetcher, *proposersettings.ProposerSettingsPayload) {
+				key := "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c"
+				pubkey1decoded, err := hexutil.Decode(key)
+				require.NoError(t, err)
+				st, err := util.NewBeaconStateDeneb(util.FillRootsNaturalOptDeneb, func(state *ethpbalpha.BeaconStateDeneb) error {
+					state.Validators = []*ethpbalpha.Validator{{
+						PublicKey:                  pubkey1decoded,
+						WithdrawalCredentials:      bytesutil.PadTo([]byte("withdrawalcredentials"), 32),
+						EffectiveBalance:           9,
+						Slashed:                    true,
+						ActivationEligibilityEpoch: 10,
+						ActivationEpoch:            11,
+						ExitEpoch:                  12,
+						WithdrawableEpoch:          13,
+					}}
+					return nil
+				})
+				require.NoError(t, err)
+				return &mockSync.Sync{IsSynced: true},
+					&mock.ChainService{
+						State: st,
+					},
+					&proposersettings.ProposerSettingsPayload{
+						DefaultConfig: &proposersettings.ProposerOptionPayload{
+							FeeRecipient: "0x967646dCD8d34F4E02204faeDcbAe0cC96fB9245",
+						},
+					}
+			},
+			verify: func(t *testing.T, settings *proposersettings.ProposerSettingsPayload, tackedValidatorCache *cache.TrackedValidatorsCache, err error) {
+				require.NoError(t, err)
+				_, ok := tackedValidatorCache.Validator(0)
+				require.Equal(t, ok, false)
+				require.Equal(t, params.BeaconConfig().DefaultFeeRecipient.String(), "0x967646dCD8d34F4E02204faeDcbAe0cC96fB9245")
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := cache.NewTrackedValidatorsCache()
+			syncChecker, chain, settings := tt.setup()
+			err := updateTrackValidatorCacheWithProposerSettings(context.Background(), syncChecker, chain, settings, c)
+			tt.verify(t, settings, c, err)
+		})
+	}
 }

@@ -1,4 +1,4 @@
-package validator_service_config
+package proposer
 
 import (
 	"fmt"
@@ -9,11 +9,12 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	proposersettings "github.com/prysmaticlabs/prysm/v4/proto/prysm/config"
+	log "github.com/sirupsen/logrus"
 )
 
 // ToSettings converts struct to ProposerSettings
-func ToSettings(ps *validatorpb.ProposerSettingsPayload) (*ProposerSettings, error) {
+func ToSettings(ps *proposersettings.ProposerSettingsPayload) (*ProposerSettings, error) {
 	settings := &ProposerSettings{}
 	if ps.ProposerConfig != nil {
 		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption)
@@ -60,7 +61,7 @@ type BuilderConfig struct {
 }
 
 // ToBuilderConfig converts protobuf to a builder config used in inmemory storage
-func ToBuilderConfig(from *validatorpb.BuilderConfig) *BuilderConfig {
+func ToBuilderConfig(from *proposersettings.BuilderConfig) *BuilderConfig {
 	if from == nil {
 		return nil
 	}
@@ -78,7 +79,7 @@ func ToBuilderConfig(from *validatorpb.BuilderConfig) *BuilderConfig {
 }
 
 // ProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.
-// validatorpb.ProposerSettingsPayload maps to ProposerSettings on import through the CLI.
+// proposersettings.ProposerSettingsPayload maps to ProposerSettings on import through the CLI.
 type ProposerSettings struct {
 	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption
 	DefaultConfig *ProposerOption
@@ -94,15 +95,15 @@ func (settings *ProposerSettings) ShouldBeSaved() bool {
 }
 
 // ToPayload converts struct to ProposerSettingsPayload
-func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
+func (ps *ProposerSettings) ToPayload() *proposersettings.ProposerSettingsPayload {
 	if ps == nil {
 		return nil
 	}
-	payload := &validatorpb.ProposerSettingsPayload{}
+	payload := &proposersettings.ProposerSettingsPayload{}
 	if ps.ProposeConfig != nil {
-		payload.ProposerConfig = make(map[string]*validatorpb.ProposerOptionPayload)
+		payload.ProposerConfig = make(map[string]*proposersettings.ProposerOptionPayload)
 		for key, option := range ps.ProposeConfig {
-			p := &validatorpb.ProposerOptionPayload{}
+			p := &proposersettings.ProposerOptionPayload{}
 			if option.FeeRecipientConfig != nil {
 				p.FeeRecipient = option.FeeRecipientConfig.FeeRecipient.Hex()
 			}
@@ -113,7 +114,7 @@ func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
 		}
 	}
 	if ps.DefaultConfig != nil {
-		p := &validatorpb.ProposerOptionPayload{}
+		p := &proposersettings.ProposerOptionPayload{}
 		if ps.DefaultConfig.FeeRecipientConfig != nil {
 			p.FeeRecipient = ps.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex()
 		}
@@ -183,11 +184,11 @@ func (bc *BuilderConfig) Clone() *BuilderConfig {
 }
 
 // ToPayload converts Builder Config to the protobuf object
-func (bc *BuilderConfig) ToPayload() *validatorpb.BuilderConfig {
+func (bc *BuilderConfig) ToPayload() *proposersettings.BuilderConfig {
 	if bc == nil {
 		return nil
 	}
-	config := &validatorpb.BuilderConfig{}
+	config := &proposersettings.BuilderConfig{}
 	config.Enabled = bc.Enabled
 	var relays []string
 	if bc.Relays != nil {
@@ -212,4 +213,31 @@ func (po *ProposerOption) Clone() *ProposerOption {
 		p.BuilderConfig = po.BuilderConfig.Clone()
 	}
 	return p
+}
+
+func VerifyOption(key string, option *proposersettings.ProposerOptionPayload) error {
+	if option == nil {
+		return fmt.Errorf("fee recipient is required for proposer %s", key)
+	}
+	if !common.IsHexAddress(option.FeeRecipient) {
+		return errors.New("fee recipient is not a valid eth1 address")
+	}
+	if err := WarnNonChecksummedAddress(option.FeeRecipient); err != nil {
+		return err
+	}
+	return nil
+}
+
+func WarnNonChecksummedAddress(feeRecipient string) error {
+	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(feeRecipient)
+	if err != nil {
+		return errors.Wrapf(err, "could not decode fee recipient %s", feeRecipient)
+	}
+	if !mixedcaseAddress.ValidChecksum() {
+		log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
+			"The checksummed address is %s and will be used as the fee recipient. "+
+			"We recommend using a mixed-case address (checksum) "+
+			"to prevent spelling mistakes in your fee recipient Ethereum address", feeRecipient, mixedcaseAddress.Address().Hex())
+	}
+	return nil
 }

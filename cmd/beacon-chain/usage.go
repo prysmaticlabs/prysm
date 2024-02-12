@@ -130,6 +130,9 @@ var appHelpFlagGroups = []flagGroup{
 			flags.SlasherDirFlag,
 			flags.LocalBlockValueBoost,
 			flags.JwtId,
+			flags.SuggestedFeeRecipient,
+			flags.ProposerSettingsFlag,
+			flags.ProposerSettingsURLFlag,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,
 			checkpoint.RemoteURL,
@@ -145,7 +148,6 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "merge",
 		Flags: []cli.Flag{
-			flags.SuggestedFeeRecipient,
 			flags.TerminalTotalDifficultyOverride,
 			flags.TerminalBlockHashOverride,
 			flags.TerminalBlockHashActivationEpochOverride,

@@ -232,12 +232,28 @@ var (
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
 	}
+
 	// SuggestedFeeRecipient specifies the fee recipient for the transaction fees.
 	SuggestedFeeRecipient = &cli.StringFlag{
 		Name:  "suggested-fee-recipient",
 		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state. Validator client can override this value through the preparebeaconproposer api.",
 		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
+	// ProposerSettingsFlag defines the path or URL to a file with proposer config.
+	ProposerSettingsFlag = &cli.StringFlag{
+		Name: "proposer-settings-file",
+		Usage: `Sets path to a YAML or JSON file containing validator settings used when proposing blocks such as
+		fee recipient and gas limit. File format found in docs.`,
+		Value: "",
+	}
+	// ProposerSettingsURLFlag defines the path or URL to a file with proposer config.
+	ProposerSettingsURLFlag = &cli.StringFlag{
+		Name: "proposer-settings-url",
+		Usage: `Sets URL to a REST endpoint containing validator settings used when proposing blocks such as
+		fee recipient and gas limit. File format found in docs`,
+		Value: "",
+	}
+
 	// TerminalTotalDifficultyOverride specifies the total difficulty to manual overrides the `TERMINAL_TOTAL_DIFFICULTY` parameter.
 	TerminalTotalDifficultyOverride = &cli.StringFlag{
 		Name: "terminal-total-difficulty-override",
