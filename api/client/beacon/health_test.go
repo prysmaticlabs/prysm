@@ -17,8 +17,8 @@ func TestNodeHealth_IsHealthy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			n := &NodeHealth{
-				isHealthy: tt.isHealthy,
-				healthCh:  make(chan bool, 1),
+				isHealthy:  tt.isHealthy,
+				healthChan: make(chan bool, 1),
 			}
 			if got := n.IsHealthy(); got != tt.want {
 				t.Errorf("IsHealthy() = %v, want %v", got, tt.want)

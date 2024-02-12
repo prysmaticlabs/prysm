@@ -168,8 +168,15 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 		}
 	}
 	if !containsHead {
-		log.Warnf("gRPC only supports the head topic, topics provided are %v.. continuing stream with head topic", topics)
+		eventsChannel <- &eventClient.Event{
+			EventType: eventClient.EventConnectionError,
+			Data:      []byte(errors.Wrap(client.ErrConnectionIssue, "gRPC only supports the head topic, and head topic was not passed").Error()),
+		}
 	}
+	if containsHead && len(topics) > 1 {
+		log.Warnf("gRPC only supports the head topic, other topics %v will be ignored", topics)
+	}
+
 	stream, err := c.beaconNodeValidatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
 	if err != nil {
 		eventsChannel <- &eventClient.Event{
@@ -187,14 +194,21 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 			c.isEventStreamRunning = false
 			return
 		default:
-			if ctx.Err() == context.Canceled {
-				log.WithError(ctx.Err()).Error("Context canceled - shutting down slots receiver")
+			if ctx.Err() != nil {
 				c.isEventStreamRunning = false
-				return
+				if errors.Is(ctx.Err(), context.Canceled) {
+					log.Error("Context canceled, stopping event stream")
+					return
+				} else {
+					eventsChannel <- &eventClient.Event{
+						EventType: eventClient.EventError,
+						Data:      []byte(ctx.Err().Error()),
+					}
+				}
 			}
 			res, err := stream.Recv()
 			if err != nil {
-				log.WithError(err).Error("Could not receive slots from beacon node: " + client.ErrConnectionIssue.Error())
+				c.isEventStreamRunning = false
 				eventsChannel <- &eventClient.Event{
 					EventType: eventClient.EventConnectionError,
 					Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
@@ -208,6 +222,7 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 				Slot: strconv.FormatUint(uint64(res.Slot), 10),
 			})
 			if err != nil {
+				c.isEventStreamRunning = false
 				eventsChannel <- &eventClient.Event{
 					EventType: eventClient.EventError,
 					Data:      []byte(errors.Wrap(err, "failed to marshal Head Event").Error()),
