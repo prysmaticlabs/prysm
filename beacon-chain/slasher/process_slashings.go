@@ -5,14 +5,17 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // Verifies attester slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
-func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) ([]*ethpb.AttesterSlashing, error) {
-	processedSlashings := make([]*ethpb.AttesterSlashing, 0, len(slashings))
+func (s *Service) processAttesterSlashings(
+	ctx context.Context, slashings map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing,
+) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
+	processedSlashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
 
 	// If no slashings, return early.
 	if len(slashings) == 0 {
@@ -25,7 +28,7 @@ func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*eth
 		return nil, errors.Wrap(err, "could not get head state")
 	}
 
-	for _, slashing := range slashings {
+	for root, slashing := range slashings {
 		// Verify the signature of the first attestation.
 		if err := s.verifyAttSignature(ctx, slashing.Attestation_1); err != nil {
 			log.WithError(err).WithField("a", slashing.Attestation_1).Warn(
@@ -50,7 +53,7 @@ func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*eth
 			log.WithError(err).Error("Could not insert attester slashing into operations pool")
 		}
 
-		processedSlashings = append(processedSlashings, slashing)
+		processedSlashings[root] = slashing
 	}
 
 	return processedSlashings, nil

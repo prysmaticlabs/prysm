@@ -10,6 +10,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	slashingsmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings/mock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -75,11 +76,16 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		firstAtt.Signature = signature.Marshal()
 		secondAtt.Signature = make([]byte, 96)
 
-		slashings := []*ethpb.AttesterSlashing{
-			{
-				Attestation_1: firstAtt,
-				Attestation_2: secondAtt,
-			},
+		slashing := &ethpb.AttesterSlashing{
+			Attestation_1: firstAtt,
+			Attestation_2: secondAtt,
+		}
+
+		root, err := slashing.HashTreeRoot()
+		require.NoError(tt, err, "failed to hash tree root")
+
+		slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{
+			root: slashing,
 		}
 
 		_, err = s.processAttesterSlashings(ctx, slashings)
@@ -94,11 +100,16 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		firstAtt.Signature = make([]byte, 96)
 		secondAtt.Signature = signature.Marshal()
 
-		slashings := []*ethpb.AttesterSlashing{
-			{
-				Attestation_1: firstAtt,
-				Attestation_2: secondAtt,
-			},
+		slashing := &ethpb.AttesterSlashing{
+			Attestation_1: firstAtt,
+			Attestation_2: secondAtt,
+		}
+
+		root, err := slashing.HashTreeRoot()
+		require.NoError(tt, err, "failed to hash tree root")
+
+		slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{
+			root: slashing,
 		}
 
 		_, err = s.processAttesterSlashings(ctx, slashings)
@@ -113,11 +124,16 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		firstAtt.Signature = signature.Marshal()
 		secondAtt.Signature = signature.Marshal()
 
-		slashings := []*ethpb.AttesterSlashing{
-			{
-				Attestation_1: firstAtt,
-				Attestation_2: secondAtt,
-			},
+		slashing := &ethpb.AttesterSlashing{
+			Attestation_1: firstAtt,
+			Attestation_2: secondAtt,
+		}
+
+		root, err := slashing.HashTreeRoot()
+		require.NoError(tt, err, "failed to hash tree root")
+
+		slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{
+			root: slashing,
 		}
 
 		_, err = s.processAttesterSlashings(ctx, slashings)

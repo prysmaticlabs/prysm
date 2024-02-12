@@ -12,6 +12,7 @@ import (
 	slashingsmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings/mock"
 	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -64,6 +65,26 @@ func Test_processAttestations(t *testing.T) {
 							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
 							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
 						},
+					},
+				},
+			},
+		},
+		{
+			name: "Same target with different signing roots - two steps",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+					},
+					expectedSlashingsInfo: nil,
+				},
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
+					},
+					expectedSlashingsInfo: []*slashingInfo{
 						{
 							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
 							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
@@ -72,35 +93,6 @@ func Test_processAttestations(t *testing.T) {
 				},
 			},
 		},
-		// Uncomment when https://github.com/prysmaticlabs/prysm/issues/13590 is fixed
-		// {
-		// 	name: "Same target with different signing roots - two steps",
-		// 	steps: []*step{
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
-		// 			},
-		// 			expectedSlashingsInfo: nil,
-		// 		},
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
-		// 			},
-		// 			expectedSlashingsInfo: []*slashingInfo{
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
-		// 					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
-		// 				},
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
-		// 					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
 		{
 			name: "Same target with same signing roots - single step",
 			steps: []*step{
@@ -144,20 +136,8 @@ func Test_processAttestations(t *testing.T) {
 					},
 					expectedSlashingsInfo: []*slashingInfo{
 						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 						},
 					},
 				},
@@ -180,20 +160,8 @@ func Test_processAttestations(t *testing.T) {
 					},
 					expectedSlashingsInfo: []*slashingInfo{
 						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 						},
 					},
 				},
@@ -210,10 +178,6 @@ func Test_processAttestations(t *testing.T) {
 						{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
 					},
 					expectedSlashingsInfo: []*slashingInfo{
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
-						},
 						{
 							attestationInfo_1: &attestationInfo{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
 							attestationInfo_2: &attestationInfo{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
@@ -258,12 +222,8 @@ func Test_processAttestations(t *testing.T) {
 					},
 					expectedSlashingsInfo: []*slashingInfo{
 						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 						},
 					},
 				},
@@ -286,61 +246,6 @@ func Test_processAttestations(t *testing.T) {
 		// 				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 		// 			},
 		// 			expectedSlashingsInfo: []*slashingInfo{
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 				},
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
-		{
-			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2) - single step",
-			steps: []*step{
-				{
-					currentEpoch: 4,
-					attestationsInfo: []*attestationInfo{
-						{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					},
-					expectedSlashingsInfo: []*slashingInfo{
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-						{
-							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-						},
-					},
-				},
-			},
-		},
-		// Uncomment when https://github.com/prysmaticlabs/prysm/issues/13591 is fixed
-		// {
-		// 	name: "Detects surrounded vote (source 0, target 3), (source 1, target 2) - two steps",
-		// 	steps: []*step{
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 			},
-		// 			expectedSlashingsInfo: nil,
-		// 		},
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 			},
-		// 			expectedSlashingsInfo: []*slashingInfo{
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 				},
 		// 				{
 		// 					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 		// 					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
@@ -363,6 +268,26 @@ func Test_processAttestations(t *testing.T) {
 							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 							attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 						},
+					},
+				},
+			},
+		},
+		{
+			name: "Detects double vote, (source 1, target 2), (source 0, target 2) - two steps",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: nil,
+				},
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: []*slashingInfo{
 						{
 							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 							attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
@@ -371,35 +296,6 @@ func Test_processAttestations(t *testing.T) {
 				},
 			},
 		},
-		// Uncomment when https://github.com/prysmaticlabs/prysm/issues/13590 is fixed
-		// {
-		// 	name: "Detects double vote, (source 1, target 2), (source 0, target 2) - two steps",
-		// 	steps: []*step{
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 			},
-		// 			expectedSlashingsInfo: nil,
-		// 		},
-		// 		{
-		// 			currentEpoch: 4,
-		// 			attestationsInfo: []*attestationInfo{
-		// 				{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 			},
-		// 			expectedSlashingsInfo: []*slashingInfo{
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 					attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 				},
-		// 				{
-		// 					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 					attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
 		{
 			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index - single step",
 			steps: []*step{
@@ -748,10 +644,11 @@ func Test_processAttestations(t *testing.T) {
 				}
 
 				// Build expected attester slashings.
-				expectedSlashings := make([]*ethpb.AttesterSlashing, 0, len(step.expectedSlashingsInfo))
+				expectedSlashings := make(map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, len(step.expectedSlashingsInfo))
+
 				for _, slashingInfo := range step.expectedSlashingsInfo {
 					// Create attestations.
-					attestation_1 := createAttestationWrapper(
+					wrapper_1 := createAttestationWrapper(
 						t,
 						domain,
 						privateKeys,
@@ -761,7 +658,7 @@ func Test_processAttestations(t *testing.T) {
 						slashingInfo.attestationInfo_1.beaconBlockRoot,
 					)
 
-					attestation_2 := createAttestationWrapper(
+					wrapper_2 := createAttestationWrapper(
 						t,
 						domain,
 						privateKeys,
@@ -772,13 +669,16 @@ func Test_processAttestations(t *testing.T) {
 					)
 
 					// Create the attester slashing.
-					attesterSlashing := &ethpb.AttesterSlashing{
-						Attestation_1: attestation_1.IndexedAttestation,
-						Attestation_2: attestation_2.IndexedAttestation,
+					expectedSlashing := &ethpb.AttesterSlashing{
+						Attestation_1: wrapper_1.IndexedAttestation,
+						Attestation_2: wrapper_2.IndexedAttestation,
 					}
 
-					// Add the attester slashing to the list.
-					expectedSlashings = append(expectedSlashings, attesterSlashing)
+					root, err := expectedSlashing.HashTreeRoot()
+					require.NoError(t, err, "failed to hash tree root")
+
+					// Add the attester slashing to the map.
+					expectedSlashings[root] = expectedSlashing
 				}
 
 				// Get the currentSlot for the current epoch.
@@ -789,7 +689,18 @@ func Test_processAttestations(t *testing.T) {
 				processedSlashings := slasherService.processAttestations(ctx, attestationWrappers, currentSlot)
 
 				// Check the processed slashings correspond to the expected slashings.
-				assert.DeepSSZEqual(t, expectedSlashings, processedSlashings)
+				require.Equal(t, len(expectedSlashings), len(processedSlashings), "processed slashings count not equal to expected")
+
+				for root := range expectedSlashings {
+					// Check the expected slashing is in the processed slashings.
+					processedSlashing, ok := processedSlashings[root]
+					require.Equal(t, true, ok, "processed slashing not found")
+
+					// Check the root matches
+					controlRoot, err := processedSlashing.HashTreeRoot()
+					require.NoError(t, err, "failed to hash tree root")
+					require.Equal(t, root, controlRoot, "root not equal")
+				}
 			}
 		})
 	}
@@ -1111,49 +1022,6 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, slashing)
-}
-
-func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
-	slasherDB := dbtest.SetupSlasherDB(t)
-	ctx := context.Background()
-	// For a list of input attestations, check that we can
-	// indeed check there could exist a double vote offense
-	// within the list with respect to previous entries in the db.
-	prevAtts := []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapperEmptySig(t, 0, 1, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapperEmptySig(t, 0, 2, []uint64{1, 2}, []byte{1}),
-	}
-	srv, err := New(context.Background(),
-		&ServiceConfig{
-			Database:      slasherDB,
-			StateNotifier: &mock.MockStateNotifier{},
-			ClockWaiter:   startup.NewClockSynchronizer(),
-		})
-	require.NoError(t, err)
-
-	err = slasherDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
-	require.NoError(t, err)
-
-	prev1 := createAttestationWrapperEmptySig(t, 0, 2, []uint64{1, 2}, []byte{1})
-	cur1 := createAttestationWrapperEmptySig(t, 0, 2, []uint64{1, 2}, []byte{2})
-	prev2 := createAttestationWrapperEmptySig(t, 0, 2, []uint64{1, 2}, []byte{1})
-	cur2 := createAttestationWrapperEmptySig(t, 0, 2, []uint64{1, 2}, []byte{2})
-	wanted := []*ethpb.AttesterSlashing{
-		{
-			Attestation_1: prev1.IndexedAttestation,
-			Attestation_2: cur1.IndexedAttestation,
-		},
-		{
-			Attestation_1: prev2.IndexedAttestation,
-			Attestation_2: cur2.IndexedAttestation,
-		},
-	}
-	newAtts := []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapperEmptySig(t, 0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
-	}
-	slashings, err := srv.checkDoubleVotes(ctx, newAtts)
-	require.NoError(t, err)
-	require.DeepEqual(t, wanted, slashings)
 }
 
 func Test_loadChunks_MinSpans(t *testing.T) {
