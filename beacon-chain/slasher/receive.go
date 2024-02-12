@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -107,7 +108,7 @@ func (s *Service) processAttestations(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
 	currentSlot primitives.Slot,
-) []*ethpb.AttesterSlashing {
+) map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing {
 	// Get the current epoch from the current slot.
 	currentEpoch := slots.ToEpoch(currentSlot)
 
@@ -137,14 +138,6 @@ func (s *Service) processAttestations(
 		"numDroppedAtts":  numDropped,
 		"attsQueueSize":   queuedAttestationsCount,
 	}).Info("Processing queued attestations for slashing detection")
-
-	// Save the attestation records to our database.
-	// If multiple attestations are provided for the same validator index + target epoch combination,
-	// then the first (validator index + target epoch) => signing root) link is kept into the database.
-	if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(ctx, validAttestations); err != nil {
-		log.WithError(err).Error(couldNotSaveAttRecord)
-		return nil
-	}
 
 	// Check for attestatinos slashings (double, sourrounding, surrounded votes).
 	slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAttestations)

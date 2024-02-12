@@ -24,10 +24,10 @@ type IndexedAttestationWrapper struct {
 // AttesterDoubleVote represents a double vote instance
 // which is a slashable event for attesters.
 type AttesterDoubleVote struct {
-	Target                 primitives.Epoch
-	ValidatorIndex         primitives.ValidatorIndex
-	PrevAttestationWrapper *IndexedAttestationWrapper
-	AttestationWrapper     *IndexedAttestationWrapper
+	Target         primitives.Epoch
+	ValidatorIndex primitives.ValidatorIndex
+	Wrapper_1      *IndexedAttestationWrapper
+	Wrapper_2      *IndexedAttestationWrapper
 }
 
 // DoubleBlockProposal containing an incoming and an existing proposal's signing root.

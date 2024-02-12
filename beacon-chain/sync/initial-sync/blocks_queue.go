@@ -29,7 +29,7 @@ const (
 	skippedMachineTimeout = 10 * staleEpochTimeout
 	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
 	// Each step is managed by assigned finite state machine. Must be >= 2.
-	lookaheadSteps = 8
+	lookaheadSteps = 4
 	// noRequiredPeersErrMaxRetries defines number of retries when no required peers are found.
 	noRequiredPeersErrMaxRetries = 1000
 	// noRequiredPeersErrRefreshInterval defines interval for which queue will be paused before
