@@ -3,78 +3,99 @@ package slasher
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // Verifies attester slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
-func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) error {
-	var beaconState state.BeaconState
-	var err error
-	if len(slashings) > 0 {
-		beaconState, err = s.serviceCfg.HeadStateFetcher.HeadState(ctx)
-		if err != nil {
-			return err
-		}
+func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) ([]*ethpb.AttesterSlashing, error) {
+	processedSlashings := make([]*ethpb.AttesterSlashing, 0, len(slashings))
+
+	// If no slashings, return early.
+	if len(slashings) == 0 {
+		return processedSlashings, nil
 	}
-	for _, sl := range slashings {
-		if err := s.verifyAttSignature(ctx, sl.Attestation_1); err != nil {
-			log.WithError(err).WithField("a", sl.Attestation_1).Warn(
+
+	// Get the head state.
+	beaconState, err := s.serviceCfg.HeadStateFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get head state")
+	}
+
+	for _, slashing := range slashings {
+		// Verify the signature of the first attestation.
+		if err := s.verifyAttSignature(ctx, slashing.Attestation_1); err != nil {
+			log.WithError(err).WithField("a", slashing.Attestation_1).Warn(
 				"Invalid signature for attestation in detected slashing offense",
 			)
+
 			continue
 		}
-		if err := s.verifyAttSignature(ctx, sl.Attestation_2); err != nil {
-			log.WithError(err).WithField("b", sl.Attestation_2).Warn(
+
+		// Verify the signature of the second attestation.
+		if err := s.verifyAttSignature(ctx, slashing.Attestation_2); err != nil {
+			log.WithError(err).WithField("b", slashing.Attestation_2).Warn(
 				"Invalid signature for attestation in detected slashing offense",
 			)
+
 			continue
 		}
 
 		// Log the slashing event and insert into the beacon node's operations pool.
-		logAttesterSlashing(sl)
-		if err := s.serviceCfg.SlashingPoolInserter.InsertAttesterSlashing(
-			ctx, beaconState, sl,
-		); err != nil {
+		logAttesterSlashing(slashing)
+		if err := s.serviceCfg.SlashingPoolInserter.InsertAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			log.WithError(err).Error("Could not insert attester slashing into operations pool")
 		}
+
+		processedSlashings = append(processedSlashings, slashing)
 	}
-	return nil
+
+	return processedSlashings, nil
 }
 
 // Verifies proposer slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
 func (s *Service) processProposerSlashings(ctx context.Context, slashings []*ethpb.ProposerSlashing) error {
-	var beaconState state.BeaconState
-	var err error
-	if len(slashings) > 0 {
-		beaconState, err = s.serviceCfg.HeadStateFetcher.HeadState(ctx)
-		if err != nil {
-			return err
-		}
+	// If no slashings, return early.
+	if len(slashings) == 0 {
+		return nil
 	}
-	for _, sl := range slashings {
-		if err := s.verifyBlockSignature(ctx, sl.Header_1); err != nil {
-			log.WithError(err).WithField("a", sl.Header_1).Warn(
+
+	// Get the head state.
+	beaconState, err := s.serviceCfg.HeadStateFetcher.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, slashing := range slashings {
+		// Verify the signature of the first block.
+		if err := s.verifyBlockSignature(ctx, slashing.Header_1); err != nil {
+			log.WithError(err).WithField("a", slashing.Header_1).Warn(
 				"Invalid signature for block header in detected slashing offense",
 			)
+
 			continue
 		}
-		if err := s.verifyBlockSignature(ctx, sl.Header_2); err != nil {
-			log.WithError(err).WithField("b", sl.Header_2).Warn(
+
+		// Verify the signature of the second block.
+		if err := s.verifyBlockSignature(ctx, slashing.Header_2); err != nil {
+			log.WithError(err).WithField("b", slashing.Header_2).Warn(
 				"Invalid signature for block header in detected slashing offense",
 			)
+
 			continue
 		}
+
 		// Log the slashing event and insert into the beacon node's operations pool.
-		logProposerSlashing(sl)
-		if err := s.serviceCfg.SlashingPoolInserter.InsertProposerSlashing(ctx, beaconState, sl); err != nil {
+		logProposerSlashing(slashing)
+		if err := s.serviceCfg.SlashingPoolInserter.InsertProposerSlashing(ctx, beaconState, slashing); err != nil {
 			log.WithError(err).Error("Could not insert proposer slashing into operations pool")
 		}
 	}
+
 	return nil
 }
 
