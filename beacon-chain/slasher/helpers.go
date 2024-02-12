@@ -21,19 +21,23 @@ func (s *Service) groupByValidatorChunkIndex(
 	attestations []*slashertypes.IndexedAttestationWrapper,
 ) map[uint64][]*slashertypes.IndexedAttestationWrapper {
 	groupedAttestations := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
-	for _, att := range attestations {
-		validatorChunkIndices := make(map[uint64]bool)
-		for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
-			validatorChunkIndex := s.params.validatorChunkIndex(primitives.ValidatorIndex(validatorIdx))
-			validatorChunkIndices[validatorChunkIndex] = true
+
+	for _, attestation := range attestations {
+		validatorChunkIndexes := make(map[uint64]bool)
+
+		for _, validatorIndex := range attestation.IndexedAttestation.AttestingIndices {
+			validatorChunkIndex := s.params.validatorChunkIndex(primitives.ValidatorIndex(validatorIndex))
+			validatorChunkIndexes[validatorChunkIndex] = true
 		}
-		for validatorChunkIndex := range validatorChunkIndices {
+
+		for validatorChunkIndex := range validatorChunkIndexes {
 			groupedAttestations[validatorChunkIndex] = append(
 				groupedAttestations[validatorChunkIndex],
-				att,
+				attestation,
 			)
 		}
 	}
+
 	return groupedAttestations
 }
 
@@ -42,10 +46,12 @@ func (s *Service) groupByChunkIndex(
 	attestations []*slashertypes.IndexedAttestationWrapper,
 ) map[uint64][]*slashertypes.IndexedAttestationWrapper {
 	attestationsByChunkIndex := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
-	for _, att := range attestations {
-		chunkIdx := s.params.chunkIndex(att.IndexedAttestation.Data.Source.Epoch)
-		attestationsByChunkIndex[chunkIdx] = append(attestationsByChunkIndex[chunkIdx], att)
+
+	for _, attestation := range attestations {
+		chunkIndex := s.params.chunkIndex(attestation.IndexedAttestation.Data.Source.Epoch)
+		attestationsByChunkIndex[chunkIndex] = append(attestationsByChunkIndex[chunkIndex], attestation)
 	}
+
 	return attestationsByChunkIndex
 }
 

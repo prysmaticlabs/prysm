@@ -91,7 +91,7 @@ func (km *Keymanager) ImportKeystores(
 	}
 
 	log.WithFields(logrus.Fields{
-		"publicKeys": CreatePrintoutOfKeys(importedKeys),
+		"pubkeys": CreatePrintoutOfKeys(importedKeys),
 	}).Info("Successfully imported validator key(s)")
 
 	// 5) Return Statuses

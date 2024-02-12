@@ -3,11 +3,11 @@ package client
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/async"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
@@ -15,7 +15,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -55,7 +54,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 	defer lock.Unlock()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
+	log := log.WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
 	duty, err := v.duty(pubKey)
 	if err != nil {
 		log.WithError(err).Error("Could not fetch validator assignment")
@@ -154,7 +153,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		return
 	}
 
-	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
+	if err := v.saveSubmittedAtt(data, pubKey[:], false); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
@@ -228,25 +227,6 @@ func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.Att
 	return domain, root, nil
 }
 
-// For logging, this saves the last submitted attester index to its attestation data. The purpose of this
-// is to enhance attesting logs to be readable when multiple validator keys ran in a single client.
-func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index primitives.ValidatorIndex) error {
-	v.attLogsLock.Lock()
-	defer v.attLogsLock.Unlock()
-
-	h, err := hash.Proto(data)
-	if err != nil {
-		return err
-	}
-
-	if v.attLogs[h] == nil {
-		v.attLogs[h] = &attSubmitted{data, []primitives.ValidatorIndex{}, []primitives.ValidatorIndex{}}
-	}
-	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []primitives.ValidatorIndex{}}
-
-	return nil
-}
-
 // highestSlot returns the highest slot with a valid block seen by the validator
 func (v *validator) highestSlot() primitives.Slot {
 	v.highestValidSlotLock.Lock()
@@ -313,14 +293,14 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot primitive
 
 func attestationLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {
 	return logrus.Fields{
-		"attesterPublicKey": fmt.Sprintf("%#x", pubKey),
-		"attestationSlot":   indexedAtt.Data.Slot,
-		"committeeIndex":    indexedAtt.Data.CommitteeIndex,
-		"beaconBlockRoot":   fmt.Sprintf("%#x", indexedAtt.Data.BeaconBlockRoot),
-		"sourceEpoch":       indexedAtt.Data.Source.Epoch,
-		"sourceRoot":        fmt.Sprintf("%#x", indexedAtt.Data.Source.Root),
-		"targetEpoch":       indexedAtt.Data.Target.Epoch,
-		"targetRoot":        fmt.Sprintf("%#x", indexedAtt.Data.Target.Root),
-		"signature":         fmt.Sprintf("%#x", indexedAtt.Signature),
+		"pubkey":         fmt.Sprintf("%#x", pubKey),
+		"slot":           indexedAtt.Data.Slot,
+		"committeeIndex": indexedAtt.Data.CommitteeIndex,
+		"blockRoot":      fmt.Sprintf("%#x", indexedAtt.Data.BeaconBlockRoot),
+		"sourceEpoch":    indexedAtt.Data.Source.Epoch,
+		"sourceRoot":     fmt.Sprintf("%#x", indexedAtt.Data.Source.Root),
+		"targetEpoch":    indexedAtt.Data.Target.Epoch,
+		"targetRoot":     fmt.Sprintf("%#x", indexedAtt.Data.Target.Root),
+		"signature":      fmt.Sprintf("%#x", indexedAtt.Signature),
 	}
 }

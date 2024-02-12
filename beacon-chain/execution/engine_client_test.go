@@ -912,6 +912,73 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, payload, got.Proto())
 	})
+	t.Run("handles invalid response from EL", func(t *testing.T) {
+		fix := fixtures()
+		payload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
+
+		jsonPayload := make(map[string]interface{})
+		tx := gethtypes.NewTransaction(
+			0,
+			common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			big.NewInt(0), 0, big.NewInt(0),
+			nil,
+		)
+		txs := []*gethtypes.Transaction{tx}
+		encodedBinaryTxs := make([][]byte, 1)
+		var err error
+		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+		require.NoError(t, err)
+		payload.Transactions = encodedBinaryTxs
+		jsonPayload["transactions"] = []hexutil.Bytes{encodedBinaryTxs[0]}
+
+		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := blocks.PayloadToHeader(wrappedPayload)
+		require.NoError(t, err)
+
+		bellatrixBlock := util.NewBlindedBeaconBlockBellatrix()
+		wanted := util.NewBeaconBlockBellatrix()
+		wanted.Block.Slot = 1
+		// Make sure block hash is the zero hash.
+		bellatrixBlock.Block.Body.ExecutionPayloadHeader.BlockHash = make([]byte, 32)
+		bellatrixBlock.Block.Slot = 1
+		wrappedEmpty, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+
+			respJSON := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  []map[string]interface{}{},
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
+
+		blindedBlock.Block.Body.ExecutionPayloadHeader = header
+		wrapped, err := blocks.NewSignedBeaconBlock(blindedBlock)
+		require.NoError(t, err)
+		copiedWrapped, err := wrapped.Copy()
+		require.NoError(t, err)
+
+		_, err = service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.ReadOnlySignedBeaconBlock{wrappedEmpty, wrapped, copiedWrapped})
+		require.ErrorContains(t, "mismatch of payloads retrieved from the execution client", err)
+	})
 }
 
 func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
@@ -2166,7 +2233,7 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 
 		bRoot := [32]byte{}
 		copy(bRoot[:], "hash")
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot})
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot, bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 2, len(results))
 

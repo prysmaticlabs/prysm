@@ -141,12 +141,14 @@ func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) []byte 
 
 // Given a validator chunk index, we determine all of the validator
 // indices that will belong in that chunk.
-func (p *Parameters) validatorIndicesInChunk(validatorChunkIdx uint64) []primitives.ValidatorIndex {
+func (p *Parameters) validatorIndexesInChunk(validatorChunkIndex uint64) []primitives.ValidatorIndex {
 	validatorIndices := make([]primitives.ValidatorIndex, 0)
-	low := validatorChunkIdx * p.validatorChunkSize
-	high := (validatorChunkIdx + 1) * p.validatorChunkSize
+	low := validatorChunkIndex * p.validatorChunkSize
+	high := (validatorChunkIndex + 1) * p.validatorChunkSize
+
 	for i := low; i < high; i++ {
 		validatorIndices = append(validatorIndices, primitives.ValidatorIndex(i))
 	}
+
 	return validatorIndices
 }

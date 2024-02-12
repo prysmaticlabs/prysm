@@ -215,15 +215,17 @@ message Withdrawal {
 message BlobsBundle {
 	// The KZG commitments of the blobs.
 	repeated bytes kzg_commitments = 1 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"];
+
 	// The proofs of the blobs.
 	repeated bytes proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"];
+
 	// The blobs itself.
-	repeated bytes blobs = 3 [(ethereum.eth.ext.ssz_size) = "?,131072", (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"];
+	repeated bytes blobs = 3 [(ethereum.eth.ext.ssz_size) = "?,blob.size", (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"];
 }
 
 // Blob contains the data that is to be committed on chain.
 message Blob {
-	// Each blob consists of `BLS_FIELD_ELEMENT`(32) multiplies `FIELD_ELEMENTS_PER_BLOB`(4096)
+	// The blob bytes.
 	bytes data = 1 [(ethereum.eth.ext.ssz_size) = "blob.size"];
 }
 

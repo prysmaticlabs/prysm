@@ -57,7 +57,6 @@ import (
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
-	slasherservice "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
@@ -112,7 +111,6 @@ type Config struct {
 	AttestationsPool              attestations.Pool
 	ExitPool                      voluntaryexits.PoolManager
 	SlashingsPool                 slashings.PoolManager
-	SlashingChecker               slasherservice.SlashingChecker
 	SyncCommitteeObjectPool       synccommittee.Pool
 	BLSChangesPool                blstoexec.PoolManager
 	SyncService                   chainSync.Checker
@@ -256,6 +254,7 @@ func (s *Service) initializeBeaconServerRoutes(beaconServer *beacon.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blocks/{block_id}/attestations", beaconServer.GetBlockAttestations).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blinded_blocks/{block_id}", beaconServer.GetBlindedBlock).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blocks/{block_id}/root", beaconServer.GetBlockRoot).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/deposit_snapshot", beaconServer.GetDepositSnapshot).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/attestations", beaconServer.ListAttestations).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/attestations", beaconServer.SubmitAttestations).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/voluntary_exits", beaconServer.ListVoluntaryExits).Methods(http.MethodGet)
@@ -335,9 +334,10 @@ func (s *Service) Start() {
 		ReplayerBuilder:    ch,
 	}
 	blocker := &lookup.BeaconDbBlocker{
-		BeaconDB:         s.cfg.BeaconDB,
-		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
-		BlobStorage:      s.cfg.BlobStorage,
+		BeaconDB:           s.cfg.BeaconDB,
+		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		BlobStorage:        s.cfg.BlobStorage,
 	}
 	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
 

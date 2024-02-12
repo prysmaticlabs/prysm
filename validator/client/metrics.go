@@ -298,7 +298,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 	if index < len(resp.BalancesBeforeEpochTransition) {
 		balBeforeEpoch = resp.BalancesBeforeEpochTransition[index]
 	} else {
-		log.WithField("pubKey", truncatedKey).Warn("Missing balance before epoch transition")
+		log.WithField("pubkey", truncatedKey).Warn("Missing balance before epoch transition")
 	}
 	if index < len(resp.BalancesAfterEpochTransition) {
 		balAfterEpoch = resp.BalancesAfterEpochTransition[index]
@@ -306,17 +306,17 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 	if index < len(resp.CorrectlyVotedSource) {
 		correctlyVotedSource = resp.CorrectlyVotedSource[index]
 	} else {
-		log.WithField("pubKey", truncatedKey).Warn("Missing correctly voted source")
+		log.WithField("pubkey", truncatedKey).Warn("Missing correctly voted source")
 	}
 	if index < len(resp.CorrectlyVotedTarget) {
 		correctlyVotedTarget = resp.CorrectlyVotedTarget[index]
 	} else {
-		log.WithField("pubKey", truncatedKey).Warn("Missing correctly voted target")
+		log.WithField("pubkey", truncatedKey).Warn("Missing correctly voted target")
 	}
 	if index < len(resp.CorrectlyVotedHead) {
 		correctlyVotedHead = resp.CorrectlyVotedHead[index]
 	} else {
-		log.WithField("pubKey", truncatedKey).Warn("Missing correctly voted head")
+		log.WithField("pubkey", truncatedKey).Warn("Missing correctly voted head")
 	}
 
 	if _, ok := v.startBalances[pubKeyBytes]; !ok {
@@ -333,7 +333,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 		percentSinceStart := (newBalance - startBalance) / startBalance
 
 		previousEpochSummaryFields := logrus.Fields{
-			"pubKey":                  truncatedKey,
+			"pubkey":                  truncatedKey,
 			"epoch":                   prevEpoch,
 			"correctlyVotedSource":    correctlyVotedSource,
 			"correctlyVotedTarget":    correctlyVotedTarget,
@@ -349,7 +349,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 			if index < len(resp.InactivityScores) {
 				previousEpochSummaryFields["inactivityScore"] = resp.InactivityScores[index]
 			} else {
-				log.WithField("pubKey", truncatedKey).Warn("Missing inactivity score")
+				log.WithField("pubkey", truncatedKey).Warn("Missing inactivity score")
 			}
 		}
 

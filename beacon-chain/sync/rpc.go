@@ -244,6 +244,9 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 }
 
 func logStreamErrors(err error, topic string) {
+	if isUnwantedError(err) {
+		return
+	}
 	if strings.Contains(topic, p2p.RPCGoodByeTopicV1) {
 		log.WithError(err).WithField("topic", topic).Trace("Could not decode goodbye stream message")
 		return
