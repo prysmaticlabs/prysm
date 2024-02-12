@@ -79,24 +79,6 @@ func run(ctx context.Context, v iface.Validator) {
 			sub.Unsubscribe()
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
-		case isHealthyAgain := <-beaconHealthTracker.HealthUpdates():
-			if isHealthyAgain {
-				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
-				if err != nil {
-					log.WithError(err).Error("Failed to re initialize validator and get head slot")
-					beaconHealthTracker.UpdateNodeHealth(false)
-					continue
-				}
-				if err := v.UpdateDuties(ctx, headSlot); err != nil {
-					handleAssignmentError(err, headSlot)
-					beaconHealthTracker.UpdateNodeHealth(false)
-					continue
-				}
-				log.Info("event stream reconnecting...")
-				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
-			}
-		case e := <-eventsChannel:
-			v.ProcessEvent(e)
 		case slot := <-v.NextSlot():
 			if !beaconHealthTracker.IsHealthy() {
 				continue
@@ -144,6 +126,24 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
+		case isHealthyAgain := <-beaconHealthTracker.HealthUpdates():
+			if isHealthyAgain {
+				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
+				if err != nil {
+					log.WithError(err).Error("Failed to re initialize validator and get head slot")
+					beaconHealthTracker.UpdateNodeHealth(false)
+					continue
+				}
+				if err := v.UpdateDuties(ctx, headSlot); err != nil {
+					handleAssignmentError(err, headSlot)
+					beaconHealthTracker.UpdateNodeHealth(false)
+					continue
+				}
+				log.Info("event stream reconnecting...")
+				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
+			}
+		case e := <-eventsChannel:
+			v.ProcessEvent(e)
 		case currentKeys := <-accountsChangedChan: // should be less of a priority than next slot
 			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		}
