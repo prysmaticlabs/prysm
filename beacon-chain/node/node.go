@@ -279,7 +279,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	log.Debugln("Registering Sync Service")
-	if err := beacon.registerSyncService(beacon.initialSyncComplete); err != nil {
+	if err := beacon.registerSyncService(beacon.initialSyncComplete, bfs); err != nil {
 		return nil, err
 	}
 
@@ -429,13 +429,12 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	}
 	if clearDBConfirmed || forceClearDB {
 		log.Warning("Removing database")
-		if err := d.Close(); err != nil {
-			return errors.Wrap(err, "could not close db prior to clearing")
-		}
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-
+		if err := b.BlobStorage.Clear(); err != nil {
+			return errors.Wrap(err, "could not clear blob storage")
+		}
 		d, err = kv.NewKVStore(b.ctx, dbPath)
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
@@ -533,11 +532,11 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	}
 	if clearDBConfirmed || forceClearDB {
 		log.Warning("Removing database")
-		if err := d.Close(); err != nil {
-			return errors.Wrap(err, "could not close db prior to clearing")
-		}
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
+		}
+		if err := b.BlobStorage.Clear(); err != nil {
+			return errors.Wrap(err, "could not clear blob storage")
 		}
 		d, err = slasherkv.NewKVStore(b.ctx, dbPath)
 		if err != nil {
@@ -721,7 +720,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 	return b.services.RegisterService(web3Service)
 }
 
-func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) error {
+func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}, bFillStore *backfill.Store) error {
 	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -760,6 +759,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithStateNotifier(b),
 		regularsync.WithBlobStorage(b.BlobStorage),
 		regularsync.WithVerifierWaiter(b.verifyInitWaiter),
+		regularsync.WithAvailableBlocker(bFillStore),
 	)
 	return b.services.RegisterService(rs)
 }
