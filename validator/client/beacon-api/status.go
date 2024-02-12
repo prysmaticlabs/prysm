@@ -79,7 +79,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 		return nil, nil, nil, errors.Wrap(err, "failed to get state validators")
 	}
 
-	validatorsCountResponse, err := c.prysmBeaconChainCLient.GetValidatorCount(ctx, "head", nil)
+	validatorsCountResponse, err := c.prysmChainClient.GetValidatorCount(ctx, "head", nil)
 	if err != nil && !errors.Is(err, iface.ErrNotSupported) {
 		return nil, nil, nil, errors.Wrap(err, "failed to get total validator count")
 	}

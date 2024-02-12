@@ -31,7 +31,7 @@ func TestListValidators(t *testing.T) {
 		defer ctrl.Finish()
 		ctx := context.Background()
 
-		beaconChainClient := beaconApiBeaconChainClient{}
+		beaconChainClient := beaconApiChainClient{}
 		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 			PageToken: "foo",
 		})
@@ -43,7 +43,7 @@ func TestListValidators(t *testing.T) {
 		defer ctrl.Finish()
 		ctx := context.Background()
 
-		beaconChainClient := beaconApiBeaconChainClient{}
+		beaconChainClient := beaconApiChainClient{}
 		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 			QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
 				Epoch: math.MaxUint64,
@@ -63,7 +63,7 @@ func TestListValidators(t *testing.T) {
 			errors.New("foo error"),
 		)
 
-		beaconChainClient := beaconApiBeaconChainClient{stateValidatorsProvider: stateValidatorsProvider}
+		beaconChainClient := beaconApiChainClient{stateValidatorsProvider: stateValidatorsProvider}
 		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 			QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
 				Epoch: 0,
@@ -83,7 +83,7 @@ func TestListValidators(t *testing.T) {
 			errors.New("bar error"),
 		)
 
-		beaconChainClient := beaconApiBeaconChainClient{stateValidatorsProvider: stateValidatorsProvider}
+		beaconChainClient := beaconApiChainClient{stateValidatorsProvider: stateValidatorsProvider}
 		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 			QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
 		})
@@ -101,7 +101,7 @@ func TestListValidators(t *testing.T) {
 			errors.New("foo error"),
 		)
 
-		beaconChainClient := beaconApiBeaconChainClient{stateValidatorsProvider: stateValidatorsProvider}
+		beaconChainClient := beaconApiChainClient{stateValidatorsProvider: stateValidatorsProvider}
 		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 			QueryFilter: nil,
 		})
@@ -122,7 +122,7 @@ func TestListValidators(t *testing.T) {
 		jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 		jsonRestHandler.EXPECT().Get(ctx, blockHeaderEndpoint, gomock.Any()).Return(errors.New("bar error"))
 
-		beaconChainClient := beaconApiBeaconChainClient{
+		beaconChainClient := beaconApiChainClient{
 			stateValidatorsProvider: stateValidatorsProvider,
 			jsonRestHandler:         jsonRestHandler,
 		}
@@ -200,7 +200,7 @@ func TestListValidators(t *testing.T) {
 					testCase.blockHeaderResponse,
 				)
 
-				beaconChainClient := beaconApiBeaconChainClient{
+				beaconChainClient := beaconApiChainClient{
 					stateValidatorsProvider: stateValidatorsProvider,
 					jsonRestHandler:         jsonRestHandler,
 				}
@@ -333,7 +333,7 @@ func TestListValidators(t *testing.T) {
 					nil,
 				)
 
-				beaconChainClient := beaconApiBeaconChainClient{stateValidatorsProvider: stateValidatorsProvider}
+				beaconChainClient := beaconApiChainClient{stateValidatorsProvider: stateValidatorsProvider}
 				_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 					QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
 				})
@@ -561,7 +561,7 @@ func TestListValidators(t *testing.T) {
 					nil,
 				)
 
-				beaconChainClient := beaconApiBeaconChainClient{stateValidatorsProvider: stateValidatorsProvider}
+				beaconChainClient := beaconApiChainClient{stateValidatorsProvider: stateValidatorsProvider}
 				validators, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 					QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
 					PublicKeys:  [][]byte{},
@@ -752,7 +752,7 @@ func TestGetChainHead(t *testing.T) {
 					testCase.generateFinalityCheckpointsResponse(),
 				)
 
-				beaconChainClient := beaconApiBeaconChainClient{jsonRestHandler: jsonRestHandler}
+				beaconChainClient := beaconApiChainClient{jsonRestHandler: jsonRestHandler}
 				_, err := beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
 				assert.ErrorContains(t, testCase.expectedError, err)
 			})
@@ -859,7 +859,7 @@ func TestGetChainHead(t *testing.T) {
 					testCase.generateHeadBlockHeadersResponse(),
 				)
 
-				beaconChainClient := beaconApiBeaconChainClient{jsonRestHandler: jsonRestHandler}
+				beaconChainClient := beaconApiChainClient{jsonRestHandler: jsonRestHandler}
 				_, err := beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
 				assert.ErrorContains(t, testCase.expectedError, err)
 			})
@@ -913,7 +913,7 @@ func TestGetChainHead(t *testing.T) {
 			HeadEpoch:                  slots.ToEpoch(8),
 		}
 
-		beaconChainClient := beaconApiBeaconChainClient{jsonRestHandler: jsonRestHandler}
+		beaconChainClient := beaconApiChainClient{jsonRestHandler: jsonRestHandler}
 		chainHead, err := beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
 		require.NoError(t, err)
 		assert.DeepEqual(t, expectedChainHead, chainHead)
@@ -949,7 +949,7 @@ func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
 		nil,
 	)
 
-	c := beaconApiBeaconChainClient{
+	c := beaconApiChainClient{
 		jsonRestHandler: jsonRestHandler,
 	}
 

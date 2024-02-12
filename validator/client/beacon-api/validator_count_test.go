@@ -141,7 +141,7 @@ func TestGetValidatorCount(t *testing.T) {
 			).Times(test.validatorCountCalled)
 
 			// Type assertion.
-			var client iface.PrysmBeaconChainClient = &prysmBeaconChainClient{
+			var client iface.PrysmChainClient = &prysmChainClient{
 				nodeClient:      &beaconApiNodeClient{jsonRestHandler: jsonRestHandler},
 				jsonRestHandler: jsonRestHandler,
 			}

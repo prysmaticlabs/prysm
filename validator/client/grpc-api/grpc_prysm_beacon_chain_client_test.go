@@ -291,8 +291,8 @@ func TestGetValidatorCount(t *testing.T) {
 				})
 			}
 
-			beaconChainClient := mock.NewMockBeaconChainClient(ctrl)
-			beaconChainClient.EXPECT().ListValidators(
+			chainClient := mock.NewMockChainClient(ctrl)
+			chainClient.EXPECT().ListValidators(
 				gomock.Any(),
 				gomock.Any(),
 			).Return(
@@ -300,7 +300,7 @@ func TestGetValidatorCount(t *testing.T) {
 				nil,
 			)
 
-			beaconChainClient.EXPECT().GetChainHead(
+			chainClient.EXPECT().GetChainHead(
 				gomock.Any(),
 				gomock.Any(),
 			).Return(
@@ -308,8 +308,8 @@ func TestGetValidatorCount(t *testing.T) {
 				nil,
 			)
 
-			prysmBeaconChainClient := &grpcPrysmBeaconChainClient{
-				beaconChainClient: beaconChainClient,
+			prysmBeaconChainClient := &grpcPrysmChainClient{
+				chainClient: chainClient,
 			}
 
 			var statuses []validator.Status

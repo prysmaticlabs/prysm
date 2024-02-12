@@ -276,7 +276,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 			PubKeys: publicKeys,
 		})
 		require.NoError(t, err)
-		s.valDB = validatorDB
+		s.db = validatorDB
 
 		// Have to close it after import is done otherwise it complains db is not open.
 		defer func() {
@@ -391,7 +391,7 @@ func TestServer_DeleteKeystores(t *testing.T) {
 		PubKeys: publicKeys,
 	})
 	require.NoError(t, err)
-	srv.valDB = validatorDB
+	srv.db = validatorDB
 
 	// Have to close it after import is done otherwise it complains db is not open.
 	defer func() {
@@ -556,7 +556,7 @@ func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
 	require.NoError(t, err)
 	err = validatorDB.SaveGenesisValidatorsRoot(ctx, make([]byte, fieldparams.RootLength))
 	require.NoError(t, err)
-	srv.valDB = validatorDB
+	srv.db = validatorDB
 
 	// Have to close it after import is done otherwise it complains db is not open.
 	defer func() {
@@ -711,7 +711,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		validatorService:          vs,
 		beaconNodeValidatorClient: beaconClient,
 		wallet:                    w,
-		beaconNodeClient:          mockNodeClient,
+		nodeClient:                mockNodeClient,
 		walletInitialized:         w != nil,
 	}
 
@@ -806,7 +806,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			resp := &SetVoluntaryExitResponse{}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
 			if tt.w.epoch == 0 {
-				genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
+				genesisResponse, err := s.nodeClient.GetGenesis(ctx, &emptypb.Empty{})
 				require.NoError(t, err)
 				tt.w.epoch, err = client.CurrentEpoch(genesisResponse.GenesisTime)
 				require.NoError(t, err)
@@ -1055,14 +1055,14 @@ func TestServer_SetGasLimit(t *testing.T) {
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
-				ValDB:     validatorDB,
+				DB:        validatorDB,
 			})
 			require.NoError(t, err)
 
 			s := &Server{
 				validatorService:          vs,
 				beaconNodeValidatorClient: beaconClient,
-				valDB:                     validatorDB,
+				db:                        validatorDB,
 			}
 
 			if tt.beaconReturn != nil {
@@ -1242,12 +1242,12 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
-				ValDB:     validatorDB,
+				DB:        validatorDB,
 			})
 			require.NoError(t, err)
 			s := &Server{
 				validatorService: vs,
-				valDB:            validatorDB,
+				db:               validatorDB,
 			}
 			// Set up global default value for builder gas limit.
 			params.BeaconConfig().DefaultBuilderGasLimit = uint64(globalDefaultGasLimit)
@@ -1703,13 +1703,13 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 			// save a default here
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
-				ValDB:     validatorDB,
+				DB:        validatorDB,
 			})
 			require.NoError(t, err)
 			s := &Server{
 				validatorService:          vs,
 				beaconNodeValidatorClient: beaconClient,
-				valDB:                     validatorDB,
+				db:                        validatorDB,
 			}
 			request := &SetFeeRecipientByPubkeyRequest{
 				Ethaddress: tt.args,
@@ -1811,12 +1811,12 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
-				ValDB:     validatorDB,
+				DB:        validatorDB,
 			})
 			require.NoError(t, err)
 			s := &Server{
 				validatorService: vs,
-				valDB:            validatorDB,
+				db:               validatorDB,
 			}
 			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
 			req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})

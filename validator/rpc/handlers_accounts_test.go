@@ -292,7 +292,7 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	s := &Server{
 		walletInitialized:         true,
 		wallet:                    w,
-		beaconNodeClient:          mockNodeClient,
+		nodeClient:                mockNodeClient,
 		beaconNodeValidatorClient: mockValidatorClient,
 		validatorService:          vs,
 	}
