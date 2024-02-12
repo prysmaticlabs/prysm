@@ -201,7 +201,6 @@ func recheckKeys(ctx context.Context, valDB db.Database, km keymanager.IKeymanag
 		log.WithError(err).Debug("Could not fetch validating keys")
 	}
 	if err := valDB.UpdatePublicKeysBuckets(validatingKeys); err != nil {
-
 		go recheckValidatingKeysBucket(ctx, valDB, km)
 	}
 }
