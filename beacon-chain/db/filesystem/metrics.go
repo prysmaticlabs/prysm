@@ -23,7 +23,7 @@ var (
 	})
 	blobsWrittenCounter = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "blob_written",
-		Help: "Number of BlobSidecar files written.",
+		Help: "Number of BlobSidecar files written",
 	})
 	blobDiskCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "blob_disk_count",
