@@ -30,17 +30,15 @@ type denebBlockGenerator struct {
 	nblobs   int
 	sign     bool
 	sk       bls.SecretKey
-	pk       bls.PublicKey
 	proposer primitives.ValidatorIndex
 	valRoot  []byte
 }
 
-func WithProposerSigning(idx primitives.ValidatorIndex, sk bls.SecretKey, pk bls.PublicKey, valRoot []byte) DenebBlockGeneratorOption {
+func WithProposerSigning(idx primitives.ValidatorIndex, sk bls.SecretKey, valRoot []byte) DenebBlockGeneratorOption {
 	return func(g *denebBlockGenerator) {
 		g.sign = true
 		g.proposer = idx
 		g.sk = sk
-		g.pk = pk
 		g.valRoot = valRoot
 	}
 }
@@ -97,6 +95,7 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	block.Block.Body.ExecutionPayload = payload
 	block.Block.Slot = g.slot
 	block.Block.ParentRoot = g.parent[:]
+	block.Block.ProposerIndex = g.proposer
 	commitments := make([][48]byte, g.nblobs)
 	block.Block.Body.BlobKzgCommitments = make([][]byte, g.nblobs)
 	for i := range commitments {

@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"math/big"
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
@@ -214,9 +215,9 @@ func Test_BeaconBlock_Copy(t *testing.T) {
 
 	payload := &pb.ExecutionPayloadDeneb{ExcessBlobGas: 123}
 	header := &pb.ExecutionPayloadHeaderDeneb{ExcessBlobGas: 223}
-	payloadInterface, err := WrappedExecutionPayloadDeneb(payload, 123)
+	payloadInterface, err := WrappedExecutionPayloadDeneb(payload, big.NewInt(123))
 	require.NoError(t, err)
-	headerInterface, err := WrappedExecutionPayloadHeaderDeneb(header, 123)
+	headerInterface, err := WrappedExecutionPayloadHeaderDeneb(header, big.NewInt(123))
 	require.NoError(t, err)
 	bb = &BeaconBlockBody{executionPayload: payloadInterface, executionPayloadHeader: headerInterface, randaoReveal: bytesutil.ToBytes96([]byte{246}), graffiti: bytesutil.ToBytes32([]byte("graffiti"))}
 	b = &BeaconBlock{body: bb, slot: 123, proposerIndex: 456, parentRoot: bytesutil.ToBytes32([]byte("parentroot")), stateRoot: bytesutil.ToBytes32([]byte("stateroot"))}
@@ -411,7 +412,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	assert.DeepEqual(t, result, e)
 
 	executionCapella := &pb.ExecutionPayloadCapella{BlockNumber: 1}
-	eCapella, err := WrappedExecutionPayloadCapella(executionCapella, 0)
+	eCapella, err := WrappedExecutionPayloadCapella(executionCapella, big.NewInt(0))
 	require.NoError(t, err)
 	bb = &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{body: &BeaconBlockBody{version: version.Capella}}}
 	require.NoError(t, bb.SetExecution(eCapella))
@@ -420,7 +421,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	assert.DeepEqual(t, result, eCapella)
 
 	executionCapellaHeader := &pb.ExecutionPayloadHeaderCapella{BlockNumber: 1}
-	eCapellaHeader, err := WrappedExecutionPayloadHeaderCapella(executionCapellaHeader, 0)
+	eCapellaHeader, err := WrappedExecutionPayloadHeaderCapella(executionCapellaHeader, big.NewInt(0))
 	require.NoError(t, err)
 	bb = &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{version: version.Capella, body: &BeaconBlockBody{version: version.Capella}}}
 	require.NoError(t, bb.SetExecution(eCapellaHeader))
@@ -429,7 +430,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	assert.DeepEqual(t, result, eCapellaHeader)
 
 	executionDeneb := &pb.ExecutionPayloadDeneb{BlockNumber: 1, ExcessBlobGas: 123}
-	eDeneb, err := WrappedExecutionPayloadDeneb(executionDeneb, 0)
+	eDeneb, err := WrappedExecutionPayloadDeneb(executionDeneb, big.NewInt(0))
 	require.NoError(t, err)
 	bb = &SignedBeaconBlock{version: version.Deneb, block: &BeaconBlock{body: &BeaconBlockBody{version: version.Deneb}}}
 	require.NoError(t, bb.SetExecution(eDeneb))
@@ -441,7 +442,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	require.DeepEqual(t, gas, uint64(123))
 
 	executionDenebHeader := &pb.ExecutionPayloadHeaderDeneb{BlockNumber: 1, ExcessBlobGas: 223}
-	eDenebHeader, err := WrappedExecutionPayloadHeaderDeneb(executionDenebHeader, 0)
+	eDenebHeader, err := WrappedExecutionPayloadHeaderDeneb(executionDenebHeader, big.NewInt(0))
 	require.NoError(t, err)
 	bb = &SignedBeaconBlock{version: version.Deneb, block: &BeaconBlock{version: version.Deneb, body: &BeaconBlockBody{version: version.Deneb}}}
 	require.NoError(t, bb.SetExecution(eDenebHeader))

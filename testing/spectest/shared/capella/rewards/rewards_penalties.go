@@ -87,7 +87,7 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	penalties := make([]uint64, len(deltas))
 	for i, d := range deltas {
 		rewards[i] = d.HeadReward + d.SourceReward + d.TargetReward
-		penalties[i] = d.SourcePenalty + d.TargetPenalty
+		penalties[i] = d.SourcePenalty + d.TargetPenalty + d.InactivityPenalty
 	}
 
 	totalSpecTestRewards := make([]uint64, len(rewards))

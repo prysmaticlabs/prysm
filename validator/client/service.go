@@ -56,6 +56,7 @@ type ValidatorService struct {
 	useWeb                 bool
 	emitAccountMetrics     bool
 	logValidatorBalances   bool
+	distributed            bool
 	interopKeysConfig      *local.InteropKeymanagerConfig
 	conn                   validatorHelpers.NodeConnection
 	grpcRetryDelay         time.Duration
@@ -83,6 +84,7 @@ type Config struct {
 	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
+	Distributed                bool
 	InteropKeysConfig          *local.InteropKeymanagerConfig
 	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
@@ -131,6 +133,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		Web3SignerConfig:       cfg.Web3SignerConfig,
 		proposerSettings:       cfg.ProposerSettings,
 		validatorsRegBatchSize: cfg.ValidatorsRegBatchSize,
+		distributed:            cfg.Distributed,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -196,11 +199,16 @@ func (v *ValidatorService) Start() {
 		Host:       v.conn.GetBeaconApiUrl(),
 	}
 
+	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
+	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler)}
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler, opts...)
+
 	valStruct := &validator{
-		db:                             v.db,
-		validatorClient:                validatorClientFactory.NewValidatorClient(v.conn, restHandler),
+		validatorClient:                validatorClient,
 		beaconClient:                   beaconChainClientFactory.NewBeaconChainClient(v.conn, restHandler),
-		node:                           nodeClientFactory.NewNodeClient(v.conn, restHandler),
+		nodeClient:                     nodeClientFactory.NewNodeClient(v.conn, restHandler),
+		prysmBeaconClient:              beaconChainClientFactory.NewPrysmBeaconClient(v.conn, restHandler),
+		db:                             v.db,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -208,7 +216,8 @@ func (v *ValidatorService) Start() {
 		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		pubkeyToValidatorIndex:         make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 		signedValidatorRegistrations:   make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
-		attLogs:                        make(map[[32]byte]*attSubmitted),
+		submittedAtts:                  make(map[submittedAttKey]*submittedAtt),
+		submittedAggregates:            make(map[submittedAttKey]*submittedAtt),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		voteStats:                      voteStats{startEpoch: primitives.Epoch(^uint64(0))},
@@ -224,8 +233,9 @@ func (v *ValidatorService) Start() {
 		Web3SignerConfig:               v.Web3SignerConfig,
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
-		prysmBeaconClient:              beaconChainClientFactory.NewPrysmBeaconClient(v.conn, restHandler),
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
+		distributed:                    v.distributed,
+		attSelections:                  make(map[attSelectionKey]iface.BeaconCommitteeSelection),
 	}
 
 	v.validator = valStruct

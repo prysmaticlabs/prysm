@@ -247,7 +247,7 @@ func (bv *ROBlobVerifier) SidecarParentSlotLower() (err error) {
 // -- i.e. get_checkpoint_block(store, block_header.parent_root, store.finalized_checkpoint.epoch) == store.finalized_checkpoint.root.
 func (bv *ROBlobVerifier) SidecarDescendsFromFinalized() (err error) {
 	defer bv.recordResult(RequireSidecarDescendsFromFinalized, &err)
-	if !bv.fc.IsCanonical(bv.blob.ParentRoot()) {
+	if !bv.fc.HasNode(bv.blob.ParentRoot()) {
 		return ErrSidecarNotFinalizedDescendent
 	}
 	return nil

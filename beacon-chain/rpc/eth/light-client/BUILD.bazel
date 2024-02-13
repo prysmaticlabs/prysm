@@ -6,11 +6,11 @@ go_library(
         "handlers.go",
         "helpers.go",
         "server.go",
-        "structs.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/light-client",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//api/server/structs:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",
         "//beacon-chain/rpc/lookup:go_default_library",
@@ -37,6 +37,7 @@ go_test(
     srcs = ["handlers_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//api/server/structs:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/rpc/testutil:go_default_library",

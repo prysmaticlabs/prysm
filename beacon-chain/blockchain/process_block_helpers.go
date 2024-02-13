@@ -37,6 +37,9 @@ func (s *Service) getFCUArgs(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) er
 	if err := s.getFCUArgsEarlyBlock(cfg, fcuArgs); err != nil {
 		return err
 	}
+	if !s.inRegularSync() {
+		return nil
+	}
 	slot := cfg.signed.Block().Slot()
 	if slots.WithinVotingWindow(uint64(s.genesisTime.Unix()), slot) {
 		return nil

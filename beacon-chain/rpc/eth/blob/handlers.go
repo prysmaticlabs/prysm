@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -46,8 +46,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	for i := range verifiedBlobs {
 		sidecars = append(sidecars, verifiedBlobs[i].BlobSidecar)
 	}
-	ssz := httputil.SszRequested(r)
-	if ssz {
+	if httputil.RespondWithSsz(r) {
 		sidecarResp := &eth.BlobSidecars{
 			Sidecars: sidecars,
 		}
@@ -86,18 +85,18 @@ loop:
 	return indices
 }
 
-func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *SidecarsResponse {
-	resp := &SidecarsResponse{Data: make([]*Sidecar, len(sidecars))}
+func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *structs.SidecarsResponse {
+	resp := &structs.SidecarsResponse{Data: make([]*structs.Sidecar, len(sidecars))}
 	for i, sc := range sidecars {
 		proofs := make([]string, len(sc.CommitmentInclusionProof))
 		for j := range sc.CommitmentInclusionProof {
 			proofs[j] = hexutil.Encode(sc.CommitmentInclusionProof[j])
 		}
-		resp.Data[i] = &Sidecar{
+		resp.Data[i] = &structs.Sidecar{
 			Index:                    strconv.FormatUint(sc.Index, 10),
 			Blob:                     hexutil.Encode(sc.Blob),
 			KzgCommitment:            hexutil.Encode(sc.KzgCommitment),
-			SignedBeaconBlockHeader:  shared.SignedBeaconBlockHeaderFromConsensus(sc.SignedBlockHeader),
+			SignedBeaconBlockHeader:  structs.SignedBeaconBlockHeaderFromConsensus(sc.SignedBlockHeader),
 			KzgProof:                 hexutil.Encode(sc.KzgProof),
 			CommitmentInclusionProof: proofs,
 		}

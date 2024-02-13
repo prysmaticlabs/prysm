@@ -115,6 +115,7 @@ func (p *ProposerIndicesCache) IndicesFromCheckpoint(c forkchoicetypes.Checkpoin
 	root, ok := p.rootMap[c]
 	p.Unlock()
 	if !ok {
+		ProposerIndicesCacheMiss.Inc()
 		return emptyIndices, ok
 	}
 	return p.ProposerIndices(c.Epoch+1, root)

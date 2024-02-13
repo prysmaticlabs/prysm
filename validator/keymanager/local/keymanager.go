@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -282,18 +283,29 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 	if err != nil {
 		return err
 	}
-	if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts); err != nil {
+
+	existedPreviously, err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts)
+	if err != nil {
 		return err
 	}
 
-	// Reinitialize account store and cache
-	// This will update the in-memory information instead of reading from the file itself for safety concerns
-	km.accountsStore = store
-	err = km.initializeKeysCachesFromKeystore()
-	if err != nil {
-		return errors.Wrap(err, "failed to initialize keys caches")
+	if existedPreviously {
+		// Reinitialize account store and cache
+		// This will update the in-memory information instead of reading from the file itself for safety concerns
+		km.accountsStore = store
+		err = km.initializeKeysCachesFromKeystore()
+		if err != nil {
+			return errors.Wrap(err, "failed to initialize keys caches")
+		}
+
+		return nil
 	}
-	return err
+
+	// manually reload the account from the keystore the first time
+	km.reloadAccountsFromKeystoreFile(filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName))
+	// listen to account changes of the new file
+	go km.listenForAccountChanges(ctx)
+	return nil
 }
 
 // CreateAccountsKeystoreRepresentation is a pure function that takes an accountStore and wallet password and returns the encrypted formatted json version for local writing.

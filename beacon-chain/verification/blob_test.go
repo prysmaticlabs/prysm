@@ -358,7 +358,7 @@ func TestSidecarDescendsFromFinalized(t *testing.T) {
 	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, 1)
 	b := blobs[0]
 	t.Run("not canonical", func(t *testing.T) {
-		ini := Initializer{shared: &sharedResources{fc: &mockForkchoicer{IsCanonicalCB: func(r [32]byte) bool {
+		ini := Initializer{shared: &sharedResources{fc: &mockForkchoicer{HasNodeCB: func(r [32]byte) bool {
 			if b.ParentRoot() != r {
 				t.Error("forkchoice.Slot called with unexpected parent root")
 			}
@@ -369,8 +369,8 @@ func TestSidecarDescendsFromFinalized(t *testing.T) {
 		require.Equal(t, true, v.results.executed(RequireSidecarDescendsFromFinalized))
 		require.NotNil(t, v.results.result(RequireSidecarDescendsFromFinalized))
 	})
-	t.Run("not canonical", func(t *testing.T) {
-		ini := Initializer{shared: &sharedResources{fc: &mockForkchoicer{IsCanonicalCB: func(r [32]byte) bool {
+	t.Run("canonical", func(t *testing.T) {
+		ini := Initializer{shared: &sharedResources{fc: &mockForkchoicer{HasNodeCB: func(r [32]byte) bool {
 			if b.ParentRoot() != r {
 				t.Error("forkchoice.Slot called with unexpected parent root")
 			}

@@ -31,7 +31,7 @@ type ServiceRegistry struct {
 	serviceTypes []reflect.Type           // keep an ordered slice of registered service types.
 }
 
-// NewServiceRegistry starts a registry instance for convenience
+// NewServiceRegistry starts a registry instance for convenience.
 func NewServiceRegistry() *ServiceRegistry {
 	return &ServiceRegistry{
 		services: make(map[reflect.Type]Service),

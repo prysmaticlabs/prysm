@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
@@ -188,16 +189,16 @@ func TestGetValidatorCount(t *testing.T) {
 		stateID          string
 		statuses         []string
 		currentEpoch     int
-		expectedResponse CountResponse
+		expectedResponse structs.GetValidatorCountResponse
 	}{
 		{
 			name:     "Head count active validators",
 			stateID:  "head",
 			statuses: []string{"active"},
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "active",
 						Count:  "13",
@@ -209,10 +210,10 @@ func TestGetValidatorCount(t *testing.T) {
 			name:     "Head count active ongoing validators",
 			stateID:  "head",
 			statuses: []string{"active_ongoing"},
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "active_ongoing",
 						Count:  "11",
@@ -224,10 +225,10 @@ func TestGetValidatorCount(t *testing.T) {
 			name:     "Head count active exiting validators",
 			stateID:  "head",
 			statuses: []string{"active_exiting"},
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "active_exiting",
 						Count:  "1",
@@ -239,10 +240,10 @@ func TestGetValidatorCount(t *testing.T) {
 			name:     "Head count active slashed validators",
 			stateID:  "head",
 			statuses: []string{"active_slashed"},
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "active_slashed",
 						Count:  "1",
@@ -254,10 +255,10 @@ func TestGetValidatorCount(t *testing.T) {
 			name:     "Head count pending validators",
 			stateID:  "head",
 			statuses: []string{"pending"},
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "pending",
 						Count:  "6",
@@ -269,10 +270,10 @@ func TestGetValidatorCount(t *testing.T) {
 			name:     "Head count pending initialized validators",
 			stateID:  "head",
 			statuses: []string{"pending_initialized"},
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "pending_initialized",
 						Count:  "1",
@@ -284,10 +285,10 @@ func TestGetValidatorCount(t *testing.T) {
 			name:     "Head count pending queued validators",
 			stateID:  "head",
 			statuses: []string{"pending_queued"},
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "pending_queued",
 						Count:  "5",
@@ -300,10 +301,10 @@ func TestGetValidatorCount(t *testing.T) {
 			stateID:      "head",
 			statuses:     []string{"exited"},
 			currentEpoch: 35,
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "exited",
 						Count:  "6",
@@ -316,10 +317,10 @@ func TestGetValidatorCount(t *testing.T) {
 			stateID:      "head",
 			statuses:     []string{"exited_slashed"},
 			currentEpoch: 35,
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "exited_slashed",
 						Count:  "2",
@@ -332,10 +333,10 @@ func TestGetValidatorCount(t *testing.T) {
 			stateID:      "head",
 			statuses:     []string{"exited_unslashed"},
 			currentEpoch: 35,
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "exited_unslashed",
 						Count:  "4",
@@ -348,10 +349,10 @@ func TestGetValidatorCount(t *testing.T) {
 			stateID:      "head",
 			statuses:     []string{"withdrawal"},
 			currentEpoch: 45,
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "withdrawal",
 						Count:  "2",
@@ -364,10 +365,10 @@ func TestGetValidatorCount(t *testing.T) {
 			stateID:      "head",
 			statuses:     []string{"withdrawal_possible"},
 			currentEpoch: 45,
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "withdrawal_possible",
 						Count:  "1",
@@ -380,10 +381,10 @@ func TestGetValidatorCount(t *testing.T) {
 			stateID:      "head",
 			statuses:     []string{"withdrawal_done"},
 			currentEpoch: 45,
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "withdrawal_done",
 						Count:  "1",
@@ -395,10 +396,10 @@ func TestGetValidatorCount(t *testing.T) {
 			name:     "Head count active and pending validators",
 			stateID:  "head",
 			statuses: []string{"active", "pending"},
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "active",
 						Count:  "13",
@@ -413,10 +414,10 @@ func TestGetValidatorCount(t *testing.T) {
 		{
 			name:    "Head count of ALL validators",
 			stateID: "head",
-			expectedResponse: CountResponse{
+			expectedResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*Count{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "active",
 						Count:  "13",
@@ -482,7 +483,7 @@ func TestGetValidatorCount(t *testing.T) {
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
-			var count CountResponse
+			var count structs.GetValidatorCountResponse
 			err = json.Unmarshal(body, &count)
 			require.NoError(t, err)
 			require.DeepEqual(t, test.expectedResponse, count)

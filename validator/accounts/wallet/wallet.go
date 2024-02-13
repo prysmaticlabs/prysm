@@ -366,26 +366,27 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 }
 
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
-func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, data []byte) error {
+func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, data []byte) (bool /* exited previously */, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
 	hasDir, err := file.HasDir(accountPath)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if !hasDir {
 		if err := file.MkdirAll(accountPath); err != nil {
-			return errors.Wrapf(err, "could not create path: %s", accountPath)
+			return false, errors.Wrapf(err, "could not create path: %s", accountPath)
 		}
 	}
 	fullPath := filepath.Join(accountPath, fileName)
+	existedPreviously := file.Exists(fullPath)
 	if err := file.WriteFile(fullPath, data); err != nil {
-		return errors.Wrapf(err, "could not write %s", filePath)
+		return false, errors.Wrapf(err, "could not write %s", filePath)
 	}
 	log.WithFields(logrus.Fields{
 		"path":     fullPath,
 		"fileName": fileName,
 	}).Debug("Wrote new file at path")
-	return nil
+	return existedPreviously, nil
 }
 
 // ReadFileAtPath within the wallet directory given the desired path and filename.

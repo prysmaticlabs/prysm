@@ -52,8 +52,8 @@ type Validator interface {
 	SubmitAggregateAndProof(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
 	SubmitSyncCommitteeMessage(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
 	SubmitSignedContributionAndProof(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
-	LogAttestationsSubmitted()
-	LogSyncCommitteeMessagesSubmitted()
+	LogSubmittedAtts(slot primitives.Slot)
+	LogSubmittedSyncCommitteeMessages()
 	UpdateDomainDataCaches(ctx context.Context, slot primitives.Slot)
 	WaitForKeymanagerInitialization(ctx context.Context) error
 	Keymanager() (keymanager.IKeymanager, error)
@@ -64,6 +64,9 @@ type Validator interface {
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
 	ProposerSettings() *validatorserviceconfig.ProposerSettings
 	SetProposerSettings(context.Context, *validatorserviceconfig.ProposerSettings) error
+	StartEventStream(ctx context.Context) error
+	EventStreamIsRunning() bool
+	NodeIsHealthy(ctx context.Context) bool
 }
 
 // SigningFunc interface defines a type for the a function that signs a message

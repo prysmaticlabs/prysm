@@ -15,6 +15,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	libp2ptest "github.com/libp2p/go-libp2p/p2p/host/peerstore/test"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
@@ -48,7 +49,7 @@ func TestGetPeer(t *testing.T) {
 
 		s.GetPeer(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetPeerResponse{}
+		resp := &structs.GetPeerResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, rawId, resp.Data.PeerId)
 		assert.Equal(t, p2pAddr, resp.Data.LastSeenP2PAddress)
@@ -142,7 +143,7 @@ func TestGetPeers(t *testing.T) {
 
 		s.GetPeers(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetPeersResponse{}
+		resp := &structs.GetPeersResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		returnedPeer := resp.Data[0]
@@ -226,7 +227,7 @@ func TestGetPeers(t *testing.T) {
 
 			s.GetPeers(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetPeersResponse{}
+			resp := &structs.GetPeersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, len(tt.wantIds), len(resp.Data), "Wrong number of peers returned")
 			for _, id := range tt.wantIds {
@@ -257,7 +258,7 @@ func TestGetPeers_NoPeersReturnsEmptyArray(t *testing.T) {
 
 	s.GetPeers(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetPeersResponse{}
+	resp := &structs.GetPeersResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	assert.Equal(t, 0, len(resp.Data))
 }
@@ -307,7 +308,7 @@ func TestGetPeerCount(t *testing.T) {
 	writer.Body = &bytes.Buffer{}
 	s.GetPeerCount(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetPeerCountResponse{}
+	resp := &structs.GetPeerCountResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	assert.Equal(t, "1", resp.Data.Connecting, "Wrong number of connecting peers")
 	assert.Equal(t, "2", resp.Data.Connected, "Wrong number of connected peers")

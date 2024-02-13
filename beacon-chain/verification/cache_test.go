@@ -18,7 +18,7 @@ import (
 func testSignedBlockBlobKeys(t *testing.T, valRoot []byte, slot primitives.Slot, nblobs int) (blocks.ROBlock, []blocks.ROBlob, bls.SecretKey, bls.PublicKey) {
 	sks, pks, err := interop.DeterministicallyGenerateKeys(0, 1)
 	require.NoError(t, err)
-	block, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, nblobs, util.WithProposerSigning(0, sks[0], pks[0], valRoot))
+	block, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, nblobs, util.WithProposerSigning(0, sks[0], valRoot))
 	return block, blobs, sks[0], pks[0]
 }
 

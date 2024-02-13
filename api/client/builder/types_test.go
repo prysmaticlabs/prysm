@@ -13,7 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/math"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
@@ -38,7 +38,7 @@ func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 		},
 		Signature: make([]byte, 96),
 	}
-	a := shared.SignedValidatorRegistrationFromConsensus(svr)
+	a := structs.SignedValidatorRegistrationFromConsensus(svr)
 	je, err := json.Marshal(a)
 	require.NoError(t, err)
 	// decode with a struct w/ plain strings so we can check the string encoding of the hex fields
@@ -55,7 +55,7 @@ func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 	require.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", un.Message.Pubkey)
 
 	t.Run("roundtrip", func(t *testing.T) {
-		b := &shared.SignedValidatorRegistration{}
+		b := &structs.SignedValidatorRegistration{}
 		if err := json.Unmarshal(je, b); err != nil {
 			require.NoError(t, err)
 		}
@@ -1718,7 +1718,7 @@ func TestUint256UnmarshalTooBig(t *testing.T) {
 func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 	expected, err := os.ReadFile("testdata/blinded-block.json")
 	require.NoError(t, err)
-	b, err := shared.BlindedBeaconBlockBellatrixFromConsensus(&eth.BlindedBeaconBlockBellatrix{
+	b, err := structs.BlindedBeaconBlockBellatrixFromConsensus(&eth.BlindedBeaconBlockBellatrix{
 		Slot:          1,
 		ProposerIndex: 1,
 		ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -1748,7 +1748,7 @@ func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 func TestMarshalBlindedBeaconBlockBodyCapella(t *testing.T) {
 	expected, err := os.ReadFile("testdata/blinded-block-capella.json")
 	require.NoError(t, err)
-	b, err := shared.BlindedBeaconBlockCapellaFromConsensus(&eth.BlindedBeaconBlockCapella{
+	b, err := structs.BlindedBeaconBlockCapellaFromConsensus(&eth.BlindedBeaconBlockCapella{
 		Slot:          1,
 		ProposerIndex: 1,
 		ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),

@@ -331,7 +331,7 @@ message BeaconBlockBodyBellatrix {
   // At most MAX_VOLUNTARY_EXITS.
   repeated v1.SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
 
-  // Sync aggregate object to track sync committee votes for light client support. 
+  // Sync aggregate object to track sync committee votes for light client support.
   v1.SyncAggregate sync_aggregate = 9;
 
   // Execution payload: the embedded execution payload of the block [New in Bellatrix]
@@ -523,7 +523,7 @@ message BeaconBlockBodyDeneb {
   // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
   repeated  SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
-  // At most MAX_BLOBS_PER_BLOCK. New in Deneb network upgrade.
+  // At most MAX_BLOB_COMMITMENTS_PER_BLOCK. New in Deneb network upgrade.
   repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
 }
 

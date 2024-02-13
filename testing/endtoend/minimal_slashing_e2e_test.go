@@ -12,7 +12,6 @@ import (
 )
 
 func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
-	t.Skip("E2E run appears broken, evaluators need to be rewritten most likely")
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2ETestConfig().Copy())
 	require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))

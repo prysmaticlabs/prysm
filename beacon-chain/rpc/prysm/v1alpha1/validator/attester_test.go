@@ -116,8 +116,9 @@ func TestGetAttestationData_OK(t *testing.T) {
 			GenesisTimeFetcher: &mock.ChainService{
 				Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
 			},
-			FinalizedFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
-			AttestationCache: cache.NewAttestationCache(),
+			FinalizedFetcher:      &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			AttestationCache:      cache.NewAttestationCache(),
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		},
 	}
 
@@ -176,7 +177,8 @@ func BenchmarkGetAttestationDataConcurrent(b *testing.B) {
 			GenesisTimeFetcher: &mock.ChainService{
 				Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
 			},
-			FinalizedFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
+			FinalizedFetcher:      &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
 		},
 	}
 
@@ -222,9 +224,10 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
 		CoreService: &core.Service{
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now()},
-			HeadFetcher:        &mock.ChainService{},
-			AttestationCache:   cache.NewAttestationCache(),
+			GenesisTimeFetcher:    &mock.ChainService{Genesis: time.Now()},
+			HeadFetcher:           &mock.ChainService{},
+			AttestationCache:      cache.NewAttestationCache(),
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 		},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
@@ -240,10 +243,11 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
 		CoreService: &core.Service{
-			AttestationCache:   cache.NewAttestationCache(),
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now()},
-			HeadFetcher:        &mock.ChainService{Optimistic: false, State: beaconState},
-			FinalizedFetcher:   &mock.ChainService{CurrentJustifiedCheckPoint: &ethpb.Checkpoint{}},
+			AttestationCache:      cache.NewAttestationCache(),
+			GenesisTimeFetcher:    &mock.ChainService{Genesis: time.Now()},
+			HeadFetcher:           &mock.ChainService{Optimistic: false, State: beaconState},
+			FinalizedFetcher:      &mock.ChainService{CurrentJustifiedCheckPoint: &ethpb.Checkpoint{}},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		},
 	}
 	_, err = as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
@@ -260,7 +264,8 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			GenesisTimeFetcher:    &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		},
 	}
 
@@ -301,10 +306,11 @@ func TestServer_GetAttestationData_RequestSlotIsDifferentThanCurrentSlot(t *test
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
-			HeadFetcher:        &mock.ChainService{TargetRoot: blockRoot2, Root: blockRoot[:]},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			StateGen:           stategen.New(db, doublylinkedtree.New()),
-			FinalizedFetcher:   &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			HeadFetcher:           &mock.ChainService{TargetRoot: blockRoot2, Root: blockRoot[:]},
+			GenesisTimeFetcher:    &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			StateGen:              stategen.New(db, doublylinkedtree.New()),
+			FinalizedFetcher:      &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		},
 	}
 	util.SaveBlock(t, ctx, db, block)
@@ -346,8 +352,9 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 			HeadFetcher: &mock.ChainService{
 				TargetRoot: targetRoot, Root: blockRoot[:],
 			},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
-			FinalizedFetcher:   &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			GenesisTimeFetcher:    &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
+			FinalizedFetcher:      &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		},
 	}
 

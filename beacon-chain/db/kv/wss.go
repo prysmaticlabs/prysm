@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
+	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -17,18 +18,6 @@ import (
 // syncing, using the provided values as their point of origin. This is an alternative
 // to syncing from genesis, and should only be run on an empty database.
 func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error {
-	genesisRoot, err := s.GenesisBlockRoot(ctx)
-	if err != nil {
-		if errors.Is(err, ErrNotFoundGenesisBlockRoot) {
-			return errors.Wrap(err, "genesis block root not found: genesis must be provided for checkpoint sync")
-		}
-		return errors.Wrap(err, "genesis block root query error: checkpoint sync must verify genesis to proceed")
-	}
-	err = s.SaveBackfillBlockRoot(ctx, genesisRoot)
-	if err != nil {
-		return errors.Wrap(err, "unable to save genesis root as initial backfill starting point for checkpoint sync")
-	}
-
 	cf, err := detect.FromState(serState)
 	if err != nil {
 		return errors.Wrap(err, "could not sniff config+fork for origin state bytes")
@@ -50,11 +39,24 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 	}
 	blk := wblk.Block()
 
-	// save block
 	blockRoot, err := blk.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
 	}
+
+	pr := blk.ParentRoot()
+	bf := &dbval.BackfillStatus{
+		LowSlot:       uint64(wblk.Block().Slot()),
+		LowRoot:       blockRoot[:],
+		LowParentRoot: pr[:],
+		OriginRoot:    blockRoot[:],
+		OriginSlot:    uint64(wblk.Block().Slot()),
+	}
+
+	if err = s.SaveBackfillStatus(ctx, bf); err != nil {
+		return errors.Wrap(err, "unable to save backfill status data to db for checkpoint sync")
+	}
+
 	log.Infof("saving checkpoint block to db, w/ root=%#x", blockRoot)
 	if err := s.SaveBlock(ctx, wblk); err != nil {
 		return errors.Wrap(err, "could not save checkpoint block")

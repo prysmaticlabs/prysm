@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -27,14 +27,14 @@ func TestProposeBeaconBlock_Capella(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = capellaBlock
 
-	jsonCapellaBlock := &shared.SignedBeaconBlockCapella{
+	jsonCapellaBlock := &structs.SignedBeaconBlockCapella{
 		Signature: hexutil.Encode(capellaBlock.Capella.Signature),
-		Message: &shared.BeaconBlockCapella{
+		Message: &structs.BeaconBlockCapella{
 			ParentRoot:    hexutil.Encode(capellaBlock.Capella.Block.ParentRoot),
 			ProposerIndex: uint64ToString(capellaBlock.Capella.Block.ProposerIndex),
 			Slot:          uint64ToString(capellaBlock.Capella.Block.Slot),
 			StateRoot:     hexutil.Encode(capellaBlock.Capella.Block.StateRoot),
-			Body: &shared.BeaconBlockBodyCapella{
+			Body: &structs.BeaconBlockBodyCapella{
 				Attestations:      jsonifyAttestations(capellaBlock.Capella.Block.Body.Attestations),
 				AttesterSlashings: jsonifyAttesterSlashings(capellaBlock.Capella.Block.Body.AttesterSlashings),
 				Deposits:          jsonifyDeposits(capellaBlock.Capella.Block.Body.Deposits),
@@ -43,11 +43,11 @@ func TestProposeBeaconBlock_Capella(t *testing.T) {
 				ProposerSlashings: jsonifyProposerSlashings(capellaBlock.Capella.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(capellaBlock.Capella.Block.Body.RandaoReveal),
 				VoluntaryExits:    JsonifySignedVoluntaryExits(capellaBlock.Capella.Block.Body.VoluntaryExits),
-				SyncAggregate: &shared.SyncAggregate{
+				SyncAggregate: &structs.SyncAggregate{
 					SyncCommitteeBits:      hexutil.Encode(capellaBlock.Capella.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(capellaBlock.Capella.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
-				ExecutionPayload: &shared.ExecutionPayloadCapella{
+				ExecutionPayload: &structs.ExecutionPayloadCapella{
 					BaseFeePerGas: bytesutil.LittleEndianBytesToBigInt(capellaBlock.Capella.Block.Body.ExecutionPayload.BaseFeePerGas).String(),
 					BlockHash:     hexutil.Encode(capellaBlock.Capella.Block.Body.ExecutionPayload.BlockHash),
 					BlockNumber:   uint64ToString(capellaBlock.Capella.Block.Body.ExecutionPayload.BlockNumber),

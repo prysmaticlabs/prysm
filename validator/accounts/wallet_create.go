@@ -32,7 +32,8 @@ func (acm *CLIManager) WalletCreate(ctx context.Context) (*wallet.Wallet, error)
 		if err != nil {
 			return nil, err
 		}
-		if err = w.WriteFileAtPath(ctx, local.AccountsPath, local.AccountsKeystoreFileName, encodedAccounts); err != nil {
+		_, err = w.WriteFileAtPath(ctx, local.AccountsPath, local.AccountsKeystoreFileName, encodedAccounts)
+		if err != nil {
 			return nil, err
 		}
 		log.WithField("--wallet-dir", acm.walletDir).Info(

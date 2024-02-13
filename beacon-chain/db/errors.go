@@ -22,9 +22,6 @@ var ErrNotFoundOriginBlockRoot = kv.ErrNotFoundOriginBlockRoot
 // ErrNotFoundBackfillBlockRoot wraps ErrNotFound for an error specific to the backfill block root.
 var ErrNotFoundBackfillBlockRoot = kv.ErrNotFoundBackfillBlockRoot
 
-// ErrNotFoundGenesisBlockRoot means no genesis block root was found, indicating the db was not initialized with genesis
-var ErrNotFoundGenesisBlockRoot = kv.ErrNotFoundGenesisBlockRoot
-
 // IsNotFound allows callers to treat errors from a flat-file database, where the file record is missing,
 // as equivalent to db.ErrNotFound.
 func IsNotFound(err error) bool {

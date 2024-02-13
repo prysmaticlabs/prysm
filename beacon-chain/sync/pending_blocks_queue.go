@@ -126,7 +126,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			// Request parent block if not in the pending queue and not in the database.
 			isParentBlockInDB := s.cfg.beaconDB.HasBlock(ctx, parentRoot)
 			if !inPendingQueue && !isParentBlockInDB && s.hasPeer() {
-				log.WithFields(logrus.Fields{"currentSlot": b.Block().Slot(), "parentRoot": hex.EncodeToString(parentRoot[:])}).Debug("Requesting parent block")
 				parentRoots = append(parentRoots, parentRoot)
 				continue
 			}
@@ -283,6 +282,8 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		r := roots[i]
 		if s.seenPendingBlocks[r] || s.cfg.chain.BlockBeingSynced(r) {
 			roots = append(roots[:i], roots[i+1:]...)
+		} else {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debug("Requesting block by root")
 		}
 	}
 	s.pendingQueueLock.RUnlock()

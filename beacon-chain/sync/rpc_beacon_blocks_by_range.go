@@ -30,13 +30,20 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	if !ok {
 		return errors.New("message is not type *pb.BeaconBlockByRangeRequest")
 	}
-	log.WithField("start-slot", m.StartSlot).WithField("count", m.Count).Debug("BeaconBlocksByRangeRequest")
+	log.WithField("startSlot", m.StartSlot).WithField("count", m.Count).Debug("Serving block by range request")
 	rp, err := validateRangeRequest(m, s.cfg.clock.CurrentSlot())
 	if err != nil {
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		tracing.AnnotateError(span, err)
 		return err
+	}
+	available := s.validateRangeAvailability(rp)
+	if !available {
+		log.Debug("error in validating range availability")
+		s.writeErrorResponseToStream(responseCodeResourceUnavailable, p2ptypes.ErrResourceUnavailable.Error(), stream)
+		tracing.AnnotateError(span, err)
+		return nil
 	}
 
 	blockLimiter, err := s.rateLimiter.topicCollector(string(stream.Protocol()))
@@ -124,6 +131,11 @@ func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.S
 	}
 
 	return rp, nil
+}
+
+func (s *Service) validateRangeAvailability(rp rangeParams) bool {
+	startBlock := rp.start
+	return s.availableBlocker.AvailableBlock(startBlock)
 }
 
 func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch, stream libp2pcore.Stream) error {

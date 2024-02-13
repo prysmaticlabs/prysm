@@ -68,7 +68,7 @@ func (b *ROBlob) ProposerIndex() primitives.ValidatorIndex {
 	return b.SignedBlockHeader.Header.ProposerIndex
 }
 
-// BlockRootSlice returns the block root as a byte slice. This is often more conveninent/concise
+// BlockRootSlice returns the block root as a byte slice. This is often more convenient/concise
 // than setting a tmp var to BlockRoot(), just so that it can be sliced.
 func (b *ROBlob) BlockRootSlice() []byte {
 	return b.root[:]

@@ -127,7 +127,7 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
 		require.Equal(t, true, ok)
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, big.NewInt(0))
 		require.NoError(t, err)
 		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.NoError(t, err)
@@ -476,7 +476,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.NoError(t, err)
@@ -490,7 +490,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.NoError(t, err)
@@ -518,7 +518,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -532,7 +532,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -560,7 +560,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -574,7 +574,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -602,7 +602,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -616,7 +616,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -911,6 +911,73 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 		got, err = reconstructed[2].Block().Body().Execution()
 		require.NoError(t, err)
 		require.DeepEqual(t, payload, got.Proto())
+	})
+	t.Run("handles invalid response from EL", func(t *testing.T) {
+		fix := fixtures()
+		payload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
+
+		jsonPayload := make(map[string]interface{})
+		tx := gethtypes.NewTransaction(
+			0,
+			common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			big.NewInt(0), 0, big.NewInt(0),
+			nil,
+		)
+		txs := []*gethtypes.Transaction{tx}
+		encodedBinaryTxs := make([][]byte, 1)
+		var err error
+		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+		require.NoError(t, err)
+		payload.Transactions = encodedBinaryTxs
+		jsonPayload["transactions"] = []hexutil.Bytes{encodedBinaryTxs[0]}
+
+		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := blocks.PayloadToHeader(wrappedPayload)
+		require.NoError(t, err)
+
+		bellatrixBlock := util.NewBlindedBeaconBlockBellatrix()
+		wanted := util.NewBeaconBlockBellatrix()
+		wanted.Block.Slot = 1
+		// Make sure block hash is the zero hash.
+		bellatrixBlock.Block.Body.ExecutionPayloadHeader.BlockHash = make([]byte, 32)
+		bellatrixBlock.Block.Slot = 1
+		wrappedEmpty, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+
+			respJSON := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  []map[string]interface{}{},
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
+
+		blindedBlock.Block.Body.ExecutionPayloadHeader = header
+		wrapped, err := blocks.NewSignedBeaconBlock(blindedBlock)
+		require.NoError(t, err)
+		copiedWrapped, err := wrapped.Copy()
+		require.NoError(t, err)
+
+		_, err = service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.ReadOnlySignedBeaconBlock{wrappedEmpty, wrapped, copiedWrapped})
+		require.ErrorContains(t, "mismatch of payloads retrieved from the execution client", err)
 	})
 }
 
@@ -1537,7 +1604,7 @@ func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 				p, err := blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
 					BlockHash:    wantedHash[:],
 					Transactions: [][]byte{},
-				}, 0)
+				}, big.NewInt(0))
 				require.NoError(t, err)
 				return p
 			},
@@ -1545,7 +1612,7 @@ func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrapped, err := blocks.WrappedExecutionPayloadHeaderCapella(tt.args.header, 0)
+			wrapped, err := blocks.WrappedExecutionPayloadHeaderCapella(tt.args.header, big.NewInt(0))
 			require.NoError(t, err)
 			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
 			if err != nil {
@@ -1598,7 +1665,7 @@ func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
 				p, err := blocks.WrappedExecutionPayloadDeneb(&pb.ExecutionPayloadDeneb{
 					BlockHash:    wantedHash[:],
 					Transactions: [][]byte{},
-				}, 0)
+				}, big.NewInt(0))
 				require.NoError(t, err)
 				return p
 			},
@@ -1606,7 +1673,7 @@ func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrapped, err := blocks.WrappedExecutionPayloadHeaderDeneb(tt.args.header, 0)
+			wrapped, err := blocks.WrappedExecutionPayloadHeaderDeneb(tt.args.header, big.NewInt(0))
 			require.NoError(t, err)
 			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
 			if err != nil {
@@ -2166,7 +2233,7 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 
 		bRoot := [32]byte{}
 		copy(bRoot[:], "hash")
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot})
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot, bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 2, len(results))
 

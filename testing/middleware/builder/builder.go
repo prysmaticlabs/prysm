@@ -24,8 +24,8 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 	gMux "github.com/gorilla/mux"
 	builderAPI "github.com/prysmaticlabs/prysm/v4/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -33,7 +33,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	"github.com/prysmaticlabs/prysm/v4/network/authorization"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
@@ -286,7 +285,7 @@ func (p *Builder) isBuilderCall(req *http.Request) bool {
 }
 
 func (p *Builder) registerValidators(w http.ResponseWriter, req *http.Request) {
-	var registrations []shared.SignedValidatorRegistration
+	var registrations []structs.SignedValidatorRegistration
 	if err := json.NewDecoder(req.Body).Decode(&registrations); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
@@ -429,7 +428,7 @@ func (p *Builder) handleHeaderRequestCapella(w http.ResponseWriter) {
 	weiVal := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
 	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
 	weiVal = weiVal.Mul(weiVal, big.NewInt(2))
-	wObj, err := blocks.WrappedExecutionPayloadCapella(b.Payload, math.WeiToGwei(weiVal))
+	wObj, err := blocks.WrappedExecutionPayloadCapella(b.Payload, weiVal)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not wrap execution payload")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -510,7 +509,7 @@ func (p *Builder) handleHeaderRequestDeneb(w http.ResponseWriter) {
 	weiVal := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
 	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
 	weiVal = weiVal.Mul(weiVal, big.NewInt(2))
-	wObj, err := blocks.WrappedExecutionPayloadDeneb(b.Payload, math.WeiToGwei(weiVal))
+	wObj, err := blocks.WrappedExecutionPayloadDeneb(b.Payload, weiVal)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not wrap execution payload")
 		http.Error(w, err.Error(), http.StatusInternalServerError)

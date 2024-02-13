@@ -1,6 +1,8 @@
 package blocks
 
 import (
+	"math/big"
+
 	"github.com/pkg/errors"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -844,7 +846,7 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload, 0)
+	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
@@ -871,7 +873,7 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader, 0)
+	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
@@ -898,7 +900,7 @@ func initBlockBodyFromProtoDeneb(pb *eth.BeaconBlockBodyDeneb) (*BeaconBlockBody
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload, 0)
+	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
@@ -926,7 +928,7 @@ func initBlindedBlockBodyFromProtoDeneb(pb *eth.BlindedBeaconBlockBodyDeneb) (*B
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader, 0)
+	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err

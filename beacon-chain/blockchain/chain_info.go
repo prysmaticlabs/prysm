@@ -556,3 +556,10 @@ func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.Slot(root)
 }
+
+// inRegularSync queries the initial sync service to
+// determine if the node is in regular sync or is still
+// syncing to the head of the chain.
+func (s *Service) inRegularSync() bool {
+	return s.cfg.SyncChecker.Synced()
+}

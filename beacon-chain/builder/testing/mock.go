@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
@@ -54,13 +55,13 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, b interfaces.
 		}
 		return w, nil, s.ErrSubmitBlindedBlock
 	case version.Capella:
-		w, err := blocks.WrappedExecutionPayloadCapella(s.PayloadCapella, 0)
+		w, err := blocks.WrappedExecutionPayloadCapella(s.PayloadCapella, big.NewInt(0))
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not wrap capella payload")
 		}
 		return w, nil, s.ErrSubmitBlindedBlock
 	case version.Deneb:
-		w, err := blocks.WrappedExecutionPayloadDeneb(s.PayloadDeneb, 0)
+		w, err := blocks.WrappedExecutionPayloadDeneb(s.PayloadDeneb, big.NewInt(0))
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not wrap deneb payload")
 		}

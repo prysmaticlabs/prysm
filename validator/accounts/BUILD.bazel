@@ -72,7 +72,7 @@ go_test(
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/rpc/eth/shared:go_default_library",
+        "//api/server/structs:go_default_library",
         "//build/bazel:go_default_library",
         "//cmd/validator/flags:go_default_library",
         "//config/fieldparams:go_default_library",

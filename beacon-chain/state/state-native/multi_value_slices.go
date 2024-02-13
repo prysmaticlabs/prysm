@@ -123,6 +123,55 @@ func NewMultiValueValidators(vals []*ethpb.Validator) *MultiValueValidators {
 	return mv
 }
 
+// Defragment checks whether each individual multi-value field in our state is fragmented
+// and if it is, it will 'reset' the field to create a new multivalue object.
+func (b *BeaconState) Defragment() {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	if b.blockRootsMultiValue != nil && b.blockRootsMultiValue.IsFragmented() {
+		initialMVslice := b.blockRootsMultiValue
+		b.blockRootsMultiValue = b.blockRootsMultiValue.Reset(b)
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.BlockRoots.String()).Inc()
+		runtime.SetFinalizer(b.blockRootsMultiValue, blockRootsFinalizer)
+	}
+	if b.stateRootsMultiValue != nil && b.stateRootsMultiValue.IsFragmented() {
+		initialMVslice := b.stateRootsMultiValue
+		b.stateRootsMultiValue = b.stateRootsMultiValue.Reset(b)
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.StateRoots.String()).Inc()
+		runtime.SetFinalizer(b.stateRootsMultiValue, stateRootsFinalizer)
+	}
+	if b.randaoMixesMultiValue != nil && b.randaoMixesMultiValue.IsFragmented() {
+		initialMVslice := b.randaoMixesMultiValue
+		b.randaoMixesMultiValue = b.randaoMixesMultiValue.Reset(b)
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.RandaoMixes.String()).Inc()
+		runtime.SetFinalizer(b.randaoMixesMultiValue, randaoMixesFinalizer)
+	}
+	if b.balancesMultiValue != nil && b.balancesMultiValue.IsFragmented() {
+		initialMVslice := b.balancesMultiValue
+		b.balancesMultiValue = b.balancesMultiValue.Reset(b)
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.Balances.String()).Inc()
+		runtime.SetFinalizer(b.balancesMultiValue, balancesFinalizer)
+	}
+	if b.validatorsMultiValue != nil && b.validatorsMultiValue.IsFragmented() {
+		initialMVslice := b.validatorsMultiValue
+		b.validatorsMultiValue = b.validatorsMultiValue.Reset(b)
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.Validators.String()).Inc()
+		runtime.SetFinalizer(b.validatorsMultiValue, validatorsFinalizer)
+	}
+	if b.inactivityScoresMultiValue != nil && b.inactivityScoresMultiValue.IsFragmented() {
+		initialMVslice := b.inactivityScoresMultiValue
+		b.inactivityScoresMultiValue = b.inactivityScoresMultiValue.Reset(b)
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.InactivityScores.String()).Inc()
+		runtime.SetFinalizer(b.inactivityScoresMultiValue, inactivityScoresFinalizer)
+	}
+}
+
 func randaoMixesFinalizer(m *MultiValueRandaoMixes) {
 	multiValueCountGauge.WithLabelValues(types.RandaoMixes.String()).Dec()
 }

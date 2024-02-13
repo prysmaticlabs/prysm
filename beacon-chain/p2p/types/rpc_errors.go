@@ -14,4 +14,5 @@ var (
 	ErrInvalidRequest         = errors.New("invalid range, step or count")
 	ErrBlobLTMinRequest       = errors.New("blob slot < minimum_request_epoch")
 	ErrMaxBlobReqExceeded     = errors.New("requested more than MAX_REQUEST_BLOB_SIDECARS")
+	ErrResourceUnavailable    = errors.New("resource requested unavailable")
 )

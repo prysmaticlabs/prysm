@@ -31,11 +31,11 @@ func WriteBlockFetchError(w http.ResponseWriter, blk interfaces.ReadOnlySignedBe
 		return false
 	}
 	if err != nil {
-		httputil.HandleError(w, "Could not get block from block ID: %s"+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get block from block ID: "+err.Error(), http.StatusInternalServerError)
 		return false
 	}
 	if err = blocks.BeaconBlockIsNil(blk); err != nil {
-		httputil.HandleError(w, "Could not find requested block: %s"+err.Error(), http.StatusNotFound)
+		httputil.HandleError(w, "Could not find requested block: "+err.Error(), http.StatusNotFound)
 		return false
 	}
 	return true

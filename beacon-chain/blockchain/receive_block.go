@@ -122,6 +122,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		}
 	}
 	daWaitedTime := time.Since(daStartTime)
+	dataAvailWaitedTime.Observe(float64(daWaitedTime.Milliseconds()))
+
+	// Defragment the state before continuing block processing.
+	s.defragmentState(postState)
 
 	// The rest of block processing takes a lock on forkchoice.
 	s.cfg.ForkChoiceStore.Lock()

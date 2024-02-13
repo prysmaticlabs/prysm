@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -371,8 +372,8 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := &SetVoluntaryExitResponse{
-		Data: &shared.SignedVoluntaryExit{
-			Message: &shared.VoluntaryExit{
+		Data: &structs.SignedVoluntaryExit{
+			Message: &structs.VoluntaryExit{
 				Epoch:          fmt.Sprintf("%d", sve.Exit.Epoch),
 				ValidatorIndex: fmt.Sprintf("%d", sve.Exit.ValidatorIndex),
 			},

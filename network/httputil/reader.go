@@ -12,8 +12,8 @@ import (
 // match a number with optional decimals
 var priorityRegex = regexp.MustCompile(`q=(\d+(?:\.\d+)?)`)
 
-// SszRequested takes a http request and checks to see if it should be requesting a ssz response.
-func SszRequested(req *http.Request) bool {
+// RespondWithSsz takes a http request and checks to see if it should be requesting a ssz response.
+func RespondWithSsz(req *http.Request) bool {
 	accept := req.Header.Values("Accept")
 	if len(accept) == 0 {
 		return false
@@ -50,4 +50,9 @@ func SszRequested(req *http.Request) bool {
 	}
 
 	return currentType == api.OctetStreamMediaType
+}
+
+// IsRequestSsz checks if the request object should be interpreted as ssz
+func IsRequestSsz(req *http.Request) bool {
+	return req.Header.Get("Content-Type") == api.OctetStreamMediaType
 }

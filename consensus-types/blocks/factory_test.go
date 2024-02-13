@@ -3,6 +3,7 @@ package blocks
 import (
 	"bytes"
 	"errors"
+	"math/big"
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -515,7 +516,7 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 			ExcessBlobGas: 123,
 			BlobGasUsed:   321,
 		}
-		wrapped, err := WrappedExecutionPayloadDeneb(payload, 123)
+		wrapped, err := WrappedExecutionPayloadDeneb(payload, big.NewInt(123))
 		require.NoError(t, err)
 		header, err := PayloadToHeaderDeneb(wrapped)
 		require.NoError(t, err)

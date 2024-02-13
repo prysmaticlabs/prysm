@@ -14,6 +14,7 @@ import (
 
 func TestUpgradeToDeneb(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, st.SetHistoricalRoots([][]byte{{1}}))
 	preForkState := st.Copy()
 	mSt, err := deneb.UpgradeToDeneb(st)
 	require.NoError(t, err)
@@ -45,6 +46,12 @@ func TestUpgradeToDeneb(t *testing.T) {
 	s, err := mSt.InactivityScores()
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, make([]uint64, numValidators), s)
+
+	hr1, err := preForkState.HistoricalRoots()
+	require.NoError(t, err)
+	hr2, err := mSt.HistoricalRoots()
+	require.NoError(t, err)
+	require.DeepEqual(t, hr1, hr2)
 
 	f := mSt.Fork()
 	require.DeepSSZEqual(t, &ethpb.Fork{

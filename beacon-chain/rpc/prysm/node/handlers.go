@@ -9,6 +9,7 @@ import (
 	corenet "github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
@@ -24,7 +25,7 @@ func (s *Server) ListTrustedPeer(w http.ResponseWriter, r *http.Request) {
 
 	peerStatus := s.PeersFetcher.Peers()
 	allIds := s.PeersFetcher.Peers().GetTrustedPeers()
-	allPeers := make([]*Peer, 0, len(allIds))
+	allPeers := make([]*structs.Peer, 0, len(allIds))
 	for _, id := range allIds {
 		p, err := httpPeerInfo(peerStatus, id)
 		if err != nil {
@@ -37,8 +38,8 @@ func (s *Server) ListTrustedPeer(w http.ResponseWriter, r *http.Request) {
 		}
 		// peers added into trusted set but never connected should also be listed
 		if p == nil {
-			p = &Peer{
-				PeerID:             id.String(),
+			p = &structs.Peer{
+				PeerId:             id.String(),
 				Enr:                "",
 				LastSeenP2PAddress: "",
 				State:              eth.ConnectionState(corenet.NotConnected).String(),
@@ -47,7 +48,7 @@ func (s *Server) ListTrustedPeer(w http.ResponseWriter, r *http.Request) {
 		}
 		allPeers = append(allPeers, p)
 	}
-	response := &PeersResponse{Peers: allPeers}
+	response := &structs.PeersResponse{Peers: allPeers}
 	httputil.WriteJson(w, response)
 }
 
@@ -65,7 +66,7 @@ func (s *Server) AddTrustedPeer(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, errJson)
 		return
 	}
-	var addrRequest *AddrRequest
+	var addrRequest *structs.AddrRequest
 	err = json.Unmarshal(body, &addrRequest)
 	if err != nil {
 		errJson := &httputil.DefaultJsonError{
@@ -130,7 +131,7 @@ func (s *Server) RemoveTrustedPeer(w http.ResponseWriter, r *http.Request) {
 
 // httpPeerInfo does the same thing as peerInfo function in node.go but returns the
 // http peer response.
-func httpPeerInfo(peerStatus *peers.Status, id peer.ID) (*Peer, error) {
+func httpPeerInfo(peerStatus *peers.Status, id peer.ID) (*structs.Peer, error) {
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
 		if errors.Is(err, peerdata.ErrPeerUnknown) {
@@ -171,8 +172,8 @@ func httpPeerInfo(peerStatus *peers.Status, id peer.ID) (*Peer, error) {
 	}
 	v1ConnState := eth.ConnectionState(connectionState).String()
 	v1PeerDirection := eth.PeerDirection(direction).String()
-	p := Peer{
-		PeerID:    id.String(),
+	p := structs.Peer{
+		PeerId:    id.String(),
 		State:     v1ConnState,
 		Direction: v1PeerDirection,
 	}

@@ -156,7 +156,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	}
 	partialMoved = true
 	blobsWrittenCounter.Inc()
-	blobSaveLatency.Observe(time.Since(startTime).Seconds())
+	blobSaveLatency.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
 }
 
@@ -180,7 +180,7 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 		return blocks.VerifiedROBlob{}, err
 	}
 	defer func() {
-		blobFetchLatency.Observe(time.Since(startTime).Seconds())
+		blobFetchLatency.Observe(float64(time.Since(startTime).Milliseconds()))
 	}()
 	return verification.BlobSidecarNoop(ro)
 }
@@ -226,6 +226,20 @@ func (bs *BlobStorage) Indices(root [32]byte) ([fieldparams.MaxBlobsPerBlock]boo
 		mask[u] = true
 	}
 	return mask, nil
+}
+
+// Clear deletes all files on the filesystem.
+func (bs *BlobStorage) Clear() error {
+	dirs, err := listDir(bs.fs, ".")
+	if err != nil {
+		return err
+	}
+	for _, dir := range dirs {
+		if err := bs.fs.RemoveAll(dir); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type blobNamer struct {

@@ -333,26 +333,29 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), count)
 	require.Equal(t, primitives.Slot(1), f.HighestReceivedBlockSlot())
+	require.Equal(t, primitives.Slot(0), f.HighestReceivedBlockDelay())
 
 	// 64
 	// Received block last epoch is 1
 	_, err = s.insert(context.Background(), 64, [32]byte{'A'}, b, b, 1, 1)
 	require.NoError(t, err)
-	s.genesisTime = uint64(time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	s.genesisTime = uint64(time.Now().Add(time.Duration((-64*int64(params.BeaconConfig().SecondsPerSlot))-1) * time.Second).Unix())
 	count, err = f.ReceivedBlocksLastEpoch()
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), count)
 	require.Equal(t, primitives.Slot(64), f.HighestReceivedBlockSlot())
+	require.Equal(t, primitives.Slot(0), f.HighestReceivedBlockDelay())
 
 	// 64 65
 	// Received block last epoch is 2
 	_, err = s.insert(context.Background(), 65, [32]byte{'B'}, b, b, 1, 1)
 	require.NoError(t, err)
-	s.genesisTime = uint64(time.Now().Add(time.Duration(-65*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-66*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
 	count, err = f.ReceivedBlocksLastEpoch()
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), count)
 	require.Equal(t, primitives.Slot(65), f.HighestReceivedBlockSlot())
+	require.Equal(t, primitives.Slot(1), f.HighestReceivedBlockDelay())
 
 	// 64 65 66
 	// Received block last epoch is 3

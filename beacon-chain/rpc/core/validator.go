@@ -29,8 +29,11 @@ import (
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 )
+
+var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
 
 // AggregateBroadcastFailedError represents an error scenario where
 // broadcasting an aggregate selection proof failed.
@@ -56,6 +59,9 @@ func (s *Service) ComputeValidatorPerformance(
 	ctx context.Context,
 	req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, *RpcError) {
+	ctx, span := trace.StartSpan(ctx, "coreService.ComputeValidatorPerformance")
+	defer span.End()
+
 	if s.SyncChecker.Syncing() {
 		return nil, &RpcError{Reason: Unavailable, Err: errors.New("Syncing to latest head, not ready to respond")}
 	}
@@ -211,6 +217,9 @@ func (s *Service) SubmitSignedContributionAndProof(
 	ctx context.Context,
 	req *ethpb.SignedContributionAndProof,
 ) *RpcError {
+	ctx, span := trace.StartSpan(ctx, "coreService.SubmitSignedContributionAndProof")
+	defer span.End()
+
 	errs, ctx := errgroup.WithContext(ctx)
 
 	// Broadcasting and saving contribution into the pool in parallel. As one fail should not affect another.
@@ -243,6 +252,9 @@ func (s *Service) SubmitSignedAggregateSelectionProof(
 	ctx context.Context,
 	req *ethpb.SignedAggregateSubmitRequest,
 ) *RpcError {
+	ctx, span := trace.StartSpan(ctx, "coreService.SubmitSignedAggregateSelectionProof")
+	defer span.End()
+
 	if req.SignedAggregateAndProof == nil || req.SignedAggregateAndProof.Message == nil ||
 		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
 		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
@@ -315,6 +327,9 @@ func (s *Service) AggregatedSigAndAggregationBits(
 func (s *Service) GetAttestationData(
 	ctx context.Context, req *ethpb.AttestationDataRequest,
 ) (*ethpb.AttestationData, *RpcError) {
+	ctx, span := trace.StartSpan(ctx, "coreService.GetAttestationData")
+	defer span.End()
+
 	if req.Slot != s.GenesisTimeFetcher.CurrentSlot() {
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: slot %d is not the current slot %d", req.Slot, s.GenesisTimeFetcher.CurrentSlot())}
 	}
@@ -368,6 +383,14 @@ func (s *Service) GetAttestationData(
 			},
 		}, nil
 	}
+	// cache miss, we need to check for optimistic status before proceeding
+	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, &RpcError{Reason: Internal, Err: err}
+	}
+	if optimistic {
+		return nil, &RpcError{Reason: Unavailable, Err: errOptimisticMode}
+	}
 
 	headRoot, err := s.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
@@ -412,6 +435,9 @@ func (s *Service) GetAttestationData(
 // SubmitSyncMessage submits the sync committee message to the network.
 // It also saves the sync committee message into the pending pool for block inclusion.
 func (s *Service) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitteeMessage) *RpcError {
+	ctx, span := trace.StartSpan(ctx, "coreService.SubmitSyncMessage")
+	defer span.End()
+
 	errs, ctx := errgroup.WithContext(ctx)
 
 	headSyncCommitteeIndices, err := s.HeadFetcher.HeadSyncCommitteeIndices(ctx, msg.ValidatorIndex, msg.Slot)

@@ -126,23 +126,6 @@ var blockTests = []struct {
 	},
 }
 
-func TestStore_SaveBackfillBlockRoot(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-
-	_, err := db.BackfillBlockRoot(ctx)
-	require.ErrorIs(t, err, ErrNotFoundBackfillBlockRoot)
-
-	var expected [32]byte
-	copy(expected[:], []byte{0x23})
-	err = db.SaveBackfillBlockRoot(ctx, expected)
-	require.NoError(t, err)
-	actual, err := db.BackfillBlockRoot(ctx)
-	require.NoError(t, err)
-	require.Equal(t, expected, actual)
-
-}
-
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	BlockCacheSize = 1
 	slot := primitives.Slot(20)

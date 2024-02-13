@@ -150,7 +150,9 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 		headBlock:     headBlock,
 		proposingSlot: proposingSlot,
 	}
-	fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, proposingSlot, newHeadRoot[:])
+	if s.inRegularSync() {
+		fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, proposingSlot, newHeadRoot[:])
+	}
 	if fcuArgs.attributes != nil && s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
 		return
 	}

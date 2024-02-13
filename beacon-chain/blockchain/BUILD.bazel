@@ -6,6 +6,7 @@ go_library(
         "chain_info.go",
         "chain_info_forkchoice.go",
         "currently_syncing_block.go",
+        "defragment.go",
         "error.go",
         "execution_engine.go",
         "forkchoice_update_execution.go",

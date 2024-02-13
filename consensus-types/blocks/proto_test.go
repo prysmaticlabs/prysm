@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -1331,7 +1332,7 @@ func bodyBlindedBellatrix(t *testing.T) *BeaconBlockBody {
 
 func bodyCapella(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	p, err := WrappedExecutionPayloadCapella(f.execPayloadCapella, 0)
+	p, err := WrappedExecutionPayloadCapella(f.execPayloadCapella, big.NewInt(0))
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Capella,
@@ -1355,7 +1356,7 @@ func bodyCapella(t *testing.T) *BeaconBlockBody {
 
 func bodyBlindedCapella(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	ph, err := WrappedExecutionPayloadHeaderCapella(f.execPayloadHeaderCapella, 0)
+	ph, err := WrappedExecutionPayloadHeaderCapella(f.execPayloadHeaderCapella, big.NewInt(0))
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Capella,
@@ -1379,7 +1380,7 @@ func bodyBlindedCapella(t *testing.T) *BeaconBlockBody {
 
 func bodyDeneb(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	p, err := WrappedExecutionPayloadDeneb(f.execPayloadDeneb, 0)
+	p, err := WrappedExecutionPayloadDeneb(f.execPayloadDeneb, big.NewInt(0))
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Deneb,
@@ -1404,7 +1405,7 @@ func bodyDeneb(t *testing.T) *BeaconBlockBody {
 
 func bodyBlindedDeneb(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	ph, err := WrappedExecutionPayloadHeaderDeneb(f.execPayloadHeaderDeneb, 0)
+	ph, err := WrappedExecutionPayloadHeaderDeneb(f.execPayloadHeaderDeneb, big.NewInt(0))
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Deneb,
