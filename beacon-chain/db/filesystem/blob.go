@@ -102,7 +102,9 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return nil
 	}
 	if bs.pruner != nil {
-		bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot())
+		if err := bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot(), sidecar.Index); err != nil {
+			return errors.Wrapf(err, "problem maintaining pruning cache/metrics for sidecar with root=%#x", sidecar.BlockRoot())
+		}
 	}
 
 	// Serialize the ethpb.BlobSidecar to binary data using SSZ.
