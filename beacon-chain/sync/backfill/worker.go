@@ -74,15 +74,11 @@ func (w *p2pWorker) handleBlocks(ctx context.Context, b batch) batch {
 	}
 	backfillBlocksApproximateBytes.Add(float64(bdl))
 	log.WithFields(b.logFields()).WithField("dlbytes", bdl).Debug("backfill batch block bytes downloaded")
-	b.results = vb
-	b.bs, err = newBlobSync(cs, blobRetentionStart, b.results, w.nbv, w.bfs)
+	bs, err := newBlobSync(cs, vb, &blobSyncConfig{retentionStart: blobRetentionStart, nbv: w.nbv, store: w.bfs})
 	if err != nil {
 		return b.withRetryableError(err)
 	}
-	if b.blobsNeeded() > 0 {
-		return b.withState(batchBlobSync)
-	}
-	return b.withState(batchImportable)
+	return b.withResults(vb, bs)
 }
 
 func (w *p2pWorker) handleBlobs(ctx context.Context, b batch) batch {

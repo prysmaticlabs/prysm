@@ -27,13 +27,19 @@ type blobSummary struct {
 	signature  [fieldparams.BLSSignatureLength]byte
 }
 
-func newBlobSync(cs, retentionStart primitives.Slot, vbs verifiedROBlocks, nbv verification.NewBlobVerifier, st *filesystem.BlobStorage) (*blobSync, error) {
-	expected, err := vbs.blobIdents(retentionStart)
+type blobSyncConfig struct {
+	retentionStart primitives.Slot
+	nbv            verification.NewBlobVerifier
+	store          *filesystem.BlobStorage
+}
+
+func newBlobSync(cs primitives.Slot, vbs verifiedROBlocks, cfg *blobSyncConfig) (*blobSync, error) {
+	expected, err := vbs.blobIdents(cfg.retentionStart)
 	if err != nil {
 		return nil, err
 	}
-	bbv := newBlobBatchVerifier(nbv)
-	as := das.NewLazilyPersistentStore(st, bbv)
+	bbv := newBlobBatchVerifier(cfg.nbv)
+	as := das.NewLazilyPersistentStore(cfg.store, bbv)
 	return &blobSync{cs: cs, expected: expected, bbv: bbv, store: as}, nil
 }
 

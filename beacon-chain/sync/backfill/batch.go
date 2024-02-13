@@ -127,6 +127,15 @@ func (b batch) blobRequest() *eth.BlobSidecarsByRangeRequest {
 	}
 }
 
+func (b batch) withResults(results verifiedROBlocks, bs *blobSync) batch {
+	b.results = results
+	b.bs = bs
+	if bs.blobsNeeded() > 0 {
+		return b.withState(batchBlobSync)
+	}
+	return b.withState(batchImportable)
+}
+
 func (b batch) withState(s batchState) batch {
 	if s == batchSequenced {
 		b.scheduled = time.Now()
