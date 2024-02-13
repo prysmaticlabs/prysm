@@ -25,6 +25,7 @@ const bytesPerSidecar = 131928
 
 var (
 	errPruningFailures = errors.New("blobs could not be pruned for some roots")
+	errNotBlobSSZ      = errors.New("not a blob ssz file")
 )
 
 type blobPruner struct {
@@ -184,9 +185,13 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 
 func idxFromPath(fname string) (uint64, error) {
 	fname = path.Base(fname)
+
+	if filepath.Ext(fname) != dotSszExt {
+		return 0, errors.Wrap(errNotBlobSSZ, "does not have .ssz extension")
+	}
 	parts := strings.Split(fname, ".")
 	if len(parts) != 2 {
-		return 0, errors.New("not a blob ssz file")
+		return 0, errors.Wrap(errNotBlobSSZ, "unexpected filename structure (want <index>.ssz)")
 	}
 	return strconv.ParseUint(parts[0], 10, 64)
 }
