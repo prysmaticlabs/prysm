@@ -11,8 +11,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_gorilla_mux//:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_rs_cors//:go_default_library",
     ],
 )

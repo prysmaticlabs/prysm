@@ -15,6 +15,9 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
@@ -69,6 +72,24 @@ import (
 )
 
 const attestationBufferSize = 100
+
+var (
+	httpRequestLatency = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_latency_seconds",
+			Help:    "Latency of HTTP requests",
+			Buckets: []float64{0.001, 0.01, 0.025, 0.1, 0.25, 1, 2.5, 10},
+		},
+		[]string{"endpoint", "code", "method"},
+	)
+	httpRequestCount = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_request_count",
+			Help: "Number of HTTP requests",
+		},
+		[]string{"endpoint", "code", "method"},
+	)
+)
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
@@ -197,6 +218,194 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 var _ stategen.CanonicalChecker = blockchain.ChainInfoFetcher(nil)
 var _ stategen.CurrentSlotter = blockchain.ChainInfoFetcher(nil)
 
+// Start the gRPC server.
+func (s *Service) Start() {
+	grpcprometheus.EnableHandlingTimeHistogram()
+
+	var stateCache stategen.CachedGetter
+	if s.cfg.StateGen != nil {
+		stateCache = s.cfg.StateGen.CombinedCache()
+	}
+	withCache := stategen.WithCache(stateCache)
+	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
+	stater := &lookup.BeaconDbStater{
+		BeaconDB:           s.cfg.BeaconDB,
+		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		StateGenService:    s.cfg.StateGen,
+		ReplayerBuilder:    ch,
+	}
+	blocker := &lookup.BeaconDbBlocker{
+		BeaconDB:           s.cfg.BeaconDB,
+		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		BlobStorage:        s.cfg.BlobStorage,
+	}
+	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
+	coreService := &core.Service{
+		HeadFetcher:           s.cfg.HeadFetcher,
+		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
+		SyncChecker:           s.cfg.SyncService,
+		Broadcaster:           s.cfg.Broadcaster,
+		SyncCommitteePool:     s.cfg.SyncCommitteeObjectPool,
+		OperationNotifier:     s.cfg.OperationNotifier,
+		AttestationCache:      cache.NewAttestationCache(),
+		StateGen:              s.cfg.StateGen,
+		P2P:                   s.cfg.Broadcaster,
+		FinalizedFetcher:      s.cfg.FinalizationFetcher,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+	}
+	validatorServer := &validatorv1alpha1.Server{
+		Ctx:                    s.ctx,
+		AttPool:                s.cfg.AttestationsPool,
+		ExitPool:               s.cfg.ExitPool,
+		HeadFetcher:            s.cfg.HeadFetcher,
+		ForkFetcher:            s.cfg.ForkFetcher,
+		ForkchoiceFetcher:      s.cfg.ForkchoiceFetcher,
+		GenesisFetcher:         s.cfg.GenesisFetcher,
+		FinalizationFetcher:    s.cfg.FinalizationFetcher,
+		TimeFetcher:            s.cfg.GenesisTimeFetcher,
+		BlockFetcher:           s.cfg.ExecutionChainService,
+		DepositFetcher:         s.cfg.DepositFetcher,
+		ChainStartFetcher:      s.cfg.ChainStartFetcher,
+		Eth1InfoFetcher:        s.cfg.ExecutionChainService,
+		OptimisticModeFetcher:  s.cfg.OptimisticModeFetcher,
+		SyncChecker:            s.cfg.SyncService,
+		StateNotifier:          s.cfg.StateNotifier,
+		BlockNotifier:          s.cfg.BlockNotifier,
+		OperationNotifier:      s.cfg.OperationNotifier,
+		P2P:                    s.cfg.Broadcaster,
+		BlockReceiver:          s.cfg.BlockReceiver,
+		BlobReceiver:           s.cfg.BlobReceiver,
+		MockEth1Votes:          s.cfg.MockEth1Votes,
+		Eth1BlockFetcher:       s.cfg.ExecutionChainService,
+		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,
+		SlashingsPool:          s.cfg.SlashingsPool,
+		StateGen:               s.cfg.StateGen,
+		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
+		ReplayerBuilder:        ch,
+		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
+		BeaconDB:               s.cfg.BeaconDB,
+		BlockBuilder:           s.cfg.BlockBuilder,
+		BLSChangesPool:         s.cfg.BLSChangesPool,
+		ClockWaiter:            s.cfg.ClockWaiter,
+		CoreService:            coreService,
+		TrackedValidatorsCache: s.cfg.TrackedValidatorsCache,
+		PayloadIDCache:         s.cfg.PayloadIDCache,
+	}
+	nodeServer := &nodev1alpha1.Server{
+		LogsStreamer:         logs.NewStreamServer(),
+		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
+		BeaconDB:             s.cfg.BeaconDB,
+		Server:               s.grpcServer,
+		SyncChecker:          s.cfg.SyncService,
+		GenesisTimeFetcher:   s.cfg.GenesisTimeFetcher,
+		PeersFetcher:         s.cfg.PeersFetcher,
+		PeerManager:          s.cfg.PeerManager,
+		GenesisFetcher:       s.cfg.GenesisFetcher,
+		POWChainInfoFetcher:  s.cfg.ExecutionChainInfoFetcher,
+		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
+		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
+	}
+	beaconChainServer := &beaconv1alpha1.Server{
+		Ctx:                         s.ctx,
+		BeaconDB:                    s.cfg.BeaconDB,
+		AttestationsPool:            s.cfg.AttestationsPool,
+		SlashingsPool:               s.cfg.SlashingsPool,
+		OptimisticModeFetcher:       s.cfg.OptimisticModeFetcher,
+		HeadFetcher:                 s.cfg.HeadFetcher,
+		FinalizationFetcher:         s.cfg.FinalizationFetcher,
+		CanonicalFetcher:            s.cfg.CanonicalFetcher,
+		ChainStartFetcher:           s.cfg.ChainStartFetcher,
+		DepositFetcher:              s.cfg.DepositFetcher,
+		BlockFetcher:                s.cfg.ExecutionChainService,
+		GenesisTimeFetcher:          s.cfg.GenesisTimeFetcher,
+		StateNotifier:               s.cfg.StateNotifier,
+		BlockNotifier:               s.cfg.BlockNotifier,
+		AttestationNotifier:         s.cfg.OperationNotifier,
+		Broadcaster:                 s.cfg.Broadcaster,
+		StateGen:                    s.cfg.StateGen,
+		SyncChecker:                 s.cfg.SyncService,
+		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
+		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
+		ReplayerBuilder:             ch,
+		CoreService:                 coreService,
+	}
+
+	endpoints := s.endpoints(s.cfg.EnableDebugRPCEndpoints, blocker, stater, rewardFetcher, validatorServer, coreService, ch)
+	for _, e := range endpoints {
+		s.cfg.Router.HandleFunc(
+			e.template,
+			promhttp.InstrumentHandlerDuration(
+				httpRequestLatency.MustCurryWith(prometheus.Labels{"endpoint": e.name}),
+				promhttp.InstrumentHandlerCounter(
+					httpRequestCount.MustCurryWith(prometheus.Labels{"endpoint": e.name}),
+					e.handler,
+				),
+			),
+		)
+	}
+
+	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
+	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
+	if s.cfg.EnableDebugRPCEndpoints {
+		log.Info("Enabled debug gRPC endpoints")
+		debugServer := &debugv1alpha1.Server{
+			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+			BeaconDB:           s.cfg.BeaconDB,
+			StateGen:           s.cfg.StateGen,
+			HeadFetcher:        s.cfg.HeadFetcher,
+			PeerManager:        s.cfg.PeerManager,
+			PeersFetcher:       s.cfg.PeersFetcher,
+			ReplayerBuilder:    ch,
+		}
+		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
+	}
+	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
+	// Register reflection service on gRPC server.
+	reflection.Register(s.grpcServer)
+
+	validatorServer.PruneBlobsBundleCacheRoutine()
+
+	go func() {
+		if s.listener != nil {
+			if err := s.grpcServer.Serve(s.listener); err != nil {
+				log.WithError(err).Errorf("Could not serve gRPC")
+			}
+		}
+	}()
+}
+
+// Stop the service.
+func (s *Service) Stop() error {
+	s.cancel()
+	if s.listener != nil {
+		s.grpcServer.GracefulStop()
+		log.Debug("Initiated graceful stop of gRPC server")
+	}
+	return nil
+}
+
+// Status returns nil or credentialError
+func (s *Service) Status() error {
+	optimistic, err := s.cfg.OptimisticModeFetcher.IsOptimistic(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if service is optimistic")
+	}
+	if optimistic {
+		return errors.New("service is optimistic, validators can't perform duties " +
+			"please check if execution layer is fully synced")
+	}
+	if s.cfg.SyncService.Syncing() {
+		return errors.New("syncing")
+	}
+	if s.credentialError != nil {
+		return s.credentialError
+	}
+	return nil
+}
+
 func (s *Service) initializeRewardServerRoutes(rewardsServer *rewards.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/attestations/{epoch}", rewardsServer.AttestationRewards).Methods(http.MethodPost)
@@ -212,15 +421,32 @@ func (s *Service) initializeBlobServerRoutes(blobServer *blob.Server) {
 }
 
 func (s *Service) initializeValidatorServerRoutes(validatorServer *validator.Server) {
+	httpRequestLatency := promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_latency_seconds",
+			Help:    "Latency of HTTP requests",
+			Buckets: []float64{0.001, 0.01, 0.025, 0.1, 0.25, 1, 2.5, 10},
+		},
+		[]string{"endpoint", "code", "method"},
+	)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_attestation", validatorServer.GetAggregateAttestation).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/contribution_and_proofs", validatorServer.SubmitContributionAndProofs).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_and_proofs", validatorServer.SubmitAggregateAndProofs).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/sync_committee_contribution", validatorServer.ProduceSyncCommitteeContribution).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/sync_committee_subscriptions", validatorServer.SubmitSyncCommitteeSubscription).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/beacon_committee_subscriptions", validatorServer.SubmitBeaconCommitteeSubscription).Methods(http.MethodPost)
-	s.cfg.Router.HandleFunc("/eth/v1/validator/attestation_data", validatorServer.GetAttestationData).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc(
+		"/eth/v1/validator/attestation_data",
+		promhttp.InstrumentHandlerDuration(
+			httpRequestLatency.MustCurryWith(prometheus.Labels{"endpoint": "GetAttestationData"}),
+			(http.HandlerFunc)(validatorServer.GetAttestationData),
+		)).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/register_validator", validatorServer.RegisterValidator).Methods(http.MethodPost)
-	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/attester/{epoch}", validatorServer.GetAttesterDuties).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/attester/{epoch}",
+		promhttp.InstrumentHandlerDuration(
+			httpRequestLatency.MustCurryWith(prometheus.Labels{"endpoint": "GetAttesterDuties"}),
+			(http.HandlerFunc)(validatorServer.GetAttesterDuties),
+		)).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/proposer/{epoch}", validatorServer.GetProposerDuties).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/sync/{epoch}", validatorServer.GetSyncCommitteeDuties).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/prepare_beacon_proposer", validatorServer.PrepareBeaconProposer).Methods(http.MethodPost)
@@ -315,318 +541,6 @@ func (s *Service) initializePrysmValidatorServerRoutes(validatorServerPrysm *val
 	s.cfg.Router.HandleFunc("/prysm/validators/performance", validatorServerPrysm.GetValidatorPerformance).Methods(http.MethodPost)
 	// /eth/v1/beacon/states/{state_id}/validator_count is not a beacon API, it's a custom endpoint
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", validatorServerPrysm.GetValidatorCount).Methods(http.MethodGet)
-}
-
-// Start the gRPC server.
-func (s *Service) Start() {
-	grpcprometheus.EnableHandlingTimeHistogram()
-
-	var stateCache stategen.CachedGetter
-	if s.cfg.StateGen != nil {
-		stateCache = s.cfg.StateGen.CombinedCache()
-	}
-	withCache := stategen.WithCache(stateCache)
-	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
-	stater := &lookup.BeaconDbStater{
-		BeaconDB:           s.cfg.BeaconDB,
-		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-		StateGenService:    s.cfg.StateGen,
-		ReplayerBuilder:    ch,
-	}
-	blocker := &lookup.BeaconDbBlocker{
-		BeaconDB:           s.cfg.BeaconDB,
-		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-		BlobStorage:        s.cfg.BlobStorage,
-	}
-	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
-
-	s.initializeRewardServerRoutes(&rewards.Server{
-		Blocker:               blocker,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		FinalizationFetcher:   s.cfg.FinalizationFetcher,
-		TimeFetcher:           s.cfg.GenesisTimeFetcher,
-		Stater:                stater,
-		HeadFetcher:           s.cfg.HeadFetcher,
-		BlockRewardFetcher:    rewardFetcher,
-	})
-	s.initializeBuilderServerRoutes(&rpcBuilder.Server{
-		FinalizationFetcher:   s.cfg.FinalizationFetcher,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		Stater:                stater,
-	})
-	s.initializeBlobServerRoutes(&blob.Server{
-		Blocker: blocker,
-	})
-
-	coreService := &core.Service{
-		HeadFetcher:           s.cfg.HeadFetcher,
-		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
-		SyncChecker:           s.cfg.SyncService,
-		Broadcaster:           s.cfg.Broadcaster,
-		SyncCommitteePool:     s.cfg.SyncCommitteeObjectPool,
-		OperationNotifier:     s.cfg.OperationNotifier,
-		AttestationCache:      cache.NewAttestationCache(),
-		StateGen:              s.cfg.StateGen,
-		P2P:                   s.cfg.Broadcaster,
-		FinalizedFetcher:      s.cfg.FinalizationFetcher,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-	}
-
-	validatorServer := &validatorv1alpha1.Server{
-		Ctx:                    s.ctx,
-		AttPool:                s.cfg.AttestationsPool,
-		ExitPool:               s.cfg.ExitPool,
-		HeadFetcher:            s.cfg.HeadFetcher,
-		ForkFetcher:            s.cfg.ForkFetcher,
-		ForkchoiceFetcher:      s.cfg.ForkchoiceFetcher,
-		GenesisFetcher:         s.cfg.GenesisFetcher,
-		FinalizationFetcher:    s.cfg.FinalizationFetcher,
-		TimeFetcher:            s.cfg.GenesisTimeFetcher,
-		BlockFetcher:           s.cfg.ExecutionChainService,
-		DepositFetcher:         s.cfg.DepositFetcher,
-		ChainStartFetcher:      s.cfg.ChainStartFetcher,
-		Eth1InfoFetcher:        s.cfg.ExecutionChainService,
-		OptimisticModeFetcher:  s.cfg.OptimisticModeFetcher,
-		SyncChecker:            s.cfg.SyncService,
-		StateNotifier:          s.cfg.StateNotifier,
-		BlockNotifier:          s.cfg.BlockNotifier,
-		OperationNotifier:      s.cfg.OperationNotifier,
-		P2P:                    s.cfg.Broadcaster,
-		BlockReceiver:          s.cfg.BlockReceiver,
-		BlobReceiver:           s.cfg.BlobReceiver,
-		MockEth1Votes:          s.cfg.MockEth1Votes,
-		Eth1BlockFetcher:       s.cfg.ExecutionChainService,
-		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,
-		SlashingsPool:          s.cfg.SlashingsPool,
-		StateGen:               s.cfg.StateGen,
-		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
-		ReplayerBuilder:        ch,
-		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
-		BeaconDB:               s.cfg.BeaconDB,
-		BlockBuilder:           s.cfg.BlockBuilder,
-		BLSChangesPool:         s.cfg.BLSChangesPool,
-		ClockWaiter:            s.cfg.ClockWaiter,
-		CoreService:            coreService,
-		TrackedValidatorsCache: s.cfg.TrackedValidatorsCache,
-		PayloadIDCache:         s.cfg.PayloadIDCache,
-	}
-	s.initializeValidatorServerRoutes(&validator.Server{
-		HeadFetcher:            s.cfg.HeadFetcher,
-		TimeFetcher:            s.cfg.GenesisTimeFetcher,
-		SyncChecker:            s.cfg.SyncService,
-		OptimisticModeFetcher:  s.cfg.OptimisticModeFetcher,
-		AttestationsPool:       s.cfg.AttestationsPool,
-		PeerManager:            s.cfg.PeerManager,
-		Broadcaster:            s.cfg.Broadcaster,
-		V1Alpha1Server:         validatorServer,
-		Stater:                 stater,
-		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
-		ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
-		BeaconDB:               s.cfg.BeaconDB,
-		BlockBuilder:           s.cfg.BlockBuilder,
-		OperationNotifier:      s.cfg.OperationNotifier,
-		TrackedValidatorsCache: s.cfg.TrackedValidatorsCache,
-		PayloadIDCache:         s.cfg.PayloadIDCache,
-		CoreService:            coreService,
-		BlockRewardFetcher:     rewardFetcher,
-	})
-
-	nodeServer := &nodev1alpha1.Server{
-		LogsStreamer:         logs.NewStreamServer(),
-		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
-		BeaconDB:             s.cfg.BeaconDB,
-		Server:               s.grpcServer,
-		SyncChecker:          s.cfg.SyncService,
-		GenesisTimeFetcher:   s.cfg.GenesisTimeFetcher,
-		PeersFetcher:         s.cfg.PeersFetcher,
-		PeerManager:          s.cfg.PeerManager,
-		GenesisFetcher:       s.cfg.GenesisFetcher,
-		POWChainInfoFetcher:  s.cfg.ExecutionChainInfoFetcher,
-		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
-		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
-	}
-	s.initializeNodeServerRoutes(&node.Server{
-		BeaconDB:                  s.cfg.BeaconDB,
-		Server:                    s.grpcServer,
-		SyncChecker:               s.cfg.SyncService,
-		OptimisticModeFetcher:     s.cfg.OptimisticModeFetcher,
-		GenesisTimeFetcher:        s.cfg.GenesisTimeFetcher,
-		PeersFetcher:              s.cfg.PeersFetcher,
-		PeerManager:               s.cfg.PeerManager,
-		MetadataProvider:          s.cfg.MetadataProvider,
-		HeadFetcher:               s.cfg.HeadFetcher,
-		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
-	})
-
-	beaconChainServer := &beaconv1alpha1.Server{
-		Ctx:                         s.ctx,
-		BeaconDB:                    s.cfg.BeaconDB,
-		AttestationsPool:            s.cfg.AttestationsPool,
-		SlashingsPool:               s.cfg.SlashingsPool,
-		OptimisticModeFetcher:       s.cfg.OptimisticModeFetcher,
-		HeadFetcher:                 s.cfg.HeadFetcher,
-		FinalizationFetcher:         s.cfg.FinalizationFetcher,
-		CanonicalFetcher:            s.cfg.CanonicalFetcher,
-		ChainStartFetcher:           s.cfg.ChainStartFetcher,
-		DepositFetcher:              s.cfg.DepositFetcher,
-		BlockFetcher:                s.cfg.ExecutionChainService,
-		GenesisTimeFetcher:          s.cfg.GenesisTimeFetcher,
-		StateNotifier:               s.cfg.StateNotifier,
-		BlockNotifier:               s.cfg.BlockNotifier,
-		AttestationNotifier:         s.cfg.OperationNotifier,
-		Broadcaster:                 s.cfg.Broadcaster,
-		StateGen:                    s.cfg.StateGen,
-		SyncChecker:                 s.cfg.SyncService,
-		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
-		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
-		ReplayerBuilder:             ch,
-		CoreService:                 coreService,
-	}
-	s.initializeBeaconServerRoutes(&beacon.Server{
-		CanonicalHistory:              ch,
-		BeaconDB:                      s.cfg.BeaconDB,
-		AttestationsPool:              s.cfg.AttestationsPool,
-		SlashingsPool:                 s.cfg.SlashingsPool,
-		ChainInfoFetcher:              s.cfg.ChainInfoFetcher,
-		GenesisTimeFetcher:            s.cfg.GenesisTimeFetcher,
-		BlockNotifier:                 s.cfg.BlockNotifier,
-		OperationNotifier:             s.cfg.OperationNotifier,
-		Broadcaster:                   s.cfg.Broadcaster,
-		BlockReceiver:                 s.cfg.BlockReceiver,
-		StateGenService:               s.cfg.StateGen,
-		Stater:                        stater,
-		Blocker:                       blocker,
-		OptimisticModeFetcher:         s.cfg.OptimisticModeFetcher,
-		HeadFetcher:                   s.cfg.HeadFetcher,
-		TimeFetcher:                   s.cfg.GenesisTimeFetcher,
-		VoluntaryExitsPool:            s.cfg.ExitPool,
-		V1Alpha1ValidatorServer:       validatorServer,
-		SyncChecker:                   s.cfg.SyncService,
-		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
-		BLSChangesPool:                s.cfg.BLSChangesPool,
-		FinalizationFetcher:           s.cfg.FinalizationFetcher,
-		ForkchoiceFetcher:             s.cfg.ForkchoiceFetcher,
-		CoreService:                   coreService,
-	})
-
-	s.initializeConfigRoutes()
-
-	s.initializeEventsServerRoutes(&events.Server{
-		StateNotifier:     s.cfg.StateNotifier,
-		OperationNotifier: s.cfg.OperationNotifier,
-		HeadFetcher:       s.cfg.HeadFetcher,
-		ChainInfoFetcher:  s.cfg.ChainInfoFetcher,
-	})
-
-	s.initializeLightClientServerRoutes(&lightclient.Server{
-		Blocker:     blocker,
-		Stater:      stater,
-		HeadFetcher: s.cfg.HeadFetcher,
-	})
-
-	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
-	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
-	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
-	if s.cfg.EnableDebugRPCEndpoints {
-		log.Info("Enabled debug gRPC endpoints")
-		debugServer := &debugv1alpha1.Server{
-			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-			BeaconDB:           s.cfg.BeaconDB,
-			StateGen:           s.cfg.StateGen,
-			HeadFetcher:        s.cfg.HeadFetcher,
-			PeerManager:        s.cfg.PeerManager,
-			PeersFetcher:       s.cfg.PeersFetcher,
-			ReplayerBuilder:    ch,
-		}
-		s.initializeDebugServerRoutes(&debug.Server{
-			BeaconDB:              s.cfg.BeaconDB,
-			HeadFetcher:           s.cfg.HeadFetcher,
-			Stater:                stater,
-			OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-			ForkFetcher:           s.cfg.ForkFetcher,
-			ForkchoiceFetcher:     s.cfg.ForkchoiceFetcher,
-			FinalizationFetcher:   s.cfg.FinalizationFetcher,
-			ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
-		})
-		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
-	}
-	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
-	// Register reflection service on gRPC server.
-	reflection.Register(s.grpcServer)
-
-	validatorServer.PruneBlobsBundleCacheRoutine()
-
-	s.initializePrysmBeaconServerRoutes(&beaconprysm.Server{
-		SyncChecker:           s.cfg.SyncService,
-		HeadFetcher:           s.cfg.HeadFetcher,
-		TimeFetcher:           s.cfg.GenesisTimeFetcher,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		CanonicalHistory:      ch,
-		BeaconDB:              s.cfg.BeaconDB,
-	})
-
-	s.initializePrysmNodeServerRoutes(&nodeprysm.Server{
-		BeaconDB:                  s.cfg.BeaconDB,
-		SyncChecker:               s.cfg.SyncService,
-		OptimisticModeFetcher:     s.cfg.OptimisticModeFetcher,
-		GenesisTimeFetcher:        s.cfg.GenesisTimeFetcher,
-		PeersFetcher:              s.cfg.PeersFetcher,
-		PeerManager:               s.cfg.PeerManager,
-		MetadataProvider:          s.cfg.MetadataProvider,
-		HeadFetcher:               s.cfg.HeadFetcher,
-		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
-	})
-
-	s.initializePrysmValidatorServerRoutes(&validatorprysm.Server{
-		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
-		HeadFetcher:           s.cfg.HeadFetcher,
-		SyncChecker:           s.cfg.SyncService,
-		CoreService:           coreService,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		Stater:                stater,
-		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
-		BeaconDB:              s.cfg.BeaconDB,
-		FinalizationFetcher:   s.cfg.FinalizationFetcher,
-	})
-
-	go func() {
-		if s.listener != nil {
-			if err := s.grpcServer.Serve(s.listener); err != nil {
-				log.WithError(err).Errorf("Could not serve gRPC")
-			}
-		}
-	}()
-}
-
-// Stop the service.
-func (s *Service) Stop() error {
-	s.cancel()
-	if s.listener != nil {
-		s.grpcServer.GracefulStop()
-		log.Debug("Initiated graceful stop of gRPC server")
-	}
-	return nil
-}
-
-// Status returns nil or credentialError
-func (s *Service) Status() error {
-	optimistic, err := s.cfg.OptimisticModeFetcher.IsOptimistic(s.ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to check if service is optimistic")
-	}
-	if optimistic {
-		return errors.New("service is optimistic, validators can't perform duties " +
-			"please check if execution layer is fully synced")
-	}
-	if s.cfg.SyncService.Syncing() {
-		return errors.New("syncing")
-	}
-	if s.credentialError != nil {
-		return s.credentialError
-	}
-	return nil
 }
 
 // Stream interceptor for new validator client connections to the beacon node.
