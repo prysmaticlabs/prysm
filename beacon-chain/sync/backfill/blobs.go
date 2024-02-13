@@ -1,6 +1,7 @@
 package backfill
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/pkg/errors"
@@ -129,7 +130,7 @@ func (bbv blobBatchVerifier) VerifiedROBlobs(_ context.Context, blk blocks.ROBlo
 		if err != nil {
 			return nil, err
 		}
-		if bytesutil.ToBytes48(vb.KzgCommitment) != bytesutil.ToBytes48(c[i]) {
+		if !bytes.Equal(vb.KzgCommitment, c[i]) {
 			return nil, errors.Wrapf(errBatchVerifierMismatch, "commitments do not match, verified=%#x da check=%#x for root %#x", vb.KzgCommitment, c[i], vb.BlockRoot())
 		}
 		vbs[i] = vb
