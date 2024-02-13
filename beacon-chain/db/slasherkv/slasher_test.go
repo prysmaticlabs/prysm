@@ -46,21 +46,29 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 func TestStore_LastEpochWrittenForValidators(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
-	indices := []primitives.ValidatorIndex{1, 2, 3}
-	epoch := primitives.Epoch(5)
+
+	validatorsCount := 11000
+	indices := make([]primitives.ValidatorIndex, validatorsCount)
+	epochs := make([]primitives.Epoch, validatorsCount)
+
+	for i := 0; i < validatorsCount; i++ {
+		indices[i] = primitives.ValidatorIndex(i)
+		epochs[i] = primitives.Epoch(i)
+	}
 
 	attestedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
 	require.NoError(t, err)
 	require.Equal(t, true, len(attestedEpochs) == len(indices))
+
 	for _, item := range attestedEpochs {
 		require.Equal(t, primitives.Epoch(0), item.Epoch)
 	}
 
-	epochsByValidator := map[primitives.ValidatorIndex]primitives.Epoch{
-		1: epoch,
-		2: epoch,
-		3: epoch,
+	epochsByValidator := make(map[primitives.ValidatorIndex]primitives.Epoch, validatorsCount)
+	for i := 0; i < validatorsCount; i++ {
+		epochsByValidator[indices[i]] = epochs[i]
 	}
+
 	err = beaconDB.SaveLastEpochsWrittenForValidators(ctx, epochsByValidator)
 	require.NoError(t, err)
 
@@ -70,9 +78,10 @@ func TestStore_LastEpochWrittenForValidators(t *testing.T) {
 
 	for i, retrievedEpoch := range retrievedEpochs {
 		want := &slashertypes.AttestedEpochForValidator{
-			Epoch:          epoch,
+			Epoch:          epochs[i],
 			ValidatorIndex: indices[i],
 		}
+
 		require.DeepEqual(t, want, retrievedEpoch)
 	}
 }
