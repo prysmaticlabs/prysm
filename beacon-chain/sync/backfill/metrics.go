@@ -74,14 +74,14 @@ var (
 	backfillBatchTimeDownloadingBlocks = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "backfill_batch_blocks_time_download",
-			Help:    "Time batch spent downloading blocks from peer.",
+			Help:    "Time, in milliseconds, batch spent downloading blocks from peer.",
 			Buckets: []float64{100, 300, 1000, 2000, 4000, 8000},
 		},
 	)
 	backfillBatchTimeDownloadingBlobs = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "backfill_batch_blobs_time_download",
-			Help:    "Time batch spent downloading blobs from peer.",
+			Help:    "Time, in milliseconds, batch spent downloading blobs from peer.",
 			Buckets: []float64{100, 300, 1000, 2000, 4000, 8000},
 		},
 	)
