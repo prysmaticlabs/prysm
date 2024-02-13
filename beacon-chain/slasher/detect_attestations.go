@@ -290,7 +290,7 @@ func (s *Service) epochUpdateForValidator(
 
 		currentChunk, ok := updatedChunks[chunkIndex]
 		if !ok {
-			currentChunk, err = s.getChunk(ctx, chunkKind, validatorChunkIndex, chunkIndex)
+			currentChunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
 			if err != nil {
 				return errors.Wrap(err, "could not get chunk")
 			}
@@ -409,7 +409,7 @@ func (s *Service) applyAttestationForValidator(
 
 	chunk, ok := chunksByChunkIdx[chunkIndex]
 	if !ok {
-		chunk, err = s.getChunk(ctx, chunkKind, validatorChunkIndex, chunkIndex)
+		chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
 		}
@@ -451,7 +451,7 @@ func (s *Service) applyAttestationForValidator(
 
 		chunk, ok := chunksByChunkIdx[chunkIndex]
 		if !ok {
-			chunk, err = s.getChunk(ctx, chunkKind, validatorChunkIndex, chunkIndex)
+			chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
 			}
@@ -490,8 +490,8 @@ func (s *Service) applyAttestationForValidator(
 	return nil, nil
 }
 
-// Retrieve a chunk from database from database.
-func (s *Service) getChunk(
+// Retrieve a chunk from database.
+func (s *Service) getChunkFromDatabase(
 	ctx context.Context,
 	chunkKind slashertypes.ChunkKind,
 	validatorChunkIndex uint64,
