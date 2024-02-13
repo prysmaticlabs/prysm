@@ -54,9 +54,7 @@ func (s *Service) checkSlashableAttestations(
 	surroundStart := time.Now()
 
 	for validatorChunkIndex, attestations := range groupedByValidatorChunkIndexAtts {
-		// The fact that we use always slashertypes.MinSpan is probably the root cause of
-		// https://github.com/prysmaticlabs/prysm/issues/13591
-		surroundSlashings, err := s.checkSurrounds(ctx, attestations, slashertypes.MinSpan, currentEpoch, validatorChunkIndex)
+		surroundSlashings, err := s.checkSurrounds(ctx, attestations, currentEpoch, validatorChunkIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -107,12 +105,12 @@ func (s *Service) checkSlashableAttestations(
 func (s *Service) checkSurrounds(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
-	chunkKind slashertypes.ChunkKind,
 	currentEpoch primitives.Epoch,
 	validatorChunkIndex uint64,
 ) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
 	// Map of updated chunks by chunk index, which will be saved at the end.
-	updatedChunks := make(map[uint64]Chunker)
+	updatedMinChunks, updatedMaxChunks := map[uint64]Chunker{}, map[uint64]Chunker{}
+
 	groupedByChunkIndexAtts := s.groupByChunkIndex(attestations)
 	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
 
@@ -120,14 +118,19 @@ func (s *Service) checkSurrounds(
 
 	// Update epoch for validators.
 	for _, validatorIndex := range validatorIndexes {
-		// This function modifies `updatedChunks` in place.
-		if err := s.epochUpdateForValidator(ctx, updatedChunks, validatorChunkIndex, chunkKind, currentEpoch, validatorIndex); err != nil {
-			return nil, errors.Wrapf(err, "could not update validator index chunks %d", validatorIndex)
+		// This function modifies `updatedMinChunks` in place.
+		if err := s.epochUpdateForValidator(ctx, updatedMinChunks, validatorChunkIndex, slashertypes.MinSpan, currentEpoch, validatorIndex); err != nil {
+			return nil, errors.Wrapf(err, "could not update validator index for min chunks %d", validatorIndex)
+		}
+
+		// This function modifies `updatedMaxChunks` in place.
+		if err := s.epochUpdateForValidator(ctx, updatedMaxChunks, validatorChunkIndex, slashertypes.MaxSpan, currentEpoch, validatorIndex); err != nil {
+			return nil, errors.Wrapf(err, "could not update validator index for max chunks %d", validatorIndex)
 		}
 	}
 
 	// Check for surrounding votes.
-	surroundingSlashings, err := s.updateSpans(ctx, updatedChunks, groupedByChunkIndexAtts, slashertypes.MinSpan, validatorChunkIndex, currentEpoch)
+	surroundingSlashings, err := s.updateSpans(ctx, updatedMinChunks, groupedByChunkIndexAtts, slashertypes.MinSpan, validatorChunkIndex, currentEpoch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not update min attestation spans for validator chunk index %d", validatorChunkIndex)
 	}
@@ -137,7 +140,7 @@ func (s *Service) checkSurrounds(
 	}
 
 	// Check for surrounded votes.
-	surroundedSlashings, err := s.updateSpans(ctx, updatedChunks, groupedByChunkIndexAtts, slashertypes.MaxSpan, validatorChunkIndex, currentEpoch)
+	surroundedSlashings, err := s.updateSpans(ctx, updatedMaxChunks, groupedByChunkIndexAtts, slashertypes.MaxSpan, validatorChunkIndex, currentEpoch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not update max attestation spans for validator chunk index %d", validatorChunkIndex)
 	}
@@ -146,8 +149,13 @@ func (s *Service) checkSurrounds(
 		slashings[root] = slashing
 	}
 
-	if err := s.saveUpdatedChunks(ctx, updatedChunks, chunkKind, validatorChunkIndex); err != nil {
-		return nil, err
+	// Save updated chunks into the database.
+	if err := s.saveUpdatedChunks(ctx, updatedMinChunks, slashertypes.MinSpan, validatorChunkIndex); err != nil {
+		return nil, errors.Wrap(err, "could not save chunks for min spans")
+	}
+
+	if err := s.saveUpdatedChunks(ctx, updatedMaxChunks, slashertypes.MaxSpan, validatorChunkIndex); err != nil {
+		return nil, errors.Wrap(err, "could not save chunks for max spans")
 	}
 
 	return slashings, nil
