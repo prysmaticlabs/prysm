@@ -849,34 +849,20 @@ func Test_epochUpdateForValidators(t *testing.T) {
 	}
 
 	t.Run("no update if no latest written epoch", func(t *testing.T) {
-		validators := []primitives.ValidatorIndex{
-			1, 2,
-		}
 		currentEpoch := primitives.Epoch(3)
 		// No last written epoch for both validators.
 		s.latestEpochWrittenForValidator = map[primitives.ValidatorIndex]primitives.Epoch{}
 
 		// Because the validators have no recorded latest epoch written, we expect
 		// no chunks to be loaded nor updated to.
-		updatedChunks := make(map[uint64]Chunker)
-		for _, valIdx := range validators {
-			err := s.loadAndUpdateChunks(
-				ctx,
-				updatedChunks,
-				slashertypes.MinSpan,
-				currentEpoch,
-				0, // validatorChunkIndex
-				valIdx,
-			)
-			require.NoError(t, err)
-		}
+		updatedChunks, err := s.updatedChunkByChunkIndex(
+			ctx, slashertypes.MinSpan, currentEpoch, 0, // validatorChunkIndex
+		)
+		require.NoError(t, err)
 		require.Equal(t, 0, len(updatedChunks))
 	})
 
 	t.Run("update from latest written epoch", func(t *testing.T) {
-		validators := []primitives.ValidatorIndex{
-			1, 2,
-		}
 		currentEpoch := primitives.Epoch(3)
 
 		// Set the latest written epoch for validators to current epoch - 1.
@@ -889,18 +875,10 @@ func Test_epochUpdateForValidators(t *testing.T) {
 		// Because the latest written epoch for the input validators is == 2, we expect
 		// that we will update all epochs from 2 up to 3 (the current epoch). This is all
 		// safe contained in chunk index 1.
-		updatedChunks := make(map[uint64]Chunker)
-		for _, valIdx := range validators {
-			err := s.loadAndUpdateChunks(
-				ctx,
-				updatedChunks,
-				slashertypes.MinSpan,
-				currentEpoch,
-				0, // validatorChunkIndex,
-				valIdx,
-			)
-			require.NoError(t, err)
-		}
+		updatedChunks, err := s.updatedChunkByChunkIndex(
+			ctx, slashertypes.MinSpan, currentEpoch, 0, // validatorChunkIndex,
+		)
+		require.NoError(t, err)
 		require.Equal(t, 1, len(updatedChunks))
 		_, ok := updatedChunks[1]
 		require.Equal(t, true, ok)

@@ -81,31 +81,21 @@ func (s *Service) checkSurroundVotes(
 	attWrappersByValidatorChunkIndex := s.groupByValidatorChunkIndex(attWrappers)
 
 	for validatorChunkIndex, attWrappers := range attWrappersByValidatorChunkIndex {
-		// Map of updated chunks by chunk index, which will be saved at the end.
-		updatedMinChunks, updatedMaxChunks := map[uint64]Chunker{}, map[uint64]Chunker{}
+		minChunkByChunkIndex, err := s.updatedChunkByChunkIndex(ctx, slashertypes.MinSpan, currentEpoch, validatorChunkIndex)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not update updatedMinChunks")
+		}
 
-		// Get all validator indexes corresponding to this validator chunk index.
-		validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
-
-		// For all validators in the chunk corresponding to this validator chunk index,
-		// update `updatedMinChunks` and `updatedMaxChunks` with default values up to the current epoch.
-		for _, validatorIndex := range validatorIndexes {
-			// This function modifies `updatedMinChunks` in place.
-			if err := s.loadAndUpdateChunks(ctx, updatedMinChunks, slashertypes.MinSpan, currentEpoch, validatorChunkIndex, validatorIndex); err != nil {
-				return nil, errors.Wrapf(err, "could not update validator index for min chunks %d", validatorIndex)
-			}
-
-			// This function modifies `updatedMaxChunks` in place.
-			if err := s.loadAndUpdateChunks(ctx, updatedMaxChunks, slashertypes.MaxSpan, currentEpoch, validatorChunkIndex, validatorIndex); err != nil {
-				return nil, errors.Wrapf(err, "could not update validator index for max chunks %d", validatorIndex)
-			}
+		maxChunkByChunkIndex, err := s.updatedChunkByChunkIndex(ctx, slashertypes.MaxSpan, currentEpoch, validatorChunkIndex)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not update updatedMaxChunks")
 		}
 
 		// Group (already grouped by validator chunk index) attestation wrappers by chunk index.
 		attWrappersByChunkIndex := s.groupByChunkIndex(attWrappers)
 
 		// Check for surrounding votes.
-		surroundingSlashings, err := s.updateSpans(ctx, updatedMinChunks, attWrappersByChunkIndex, slashertypes.MinSpan, validatorChunkIndex, currentEpoch)
+		surroundingSlashings, err := s.updateSpans(ctx, minChunkByChunkIndex, attWrappersByChunkIndex, slashertypes.MinSpan, validatorChunkIndex, currentEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not update min attestation spans for validator chunk index %d", validatorChunkIndex)
 		}
@@ -115,7 +105,7 @@ func (s *Service) checkSurroundVotes(
 		}
 
 		// Check for surrounded votes.
-		surroundedSlashings, err := s.updateSpans(ctx, updatedMaxChunks, attWrappersByChunkIndex, slashertypes.MaxSpan, validatorChunkIndex, currentEpoch)
+		surroundedSlashings, err := s.updateSpans(ctx, maxChunkByChunkIndex, attWrappersByChunkIndex, slashertypes.MaxSpan, validatorChunkIndex, currentEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not update max attestation spans for validator chunk index %d", validatorChunkIndex)
 		}
@@ -125,11 +115,11 @@ func (s *Service) checkSurroundVotes(
 		}
 
 		// Save updated chunks into the database.
-		if err := s.saveUpdatedChunks(ctx, updatedMinChunks, slashertypes.MinSpan, validatorChunkIndex); err != nil {
+		if err := s.saveUpdatedChunks(ctx, minChunkByChunkIndex, slashertypes.MinSpan, validatorChunkIndex); err != nil {
 			return nil, errors.Wrap(err, "could not save chunks for min spans")
 		}
 
-		if err := s.saveUpdatedChunks(ctx, updatedMaxChunks, slashertypes.MaxSpan, validatorChunkIndex); err != nil {
+		if err := s.saveUpdatedChunks(ctx, maxChunkByChunkIndex, slashertypes.MaxSpan, validatorChunkIndex); err != nil {
 			return nil, errors.Wrap(err, "could not save chunks for max spans")
 		}
 
@@ -246,55 +236,63 @@ func (s *Service) checkDoubleVotes(
 	return slashings, nil
 }
 
-// This function updates `updatedChunks`, representing the slashing spans for a given validator for
-// a change in epoch since the last epoch we have recorded for the validator.
-// For example, if the last epoch a validator has written is N, and the current epoch is N+5,
-// we update entries in the slashing spans with their neutral element for epochs N+1 to N+4.
-// This also puts any loaded chunks in a map used as a cache for further processing and minimizing
-// database reads later on.
-func (s *Service) loadAndUpdateChunks(
+// updatedChunkByChunkIndex loads the chunks from the database for validators corresponding to
+// the `validatorChunkIndex` and which have an entry in `s.latestEpochWrittenForValidator`.
+// It then updates the chunks with the neutral element for corresponding validators from
+// the latest epoch written to the current epoch.
+// A mapping between chunk index and chunk is returned to the caller.
+func (s *Service) updatedChunkByChunkIndex(
 	ctx context.Context,
-	chunkByChunkIndex map[uint64]Chunker,
 	chunkKind slashertypes.ChunkKind,
 	currentEpoch primitives.Epoch,
 	validatorChunkIndex uint64,
-	validatorIndex primitives.ValidatorIndex,
-) error {
+) (map[uint64]Chunker, error) {
 	var err error
 
-	latestEpochWritten, ok := s.latestEpochWrittenForValidator[validatorIndex]
-	if !ok {
-		return nil
-	}
+	chunkByChunkIndex := map[uint64]Chunker{}
 
-	for latestEpochWritten <= currentEpoch {
-		chunkIndex := s.params.chunkIndex(latestEpochWritten)
-
-		currentChunk, ok := chunkByChunkIndex[chunkIndex]
+	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
+	for _, validatorIndex := range validatorIndexes {
+		// Retrieve the latest epoch written for the validator.
+		latestEpochWritten, ok := s.latestEpochWrittenForValidator[validatorIndex]
 		if !ok {
-			currentChunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
-			if err != nil {
-				return errors.Wrap(err, "could not get chunk")
-			}
+			continue
 		}
 
-		for s.params.chunkIndex(latestEpochWritten) == chunkIndex && latestEpochWritten <= currentEpoch {
-			if err := setChunkRawDistance(
-				s.params,
-				currentChunk.Chunk(),
-				validatorIndex,
-				latestEpochWritten,
-				currentChunk.NeutralElement(),
-			); err != nil {
-				return err
+		for latestEpochWritten <= currentEpoch {
+			// Get the chunk index for the latest epoch written.
+			chunkIndex := s.params.chunkIndex(latestEpochWritten)
+
+			// Get the chunk corresponding to the chunk index from the `chunkByChunkIndex` map.
+			currentChunk, ok := chunkByChunkIndex[chunkIndex]
+			if !ok {
+				// If the chunk is not in the map, retrieve it from the database.
+				currentChunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get chunk")
+				}
+			}
+
+			// Update the current chunk with the neutral element for the validator index for the latest epoch written.
+			for s.params.chunkIndex(latestEpochWritten) == chunkIndex && latestEpochWritten <= currentEpoch {
+				if err := setChunkRawDistance(
+					s.params,
+					currentChunk.Chunk(),
+					validatorIndex,
+					latestEpochWritten,
+					currentChunk.NeutralElement(),
+				); err != nil {
+					return nil, err
+				}
+
+				latestEpochWritten++
 			}
 
 			chunkByChunkIndex[chunkIndex] = currentChunk
-			latestEpochWritten++
 		}
 	}
 
-	return nil
+	return chunkByChunkIndex, nil
 }
 
 // Updates spans and detects any slashable attester offenses along the way.
