@@ -46,17 +46,18 @@ func (s *Store) LastEpochWrittenForValidators(
 		for i, encodedIndex := range encodedIndexes {
 			var epoch primitives.Epoch
 
-			epochBytes := bkt.Get(encodedIndex)
-			if epochBytes != nil {
+			if epochBytes := bkt.Get(encodedIndex); epochBytes != nil {
 				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
 					return err
 				}
 			}
 
-			attestedEpochs = append(attestedEpochs, &slashertypes.AttestedEpochForValidator{
+			attestedEpoch := &slashertypes.AttestedEpochForValidator{
 				ValidatorIndex: validatorIndexes[i],
 				Epoch:          epoch,
-			})
+			}
+
+			attestedEpochs = append(attestedEpochs, attestedEpoch)
 		}
 
 		return nil
@@ -83,18 +84,20 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 			return ctx.Err()
 		}
 
+		encodedIndex := encodeValidatorIndex(valIndex)
+
 		encodedEpoch, err := epoch.MarshalSSZ()
 		if err != nil {
 			return err
 		}
 
-		encodedIndexes = append(encodedIndexes, encodeValidatorIndex(valIndex))
+		encodedIndexes = append(encodedIndexes, encodedIndex)
 		encodedEpochs = append(encodedEpochs, encodedEpoch)
 	}
 
 	// The list of validators might be too massive for boltdb to handle in a single transaction,
 	// so instead we split it into batches and write each batch.
-	for i := 0; i < len(encodedIndexes); i += batchSize {
+	for start := 0; start < len(encodedIndexes); start += batchSize {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -105,17 +108,14 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 			}
 
 			bkt := tx.Bucket(attestedEpochsByValidator)
+			end := min(start+batchSize, len(encodedIndexes))
 
-			minimum := i + batchSize
-			if minimum > len(encodedIndexes) {
-				minimum = len(encodedIndexes)
-			}
-
-			for j, encodedIndex := range encodedIndexes[i:minimum] {
+			for j, encodedIndex := range encodedIndexes[start:end] {
 				if ctx.Err() != nil {
 					return ctx.Err()
 				}
-				if err := bkt.Put(encodedIndex, encodedEpochs[j]); err != nil {
+
+				if err := bkt.Put(encodedIndex, encodedEpochs[j+start]); err != nil {
 					return err
 				}
 			}
