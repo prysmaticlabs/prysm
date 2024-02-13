@@ -28,13 +28,13 @@ type blobSummary struct {
 }
 
 func newBlobSync(cs, retentionStart primitives.Slot, vbs verifiedROBlocks, nbv verification.NewBlobVerifier, st *filesystem.BlobStorage) (*blobSync, error) {
-	todo, err := vbs.blobIdents(retentionStart)
+	expected, err := vbs.blobIdents(retentionStart)
 	if err != nil {
 		return nil, err
 	}
 	bbv := newBlobBatchVerifier(nbv)
 	as := das.NewLazilyPersistentStore(st, bbv)
-	return &blobSync{cs: cs, expected: todo, bbv: bbv, store: as}, nil
+	return &blobSync{cs: cs, expected: expected, bbv: bbv, store: as}, nil
 }
 
 type blobVerifierMap map[[32]byte][fieldparams.MaxBlobsPerBlock]verification.BlobVerifier
