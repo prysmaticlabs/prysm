@@ -860,12 +860,12 @@ func Test_epochUpdateForValidators(t *testing.T) {
 		// no chunks to be loaded nor updated to.
 		updatedChunks := make(map[uint64]Chunker)
 		for _, valIdx := range validators {
-			err := s.epochUpdateForValidator(
+			err := s.loadAndUpdateChunks(
 				ctx,
 				updatedChunks,
-				0, // validatorChunkIndex
 				slashertypes.MinSpan,
 				currentEpoch,
+				0, // validatorChunkIndex
 				valIdx,
 			)
 			require.NoError(t, err)
@@ -891,12 +891,12 @@ func Test_epochUpdateForValidators(t *testing.T) {
 		// safe contained in chunk index 1.
 		updatedChunks := make(map[uint64]Chunker)
 		for _, valIdx := range validators {
-			err := s.epochUpdateForValidator(
+			err := s.loadAndUpdateChunks(
 				ctx,
 				updatedChunks,
-				0, // validatorChunkIndex,
 				slashertypes.MinSpan,
 				currentEpoch,
+				0, // validatorChunkIndex,
 				valIdx,
 			)
 			require.NoError(t, err)

@@ -91,12 +91,12 @@ func (s *Service) checkSurroundVotes(
 		// update `updatedMinChunks` and `updatedMaxChunks` with default values up to the current epoch.
 		for _, validatorIndex := range validatorIndexes {
 			// This function modifies `updatedMinChunks` in place.
-			if err := s.epochUpdateForValidator(ctx, updatedMinChunks, validatorChunkIndex, slashertypes.MinSpan, currentEpoch, validatorIndex); err != nil {
+			if err := s.loadAndUpdateChunks(ctx, updatedMinChunks, slashertypes.MinSpan, currentEpoch, validatorChunkIndex, validatorIndex); err != nil {
 				return nil, errors.Wrapf(err, "could not update validator index for min chunks %d", validatorIndex)
 			}
 
 			// This function modifies `updatedMaxChunks` in place.
-			if err := s.epochUpdateForValidator(ctx, updatedMaxChunks, validatorChunkIndex, slashertypes.MaxSpan, currentEpoch, validatorIndex); err != nil {
+			if err := s.loadAndUpdateChunks(ctx, updatedMaxChunks, slashertypes.MaxSpan, currentEpoch, validatorChunkIndex, validatorIndex); err != nil {
 				return nil, errors.Wrapf(err, "could not update validator index for max chunks %d", validatorIndex)
 			}
 		}
@@ -252,12 +252,12 @@ func (s *Service) checkDoubleVotes(
 // we update entries in the slashing spans with their neutral element for epochs N+1 to N+4.
 // This also puts any loaded chunks in a map used as a cache for further processing and minimizing
 // database reads later on.
-func (s *Service) epochUpdateForValidator(
+func (s *Service) loadAndUpdateChunks(
 	ctx context.Context,
-	updatedChunks map[uint64]Chunker,
-	validatorChunkIndex uint64,
+	chunkByChunkIndex map[uint64]Chunker,
 	chunkKind slashertypes.ChunkKind,
 	currentEpoch primitives.Epoch,
+	validatorChunkIndex uint64,
 	validatorIndex primitives.ValidatorIndex,
 ) error {
 	var err error
@@ -270,7 +270,7 @@ func (s *Service) epochUpdateForValidator(
 	for latestEpochWritten <= currentEpoch {
 		chunkIndex := s.params.chunkIndex(latestEpochWritten)
 
-		currentChunk, ok := updatedChunks[chunkIndex]
+		currentChunk, ok := chunkByChunkIndex[chunkIndex]
 		if !ok {
 			currentChunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
 			if err != nil {
@@ -289,7 +289,7 @@ func (s *Service) epochUpdateForValidator(
 				return err
 			}
 
-			updatedChunks[chunkIndex] = currentChunk
+			chunkByChunkIndex[chunkIndex] = currentChunk
 			latestEpochWritten++
 		}
 	}
