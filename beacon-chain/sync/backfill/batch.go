@@ -170,8 +170,8 @@ func (b batch) availabilityStore() das.AvailabilityStore {
 	return b.bs.store
 }
 
-func sortBatchDesc(todo []batch) {
-	sort.Slice(todo, func(i, j int) bool {
-		return todo[j].end < todo[i].end
+func sortBatchDesc(bb []batch) {
+	sort.Slice(bb, func(i, j int) bool {
+		return bb[j].end < bb[i].end
 	})
 }
