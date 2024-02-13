@@ -20,14 +20,11 @@ import (
 func (s *Service) checkSlashableAttestations(
 	ctx context.Context, currentEpoch primitives.Epoch, atts []*slashertypes.IndexedAttestationWrapper,
 ) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
-	totalStart := time.Now()
+	start := time.Now()
 
 	slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
 
 	// Double votes
-	log.Debug("Checking for double votes")
-	start := time.Now()
-
 	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, atts)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check slashable double votes")
@@ -47,40 +44,20 @@ func (s *Service) checkSlashableAttestations(
 	}
 
 	// Surrounding / surrounded votes
-	groupedByValidatorChunkIndexAtts := s.groupByValidatorChunkIndex(atts)
-	log.WithField("numBatches", len(groupedByValidatorChunkIndexAtts)).Debug("Batching attestations by validator chunk index")
-	groupsCount := len(groupedByValidatorChunkIndexAtts)
-
-	surroundStart := time.Now()
-
-	for validatorChunkIndex, attestations := range groupedByValidatorChunkIndexAtts {
-		surroundSlashings, err := s.checkSurrounds(ctx, attestations, currentEpoch, validatorChunkIndex)
-		if err != nil {
-			return nil, err
-		}
-
-		for root, slashing := range surroundSlashings {
-			slashings[root] = slashing
-		}
-
-		indices := s.params.validatorIndexesInChunk(validatorChunkIndex)
-		for _, idx := range indices {
-			s.latestEpochWrittenForValidator[idx] = currentEpoch
-		}
+	surroundSlashings, err := s.checkSurroundVotes(ctx, atts, currentEpoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not check slashable surround votes")
 	}
 
-	surroundElapsed := time.Since(surroundStart)
-	totalElapsed := time.Since(totalStart)
+	for root, slashing := range surroundSlashings {
+		slashings[root] = slashing
+	}
+
+	elapsed := time.Since(start)
 
 	fields := logrus.Fields{
-		"numAttestations":                 len(atts),
-		"numBatchesByValidatorChunkIndex": groupsCount,
-		"elapsed":                         totalElapsed,
-	}
-
-	if groupsCount > 0 {
-		avgProcessingTimePerBatch := surroundElapsed / time.Duration(groupsCount)
-		fields["avgBatchProcessingTime"] = avgProcessingTimePerBatch
+		"numAttestations": len(atts),
+		"elapsed":         elapsed,
 	}
 
 	log.WithFields(fields).Info("Done checking slashable attestations")
@@ -92,70 +69,75 @@ func (s *Service) checkSlashableAttestations(
 	return slashings, nil
 }
 
-// Given a list of attestations all corresponding to a validator chunk index as well
-// as the current epoch in time, we perform slashing detection.
-// The process is as follows given a list of attestations:
-//
-//  1. Group the attestations by chunk index.
-//  2. Update the min and max spans for those grouped attestations, check if any slashings are
-//     found in the process
-//  3. Update the latest written epoch for all validators involved to the current epoch.
-//
-// This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
-func (s *Service) checkSurrounds(
+// Check for surrounding and surrounded votes in our database given a list of incoming attestations.
+func (s *Service) checkSurroundVotes(
 	ctx context.Context,
-	attestations []*slashertypes.IndexedAttestationWrapper,
+	attWrappers []*slashertypes.IndexedAttestationWrapper,
 	currentEpoch primitives.Epoch,
-	validatorChunkIndex uint64,
 ) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
-	// Map of updated chunks by chunk index, which will be saved at the end.
-	updatedMinChunks, updatedMaxChunks := map[uint64]Chunker{}, map[uint64]Chunker{}
-
-	groupedByChunkIndexAtts := s.groupByChunkIndex(attestations)
-	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
-
 	slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
 
-	// Update epoch for validators.
-	for _, validatorIndex := range validatorIndexes {
-		// This function modifies `updatedMinChunks` in place.
-		if err := s.epochUpdateForValidator(ctx, updatedMinChunks, validatorChunkIndex, slashertypes.MinSpan, currentEpoch, validatorIndex); err != nil {
-			return nil, errors.Wrapf(err, "could not update validator index for min chunks %d", validatorIndex)
+	// Group attestation wrappers by validator chunk index.
+	attWrappersByValidatorChunkIndex := s.groupByValidatorChunkIndex(attWrappers)
+
+	for validatorChunkIndex, attWrappers := range attWrappersByValidatorChunkIndex {
+		// Map of updated chunks by chunk index, which will be saved at the end.
+		updatedMinChunks, updatedMaxChunks := map[uint64]Chunker{}, map[uint64]Chunker{}
+
+		// Get all validator indexes corresponding to this validator chunk index.
+		validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
+
+		// For all validators in the chunk corresponding to this validator chunk index,
+		// update `updatedMinChunks` and `updatedMaxChunks` with default values up to the current epoch.
+		for _, validatorIndex := range validatorIndexes {
+			// This function modifies `updatedMinChunks` in place.
+			if err := s.epochUpdateForValidator(ctx, updatedMinChunks, validatorChunkIndex, slashertypes.MinSpan, currentEpoch, validatorIndex); err != nil {
+				return nil, errors.Wrapf(err, "could not update validator index for min chunks %d", validatorIndex)
+			}
+
+			// This function modifies `updatedMaxChunks` in place.
+			if err := s.epochUpdateForValidator(ctx, updatedMaxChunks, validatorChunkIndex, slashertypes.MaxSpan, currentEpoch, validatorIndex); err != nil {
+				return nil, errors.Wrapf(err, "could not update validator index for max chunks %d", validatorIndex)
+			}
 		}
 
-		// This function modifies `updatedMaxChunks` in place.
-		if err := s.epochUpdateForValidator(ctx, updatedMaxChunks, validatorChunkIndex, slashertypes.MaxSpan, currentEpoch, validatorIndex); err != nil {
-			return nil, errors.Wrapf(err, "could not update validator index for max chunks %d", validatorIndex)
+		// Group (already grouped by validator chunk index) attestation wrappers by chunk index.
+		attWrappersByChunkIndex := s.groupByChunkIndex(attWrappers)
+
+		// Check for surrounding votes.
+		surroundingSlashings, err := s.updateSpans(ctx, updatedMinChunks, attWrappersByChunkIndex, slashertypes.MinSpan, validatorChunkIndex, currentEpoch)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not update min attestation spans for validator chunk index %d", validatorChunkIndex)
 		}
-	}
 
-	// Check for surrounding votes.
-	surroundingSlashings, err := s.updateSpans(ctx, updatedMinChunks, groupedByChunkIndexAtts, slashertypes.MinSpan, validatorChunkIndex, currentEpoch)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not update min attestation spans for validator chunk index %d", validatorChunkIndex)
-	}
+		for root, slashing := range surroundingSlashings {
+			slashings[root] = slashing
+		}
 
-	for root, slashing := range surroundingSlashings {
-		slashings[root] = slashing
-	}
+		// Check for surrounded votes.
+		surroundedSlashings, err := s.updateSpans(ctx, updatedMaxChunks, attWrappersByChunkIndex, slashertypes.MaxSpan, validatorChunkIndex, currentEpoch)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not update max attestation spans for validator chunk index %d", validatorChunkIndex)
+		}
 
-	// Check for surrounded votes.
-	surroundedSlashings, err := s.updateSpans(ctx, updatedMaxChunks, groupedByChunkIndexAtts, slashertypes.MaxSpan, validatorChunkIndex, currentEpoch)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not update max attestation spans for validator chunk index %d", validatorChunkIndex)
-	}
+		for root, slashing := range surroundedSlashings {
+			slashings[root] = slashing
+		}
 
-	for root, slashing := range surroundedSlashings {
-		slashings[root] = slashing
-	}
+		// Save updated chunks into the database.
+		if err := s.saveUpdatedChunks(ctx, updatedMinChunks, slashertypes.MinSpan, validatorChunkIndex); err != nil {
+			return nil, errors.Wrap(err, "could not save chunks for min spans")
+		}
 
-	// Save updated chunks into the database.
-	if err := s.saveUpdatedChunks(ctx, updatedMinChunks, slashertypes.MinSpan, validatorChunkIndex); err != nil {
-		return nil, errors.Wrap(err, "could not save chunks for min spans")
-	}
+		if err := s.saveUpdatedChunks(ctx, updatedMaxChunks, slashertypes.MaxSpan, validatorChunkIndex); err != nil {
+			return nil, errors.Wrap(err, "could not save chunks for max spans")
+		}
 
-	if err := s.saveUpdatedChunks(ctx, updatedMaxChunks, slashertypes.MaxSpan, validatorChunkIndex); err != nil {
-		return nil, errors.Wrap(err, "could not save chunks for max spans")
+		// Update the latest written epoch for all validators involved to the current chunk.
+		indices := s.params.validatorIndexesInChunk(validatorChunkIndex)
+		for _, idx := range indices {
+			s.latestEpochWrittenForValidator[idx] = currentEpoch
+		}
 	}
 
 	return slashings, nil
