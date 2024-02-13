@@ -41,7 +41,7 @@ const defaultEth1HeaderReqLimit = uint64(1000)
 const depositLogRequestLimit = 10000
 const additiveFactorMultiplier = 0.10
 const multiplicativeDecreaseDivisor = 2
-const depositLoggingInterval = 512
+const depositLoggingInterval = 1024
 
 var errTimedOut = errors.New("net/http: request canceled")
 
