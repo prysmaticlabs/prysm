@@ -458,10 +458,8 @@ func (s *Service) applyAttestationForValidator(
 		}
 
 		keepGoing, err := chunk.Update(
-			&chunkUpdateArgs{
-				chunkIndex:   chunkIndex,
-				currentEpoch: currentEpoch,
-			},
+			chunkIndex,
+			currentEpoch,
 			validatorIndex,
 			startEpoch,
 			targetEpoch,
