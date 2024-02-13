@@ -517,14 +517,14 @@ func (s *Service) loadChunks(
 	ctx context.Context,
 	validatorChunkIndex uint64,
 	chunkKind slashertypes.ChunkKind,
-	chunkIndices []uint64,
+	chunkIndexes []uint64,
 ) (map[uint64]Chunker, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.loadChunks")
 	defer span.End()
 
-	chunkKeys := make([][]byte, 0, len(chunkIndices))
-	for _, chunkIdx := range chunkIndices {
-		chunkKeys = append(chunkKeys, s.params.flatSliceID(validatorChunkIndex, chunkIdx))
+	chunkKeys := make([][]byte, 0, len(chunkIndexes))
+	for _, chunkIndex := range chunkIndexes {
+		chunkKeys = append(chunkKeys, s.params.flatSliceID(validatorChunkIndex, chunkIndex))
 	}
 
 	rawChunks, chunksExist, err := s.serviceCfg.Database.LoadSlasherChunks(ctx, chunkKind, chunkKeys)
@@ -563,7 +563,7 @@ func (s *Service) loadChunks(
 			return nil, errors.Wrap(err, "could not initialize chunk")
 		}
 
-		chunksByChunkIdx[chunkIndices[i]] = chunk
+		chunksByChunkIdx[chunkIndexes[i]] = chunk
 	}
 
 	return chunksByChunkIdx, nil
