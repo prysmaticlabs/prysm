@@ -1,6 +1,7 @@
 package blob
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -21,7 +22,11 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 	var sidecars []*eth.BlobSidecar
 
-	indices := parseIndices(r.URL)
+	indices, err := parseIndices(r.URL)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	segments := strings.Split(r.URL.Path, "/")
 	blockId := segments[len(segments)-1]
 
@@ -63,16 +68,19 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseIndices filters out invalid and duplicate blob indices
-func parseIndices(url *url.URL) []uint64 {
+func parseIndices(url *url.URL) ([]uint64, error) {
 	rawIndices := url.Query()["indices"]
 	indices := make([]uint64, 0, field_params.MaxBlobsPerBlock)
+	invalidIndicies := make([]string, 0)
 loop:
 	for _, raw := range rawIndices {
 		ix, err := strconv.ParseUint(raw, 10, 64)
 		if err != nil {
+			invalidIndicies = append(invalidIndicies, raw)
 			continue
 		}
 		if ix >= field_params.MaxBlobsPerBlock {
+			invalidIndicies = append(invalidIndicies, raw)
 			continue
 		}
 		for i := range indices {
@@ -82,7 +90,11 @@ loop:
 		}
 		indices = append(indices, ix)
 	}
-	return indices
+
+	if len(invalidIndicies) > 0 {
+		return nil, fmt.Errorf("requested blob indicies %v are invalid", invalidIndicies)
+	}
+	return indices, nil
 }
 
 func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *structs.SidecarsResponse {
