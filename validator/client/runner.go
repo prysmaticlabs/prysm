@@ -44,8 +44,8 @@ func run(ctx context.Context, v iface.Validator) {
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
-	eventsChannel := make(chan *event.Event, 1)
-	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
+	eventsChan := make(chan *event.Event, 1)
+	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
 
 	beaconHealthTracker := v.NodeHealthTracker(ctx)
 	runHealthCheckRoutine(ctx, v)
@@ -140,9 +140,9 @@ func run(ctx context.Context, v iface.Validator) {
 					continue
 				}
 				log.Info("event stream reconnecting...")
-				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
+				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
 			}
-		case e := <-eventsChannel:
+		case e := <-eventsChan:
 			v.ProcessEvent(e)
 		case currentKeys := <-accountsChangedChan: // should be less of a priority than next slot
 			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
