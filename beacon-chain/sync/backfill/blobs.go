@@ -34,14 +34,14 @@ type blobSyncConfig struct {
 	store          *filesystem.BlobStorage
 }
 
-func newBlobSync(cs primitives.Slot, vbs verifiedROBlocks, cfg *blobSyncConfig) (*blobSync, error) {
+func newBlobSync(current primitives.Slot, vbs verifiedROBlocks, cfg *blobSyncConfig) (*blobSync, error) {
 	expected, err := vbs.blobIdents(cfg.retentionStart)
 	if err != nil {
 		return nil, err
 	}
 	bbv := newBlobBatchVerifier(cfg.nbv)
 	as := das.NewLazilyPersistentStore(cfg.store, bbv)
-	return &blobSync{cs: cs, expected: expected, bbv: bbv, store: as}, nil
+	return &blobSync{current: current, expected: expected, bbv: bbv, store: as}, nil
 }
 
 type blobVerifierMap map[[32]byte][fieldparams.MaxBlobsPerBlock]verification.BlobVerifier
@@ -51,7 +51,7 @@ type blobSync struct {
 	expected []blobSummary
 	next     int
 	bbv      *blobBatchVerifier
-	cs       primitives.Slot
+	current  primitives.Slot
 }
 
 func (bs *blobSync) blobsNeeded() int {
@@ -89,7 +89,7 @@ func (bs *blobSync) validateNext(rb blocks.ROBlob) error {
 	if err := v.SidecarKzgProofVerified(); err != nil {
 		return err
 	}
-	if err := bs.store.Persist(bs.cs, rb); err != nil {
+	if err := bs.store.Persist(bs.current, rb); err != nil {
 		return err
 	}
 
