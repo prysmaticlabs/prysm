@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	beaconprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon"
 	nodeprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/node"
-	validatorprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -302,18 +301,14 @@ func (s *Service) initializeDebugServerRoutes(debugServer *debug.Server) {
 // prysm internal routes
 func (s *Service) initializePrysmBeaconServerRoutes(beaconServerPrysm *beaconprysm.Server) {
 	s.cfg.Router.HandleFunc("/prysm/v1/beacon/weak_subjectivity", beaconServerPrysm.GetWeakSubjectivity).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/prysm/v1/beacon/states/{state_id}/validator_count", beaconServerPrysm.GetValidatorCount).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/prysm/v1/beacon/validator_performance", beaconServerPrysm.GetValidatorPerformance).Methods(http.MethodPost)
 }
 
 func (s *Service) initializePrysmNodeServerRoutes(nodeServerPrysm *nodeprysm.Server) {
-	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods(http.MethodGet)
-	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost)
-	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete)
-}
-
-func (s *Service) initializePrysmValidatorServerRoutes(validatorServerPrysm *validatorprysm.Server) {
-	s.cfg.Router.HandleFunc("/prysm/validators/performance", validatorServerPrysm.GetValidatorPerformance).Methods(http.MethodPost)
-	// /eth/v1/beacon/states/{state_id}/validator_count is not a beacon API, it's a custom endpoint
-	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", validatorServerPrysm.GetValidatorCount).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete)
 }
 
 // Start the gRPC server.
@@ -564,6 +559,10 @@ func (s *Service) Start() {
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		CanonicalHistory:      ch,
 		BeaconDB:              s.cfg.BeaconDB,
+		Stater:                stater,
+		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+		CoreService:           coreService,
 	})
 
 	s.initializePrysmNodeServerRoutes(&nodeprysm.Server{
@@ -576,18 +575,6 @@ func (s *Service) Start() {
 		MetadataProvider:          s.cfg.MetadataProvider,
 		HeadFetcher:               s.cfg.HeadFetcher,
 		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
-	})
-
-	s.initializePrysmValidatorServerRoutes(&validatorprysm.Server{
-		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
-		HeadFetcher:           s.cfg.HeadFetcher,
-		SyncChecker:           s.cfg.SyncService,
-		CoreService:           coreService,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		Stater:                stater,
-		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
-		BeaconDB:              s.cfg.BeaconDB,
-		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 	})
 
 	go func() {
