@@ -544,8 +544,8 @@ func (s *ChainService) CachedHeadRoot() [32]byte {
 	return [32]byte{}
 }
 
-// GetSafeHeadPayloadBlockHash mocks the same method in the chain service
-func (s *ChainService) GetSafeHeadPayloadBlockHash() [32]byte {
+// SafeHeadPayloadBlockHash mocks the same method in the chain service
+func (s *ChainService) SafeHeadPayloadBlockHash() [32]byte {
 	return [32]byte{}
 }
 
