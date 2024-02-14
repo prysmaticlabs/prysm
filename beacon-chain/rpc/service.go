@@ -293,7 +293,6 @@ func (s *Service) initializeLightClientServerRoutes(lightClientServer *lightclie
 }
 
 func (s *Service) initializeDebugServerRoutes(debugServer *debug.Server) {
-	s.cfg.Router.HandleFunc("/eth/v1/debug/beacon/states/{state_id}", debugServer.GetBeaconStateSSZ).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/states/{state_id}", debugServer.GetBeaconStateV2).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/heads", debugServer.GetForkChoiceHeadsV2).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/debug/fork_choice", debugServer.GetForkChoice).Methods(http.MethodGet)
