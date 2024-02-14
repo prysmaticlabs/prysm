@@ -19,31 +19,6 @@ import (
 
 const errMsgStateFromConsensus = "Could not convert consensus state to response"
 
-// GetBeaconStateSSZ returns the SSZ-serialized version of the full beacon state object for given state ID.
-//
-// DEPRECATED: please use GetBeaconStateV2 instead
-func (s *Server) GetBeaconStateSSZ(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "debug.GetBeaconStateSSZ")
-	defer span.End()
-
-	stateId := mux.Vars(r)["state_id"]
-	if stateId == "" {
-		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
-		return
-	}
-	st, err := s.Stater.State(ctx, []byte(stateId))
-	if err != nil {
-		shared.WriteStateFetchError(w, err)
-		return
-	}
-	sszState, err := st.MarshalSSZ()
-	if err != nil {
-		httputil.HandleError(w, "Could not marshal state into SSZ: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	httputil.WriteSsz(w, sszState, "beacon_state.ssz")
-}
-
 // GetBeaconStateV2 returns the full beacon state for a given state ID.
 func (s *Server) GetBeaconStateV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "debug.GetBeaconStateV2")
