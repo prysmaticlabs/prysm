@@ -99,12 +99,7 @@ func (w *p2pWorker) handleBlobs(ctx context.Context, b batch) batch {
 		backfillBlobsApproximateBytes.Add(float64(sz))
 		log.WithFields(b.logFields()).WithField("dlbytes", sz).Debug("backfill batch blob bytes downloaded")
 	}
-	if b.blobsNeeded() > 0 {
-		log.WithFields(b.logFields()).WithField("blobs_missing", b.blobsNeeded()).Error("batch still missing blobs after downloading from peer")
-		b.bs = nil
-		return b.withState(batchErrRetryable)
-	}
-	return b.withState(batchImportable)
+	return b.postBlobSync()
 }
 
 func newP2pWorker(id workerId, p p2p.P2P, todo, done chan batch, c *startup.Clock, v *verifier, cm sync.ContextByteVersions, nbv verification.NewBlobVerifier, bfs *filesystem.BlobStorage) *p2pWorker {

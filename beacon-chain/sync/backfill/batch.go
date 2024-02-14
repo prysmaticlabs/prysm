@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -132,6 +133,16 @@ func (b batch) withResults(results verifiedROBlocks, bs *blobSync) batch {
 	b.bs = bs
 	if bs.blobsNeeded() > 0 {
 		return b.withState(batchBlobSync)
+	}
+	return b.withState(batchImportable)
+}
+
+func (b batch) postBlobSync() batch {
+	if b.blobsNeeded() > 0 {
+		log.WithFields(b.logFields()).WithField("blobs_missing", b.blobsNeeded()).Error("batch still missing blobs after downloading from peer")
+		b.bs = nil
+		b.results = []blocks.ROBlock{}
+		return b.withState(batchErrRetryable)
 	}
 	return b.withState(batchImportable)
 }
