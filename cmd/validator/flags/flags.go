@@ -174,12 +174,7 @@ var (
 		Name:  "mnemonic-language",
 		Usage: "Allows specifying mnemonic language. Supported languages are: english|chinese_traditional|chinese_simplified|czech|french|japanese|korean|italian|spanish.",
 	}
-	// DeprecatedShowDepositDataFlag for accounts.
-	// Deprecated: to be removed
-	DeprecatedShowDepositDataFlag = &cli.BoolFlag{
-		Name:  "show-deposit-data",
-		Usage: "This flag is deprecated and will be removed",
-	}
+
 	// ShowPrivateKeysFlag for accounts.
 	ShowPrivateKeysFlag = &cli.BoolFlag{
 		Name:  "show-private-keys",
