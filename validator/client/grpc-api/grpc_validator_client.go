@@ -174,7 +174,7 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 		}
 	}
 	if containsHead && len(topics) > 1 {
-		log.Warnf("gRPC only supports the head topic, other topics %v will be ignored", topics)
+		log.Warn("gRPC only supports the head topic, other topics will be ignored")
 	}
 
 	stream, err := c.beaconNodeValidatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
@@ -198,13 +198,14 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 				c.isEventStreamRunning = false
 				if errors.Is(ctx.Err(), context.Canceled) {
 					log.Error("Context canceled, stopping event stream")
+					close(eventsChannel)
 					return
-				} else {
-					eventsChannel <- &eventClient.Event{
-						EventType: eventClient.EventError,
-						Data:      []byte(ctx.Err().Error()),
-					}
 				}
+				eventsChannel <- &eventClient.Event{
+					EventType: eventClient.EventError,
+					Data:      []byte(ctx.Err().Error()),
+				}
+				return
 			}
 			res, err := stream.Recv()
 			if err != nil {
