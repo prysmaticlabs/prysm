@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -14,6 +15,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -72,6 +74,9 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		return nil, err
 	}
 	atts = sorted.limitToMaxAttestations()
+
+	atts = proposerAtts(atts).checkSignatures(ctx, latestState)
+
 	return atts, nil
 }
 
@@ -221,6 +226,58 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 	}
 
 	return uniqAtts, nil
+}
+
+// checkSignatures batch verifies proposerAtts in one go.
+// If that fails, it falls back to verifying each attestation individually and includes the right ones.
+func (a proposerAtts) checkSignatures(ctx context.Context, st state.BeaconState) proposerAtts {
+	aSet, err := blocks.AttestationSignatureBatch(ctx, st, a)
+	if err != nil {
+		log.WithError(err).Error("Could not create attestation signature set")
+		return a.filterSignatures(ctx, st)
+	}
+	if verified, err := aSet.Verify(); err != nil || !verified {
+		if err != nil {
+			log.WithError(err).Error("Batch verification failed")
+		} else {
+			log.Error("Batch verification failed: signatures not verified")
+		}
+		return a.filterSignatures(ctx, st)
+	}
+	return a
+}
+
+// filterSignatures verifies each attestation individually and includes the right ones.
+func (a proposerAtts) filterSignatures(ctx context.Context, st state.BeaconState) proposerAtts {
+	var validAtts proposerAtts
+	for _, att := range a {
+		aSet, err := blocks.AttestationSignatureBatch(ctx, st, []*ethpb.Attestation{att})
+		if err != nil {
+			log.WithFields(attestationFields(att)).WithError(err).Error("Could not create individual attestation signature set")
+			continue
+		}
+		if verified, err := aSet.Verify(); err != nil || !verified {
+			logEntry := log.WithFields(attestationFields(att))
+			if err != nil {
+				logEntry.WithError(err).Error("Verification of individual attestation failed")
+			} else {
+				logEntry.Error("Verification of individual attestation failed: signature not verified")
+			}
+			continue
+		}
+		validAtts = append(validAtts, att)
+	}
+	return validAtts
+}
+
+func attestationFields(att *ethpb.Attestation) logrus.Fields {
+	return logrus.Fields{
+		"slot":            att.Data.Slot,
+		"index":           att.Data.CommitteeIndex,
+		"targetRoot":      fmt.Sprintf("%x", att.Data.Target.Root),
+		"targetEpoch":     att.Data.Target.Epoch,
+		"beaconBlockRoot": fmt.Sprintf("%x", att.Data.BeaconBlockRoot),
+	}
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
