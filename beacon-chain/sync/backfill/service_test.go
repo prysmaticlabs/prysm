@@ -22,13 +22,8 @@ type mockMinimumSlotter struct {
 	min primitives.Slot
 }
 
-var _ minimumSlotter = &mockMinimumSlotter{}
-
-func (m mockMinimumSlotter) minimumSlot() primitives.Slot {
+func (m mockMinimumSlotter) minimumSlot(_ primitives.Slot) primitives.Slot {
 	return m.min
-}
-
-func (m mockMinimumSlotter) setClock(*startup.Clock) {
 }
 
 type mockInitalizerWaiter struct {
@@ -65,7 +60,7 @@ func TestServiceInit(t *testing.T) {
 	srv, err := NewService(ctx, su, bfs, cw, p2pt, &mockAssigner{},
 		WithBatchSize(batchSize), WithWorkerCount(nWorkers), WithEnableBackfill(true), WithVerifierWaiter(&mockInitalizerWaiter{}))
 	require.NoError(t, err)
-	srv.ms = mockMinimumSlotter{min: primitives.Slot(high - batchSize*uint64(nBatches))}
+	srv.ms = mockMinimumSlotter{min: primitives.Slot(high - batchSize*uint64(nBatches))}.minimumSlot
 	srv.pool = pool
 	srv.batchImporter = func(context.Context, primitives.Slot, batch, *Store) (*dbval.BackfillStatus, error) {
 		return &dbval.BackfillStatus{}, nil
