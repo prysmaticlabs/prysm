@@ -221,7 +221,7 @@ func wrapInMetrics[Resp any](action string, f func() (Resp, error)) (Resp, error
 	resp, err := f()
 	httpActionCount.WithLabelValues(action).Inc()
 	if err == nil {
-		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+		httpActionLatency.WithLabelValues(action).Observe(time.Since(now).Seconds())
 	} else {
 		failedHTTPActionCount.WithLabelValues(action).Inc()
 	}

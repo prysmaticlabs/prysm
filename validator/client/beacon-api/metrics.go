@@ -9,9 +9,9 @@ var (
 	httpActionLatency = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Namespace: "validator",
-			Name:      "http_action_latency_milliseconds",
-			Help:      "Latency of HTTP actions performed against the beacon node. This metric captures only actions that didn't result in an error.",
-			Buckets:   []float64{1, 10, 25, 100, 250, 1000, 2500, 10000},
+			Name:      "http_action_latency_seconds",
+			Help:      "Latency of HTTP actions performed against the beacon node in seconds. This metric captures only actions that didn't result in an error.",
+			Buckets:   []float64{0.001, 0.01, 0.025, 0.1, 0.25, 1, 2.5, 10},
 		},
 		[]string{"action"},
 	)

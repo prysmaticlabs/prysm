@@ -335,7 +335,6 @@ func newRouter(cliCtx *cli.Context) *mux.Router {
 		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
 	}
 	r := mux.NewRouter()
-	//r.Use(server.PrometheusHandler) // Apply as the first middleware so that metrics such as latency take other middleware into account.
 	r.Path("/metrics").Handler(promhttp.Handler())
 	r.Use(server.NormalizeQueryValuesHandler)
 	r.Use(server.CorsHandler(allowedOrigins))

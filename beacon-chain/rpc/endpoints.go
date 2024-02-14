@@ -389,13 +389,13 @@ func (s *Service) beaconEndpoints(
 			template: "/eth/v1/beacon/blocks",
 			name:     namespace + ".PublishBlock",
 			handler:  server.PublishBlock,
-			methods:  []string{http.MethodGet},
+			methods:  []string{http.MethodPost},
 		},
 		{
 			template: "/eth/v1/beacon/blinded_blocks",
 			name:     namespace + ".PublishBlindedBlock",
 			handler:  server.PublishBlindedBlock,
-			methods:  []string{http.MethodGet},
+			methods:  []string{http.MethodPost},
 		},
 		{
 			template: "/eth/v2/beacon/blocks",
