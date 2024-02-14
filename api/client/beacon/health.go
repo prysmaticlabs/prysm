@@ -12,7 +12,7 @@ type NodeHealth struct {
 
 func NewNodeHealth(initialStatus bool) *NodeHealth {
 	return &NodeHealth{
-		isHealthy:  initialStatus, // just default it to true
+		isHealthy:  initialStatus,
 		healthChan: make(chan bool, 1),
 	}
 }
