@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -38,7 +38,7 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 	// Make sure that GetGenesis() is called exactly once
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(
-		&beacon.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
+		&structs.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
 	).Times(1)
 
@@ -86,7 +86,7 @@ func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
 	// Make sure that GetGenesis() is called exactly once
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(
-		&beacon.Genesis{GenesisValidatorsRoot: "foo"},
+		&structs.Genesis{GenesisValidatorsRoot: "foo"},
 		nil,
 	).Times(1)
 

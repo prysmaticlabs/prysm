@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"encoding/binary"
+	"math/big"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -99,7 +100,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 					BlockHash:        make([]byte, 32),
 					TransactionsRoot: make([]byte, 32),
 					WithdrawalsRoot:  make([]byte, 32),
-				}, 0)
+				}, big.NewInt(0))
 				require.NoError(t, err)
 				require.NoError(t, st.SetLatestExecutionPayloadHeader(p))
 				return st
@@ -124,7 +125,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 					BlockHash:        make([]byte, 32),
 					TransactionsRoot: make([]byte, 32),
 					WithdrawalsRoot:  make([]byte, 32),
-				}, 0)
+				}, big.NewInt(0))
 				require.NoError(t, err)
 				require.NoError(t, st.SetLatestExecutionPayloadHeader(p))
 				return st
@@ -675,6 +676,7 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+	require.NoError(t, db.SaveOriginCheckpointBlockRoot(context.Background(), [32]byte{'a'}))
 
 	bRoots := make([][32]byte, 0)
 	slotsPerArchivedPoint := primitives.Slot(128)
@@ -720,6 +722,7 @@ func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+	require.NoError(t, db.SaveOriginCheckpointBlockRoot(context.Background(), [32]byte{'a'}))
 
 	for i := primitives.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
 		b := util.NewBeaconBlock()
@@ -741,6 +744,35 @@ func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 	require.Equal(t, true, db.HasState(context.Background(), genesisRoot))
 }
 
+func TestStore_CleanUpDirtyStates_OriginRoot(t *testing.T) {
+	db := setupDB(t)
+
+	genesisState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	r := [32]byte{'a'}
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), r))
+	require.NoError(t, db.SaveState(context.Background(), genesisState, r))
+
+	for i := primitives.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
+		b := util.NewBeaconBlock()
+		b.Block.Slot = i
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		wsb, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(context.Background(), wsb))
+
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, st.SetSlot(i))
+		require.NoError(t, db.SaveState(context.Background(), st, r))
+	}
+
+	require.NoError(t, db.SaveOriginCheckpointBlockRoot(context.Background(), r))
+	require.NoError(t, db.CleanUpDirtyStates(context.Background(), params.BeaconConfig().SlotsPerEpoch))
+	require.Equal(t, true, db.HasState(context.Background(), r))
+}
+
 func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 	db := setupDB(t)
 
@@ -749,6 +781,7 @@ func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+	require.NoError(t, db.SaveOriginCheckpointBlockRoot(context.Background(), [32]byte{'a'}))
 
 	var unfinalizedRoots [][32]byte
 	for i := primitives.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {

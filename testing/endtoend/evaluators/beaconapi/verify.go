@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -45,7 +44,7 @@ func verify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 }
 
 func run(nodeIdx int) error {
-	genesisResp := &beacon.GetGenesisResponse{}
+	genesisResp := &structs.GetGenesisResponse{}
 	if err := doJSONGetRequest(v1PathTemplate, "/beacon/genesis", nodeIdx, genesisResp); err != nil {
 		return errors.Wrap(err, "error getting genesis data")
 	}
@@ -135,14 +134,14 @@ func postEvaluation(requests map[string]endpoint, epoch primitives.Epoch) error 
 
 	// verify that dependent root of proposer duties matches block header
 	blockHeaderData := requests["/beacon/headers/{param1}"]
-	header, ok := blockHeaderData.getPResp().(*beacon.GetBlockHeaderResponse)
+	header, ok := blockHeaderData.getPResp().(*structs.GetBlockHeaderResponse)
 	if !ok {
-		return fmt.Errorf(msgWrongJson, &beacon.GetBlockHeaderResponse{}, blockHeaderData.getPResp())
+		return fmt.Errorf(msgWrongJson, &structs.GetBlockHeaderResponse{}, blockHeaderData.getPResp())
 	}
 	dutiesData := requests["/validator/duties/proposer/{param1}"]
-	duties, ok := dutiesData.getPResp().(*validator.GetProposerDutiesResponse)
+	duties, ok := dutiesData.getPResp().(*structs.GetProposerDutiesResponse)
 	if !ok {
-		return fmt.Errorf(msgWrongJson, &validator.GetProposerDutiesResponse{}, dutiesData.getPResp())
+		return fmt.Errorf(msgWrongJson, &structs.GetProposerDutiesResponse{}, dutiesData.getPResp())
 	}
 	if header.Data.Root != duties.DependentRoot {
 		return fmt.Errorf("header root %s does not match duties root %s ", header.Data.Root, duties.DependentRoot)

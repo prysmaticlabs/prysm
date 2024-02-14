@@ -283,7 +283,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	// on our features or the beacon index is a multiplier of 2 (idea is to split nodes
 	// equally down the line with one group having feature flags and the other without
 	// feature flags; this is to allow A-B testing on new features)
-	if !config.TestFeature || index%2 == 0 {
+	if !config.TestFeature || index != 1 {
 		args = append(args, features.E2EBeaconChainFlags...)
 	}
 	if config.UseBuilder {

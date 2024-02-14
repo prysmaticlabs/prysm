@@ -73,6 +73,8 @@ func (s *Service) sendFCUWithAttributes(cfg *postBlockProcessConfig, fcuArgs *fc
 	slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 	defer cancel()
 	cfg.ctx = slotCtx
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
 	if err := s.computePayloadAttributes(cfg, fcuArgs); err != nil {
 		log.WithError(err).Error("could not compute payload attributes")
 		return
@@ -80,8 +82,6 @@ func (s *Service) sendFCUWithAttributes(cfg *postBlockProcessConfig, fcuArgs *fc
 	if fcuArgs.attributes.IsEmpty() {
 		return
 	}
-	s.cfg.ForkChoiceStore.RLock()
-	defer s.cfg.ForkChoiceStore.RUnlock()
 	if _, err := s.notifyForkchoiceUpdate(cfg.ctx, fcuArgs); err != nil {
 		log.WithError(err).Error("could not update forkchoice with payload attributes for proposal")
 	}

@@ -41,6 +41,7 @@ const defaultEth1HeaderReqLimit = uint64(1000)
 const depositLogRequestLimit = 10000
 const additiveFactorMultiplier = 0.10
 const multiplicativeDecreaseDivisor = 2
+const depositLoggingInterval = 1024
 
 var errTimedOut = errors.New("net/http: request canceled")
 
@@ -195,16 +196,19 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gethtypes.L
 		s.cfg.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, root)
 	}
 	if validData {
-		log.WithFields(logrus.Fields{
-			"eth1Block":       depositLog.BlockNumber,
-			"publicKey":       fmt.Sprintf("%#x", depositData.PublicKey),
-			"merkleTreeIndex": index,
-		}).Debug("Deposit registered from deposit contract")
+		// Log the deposit received periodically
+		if index%depositLoggingInterval == 0 {
+			log.WithFields(logrus.Fields{
+				"eth1Block":       depositLog.BlockNumber,
+				"publicKey":       fmt.Sprintf("%#x", depositData.PublicKey),
+				"merkleTreeIndex": index,
+			}).Debug("Deposit registered from deposit contract")
+		}
 		validDepositsCount.Inc()
 		// Notify users what is going on, from time to time.
 		if !s.chainStartData.Chainstarted {
 			deposits := len(s.chainStartData.ChainstartDeposits)
-			if deposits%512 == 0 {
+			if deposits%depositLoggingInterval == 0 {
 				valCount, err := helpers.ActiveValidatorCount(ctx, s.preGenesisState, 0)
 				if err != nil {
 					log.WithError(err).Error("Could not determine active validator count from pre genesis state")
@@ -312,6 +316,11 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 	batchSize := s.cfg.eth1HeaderReqLimit
 	additiveFactor := uint64(float64(batchSize) * additiveFactorMultiplier)
+
+	log.WithFields(logrus.Fields{
+		"currentEth1Block": latestFollowHeight,
+		"currentLogCount":  logCount,
+	}).Debug("Processing historical deposit logs")
 
 	for currentBlockNum < latestFollowHeight {
 		currentBlockNum, batchSize, err = s.processBlockInBatch(ctx, currentBlockNum, latestFollowHeight, batchSize, additiveFactor, logCount, headersMap)

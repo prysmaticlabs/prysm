@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/backfill/coverage"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 )
 
@@ -167,6 +168,15 @@ func WithBlobStorage(b *filesystem.BlobStorage) Option {
 func WithVerifierWaiter(v *verification.InitializerWaiter) Option {
 	return func(s *Service) error {
 		s.verifierWaiter = v
+		return nil
+	}
+}
+
+// WithAvailableBlocker allows the sync package to access the current
+// status of backfill.
+func WithAvailableBlocker(avb coverage.AvailableBlocker) Option {
+	return func(s *Service) error {
+		s.availableBlocker = avb
 		return nil
 	}
 }

@@ -102,7 +102,9 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return nil
 	}
 	if bs.pruner != nil {
-		bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot())
+		if err := bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot(), sidecar.Index); err != nil {
+			return errors.Wrapf(err, "problem maintaining pruning cache/metrics for sidecar with root=%#x", sidecar.BlockRoot())
+		}
 	}
 
 	// Serialize the ethpb.BlobSidecar to binary data using SSZ.
@@ -226,6 +228,20 @@ func (bs *BlobStorage) Indices(root [32]byte) ([fieldparams.MaxBlobsPerBlock]boo
 		mask[u] = true
 	}
 	return mask, nil
+}
+
+// Clear deletes all files on the filesystem.
+func (bs *BlobStorage) Clear() error {
+	dirs, err := listDir(bs.fs, ".")
+	if err != nil {
+		return err
+	}
+	for _, dir := range dirs {
+		if err := bs.fs.RemoveAll(dir); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type blobNamer struct {

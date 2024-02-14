@@ -113,7 +113,7 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 	cursorNum := big.NewInt(0).SetUint64(latestBlkHeight)
 	cursorTime := latestBlkTime
 
-	numOfBlocks := uint64(0)
+	var numOfBlocks uint64
 	estimatedBlk := cursorNum.Uint64()
 	maxTimeBuffer := searchThreshold * params.BeaconConfig().SecondsPerETH1Block
 	// Terminate if we can't find an acceptable block after

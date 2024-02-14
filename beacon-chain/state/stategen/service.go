@@ -10,14 +10,16 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/backfill"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/backfill/coverage"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -51,7 +53,7 @@ type State struct {
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
-	backfillStatus          *backfill.Status
+	avb                     coverage.AvailableBlocker
 	migrationLock           *sync.Mutex
 	fc                      forkchoice.ForkChoicer
 }
@@ -78,9 +80,11 @@ type finalizedInfo struct {
 // Option is a functional option for controlling the initialization of a *State value
 type Option func(*State)
 
-func WithBackfillStatus(bfs *backfill.Status) Option {
+// WithAvailableBlocker gives stategen an AvailableBlocker, which is used to determine if a given
+// block is available. This is necessary because backfill creates a hole in the block history.
+func WithAvailableBlocker(avb coverage.AvailableBlocker) Option {
 	return func(sg *State) {
-		sg.backfillStatus = bfs
+		sg.avb = avb
 	}
 }
 
@@ -142,6 +146,7 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	}()
 
 	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
+	fEpoch := slots.ToEpoch(fState.Slot())
 
 	// Pre-populate the pubkey cache with the validator public keys from the finalized state.
 	// This process takes about 30 seconds on mainnet with 450,000 validators.
@@ -151,6 +156,10 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 		if err := fState.ReadFromEveryValidator(func(_ int, val state.ReadOnlyValidator) error {
 			if ctx.Err() != nil {
 				return ctx.Err()
+			}
+			// Do not cache for non-active validators.
+			if !helpers.IsActiveValidatorUsingTrie(val, fEpoch) {
+				return nil
 			}
 			pub := val.PublicKey()
 			_, err := bls.PublicKeyFromBytes(pub[:])

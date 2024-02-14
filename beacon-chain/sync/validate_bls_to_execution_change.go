@@ -38,6 +38,9 @@ func (s *Service) validateBlsToExecutionChange(ctx context.Context, pid peer.ID,
 	}
 
 	// Check that the validator hasn't submitted a previous execution change.
+	if blsChange.Message == nil {
+		return pubsub.ValidationReject, errNilMessage
+	}
 	if s.cfg.blsToExecPool.ValidatorExists(blsChange.Message.ValidatorIndex) {
 		return pubsub.ValidationIgnore, nil
 	}

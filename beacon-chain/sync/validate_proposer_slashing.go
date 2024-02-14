@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -52,6 +53,13 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 	headState, err := s.cfg.chain.HeadState(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
+	}
+	rov, err := headState.ValidatorAtIndexReadOnly(slashing.Header_1.Header.ProposerIndex)
+	if err != nil {
+		return pubsub.ValidationReject, err
+	}
+	if rov.Slashed() {
+		return pubsub.ValidationIgnore, fmt.Errorf("proposer is already slashed: %d", slashing.Header_1.Header.ProposerIndex)
 	}
 	if err := blocks.VerifyProposerSlashing(headState, slashing); err != nil {
 		return pubsub.ValidationReject, err

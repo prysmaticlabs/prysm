@@ -1,9 +1,11 @@
 package simulator
 
 import (
+	"bytes"
 	"context"
 	"math"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -88,10 +90,31 @@ func (s *Simulator) generateAttestationsForSlot(
 				}
 				slashableAtt.Signature = aggSig.Marshal()
 				slashedIndices = append(slashedIndices, slashableAtt.AttestingIndices...)
-				slashings = append(slashings, &ethpb.AttesterSlashing{
+
+				attDataRoot, err := att.Data.HashTreeRoot()
+				if err != nil {
+					return nil, nil, errors.Wrap(err, "cannot compte `att` hash tree root")
+				}
+
+				slashableAttDataRoot, err := slashableAtt.Data.HashTreeRoot()
+				if err != nil {
+					return nil, nil, errors.Wrap(err, "cannot compte `slashableAtt` hash tree root")
+				}
+
+				slashing := &ethpb.AttesterSlashing{
 					Attestation_1: att,
 					Attestation_2: slashableAtt,
-				})
+				}
+
+				// Ensure the attestation with the lower data root is the first attestation.
+				if bytes.Compare(attDataRoot[:], slashableAttDataRoot[:]) > 0 {
+					slashing = &ethpb.AttesterSlashing{
+						Attestation_1: slashableAtt,
+						Attestation_2: att,
+					}
+				}
+
+				slashings = append(slashings, slashing)
 				attestations = append(attestations, slashableAtt)
 			}
 		}

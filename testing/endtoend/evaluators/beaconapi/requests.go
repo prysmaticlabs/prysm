@@ -5,57 +5,53 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 var requests = map[string]endpoint{
-	"/beacon/genesis": newMetadata[beacon.GetGenesisResponse](v1PathTemplate),
-	"/beacon/states/{param1}/root": newMetadata[beacon.GetStateRootResponse](v1PathTemplate,
+	"/beacon/genesis": newMetadata[structs.GetGenesisResponse](v1PathTemplate),
+	"/beacon/states/{param1}/root": newMetadata[structs.GetStateRootResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/states/{param1}/fork": newMetadata[beacon.GetStateForkResponse](v1PathTemplate,
+	"/beacon/states/{param1}/fork": newMetadata[structs.GetStateForkResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/states/{param1}/finality_checkpoints": newMetadata[beacon.GetFinalityCheckpointsResponse](v1PathTemplate,
+	"/beacon/states/{param1}/finality_checkpoints": newMetadata[structs.GetFinalityCheckpointsResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
 	// we want to test comma-separated query params
-	"/beacon/states/{param1}/validators?id=0,1": newMetadata[beacon.GetValidatorsResponse](v1PathTemplate,
+	"/beacon/states/{param1}/validators?id=0,1": newMetadata[structs.GetValidatorsResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/states/{param1}/validators/{param2}": newMetadata[beacon.GetValidatorResponse](v1PathTemplate,
+	"/beacon/states/{param1}/validators/{param2}": newMetadata[structs.GetValidatorResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head", "0"}
 		})),
-	"/beacon/states/{param1}/validator_balances?id=0,1": newMetadata[beacon.GetValidatorBalancesResponse](v1PathTemplate,
+	"/beacon/states/{param1}/validator_balances?id=0,1": newMetadata[structs.GetValidatorBalancesResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/states/{param1}/committees?index=0": newMetadata[beacon.GetCommitteesResponse](v1PathTemplate,
+	"/beacon/states/{param1}/committees?index=0": newMetadata[structs.GetCommitteesResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/states/{param1}/sync_committees": newMetadata[beacon.GetSyncCommitteeResponse](v1PathTemplate,
+	"/beacon/states/{param1}/sync_committees": newMetadata[structs.GetSyncCommitteeResponse](v1PathTemplate,
 		withStart(params.BeaconConfig().AltairForkEpoch),
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/states/{param1}/randao": newMetadata[beacon.GetRandaoResponse](v1PathTemplate,
+	"/beacon/states/{param1}/randao": newMetadata[structs.GetRandaoResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/headers": newMetadata[beacon.GetBlockHeadersResponse](v1PathTemplate),
-	"/beacon/headers/{param1}": newMetadata[beacon.GetBlockHeaderResponse](v1PathTemplate,
+	"/beacon/headers": newMetadata[structs.GetBlockHeadersResponse](v1PathTemplate),
+	"/beacon/headers/{param1}": newMetadata[structs.GetBlockHeaderResponse](v1PathTemplate,
 		withParams(func(e primitives.Epoch) []string {
 			slot := uint64(0)
 			if e > 0 {
@@ -63,88 +59,88 @@ var requests = map[string]endpoint{
 			}
 			return []string{fmt.Sprintf("%v", slot)}
 		})),
-	"/beacon/blocks/{param1}": newMetadata[beacon.GetBlockV2Response](v2PathTemplate,
+	"/beacon/blocks/{param1}": newMetadata[structs.GetBlockV2Response](v2PathTemplate,
 		withSsz(),
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/blocks/{param1}/root": newMetadata[beacon.BlockRootResponse](v1PathTemplate,
+	"/beacon/blocks/{param1}/root": newMetadata[structs.BlockRootResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/blocks/{param1}/attestations": newMetadata[beacon.GetBlockAttestationsResponse](v1PathTemplate,
+	"/beacon/blocks/{param1}/attestations": newMetadata[structs.GetBlockAttestationsResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/blinded_blocks/{param1}": newMetadata[beacon.GetBlockV2Response](v1PathTemplate,
+	"/beacon/blinded_blocks/{param1}": newMetadata[structs.GetBlockV2Response](v1PathTemplate,
 		withSsz(),
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
-	"/beacon/pool/attestations": newMetadata[beacon.ListAttestationsResponse](v1PathTemplate,
+	"/beacon/pool/attestations": newMetadata[structs.ListAttestationsResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
-			pResp, ok := p.(*beacon.ListAttestationsResponse)
+			pResp, ok := p.(*structs.ListAttestationsResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.ListAttestationsResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.ListAttestationsResponse{}, p)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
 			}
 			return nil
 		})),
-	"/beacon/pool/attester_slashings": newMetadata[beacon.GetAttesterSlashingsResponse](v1PathTemplate,
+	"/beacon/pool/attester_slashings": newMetadata[structs.GetAttesterSlashingsResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
-			pResp, ok := p.(*beacon.GetAttesterSlashingsResponse)
+			pResp, ok := p.(*structs.GetAttesterSlashingsResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.GetAttesterSlashingsResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.GetAttesterSlashingsResponse{}, p)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
 			}
 			return nil
 		})),
-	"/beacon/pool/proposer_slashings": newMetadata[beacon.GetProposerSlashingsResponse](v1PathTemplate,
+	"/beacon/pool/proposer_slashings": newMetadata[structs.GetProposerSlashingsResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
-			pResp, ok := p.(*beacon.GetProposerSlashingsResponse)
+			pResp, ok := p.(*structs.GetProposerSlashingsResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.GetProposerSlashingsResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.GetProposerSlashingsResponse{}, p)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
 			}
 			return nil
 		})),
-	"/beacon/pool/voluntary_exits": newMetadata[beacon.ListVoluntaryExitsResponse](v1PathTemplate,
+	"/beacon/pool/voluntary_exits": newMetadata[structs.ListVoluntaryExitsResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
-			pResp, ok := p.(*beacon.ListVoluntaryExitsResponse)
+			pResp, ok := p.(*structs.ListVoluntaryExitsResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.ListVoluntaryExitsResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.ListVoluntaryExitsResponse{}, p)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
 			}
 			return nil
 		})),
-	"/beacon/pool/bls_to_execution_changes": newMetadata[beacon.BLSToExecutionChangesPoolResponse](v1PathTemplate,
+	"/beacon/pool/bls_to_execution_changes": newMetadata[structs.BLSToExecutionChangesPoolResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
-			pResp, ok := p.(*beacon.BLSToExecutionChangesPoolResponse)
+			pResp, ok := p.(*structs.BLSToExecutionChangesPoolResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.BLSToExecutionChangesPoolResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.BLSToExecutionChangesPoolResponse{}, p)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
 			}
 			return nil
 		})),
-	"/config/fork_schedule": newMetadata[config.GetForkScheduleResponse](v1PathTemplate,
+	"/config/fork_schedule": newMetadata[structs.GetForkScheduleResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, lh interface{}) error {
-			pResp, ok := p.(*config.GetForkScheduleResponse)
+			pResp, ok := p.(*structs.GetForkScheduleResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &config.GetForkScheduleResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.GetForkScheduleResponse{}, p)
 			}
-			lhResp, ok := lh.(*config.GetForkScheduleResponse)
+			lhResp, ok := lh.(*structs.GetForkScheduleResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &config.GetForkScheduleResponse{}, lh)
+				return fmt.Errorf(msgWrongJson, &structs.GetForkScheduleResponse{}, lh)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
@@ -165,50 +161,50 @@ var requests = map[string]endpoint{
 			}
 			return compareJSON(pResp, lhResp)
 		})),
-	"/config/deposit_contract": newMetadata[config.GetDepositContractResponse](v1PathTemplate),
-	"/debug/beacon/heads":      newMetadata[debug.GetForkChoiceHeadsV2Response](v2PathTemplate),
-	"/node/identity": newMetadata[node.GetIdentityResponse](v1PathTemplate,
+	"/config/deposit_contract": newMetadata[structs.GetDepositContractResponse](v1PathTemplate),
+	"/debug/beacon/heads":      newMetadata[structs.GetForkChoiceHeadsV2Response](v2PathTemplate),
+	"/node/identity": newMetadata[structs.GetIdentityResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
-			pResp, ok := p.(*node.GetIdentityResponse)
+			pResp, ok := p.(*structs.GetIdentityResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &node.GetIdentityResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.GetIdentityResponse{}, p)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
 			}
 			return nil
 		})),
-	"/node/peers": newMetadata[node.GetPeersResponse](v1PathTemplate,
+	"/node/peers": newMetadata[structs.GetPeersResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
-			pResp, ok := p.(*node.GetPeersResponse)
+			pResp, ok := p.(*structs.GetPeersResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &node.GetPeersResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.GetPeersResponse{}, p)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
 			}
 			return nil
 		})),
-	"/node/peer_count": newMetadata[node.GetPeerCountResponse](v1PathTemplate,
+	"/node/peer_count": newMetadata[structs.GetPeerCountResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
-			pResp, ok := p.(*node.GetPeerCountResponse)
+			pResp, ok := p.(*structs.GetPeerCountResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &node.GetPeerCountResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.GetPeerCountResponse{}, p)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
 			}
 			return nil
 		})),
-	"/node/version": newMetadata[node.GetVersionResponse](v1PathTemplate,
+	"/node/version": newMetadata[structs.GetVersionResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, lh interface{}) error {
-			pResp, ok := p.(*node.GetVersionResponse)
+			pResp, ok := p.(*structs.GetVersionResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.ListAttestationsResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.ListAttestationsResponse{}, p)
 			}
-			lhResp, ok := lh.(*node.GetVersionResponse)
+			lhResp, ok := lh.(*structs.GetVersionResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.ListAttestationsResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.ListAttestationsResponse{}, p)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
@@ -224,19 +220,19 @@ var requests = map[string]endpoint{
 			}
 			return nil
 		})),
-	"/node/syncing": newMetadata[node.SyncStatusResponse](v1PathTemplate),
-	"/validator/duties/proposer/{param1}": newMetadata[validator.GetProposerDutiesResponse](v1PathTemplate,
+	"/node/syncing": newMetadata[structs.SyncStatusResponse](v1PathTemplate),
+	"/validator/duties/proposer/{param1}": newMetadata[structs.GetProposerDutiesResponse](v1PathTemplate,
 		withParams(func(e primitives.Epoch) []string {
 			return []string{fmt.Sprintf("%v", e)}
 		}),
 		withCustomEval(func(p interface{}, lh interface{}) error {
-			pResp, ok := p.(*validator.GetProposerDutiesResponse)
+			pResp, ok := p.(*structs.GetProposerDutiesResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &validator.GetProposerDutiesResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.GetProposerDutiesResponse{}, p)
 			}
-			lhResp, ok := lh.(*validator.GetProposerDutiesResponse)
+			lhResp, ok := lh.(*structs.GetProposerDutiesResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &validator.GetProposerDutiesResponse{}, lh)
+				return fmt.Errorf(msgWrongJson, &structs.GetProposerDutiesResponse{}, lh)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData
@@ -251,7 +247,7 @@ var requests = map[string]endpoint{
 			}
 			return compareJSON(pResp, lhResp)
 		})),
-	"/validator/duties/attester/{param1}": newMetadata[validator.GetAttesterDutiesResponse](v1PathTemplate,
+	"/validator/duties/attester/{param1}": newMetadata[structs.GetAttesterDutiesResponse](v1PathTemplate,
 		withParams(func(e primitives.Epoch) []string {
 			//ask for a future epoch to test this case
 			return []string{fmt.Sprintf("%v", e+1)}
@@ -264,13 +260,13 @@ var requests = map[string]endpoint{
 			return validatorIndices
 		}()),
 		withCustomEval(func(p interface{}, lh interface{}) error {
-			pResp, ok := p.(*validator.GetAttesterDutiesResponse)
+			pResp, ok := p.(*structs.GetAttesterDutiesResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &validator.GetAttesterDutiesResponse{}, p)
+				return fmt.Errorf(msgWrongJson, &structs.GetAttesterDutiesResponse{}, p)
 			}
-			lhResp, ok := lh.(*validator.GetAttesterDutiesResponse)
+			lhResp, ok := lh.(*structs.GetAttesterDutiesResponse)
 			if !ok {
-				return fmt.Errorf(msgWrongJson, &validator.GetAttesterDutiesResponse{}, lh)
+				return fmt.Errorf(msgWrongJson, &structs.GetAttesterDutiesResponse{}, lh)
 			}
 			if pResp.Data == nil {
 				return errEmptyPrysmData

@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	bolt "go.etcd.io/bbolt"
 )
 
 var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
@@ -233,4 +235,65 @@ func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte)
 		require.NoError(t, err)
 	}
 	return ifaceBlocks
+}
+
+func TestStore_BackfillFinalizedIndex(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	require.ErrorIs(t, db.BackfillFinalizedIndex(ctx, []consensusblocks.ROBlock{}, [32]byte{}), errEmptyBlockSlice)
+	blks, err := consensusblocks.NewROBlockSlice(makeBlocks(t, 0, 66, [32]byte{}))
+	require.NoError(t, err)
+
+	// set up existing finalized block
+	ebpr := blks[64].Block().ParentRoot()
+	ebr := blks[64].Root()
+	chldr := blks[65].Root()
+	ebf := &ethpb.FinalizedBlockRootContainer{
+		ParentRoot: ebpr[:],
+		ChildRoot:  chldr[:],
+	}
+	disjoint := []consensusblocks.ROBlock{
+		blks[0],
+		blks[2],
+	}
+	enc, err := encode(ctx, ebf)
+	require.NoError(t, err)
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
+		return bkt.Put(ebr[:], enc)
+	})
+
+	// reslice to remove the existing blocks
+	blks = blks[0:64]
+	// check the other error conditions with a descendent root that really doesn't exist
+	require.NoError(t, err)
+	require.ErrorIs(t, db.BackfillFinalizedIndex(ctx, disjoint, [32]byte{}), errIncorrectBlockParent)
+	require.NoError(t, err)
+	require.ErrorIs(t, errFinalizedChildNotFound, db.BackfillFinalizedIndex(ctx, blks, [32]byte{}))
+
+	// use the real root so that it succeeds
+	require.NoError(t, db.BackfillFinalizedIndex(ctx, blks, ebr))
+	for i := range blks {
+		require.NoError(t, db.db.View(func(tx *bolt.Tx) error {
+			bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
+			encfr := bkt.Get(blks[i].RootSlice())
+			require.Equal(t, true, len(encfr) > 0)
+			fr := &ethpb.FinalizedBlockRootContainer{}
+			require.NoError(t, decode(ctx, encfr, fr))
+			require.Equal(t, 32, len(fr.ParentRoot))
+			require.Equal(t, 32, len(fr.ChildRoot))
+			pr := blks[i].Block().ParentRoot()
+			require.Equal(t, true, bytes.Equal(fr.ParentRoot, pr[:]))
+			if i > 0 {
+				require.Equal(t, true, bytes.Equal(fr.ParentRoot, blks[i-1].RootSlice()))
+			}
+			if i < len(blks)-1 {
+				require.DeepEqual(t, fr.ChildRoot, blks[i+1].RootSlice())
+			}
+			if i == len(blks)-1 {
+				require.DeepEqual(t, fr.ChildRoot, ebr[:])
+			}
+			return nil
+		}))
+	}
 }

@@ -379,7 +379,7 @@ func UpdateCachedCheckpointToStateRoot(state state.ReadOnlyBeaconState, cp *fork
 	if cp.Epoch <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
 		return nil
 	}
-	slot, err := slots.EpochEnd(cp.Epoch - 1)
+	slot, err := slots.EpochEnd(cp.Epoch)
 	if err != nil {
 		return err
 	}

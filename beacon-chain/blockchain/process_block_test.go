@@ -911,7 +911,6 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state older than Bellatrix, nil payload",
 			stateVersion: 1,
 			payload:      nil,
-			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state older than Bellatrix, empty payload",
@@ -940,7 +939,6 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, nil payload",
 			stateVersion: 2,
 			payload:      nil,
-			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state is Bellatrix, empty payload",
@@ -2048,7 +2046,9 @@ func TestFillMissingBlockPayloadId_PrepareAllPayloads(t *testing.T) {
 // boost. It alters the genesisTime tracked by the store.
 func driftGenesisTime(s *Service, slot, delay int64) {
 	offset := slot*int64(params.BeaconConfig().SecondsPerSlot) + delay
-	s.SetGenesisTime(time.Unix(time.Now().Unix()-offset, 0))
+	newTime := time.Unix(time.Now().Unix()-offset, 0)
+	s.SetGenesisTime(newTime)
+	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(newTime.Unix()))
 }
 
 func TestMissingIndices(t *testing.T) {

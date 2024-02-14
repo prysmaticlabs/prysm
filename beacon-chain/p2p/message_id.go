@@ -83,7 +83,7 @@ func postAltairMsgID(pmsg *pubsubpb.Message, fEpoch primitives.Epoch) string {
 	decodedData, err := encoder.DecodeSnappy(pmsg.Data, gossipPubSubSize)
 	if err != nil {
 		totalLength, err := math.AddInt(
-			len(params.BeaconConfig().MessageDomainValidSnappy),
+			len(params.BeaconConfig().MessageDomainInvalidSnappy),
 			len(topicLenBytes),
 			topicLen,
 			len(pmsg.Data),

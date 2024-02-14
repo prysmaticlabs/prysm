@@ -14,6 +14,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	libp2ptest "github.com/libp2p/go-libp2p/p2p/host/peerstore/test"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
@@ -84,14 +85,14 @@ func TestListTrustedPeer(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		s.ListTrustedPeer(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &PeersResponse{}
+		resp := &structs.PeersResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		peers := resp.Peers
 		// assert number of trusted peer is right
 		assert.Equal(t, 9, len(peers))
 
 		for i := 0; i < 9; i++ {
-			pid, err := peer.Decode(peers[i].PeerID)
+			pid, err := peer.Decode(peers[i].PeerId)
 			require.NoError(t, err)
 			if pid == ids[8] {
 				assert.Equal(t, "", peers[i].Enr)
@@ -151,7 +152,7 @@ func TestListTrustedPeers_NoPeersReturnsEmptyArray(t *testing.T) {
 	writer.Body = &bytes.Buffer{}
 	s.ListTrustedPeer(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
-	resp := &PeersResponse{}
+	resp := &structs.PeersResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	peers := resp.Peers
 	assert.Equal(t, 0, len(peers))
@@ -163,7 +164,7 @@ func TestAddTrustedPeer(t *testing.T) {
 	s := Server{PeersFetcher: peerFetcher}
 
 	url := "http://anything.is.fine"
-	addr := &AddrRequest{
+	addr := &structs.AddrRequest{
 		Addr: "/ip4/127.0.0.1/tcp/30303/p2p/16Uiu2HAm1n583t4huDMMqEUUBuQs6bLts21mxCfX3tiqu9JfHvRJ",
 	}
 	addrJson, err := json.Marshal(addr)
@@ -201,7 +202,7 @@ func TestAddTrustedPeer_BadAddress(t *testing.T) {
 	s := Server{PeersFetcher: peerFetcher}
 
 	url := "http://anything.is.fine"
-	addr := &AddrRequest{
+	addr := &structs.AddrRequest{
 		Addr: "anything/but/not/an/address",
 	}
 	addrJson, err := json.Marshal(addr)

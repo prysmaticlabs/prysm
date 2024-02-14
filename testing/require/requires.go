@@ -51,6 +51,11 @@ func ErrorContains(tb assertions.AssertionTestingTB, want string, err error, msg
 	assertions.ErrorContains(tb.Fatalf, want, err, msg...)
 }
 
+// IsNil asserts that the observed value is nil.
+func IsNil(tb assertions.AssertionTestingTB, got interface{}, msg ...interface{}) {
+	assertions.IsNil(tb.Fatalf, got, msg...)
+}
+
 // NotNil asserts that passed value is not nil.
 func NotNil(tb assertions.AssertionTestingTB, obj interface{}, msg ...interface{}) {
 	assertions.NotNil(tb.Fatalf, obj, msg...)

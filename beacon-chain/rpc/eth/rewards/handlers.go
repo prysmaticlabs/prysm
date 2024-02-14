@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
@@ -52,7 +53,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, httpError)
 		return
 	}
-	response := &BlockRewardsResponse{
+	response := &structs.BlockRewardsResponse{
 		Data:                blockRewards,
 		ExecutionOptimistic: optimistic,
 		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, blkRoot),
@@ -91,8 +92,8 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := &AttestationRewardsResponse{
-		Data: AttestationRewards{
+	resp := &structs.AttestationRewardsResponse{
+		Data: structs.AttestationRewards{
 			IdealRewards: idealRewards,
 			TotalRewards: totalRewards,
 		},
@@ -174,14 +175,14 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scRewards := make([]SyncCommitteeReward, len(valIndices))
+	scRewards := make([]structs.SyncCommitteeReward, len(valIndices))
 	for i, valIdx := range valIndices {
-		scRewards[i] = SyncCommitteeReward{
+		scRewards[i] = structs.SyncCommitteeReward{
 			ValidatorIndex: strconv.FormatUint(uint64(valIdx), 10),
 			Reward:         strconv.Itoa(rewards[i]),
 		}
 	}
-	response := &SyncCommitteeRewardsResponse{
+	response := &structs.SyncCommitteeRewardsResponse{
 		Data:                scRewards,
 		ExecutionOptimistic: optimistic,
 		Finalized:           s.FinalizationFetcher.IsFinalized(r.Context(), blkRoot),
@@ -257,11 +258,11 @@ func idealAttRewards(
 	st state.BeaconState,
 	bal *precompute.Balance,
 	vals []*precompute.Validator,
-) ([]IdealAttestationReward, bool) {
+) ([]structs.IdealAttestationReward, bool) {
 	idealValsCount := uint64(16)
 	minIdealBalance := uint64(17)
 	maxIdealBalance := minIdealBalance + idealValsCount - 1
-	idealRewards := make([]IdealAttestationReward, 0, idealValsCount)
+	idealRewards := make([]structs.IdealAttestationReward, 0, idealValsCount)
 	idealVals := make([]*precompute.Validator, 0, idealValsCount)
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	for i := minIdealBalance; i <= maxIdealBalance; i++ {
@@ -276,7 +277,7 @@ func idealAttRewards(
 					IsPrevEpochTargetAttester:    true,
 					IsPrevEpochHeadAttester:      true,
 				})
-				idealRewards = append(idealRewards, IdealAttestationReward{
+				idealRewards = append(idealRewards, structs.IdealAttestationReward{
 					EffectiveBalance: strconv.FormatUint(effectiveBalance, 10),
 					Inactivity:       strconv.FormatUint(0, 10),
 				})
@@ -316,10 +317,10 @@ func totalAttRewards(
 	bal *precompute.Balance,
 	vals []*precompute.Validator,
 	valIndices []primitives.ValidatorIndex,
-) ([]TotalAttestationReward, bool) {
-	totalRewards := make([]TotalAttestationReward, len(valIndices))
+) ([]structs.TotalAttestationReward, bool) {
+	totalRewards := make([]structs.TotalAttestationReward, len(valIndices))
 	for i, v := range valIndices {
-		totalRewards[i] = TotalAttestationReward{ValidatorIndex: strconv.FormatUint(uint64(v), 10)}
+		totalRewards[i] = structs.TotalAttestationReward{ValidatorIndex: strconv.FormatUint(uint64(v), 10)}
 	}
 	deltas, err := altair.AttestationsDelta(st, bal, vals)
 	if err != nil {

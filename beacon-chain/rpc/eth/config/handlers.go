@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
@@ -20,8 +20,8 @@ func GetDepositContract(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "config.GetDepositContract")
 	defer span.End()
 
-	httputil.WriteJson(w, &GetDepositContractResponse{
-		Data: &DepositContractData{
+	httputil.WriteJson(w, &structs.GetDepositContractResponse{
+		Data: &structs.DepositContractData{
 			ChainId: strconv.FormatUint(params.BeaconConfig().DepositChainID, 10),
 			Address: params.BeaconConfig().DepositContractAddress,
 		},
@@ -35,14 +35,14 @@ func GetForkSchedule(w http.ResponseWriter, r *http.Request) {
 
 	schedule := params.BeaconConfig().ForkVersionSchedule
 	if len(schedule) == 0 {
-		httputil.WriteJson(w, &GetForkScheduleResponse{
-			Data: make([]*shared.Fork, 0),
+		httputil.WriteJson(w, &structs.GetForkScheduleResponse{
+			Data: make([]*structs.Fork, 0),
 		})
 		return
 	}
 
 	versions := forks.SortedForkVersions(schedule)
-	chainForks := make([]*shared.Fork, len(schedule))
+	chainForks := make([]*structs.Fork, len(schedule))
 	var previous, current []byte
 	for i, v := range versions {
 		if i == 0 {
@@ -52,14 +52,14 @@ func GetForkSchedule(w http.ResponseWriter, r *http.Request) {
 		}
 		copyV := v
 		current = copyV[:]
-		chainForks[i] = &shared.Fork{
+		chainForks[i] = &structs.Fork{
 			PreviousVersion: hexutil.Encode(previous),
 			CurrentVersion:  hexutil.Encode(current),
 			Epoch:           fmt.Sprintf("%d", schedule[v]),
 		}
 	}
 
-	httputil.WriteJson(w, &GetForkScheduleResponse{
+	httputil.WriteJson(w, &structs.GetForkScheduleResponse{
 		Data: chainForks,
 	})
 }
@@ -77,7 +77,7 @@ func GetSpec(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Could not prepare config spec: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, &GetSpecResponse{Data: data})
+	httputil.WriteJson(w, &structs.GetSpecResponse{Data: data})
 }
 
 func prepareConfigSpec() (map[string]string, error) {

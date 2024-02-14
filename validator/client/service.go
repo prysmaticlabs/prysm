@@ -56,6 +56,7 @@ type ValidatorService struct {
 	useWeb                 bool
 	emitAccountMetrics     bool
 	logValidatorBalances   bool
+	distributed            bool
 	interopKeysConfig      *local.InteropKeymanagerConfig
 	conn                   validatorHelpers.NodeConnection
 	grpcRetryDelay         time.Duration
@@ -83,6 +84,7 @@ type Config struct {
 	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
+	Distributed                bool
 	InteropKeysConfig          *local.InteropKeymanagerConfig
 	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
@@ -131,6 +133,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		Web3SignerConfig:       cfg.Web3SignerConfig,
 		proposerSettings:       cfg.ProposerSettings,
 		validatorsRegBatchSize: cfg.ValidatorsRegBatchSize,
+		distributed:            cfg.Distributed,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -213,7 +216,8 @@ func (v *ValidatorService) Start() {
 		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		pubkeyToValidatorIndex:         make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 		signedValidatorRegistrations:   make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
-		attLogs:                        make(map[[32]byte]*attSubmitted),
+		submittedAtts:                  make(map[submittedAttKey]*submittedAtt),
+		submittedAggregates:            make(map[submittedAttKey]*submittedAtt),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		voteStats:                      voteStats{startEpoch: primitives.Epoch(^uint64(0))},
@@ -230,6 +234,8 @@ func (v *ValidatorService) Start() {
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
+		distributed:                    v.distributed,
+		attSelections:                  make(map[attSelectionKey]iface.BeaconCommitteeSelection),
 	}
 
 	v.validator = valStruct

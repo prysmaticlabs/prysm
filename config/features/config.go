@@ -223,9 +223,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableFullSSZDataLogging)
 		cfg.EnableFullSSZDataLogging = true
 	}
-	if ctx.IsSet(enableVerboseSigVerification.Name) {
-		logEnabled(enableVerboseSigVerification)
-		cfg.EnableVerboseSigVerification = true
+	cfg.EnableVerboseSigVerification = true
+	if ctx.IsSet(disableVerboseSigVerification.Name) {
+		logEnabled(disableVerboseSigVerification)
+		cfg.EnableVerboseSigVerification = false
 	}
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)
@@ -235,9 +236,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
 	}
-	if ctx.IsSet(EnableEIP4881.Name) {
-		logEnabled(EnableEIP4881)
-		cfg.EnableEIP4881 = true
+	cfg.EnableEIP4881 = true
+	if ctx.IsSet(DisableEIP4881.Name) {
+		logEnabled(DisableEIP4881)
+		cfg.EnableEIP4881 = false
 	}
 	if ctx.IsSet(EnableLightClient.Name) {
 		logEnabled(EnableLightClient)

@@ -53,7 +53,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	span.AddAttributes(trace.StringAttribute("validator", fmtKey))
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
+	log := log.WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
 	// Sign randao reveal, it's used to request block from beacon node
 	epoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
@@ -82,7 +82,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		BuilderBoostFactor: findBuilderBoost(pubKey, v.proposerSettings),
 	})
 	if err != nil {
-		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
+		log.WithField("slot", slot).WithError(err).Error("Failed to request block from beacon node")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -153,7 +153,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 
 	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, genericSignedBlock)
 	if err != nil {
-		log.WithField("blockSlot", slot).WithError(err).Error("Failed to propose block")
+		log.WithField("slot", slot).WithError(err).Error("Failed to propose block")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -210,12 +210,12 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	graffiti := blk.Block().Body().Graffiti()
 	log.WithFields(logrus.Fields{
-		"slot":            blk.Block().Slot(),
-		"blockRoot":       blkRoot,
-		"numAttestations": len(blk.Block().Body().Attestations()),
-		"numDeposits":     len(blk.Block().Body().Deposits()),
-		"graffiti":        string(graffiti[:]),
-		"fork":            version.String(blk.Block().Version()),
+		"slot":             blk.Block().Slot(),
+		"blockRoot":        blkRoot,
+		"attestationCount": len(blk.Block().Body().Attestations()),
+		"depositCount":     len(blk.Block().Body().Deposits()),
+		"graffiti":         string(graffiti[:]),
+		"fork":             version.String(blk.Block().Version()),
 	}).Info("Submitted new block")
 
 	if v.emitAccountMetrics {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
@@ -14,16 +14,16 @@ import (
 )
 
 type BeaconBlockConverter interface {
-	ConvertRESTPhase0BlockToProto(block *shared.BeaconBlock) (*ethpb.BeaconBlock, error)
-	ConvertRESTAltairBlockToProto(block *shared.BeaconBlockAltair) (*ethpb.BeaconBlockAltair, error)
-	ConvertRESTBellatrixBlockToProto(block *shared.BeaconBlockBellatrix) (*ethpb.BeaconBlockBellatrix, error)
-	ConvertRESTCapellaBlockToProto(block *shared.BeaconBlockCapella) (*ethpb.BeaconBlockCapella, error)
+	ConvertRESTPhase0BlockToProto(block *structs.BeaconBlock) (*ethpb.BeaconBlock, error)
+	ConvertRESTAltairBlockToProto(block *structs.BeaconBlockAltair) (*ethpb.BeaconBlockAltair, error)
+	ConvertRESTBellatrixBlockToProto(block *structs.BeaconBlockBellatrix) (*ethpb.BeaconBlockBellatrix, error)
+	ConvertRESTCapellaBlockToProto(block *structs.BeaconBlockCapella) (*ethpb.BeaconBlockCapella, error)
 }
 
 type beaconApiBeaconBlockConverter struct{}
 
 // ConvertRESTPhase0BlockToProto converts a Phase0 JSON beacon block to its protobuf equivalent
-func (c beaconApiBeaconBlockConverter) ConvertRESTPhase0BlockToProto(block *shared.BeaconBlock) (*ethpb.BeaconBlock, error) {
+func (c beaconApiBeaconBlockConverter) ConvertRESTPhase0BlockToProto(block *structs.BeaconBlock) (*ethpb.BeaconBlock, error) {
 	blockSlot, err := strconv.ParseUint(block.Slot, 10, 64)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse slot `%s`", block.Slot)
@@ -125,19 +125,19 @@ func (c beaconApiBeaconBlockConverter) ConvertRESTPhase0BlockToProto(block *shar
 }
 
 // ConvertRESTAltairBlockToProto converts an Altair JSON beacon block to its protobuf equivalent
-func (c beaconApiBeaconBlockConverter) ConvertRESTAltairBlockToProto(block *shared.BeaconBlockAltair) (*ethpb.BeaconBlockAltair, error) {
+func (c beaconApiBeaconBlockConverter) ConvertRESTAltairBlockToProto(block *structs.BeaconBlockAltair) (*ethpb.BeaconBlockAltair, error) {
 	if block.Body == nil {
 		return nil, errors.New("block body is nil")
 	}
 
 	// Call convertRESTPhase0BlockToProto to set the phase0 fields because all the error handling and the heavy lifting
 	// has already been done
-	phase0Block, err := c.ConvertRESTPhase0BlockToProto(&shared.BeaconBlock{
+	phase0Block, err := c.ConvertRESTPhase0BlockToProto(&structs.BeaconBlock{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,
 		StateRoot:     block.StateRoot,
-		Body: &shared.BeaconBlockBody{
+		Body: &structs.BeaconBlockBody{
 			RandaoReveal:      block.Body.RandaoReveal,
 			Eth1Data:          block.Body.Eth1Data,
 			Graffiti:          block.Body.Graffiti,
@@ -189,19 +189,19 @@ func (c beaconApiBeaconBlockConverter) ConvertRESTAltairBlockToProto(block *shar
 }
 
 // ConvertRESTBellatrixBlockToProto converts a Bellatrix JSON beacon block to its protobuf equivalent
-func (c beaconApiBeaconBlockConverter) ConvertRESTBellatrixBlockToProto(block *shared.BeaconBlockBellatrix) (*ethpb.BeaconBlockBellatrix, error) {
+func (c beaconApiBeaconBlockConverter) ConvertRESTBellatrixBlockToProto(block *structs.BeaconBlockBellatrix) (*ethpb.BeaconBlockBellatrix, error) {
 	if block.Body == nil {
 		return nil, errors.New("block body is nil")
 	}
 
 	// Call convertRESTAltairBlockToProto to set the altair fields because all the error handling and the heavy lifting
 	// has already been done
-	altairBlock, err := c.ConvertRESTAltairBlockToProto(&shared.BeaconBlockAltair{
+	altairBlock, err := c.ConvertRESTAltairBlockToProto(&structs.BeaconBlockAltair{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,
 		StateRoot:     block.StateRoot,
-		Body: &shared.BeaconBlockBodyAltair{
+		Body: &structs.BeaconBlockBodyAltair{
 			RandaoReveal:      block.Body.RandaoReveal,
 			Eth1Data:          block.Body.Eth1Data,
 			Graffiti:          block.Body.Graffiti,
@@ -327,7 +327,7 @@ func (c beaconApiBeaconBlockConverter) ConvertRESTBellatrixBlockToProto(block *s
 }
 
 // ConvertRESTCapellaBlockToProto converts a Capella JSON beacon block to its protobuf equivalent
-func (c beaconApiBeaconBlockConverter) ConvertRESTCapellaBlockToProto(block *shared.BeaconBlockCapella) (*ethpb.BeaconBlockCapella, error) {
+func (c beaconApiBeaconBlockConverter) ConvertRESTCapellaBlockToProto(block *structs.BeaconBlockCapella) (*ethpb.BeaconBlockCapella, error) {
 	if block.Body == nil {
 		return nil, errors.New("block body is nil")
 	}
@@ -338,12 +338,12 @@ func (c beaconApiBeaconBlockConverter) ConvertRESTCapellaBlockToProto(block *sha
 
 	// Call convertRESTBellatrixBlockToProto to set the bellatrix fields because all the error handling and the heavy
 	// lifting has already been done
-	bellatrixBlock, err := c.ConvertRESTBellatrixBlockToProto(&shared.BeaconBlockBellatrix{
+	bellatrixBlock, err := c.ConvertRESTBellatrixBlockToProto(&structs.BeaconBlockBellatrix{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,
 		StateRoot:     block.StateRoot,
-		Body: &shared.BeaconBlockBodyBellatrix{
+		Body: &structs.BeaconBlockBodyBellatrix{
 			RandaoReveal:      block.Body.RandaoReveal,
 			Eth1Data:          block.Body.Eth1Data,
 			Graffiti:          block.Body.Graffiti,
@@ -353,7 +353,7 @@ func (c beaconApiBeaconBlockConverter) ConvertRESTCapellaBlockToProto(block *sha
 			Deposits:          block.Body.Deposits,
 			VoluntaryExits:    block.Body.VoluntaryExits,
 			SyncAggregate:     block.Body.SyncAggregate,
-			ExecutionPayload: &shared.ExecutionPayload{
+			ExecutionPayload: &structs.ExecutionPayload{
 				ParentHash:    block.Body.ExecutionPayload.ParentHash,
 				FeeRecipient:  block.Body.ExecutionPayload.FeeRecipient,
 				StateRoot:     block.Body.ExecutionPayload.StateRoot,
