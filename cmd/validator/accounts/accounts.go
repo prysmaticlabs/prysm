@@ -54,7 +54,6 @@ var Commands = &cli.Command{
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
-				flags.ShowDepositDataFlag,
 				flags.ShowPrivateKeysFlag,
 				flags.ListValidatorIndices,
 				flags.BeaconRPCProviderFlag,

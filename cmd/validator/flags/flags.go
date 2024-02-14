@@ -174,11 +174,11 @@ var (
 		Name:  "mnemonic-language",
 		Usage: "Allows specifying mnemonic language. Supported languages are: english|chinese_traditional|chinese_simplified|czech|french|japanese|korean|italian|spanish.",
 	}
-	// ShowDepositDataFlag for accounts.
-	ShowDepositDataFlag = &cli.BoolFlag{
+	// DeprecatedShowDepositDataFlag for accounts.
+	// Deprecated: to be removed
+	DeprecatedShowDepositDataFlag = &cli.BoolFlag{
 		Name:  "show-deposit-data",
-		Usage: "Displays raw eth1 tx deposit data for validator accounts.",
-		Value: false,
+		Usage: "This flag is deprecated and will be removed",
 	}
 	// ShowPrivateKeysFlag for accounts.
 	ShowPrivateKeysFlag = &cli.BoolFlag{

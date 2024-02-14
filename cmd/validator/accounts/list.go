@@ -31,9 +31,6 @@ func accountsList(c *cli.Context) error {
 		accounts.WithBeaconRESTApiProvider(c.String(flags.BeaconRESTApiProviderFlag.Name)),
 		accounts.WithGRPCHeaders(grpcHeaders),
 	}
-	if c.IsSet(flags.ShowDepositDataFlag.Name) {
-		opts = append(opts, accounts.WithShowDepositData())
-	}
 	if c.IsSet(flags.ShowPrivateKeysFlag.Name) {
 		opts = append(opts, accounts.WithShowPrivateKeys())
 	}

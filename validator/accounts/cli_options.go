@@ -37,14 +37,6 @@ func WithKeymanagerType(k keymanager.Kind) Option {
 	}
 }
 
-// WithShowDepositData enables displaying deposit data in the accounts cli manager.
-func WithShowDepositData() Option {
-	return func(acc *CLIManager) error {
-		acc.showDepositData = true
-		return nil
-	}
-}
-
 // WithShowPrivateKeys enables displaying private keys in the accounts cli manager.
 func WithShowPrivateKeys() Option {
 	return func(acc *CLIManager) error {
