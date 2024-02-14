@@ -874,7 +874,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 	t.Run("ready to update machines - constrained mode", func(t *testing.T) {
 		p := p2pt.NewTestP2P(t)
 		connectPeers(t, p, []*peerData{
-			{blocks: makeSequence(500, 628), finalizedEpoch: 16, headSlot: 600},
+			{blocks: makeSequence(200, 320), finalizedEpoch: 8, headSlot: 300},
 		}, p.Peers())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 			chain: mc,
@@ -924,7 +924,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 	t.Run("ready to update machines - unconstrained mode", func(t *testing.T) {
 		p := p2pt.NewTestP2P(t)
 		connectPeers(t, p, []*peerData{
-			{blocks: makeSequence(500, 628), finalizedEpoch: 16, headSlot: 600},
+			{blocks: makeSequence(200, 320), finalizedEpoch: 8, headSlot: 320},
 		}, p.Peers())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 			chain: mc,

@@ -1,6 +1,7 @@
 package slasher
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
@@ -10,16 +11,15 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
 // A struct encapsulating input arguments to
 // functions used for attester slashing detection and
 // loading, saving, and updating min/max span chunks.
 type chunkUpdateArgs struct {
-	kind                slashertypes.ChunkKind
-	chunkIndex          uint64
-	validatorChunkIndex uint64
-	currentEpoch        primitives.Epoch
+	chunkIndex   uint64
+	currentEpoch primitives.Epoch
 }
 
 // Chunker defines a struct which represents a slice containing a chunk for K different validator's
@@ -187,10 +187,10 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.SlasherDatabase,
 	validatorIdx primitives.ValidatorIndex,
-	attestation *slashertypes.IndexedAttestationWrapper,
+	incomingAttWrapper *slashertypes.IndexedAttestationWrapper,
 ) (*ethpb.AttesterSlashing, error) {
-	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
-	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
+	sourceEpoch := incomingAttWrapper.IndexedAttestation.Data.Source.Epoch
+	targetEpoch := incomingAttWrapper.IndexedAttestation.Data.Target.Epoch
 
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
@@ -199,30 +199,56 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 		)
 	}
 
-	if targetEpoch > minTarget {
-		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
-			ctx, validatorIdx, minTarget,
-		)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err, "could not get existing attestation record at target %d", minTarget,
-			)
+	if targetEpoch <= minTarget {
+		// The incoming attestation does not surround any existing ones.
+		return nil, nil
+	}
+
+	// The incoming attestation surrounds an existing one.
+	existingAttWrapper, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, minTarget)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get existing attestation record at target %d", minTarget)
+	}
+
+	if existingAttWrapper == nil {
+		// This case should normally not happen. If this happen, it means we previously
+		// recorded in our min/max DB an distance corresponding to an attestaiton, but WITHOUT
+		// recording the attestation itself. As a consequence, we say there is no surrounding vote,
+		// but we log an error.
+		fields := logrus.Fields{
+			"validatorIndex": validatorIdx,
+			"targetEpoch":    minTarget,
 		}
 
-		if existingAttRecord == nil {
-			return nil, nil
-		}
+		log.WithFields(fields).Error("No existing attestation record found while a surrounding vote was detected.")
+		return nil, nil
+	}
 
-		if sourceEpoch < existingAttRecord.IndexedAttestation.Data.Source.Epoch {
-			surroundingVotesTotal.Inc()
-			return &ethpb.AttesterSlashing{
-				Attestation_1: attestation.IndexedAttestation,
-				Attestation_2: existingAttRecord.IndexedAttestation,
-			}, nil
+	if existingAttWrapper.IndexedAttestation.Data.Source.Epoch <= sourceEpoch {
+		// This case should normally not happen, since if we have targetEpoch > minTarget,
+		// then there is at least one attestation we surround.
+		// However, it can happens if we have multiple attestation with the same target
+		// but with a different source. In this case, we have both a double vote AND a surround vote.
+		// The validator will be slashed for the double vote, and the surround vote will be ignored.
+		return nil, nil
+	}
+
+	surroundingVotesTotal.Inc()
+
+	slashing := &ethpb.AttesterSlashing{
+		Attestation_1: existingAttWrapper.IndexedAttestation,
+		Attestation_2: incomingAttWrapper.IndexedAttestation,
+	}
+
+	// Ensure the attestation with the lower data root is the first attestation.
+	if bytes.Compare(existingAttWrapper.DataRoot[:], incomingAttWrapper.DataRoot[:]) > 0 {
+		slashing = &ethpb.AttesterSlashing{
+			Attestation_1: incomingAttWrapper.IndexedAttestation,
+			Attestation_2: existingAttWrapper.IndexedAttestation,
 		}
 	}
 
-	return nil, nil
+	return slashing, nil
 }
 
 // CheckSlashable takes in a validator index and an incoming attestation
@@ -240,10 +266,10 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.SlasherDatabase,
 	validatorIdx primitives.ValidatorIndex,
-	attestation *slashertypes.IndexedAttestationWrapper,
+	incomingAttWrapper *slashertypes.IndexedAttestationWrapper,
 ) (*ethpb.AttesterSlashing, error) {
-	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
-	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
+	sourceEpoch := incomingAttWrapper.IndexedAttestation.Data.Source.Epoch
+	targetEpoch := incomingAttWrapper.IndexedAttestation.Data.Target.Epoch
 
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
@@ -252,29 +278,56 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 		)
 	}
 
-	if targetEpoch < maxTarget {
-		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
-			ctx, validatorIdx, maxTarget,
-		)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err, "could not get existing attestation record at target %d", maxTarget,
-			)
+	if targetEpoch >= maxTarget {
+		// The incoming attestation is not surrounded by any existing ones.
+		return nil, nil
+	}
+
+	// The incoming attestation is surrounded by an existing one.
+	existingAttWrapper, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, maxTarget)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get existing attestation record at target %d", maxTarget)
+	}
+
+	if existingAttWrapper == nil {
+		// This case should normally not happen. If this happen, it means we previously
+		// recorded in our min/max DB an distance corresponding to an attestaiton, but WITHOUT
+		// recording the attestation itself. As a consequence, we say there is no surrounded vote,
+		// but we log an error.
+		fields := logrus.Fields{
+			"validatorIndex": validatorIdx,
+			"targetEpoch":    maxTarget,
 		}
 
-		if existingAttRecord == nil {
-			return nil, nil
-		}
+		log.WithFields(fields).Error("No existing attestation record found while a surrounded vote was detected.")
+		return nil, nil
+	}
 
-		if existingAttRecord.IndexedAttestation.Data.Source.Epoch < sourceEpoch {
-			surroundedVotesTotal.Inc()
-			return &ethpb.AttesterSlashing{
-				Attestation_1: existingAttRecord.IndexedAttestation,
-				Attestation_2: attestation.IndexedAttestation,
-			}, nil
+	if existingAttWrapper.IndexedAttestation.Data.Source.Epoch >= sourceEpoch {
+		// This case should normally not happen, since if we have targetEpoch < maxTarget,
+		// then there is at least one attestation that surrounds us.
+		// However, it can happens if we have multiple attestation with the same target
+		// but with a different source. In this case, we have both a double vote AND a surround vote.
+		// The validator will be slashed for the double vote, and the surround vote will be ignored.
+		return nil, nil
+	}
+
+	surroundedVotesTotal.Inc()
+
+	slashing := &ethpb.AttesterSlashing{
+		Attestation_1: existingAttWrapper.IndexedAttestation,
+		Attestation_2: incomingAttWrapper.IndexedAttestation,
+	}
+
+	// Ensure the attestation with the lower data root is the first attestation.
+	if bytes.Compare(existingAttWrapper.DataRoot[:], incomingAttWrapper.DataRoot[:]) > 0 {
+		slashing = &ethpb.AttesterSlashing{
+			Attestation_1: incomingAttWrapper.IndexedAttestation,
+			Attestation_2: existingAttWrapper.IndexedAttestation,
 		}
 	}
-	return nil, nil
+
+	return slashing, nil
 }
 
 // Update a min span chunk for a validator index starting at the current epoch, e_c, then updating
@@ -492,13 +545,13 @@ func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) pr
 //	max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
 //
 // If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
-// epoch is the start epoch of chunk 2, which is epoch 4. This is computed as:
+// epoch is the start epoch of chunk 2, which is epoch 6. This is computed as:
 //
 //	first_epoch(chunkIndex(startEpoch)+1)
 //	first_epoch(chunkIndex(3)+1)
 //	first_epoch(1 + 1)
 //	first_epoch(2)
-//	4
+//	6
 func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch {
 	return m.params.firstEpoch(m.params.chunkIndex(startEpoch) + 1)
 }

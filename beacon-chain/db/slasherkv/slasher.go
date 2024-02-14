@@ -21,9 +21,8 @@ import (
 )
 
 const (
-	// Signing root (32 bytes)
 	attestationRecordKeySize = 32 // Bytes.
-	signingRootSize          = 32 // Bytes.
+	rootSize                 = 32 // Bytes.
 )
 
 // LastEpochWrittenForValidators given a list of validator indices returns the latest
@@ -47,17 +46,18 @@ func (s *Store) LastEpochWrittenForValidators(
 		for i, encodedIndex := range encodedIndexes {
 			var epoch primitives.Epoch
 
-			epochBytes := bkt.Get(encodedIndex)
-			if epochBytes != nil {
+			if epochBytes := bkt.Get(encodedIndex); epochBytes != nil {
 				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
 					return err
 				}
 			}
 
-			attestedEpochs = append(attestedEpochs, &slashertypes.AttestedEpochForValidator{
+			attestedEpoch := &slashertypes.AttestedEpochForValidator{
 				ValidatorIndex: validatorIndexes[i],
 				Epoch:          epoch,
-			})
+			}
+
+			attestedEpochs = append(attestedEpochs, attestedEpoch)
 		}
 
 		return nil
@@ -84,18 +84,20 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 			return ctx.Err()
 		}
 
+		encodedIndex := encodeValidatorIndex(valIndex)
+
 		encodedEpoch, err := epoch.MarshalSSZ()
 		if err != nil {
 			return err
 		}
 
-		encodedIndexes = append(encodedIndexes, encodeValidatorIndex(valIndex))
+		encodedIndexes = append(encodedIndexes, encodedIndex)
 		encodedEpochs = append(encodedEpochs, encodedEpoch)
 	}
 
 	// The list of validators might be too massive for boltdb to handle in a single transaction,
 	// so instead we split it into batches and write each batch.
-	for i := 0; i < len(encodedIndexes); i += batchSize {
+	for start := 0; start < len(encodedIndexes); start += batchSize {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -106,17 +108,14 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 			}
 
 			bkt := tx.Bucket(attestedEpochsByValidator)
+			end := min(start+batchSize, len(encodedIndexes))
 
-			minimum := i + batchSize
-			if minimum > len(encodedIndexes) {
-				minimum = len(encodedIndexes)
-			}
-
-			for j, encodedIndex := range encodedIndexes[i:minimum] {
+			for j, encodedIndex := range encodedIndexes[start:end] {
 				if ctx.Err() != nil {
 					return ctx.Err()
 				}
-				if err := bkt.Put(encodedIndex, encodedEpochs[j]); err != nil {
+
+				if err := bkt.Put(encodedIndex, encodedEpochs[j+start]); err != nil {
 					return err
 				}
 			}
@@ -170,15 +169,15 @@ func (s *Store) CheckAttesterDoubleVotes(
 						continue
 					}
 
-					// Retrieve the attestation record corresponding to the signing root
+					// Retrieve the attestation record corresponding to the data root
 					// from the database.
 					encExistingAttRecord := attRecordsBkt.Get(attRecordsKey)
 					if encExistingAttRecord == nil {
 						continue
 					}
 
-					existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
-					if existingSigningRoot == attToProcess.SigningRoot {
+					existingDataRoot := bytesutil.ToBytes32(attRecordsKey[:rootSize])
+					if existingDataRoot == attToProcess.DataRoot {
 						continue
 					}
 
@@ -190,10 +189,10 @@ func (s *Store) CheckAttesterDoubleVotes(
 
 					// Build the proof of double vote.
 					slashAtt := &slashertypes.AttesterDoubleVote{
-						ValidatorIndex:         primitives.ValidatorIndex(valIdx),
-						Target:                 attToProcess.IndexedAttestation.Data.Target.Epoch,
-						PrevAttestationWrapper: existingAttRecord,
-						AttestationWrapper:     attToProcess,
+						ValidatorIndex: primitives.ValidatorIndex(valIdx),
+						Target:         attToProcess.IndexedAttestation.Data.Target.Epoch,
+						Wrapper_1:      existingAttRecord,
+						Wrapper_2:      attToProcess,
 					}
 
 					localDoubleVotes = append(localDoubleVotes, slashAtt)
@@ -281,12 +280,12 @@ func (s *Store) SaveAttestationRecordsForValidators(
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
-		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
+		dataRootsBkt := tx.Bucket(attestationDataRootsBucket)
 
 		for i := len(attestations) - 1; i >= 0; i-- {
 			attestation := attestations[i]
 
-			if err := attRecordsBkt.Put(attestation.SigningRoot[:], encodedRecords[i]); err != nil {
+			if err := attRecordsBkt.Put(attestation.DataRoot[:], encodedRecords[i]); err != nil {
 				return err
 			}
 
@@ -294,7 +293,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 				encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))
 
 				key := append(encodedTargetEpoch[i], encIdx...)
-				if err := signingRootsBkt.Put(key, attestation.SigningRoot[:]); err != nil {
+				if err := dataRootsBkt.Put(key, attestation.DataRoot[:]); err != nil {
 					return err
 				}
 			}
@@ -396,14 +395,14 @@ func (s *Store) CheckDoubleBlockProposals(
 
 			// If there is no existing proposal record (empty result), then there is no double proposal.
 			// We can continue to the next proposal.
-			if len(encExistingProposalWrapper) < signingRootSize {
+			if len(encExistingProposalWrapper) < rootSize {
 				continue
 			}
 
 			// Compare the proposal signing root in the DB with the incoming proposal signing root.
 			// If they differ, we have a double proposal.
-			existingSigningRoot := bytesutil.ToBytes32(encExistingProposalWrapper[:signingRootSize])
-			if existingSigningRoot != incomingProposal.SigningRoot {
+			existingRoot := bytesutil.ToBytes32(encExistingProposalWrapper[:rootSize])
+			if existingRoot != incomingProposal.HeaderRoot {
 				existingProposalWrapper, err := decodeProposalRecord(encExistingProposalWrapper)
 				if err != nil {
 					return err
@@ -610,18 +609,18 @@ func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byt
 	// Compress attestation.
 	compressedAtt := snappy.Encode(nil, encodedAtt)
 
-	return append(att.SigningRoot[:], compressedAtt...), nil
+	return append(att.DataRoot[:], compressedAtt...), nil
 }
 
 // Decode attestation record from bytes.
 // The input encoded attestation record consists in the signing root concatened with the compressed attestation record.
 func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWrapper, error) {
-	if len(encoded) < signingRootSize {
-		return nil, fmt.Errorf("wrong length for encoded attestation record, want minimum %d, got %d", signingRootSize, len(encoded))
+	if len(encoded) < rootSize {
+		return nil, fmt.Errorf("wrong length for encoded attestation record, want minimum %d, got %d", rootSize, len(encoded))
 	}
 
 	// Decompress attestation.
-	decodedAttBytes, err := snappy.Decode(nil, encoded[signingRootSize:])
+	decodedAttBytes, err := snappy.Decode(nil, encoded[rootSize:])
 	if err != nil {
 		return nil, err
 	}
@@ -633,13 +632,13 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 	}
 
 	// Decode signing root.
-	signingRootBytes := encoded[:signingRootSize]
-	signingRoot := bytesutil.ToBytes32(signingRootBytes)
+	dataRootBytes := encoded[:rootSize]
+	dataRoot := bytesutil.ToBytes32(dataRootBytes)
 
 	// Return decoded attestation.
 	attestation := &slashertypes.IndexedAttestationWrapper{
 		IndexedAttestation: decodedAtt,
-		SigningRoot:        signingRoot,
+		DataRoot:           dataRoot,
 	}
 
 	return attestation, nil
@@ -654,18 +653,18 @@ func encodeProposalRecord(blkHdr *slashertypes.SignedBlockHeaderWrapper) ([]byte
 		return nil, err
 	}
 	compressedHdr := snappy.Encode(nil, encodedHdr)
-	return append(blkHdr.SigningRoot[:], compressedHdr...), nil
+	return append(blkHdr.HeaderRoot[:], compressedHdr...), nil
 }
 
 func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrapper, error) {
-	if len(encoded) < signingRootSize {
+	if len(encoded) < rootSize {
 		return nil, fmt.Errorf(
-			"wrong length for encoded proposal record, want %d, got %d", signingRootSize, len(encoded),
+			"wrong length for encoded proposal record, want %d, got %d", rootSize, len(encoded),
 		)
 	}
-	signingRoot := encoded[:signingRootSize]
+	dataRoot := encoded[:rootSize]
 	decodedBlkHdr := &ethpb.SignedBeaconBlockHeader{}
-	decodedHdrBytes, err := snappy.Decode(nil, encoded[signingRootSize:])
+	decodedHdrBytes, err := snappy.Decode(nil, encoded[rootSize:])
 	if err != nil {
 		return nil, err
 	}
@@ -674,7 +673,7 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 	}
 	return &slashertypes.SignedBlockHeaderWrapper{
 		SignedBeaconBlockHeader: decodedBlkHdr,
-		SigningRoot:             bytesutil.ToBytes32(signingRoot),
+		HeaderRoot:              bytesutil.ToBytes32(dataRoot),
 	}, nil
 }
 
