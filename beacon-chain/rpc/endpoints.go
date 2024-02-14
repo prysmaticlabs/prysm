@@ -45,6 +45,7 @@ func (s *Service) endpoints(
 	endpoints = append(endpoints, s.validatorEndpoints(validatorServer, stater, coreService, rewardFetcher)...)
 	endpoints = append(endpoints, s.nodeEndpoints()...)
 	endpoints = append(endpoints, s.beaconEndpoints(ch, stater, blocker, validatorServer, coreService)...)
+	endpoints = append(endpoints, s.configEndpoints()...)
 	endpoints = append(endpoints, s.lightClientEndpoints(blocker, stater)...)
 	endpoints = append(endpoints, s.eventsEndpoints()...)
 	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch)...)
