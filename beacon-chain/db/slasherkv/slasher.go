@@ -39,14 +39,17 @@ func (s *Store) LastEpochWrittenForValidators(
 		bkt := tx.Bucket(attestedEpochsByValidator)
 
 		for _, validatorIndex := range validatorIndexes {
-			var epoch primitives.Epoch
-
 			encodedIndex := encodeValidatorIndex(validatorIndex)
 
-			if epochBytes := bkt.Get(encodedIndex); epochBytes != nil {
-				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
-					return err
-				}
+			epochBytes := bkt.Get(encodedIndex)
+			if epochBytes == nil {
+				// If there is no epoch for this validator, skip to the next validator.
+				continue
+			}
+
+			var epoch primitives.Epoch
+			if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
+				return err
 			}
 
 			attestedEpoch := &slashertypes.AttestedEpochForValidator{
