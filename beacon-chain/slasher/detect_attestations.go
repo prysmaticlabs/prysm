@@ -237,9 +237,9 @@ func (s *Service) checkDoubleVotes(
 }
 
 // updatedChunkByChunkIndex loads the chunks from the database for validators corresponding to
-// the `validatorChunkIndex` and which have an entry in `s.latestEpochWrittenForValidator`.
+// the `validatorChunkIndex`.
 // It then updates the chunks with the neutral element for corresponding validators from
-// the latest epoch written to the current epoch.
+// the epoch just after the latest epoch written to the current epoch.
 // A mapping between chunk index and chunk is returned to the caller.
 func (s *Service) updatedChunkByChunkIndex(
 	ctx context.Context,
@@ -255,13 +255,16 @@ func (s *Service) updatedChunkByChunkIndex(
 	for _, validatorIndex := range validatorIndexes {
 		// Retrieve the latest epoch written for the validator.
 		latestEpochWritten, ok := s.latestEpochWrittenForValidator[validatorIndex]
+
+		// Start from the epoch just after the latest epoch written.
+		epochToWrite := latestEpochWritten + 1
 		if !ok {
-			continue
+			epochToWrite = 0
 		}
 
-		for latestEpochWritten <= currentEpoch {
+		for epochToWrite <= currentEpoch {
 			// Get the chunk index for the latest epoch written.
-			chunkIndex := s.params.chunkIndex(latestEpochWritten)
+			chunkIndex := s.params.chunkIndex(epochToWrite)
 
 			// Get the chunk corresponding to the chunk index from the `chunkByChunkIndex` map.
 			currentChunk, ok := chunkByChunkIndex[chunkIndex]
@@ -274,18 +277,18 @@ func (s *Service) updatedChunkByChunkIndex(
 			}
 
 			// Update the current chunk with the neutral element for the validator index for the latest epoch written.
-			for s.params.chunkIndex(latestEpochWritten) == chunkIndex && latestEpochWritten <= currentEpoch {
+			for s.params.chunkIndex(epochToWrite) == chunkIndex && epochToWrite <= currentEpoch {
 				if err := setChunkRawDistance(
 					s.params,
 					currentChunk.Chunk(),
 					validatorIndex,
-					latestEpochWritten,
+					epochToWrite,
 					currentChunk.NeutralElement(),
 				); err != nil {
 					return nil, err
 				}
 
-				latestEpochWritten++
+				epochToWrite++
 			}
 
 			chunkByChunkIndex[chunkIndex] = currentChunk
