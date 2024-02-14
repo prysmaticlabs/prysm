@@ -171,7 +171,6 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 		t,
 		km.ListKeymanagerAccounts(cliCtx.Context,
 			keymanager.ListKeymanagerAccountConfig{
-				ShowDepositData: true,
 				ShowPrivateKeys: true,
 			}),
 	)
