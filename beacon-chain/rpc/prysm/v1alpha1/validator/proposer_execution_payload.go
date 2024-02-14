@@ -112,7 +112,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	if st.Version() >= version.Bellatrix {
 		finalizedBlockHash = vs.FinalizationFetcher.FinalizedBlockHash()
 		if features.Get().SafeHeadFCU {
-			safeBlockHash = vs.ForkchoiceFetcher.GetSafeHeadPayloadBlockHash()
+			safeBlockHash = vs.ForkchoiceFetcher.SafeHeadPayloadBlockHash()
 		} else {
 			safeBlockHash = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
 		}
