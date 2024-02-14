@@ -81,12 +81,16 @@ type MinSpanChunksSlice struct {
 	data   []uint16
 }
 
+var _ Chunker = (*MinSpanChunksSlice)(nil)
+
 // MaxSpanChunksSlice represents the same data structure as MinSpanChunksSlice however
 // keeps track of validator max spans for slashing detection instead.
 type MaxSpanChunksSlice struct {
 	params *Parameters
 	data   []uint16
 }
+
+var _ Chunker = (*MaxSpanChunksSlice)(nil)
 
 // EmptyMinSpanChunksSlice initializes a min span chunk of length C*K for
 // C = chunkSize and K = validatorChunkSize filled with neutral elements.
