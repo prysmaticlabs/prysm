@@ -9,7 +9,7 @@ import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "DebugProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -64,17 +64,17 @@ service Debug {
 
 message InclusionSlotRequest {
     uint64 id = 1;
-    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 }
 
 message InclusionSlotResponse {
-    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 }
 
 message BeaconStateRequest {
     oneof query_filter {
         // The slot corresponding to a desired beacon state.
-        uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+        uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
         // The block root corresponding to a desired beacon state.
         bytes block_root = 2;

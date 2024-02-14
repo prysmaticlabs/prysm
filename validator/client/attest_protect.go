@@ -6,10 +6,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/slashings"
-	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/slashings"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 	"go.opencensus.io/trace"
 )
 

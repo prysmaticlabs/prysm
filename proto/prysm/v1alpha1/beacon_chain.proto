@@ -24,7 +24,7 @@ import "proto/prysm/v1alpha1/beacon_block.proto";
 import "proto/prysm/v1alpha1/validator.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconChainProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -297,7 +297,7 @@ message ValidatorChangeSet {
 message ListIndexedAttestationsRequest {
     oneof query_filter {
         // Retrieve attestations by epoch processed.
-        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
         // Optional criteria to retrieve genesis epoch attestations.
         bool genesis_epoch = 2;
@@ -319,7 +319,7 @@ message ListAttestationsRequest {
 
     oneof query_filter {
         // Filter attestations by epoch processed.
-        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
         // Optional criteria to retrieve attestations from 0 epoch.
         bool genesis_epoch = 2;
@@ -367,11 +367,11 @@ message ListBlocksRequest {
         // Slot to lookup a block. If the slot is not yet finalized, this
         // criteria may yield multiple valid blocks if the node has seen blocks
         // from another fork.
-        uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+        uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
         // The epoch number for which to retrieve blocks. If specified, this
         // will return all blocks found within the span of the specified epoch.
-        uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
         // Optional criteria to retrieve genesis block.
         bool genesis = 4;
@@ -438,37 +438,37 @@ message BeaconBlockContainer {
 // Information about the head of the beacon chain.
 message ChainHead {
     // Slot of the head block.
-    uint64 head_slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 head_slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Epoch of the head block.
-    uint64 head_epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 head_epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     // 32 byte merkle tree root of the canonical head block in the beacon node.
     bytes head_block_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 
     // Most recent slot that contains the finalized block.
-    uint64 finalized_slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 finalized_slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Epoch of the finalized block.
-    uint64 finalized_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 finalized_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     // Most recent 32 byte finalized block root.
     bytes finalized_block_root = 6 [(ethereum.eth.ext.ssz_size) = "32"];
 
     // Most recent slot that contains the justified block.
-    uint64 justified_slot = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 justified_slot = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Epoch of the justified block.
-    uint64 justified_epoch = 8 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 justified_epoch = 8 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     // Most recent 32 byte justified block root.
     bytes justified_block_root = 9 [(ethereum.eth.ext.ssz_size) = "32"];
 
     // Most recent slot that contains the previous justified block.
-    uint64 previous_justified_slot = 10 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 previous_justified_slot = 10 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Epoch of the previous justified block.
-    uint64 previous_justified_epoch = 11 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 previous_justified_epoch = 11 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     // Previous 32 byte justified block root.
     bytes previous_justified_block_root = 12 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -480,7 +480,7 @@ message ChainHead {
 message ListCommitteesRequest {
     oneof query_filter {
         // Optional criteria to retrieve data at a specific epoch.
-        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
         // Optional criteria to retrieve genesis data.
         bool genesis = 2;
@@ -490,7 +490,7 @@ message ListCommitteesRequest {
 message BeaconCommittees {
     message CommitteeItem {
         // A committee is a list of validator indices participating in consensus at a slot.
-        repeated uint64 validator_indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+        repeated uint64 validator_indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
     }
 
     message CommitteesList {
@@ -499,7 +499,7 @@ message BeaconCommittees {
     }
 
     // The epoch for which the committees in the response belong to.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     // A map of validator committees by slot.
     map<uint64, CommitteesList> committees = 2;
@@ -511,7 +511,7 @@ message BeaconCommittees {
 message ListValidatorBalancesRequest {
     oneof query_filter {
         // Optional criteria to retrieve balances at a specific epoch.
-        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
         // Optional criteria to retrieve the genesis list of balances.
         bool genesis = 2;
@@ -521,7 +521,7 @@ message ListValidatorBalancesRequest {
     // epoch.
     repeated bytes public_keys = 3 [(ethereum.eth.ext.ssz_size) = "?,48"];
     // Validator indices to filter validators for the given epoch.
-    repeated uint64 indices = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 indices = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // The maximum number of Validators to return in the response.
     // This field is optional.
@@ -535,14 +535,14 @@ message ListValidatorBalancesRequest {
 
 message ValidatorBalances {
     // Epoch which the state was considered to determine the validator balances.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     message Balance {
         // Validator's 48 byte BLS public key.
         bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48"];
 
         // Validator's index in the validator set.
-        uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+        uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
         // Validator's balance in gwei.
         uint64 balance = 3;
@@ -566,7 +566,7 @@ message ListValidatorsRequest {
         // Optional criteria to retrieve validators at a specific epoch.
         // Omitting this field or setting it to zero will retrieve a response
         // with the current active validator set.
-        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
         // Optional criteria to retrieve the genesis set of validators.
         bool genesis = 2;
@@ -590,13 +590,13 @@ message ListValidatorsRequest {
 
     // Specify which validators you would like to retrieve by their indices.
     // This field is optional.
-    repeated uint64 indices = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 indices = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 }
 
 message GetValidatorRequest {
     oneof query_filter {
         // Validator index in the registry.
-        uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+        uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
         // 48 byte validator public key.
         bytes public_key = 2 [(ethereum.eth.ext.ssz_size) = "48"];
@@ -607,10 +607,10 @@ message Validators {
     // Epoch which the state was considered to determine the active validator
     // set. This field is not optional. Zero value epoch indicates the validator
     // set is from the Ethereum proof of stake genesis set.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     message ValidatorContainer {
-        uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+        uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
         Validator validator = 2;
     }
 
@@ -628,7 +628,7 @@ message Validators {
 message GetValidatorActiveSetChangesRequest {
     oneof query_filter {
         // Optional criteria to retrieve balances at a specific epoch.
-        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
         // Optional criteria to retrieve the genesis list of balances.
         bool genesis = 2;
@@ -638,38 +638,38 @@ message GetValidatorActiveSetChangesRequest {
 message ActiveSetChanges {
     // Epoch which the state was considered to determine the active validator
     // set.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     // 48 byte validator public keys that have been activated in the given epoch.
     repeated bytes activated_public_keys = 2 [(ethereum.eth.ext.ssz_size) = "?,48"];
 
     // Indices of validators activated in the given epoch.
-    repeated uint64 activated_indices = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 activated_indices = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 48 byte validator public keys that have been voluntarily exited in the given epoch.
     repeated bytes exited_public_keys = 4 [(ethereum.eth.ext.ssz_size) = "?,48"];
 
     // Indices of validators exited in the given epoch.
-    repeated uint64 exited_indices = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 exited_indices = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 48 byte validator public keys that have been slashed in the given epoch.
     repeated bytes slashed_public_keys = 6 [(ethereum.eth.ext.ssz_size) = "?,48"];
 
     // Indices of validators slashed in the given epoch.
-    repeated uint64 slashed_indices = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 slashed_indices = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 48 byte validator public keys that have been involuntarily ejected in this epoch.
     repeated bytes ejected_public_keys = 8 [(ethereum.eth.ext.ssz_size) = "?,48"];
 
     // Indices of validators ejected in the given epoch.
-    repeated uint64 ejected_indices = 9 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 ejected_indices = 9 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 }
 
 message ValidatorPerformanceRequest {
     // A list of 48 byte validator public keys.
     repeated bytes public_keys = 1 [deprecated = true];
     // A list of validator indices to retrieve performance by their indices.
-    repeated uint64 indices = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 indices = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 }
 
 message ValidatorPerformanceResponse {
@@ -679,11 +679,11 @@ message ValidatorPerformanceResponse {
     // The slot of when validator's attestation got included in the chain at previous epoch, the slot
     // is mapped 1-to-1 with the request's public keys.
     // Deprecated: This field can no longer be fetched from the beacon state after the Altair hard fork.
-    repeated uint64 inclusion_slots = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
+    repeated uint64 inclusion_slots = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot", deprecated = true];
     // The distance of when validator submitted and got included in the chain, the distance
     // is mapped 1-to-1 with the request's public keys.
     // Deprecated: This field can no longer be fetched from the beacon state after the Altair hard fork.
-    repeated uint64 inclusion_distances = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
+    repeated uint64 inclusion_distances = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot", deprecated = true];
     // Whether the list of validator recently correctly voted for source at previous epoch, the result
     // is mapped 1-to-1 with the request's public keys.
     repeated bool correctly_voted_source = 4;
@@ -727,17 +727,17 @@ message ValidatorQueue {
 
     // Ordered list of validator indices awaiting activation. 0th item in the list is the
     // next validator index to be processed.
-    repeated uint64 activation_validator_indices = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 activation_validator_indices = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // Ordered list of validator indices awaiting exit. 0th item in the list is the
     // next validator index to be processed.
-    repeated uint64 exit_validator_indices = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 exit_validator_indices = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 }
 
 message ListValidatorAssignmentsRequest {
     oneof query_filter {
         // Epoch to validator assignments for.
-        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
         // Whether or not to query for the genesis information.
         bool genesis = 2;
@@ -745,7 +745,7 @@ message ListValidatorAssignmentsRequest {
     // 48 byte validator public keys to filter assignments for the given epoch.
     repeated bytes public_keys = 3 [(ethereum.eth.ext.ssz_size) = "?,48"];
     // Validator indices to filter assignments for the given epoch.
-    repeated uint64 indices = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 indices = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // The maximum number of ValidatorAssignments to return in the response.
     // This field is optional.
@@ -763,28 +763,28 @@ message ValidatorAssignments {
         // they also attest and produce beacon chain blocks. This is a list of validator indices that
         // are in the same committee as requested validator, everyone in the committee is assigned to the
         // same slot and same committee.
-        repeated uint64 beacon_committees = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+        repeated uint64 beacon_committees = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
         // Committee index represents the committee of validator that's in.
-        uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.CommitteeIndex"];
+        uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.CommitteeIndex"];
 
         // Beacon chain slot in which the validator must perform its assigned
         // duty as an attester.
-        uint64 attester_slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+        uint64 attester_slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
         // Beacon chain slots in which the validator must perform its assigned
         // duty as a proposer.
-        repeated uint64 proposer_slots = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+        repeated uint64 proposer_slots = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
         // 48 byte BLS public key.
         bytes public_key = 5 [(ethereum.eth.ext.ssz_size) = "48", deprecated = true];
 
         // Validator index in the beacon state.
-        uint64 validator_index = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+        uint64 validator_index = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
     }
 
     // The epoch for which this set of validator assignments is valid.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     repeated CommitteeAssignment assignments = 2;
 
@@ -802,7 +802,7 @@ message GetValidatorParticipationRequest {
     option deprecated = true;
     oneof query_filter {
         // Epoch to request participation information.
-        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
         // Whether or not to query for the genesis information.
         bool genesis = 2;
@@ -813,7 +813,7 @@ message GetValidatorParticipationRequest {
 message ValidatorParticipationResponse {
     option deprecated = true;
     // Epoch which this message is applicable.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     // Whether or not epoch has been finalized.
     bool finalized = 2;
@@ -855,26 +855,26 @@ message BeaconConfig {
 message SubmitSlashingResponse {
     // Indices of the validators to be slashed by the submitted
     // proposer/attester slashing object.
-    repeated uint64 slashed_indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 slashed_indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 }
 
 message IndividualVotesRequest {
     // Epoch of the request.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
     // Validator 48 byte BLS public keys to filter validators for the given epoch.
     repeated bytes public_keys = 2;
     // Validator indices to filter validators for the given epoch.
-    repeated uint64 indices = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 indices = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 }
 
 message IndividualVotesRespond {
     message IndividualVote {
         // The epoch of the vote status request.
-        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
         // The public key of the vote status request.
         bytes public_key = 2;
         // The validator index of the request.
-        uint64 validator_index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+        uint64 validator_index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
         // Has the validator been slashed.
         bool is_slashed = 4;
         // Is the validator withdrawable.
@@ -896,9 +896,9 @@ message IndividualVotesRespond {
         // The current effective balance of the validator.
         uint64 current_epoch_effective_balance_gwei = 13;
         // The slots of when the validator's attestation got included in the block. Only available in phase0.
-        uint64 inclusion_slot = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
+        uint64 inclusion_slot = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot", deprecated = true];
         // How many slots have passed until the validator's attestation got included in the block. Only available in phase0.
-        uint64 inclusion_distance = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot", deprecated = true];
+        uint64 inclusion_distance = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot", deprecated = true];
         // The inactivity score of the validator tracks validator participation. [New in Altair]
         uint64 inactivity_score = 16;
     }
