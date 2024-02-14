@@ -1015,6 +1015,39 @@ func Test_epochUpdateForValidators(t *testing.T) {
 				0: {neutralMax, neutralMax, neutralMax, 55, neutralMax, neutralMax, neutralMax, 55},
 			},
 		},
+		{
+			name:                               "start with some data - high latest updated epoch",
+			chunkSize:                          4,
+			validatorChunkSize:                 2,
+			historyLength:                      12,
+			currentEpoch:                       16,
+			validatorChunkIndex:                21,
+			latestUpdatedEpochByValidatorIndex: map[primitives.ValidatorIndex]primitives.Epoch{42: 2, 43: 3},
+			initialMinChunkByChunkIndex: map[uint64][]uint16{
+				// | validator 42 |  validator 43 |
+				0: {55, 55, 55, 55, 55, 55, 55, 55},
+				1: {66, 66, 66, 66, 66, 66, 66, 66},
+				2: {77, 77, 77, 77, 77, 77, 77, 77},
+			},
+			expectedMinChunkByChunkIndex: map[uint64][]uint16{
+				// |                  validator 42                |                  validator 43                 |
+				0: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+				1: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+				2: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+			},
+			initialMaxChunkByChunkIndex: map[uint64][]uint16{
+				// | validator 42 |  validator 43 |
+				0: {55, 55, 55, 55, 55, 55, 55, 55},
+				1: {66, 66, 66, 66, 66, 66, 66, 66},
+				2: {77, 77, 77, 77, 77, 77, 77, 77},
+			},
+			expectedMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |                  validator 42                |                  validator 43                 |
+				0: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+				1: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+			},
+		},
 	}
 
 	for _, tt := range testCases {

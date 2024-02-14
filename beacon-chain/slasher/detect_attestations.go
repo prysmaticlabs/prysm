@@ -247,8 +247,6 @@ func (s *Service) updatedChunkByChunkIndex(
 	currentEpoch primitives.Epoch,
 	validatorChunkIndex uint64,
 ) (map[uint64]Chunker, error) {
-	var err error
-
 	chunkByChunkIndex := map[uint64]Chunker{}
 
 	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
@@ -257,9 +255,19 @@ func (s *Service) updatedChunkByChunkIndex(
 		latestEpochWritten, ok := s.latestEpochWrittenForValidator[validatorIndex]
 
 		// Start from the epoch just after the latest epoch written.
-		epochToWrite := latestEpochWritten + 1
+		epochToWrite, err := latestEpochWritten.SafeAdd(1)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not add 1 to latest epoch written")
+		}
+
 		if !ok {
 			epochToWrite = 0
+		}
+
+		// It is useless to update more than `historyLength` epochs, since
+		// the chunks are circular and we will be overwritten at least one.
+		if currentEpoch-epochToWrite >= s.params.historyLength {
+			epochToWrite = currentEpoch + 1 - s.params.historyLength
 		}
 
 		for epochToWrite <= currentEpoch {
