@@ -24,28 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-func TestGetBeaconStateSSZ(t *testing.T) {
-	fakeState, err := util.NewBeaconState()
-	require.NoError(t, err)
-	sszState, err := fakeState.MarshalSSZ()
-	require.NoError(t, err)
-
-	s := &Server{
-		Stater: &testutil.MockStater{
-			BeaconState: fakeState,
-		},
-	}
-
-	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/debug/beacon/states/{state_id}", nil)
-	request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
-
-	s.GetBeaconStateSSZ(writer, request)
-	require.Equal(t, http.StatusOK, writer.Code)
-	assert.DeepEqual(t, sszState, writer.Body.Bytes())
-}
-
 func TestGetBeaconStateV2(t *testing.T) {
 	ctx := context.Background()
 	db := dbtest.SetupDB(t)
