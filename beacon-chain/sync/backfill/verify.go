@@ -9,7 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
@@ -17,8 +19,37 @@ var errInvalidBatchChain = errors.New("parent_root of block does not match the p
 var errProposerIndexTooHigh = errors.New("proposer index not present in origin state")
 var errUnknownDomain = errors.New("runtime error looking up signing domain for fork")
 
-// VerifiedROBlocks represents a slice of blocks that have passed signature verification.
-type VerifiedROBlocks []blocks.ROBlock
+// verifiedROBlocks represents a slice of blocks that have passed signature verification.
+type verifiedROBlocks []blocks.ROBlock
+
+func (v verifiedROBlocks) blobIdents(retentionStart primitives.Slot) ([]blobSummary, error) {
+	// early return if the newest block is outside the retention window
+	if len(v) > 0 && v[len(v)-1].Block().Slot() < retentionStart {
+		return nil, nil
+	}
+	bs := make([]blobSummary, 0)
+	for i := range v {
+		if v[i].Block().Slot() < retentionStart {
+			continue
+		}
+		if v[i].Block().Version() < version.Deneb {
+			continue
+		}
+		c, err := v[i].Block().Body().BlobKzgCommitments()
+		if err != nil {
+			return nil, errors.Wrapf(err, "unexpected error checking commitments for block root %#x", v[i].Root())
+		}
+		if len(c) == 0 {
+			continue
+		}
+		for ci := range c {
+			bs = append(bs, blobSummary{
+				blockRoot: v[i].Root(), signature: v[i].Signature(),
+				index: uint64(ci), commitment: bytesutil.ToBytes48(c[ci])})
+		}
+	}
+	return bs, nil
+}
 
 type verifier struct {
 	keys   [][fieldparams.BLSPubkeyLength]byte
@@ -27,7 +58,7 @@ type verifier struct {
 }
 
 // TODO: rewrite this to use ROBlock.
-func (vr verifier) verify(blks []interfaces.ReadOnlySignedBeaconBlock) (VerifiedROBlocks, error) {
+func (vr verifier) verify(blks []interfaces.ReadOnlySignedBeaconBlock) (verifiedROBlocks, error) {
 	var err error
 	result := make([]blocks.ROBlock, len(blks))
 	sigSet := bls.NewSet()
