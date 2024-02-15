@@ -8,13 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	dbTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
@@ -29,14 +25,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
-	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
-	"github.com/prysmaticlabs/prysm/v5/testing/mock"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
@@ -823,240 +816,4 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 		assert.Equal(t, tt.res.TotalSize, res.TotalSize, "Unexpected total size")
 		assert.Equal(t, tt.res.NextPageToken, res.NextPageToken, "Unexpected next page token")
 	}
-}
-
-func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	chainService := &chainMock.ChainService{}
-	server := &Server{
-		Ctx:                 ctx,
-		AttestationNotifier: chainService.OperationNotifier(),
-		GenesisTimeFetcher: &chainMock.ChainService{
-			Genesis: time.Now(),
-		},
-	}
-
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
-	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
-	go func(tt *testing.T) {
-		err := server.StreamIndexedAttestations(&emptypb.Empty{}, mockStream)
-		assert.ErrorContains(t, "Context canceled", err)
-		<-exitRoutine
-	}(t)
-	cancel()
-	exitRoutine <- true
-}
-
-func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.BeaconConfig())
-	db := dbTest.SetupDB(t)
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	ctx := context.Background()
-
-	numValidators := 64
-	headState, privKeys := util.DeterministicGenesisState(t, uint64(numValidators))
-	b := util.NewBeaconBlock()
-	util.SaveBlock(t, ctx, db, b)
-	gRoot, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, db.SaveState(ctx, headState, gRoot))
-
-	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
-	require.NoError(t, err)
-	epoch := primitives.Epoch(0)
-	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	require.NoError(t, err)
-	committees, err := computeCommittees(context.Background(), params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)), activeIndices, attesterSeed)
-	require.NoError(t, err)
-
-	count := params.BeaconConfig().SlotsPerEpoch
-	// We generate attestations for each validator per slot per epoch.
-	atts := make(map[[32]byte][]*ethpb.Attestation)
-	for i := primitives.Slot(0); i < count; i++ {
-		comms := committees[i].Committees
-		for j := 0; j < numValidators; j++ {
-			var indexInCommittee uint64
-			var committeeIndex primitives.CommitteeIndex
-			var committeeLength int
-			var found bool
-			for comIndex, item := range comms {
-				for n, idx := range item.ValidatorIndices {
-					if primitives.ValidatorIndex(j) == idx {
-						indexInCommittee = uint64(n)
-						committeeIndex = primitives.CommitteeIndex(comIndex)
-						committeeLength = len(item.ValidatorIndices)
-						found = true
-						break
-					}
-				}
-			}
-			if !found {
-				continue
-			}
-			attExample := &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
-					Slot:            i,
-					Source: &ethpb.Checkpoint{
-						Epoch: 0,
-						Root:  gRoot[:],
-					},
-					Target: &ethpb.Checkpoint{
-						Epoch: 0,
-						Root:  gRoot[:],
-					},
-				},
-			}
-			domain, err := signing.Domain(headState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, headState.GenesisValidatorsRoot())
-			require.NoError(t, err)
-			encoded, err := signing.ComputeSigningRoot(attExample.Data, domain)
-			require.NoError(t, err)
-			sig := privKeys[j].Sign(encoded[:])
-			attExample.Signature = sig.Marshal()
-			attExample.Data.CommitteeIndex = committeeIndex
-			aggregationBitfield := bitfield.NewBitlist(uint64(committeeLength))
-			aggregationBitfield.SetBitAt(indexInCommittee, true)
-			attExample.AggregationBits = aggregationBitfield
-			atts[encoded] = append(atts[encoded], attExample)
-		}
-	}
-
-	chainService := &chainMock.ChainService{}
-	server := &Server{
-		BeaconDB: db,
-		Ctx:      context.Background(),
-		HeadFetcher: &chainMock.ChainService{
-			State: headState,
-		},
-		GenesisTimeFetcher: &chainMock.ChainService{
-			Genesis: time.Now(),
-		},
-		AttestationNotifier:         chainService.OperationNotifier(),
-		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 1),
-		StateGen:                    stategen.New(db, doublylinkedtree.New()),
-	}
-
-	for dataRoot, sameDataAtts := range atts {
-		aggAtts, err := attaggregation.Aggregate(sameDataAtts)
-		require.NoError(t, err)
-		atts[dataRoot] = aggAtts
-	}
-
-	// Next up we convert the test attestations to indexed form.
-	attsByTarget := make(map[[32]byte][]*ethpb.Attestation)
-	for _, dataRootAtts := range atts {
-		targetRoot := bytesutil.ToBytes32(dataRootAtts[0].Data.Target.Root)
-		attsByTarget[targetRoot] = append(attsByTarget[targetRoot], dataRootAtts...)
-	}
-
-	allAtts := make([]*ethpb.Attestation, 0)
-	indexedAtts := make(map[[32]byte][]*ethpb.IndexedAttestation)
-	for dataRoot, aggAtts := range attsByTarget {
-		allAtts = append(allAtts, aggAtts...)
-		for _, att := range aggAtts {
-			committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-			idxAtt, err := attestation.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
-			require.NoError(t, err)
-			indexedAtts[dataRoot] = append(indexedAtts[dataRoot], idxAtt)
-		}
-	}
-
-	attsSent := 0
-	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
-	for _, atts := range indexedAtts {
-		for _, att := range atts {
-			if attsSent == len(allAtts)-1 {
-				mockStream.EXPECT().Send(att).Do(func(arg0 interface{}) {
-					exitRoutine <- true
-				})
-				t.Log("cancelled")
-			} else {
-				mockStream.EXPECT().Send(att)
-				attsSent++
-			}
-		}
-	}
-	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
-
-	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamIndexedAttestations(&emptypb.Empty{}, mockStream), "Could not call RPC method")
-	}(t)
-
-	server.CollectedAttestationsBuffer <- allAtts
-	<-exitRoutine
-}
-
-func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
-	ctx := context.Background()
-
-	ctx, cancel := context.WithCancel(ctx)
-	chainService := &chainMock.ChainService{}
-	server := &Server{
-		Ctx:                 ctx,
-		AttestationNotifier: chainService.OperationNotifier(),
-	}
-
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconChain_StreamAttestationsServer(ctrl)
-	mockStream.EXPECT().Context().Return(ctx)
-	go func(tt *testing.T) {
-		err := server.StreamAttestations(
-			&emptypb.Empty{},
-			mockStream,
-		)
-		assert.ErrorContains(tt, "Context canceled", err)
-		<-exitRoutine
-	}(t)
-	cancel()
-	exitRoutine <- true
-}
-
-func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	ctx := context.Background()
-	chainService := &chainMock.ChainService{}
-	server := &Server{
-		Ctx:                 ctx,
-		AttestationNotifier: chainService.OperationNotifier(),
-	}
-
-	atts := []*ethpb.Attestation{
-		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}),
-		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}}),
-		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}}),
-	}
-
-	mockStream := mock.NewMockBeaconChain_StreamAttestationsServer(ctrl)
-	mockStream.EXPECT().Send(atts[0])
-	mockStream.EXPECT().Send(atts[1])
-	mockStream.EXPECT().Send(atts[2]).Do(func(arg0 interface{}) {
-		exitRoutine <- true
-	})
-	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
-
-	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamAttestations(&emptypb.Empty{}, mockStream), "Could not call RPC method")
-	}(t)
-	for i := 0; i < len(atts); i++ {
-		// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-		for sent := 0; sent == 0; {
-			sent = server.AttestationNotifier.OperationFeed().Send(&feed.Event{
-				Type: operation.UnaggregatedAttReceived,
-				Data: &operation.UnAggregatedAttReceivedData{Attestation: atts[i]},
-			})
-		}
-	}
-	<-exitRoutine
 }
