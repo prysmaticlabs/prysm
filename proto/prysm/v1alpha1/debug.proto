@@ -51,15 +51,6 @@ service Debug {
             get: "/eth/v1alpha1/debug/peer"
         };
     }
-
-    // Returns the inclusion slot of a given attester id and slot.
-    // DEPRECATED: This endpoint doesn't appear to be used and have been marked for deprecation.
-    rpc GetInclusionSlot(InclusionSlotRequest) returns (InclusionSlotResponse) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/debug/inclusion"
-        };
-    }
 }
 
 message InclusionSlotRequest {

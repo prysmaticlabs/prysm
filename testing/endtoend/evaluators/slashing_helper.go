@@ -55,7 +55,7 @@ func (h *doubleAttestationHelper) setup(ctx context.Context) error {
 
 	var committeeIndex primitives.CommitteeIndex
 	var committee []primitives.ValidatorIndex
-	for _, duty := range duties.Duties {
+	for _, duty := range duties.CurrentEpochDuties {
 		if duty.AttesterSlot == chainHead.HeadSlot {
 			committeeIndex = duty.CommitteeIndex
 			committee = duty.Committee
