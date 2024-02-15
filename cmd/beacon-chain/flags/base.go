@@ -152,7 +152,7 @@ var (
 	// BlockBatchLimit specifies the requested block batch size.
 	BlockBatchLimit = &cli.IntFlag{
 		Name:  "block-batch-limit",
-		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
+		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch. Maximum 128",
 		Value: 64,
 	}
 	// BlockBatchLimitBurstFactor specifies the factor by which block batch size may increase.
