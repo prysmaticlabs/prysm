@@ -171,7 +171,6 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 		t,
 		km.ListKeymanagerAccounts(cliCtx.Context,
 			keymanager.ListKeymanagerAccountConfig{
-				ShowDepositData: true,
 				ShowPrivateKeys: true,
 			}),
 	)
@@ -190,36 +189,30 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 		(keymanager kind) local wallet
 
 		Showing 5 validator accounts
-		View the eth1 deposit transaction data for your accounts by running `validator accounts list --show-deposit-data
 
 		Account 0 | fully-evolving-fawn
 		[validating public key] 0xa6669aa0381c06470b9a6faf8abf4194ad5148a62e461cbef5a6bc4d292026f58b992c4cf40e50552d301cef19da75b9
 		[validating private key] 0x50cabc13435fcbde9d240fe720aff84f8557a6c1c445211b904f1a9620668241
-		If you imported your account coming from the Ethereum launchpad, you will find your deposit_data.json in the eth2.0-deposit-cli's validator_keys folder
 
 
 		Account 1 | preferably-mighty-heron
 		[validating public key] 0xa7ea37fa2e2272762ffed8486f09b13cd56d76cf03a2a3e75bc36bd1719add84c20597671750be5bc1ccd3dadfebc30f
 		[validating private key] 0x44563da0d11bc6a7219d18217cce8cdd064de3ebee5cdcf8d901c2fae7545116
-		If you imported your account coming from the Ethereum eth2 launchpad, you will find your deposit_data.json in the eth2.0-deposit-cli's validator_keys folder
 
 
 		Account 2 | conversely-good-monitor
 		[validating public key] 0xa4c63619fb8cb87f6dd1686c9255f99c68066797bf284488ecbab64b1926d33eefdf96d1ee89ae4a89e84e7fb019d5e5
 		[validating private key] 0x4448d0ab17ecd73bbb636ddbfc89b181731f6cd88c33f2cecc0d04cba1a18447
-		If you imported your account coming from the Ethereum eth2 launchpad, you will find your deposit_data.json in the eth2.0-deposit-cli's validator_keys folder
 
 
 		Account 3 | rarely-joint-mako
 		[validating public key] 0x91dd8d5bfc22aea398740ebcea66ced159df8d3f1a066d7aba9f0bef4ed6d9687fc1fd1c87bd2b6d12b0788dfb6a7d20
 		[validating private key] 0x4d1944bd7375185f70b3e70c68d9e6307f2009de3a4cf47ca5217443ddf81fc9
-		If you imported your account coming from the Ethereum eth2 launchpad, you will find your deposit_data.json in the eth2.0-deposit-cli's validator_keys folder
 
 
 		Account 4 | mainly-useful-catfish
 		[validating public key] 0x83c4d722a98b599e2666bbe35146ff44800256190bc662f2dd5efbc0c4c0d57e5d297487a4f9c21a932d3b1b40e8379f
 		[validating private key] 0x284cd65030496bf82ee2d52963cd540a1abb2cc738b8164901bbe7e2df4d57bd
-		If you imported your account coming from the Ethereum eth2 launchpad, you will find your deposit_data.json in the eth2.0-deposit-cli's validator_keys folder
 
 
 
@@ -227,7 +220,7 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 
 	// Expected output format definition
 	const prologLength = 4
-	const accountLength = 6
+	const accountLength = 4
 	const epilogLength = 2
 	const nameOffset = 1
 	const keyOffset = 2

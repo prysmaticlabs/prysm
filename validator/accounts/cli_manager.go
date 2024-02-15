@@ -41,7 +41,6 @@ type CLIManager struct {
 	wallet               *wallet.Wallet
 	keymanager           keymanager.IKeymanager
 	keymanagerKind       keymanager.Kind
-	showDepositData      bool
 	showPrivateKeys      bool
 	listValidatorIndices bool
 	deletePublicKeys     bool

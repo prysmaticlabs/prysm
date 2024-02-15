@@ -89,7 +89,6 @@ type PublicKeyDeleter interface {
 }
 
 type ListKeymanagerAccountConfig struct {
-	ShowDepositData          bool
 	ShowPrivateKeys          bool
 	WalletAccountsDir        string
 	KeymanagerConfigFileName string

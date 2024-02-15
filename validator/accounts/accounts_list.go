@@ -23,7 +23,6 @@ func (acm *CLIManager) List(ctx context.Context) error {
 	}
 	return acm.keymanager.ListKeymanagerAccounts(ctx,
 		keymanager.ListKeymanagerAccountConfig{
-			ShowDepositData:          acm.showDepositData,
 			ShowPrivateKeys:          acm.showPrivateKeys,
 			WalletAccountsDir:        acm.wallet.AccountsDir(),
 			KeymanagerConfigFileName: wallet.KeymanagerConfigFileName,

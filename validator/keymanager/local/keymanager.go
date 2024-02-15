@@ -427,15 +427,6 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 				fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), privateKeys[i])
 			}
 		}
-		if !cfg.ShowDepositData {
-			continue
-		}
-		fmt.Printf(
-			"%s\n",
-			au.BrightRed("If you imported your account coming from the eth2 launchpad, you will find your "+
-				"deposit_data.json in the eth2.0-deposit-cli's validator_keys folder"),
-		)
-		fmt.Println("")
 	}
 	fmt.Println("")
 	return nil
