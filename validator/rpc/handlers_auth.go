@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
 	"go.opencensus.io/trace"
 )
 

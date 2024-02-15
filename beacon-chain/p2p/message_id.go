@@ -2,13 +2,13 @@ package p2p
 
 import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
 )
 
 // MsgID is a content addressable ID function.

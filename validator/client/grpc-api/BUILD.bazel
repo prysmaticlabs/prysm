@@ -8,7 +8,7 @@ go_library(
         "grpc_prysm_beacon_chain_client.go",
         "grpc_validator_client.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/validator/client/grpc-api",
+    importpath = "github.com/prysmaticlabs/prysm/v5/validator/client/grpc-api",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/rpc/eth/helpers:go_default_library",

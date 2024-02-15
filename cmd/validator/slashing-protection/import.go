@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/userprompt"
-	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
-	slashingprotection "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	slashingprotection "github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history"
 	"github.com/urfave/cli/v2"
 )
 

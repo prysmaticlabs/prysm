@@ -13,9 +13,9 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // MultiAddressBuilder takes in an ip address string and port to produce a go multiaddr format.

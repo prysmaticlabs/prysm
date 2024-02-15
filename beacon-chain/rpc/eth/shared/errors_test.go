@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
 
 // TestWriteStateFetchError tests the WriteStateFetchError function

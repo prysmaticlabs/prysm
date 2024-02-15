@@ -1,4 +1,4 @@
-module github.com/prysmaticlabs/prysm/v4
+module github.com/prysmaticlabs/prysm/v5
 
 go 1.21
 
