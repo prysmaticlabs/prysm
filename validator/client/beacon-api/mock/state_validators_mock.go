@@ -9,8 +9,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	structs "github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	structs "github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	primitives "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // MockStateValidatorsProvider is a mock of StateValidatorsProvider interface.

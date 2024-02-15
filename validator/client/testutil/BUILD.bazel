@@ -7,7 +7,7 @@ go_library(
         "helper.go",
         "mock_validator.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/validator/client/testutil",
+    importpath = "github.com/prysmaticlabs/prysm/v5/validator/client/testutil",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//config/fieldparams:go_default_library",

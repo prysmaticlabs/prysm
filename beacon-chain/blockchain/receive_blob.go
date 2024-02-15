@@ -3,7 +3,7 @@ package blockchain
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 )
 
 // SendNewBlobEvent sends a message to the BlobNotifier channel that the blob

@@ -9,24 +9,24 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/blob"
-	rpcBuilder "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
-	lightclient "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/light-client"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
-	beaconprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon"
-	nodeprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/node"
-	validatorprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/blob"
+	rpcBuilder "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/builder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/debug"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/events"
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/light-client"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/node"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/rewards"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/validator"
+	beaconprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/beacon"
+	nodeprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/node"
+	validatorprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/validator"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -161,11 +161,15 @@ func TestServer_InitializeRoutes(t *testing.T) {
 	}
 
 	prysmCustomRoutes := map[string][]string{
-		"/prysm/v1/beacon/weak_subjectivity":               {http.MethodGet},
-		"/prysm/node/trusted_peers":                        {http.MethodGet, http.MethodPost},
-		"/prysm/node/trusted_peers/{peer_id}":              {http.MethodDelete},
-		"/prysm/validators/performance":                    {http.MethodPost},
-		"/eth/v1/beacon/states/{state_id}/validator_count": {http.MethodGet},
+		"/prysm/v1/beacon/weak_subjectivity":                 {http.MethodGet},
+		"/prysm/node/trusted_peers":                          {http.MethodGet, http.MethodPost},
+		"/prysm/v1/node/trusted_peers":                       {http.MethodGet, http.MethodPost},
+		"/prysm/node/trusted_peers/{peer_id}":                {http.MethodDelete},
+		"/prysm/v1/node/trusted_peers/{peer_id}":             {http.MethodDelete},
+		"/prysm/validator/performance":                       {http.MethodPost},
+		"/prysm/v1/validator/performance":                    {http.MethodPost},
+		"/eth/v1/beacon/states/{state_id}/validator_count":   {http.MethodGet},
+		"/prysm/v1/beacon/states/{state_id}/validator_count": {http.MethodGet},
 	}
 
 	wantRouteList := combineMaps(beaconRoutes, builderRoutes, configRoutes, debugRoutes, eventsRoutes, nodeRoutes, validatorRoutes, prysmCustomRoutes)
