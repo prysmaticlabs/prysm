@@ -1,4 +1,4 @@
-package validator
+package beacon
 
 import (
 	"fmt"
@@ -50,7 +50,7 @@ import (
 //		]
 //	}
 func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.GetValidatorCount")
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorCount")
 	defer span.End()
 
 	stateID := mux.Vars(r)["state_id"]

@@ -15,19 +15,6 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/config"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/events"
-	beaconprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/beacon"
-	nodeprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/node"
-	validatorprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/validator"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/plugin/ocgrpc"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/peer"
-	"google.golang.org/grpc/reflection"
-
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
@@ -36,6 +23,7 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
@@ -47,16 +35,21 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/blob"
 	rpcBuilder "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/builder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/debug"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/events"
 	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/light-client"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
+	beaconprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/beacon"
+	nodeprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/node"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/v1alpha1/validator"
+	validatorprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
@@ -65,6 +58,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/io/logs"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/plugin/ocgrpc"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/reflection"
 )
 
 const attestationBufferSize = 100
@@ -301,18 +300,22 @@ func (s *Service) initializeDebugServerRoutes(debugServer *debug.Server) {
 // prysm internal routes
 func (s *Service) initializePrysmBeaconServerRoutes(beaconServerPrysm *beaconprysm.Server) {
 	s.cfg.Router.HandleFunc("/prysm/v1/beacon/weak_subjectivity", beaconServerPrysm.GetWeakSubjectivity).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", beaconServerPrysm.GetValidatorCount).Methods(http.MethodGet) // TODO: deprecate in Swagger, remove in v6
+	s.cfg.Router.HandleFunc("/prysm/v1/beacon/states/{state_id}/validator_count", beaconServerPrysm.GetValidatorCount).Methods(http.MethodGet)
 }
 
 func (s *Service) initializePrysmNodeServerRoutes(nodeServerPrysm *nodeprysm.Server) {
-	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods(http.MethodGet)
-	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost)
-	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete)
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods(http.MethodGet) // TODO: deprecate in Swagger, remove in v6
+	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost) // TODO: deprecate in Swagger, remove in v6
+	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete) // TODO: deprecate in Swagger, remove in v6
+	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete)
 }
 
 func (s *Service) initializePrysmValidatorServerRoutes(validatorServerPrysm *validatorprysm.Server) {
-	s.cfg.Router.HandleFunc("/prysm/validators/performance", validatorServerPrysm.GetValidatorPerformance).Methods(http.MethodPost)
-	// /eth/v1/beacon/states/{state_id}/validator_count is not a beacon API, it's a custom endpoint
-	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", validatorServerPrysm.GetValidatorCount).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/prysm/validator/performance", validatorServerPrysm.GetValidatorPerformance).Methods(http.MethodPost) // TODO: deprecate in Swagger, remove in v6
+	s.cfg.Router.HandleFunc("/prysm/v1/validator/performance", validatorServerPrysm.GetValidatorPerformance).Methods(http.MethodPost)
 }
 
 // Start the gRPC server.
@@ -563,6 +566,9 @@ func (s *Service) Start() {
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		CanonicalHistory:      ch,
 		BeaconDB:              s.cfg.BeaconDB,
+		Stater:                stater,
+		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 	})
 
 	s.initializePrysmNodeServerRoutes(&nodeprysm.Server{
@@ -577,17 +583,7 @@ func (s *Service) Start() {
 		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
 	})
 
-	s.initializePrysmValidatorServerRoutes(&validatorprysm.Server{
-		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
-		HeadFetcher:           s.cfg.HeadFetcher,
-		SyncChecker:           s.cfg.SyncService,
-		CoreService:           coreService,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		Stater:                stater,
-		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
-		BeaconDB:              s.cfg.BeaconDB,
-		FinalizationFetcher:   s.cfg.FinalizationFetcher,
-	})
+	s.initializePrysmValidatorServerRoutes(&validatorprysm.Server{CoreService: coreService})
 
 	go func() {
 		if s.listener != nil {
