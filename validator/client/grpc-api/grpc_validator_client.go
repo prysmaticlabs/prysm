@@ -14,8 +14,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
 )
 
 type grpcValidatorClient struct {
