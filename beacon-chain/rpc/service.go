@@ -49,6 +49,7 @@ import (
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/v1alpha1/validator"
+	validatorprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
@@ -301,8 +302,6 @@ func (s *Service) initializePrysmBeaconServerRoutes(beaconServerPrysm *beaconpry
 	s.cfg.Router.HandleFunc("/prysm/v1/beacon/weak_subjectivity", beaconServerPrysm.GetWeakSubjectivity).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", beaconServerPrysm.GetValidatorCount).Methods(http.MethodGet) // TODO: deprecate in Swagger, remove in v6
 	s.cfg.Router.HandleFunc("/prysm/v1/beacon/states/{state_id}/validator_count", beaconServerPrysm.GetValidatorCount).Methods(http.MethodGet)
-	s.cfg.Router.HandleFunc("/prysm/validator/performance", beaconServerPrysm.GetValidatorPerformance).Methods(http.MethodPost) // TODO: deprecate in Swagger, remove in v6
-	s.cfg.Router.HandleFunc("/prysm/v1/beacon/validator_performance", beaconServerPrysm.GetValidatorPerformance).Methods(http.MethodPost)
 }
 
 func (s *Service) initializePrysmNodeServerRoutes(nodeServerPrysm *nodeprysm.Server) {
@@ -312,6 +311,11 @@ func (s *Service) initializePrysmNodeServerRoutes(nodeServerPrysm *nodeprysm.Ser
 	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete) // TODO: deprecate in Swagger, remove in v6
 	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete)
+}
+
+func (s *Service) initializePrysmValidatorServerRoutes(validatorServerPrysm *validatorprysm.Server) {
+	s.cfg.Router.HandleFunc("/prysm/validator/performance", validatorServerPrysm.GetValidatorPerformance).Methods(http.MethodPost) // TODO: deprecate in Swagger, remove in v6
+	s.cfg.Router.HandleFunc("/prysm/v1/validator/performance", validatorServerPrysm.GetValidatorPerformance).Methods(http.MethodPost)
 }
 
 // Start the gRPC server.
@@ -565,7 +569,6 @@ func (s *Service) Start() {
 		Stater:                stater,
 		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
-		CoreService:           coreService,
 	})
 
 	s.initializePrysmNodeServerRoutes(&nodeprysm.Server{
@@ -579,6 +582,8 @@ func (s *Service) Start() {
 		HeadFetcher:               s.cfg.HeadFetcher,
 		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
 	})
+
+	s.initializePrysmValidatorServerRoutes(&validatorprysm.Server{CoreService: coreService})
 
 	go func() {
 		if s.listener != nil {

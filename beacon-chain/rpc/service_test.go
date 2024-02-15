@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/validator"
 	beaconprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/beacon"
 	nodeprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/node"
+	validatorprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -67,6 +68,7 @@ func TestServer_InitializeRoutes(t *testing.T) {
 	//prysm internal
 	s.initializePrysmBeaconServerRoutes(&beaconprysm.Server{})
 	s.initializePrysmNodeServerRoutes(&nodeprysm.Server{})
+	s.initializePrysmValidatorServerRoutes(&validatorprysm.Server{})
 
 	beaconRoutes := map[string][]string{
 		"/eth/v1/beacon/genesis":                                     {http.MethodGet},
@@ -165,7 +167,7 @@ func TestServer_InitializeRoutes(t *testing.T) {
 		"/prysm/node/trusted_peers/{peer_id}":                {http.MethodDelete},
 		"/prysm/v1/node/trusted_peers/{peer_id}":             {http.MethodDelete},
 		"/prysm/validator/performance":                       {http.MethodPost},
-		"/prysm/v1/beacon/validator_performance":             {http.MethodPost},
+		"/prysm/v1/validator/performance":                    {http.MethodPost},
 		"/eth/v1/beacon/states/{state_id}/validator_count":   {http.MethodGet},
 		"/prysm/v1/beacon/states/{state_id}/validator_count": {http.MethodGet},
 	}

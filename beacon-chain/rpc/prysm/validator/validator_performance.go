@@ -1,4 +1,4 @@
-package beacon
+package validator
 
 import (
 	"encoding/json"
