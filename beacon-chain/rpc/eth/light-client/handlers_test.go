@@ -11,19 +11,20 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
@@ -70,7 +71,7 @@ func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
 
 	s.GetLightClientBootstrap(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &LightClientBootstrapResponse{}
+	resp := &structs.LightClientBootstrapResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "capella", resp.Version)
 	require.Equal(t, hexutil.Encode(header.Header.BodyRoot), resp.Data.Header.BodyRoot)
@@ -171,7 +172,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRange(t *testing.T) {
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp []LightClientUpdateWithVersion
+	var resp []structs.LightClientUpdateWithVersion
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	require.Equal(t, 1, len(resp))
 	require.Equal(t, "capella", resp[0].Version)
@@ -274,7 +275,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCount(t *tes
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp []LightClientUpdateWithVersion
+	var resp []structs.LightClientUpdateWithVersion
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	require.Equal(t, 1, len(resp)) // Even with big count input, the response is still the max available period, which is 1 in test case.
 	require.Equal(t, "capella", resp[0].Version)
@@ -377,7 +378,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooEarlyPeriod(t *testi
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp []LightClientUpdateWithVersion
+	var resp []structs.LightClientUpdateWithVersion
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	require.Equal(t, 1, len(resp))
 	require.Equal(t, "capella", resp[0].Version)
@@ -480,7 +481,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigCount(t *testing.
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp []LightClientUpdateWithVersion
+	var resp []structs.LightClientUpdateWithVersion
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	require.Equal(t, 1, len(resp))
 	require.Equal(t, "capella", resp[0].Version)
@@ -684,7 +685,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
 	s.GetLightClientFinalityUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &LightClientUpdateWithVersion{}
+	resp := &structs.LightClientUpdateWithVersion{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "capella", resp.Version)
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
@@ -790,7 +791,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
 	s.GetLightClientOptimisticUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &LightClientUpdateWithVersion{}
+	resp := &structs.LightClientUpdateWithVersion{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "capella", resp.Version)
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)

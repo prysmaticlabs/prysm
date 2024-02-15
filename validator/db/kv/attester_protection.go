@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/slashings"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/slashings"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -354,7 +354,7 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 			span.AddAttributes(trace.Int64Attribute("num_records", int64(s.batchedAttestations.Len())))
 
 			if numRecords := s.batchedAttestations.Len(); numRecords >= attestationBatchCapacity {
-				log.WithField("numRecords", numRecords).Debug(
+				log.WithField("recordCount", numRecords).Debug(
 					"Reached max capacity of batched attestation records, flushing to DB",
 				)
 				if s.batchedAttestationsFlushInProgress.IsNotSet() {
@@ -368,7 +368,7 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 			span.End()
 		case <-ticker.C:
 			if numRecords := s.batchedAttestations.Len(); numRecords > 0 {
-				log.WithField("numRecords", numRecords).Debug(
+				log.WithField("recordCount", numRecords).Debug(
 					"Batched attestation records write interval reached, flushing to DB",
 				)
 				if s.batchedAttestationsFlushInProgress.IsNotSet() {

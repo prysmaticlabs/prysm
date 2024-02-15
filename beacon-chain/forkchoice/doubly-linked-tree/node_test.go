@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestNode_ApplyWeightChanges_PositiveChange(t *testing.T) {
@@ -146,7 +146,9 @@ func TestNode_ViableForHead(t *testing.T) {
 		{&Node{}, 1, false},
 		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, true},
 		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, false},
-		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, true},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 2}, 3, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 2}, 4, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 3}, 4, true},
 	}
 	for _, tc := range tests {
 		got := tc.n.viableForHead(tc.justifiedEpoch, 5)

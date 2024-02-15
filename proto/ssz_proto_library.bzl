@@ -20,7 +20,7 @@ mainnet = {
     "sync_committee_aggregate_bytes.size": "16",
     "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector128",
     "withdrawal.size": "16",
-    "blob.size": "131072",
+    "blob.size": "131072",  # BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
     "logs_bloom.size": "256",
     "extra_data.size": "32",
     "max_blobs_per_block.size": "6",

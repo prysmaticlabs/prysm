@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
-	pmath "github.com/prysmaticlabs/prysm/v4/math"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	multi_value_slice "github.com/prysmaticlabs/prysm/v5/container/multi-value-slice"
+	pmath "github.com/prysmaticlabs/prysm/v5/math"
 )
 
 var (
@@ -60,7 +60,7 @@ func NewFieldTrie(field types.FieldIndex, fieldInfo types.DataType, elements int
 	if err := validateElements(field, fieldInfo, elements, length); err != nil {
 		return nil, err
 	}
-	numOfElems := 0
+	var numOfElems int
 	if val, ok := elements.(sliceAccessor); ok {
 		numOfElems = val.Len(val.State())
 	} else {

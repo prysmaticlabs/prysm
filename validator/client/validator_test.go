@@ -15,29 +15,29 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	validatorType "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	blsmock "github.com/prysmaticlabs/prysm/v4/crypto/bls/common/mock"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	dbTest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	validatorType "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	blsmock "github.com/prysmaticlabs/prysm/v5/crypto/bls/common/mock"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	mock2 "github.com/prysmaticlabs/prysm/v5/testing/mock"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	validatormock "github.com/prysmaticlabs/prysm/v5/testing/validator-mock"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	dbTest "github.com/prysmaticlabs/prysm/v5/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc/codes"
@@ -639,6 +639,92 @@ func TestUpdateDuties_AllValidatorsExited(t *testing.T) {
 
 }
 
+func TestUpdateDuties_Distributed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	// Start of third epoch.
+	slot := 2 * params.BeaconConfig().SlotsPerEpoch
+	keys := randKeypair(t)
+	resp := &ethpb.DutiesResponse{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				AttesterSlot:   slot, // First slot in epoch.
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				PublicKey:      keys.pub[:],
+				Status:         ethpb.ValidatorStatus_ACTIVE,
+			},
+		},
+		NextEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				AttesterSlot:   slot + params.BeaconConfig().SlotsPerEpoch, // First slot in next epoch.
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				PublicKey:      keys.pub[:],
+				Status:         ethpb.ValidatorStatus_ACTIVE,
+			},
+		},
+	}
+
+	v := validator{
+		keyManager:      newMockKeymanager(t, keys),
+		validatorClient: client,
+		distributed:     true,
+	}
+
+	sigDomain := make([]byte, 32)
+
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
+	client.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(
+		&ethpb.DomainResponse{SignatureDomain: sigDomain},
+		nil, /*err*/
+	).Times(2)
+
+	client.EXPECT().GetAggregatedSelections(
+		gomock.Any(),
+		gomock.Any(), // fill this properly
+	).Return(
+		[]iface.BeaconCommitteeSelection{
+			{
+				SelectionProof: make([]byte, 32),
+				Slot:           slot,
+				ValidatorIndex: 200,
+			},
+			{
+				SelectionProof: make([]byte, 32),
+				Slot:           slot + params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 200,
+			},
+		},
+		nil,
+	)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	client.EXPECT().SubscribeCommitteeSubnets(
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest, _ []primitives.ValidatorIndex) (*emptypb.Empty, error) {
+		wg.Done()
+		return nil, nil
+	})
+
+	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+	util.WaitTimeout(&wg, 2*time.Second)
+	require.Equal(t, 2, len(v.attSelections))
+}
+
 func TestRolesAt_OK(t *testing.T) {
 	v, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -773,7 +859,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 					PositionInActivationQueue: 30,
 				},
 			},
-			log:    "Deposit processed, entering activation queue after finalization\" index=30 positionInActivationQueue=30",
+			log:    "Deposit processed, entering activation queue after finalization\" positionInActivationQueue=30 prefix=client pubkey=0x000000000000 status=DEPOSITED validatorIndex=30",
 			active: false,
 		},
 		{
@@ -787,7 +873,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 					PositionInActivationQueue: 6,
 				},
 			},
-			log:    "Waiting to be assigned activation epoch\" expectedWaitingTime=12m48s index=50 positionInActivationQueue=6",
+			log:    "Waiting to be assigned activation epoch\" expectedWaitingTime=12m48s positionInActivationQueue=6 prefix=client pubkey=0x000000000000 status=PENDING validatorIndex=50",
 			active: false,
 		},
 		{
@@ -801,7 +887,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 					PositionInActivationQueue: 5,
 				},
 			},
-			log:    "Waiting for activation\" activationEpoch=60 index=89",
+			log:    "Waiting for activation\" activationEpoch=60 prefix=client pubkey=0x000000000000 status=PENDING validatorIndex=89",
 			active: false,
 		},
 		{
@@ -2173,7 +2259,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	signature := blsmock.NewSignature(ctrl)
+	signature := blsmock.NewMockSignature(ctrl)
 	signature.EXPECT().Marshal().Return([]byte{})
 
 	v := validator{
@@ -2258,7 +2344,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	signature := blsmock.NewSignature(ctrl)
+	signature := blsmock.NewMockSignature(ctrl)
 	signature.EXPECT().Marshal().Return([]byte{}).Times(2)
 
 	v := validator{
@@ -2380,7 +2466,7 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	signature := blsmock.NewSignature(ctrl)
+	signature := blsmock.NewMockSignature(ctrl)
 
 	v := validator{
 		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},

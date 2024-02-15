@@ -9,13 +9,13 @@ import (
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/spf13/afero"
 )
 
@@ -87,6 +87,19 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		require.NoError(t, bs.Remove(expected.BlockRoot()))
 		_, err = bs.Get(expected.BlockRoot(), expected.Index)
 		require.ErrorContains(t, "file does not exist", err)
+	})
+
+	t.Run("clear", func(t *testing.T) {
+		blob := testSidecars[0]
+		b := NewEphemeralBlobStorage(t)
+		require.NoError(t, b.Save(blob))
+		res, err := b.Get(blob.BlockRoot(), blob.Index)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.NoError(t, b.Clear())
+		// After clearing, the blob should not exist in the db.
+		_, err = b.Get(blob.BlockRoot(), blob.Index)
+		require.ErrorIs(t, err, os.ErrNotExist)
 	})
 }
 
