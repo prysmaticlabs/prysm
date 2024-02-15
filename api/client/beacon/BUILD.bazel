@@ -8,7 +8,7 @@ go_library(
         "doc.go",
         "health.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/api/client/beacon",
+    importpath = "github.com/prysmaticlabs/prysm/v5/api/client/beacon",
     visibility = ["//visibility:public"],
     deps = [
         "//api/client:go_default_library",

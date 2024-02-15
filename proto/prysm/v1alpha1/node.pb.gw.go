@@ -15,7 +15,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
-	github_com_prysmaticlabs_prysm_v4_consensus_types_primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	github_com_prysmaticlabs_prysm_v5_consensus_types_primitives "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -32,7 +32,7 @@ var _ status.Status
 var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
-var _ = github_com_prysmaticlabs_prysm_v4_consensus_types_primitives.Epoch(0)
+var _ = github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Epoch(0)
 var _ = emptypb.Empty{}
 
 func request_Node_GetSyncStatus_0(ctx context.Context, marshaler runtime.Marshaler, client NodeClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {

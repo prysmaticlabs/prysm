@@ -1,4 +1,4 @@
-package validator
+package beacon
 
 import (
 	"fmt"
@@ -8,16 +8,16 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -50,7 +50,7 @@ import (
 //		]
 //	}
 func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.GetValidatorCount")
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorCount")
 	defer span.End()
 
 	stateID := mux.Vars(r)["state_id"]

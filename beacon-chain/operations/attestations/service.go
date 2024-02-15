@@ -9,8 +9,8 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
+	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 )
 
 var forkChoiceProcessedRootsSize = 1 << 16

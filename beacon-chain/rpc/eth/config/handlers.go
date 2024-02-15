@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	"go.opencensus.io/trace"
 )
 

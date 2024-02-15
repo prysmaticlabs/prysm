@@ -22,7 +22,15 @@ var (
 		Help: "Number of BlobSidecar files pruned.",
 	})
 	blobsWrittenCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "blobs_written",
-		Help: "Number of BlobSidecar files written.",
+		Name: "blob_written",
+		Help: "Number of BlobSidecar files written",
+	})
+	blobDiskCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "blob_disk_count",
+		Help: "Approximate number of blob files in storage",
+	})
+	blobDiskSize = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "blob_disk_bytes",
+		Help: "Approximate number of bytes occupied by blobs in storage",
 	})
 )

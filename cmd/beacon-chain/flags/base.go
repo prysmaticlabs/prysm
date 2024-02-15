@@ -3,8 +3,8 @@
 package flags
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -141,12 +141,6 @@ var (
 		Name:  "gc-percent",
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
-	}
-	// SafeSlotsToImportOptimistically is deprecated. It should be removed in the next major release.
-	SafeSlotsToImportOptimistically = &cli.IntFlag{
-		Name:   "safe-slots-to-import-optimistically",
-		Usage:  "DEPRECATED. DO NOT USE",
-		Hidden: true,
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.

@@ -7,14 +7,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
-	"github.com/prysmaticlabs/prysm/v4/api/client/event"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
-	iface2 "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/api/client/event"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
+	iface2 "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 )
 
 // Wallet contains an in-memory, simulated wallet implementation.

@@ -4,15 +4,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
-	"github.com/prysmaticlabs/prysm/v4/api/client/event"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/api/client/event"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 )
 
 // ValidatorRole defines the validator role.

@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	eventClient "github.com/prysmaticlabs/prysm/v4/api/client/event"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	eventClient "github.com/prysmaticlabs/prysm/v5/api/client/event"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	mock2 "github.com/prysmaticlabs/prysm/v5/testing/mock"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
