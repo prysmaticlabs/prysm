@@ -9,11 +9,11 @@ import (
 	"github.com/pkg/errors"
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {

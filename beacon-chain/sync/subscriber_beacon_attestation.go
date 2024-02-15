@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 

@@ -9,7 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )

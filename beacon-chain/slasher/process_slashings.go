@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // Verifies attester slashings, logs them, and submits them to the slashing operations pool

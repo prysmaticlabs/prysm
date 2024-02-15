@@ -7,10 +7,10 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
 
 func TestScorers_Service_Init(t *testing.T) {
