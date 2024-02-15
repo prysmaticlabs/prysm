@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -26,10 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
-
-func TestParseIndices(t *testing.T) {
-	assert.DeepEqual(t, []uint64{1, 2, 3}, parseIndices(&url.URL{RawQuery: "indices=100&indices=1&indices=2&indices=foo&indices=1&indices=3&bar=bar"}))
-}
 
 func TestBlobs(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
@@ -371,4 +368,47 @@ func TestBlobs(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		require.Equal(t, len(writer.Body.Bytes()), 131932)
 	})
+}
+
+func Test_parseIndices(t *testing.T) {
+	tests := []struct {
+		name    string
+		query   string
+		want    []uint64
+		wantErr string
+	}{
+		{
+			name:  "happy path with duplicate indices within bound and other query parameters ignored",
+			query: "indices=1&indices=2&indices=1&indices=3&bar=bar",
+			want:  []uint64{1, 2, 3},
+		},
+		{
+			name:    "out of bounds indices throws error",
+			query:   "indices=6&indices=7",
+			wantErr: "requested blob indices [6 7] are invalid",
+		},
+		{
+			name:    "negative indices",
+			query:   "indices=-1&indices=-8",
+			wantErr: "requested blob indices [-1 -8] are invalid",
+		},
+		{
+			name:    "invalid indices",
+			query:   "indices=foo&indices=bar",
+			wantErr: "requested blob indices [foo bar] are invalid",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseIndices(&url.URL{RawQuery: tt.query})
+			if err != nil && tt.wantErr != "" {
+				require.StringContains(t, tt.wantErr, err.Error())
+				return
+			}
+			require.NoError(t, err)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseIndices() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
