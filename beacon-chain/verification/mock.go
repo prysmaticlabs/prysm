@@ -3,7 +3,7 @@ package verification
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 )
 
 type MockBlobVerifier struct {

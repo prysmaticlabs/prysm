@@ -6,6 +6,6 @@ go_library(
         "constants.go",
         "headers.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/api",
+    importpath = "github.com/prysmaticlabs/prysm/v5/api",
     visibility = ["//visibility:public"],
 )

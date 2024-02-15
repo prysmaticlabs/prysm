@@ -3,8 +3,8 @@
 package flags
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/urfave/cli/v2"
 )
 

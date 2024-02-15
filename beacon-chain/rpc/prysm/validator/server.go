@@ -1,11 +1,11 @@
 package validator
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
 )
 
 // Server defines a server implementation for HTTP endpoints, providing

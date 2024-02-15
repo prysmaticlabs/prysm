@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/logging"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
@@ -102,7 +102,9 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return nil
 	}
 	if bs.pruner != nil {
-		bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot())
+		if err := bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot(), sidecar.Index); err != nil {
+			return errors.Wrapf(err, "problem maintaining pruning cache/metrics for sidecar with root=%#x", sidecar.BlockRoot())
+		}
 	}
 
 	// Serialize the ethpb.BlobSidecar to binary data using SSZ.

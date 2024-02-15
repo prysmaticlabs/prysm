@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	common "github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	common "github.com/prysmaticlabs/prysm/v5/crypto/bls/common"
 )
 
 // MockSecretKey is a mock of SecretKey interface.

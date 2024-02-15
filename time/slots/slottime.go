@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	mathutil "github.com/prysmaticlabs/prysm/v4/math"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	mathutil "github.com/prysmaticlabs/prysm/v5/math"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 )
 
 // MaxSlotBuffer specifies the max buffer given to slots from

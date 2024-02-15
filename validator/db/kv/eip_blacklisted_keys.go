@@ -3,7 +3,7 @@ package kv
 import (
 	"context"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
