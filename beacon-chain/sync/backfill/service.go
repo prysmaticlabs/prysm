@@ -39,6 +39,7 @@ type Service struct {
 	pa              PeerAssigner
 	batchImporter   batchImporter
 	blobStore       *filesystem.BlobStorage
+	initSyncWaiter  func() error
 }
 
 var _ runtime.Service = (*Service)(nil)
@@ -89,6 +90,15 @@ func WithWorkerCount(n int) ServiceOption {
 func WithBatchSize(n uint64) ServiceOption {
 	return func(s *Service) error {
 		s.batchSize = n
+		return nil
+	}
+}
+
+// WithInitSyncWaiter sets a function on the service which will block until init-sync
+// completes for the first time, or returns an error if context is canceled.
+func WithInitSyncWaiter(w func() error) ServiceOption {
+	return func(s *Service) error {
+		s.initSyncWaiter = w
 		return nil
 	}
 }
@@ -261,8 +271,15 @@ func (s *Service) Start() {
 		log.WithError(err).Error("Unable to initialize backfill verifier.")
 		return
 	}
-	s.pool.spawn(ctx, s.nWorkers, clock, s.pa, s.verifier, s.ctxMap, s.newBlobVerifier, s.blobStore)
 
+	if s.initSyncWaiter != nil {
+		log.Info("Backfill service waiting for initial-sync to reach head before starting.")
+		if err := s.initSyncWaiter(); err != nil {
+			log.WithError(err).Error("Error waiting for init-sync to complete.")
+			return
+		}
+	}
+	s.pool.spawn(ctx, s.nWorkers, clock, s.pa, s.verifier, s.ctxMap, s.newBlobVerifier, s.blobStore)
 	s.batchSeq = newBatchSequencer(s.nWorkers, s.ms(s.clock.CurrentSlot()), primitives.Slot(status.LowSlot), primitives.Slot(s.batchSize))
 	if err = s.initBatches(); err != nil {
 		log.WithError(err).Error("Non-recoverable error in backfill service.")
