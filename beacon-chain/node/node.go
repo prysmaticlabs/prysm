@@ -244,7 +244,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		beacon.clockWaiter, forkchoice.NewROForkChoice(beacon.forkChoicer), beacon.stateGen)
 
 	pa := peers.NewAssigner(beacon.fetchP2P().Peers(), beacon.forkChoicer)
-	beacon.BackfillOpts = append(beacon.BackfillOpts, backfill.WithVerifierWaiter(beacon.verifyInitWaiter))
+	beacon.BackfillOpts = append(beacon.BackfillOpts, backfill.WithVerifierWaiter(beacon.verifyInitWaiter),
+		backfill.WithInitSyncWaiter(initSyncWaiter(ctx, beacon.initialSyncComplete)))
 	bf, err := backfill.NewService(ctx, bfs, beacon.BlobStorage, beacon.clockWaiter, beacon.fetchP2P(), pa, beacon.BackfillOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "error initializing backfill service")
@@ -326,6 +327,16 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	beacon.collector = c
 
 	return beacon, nil
+}
+func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
+	return func() error {
+		select {
+		case <-complete:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
 
 func newRouter(cliCtx *cli.Context) *mux.Router {
