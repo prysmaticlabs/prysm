@@ -91,8 +91,8 @@ loop:
 		indices = append(indices, ix)
 	}
 
-	if len(invalidIndicies) > 0 {
-		return nil, fmt.Errorf("requested blob indicies %v are invalid", invalidIndicies)
+	if len(invalidIndices) > 0 {
+		return nil, fmt.Errorf("requested blob indices %v are invalid", invalidIndices)
 	}
 	return indices, nil
 }
