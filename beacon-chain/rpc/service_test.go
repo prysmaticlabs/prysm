@@ -160,9 +160,13 @@ func TestServer_InitializeRoutes(t *testing.T) {
 
 	prysmCustomRoutes := map[string][]string{
 		"/prysm/v1/beacon/weak_subjectivity":                 {http.MethodGet},
+		"/prysm/node/trusted_peers":                          {http.MethodGet, http.MethodPost},
 		"/prysm/v1/node/trusted_peers":                       {http.MethodGet, http.MethodPost},
+		"/prysm/node/trusted_peers/{peer_id}":                {http.MethodDelete},
 		"/prysm/v1/node/trusted_peers/{peer_id}":             {http.MethodDelete},
+		"/prysm/validator/performance":                       {http.MethodPost},
 		"/prysm/v1/beacon/validator_performance":             {http.MethodPost},
+		"/eth/v1/beacon/states/{state_id}/validator_count":   {http.MethodGet},
 		"/prysm/v1/beacon/states/{state_id}/validator_count": {http.MethodGet},
 	}
 

@@ -300,13 +300,18 @@ func (s *Service) initializeDebugServerRoutes(debugServer *debug.Server) {
 // prysm internal routes
 func (s *Service) initializePrysmBeaconServerRoutes(beaconServerPrysm *beaconprysm.Server) {
 	s.cfg.Router.HandleFunc("/prysm/v1/beacon/weak_subjectivity", beaconServerPrysm.GetWeakSubjectivity).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", beaconServerPrysm.GetValidatorCount).Methods(http.MethodGet) // TODO: deprecate in Swagger, remove in v6
 	s.cfg.Router.HandleFunc("/prysm/v1/beacon/states/{state_id}/validator_count", beaconServerPrysm.GetValidatorCount).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/prysm/validator/performance", beaconServerPrysm.GetValidatorPerformance).Methods(http.MethodPost) // TODO: deprecate in Swagger, remove in v6
 	s.cfg.Router.HandleFunc("/prysm/v1/beacon/validator_performance", beaconServerPrysm.GetValidatorPerformance).Methods(http.MethodPost)
 }
 
 func (s *Service) initializePrysmNodeServerRoutes(nodeServerPrysm *nodeprysm.Server) {
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods(http.MethodGet) // TODO: deprecate in Swagger, remove in v6
 	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost) // TODO: deprecate in Swagger, remove in v6
 	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete) // TODO: deprecate in Swagger, remove in v6
 	s.cfg.Router.HandleFunc("/prysm/v1/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete)
 }
 
