@@ -3,18 +3,12 @@ package validator
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -28,78 +22,6 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 	return vs.duties(ctx, req)
-}
-
-// StreamDuties returns the duties assigned to a list of validators specified
-// in the request object via a server-side stream. The stream sends out new assignments in case
-// a chain re-org occurred.
-func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNodeValidator_StreamDutiesServer) error {
-	if vs.SyncChecker.Syncing() {
-		return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
-	}
-
-	// If we are post-genesis time, then set the current epoch to
-	// the number epochs since the genesis time, otherwise 0 by default.
-	genesisTime := vs.TimeFetcher.GenesisTime()
-	if genesisTime.IsZero() {
-		return status.Error(codes.Unavailable, "genesis time is not set")
-	}
-	var currentEpoch primitives.Epoch
-	if genesisTime.Before(prysmTime.Now()) {
-		currentEpoch = slots.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
-	}
-	req.Epoch = currentEpoch
-	res, err := vs.duties(stream.Context(), req)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
-	}
-	if err := stream.Send(res); err != nil {
-		return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
-	}
-
-	// We start a for loop which ticks on every epoch or a chain reorg.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-
-	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
-	epochTicker := slots.NewSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
-	for {
-		select {
-		// Ticks every epoch to submit assignments to connected validator clients.
-		case slot := <-epochTicker.C():
-			req.Epoch = primitives.Epoch(slot)
-			res, err := vs.duties(stream.Context(), req)
-			if err != nil {
-				return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
-			}
-			if err := stream.Send(res); err != nil {
-				return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
-			}
-		case ev := <-stateChannel:
-			// If a reorg occurred, we recompute duties for the connected validator clients
-			// and send another response over the server stream right away.
-			currentEpoch = slots.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
-			if ev.Type == statefeed.Reorg {
-				data, ok := ev.Data.(*ethpbv1.EventChainReorg)
-				if !ok {
-					return status.Errorf(codes.Internal, "Received incorrect data type over reorg feed: %v", data)
-				}
-				req.Epoch = currentEpoch
-				res, err := vs.duties(stream.Context(), req)
-				if err != nil {
-					return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
-				}
-				if err := stream.Send(res); err != nil {
-					return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
-				}
-			}
-		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "Stream context canceled")
-		case <-vs.Ctx.Done():
-			return status.Error(codes.Canceled, "RPC context canceled")
-		}
-	}
 }
 
 // Compute the validator duties from the head state's corresponding epoch
@@ -220,7 +142,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		nextValidatorAssignments = append(nextValidatorAssignments, nextAssignment)
 	}
 	return &ethpb.DutiesResponse{
-		Duties:             validatorAssignments,
 		CurrentEpochDuties: validatorAssignments,
 		NextEpochDuties:    nextValidatorAssignments,
 	}, nil

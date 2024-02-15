@@ -59,26 +59,6 @@ service BeaconChain {
         };
     }
 
-    // Server-side stream of attestations as they are received by
-    // the beacon chain node.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-    rpc StreamAttestations(google.protobuf.Empty) returns (stream Attestation) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations/stream"
-        };
-    }
-
-    // Server-side stream of indexed attestations as they are received by
-    // the beacon chain node.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-    rpc StreamIndexedAttestations(google.protobuf.Empty) returns (stream IndexedAttestation) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations/indexed/stream"
-        };
-    }
-
     // Retrieve attestations from pool.
     //
     // The server returns a list of attestations that have been seen but not
@@ -104,29 +84,6 @@ service BeaconChain {
     rpc ListBeaconBlocks(ListBlocksRequest) returns (ListBeaconBlocksResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha2/beacon/blocks"
-        };
-    }
-
-    // Server-side stream of all signed blocks as they are received by
-    // the beacon chain node.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-    rpc StreamBlocks(StreamBlocksRequest) returns (stream SignedBeaconBlock) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/blocks/stream"
-        };
-    }
-
-    // Server-side stream of information about the head of the beacon chain
-    // from the view of the beacon chain node.
-    //
-    // This includes the head block slot and root as well as information about
-    // the most recent finalized and justified slots.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-    rpc StreamChainHead(google.protobuf.Empty) returns (stream ChainHead) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/chainhead/stream"
         };
     }
 
@@ -228,6 +185,7 @@ service BeaconChain {
     // validator attestations. This endpoint allows for retrieval of genesis
     // information via a boolean query filter.
     rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipationResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/eth/v1alpha1/validators/participation"
         };
@@ -237,16 +195,6 @@ service BeaconChain {
     rpc GetBeaconConfig(google.protobuf.Empty) returns (BeaconConfig) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/config"
-        };
-    }
-
-    // Server-side stream of validator information at each epoch.
-    // DEPRECATED: Streaming Validator Info is no longer supported.
-    // The Beacon API /eth/v1/beacon/states/{state_id}/validators will provide validator info in unstreamed format.
-    rpc StreamValidatorsInfo(stream ValidatorChangeSet) returns (stream ValidatorInfo) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/validators/info/stream"
         };
     }
 
@@ -270,27 +218,6 @@ service BeaconChain {
             get: "/eth/v1alpha1/beacon/individual_votes"
         };
     }
-}
-
-// SetAction defines the type of action that should be applied to the keys in a validator change set.
-enum SetAction {
-    // ADD_VALIDATOR_KEYS adds to the existing keys.
-    ADD_VALIDATOR_KEYS = 0;
-    // REMOVE_VALIDATOR_KEYS removes from the existing keys.
-    REMOVE_VALIDATOR_KEYS = 1;
-    // SET_VALIDATOR_KEYS overwrites the existing keys.
-    SET_VALIDATOR_KEYS = 2;
-}
-
-// ValidatorChangeSet updates the server's list of keys on which to operate.
-// DEPRECATED: This message's endpoint is superseded by the /eth/v1/events Beacon API endpoint
-message ValidatorChangeSet {
-    option deprecated = true;
-    // Action (add/remove/set).
-    SetAction action = 1;
-
-    // 48 byte BLS public keys of validators on which the operation occurs.
-    repeated bytes public_keys = 2;
 }
 
 // Request for indexed attestations by target epoch.
@@ -809,7 +736,6 @@ message GetValidatorParticipationRequest {
     }
 }
 
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ValidatorParticipationResponse {
     option deprecated = true;
     // Epoch which this message is applicable.

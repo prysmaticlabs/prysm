@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/v5/api/pagination"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
@@ -17,11 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
-	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -196,187 +191,6 @@ func (bs *Server) ListIndexedAttestations(
 		TotalSize:           int32(len(indexedAtts)),
 		NextPageToken:       nextPageToken,
 	}, nil
-}
-
-// StreamAttestations to clients at the end of every slot. This method retrieves the
-// aggregated attestations currently in the pool at the start of a slot and sends
-// them over a gRPC stream.
-// DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-func (bs *Server) StreamAttestations(
-	_ *emptypb.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
-) error {
-	attestationsChannel := make(chan *feed.Event, 1)
-	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
-	defer attSub.Unsubscribe()
-	for {
-		select {
-		case event := <-attestationsChannel:
-			if event.Type == operation.UnaggregatedAttReceived {
-				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
-				if !ok {
-					// Got bad data over the stream.
-					continue
-				}
-				if data.Attestation == nil {
-					// One nil attestation shouldn't stop the stream.
-					continue
-				}
-				if err := stream.Send(data.Attestation); err != nil {
-					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-				}
-			}
-		case <-bs.Ctx.Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		}
-	}
-}
-
-// StreamIndexedAttestations to clients at the end of every slot. This method retrieves the
-// aggregated attestations currently in the pool, converts them into indexed form, and
-// sends them over a gRPC stream.
-// DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-func (bs *Server) StreamIndexedAttestations(
-	_ *emptypb.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
-) error {
-	attestationsChannel := make(chan *feed.Event, 1)
-	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
-	defer attSub.Unsubscribe()
-	go bs.collectReceivedAttestations(stream.Context())
-	for {
-		select {
-		case event, ok := <-attestationsChannel:
-			if !ok {
-				log.Error("Indexed attestations stream channel closed")
-				continue
-			}
-			if event.Type == operation.UnaggregatedAttReceived {
-				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
-				if !ok {
-					// Got bad data over the stream.
-					log.Warningf("Indexed attestations stream got data of wrong type on stream expected *UnAggregatedAttReceivedData, received %T", event.Data)
-					continue
-				}
-				if data.Attestation == nil {
-					// One nil attestation shouldn't stop the stream.
-					log.Debug("Indexed attestations stream got a nil attestation")
-					continue
-				}
-				bs.ReceivedAttestationsBuffer <- data.Attestation
-			} else if event.Type == operation.AggregatedAttReceived {
-				data, ok := event.Data.(*operation.AggregatedAttReceivedData)
-				if !ok {
-					// Got bad data over the stream.
-					log.Warningf("Indexed attestations stream got data of wrong type on stream expected *AggregatedAttReceivedData, received %T", event.Data)
-					continue
-				}
-				if data.Attestation == nil || data.Attestation.Aggregate == nil {
-					// One nil attestation shouldn't stop the stream.
-					log.Debug("Indexed attestations stream got nil attestation or nil attestation aggregate")
-					continue
-				}
-				bs.ReceivedAttestationsBuffer <- data.Attestation.Aggregate
-			}
-		case aggAtts, ok := <-bs.CollectedAttestationsBuffer:
-			if !ok {
-				log.Error("Indexed attestations stream collected attestations channel closed")
-				continue
-			}
-			if len(aggAtts) == 0 {
-				continue
-			}
-			// All attestations we receive have the same target epoch given they
-			// have the same data root, so we just use the target epoch from
-			// the first one to determine committees for converting into indexed
-			// form.
-			targetRoot := aggAtts[0].Data.Target.Root
-			targetEpoch := aggAtts[0].Data.Target.Epoch
-			committeesBySlot, _, err := bs.retrieveCommitteesForRoot(stream.Context(), targetRoot)
-			if err != nil {
-				return status.Errorf(
-					codes.Internal,
-					"Could not retrieve committees for target root %#x: %v",
-					targetRoot,
-					err,
-				)
-			}
-			// We use the retrieved committees for the epoch to convert all attestations
-			// into indexed form effectively.
-			startSlot, err := slots.EpochStart(targetEpoch)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-			endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
-			for _, att := range aggAtts {
-				// Out of range check, the attestation slot cannot be greater
-				// the last slot of the requested epoch or smaller than its start slot
-				// given committees are accessed as a map of slot -> committees list, where there are
-				// SLOTS_PER_EPOCH keys in the map.
-				if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
-					continue
-				}
-				committeesForSlot, ok := committeesBySlot[att.Data.Slot]
-				if !ok || committeesForSlot.Committees == nil {
-					continue
-				}
-				committee := committeesForSlot.Committees[att.Data.CommitteeIndex]
-				idxAtt, err := attestation.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
-				if err != nil {
-					continue
-				}
-				if err := stream.Send(idxAtt); err != nil {
-					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-				}
-			}
-		case <-bs.Ctx.Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		}
-	}
-}
-
-// already being done by the attestation pool in the operations service.
-func (bs *Server) collectReceivedAttestations(ctx context.Context) {
-	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
-	twoThirdsASlot := 2 * slots.DivideSlotBy(3) /* 2/3 slot duration */
-	ticker := slots.NewSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
-	for {
-		select {
-		case <-ticker.C():
-			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
-			for root, atts := range attsByRoot {
-				// We aggregate the received attestations, we know they all have the same data root.
-				aggAtts, err := attaggregation.Aggregate(atts)
-				if err != nil {
-					log.WithError(err).Error("Could not aggregate attestations")
-					continue
-				}
-				if len(aggAtts) == 0 {
-					continue
-				}
-				targetRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
-				aggregatedAttsByTarget[targetRoot] = append(aggregatedAttsByTarget[targetRoot], aggAtts...)
-				attsByRoot[root] = make([]*ethpb.Attestation, 0)
-			}
-			for _, atts := range aggregatedAttsByTarget {
-				bs.CollectedAttestationsBuffer <- atts
-			}
-		case att := <-bs.ReceivedAttestationsBuffer:
-			attDataRoot, err := att.Data.HashTreeRoot()
-			if err != nil {
-				log.WithError(err).Error("Could not hash tree root attestation data")
-				continue
-			}
-			attsByRoot[attDataRoot] = append(attsByRoot[attDataRoot], att)
-		case <-ctx.Done():
-			return
-		case <-bs.Ctx.Done():
-			return
-		}
-	}
 }
 
 // AttestationPool retrieves pending attestations.

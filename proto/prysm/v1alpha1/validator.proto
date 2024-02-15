@@ -53,19 +53,6 @@ service BeaconNodeValidator {
         };
     }
 
-    // Stream validator duties for the requested validators.
-    //
-    // The duties consist of:
-    //   Proposer - the validator that creates a beacon chain block.
-    //   Attester — a validator that is part of a committee that needs to sign off on a beacon chain
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-    rpc StreamDuties(DutiesRequest) returns (stream DutiesResponse) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/validator/duties/stream"
-        };
-    }
-
     // DomainData fetches the current BLS signature domain version information from the
     // running beacon node's state. This information is used when validators sign
     // blocks and attestations appropriately based on their duty.
@@ -373,7 +360,6 @@ message StreamSlotsResponse {
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 }
 
-
 // DEPRECATED: This endpoint StreamBlocks is superseded by the /eth/v1/events Beacon API endpoint
 message StreamBlocksResponse {
     option deprecated = true;
@@ -394,7 +380,6 @@ message StreamBlocksResponse {
         SignedBeaconBlockDeneb deneb_block = 5;
     }
 }
-
 
 message DomainRequest {
     // The epoch for which the domain is being requested.
@@ -522,7 +507,7 @@ message DutiesRequest {
 }
 
 message DutiesResponse {
-    repeated Duty duties = 1 [deprecated = true];
+    reserved 1; // Deprecated fields
 
     repeated Duty current_epoch_duties = 2;
 
@@ -676,13 +661,10 @@ message ValidatorParticipation {
     // Percentage of validator participation in the given epoch. This field
     // contains a value between 0 and 1.
     float global_participation_rate = 1  [deprecated = true];
-
     // The total amount of ether, in gwei, that has been used in voting.
     uint64 voted_ether = 2 [deprecated = true];
-
     // The total amount of ether, in gwei, that is eligible for voting.
     uint64 eligible_ether = 3 [deprecated = true];
-
     // Total staked gwei that was active (i.e. eligible to vote) during the current epoch.
     uint64 current_epoch_active_gwei = 4;
     // Total staked gwei that had attestations included in a block during the current epoch,
@@ -767,7 +749,6 @@ message StreamSlotsRequest {
     option deprecated = true;
     bool verified_only = 1;
 }
-
 
 // Request to only return blocks that is verified by the beacon node.
 // DEPRECATED: This endpoint StreamBlocks is superseded by the /eth/v1/events Beacon API endpoint
