@@ -40,7 +40,7 @@ type sharedResources struct {
 
 // Initializer is used to create different Verifiers.
 // Verifiers require access to stateful data structures, like caches,
-// and it is Initializer's job to provides access to those.
+// and it is Initializer's job to provide access to those.
 type Initializer struct {
 	shared *sharedResources
 }

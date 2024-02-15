@@ -28,7 +28,7 @@ func TestTryPruneDir_CachedNotExpired(t *testing.T) {
 	root := fmt.Sprintf("%#x", sc.BlockRoot())
 	// This slot is right on the edge of what would need to be pruned, so by adding it to the cache and
 	// skipping any other test setup, we can be certain the hot cache path never touches the filesystem.
-	pr.slotMap.ensure(root, sc.Slot())
+	require.NoError(t, pr.slotMap.ensure(root, sc.Slot(), 0))
 	pruned, err := pr.tryPruneDir(root, pr.windowSize)
 	require.NoError(t, err)
 	require.Equal(t, 0, pruned)
@@ -45,7 +45,7 @@ func TestTryPruneDir_CachedExpired(t *testing.T) {
 		require.NoError(t, err)
 		root := fmt.Sprintf("%#x", sc.BlockRoot())
 		require.NoError(t, fs.Mkdir(root, directoryPermissions)) // make empty directory
-		pr.slotMap.ensure(root, sc.Slot())
+		require.NoError(t, pr.slotMap.ensure(root, sc.Slot(), 0))
 		pruned, err := pr.tryPruneDir(root, slot+1)
 		require.NoError(t, err)
 		require.Equal(t, 0, pruned)

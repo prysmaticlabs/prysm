@@ -3,6 +3,9 @@ package backfill
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 )
 
 var (
@@ -30,10 +33,28 @@ var (
 			Help: "Number of backfill batches downloaded and imported.",
 		},
 	)
-	backfillBatchApproximateBytes = promauto.NewCounter(
+	backfillBlocksApproximateBytes = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "backfill_batch_bytes_downloaded",
-			Help: "Count of bytes downloaded from peers",
+			Name: "backfill_blocks_bytes_downloaded",
+			Help: "BeaconBlock bytes downloaded from peers for backfill.",
+		},
+	)
+	backfillBlobsApproximateBytes = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "backfill_blobs_bytes_downloaded",
+			Help: "BlobSidecar bytes downloaded from peers for backfill.",
+		},
+	)
+	backfillBlobsDownloadCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "backfill_blobs_download_count",
+			Help: "Number of BlobSidecar values downloaded from peers for backfill.",
+		},
+	)
+	backfillBlocksDownloadCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "backfill_blocks_download_count",
+			Help: "Number of BeaconBlock values downloaded from peers for backfill.",
 		},
 	)
 	backfillBatchTimeRoundtrip = promauto.NewHistogram(
@@ -50,10 +71,17 @@ var (
 			Buckets: []float64{50, 100, 300, 1000, 2000},
 		},
 	)
-	backfillBatchTimeDownloading = promauto.NewHistogram(
+	backfillBatchTimeDownloadingBlocks = promauto.NewHistogram(
 		prometheus.HistogramOpts{
-			Name:    "backfill_batch_time_download",
-			Help:    "Time batch spent downloading blocks from peer.",
+			Name:    "backfill_batch_blocks_time_download",
+			Help:    "Time, in milliseconds, batch spent downloading blocks from peer.",
+			Buckets: []float64{100, 300, 1000, 2000, 4000, 8000},
+		},
+	)
+	backfillBatchTimeDownloadingBlobs = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "backfill_batch_blobs_time_download",
+			Help:    "Time, in milliseconds, batch spent downloading blobs from peer.",
 			Buckets: []float64{100, 300, 1000, 2000, 4000, 8000},
 		},
 	)
@@ -65,3 +93,16 @@ var (
 		},
 	)
 )
+
+func blobValidationMetrics(_ blocks.ROBlob) error {
+	backfillBlobsDownloadCount.Inc()
+	return nil
+}
+
+func blockValidationMetrics(interfaces.ReadOnlySignedBeaconBlock) error {
+	backfillBlocksDownloadCount.Inc()
+	return nil
+}
+
+var _ sync.BlobResponseValidation = blobValidationMetrics
+var _ sync.BeaconBlockProcessor = blockValidationMetrics

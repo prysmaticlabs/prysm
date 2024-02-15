@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -73,7 +74,7 @@ func (s *Store) status() *dbval.BackfillStatus {
 // fillBack saves the slice of blocks and updates the BackfillStatus LowSlot/Root/ParentRoot tracker to the values
 // from the first block in the slice. This method assumes that the block slice has been fully validated and
 // sorted in slot order by the calling function.
-func (s *Store) fillBack(ctx context.Context, blocks []blocks.ROBlock) (*dbval.BackfillStatus, error) {
+func (s *Store) fillBack(ctx context.Context, current primitives.Slot, blocks []blocks.ROBlock, store das.AvailabilityStore) (*dbval.BackfillStatus, error) {
 	status := s.status()
 	if len(blocks) == 0 {
 		return status, nil
@@ -85,6 +86,12 @@ func (s *Store) fillBack(ctx context.Context, blocks []blocks.ROBlock) (*dbval.B
 	if highest.Root() != bytesutil.ToBytes32(status.LowParentRoot) {
 		return nil, errors.Wrapf(errBatchDisconnected, "prev parent_root=%#x, root=%#x, prev slot=%d, slot=%d",
 			status.LowParentRoot, highest.Root(), status.LowSlot, highest.Block().Slot())
+	}
+
+	for i := range blocks {
+		if err := store.IsDataAvailable(ctx, current, blocks[i]); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.store.SaveROBlocks(ctx, blocks, false); err != nil {
