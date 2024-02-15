@@ -31,7 +31,7 @@ import (
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -370,12 +370,16 @@ func TestRequestPendingBlobs(t *testing.T) {
 	t.Run("old block should not fail", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
-		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, "test"))
+		cc, err := commitmentsForBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, cc, "test"))
 	})
 	t.Run("empty commitment block should not fail", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
-		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, "test"))
+		cc, err := commitmentsForBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, cc, "test"))
 	})
 	t.Run("unsupported protocol", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
@@ -406,7 +410,9 @@ func TestRequestPendingBlobs(t *testing.T) {
 		b.Block.Body.BlobKzgCommitments = make([][]byte, 1)
 		b1, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		require.ErrorContains(t, "protocols not supported", s.requestPendingBlobs(context.Background(), b1, [32]byte{}, p2.PeerID()))
+		cc, err := commitmentsForBlock(b1)
+		require.NoError(t, err)
+		require.ErrorContains(t, "protocols not supported", s.requestPendingBlobs(context.Background(), b1, [32]byte{}, cc, p2.PeerID()))
 	})
 }
 
