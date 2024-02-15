@@ -109,7 +109,7 @@ func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
 			if option.BuilderConfig != nil {
 				p.Builder = option.BuilderConfig.ToPayload()
 			}
-			p.Graffiti = option.Graffiti
+			p.Graffiti = option.GraffitiConfig.Graffiti
 			payload.ProposerConfig[hexutil.Encode(key[:])] = p
 		}
 	}
@@ -121,7 +121,7 @@ func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
 		if ps.DefaultConfig.BuilderConfig != nil {
 			p.Builder = ps.DefaultConfig.BuilderConfig.ToPayload()
 		}
-		p.Graffiti = ps.DefaultConfig.Graffiti
+		p.Graffiti = ps.DefaultConfig.GraffitiConfig.Graffiti
 		payload.DefaultConfig = p
 	}
 	return payload
@@ -132,11 +132,16 @@ type FeeRecipientConfig struct {
 	FeeRecipient common.Address
 }
 
+// GraffitiConfig is a prysm internal representation to see if the graffiti was set.
+type GraffitiConfig struct {
+	Graffiti string
+}
+
 // ProposerOption is a Prysm internal representation of the ProposerOptionPayload on the validator client in bytes format instead of hex.
 type ProposerOption struct {
 	FeeRecipientConfig *FeeRecipientConfig
 	BuilderConfig      *BuilderConfig
-	Graffiti           string
+	GraffitiConfig     *GraffitiConfig
 }
 
 // Clone creates a deep copy of the proposer settings
@@ -185,6 +190,14 @@ func (bc *BuilderConfig) Clone() *BuilderConfig {
 	return config
 }
 
+// Clone creates a deep copy of graffiti config
+func (gc *GraffitiConfig) Clone() *GraffitiConfig {
+	if gc == nil {
+		return nil
+	}
+	return &GraffitiConfig{gc.Graffiti}
+}
+
 // ToPayload converts Builder Config to the protobuf object
 func (bc *BuilderConfig) ToPayload() *validatorpb.BuilderConfig {
 	if bc == nil {
@@ -214,6 +227,8 @@ func (po *ProposerOption) Clone() *ProposerOption {
 	if po.BuilderConfig != nil {
 		p.BuilderConfig = po.BuilderConfig.Clone()
 	}
-	p.Graffiti = po.Graffiti
+	if po.GraffitiConfig != nil {
+		p.GraffitiConfig = po.GraffitiConfig.Clone()
+	}
 	return p
 }

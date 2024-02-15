@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -389,13 +390,13 @@ func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 	if v.proposerSettings != nil {
 		if v.proposerSettings.ProposeConfig != nil {
 			option, ok := v.proposerSettings.ProposeConfig[pubKey]
-			if ok && option.Graffiti != "" {
-				return []byte(option.Graffiti), nil
+			if ok && option.GraffitiConfig != nil {
+				return []byte(option.GraffitiConfig.Graffiti), nil
 			}
 		}
 		if v.proposerSettings.DefaultConfig != nil {
-			if v.proposerSettings.DefaultConfig.Graffiti != "" {
-				return []byte(v.proposerSettings.DefaultConfig.Graffiti), nil
+			if v.proposerSettings.DefaultConfig.GraffitiConfig != nil {
+				return []byte(v.proposerSettings.DefaultConfig.GraffitiConfig.Graffiti), nil
 			}
 		}
 	}
@@ -456,7 +457,12 @@ func (v *validator) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 	if !ok || option == nil {
 		return fmt.Errorf("attempted to set graffiti but proposer settings are missing for pubkey:%s", hexutil.Encode(pubKey[:]))
 	}
-	option.Graffiti = string(graffiti)
+	if graffiti == nil {
+		return nil
+	}
+	option.GraffitiConfig = &validatorserviceconfig.GraffitiConfig{
+		Graffiti: string(graffiti),
+	}
 	return v.SetProposerSettings(ctx, ps) // save the proposer settings
 }
 
@@ -469,6 +475,6 @@ func (v *validator) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSP
 	if !ok || option == nil {
 		return fmt.Errorf("graffiti not found in proposer settings for pubkey:%s", hexutil.Encode(pubKey[:]))
 	}
-	option.Graffiti = ""
+	option.GraffitiConfig = nil
 	return v.SetProposerSettings(ctx, ps) // save the proposer settings
 }
