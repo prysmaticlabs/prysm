@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	bolt "go.etcd.io/bbolt"
 )
 

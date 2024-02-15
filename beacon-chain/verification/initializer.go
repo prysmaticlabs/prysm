@@ -4,12 +4,12 @@ import (
 	"context"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // Forkchoicer represents the forkchoice methods that the verifiers need.
@@ -40,7 +40,7 @@ type sharedResources struct {
 
 // Initializer is used to create different Verifiers.
 // Verifiers require access to stateful data structures, like caches,
-// and it is Initializer's job to provides access to those.
+// and it is Initializer's job to provide access to those.
 type Initializer struct {
 	shared *sharedResources
 }

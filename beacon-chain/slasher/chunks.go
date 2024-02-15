@@ -7,10 +7,10 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 

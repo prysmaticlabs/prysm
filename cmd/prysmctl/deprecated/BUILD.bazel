@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["cmd.go"],
-    importpath = "github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/deprecated",
+    importpath = "github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/deprecated",
     visibility = ["//visibility:public"],
     deps = [
         "//cmd/prysmctl/deprecated/checkpoint:go_default_library",

@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	structs "github.com/prysmaticlabs/prysm/v4/api/server/structs"
+	structs "github.com/prysmaticlabs/prysm/v5/api/server/structs"
 )
 
 // MockGenesisProvider is a mock of GenesisProvider interface.

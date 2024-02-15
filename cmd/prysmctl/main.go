@@ -3,13 +3,13 @@ package main
 import (
 	"os"
 
-	"github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/checkpointsync"
-	"github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/db"
-	"github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/deprecated"
-	"github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/p2p"
-	"github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/testnet"
-	"github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/validator"
-	"github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/weaksubjectivity"
+	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/checkpointsync"
+	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/db"
+	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/deprecated"
+	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/p2p"
+	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/testnet"
+	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/validator"
+	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/weaksubjectivity"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

@@ -1,7 +1,7 @@
 package deprecated
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/deprecated/checkpoint"
+	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/deprecated/checkpoint"
 	"github.com/urfave/cli/v2"
 )
 
