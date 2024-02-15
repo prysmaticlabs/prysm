@@ -71,16 +71,16 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 func parseIndices(url *url.URL) ([]uint64, error) {
 	rawIndices := url.Query()["indices"]
 	indices := make([]uint64, 0, field_params.MaxBlobsPerBlock)
-	invalidIndicies := make([]string, 0)
+	invalidIndices := make([]string, 0)
 loop:
 	for _, raw := range rawIndices {
 		ix, err := strconv.ParseUint(raw, 10, 64)
 		if err != nil {
-			invalidIndicies = append(invalidIndicies, raw)
+			invalidIndices = append(invalidIndices, raw)
 			continue
 		}
 		if ix >= field_params.MaxBlobsPerBlock {
-			invalidIndicies = append(invalidIndicies, raw)
+			invalidIndices = append(invalidIndices, raw)
 			continue
 		}
 		for i := range indices {
