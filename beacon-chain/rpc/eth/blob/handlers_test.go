@@ -385,17 +385,17 @@ func Test_parseIndices(t *testing.T) {
 		{
 			name:    "out of bounds indices throws error",
 			query:   "indices=6&indices=7",
-			wantErr: "requested blob indicies [6 7] are invalid",
+			wantErr: "requested blob indices [6 7] are invalid",
 		},
 		{
 			name:    "negative indices",
 			query:   "indices=-1&indices=-8",
-			wantErr: "requested blob indicies [-1 -8] are invalid",
+			wantErr: "requested blob indices [-1 -8] are invalid",
 		},
 		{
-			name:    "invalid indicies",
+			name:    "invalid indices",
 			query:   "indices=foo&indices=bar",
-			wantErr: "requested blob indicies [foo bar] are invalid",
+			wantErr: "requested blob indices [foo bar] are invalid",
 		},
 	}
 	for _, tt := range tests {
