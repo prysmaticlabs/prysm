@@ -386,7 +386,6 @@ func signVoluntaryExit(
 
 // GetGraffiti gets the graffiti from cli or file for the validator public key.
 func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
-
 	if v.proposerSettings != nil {
 		// Check proposer settings for specific key first
 		if v.proposerSettings.ProposeConfig != nil {
@@ -453,18 +452,15 @@ func (v *validator) SetGraffiti(ctx context.Context, pubkey [fieldparams.BLSPubk
 	if graffiti == nil {
 		return nil
 	}
-	var settings *validatorserviceconfig.ProposerSettings
 	if v.proposerSettings == nil {
-		settings = &validatorserviceconfig.ProposerSettings{}
+		settings := &validatorserviceconfig.ProposerSettings{}
 		return v.SetProposerSettings(ctx, settings)
 	}
 	if v.proposerSettings.ProposeConfig == nil {
 		ps := v.proposerSettings.Clone()
 		ps.ProposeConfig = map[[48]byte]*validatorserviceconfig.ProposerOption{pubkey: {GraffitiConfig: &validatorserviceconfig.GraffitiConfig{Graffiti: string(graffiti)}}}
-		settings = ps
 		return v.SetProposerSettings(ctx, ps)
 	}
-
 	ps := v.proposerSettings.Clone()
 	var option *validatorserviceconfig.ProposerOption
 	option, ok := ps.ProposeConfig[pubkey]
