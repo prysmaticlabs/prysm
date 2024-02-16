@@ -14,14 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// A struct encapsulating input arguments to
-// functions used for attester slashing detection and
-// loading, saving, and updating min/max span chunks.
-type chunkUpdateArgs struct {
-	chunkIndex   uint64
-	currentEpoch primitives.Epoch
-}
-
 // Chunker defines a struct which represents a slice containing a chunk for K different validator's
 // min/max spans used for surround vote detection in slasher. The interface defines methods used to check
 // if an attestation is slashable for a validator index based on the contents of
@@ -36,7 +28,8 @@ type Chunker interface {
 		attestation *slashertypes.IndexedAttestationWrapper,
 	) (*ethpb.AttesterSlashing, error)
 	Update(
-		args *chunkUpdateArgs,
+		chunkIndex uint64,
+		currentEpoch primitives.Epoch,
 		validatorIndex primitives.ValidatorIndex,
 		startEpoch,
 		newTargetEpoch primitives.Epoch,
@@ -88,12 +81,16 @@ type MinSpanChunksSlice struct {
 	data   []uint16
 }
 
+var _ Chunker = (*MinSpanChunksSlice)(nil)
+
 // MaxSpanChunksSlice represents the same data structure as MinSpanChunksSlice however
 // keeps track of validator max spans for slashing detection instead.
 type MaxSpanChunksSlice struct {
 	params *Parameters
 	data   []uint16
 }
+
+var _ Chunker = (*MaxSpanChunksSlice)(nil)
 
 // EmptyMinSpanChunksSlice initializes a min span chunk of length C*K for
 // C = chunkSize and K = validatorChunkSize filled with neutral elements.
@@ -384,21 +381,22 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 // to update. In our example, we stop at 2, which is still part of chunk 0, so no need
 // to jump to another min span chunks slice to perform updates.
 func (m *MinSpanChunksSlice) Update(
-	args *chunkUpdateArgs,
+	chunkIndex uint64,
+	currentEpoch primitives.Epoch,
 	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch primitives.Epoch,
 ) (keepGoing bool, err error) {
 	// The lowest epoch we need to update.
 	minEpoch := primitives.Epoch(0)
-	if args.currentEpoch > (m.params.historyLength - 1) {
-		minEpoch = args.currentEpoch - (m.params.historyLength - 1)
+	if currentEpoch > (m.params.historyLength - 1) {
+		minEpoch = currentEpoch - (m.params.historyLength - 1)
 	}
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at startEpoch down to minEpoch.
 	// As long as the epoch, e, in the same chunk index and e >= minEpoch, we proceed with
 	// a for loop.
-	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk >= minEpoch {
+	for m.params.chunkIndex(epochInChunk) == chunkIndex && epochInChunk >= minEpoch {
 		var chunkTarget primitives.Epoch
 		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
@@ -433,7 +431,8 @@ func (m *MinSpanChunksSlice) Update(
 // more about how update exactly works, refer to the detailed documentation for the Update function for
 // MinSpanChunksSlice.
 func (m *MaxSpanChunksSlice) Update(
-	args *chunkUpdateArgs,
+	chunkIndex uint64,
+	currentEpoch primitives.Epoch,
 	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch primitives.Epoch,
@@ -442,7 +441,7 @@ func (m *MaxSpanChunksSlice) Update(
 	// We go down the chunk for the validator, updating every value starting at startEpoch up to
 	// and including the current epoch. As long as the epoch, e, is in the same chunk index and e <= currentEpoch,
 	// we proceed with a for loop.
-	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk <= args.currentEpoch {
+	for m.params.chunkIndex(epochInChunk) == chunkIndex && epochInChunk <= currentEpoch {
 		var chunkTarget primitives.Epoch
 		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
@@ -465,7 +464,7 @@ func (m *MaxSpanChunksSlice) Update(
 	}
 	// If the epoch to update now lies beyond the current chunk, then
 	// continue to the next chunk to update it.
-	keepGoing = epochInChunk <= args.currentEpoch
+	keepGoing = epochInChunk <= currentEpoch
 	return
 }
 

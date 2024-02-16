@@ -834,77 +834,293 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 }
 
 func Test_epochUpdateForValidators(t *testing.T) {
-	ctx := context.Background()
-	slasherDB := dbtest.SetupSlasherDB(t)
+	neutralMin, neutralMax := uint16(65535), uint16(0)
 
-	// Check if the chunk at chunk index already exists in-memory.
-	s := &Service{
-		params: &Parameters{
-			chunkSize:          2, // 2 epochs in a chunk.
-			validatorChunkSize: 2, // 2 validators in a chunk.
-			historyLength:      4,
+	testCases := []struct {
+		name                               string
+		chunkSize                          uint64
+		validatorChunkSize                 uint64
+		historyLength                      primitives.Epoch
+		currentEpoch                       primitives.Epoch
+		validatorChunkIndex                uint64
+		latestUpdatedEpochByValidatorIndex map[primitives.ValidatorIndex]primitives.Epoch
+		initialMinChunkByChunkIndex        map[uint64][]uint16
+		expectedMinChunkByChunkIndex       map[uint64][]uint16
+		initialMaxChunkByChunkIndex        map[uint64][]uint16
+		expectedMaxChunkByChunkIndex       map[uint64][]uint16
+	}{
+		{
+			name:                               "start with no data - first chunk",
+			chunkSize:                          4,
+			validatorChunkSize:                 2,
+			historyLength:                      8,
+			currentEpoch:                       2,
+			validatorChunkIndex:                21,
+			latestUpdatedEpochByValidatorIndex: nil,
+			initialMinChunkByChunkIndex:        nil,
+			expectedMinChunkByChunkIndex: map[uint64][]uint16{
+				// |                  validator 42                |                   validator 43                |
+				0: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+			},
+			initialMaxChunkByChunkIndex: nil,
+			expectedMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |                  validator 42                |                   validator 43                |
+				0: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+			},
 		},
-		serviceCfg:                     &ServiceConfig{Database: slasherDB},
-		latestEpochWrittenForValidator: map[primitives.ValidatorIndex]primitives.Epoch{},
+		{
+			name:                               "start with no data - second chunk",
+			chunkSize:                          4,
+			validatorChunkSize:                 2,
+			historyLength:                      8,
+			currentEpoch:                       5,
+			validatorChunkIndex:                21,
+			latestUpdatedEpochByValidatorIndex: nil,
+			initialMinChunkByChunkIndex:        nil,
+			expectedMinChunkByChunkIndex: map[uint64][]uint16{
+				// |                  validator 42                |                   validator 43                |
+				0: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+				1: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+			},
+			initialMaxChunkByChunkIndex: nil,
+			expectedMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |                  validator 42                |                   validator 43                |
+				0: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+				1: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+			},
+		},
+		{
+			name:                               "start with some data - first chunk",
+			chunkSize:                          4,
+			validatorChunkSize:                 2,
+			historyLength:                      8,
+			currentEpoch:                       2,
+			validatorChunkIndex:                21,
+			latestUpdatedEpochByValidatorIndex: map[primitives.ValidatorIndex]primitives.Epoch{42: 0, 43: 1},
+			initialMinChunkByChunkIndex: map[uint64][]uint16{
+				// |    validator 42    |   validator 43    |
+				0: {14, 9999, 9999, 9999, 15, 16, 9999, 9999},
+			},
+			expectedMinChunkByChunkIndex: map[uint64][]uint16{
+				// |           validator 42         |      validator 43       |
+				0: {14, neutralMin, neutralMin, 9999, 15, 16, neutralMin, 9999},
+			},
+			initialMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |    validator 42    |  validator 43     |
+				0: {70, 9999, 9999, 9999, 71, 72, 9999, 9999},
+			},
+			expectedMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |          validator 42          |      validator 43        |
+				0: {70, neutralMax, neutralMax, 9999, 71, 72, neutralMax, 9999},
+			},
+		},
+		{
+			name:                               "start with some data - second chunk",
+			chunkSize:                          4,
+			validatorChunkSize:                 2,
+			historyLength:                      8,
+			currentEpoch:                       5,
+			validatorChunkIndex:                21,
+			latestUpdatedEpochByValidatorIndex: map[primitives.ValidatorIndex]primitives.Epoch{42: 1, 43: 2},
+			initialMinChunkByChunkIndex: map[uint64][]uint16{
+				// |   validator 42   |  validator 43   |
+				0: {14, 13, 9999, 9999, 15, 16, 17, 9999},
+			},
+			expectedMinChunkByChunkIndex: map[uint64][]uint16{
+				// |         validator 42         |     validator 43      |
+				0: {14, 13, neutralMin, neutralMin, 15, 16, 17, neutralMin},
+
+				// |                  validator 42                |                   validator 43                |
+				1: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+			},
+			initialMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |   validator 42   |   validator 43  |
+				0: {70, 69, 9999, 9999, 71, 72, 73, 9999},
+			},
+			expectedMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |         validator 42         |      validator 43     |
+				0: {70, 69, neutralMax, neutralMax, 71, 72, 73, neutralMax},
+
+				// |                  validator 42                |                   validator 43                |
+				1: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+			},
+		},
+		{
+			name:                               "start with some data - third chunk",
+			chunkSize:                          4,
+			validatorChunkSize:                 2,
+			historyLength:                      12,
+			currentEpoch:                       9,
+			validatorChunkIndex:                21,
+			latestUpdatedEpochByValidatorIndex: map[primitives.ValidatorIndex]primitives.Epoch{42: 5, 43: 6},
+			initialMinChunkByChunkIndex: map[uint64][]uint16{
+				// |   validator 42   |  validator 43   |
+				1: {14, 13, 9999, 9999, 15, 16, 17, 9999},
+			},
+			expectedMinChunkByChunkIndex: map[uint64][]uint16{
+				// |         validator 42         |     validator 43      |
+				1: {14, 13, neutralMin, neutralMin, 15, 16, 17, neutralMin},
+
+				// |                  validator 42                |                   validator 43                |
+				2: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+			},
+			initialMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |   validator 42   |   validator 43  |
+				1: {70, 69, 9999, 9999, 71, 72, 73, 9999},
+			},
+			expectedMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |         validator 42         |      validator 43     |
+				1: {70, 69, neutralMax, neutralMax, 71, 72, 73, neutralMax},
+
+				// |                  validator 42                |                   validator 43                |
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+			},
+		},
+		{
+			name:                               "start with some data - third chunk - wrap to first chunk",
+			chunkSize:                          4,
+			validatorChunkSize:                 2,
+			historyLength:                      12,
+			currentEpoch:                       14,
+			validatorChunkIndex:                21,
+			latestUpdatedEpochByValidatorIndex: map[primitives.ValidatorIndex]primitives.Epoch{42: 9, 43: 10},
+			initialMinChunkByChunkIndex: map[uint64][]uint16{
+				// | validator 42 |  validator 43 |
+				0: {55, 55, 55, 55, 55, 55, 55, 55},
+				1: {66, 66, 66, 66, 66, 66, 66, 66},
+
+				// |   validator 42   |   validator 43  |
+				2: {77, 77, 9999, 9999, 77, 77, 77, 9999},
+			},
+			expectedMinChunkByChunkIndex: map[uint64][]uint16{
+				// |        validator 42          |      validator 43     |
+				2: {77, 77, neutralMin, neutralMin, 77, 77, 77, neutralMin},
+
+				// |             validator 42             |             validator 43              |
+				0: {neutralMin, neutralMin, neutralMin, 55, neutralMin, neutralMin, neutralMin, 55},
+			},
+			initialMaxChunkByChunkIndex: map[uint64][]uint16{
+				// | validator 42 |  validator 43 |
+				0: {55, 55, 55, 55, 55, 55, 55, 55},
+				1: {66, 66, 66, 66, 66, 66, 66, 66},
+
+				// |   validator 42   |   validator 43  |
+				2: {77, 77, 9999, 9999, 77, 77, 77, 9999},
+			},
+			expectedMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |        validator 42          |      validator 43     |
+				2: {77, 77, neutralMax, neutralMax, 77, 77, 77, neutralMax},
+
+				// |             validator 42             |             validator 43              |
+				0: {neutralMax, neutralMax, neutralMax, 55, neutralMax, neutralMax, neutralMax, 55},
+			},
+		},
+		{
+			name:                               "start with some data - high latest updated epoch",
+			chunkSize:                          4,
+			validatorChunkSize:                 2,
+			historyLength:                      12,
+			currentEpoch:                       16,
+			validatorChunkIndex:                21,
+			latestUpdatedEpochByValidatorIndex: map[primitives.ValidatorIndex]primitives.Epoch{42: 2, 43: 3},
+			initialMinChunkByChunkIndex: map[uint64][]uint16{
+				// | validator 42 |  validator 43 |
+				0: {55, 55, 55, 55, 55, 55, 55, 55},
+				1: {66, 66, 66, 66, 66, 66, 66, 66},
+				2: {77, 77, 77, 77, 77, 77, 77, 77},
+			},
+			expectedMinChunkByChunkIndex: map[uint64][]uint16{
+				// |                  validator 42                |                  validator 43                 |
+				0: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+				1: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+				2: {neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin, neutralMin},
+			},
+			initialMaxChunkByChunkIndex: map[uint64][]uint16{
+				// | validator 42 |  validator 43 |
+				0: {55, 55, 55, 55, 55, 55, 55, 55},
+				1: {66, 66, 66, 66, 66, 66, 66, 66},
+				2: {77, 77, 77, 77, 77, 77, 77, 77},
+			},
+			expectedMaxChunkByChunkIndex: map[uint64][]uint16{
+				// |                  validator 42                |                  validator 43                 |
+				0: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+				1: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax, neutralMax},
+			},
+		},
 	}
 
-	t.Run("no update if no latest written epoch", func(t *testing.T) {
-		validators := []primitives.ValidatorIndex{
-			1, 2,
-		}
-		currentEpoch := primitives.Epoch(3)
-		// No last written epoch for both validators.
-		s.latestEpochWrittenForValidator = map[primitives.ValidatorIndex]primitives.Epoch{}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create context.
+			ctx := context.Background()
 
-		// Because the validators have no recorded latest epoch written, we expect
-		// no chunks to be loaded nor updated to.
-		updatedChunks := make(map[uint64]Chunker)
-		for _, valIdx := range validators {
-			err := s.epochUpdateForValidator(
-				ctx,
-				updatedChunks,
-				0, // validatorChunkIndex
-				slashertypes.MinSpan,
-				currentEpoch,
-				valIdx,
+			// Initialize the slasher database.
+			slasherDB := dbtest.SetupSlasherDB(t)
+
+			// Intialize the slasher service.
+			service := &Service{
+				params: &Parameters{
+					chunkSize:          tt.chunkSize,
+					validatorChunkSize: tt.validatorChunkSize,
+					historyLength:      tt.historyLength,
+				},
+				serviceCfg:                     &ServiceConfig{Database: slasherDB},
+				latestEpochWrittenForValidator: tt.latestUpdatedEpochByValidatorIndex,
+			}
+
+			// Save min initial chunks if they exist.
+			if tt.initialMinChunkByChunkIndex != nil {
+				minChunkerByChunkerIndex := map[uint64]Chunker{}
+				for chunkIndex, minChunk := range tt.initialMinChunkByChunkIndex {
+					minChunkerByChunkerIndex[chunkIndex] = &MinSpanChunksSlice{data: minChunk}
+				}
+
+				err := service.saveUpdatedChunks(ctx, minChunkerByChunkerIndex, slashertypes.MinSpan, tt.validatorChunkIndex)
+				require.NoError(t, err)
+			}
+
+			// Save max initial chunks if they exist.
+			if tt.initialMaxChunkByChunkIndex != nil {
+				maxChunkerByChunkerIndex := map[uint64]Chunker{}
+				for chunkIndex, maxChunk := range tt.initialMaxChunkByChunkIndex {
+					maxChunkerByChunkerIndex[chunkIndex] = &MaxSpanChunksSlice{data: maxChunk}
+				}
+
+				err := service.saveUpdatedChunks(ctx, maxChunkerByChunkerIndex, slashertypes.MaxSpan, tt.validatorChunkIndex)
+				require.NoError(t, err)
+			}
+
+			// Get chunks.
+			actualMinChunkByChunkIndex, err := service.updatedChunkByChunkIndex(
+				ctx, slashertypes.MinSpan, tt.currentEpoch, tt.validatorChunkIndex,
 			)
+
+			// Compare the actual and expected chunks.
 			require.NoError(t, err)
-		}
-		require.Equal(t, 0, len(updatedChunks))
-	})
+			require.Equal(t, len(tt.expectedMinChunkByChunkIndex), len(actualMinChunkByChunkIndex))
+			for chunkIndex, expectedMinChunk := range tt.expectedMinChunkByChunkIndex {
+				actualMinChunk, ok := actualMinChunkByChunkIndex[chunkIndex]
+				require.Equal(t, true, ok)
+				require.Equal(t, len(expectedMinChunk), len(actualMinChunk.Chunk()))
+				require.DeepSSZEqual(t, expectedMinChunk, actualMinChunk.Chunk())
+			}
 
-	t.Run("update from latest written epoch", func(t *testing.T) {
-		validators := []primitives.ValidatorIndex{
-			1, 2,
-		}
-		currentEpoch := primitives.Epoch(3)
-
-		// Set the latest written epoch for validators to current epoch - 1.
-		latestWrittenEpoch := currentEpoch - 1
-		s.latestEpochWrittenForValidator = map[primitives.ValidatorIndex]primitives.Epoch{
-			1: latestWrittenEpoch,
-			2: latestWrittenEpoch,
-		}
-
-		// Because the latest written epoch for the input validators is == 2, we expect
-		// that we will update all epochs from 2 up to 3 (the current epoch). This is all
-		// safe contained in chunk index 1.
-		updatedChunks := make(map[uint64]Chunker)
-		for _, valIdx := range validators {
-			err := s.epochUpdateForValidator(
-				ctx,
-				updatedChunks,
-				0, // validatorChunkIndex,
-				slashertypes.MinSpan,
-				currentEpoch,
-				valIdx,
+			actualMaxChunkByChunkIndex, err := service.updatedChunkByChunkIndex(
+				ctx, slashertypes.MaxSpan, tt.currentEpoch, tt.validatorChunkIndex,
 			)
+
 			require.NoError(t, err)
-		}
-		require.Equal(t, 1, len(updatedChunks))
-		_, ok := updatedChunks[1]
-		require.Equal(t, true, ok)
-	})
+			require.Equal(t, len(tt.expectedMaxChunkByChunkIndex), len(actualMaxChunkByChunkIndex))
+			for chunkIndex, expectedMaxChunk := range tt.expectedMaxChunkByChunkIndex {
+				actualMaxChunk, ok := actualMaxChunkByChunkIndex[chunkIndex]
+				require.Equal(t, true, ok)
+				require.Equal(t, len(expectedMaxChunk), len(actualMaxChunk.Chunk()))
+				require.DeepSSZEqual(t, expectedMaxChunk, actualMaxChunk.Chunk())
+			}
+
+		})
+	}
 }
 
 func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
