@@ -34,26 +34,26 @@ func (s *Store) LastEpochWrittenForValidators(
 	defer span.End()
 
 	attestedEpochs := make([]*slashertypes.AttestedEpochForValidator, 0)
-	encodedIndexes := make([][]byte, len(validatorIndexes))
-
-	for i, validatorIndex := range validatorIndexes {
-		encodedIndexes[i] = encodeValidatorIndex(validatorIndex)
-	}
 
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
 
-		for i, encodedIndex := range encodedIndexes {
-			var epoch primitives.Epoch
+		for _, validatorIndex := range validatorIndexes {
+			encodedIndex := encodeValidatorIndex(validatorIndex)
 
-			if epochBytes := bkt.Get(encodedIndex); epochBytes != nil {
-				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
-					return err
-				}
+			epochBytes := bkt.Get(encodedIndex)
+			if epochBytes == nil {
+				// If there is no epoch for this validator, skip to the next validator.
+				continue
+			}
+
+			var epoch primitives.Epoch
+			if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
+				return err
 			}
 
 			attestedEpoch := &slashertypes.AttestedEpochForValidator{
-				ValidatorIndex: validatorIndexes[i],
+				ValidatorIndex: validatorIndex,
 				Epoch:          epoch,
 			}
 
