@@ -4,14 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -20,8 +18,6 @@ import (
 func (s *Service) checkSlashableAttestations(
 	ctx context.Context, currentEpoch primitives.Epoch, atts []*slashertypes.IndexedAttestationWrapper,
 ) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
-	start := time.Now()
-
 	slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
 
 	// Double votes
@@ -29,8 +25,6 @@ func (s *Service) checkSlashableAttestations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check slashable double votes")
 	}
-
-	log.WithField("elapsed", time.Since(start)).Debug("Done checking double votes")
 
 	for root, slashing := range doubleVoteSlashings {
 		slashings[root] = slashing
@@ -51,19 +45,6 @@ func (s *Service) checkSlashableAttestations(
 
 	for root, slashing := range surroundSlashings {
 		slashings[root] = slashing
-	}
-
-	elapsed := time.Since(start)
-
-	fields := logrus.Fields{
-		"numAttestations": len(atts),
-		"elapsed":         elapsed,
-	}
-
-	log.WithFields(fields).Info("Done checking slashable attestations")
-
-	if len(slashings) > 0 {
-		log.WithField("numSlashings", len(slashings)).Warn("Slashable attestation offenses found")
 	}
 
 	return slashings, nil

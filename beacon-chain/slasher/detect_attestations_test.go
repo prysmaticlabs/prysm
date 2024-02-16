@@ -1351,7 +1351,8 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	tickerChan <- 1
 	cancel()
 	s.wg.Wait()
-	assert.LogsContain(t, hook, "Processing queued")
+	assert.LogsContain(t, hook, "Start processing queued attestations")
+	assert.LogsContain(t, hook, "Done processing queued attestations")
 }
 
 func BenchmarkCheckSlashableAttestations(b *testing.B) {
