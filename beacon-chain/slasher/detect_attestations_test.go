@@ -1445,6 +1445,66 @@ func runAttestationsBenchmark(b *testing.B, s *Service, numAtts, numValidators u
 	}
 }
 
+func Benchmark_checkSurroundVotes(b *testing.B) {
+	const (
+		// Approximatively the number of Holesky active validators on 2024-02-16
+		// This number is both a multiple of 32 (the number of slots per epoch) and 256 (the number of validators per chunk)
+		validatorsCount = 1_638_400
+		slotsPerEpoch   = 32
+
+		targetEpoch  = 42
+		sourceEpoch  = 43
+		currentEpoch = 43
+	)
+	// Create a context.
+	ctx := context.Background()
+
+	// Initialize the slasher database.
+	slasherDB := dbtest.SetupSlasherDB(b)
+
+	// Initialize the slasher service.
+	service, err := New(ctx, &ServiceConfig{Database: slasherDB})
+	require.NoError(b, err)
+
+	// Create the attesting validators indexes.
+	// The best case scenario would be to have all validators attesting for a slot with contiguous indexes.
+	// So for 1_638_400 validators with 32 slots per epoch, we would have 48_000 attestation wrappers per slot.
+	// With 256 validators per chunk, we would have only 188 modified chunks.
+	//
+	// In this benchmark, we use the worst case scenario where attestating validators are evenly splitted across all validators chunks.
+	// We also suppose that only one chunk per validator chunk index is modified.
+	// For one given validator index, multiple chunk indexes could be modified.
+	//
+	// With 1_638_400 validators we have 6400 chunks. If exactly 8 validators per chunks attest, we have:
+	// 6_400 chunks * 8 = 51_200 validators attesting per slot. And 51_200 validators * 32 slots = 1_638_400
+	// attesting validators per epoch.
+	// ==> Attesting validator indexes will be computed as follows:
+	//         validator chunk index 0               validator chunk index 1                   validator chunk index 6_399
+	// [0, 32, 64, 96, 128, 160, 192, 224 | 256, 288, 320, 352, 384, 416, 448, 480 | ... | ..., 1_638_606,  1_638_368, 1_638_400]
+	//
+
+	attestingValidatorsCount := validatorsCount / slotsPerEpoch
+	validatorIndexes := make([]uint64, attestingValidatorsCount)
+	for i := 0; i < attestingValidatorsCount; i++ {
+		validatorIndexes[i] = 32 * uint64(i)
+	}
+
+	// Create the attestation wrapper.
+	// This benchmark assume that all validators produced the exact same head, source and target votes.
+	attWrapper := createAttestationWrapperEmptySig(b, sourceEpoch, targetEpoch, validatorIndexes, nil)
+	attWrappers := []*slashertypes.IndexedAttestationWrapper{attWrapper}
+
+	// Run the benchmark.
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StartTimer()
+		_, err = service.checkSurroundVotes(ctx, attWrappers, currentEpoch)
+		b.StopTimer()
+
+		require.NoError(b, err)
+	}
+}
+
 // createAttestationWrapperEmptySig creates an attestation wrapper with source and target,
 // for validators with indices, and a beacon block root (corresponding to the head vote).
 // For source and target epochs, the corresponding root is null.
