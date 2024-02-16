@@ -127,14 +127,10 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	source = primitives.Epoch(1)
 	target = primitives.Epoch(2)
 	att = createAttestationWrapperEmptySig(t, source, target, nil, nil)
-	chunkIdx := uint64(0)
+	chunkIndex := uint64(0)
 	startEpoch := target
 	currentEpoch := target
-	args := &chunkUpdateArgs{
-		chunkIndex:   chunkIdx,
-		currentEpoch: currentEpoch,
-	}
-	_, err = chunk.Update(args, validatorIdx, startEpoch, target)
+	_, err = chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
 
 	// Next up, we create a surrounding vote, but it should NOT be slashable
@@ -209,14 +205,10 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	source = primitives.Epoch(0)
 	target = primitives.Epoch(3)
 	att = createAttestationWrapperEmptySig(t, source, target, nil, nil)
-	chunkIdx := uint64(0)
+	chunkIndex := uint64(0)
 	startEpoch := source
 	currentEpoch := target
-	args := &chunkUpdateArgs{
-		chunkIndex:   chunkIdx,
-		currentEpoch: currentEpoch,
-	}
-	_, err = chunk.Update(args, validatorIdx, startEpoch, target)
+	_, err = chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
 
 	// Next up, we create a surrounded vote, but it should NOT be slashable
@@ -288,15 +280,11 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	}
 	chunk := EmptyMinSpanChunksSlice(params)
 	target := primitives.Epoch(3)
-	chunkIdx := uint64(1)
-	validatorIdx := primitives.ValidatorIndex(0)
+	chunkIndex := uint64(1)
+	validatorIndex := primitives.ValidatorIndex(0)
 	startEpoch := target
 	currentEpoch := target
-	args := &chunkUpdateArgs{
-		chunkIndex:   chunkIdx,
-		currentEpoch: currentEpoch,
-	}
-	keepGoing, err := chunk.Update(args, validatorIdx, startEpoch, target)
+	keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIndex, startEpoch, target)
 	require.NoError(t, err)
 
 	// We should keep going! We still have to update the data for chunk index 0.
@@ -306,15 +294,11 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 
 	// Now we update for chunk index 0.
 	chunk = EmptyMinSpanChunksSlice(params)
-	chunkIdx = uint64(0)
-	validatorIdx = primitives.ValidatorIndex(0)
+	chunkIndex = uint64(0)
+	validatorIndex = primitives.ValidatorIndex(0)
 	startEpoch = primitives.Epoch(1)
 	currentEpoch = target
-	args = &chunkUpdateArgs{
-		chunkIndex:   chunkIdx,
-		currentEpoch: currentEpoch,
-	}
-	keepGoing, err = chunk.Update(args, validatorIdx, startEpoch, target)
+	keepGoing, err = chunk.Update(chunkIndex, currentEpoch, validatorIndex, startEpoch, target)
 	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want = []uint16{3, 2, math.MaxUint16, math.MaxUint16, math.MaxUint16, math.MaxUint16}
@@ -329,15 +313,11 @@ func TestMaxSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	}
 	chunk := EmptyMaxSpanChunksSlice(params)
 	target := primitives.Epoch(3)
-	chunkIdx := uint64(0)
+	chunkIndex := uint64(0)
 	validatorIdx := primitives.ValidatorIndex(0)
 	startEpoch := primitives.Epoch(0)
 	currentEpoch := target
-	args := &chunkUpdateArgs{
-		chunkIndex:   chunkIdx,
-		currentEpoch: currentEpoch,
-	}
-	keepGoing, err := chunk.Update(args, validatorIdx, startEpoch, target)
+	keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
 
 	// We should keep going! We still have to update the data for chunk index 1.
@@ -347,15 +327,11 @@ func TestMaxSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 
 	// Now we update for chunk index 1.
 	chunk = EmptyMaxSpanChunksSlice(params)
-	chunkIdx = uint64(1)
+	chunkIndex = uint64(1)
 	validatorIdx = primitives.ValidatorIndex(0)
 	startEpoch = primitives.Epoch(2)
 	currentEpoch = target
-	args = &chunkUpdateArgs{
-		chunkIndex:   chunkIdx,
-		currentEpoch: currentEpoch,
-	}
-	keepGoing, err = chunk.Update(args, validatorIdx, startEpoch, target)
+	keepGoing, err = chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want = []uint16{1, 0, 0, 0, 0, 0}
@@ -393,15 +369,11 @@ func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	}
 	chunk := EmptyMinSpanChunksSlice(params)
 	target := primitives.Epoch(1)
-	chunkIdx := uint64(0)
+	chunkIndex := uint64(0)
 	validatorIdx := primitives.ValidatorIndex(0)
 	startEpoch := target
 	currentEpoch := target
-	args := &chunkUpdateArgs{
-		chunkIndex:   chunkIdx,
-		currentEpoch: currentEpoch,
-	}
-	keepGoing, err := chunk.Update(args, validatorIdx, startEpoch, target)
+	keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want := []uint16{1, 0, math.MaxUint16, math.MaxUint16, math.MaxUint16, math.MaxUint16}
@@ -416,15 +388,11 @@ func TestMaxSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	}
 	chunk := EmptyMaxSpanChunksSlice(params)
 	target := primitives.Epoch(3)
-	chunkIdx := uint64(0)
+	chunkIndex := uint64(0)
 	validatorIdx := primitives.ValidatorIndex(0)
 	startEpoch := primitives.Epoch(0)
 	currentEpoch := target
-	args := &chunkUpdateArgs{
-		chunkIndex:   chunkIdx,
-		currentEpoch: currentEpoch,
-	}
-	keepGoing, err := chunk.Update(args, validatorIdx, startEpoch, target)
+	keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want := []uint16{3, 2, 1, 0, 0, 0, 0, 0}
