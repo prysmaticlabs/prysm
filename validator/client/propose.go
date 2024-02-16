@@ -386,14 +386,16 @@ func signVoluntaryExit(
 
 // GetGraffiti gets the graffiti from cli or file for the validator public key.
 func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
-	// Check proposer settings first
+
 	if v.proposerSettings != nil {
+		// Check proposer settings for specific key first
 		if v.proposerSettings.ProposeConfig != nil {
 			option, ok := v.proposerSettings.ProposeConfig[pubKey]
 			if ok && option.GraffitiConfig != nil {
 				return []byte(option.GraffitiConfig.Graffiti), nil
 			}
 		}
+		// Check proposer settings for default settings second
 		if v.proposerSettings.DefaultConfig != nil {
 			if v.proposerSettings.DefaultConfig.GraffitiConfig != nil {
 				return []byte(v.proposerSettings.DefaultConfig.GraffitiConfig.Graffiti), nil
@@ -447,18 +449,27 @@ func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 	return []byte{}, nil
 }
 
-func (v *validator) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
-	if v.proposerSettings == nil || v.proposerSettings.ProposeConfig == nil {
-		return errors.New("attempted to set graffiti without proposer settings, graffiti will default to flag options")
-	}
-	ps := v.proposerSettings.Clone()
-	var option *validatorserviceconfig.ProposerOption
-	option, ok := ps.ProposeConfig[pubKey]
-	if !ok || option == nil {
-		return fmt.Errorf("attempted to set graffiti but proposer settings are missing for pubkey:%s", hexutil.Encode(pubKey[:]))
-	}
+func (v *validator) SetGraffiti(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
 	if graffiti == nil {
 		return nil
+	}
+	var settings *validatorserviceconfig.ProposerSettings
+	if v.proposerSettings == nil {
+		settings = &validatorserviceconfig.ProposerSettings{}
+		return v.SetProposerSettings(ctx, settings)
+	}
+	if v.proposerSettings.ProposeConfig == nil {
+		ps := v.proposerSettings.Clone()
+		ps.ProposeConfig = map[[48]byte]*validatorserviceconfig.ProposerOption{pubkey: {GraffitiConfig: &validatorserviceconfig.GraffitiConfig{Graffiti: string(graffiti)}}}
+		settings = ps
+		return v.SetProposerSettings(ctx, ps)
+	}
+
+	ps := v.proposerSettings.Clone()
+	var option *validatorserviceconfig.ProposerOption
+	option, ok := ps.ProposeConfig[pubkey]
+	if !ok || option == nil {
+		return fmt.Errorf("attempted to set graffiti but proposer settings are missing for pubkey:%s", hexutil.Encode(pubkey[:]))
 	}
 	option.GraffitiConfig = &validatorserviceconfig.GraffitiConfig{
 		Graffiti: string(graffiti),
