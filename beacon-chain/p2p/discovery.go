@@ -14,11 +14,11 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // Listener defines the discovery V5 network interface that is used

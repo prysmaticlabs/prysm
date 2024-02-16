@@ -5,10 +5,10 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition/interop"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 var (

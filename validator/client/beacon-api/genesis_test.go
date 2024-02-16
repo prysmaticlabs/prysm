@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 )
 
 func TestGetGenesis_ValidGenesis(t *testing.T) {

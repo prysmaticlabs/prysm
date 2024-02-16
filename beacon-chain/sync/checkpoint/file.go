@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	log "github.com/sirupsen/logrus"
 )
 

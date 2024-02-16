@@ -9,8 +9,8 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/math"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/math"
 )
 
 var _ NetworkEncoding = (*SszNetworkEncoder)(nil)

@@ -7,12 +7,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
@@ -66,7 +65,6 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Con
 		return nil, errors.Wrap(err, "failed to calculate attestation data root")
 	}
 
-	logrus.Infof("Aggregator requested attestation %#x", attestationDataRoot)
 	aggregateAttestationResponse, err := c.getAggregateAttestation(ctx, in.Slot, attestationDataRoot[:])
 	if err != nil {
 		return nil, err

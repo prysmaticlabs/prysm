@@ -3,11 +3,11 @@ package state_native
 import (
 	"math/big"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // LatestExecutionPayloadHeader of the beacon state.

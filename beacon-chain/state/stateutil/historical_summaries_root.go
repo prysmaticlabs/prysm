@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 func HistoricalSummariesRoot(summaries []*ethpb.HistoricalSummary) ([32]byte, error) {

@@ -7,9 +7,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	protodb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	protodb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // SparseMerkleTrie implements a sparse, general purpose Merkle trie to be used

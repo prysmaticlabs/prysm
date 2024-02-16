@@ -9,13 +9,13 @@ import (
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
-	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
@@ -56,18 +56,15 @@ func TestStore_LastEpochWrittenForValidators(t *testing.T) {
 		epochs[i] = primitives.Epoch(i)
 	}
 
-	attestedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
-	require.NoError(t, err)
-	require.Equal(t, true, len(attestedEpochs) == len(indices))
-
-	for _, item := range attestedEpochs {
-		require.Equal(t, primitives.Epoch(0), item.Epoch)
-	}
-
 	epochsByValidator := make(map[primitives.ValidatorIndex]primitives.Epoch, validatorsCount)
 	for i := 0; i < validatorsCount; i++ {
 		epochsByValidator[indices[i]] = epochs[i]
 	}
+
+	// No epochs written for any validators, should return empty list.
+	attestedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(attestedEpochs))
 
 	err = beaconDB.SaveLastEpochsWrittenForValidators(ctx, epochsByValidator)
 	require.NoError(t, err)

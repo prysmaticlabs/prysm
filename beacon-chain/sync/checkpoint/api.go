@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	log "github.com/sirupsen/logrus"
 )
 

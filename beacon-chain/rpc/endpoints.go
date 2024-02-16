@@ -3,23 +3,23 @@ package rpc
 import (
 	"net/http"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/blob"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
-	lightclient "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/light-client"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	beaconprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon"
-	nodeprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/node"
-	validatorv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
-	validatorprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/blob"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/builder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/config"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/debug"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/events"
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/light-client"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/node"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/rewards"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
+	beaconprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/beacon"
+	nodeprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/node"
+	validatorv1alpha1 "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/v1alpha1/validator"
+	validatorprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/validator"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 )
 
 type endpoint struct {
@@ -411,12 +411,6 @@ func (s *Service) beaconEndpoints(
 			methods:  []string{http.MethodPost},
 		},
 		{
-			template: "/eth/v1/beacon/blocks/{block_id}",
-			name:     namespace + ".GetBlock",
-			handler:  server.GetBlock,
-			methods:  []string{http.MethodGet},
-		},
-		{
 			template: "/eth/v2/beacon/blocks/{block_id}",
 			name:     namespace + ".GetBlockV2",
 			handler:  server.GetBlockV2,
@@ -626,12 +620,6 @@ func (s *Service) debugEndpoints(stater lookup.Stater) []endpoint {
 	const namespace = "debug"
 	return []endpoint{
 		{
-			template: "/eth/v1/debug/beacon/states/{state_id}",
-			name:     namespace + ".GetBeaconStateSSZ",
-			handler:  server.GetBeaconStateSSZ,
-			methods:  []string{http.MethodGet},
-		},
-		{
 			template: "/eth/v2/debug/beacon/states/{state_id}",
 			name:     namespace + ".GetBeaconStateV2",
 			handler:  server.GetBeaconStateV2,
@@ -691,6 +679,18 @@ func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory) []endpoint
 			handler:  server.GetWeakSubjectivity,
 			methods:  []string{http.MethodGet},
 		},
+		{
+			template: "/eth/v1/beacon/states/{state_id}/validator_count",
+			name:     namespace + ".GetValidatorCount",
+			handler:  server.GetValidatorCount,
+			methods:  []string{http.MethodGet},
+		},
+		{
+			template: "/prysm/v1/beacon/states/{state_id}/validator_count",
+			name:     namespace + ".GetValidatorCount",
+			handler:  server.GetValidatorCount,
+			methods:  []string{http.MethodGet},
+		},
 	}
 }
 
@@ -716,7 +716,19 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 			methods:  []string{http.MethodGet},
 		},
 		{
+			template: "/prysm/v1/node/trusted_peers",
+			name:     namespace + ".ListTrustedPeer",
+			handler:  server.ListTrustedPeer,
+			methods:  []string{http.MethodGet},
+		},
+		{
 			template: "/prysm/node/trusted_peers",
+			name:     namespace + ".AddTrustedPeer",
+			handler:  server.AddTrustedPeer,
+			methods:  []string{http.MethodPost},
+		},
+		{
+			template: "/prysm/v1/node/trusted_peers",
 			name:     namespace + ".AddTrustedPeer",
 			handler:  server.AddTrustedPeer,
 			methods:  []string{http.MethodPost},
@@ -727,20 +739,18 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 			handler:  server.RemoveTrustedPeer,
 			methods:  []string{http.MethodDelete},
 		},
+		{
+			template: "/prysm/v1/node/trusted_peers/{peer_id}",
+			name:     namespace + ".RemoveTrustedPeer",
+			handler:  server.RemoveTrustedPeer,
+			methods:  []string{http.MethodDelete},
+		},
 	}
 }
 
 func (s *Service) prysmValidatorEndpoints(coreService *core.Service, stater lookup.Stater) []endpoint {
 	server := &validatorprysm.Server{
-		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
-		HeadFetcher:           s.cfg.HeadFetcher,
-		SyncChecker:           s.cfg.SyncService,
-		CoreService:           coreService,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		Stater:                stater,
-		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
-		BeaconDB:              s.cfg.BeaconDB,
-		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+		CoreService: coreService,
 	}
 
 	const namespace = "prysm.validator"
@@ -752,10 +762,10 @@ func (s *Service) prysmValidatorEndpoints(coreService *core.Service, stater look
 			methods:  []string{http.MethodPost},
 		},
 		{
-			template: "/eth/v1/beacon/states/{state_id}/validator_count",
-			name:     namespace + ".GetValidatorCount",
-			handler:  server.GetValidatorCount,
-			methods:  []string{http.MethodGet},
+			template: "/prysm/v1/validators/performance",
+			name:     namespace + ".GetValidatorPerformance",
+			handler:  server.GetValidatorPerformance,
+			methods:  []string{http.MethodPost},
 		},
 	}
 }

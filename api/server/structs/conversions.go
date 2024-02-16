@@ -7,16 +7,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/server"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v5/api/server"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 var errNilValue = errors.New("nil value")

@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/io/prompt"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/prompt"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 )
 
 // Delete the accounts that the user requests to be deleted from the wallet.

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
 
 func Test_endpoints(t *testing.T) {
@@ -109,17 +109,21 @@ func Test_endpoints(t *testing.T) {
 	}
 
 	prysmBeaconRoutes := map[string][]string{
-		"/prysm/v1/beacon/weak_subjectivity": {http.MethodGet},
+		"/prysm/v1/beacon/weak_subjectivity":                 {http.MethodGet},
+		"/eth/v1/beacon/states/{state_id}/validator_count":   {http.MethodGet},
+		"/prysm/v1/beacon/states/{state_id}/validator_count": {http.MethodGet},
 	}
 
 	prysmNodeRoutes := map[string][]string{
-		"/prysm/node/trusted_peers":           {http.MethodGet, http.MethodPost},
-		"/prysm/node/trusted_peers/{peer_id}": {http.MethodDelete},
+		"/prysm/node/trusted_peers":              {http.MethodGet, http.MethodPost},
+		"/prysm/v1/node/trusted_peers":           {http.MethodGet, http.MethodPost},
+		"/prysm/node/trusted_peers/{peer_id}":    {http.MethodDelete},
+		"/prysm/v1/node/trusted_peers/{peer_id}": {http.MethodDelete},
 	}
 
 	prysmValidatorRoutes := map[string][]string{
-		"/prysm/validators/performance":                    {http.MethodPost},
-		"/eth/v1/beacon/states/{state_id}/validator_count": {http.MethodGet},
+		"/prysm/validators/performance":    {http.MethodPost},
+		"/prysm/v1/validators/performance": {http.MethodPost},
 	}
 
 	s := &Service{cfg: &Config{}}
