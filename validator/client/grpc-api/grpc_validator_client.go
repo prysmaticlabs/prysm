@@ -197,8 +197,10 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 			if ctx.Err() != nil {
 				c.isEventStreamRunning = false
 				if errors.Is(ctx.Err(), context.Canceled) {
-					log.Error("Context canceled, stopping event stream")
-					close(eventsChannel)
+					eventsChannel <- &eventClient.Event{
+						EventType: eventClient.EventConnectionError,
+						Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
+					}
 					return
 				}
 				eventsChannel <- &eventClient.Event{
@@ -223,7 +225,6 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 				Slot: strconv.FormatUint(uint64(res.Slot), 10),
 			})
 			if err != nil {
-				c.isEventStreamRunning = false
 				eventsChannel <- &eventClient.Event{
 					EventType: eventClient.EventError,
 					Data:      []byte(errors.Wrap(err, "failed to marshal Head Event").Error()),

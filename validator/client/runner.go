@@ -310,7 +310,7 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 			tracker.UpdateNodeHealth(newStatus)
 			// in case of node returning healthy but event stream died
 			if !v.EventStreamIsRunning() {
-				log.Info("event stream reconnecting...")
+				log.Info("Event stream reconnecting...")
 				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
 			}
 		}

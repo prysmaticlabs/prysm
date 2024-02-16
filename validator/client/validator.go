@@ -1060,8 +1060,10 @@ func (v *validator) ProcessEvent(event *eventClient.Event) {
 		log.Warn("Received empty event")
 	}
 	switch event.EventType {
-	case eventClient.EventConnectionError, eventClient.EventError:
-		log.WithError(errors.New(string(event.Data))).Warn("Event stream interrupted")
+	case eventClient.EventError:
+		log.Error(string(event.Data))
+	case eventClient.EventConnectionError:
+		log.WithError(errors.New(string(event.Data))).Error("Event stream interrupted")
 	case eventClient.EventHead:
 		log.Debug("Received head event")
 		head := &structs.HeadEvent{}
