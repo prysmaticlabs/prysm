@@ -87,7 +87,6 @@ func TestServer_InitializeRoutes(t *testing.T) {
 		"/eth/v2/beacon/blinded_blocks":                              {http.MethodPost},
 		"/eth/v1/beacon/blocks":                                      {http.MethodPost},
 		"/eth/v2/beacon/blocks":                                      {http.MethodPost},
-		"/eth/v1/beacon/blocks/{block_id}":                           {http.MethodGet}, //deprecated
 		"/eth/v2/beacon/blocks/{block_id}":                           {http.MethodGet},
 		"/eth/v1/beacon/blocks/{block_id}/root":                      {http.MethodGet},
 		"/eth/v1/beacon/blocks/{block_id}/attestations":              {http.MethodGet},
