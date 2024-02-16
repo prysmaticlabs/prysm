@@ -47,51 +47,6 @@ var (
 
 type handled bool
 
-// GetBlock retrieves block details for given block ID.
-//
-// DEPRECATED: please use GetBlockV2 instead
-func (s *Server) GetBlock(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlock")
-	defer span.End()
-
-	blockId := mux.Vars(r)["block_id"]
-	if blockId == "" {
-		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
-		return
-	}
-	blk, err := s.Blocker.Block(ctx, []byte(blockId))
-	if !shared.WriteBlockFetchError(w, blk, err) {
-		return
-	}
-
-	if httputil.RespondWithSsz(r) {
-		s.getBlockSSZ(ctx, w, blk)
-	} else {
-		s.getBlock(ctx, w, blk)
-	}
-}
-
-// getBlock returns the JSON-serialized version of the beacon block for given block ID.
-func (s *Server) getBlock(ctx context.Context, w http.ResponseWriter, blk interfaces.ReadOnlySignedBeaconBlock) {
-	v2Resp, err := s.getBlockPhase0(ctx, blk)
-	if err != nil {
-		httputil.HandleError(w, "Could not get block: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	resp := &structs.GetBlockResponse{Data: v2Resp.Data}
-	httputil.WriteJson(w, resp)
-}
-
-// getBlockSSZ returns the SSZ-serialized version of the becaon block for given block ID.
-func (s *Server) getBlockSSZ(ctx context.Context, w http.ResponseWriter, blk interfaces.ReadOnlySignedBeaconBlock) {
-	resp, err := s.getBlockPhase0SSZ(ctx, blk)
-	if err != nil {
-		httputil.HandleError(w, "Could not get block: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	httputil.WriteSsz(w, resp, "beacon_block.ssz")
-}
-
 // GetBlockV2 retrieves block details for given block ID.
 func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockV2")

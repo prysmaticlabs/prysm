@@ -248,7 +248,6 @@ func (s *Service) initializeBeaconServerRoutes(beaconServer *beacon.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blinded_blocks", beaconServer.PublishBlindedBlock).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconServer.PublishBlockV2).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blinded_blocks", beaconServer.PublishBlindedBlockV2).Methods(http.MethodPost)
-	s.cfg.Router.HandleFunc("/eth/v1/beacon/blocks/{block_id}", beaconServer.GetBlock).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks/{block_id}", beaconServer.GetBlockV2).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blocks/{block_id}/attestations", beaconServer.GetBlockAttestations).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blinded_blocks/{block_id}", beaconServer.GetBlindedBlock).Methods(http.MethodGet)
