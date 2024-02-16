@@ -45,10 +45,9 @@ func run(ctx context.Context, v iface.Validator) {
 		handleAssignmentError(err, headSlot)
 	}
 	eventsChan := make(chan *event.Event, 1)
-	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
 
 	beaconHealthTracker := v.NodeHealthTracker(ctx)
-	runHealthCheckRoutine(ctx, v)
+	runHealthCheckRoutine(ctx, v, eventsChan)
 
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	km, err := v.Keymanager()
@@ -139,8 +138,6 @@ func run(ctx context.Context, v iface.Validator) {
 					beaconHealthTracker.UpdateNodeHealth(false)
 					continue
 				}
-				log.Info("event stream reconnecting...")
-				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
 			}
 		case e := <-eventsChan:
 			v.ProcessEvent(e)
@@ -299,21 +296,22 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 	}
 }
 
-func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
+func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan chan<- *event.Event) {
 	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	tracker := v.NodeHealthTracker(ctx)
 	go func() {
-		for {
-			select {
-			case <-healthCheckTicker.C:
-				newStatus := v.NodeIsHealthy(ctx)
-				tracker.UpdateNodeHealth(newStatus)
-			case <-ctx.Done():
-				if ctx.Err() != nil {
-					log.WithError(ctx.Err()).Error("Context cancelled")
-				}
-				log.Error("Context cancelled")
+		// trigger the healthcheck immediately the first time
+		for ; true; <-healthCheckTicker.C {
+			if ctx.Err() != nil {
+				log.WithError(ctx.Err()).Error("Context cancelled")
 				return
+			}
+			newStatus := v.NodeIsHealthy(ctx)
+			tracker.UpdateNodeHealth(newStatus)
+			// in case of node returning healthy but event stream died
+			if !v.EventStreamIsRunning() {
+				log.Info("event stream reconnecting...")
+				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
 			}
 		}
 	}()

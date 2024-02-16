@@ -61,7 +61,7 @@ type Validator interface {
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
 	ProposerSettings() *validatorserviceconfig.ProposerSettings
 	SetProposerSettings(context.Context, *validatorserviceconfig.ProposerSettings) error
-	StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *event.Event)
+	StartEventStream(ctx context.Context, topics []string, eventsChan chan<- *event.Event)
 	ProcessEvent(event *event.Event)
 	EventStreamIsRunning() bool
 	NodeIsHealthy(ctx context.Context) bool
