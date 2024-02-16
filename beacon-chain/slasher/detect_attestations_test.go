@@ -3,6 +3,7 @@ package slasher
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -1076,7 +1077,11 @@ func Test_epochUpdateForValidators(t *testing.T) {
 					minChunkerByChunkerIndex[chunkIndex] = &MinSpanChunksSlice{data: minChunk}
 				}
 
-				err := service.saveUpdatedChunks(ctx, minChunkerByChunkerIndex, slashertypes.MinSpan, tt.validatorChunkIndex)
+				minChunkerByChunkerIndexByValidatorChunkerIndex := map[uint64]map[uint64]Chunker{
+					tt.validatorChunkIndex: minChunkerByChunkerIndex,
+				}
+
+				err := service.saveChunksToDisk(ctx, slashertypes.MinSpan, minChunkerByChunkerIndexByValidatorChunkerIndex)
 				require.NoError(t, err)
 			}
 
@@ -1087,7 +1092,11 @@ func Test_epochUpdateForValidators(t *testing.T) {
 					maxChunkerByChunkerIndex[chunkIndex] = &MaxSpanChunksSlice{data: maxChunk}
 				}
 
-				err := service.saveUpdatedChunks(ctx, maxChunkerByChunkerIndex, slashertypes.MaxSpan, tt.validatorChunkIndex)
+				maxChunkerByChunkerIndexByValidatorChunkerIndex := map[uint64]map[uint64]Chunker{
+					tt.validatorChunkIndex: maxChunkerByChunkerIndex,
+				}
+
+				err := service.saveChunksToDisk(ctx, slashertypes.MaxSpan, maxChunkerByChunkerIndexByValidatorChunkerIndex)
 				require.NoError(t, err)
 			}
 
@@ -1301,12 +1310,12 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 		4: existingChunk,
 		6: existingChunk,
 	}
-	err = s.saveUpdatedChunks(
-		ctx,
-		updatedChunks,
-		kind,
-		0, // validatorChunkIndex
-	)
+
+	chunkByChunkIndexByValidatorChunkIndex := map[uint64]map[uint64]Chunker{
+		0: updatedChunks,
+	}
+
+	err = s.saveChunksToDisk(ctx, kind, chunkByChunkIndexByValidatorChunkIndex)
 	require.NoError(t, err)
 	// Check if the retrieved chunks match what we just saved to disk.
 	received, err = s.loadChunks(ctx, 0, kind, []uint64{2, 4, 6})
@@ -1353,6 +1362,52 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	s.wg.Wait()
 	assert.LogsContain(t, hook, "Start processing queued attestations")
 	assert.LogsContain(t, hook, "Done processing queued attestations")
+}
+
+func Benchmark_saveChunksToDisk(b *testing.B) {
+	// Define the parameters.
+	const (
+		chunkKind                    = slashertypes.MinSpan
+		validatorsChunksCount        = 6000 // Corresponds to 1_536_000 validators x 256 validators / chunk
+		chunkIndex            uint64 = 13
+		validatorChunkIndex   uint64 = 42
+	)
+
+	params := DefaultParams()
+
+	// Get a context.
+	ctx := context.Background()
+
+	chunkByChunkIndexByValidatorChunkIndex := make(map[uint64]map[uint64]Chunker, validatorsChunksCount)
+
+	// Populate the chunkers.
+	for i := 0; i < validatorsChunksCount; i++ {
+		data := make([]uint16, params.chunkSize)
+		for j := 0; j < int(params.chunkSize); j++ {
+			data[j] = uint16(rand.Intn(1 << 16))
+		}
+
+		chunker := map[uint64]Chunker{chunkIndex: &MinSpanChunksSlice{params: params, data: data}}
+		chunkByChunkIndexByValidatorChunkIndex[uint64(i)] = chunker
+	}
+
+	// Initialize the slasher database.
+	slasherDB := dbtest.SetupSlasherDB(b)
+
+	// Initialize the slasher service.
+	service, err := New(ctx, &ServiceConfig{Database: slasherDB})
+	require.NoError(b, err)
+
+	// Reset the benchmark timer.
+	b.ResetTimer()
+
+	// Run the benchmark.
+	for i := 0; i < b.N; i++ {
+		b.StartTimer()
+		err = service.saveChunksToDisk(ctx, slashertypes.MinSpan, chunkByChunkIndexByValidatorChunkIndex)
+		b.StopTimer()
+		require.NoError(b, err)
+	}
 }
 
 func BenchmarkCheckSlashableAttestations(b *testing.B) {

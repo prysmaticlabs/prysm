@@ -60,6 +60,10 @@ func (s *Service) checkSurroundVotes(
 
 	// Group attestation wrappers by validator chunk index.
 	attWrappersByValidatorChunkIndex := s.groupByValidatorChunkIndex(attWrappers)
+	attWrappersByValidatorChunkIndexCount := len(attWrappersByValidatorChunkIndex)
+
+	minChunkByChunkIndexByValidatorChunkIndex := make(map[uint64]map[uint64]Chunker, attWrappersByValidatorChunkIndexCount)
+	maxChunkByChunkIndexByValidatorChunkIndex := make(map[uint64]map[uint64]Chunker, attWrappersByValidatorChunkIndexCount)
 
 	for validatorChunkIndex, attWrappers := range attWrappersByValidatorChunkIndex {
 		minChunkByChunkIndex, err := s.updatedChunkByChunkIndex(ctx, slashertypes.MinSpan, currentEpoch, validatorChunkIndex)
@@ -95,20 +99,24 @@ func (s *Service) checkSurroundVotes(
 			slashings[root] = slashing
 		}
 
-		// Save updated chunks into the database.
-		if err := s.saveUpdatedChunks(ctx, minChunkByChunkIndex, slashertypes.MinSpan, validatorChunkIndex); err != nil {
-			return nil, errors.Wrap(err, "could not save chunks for min spans")
-		}
-
-		if err := s.saveUpdatedChunks(ctx, maxChunkByChunkIndex, slashertypes.MaxSpan, validatorChunkIndex); err != nil {
-			return nil, errors.Wrap(err, "could not save chunks for max spans")
-		}
+		// Memoize the updated chunks for the current validator chunk index.
+		minChunkByChunkIndexByValidatorChunkIndex[validatorChunkIndex] = minChunkByChunkIndex
+		maxChunkByChunkIndexByValidatorChunkIndex[validatorChunkIndex] = maxChunkByChunkIndex
 
 		// Update the latest written epoch for all validators involved to the current chunk.
 		indices := s.params.validatorIndexesInChunk(validatorChunkIndex)
 		for _, idx := range indices {
 			s.latestEpochWrittenForValidator[idx] = currentEpoch
 		}
+	}
+
+	// Save the updated chunks to disk.
+	if err := s.saveChunksToDisk(ctx, slashertypes.MinSpan, minChunkByChunkIndexByValidatorChunkIndex); err != nil {
+		return nil, errors.Wrap(err, "could not save updated min chunks to disk")
+	}
+
+	if err := s.saveChunksToDisk(ctx, slashertypes.MaxSpan, maxChunkByChunkIndexByValidatorChunkIndex); err != nil {
+		return nil, errors.Wrap(err, "could not save updated max chunks to disk")
 	}
 
 	return slashings, nil
@@ -539,21 +547,35 @@ func (s *Service) loadChunks(
 	return chunksByChunkIdx, nil
 }
 
-// Saves updated chunks to disk given the required database schema.
-func (s *Service) saveUpdatedChunks(
+func (s *Service) saveChunksToDisk(
 	ctx context.Context,
-	updatedChunksByChunkIdx map[uint64]Chunker,
 	chunkKind slashertypes.ChunkKind,
-	validatorChunkIndex uint64,
+	chunkByChunkIndexByValidatorChunkIndex map[uint64]map[uint64]Chunker,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "Slasher.saveUpdatedChunks")
+	ctx, span := trace.StartSpan(ctx, "Slasher.saveChunksToDisk")
 	defer span.End()
-	chunkKeys := make([][]byte, 0, len(updatedChunksByChunkIdx))
-	chunks := make([][]uint16, 0, len(updatedChunksByChunkIdx))
-	for chunkIdx, chunk := range updatedChunksByChunkIdx {
-		chunkKeys = append(chunkKeys, s.params.flatSliceID(validatorChunkIndex, chunkIdx))
-		chunks = append(chunks, chunk.Chunk())
+
+	// Compute the total number of chunks to save.
+	chunksCount := 0
+	for _, chunkByChunkIndex := range chunkByChunkIndexByValidatorChunkIndex {
+		chunksCount += len(chunkByChunkIndex)
 	}
-	chunksSavedTotal.Add(float64(len(chunks)))
+
+	// Create needed arrays.
+	chunkKeys := make([][]byte, 0, chunksCount)
+	chunks := make([][]uint16, 0, chunksCount)
+
+	// Fill the arrays.
+	for validatorChunkIndex, chunkByChunkIndex := range chunkByChunkIndexByValidatorChunkIndex {
+		for chunkIndex, chunk := range chunkByChunkIndex {
+			chunkKeys = append(chunkKeys, s.params.flatSliceID(validatorChunkIndex, chunkIndex))
+			chunks = append(chunks, chunk.Chunk())
+		}
+	}
+
+	// Update prometheus metrics.
+	chunksSavedTotal.Add(float64(chunksCount))
+
+	// Save the chunks to disk.
 	return s.serviceCfg.Database.SaveSlasherChunks(ctx, chunkKind, chunkKeys, chunks)
 }
