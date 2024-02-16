@@ -204,11 +204,7 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 	}
 
-	commitmentCount, err := commitmentsForBlock(b)
-	if err != nil {
-		return err
-	}
-	request, err := s.constructPendingBlobsRequest(ctx, blkRoot, commitmentCount)
+	request, err := s.pendingBlobsRequestForBlock(blkRoot, b)
 	if err != nil {
 		return err
 	}

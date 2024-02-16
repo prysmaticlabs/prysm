@@ -51,18 +51,18 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, requests *t
 		if blk.Version() < version.Deneb {
 			continue
 		}
-		cmts, err := commitmentsForBlock(blk)
-		if err != nil {
-			return err
-		}
-		if cmts == 0 {
-			continue
-		}
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
 		}
-		if err := s.requestPendingBlobs(ctx, blk, blkRoot, cmts, id); err != nil {
+		request, err := s.pendingBlobsRequestForBlock(blkRoot, blk)
+		if err != nil {
+			return err
+		}
+		if len(request) == 0 {
+			continue
+		}
+		if err := s.sendAndSaveBlobSidecars(ctx, request, id, blk); err != nil {
 			return err
 		}
 	}
@@ -133,29 +133,6 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	return nil
 }
 
-func commitmentsForBlock(block interfaces.ReadOnlySignedBeaconBlock) (int, error) {
-	if block.Version() < version.Deneb {
-		return 0, nil // Block before deneb has no blob.
-	}
-	commitments, err := block.Block().Body().BlobKzgCommitments()
-	if err != nil {
-		return 0, err
-	}
-	return len(commitments), nil
-}
-
-// requestPendingBlobs handles the request for pending blobs based on the given beacon block.
-func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, cmts int, peerID peer.ID) error {
-	if cmts < 1 {
-		return nil
-	}
-	request, err := s.constructPendingBlobsRequest(ctx, blockRoot, cmts)
-	if err != nil {
-		return err
-	}
-	return s.sendAndSaveBlobSidecars(ctx, request, peerID, block)
-}
-
 // sendAndSaveBlobSidecars sends the blob request and saves received sidecars.
 func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.BlobSidecarsByRootReq, peerID peer.ID, block interfaces.ReadOnlySignedBeaconBlock) error {
 	if len(request) == 0 {
@@ -193,8 +170,22 @@ func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.Blo
 	return nil
 }
 
+func (s *Service) pendingBlobsRequestForBlock(root [32]byte, b interfaces.ReadOnlySignedBeaconBlock) (types.BlobSidecarsByRootReq, error) {
+	if b.Version() < version.Deneb {
+		return nil, nil // Block before deneb has no blob.
+	}
+	cc, err := b.Block().Body().BlobKzgCommitments()
+	if err != nil {
+		return nil, err
+	}
+	if len(cc) == 0 {
+		return nil, nil
+	}
+	return s.constructPendingBlobsRequest(root, len(cc))
+}
+
 // constructPendingBlobsRequest creates a request for BlobSidecars by root, considering blobs already in DB.
-func (s *Service) constructPendingBlobsRequest(ctx context.Context, root [32]byte, commitments int) (types.BlobSidecarsByRootReq, error) {
+func (s *Service) constructPendingBlobsRequest(root [32]byte, commitments int) (types.BlobSidecarsByRootReq, error) {
 	if commitments == 0 {
 		return nil, nil
 	}
