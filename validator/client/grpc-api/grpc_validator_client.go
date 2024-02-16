@@ -199,7 +199,7 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 				if errors.Is(ctx.Err(), context.Canceled) {
 					eventsChannel <- &eventClient.Event{
 						EventType: eventClient.EventConnectionError,
-						Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
+						Data:      []byte(errors.Wrap(client.ErrConnectionIssue, ctx.Err().Error()).Error()),
 					}
 					return
 				}
