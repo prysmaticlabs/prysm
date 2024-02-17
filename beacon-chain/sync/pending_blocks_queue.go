@@ -192,6 +192,8 @@ func (s *Service) hasPeer() bool {
 	return len(s.cfg.p2p.Peers().Connected()) > 0
 }
 
+var errNoPeersForPending = errors.New("no suitable peers to process pending block queue, delaying")
+
 // processAndBroadcastBlock validates, processes, and broadcasts a block.
 // part of the function is to request missing blobs from peers if the block contains kzg commitments.
 func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) error {
@@ -202,10 +204,17 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 	}
 
-	peers := s.getBestPeers()
-	peerCount := len(peers)
-	if peerCount > 0 {
-		if err := s.requestPendingBlobs(ctx, b, blkRoot, peers[rand.NewGenerator().Int()%peerCount]); err != nil {
+	request, err := s.pendingBlobsRequestForBlock(blkRoot, b)
+	if err != nil {
+		return err
+	}
+	if len(request) > 0 {
+		peers := s.getBestPeers()
+		peerCount := len(peers)
+		if peerCount == 0 {
+			return errors.Wrapf(errNoPeersForPending, "block root=%#x", blkRoot)
+		}
+		if err := s.sendAndSaveBlobSidecars(ctx, request, peers[rand.NewGenerator().Int()%peerCount], b); err != nil {
 			return err
 		}
 	}

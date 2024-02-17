@@ -157,6 +157,7 @@ type Service struct {
 	verifierWaiter                   *verification.InitializerWaiter
 	newBlobVerifier                  verification.NewBlobVerifier
 	availableBlocker                 coverage.AvailableBlocker
+	ctxMap                           ContextByteVersions
 }
 
 // NewService initializes new regular sync service.
@@ -295,6 +296,15 @@ func (s *Service) waitForChainStart() {
 	s.cfg.clock = clock
 	startTime := clock.GenesisTime()
 	log.WithField("starttime", startTime).Debug("Received state initialized event")
+
+	ctxMap, err := ContextByteVersionsForValRoot(clock.GenesisValidatorsRoot())
+	if err != nil {
+		log.WithError(err).WithField("genesis_validator_root", clock.GenesisValidatorsRoot()).
+			Error("sync service failed to initialize context version map")
+		return
+	}
+	s.ctxMap = ctxMap
+
 	// Register respective rpc handlers at state initialized event.
 	s.registerRPCHandlers()
 	// Wait for chainstart in separate routine.
