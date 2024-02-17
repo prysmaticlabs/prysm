@@ -1085,6 +1085,14 @@ func (v *validator) NodeIsHealthy(ctx context.Context) bool {
 	return v.nodeClient.IsHealthy(ctx)
 }
 
+func (v *validator) RetrieveHost() string {
+	return v.validatorClient.RetrieveHost()
+}
+
+func (v *validator) UpdateHost(host string) {
+	v.validatorClient.UpdateHost(host)
+}
+
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	statusRequestKeys := make([][]byte, 0)

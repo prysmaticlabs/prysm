@@ -15,6 +15,7 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
@@ -194,14 +195,21 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
+	urls := strings.Split(v.conn.GetBeaconApiUrl(), ",")
 	restHandler := &beaconApi.BeaconApiJsonRestHandler{
 		HttpClient: http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
-		Host:       v.conn.GetBeaconApiUrl(),
+		Host: func() string {
+			return urls[0]
+		},
 	}
 
-	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
+	evHandler := beaconApi.NewEventHandler(http.DefaultClient, urls[0])
 	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler)}
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler, opts...)
+
+	if len(urls) > 1 && features.Get().EnableBeaconRESTApi {
+		runNodeSwitcherRoutine(v.ctx, v.validator, urls)
+	}
 
 	valStruct := &validator{
 		validatorClient:                validatorClient,
@@ -359,4 +367,29 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
 	nc := ethpb.NewNodeClient(v.conn.GetGrpcClientConn())
 	return nc.GetGenesis(ctx, &emptypb.Empty{})
+}
+
+func runNodeSwitcherRoutine(ctx context.Context, v iface.Validator, endpoints []string) {
+	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	go func() {
+		for {
+			select {
+			case <-healthCheckTicker.C:
+				if !v.NodeIsHealthy(ctx) {
+					for i, url := range endpoints {
+						if url == v.RetrieveHost() {
+							next := (i + 1) % len(endpoints)
+							v.UpdateHost(endpoints[next])
+						}
+					}
+				}
+			case <-ctx.Done():
+				if ctx.Err() != nil {
+					log.WithError(ctx.Err()).Error("Context cancelled")
+				}
+				log.Error("Context cancelled")
+				return
+			}
+		}
+	}()
 }

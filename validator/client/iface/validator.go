@@ -67,6 +67,8 @@ type Validator interface {
 	StartEventStream(ctx context.Context) error
 	EventStreamIsRunning() bool
 	NodeIsHealthy(ctx context.Context) bool
+	RetrieveHost() string
+	UpdateHost(host string)
 }
 
 // SigningFunc interface defines a type for the a function that signs a message

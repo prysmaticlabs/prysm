@@ -179,3 +179,11 @@ func (c *beaconApiValidatorClient) EventStreamIsRunning() bool {
 func (c *beaconApiValidatorClient) GetAggregatedSelections(ctx context.Context, selections []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
 	return c.getAggregatedSelection(ctx, selections)
 }
+
+func (c *beaconApiValidatorClient) RetrieveHost() string {
+	return c.jsonRestHandler.GetHost()
+}
+
+func (c *beaconApiValidatorClient) UpdateHost(host string) {
+	c.jsonRestHandler.SetHost(host)
+}
