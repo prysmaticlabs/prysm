@@ -19,7 +19,7 @@ go_library(
         "prune_attester_protection.go",
         "schema.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/validator/db/kv",
+    importpath = "github.com/prysmaticlabs/prysm/v5/validator/db/kv",
     visibility = [
         "//cmd:__subpackages__",
         "//validator:__subpackages__",

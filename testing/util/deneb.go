@@ -8,18 +8,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 type DenebBlockGeneratorOption func(*denebBlockGenerator)
@@ -30,17 +30,15 @@ type denebBlockGenerator struct {
 	nblobs   int
 	sign     bool
 	sk       bls.SecretKey
-	pk       bls.PublicKey
 	proposer primitives.ValidatorIndex
 	valRoot  []byte
 }
 
-func WithProposerSigning(idx primitives.ValidatorIndex, sk bls.SecretKey, pk bls.PublicKey, valRoot []byte) DenebBlockGeneratorOption {
+func WithProposerSigning(idx primitives.ValidatorIndex, sk bls.SecretKey, valRoot []byte) DenebBlockGeneratorOption {
 	return func(g *denebBlockGenerator) {
 		g.sign = true
 		g.proposer = idx
 		g.sk = sk
-		g.pk = pk
 		g.valRoot = valRoot
 	}
 }
@@ -87,15 +85,17 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 		Timestamp:     0,
 		ExtraData:     make([]byte, 0),
 		BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
-		ExcessBlobGas: 0,
-		BlobGasUsed:   0,
 		BlockHash:     blockHash[:],
 		Transactions:  encodedBinaryTxs,
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
+		BlobGasUsed:   0,
+		ExcessBlobGas: 0,
 	}
 	block := NewBeaconBlockDeneb()
 	block.Block.Body.ExecutionPayload = payload
 	block.Block.Slot = g.slot
 	block.Block.ParentRoot = g.parent[:]
+	block.Block.ProposerIndex = g.proposer
 	commitments := make([][48]byte, g.nblobs)
 	block.Block.Body.BlobKzgCommitments = make([][]byte, g.nblobs)
 	for i := range commitments {
@@ -188,7 +188,7 @@ func ExtendBlocksPlusBlobs(t *testing.T, blks []blocks.ROBlock, size int) ([]blo
 	return blks, blobs
 }
 
-// HackDenebForkEpoch is helpful for tests that need to set up cases where the deneb fork has passed.
+// HackDenebMaxuint is helpful for tests that need to set up cases where the deneb fork has passed.
 // We have unit tests that assert our config matches the upstream config, where the next fork is always
 // set to MaxUint64 until the fork epoch is formally set. This creates an issue for tests that want to
 // work with slots that are defined to be after deneb because converting the max epoch to a slot leads

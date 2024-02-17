@@ -106,6 +106,13 @@ load("@rules_distroless//distroless:dependencies.bzl", "rules_distroless_depende
 
 rules_distroless_dependencies()
 
+http_archive(
+    name = "distroless",
+    integrity = "sha256-Cf00kUp1NyXA3LzbdyYy4Kda27wbkB8+A9MliTxq4jE=",
+    strip_prefix = "distroless-9dc924b9fe812eec2fa0061824dcad39eb09d0d6",
+    url = "https://github.com/GoogleContainerTools/distroless/archive/9dc924b9fe812eec2fa0061824dcad39eb09d0d6.tar.gz",  # 2024-01-24
+)
+
 load("@aspect_bazel_lib//lib:repositories.bzl", "aspect_bazel_lib_dependencies", "aspect_bazel_lib_register_toolchains")
 
 aspect_bazel_lib_dependencies()
@@ -143,6 +150,10 @@ http_archive(
         "https://github.com/bazelbuild/rules_go/releases/download/v0.43.0/rules_go-v0.43.0.zip",
     ],
 )
+
+load("//:distroless_deps.bzl", "distroless_deps")
+
+distroless_deps()
 
 # Override default import in rules_go with special patch until
 # https://github.com/gogo/protobuf/pull/582 is merged.
@@ -182,7 +193,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.21.5",
+    go_version = "1.21.6",
     nogo = "@//:nogo",
 )
 
@@ -223,7 +234,9 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.4.0-beta.5"
+consensus_spec_version = "v1.4.0-beta.7"
+
+consensus_spec_test_version = "v1.4.0-beta.7-hotfix"
 
 bls_test_version = "v0.1.1"
 
@@ -239,8 +252,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "9017ffff84d64a7c4c9e6ff9f421f9479f71d3b463b738f54e02158dbb4f50f0",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
+    sha256 = "c282c0f86f23f3d2e0f71f5975769a4077e62a7e3c7382a16bd26a7e589811a0",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_test_version,
 )
 
 http_archive(
@@ -255,8 +268,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "f08711682553fe7c9362f1400ed8c56b2fa9576df08581fcad4c508ba8ad4788",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
+    sha256 = "4649c35aa3b8eb0cfdc81bee7c05649f90ef36bede5b0513e1f2e8baf37d6033",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_test_version,
 )
 
 http_archive(
@@ -271,8 +284,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "7ea3189e3879f2ac62467cbf2945c00b6c94d30cdefb2d645c630b1018c50e10",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
+    sha256 = "c5a03f724f757456ffaabd2a899992a71d2baf45ee4db65ca3518f2b7ee928c8",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_test_version,
 )
 
 http_archive(
@@ -286,7 +299,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "4119992a2efc79e5cb2bdc07ed08c0b1fa32332cbd0d88e6467f34938df97026",
+    sha256 = "049c29267310e6b88280f4f834a75866c2f5b9036fa97acb9d9c6db8f64d9118",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -317,9 +330,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "2701e1e1a3ec10c673fe7dbdbbe6f02c8ae8c922aebbf6e720d8c72d5458aafe",
-    strip_prefix = "eth2-networks-7b4897888cebef23801540236f73123e21774954",
-    url = "https://github.com/eth-clients/eth2-networks/archive/7b4897888cebef23801540236f73123e21774954.tar.gz",
+    sha256 = "77e7e3ed65e33b7bb19d30131f4c2bb39e4dfeb188ab9ae84651c3cc7600131d",
+    strip_prefix = "eth2-networks-934c948e69205dcf2deb87e4ae6cc140c335f94d",
+    url = "https://github.com/eth-clients/eth2-networks/archive/934c948e69205dcf2deb87e4ae6cc140c335f94d.tar.gz",
 )
 
 http_archive(
@@ -349,17 +362,17 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "9f66d8d5644982d3d0d2e3d2b9ebe77a5f96638a5d7fcd715599c32818195cb3",
-    strip_prefix = "holesky-ea39b9006210848e13f28d92e12a30548cecd41d",
-    url = "https://github.com/eth-clients/holesky/archive/ea39b9006210848e13f28d92e12a30548cecd41d.tar.gz",  # 2023-09-21
+    sha256 = "5f4be6fd088683ea9db45c863b9c5a1884422449e5b59fd2d561d3ba0f73ffd9",
+    strip_prefix = "holesky-9d9aabf2d4de51334ee5fed6c79a4d55097d1a43",
+    url = "https://github.com/eth-clients/holesky/archive/9d9aabf2d4de51334ee5fed6c79a4d55097d1a43.tar.gz",  # 2024-01-22
 )
 
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "4e176116949be52b0408dfd24f8925d1eb674a781ae242a75296b17a1c721395",
-    strip_prefix = "protobuf-23.3",
+    sha256 = "9bd87b8280ef720d3240514f884e56a712f2218f0d693b48050c836028940a42",
+    strip_prefix = "protobuf-25.1",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v23.3.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v25.1.tar.gz",
     ],
 )
 

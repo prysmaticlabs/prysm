@@ -4,10 +4,10 @@ import (
 	"io"
 	"testing"
 
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 type mockCall int
@@ -29,6 +29,7 @@ const (
 	unrealizedJustifiedPayloadBlockHashCalled
 	nodeCountCalled
 	highestReceivedBlockSlotCalled
+	highestReceivedBlockDelayCalled
 	receivedBlocksLastEpochCalled
 	weightCalled
 	isOptimisticCalled
@@ -112,6 +113,11 @@ func TestROLocking(t *testing.T) {
 			name: "highestReceivedBlockSlotCalled",
 			call: highestReceivedBlockSlotCalled,
 			cb:   func(g FastGetter) { g.HighestReceivedBlockSlot() },
+		},
+		{
+			name: "highestReceivedBlockDelayCalled",
+			call: highestReceivedBlockDelayCalled,
+			cb:   func(g FastGetter) { g.HighestReceivedBlockDelay() },
 		},
 		{
 			name: "receivedBlocksLastEpochCalled",
@@ -242,6 +248,11 @@ func (ro *mockROForkchoice) NodeCount() int {
 
 func (ro *mockROForkchoice) HighestReceivedBlockSlot() primitives.Slot {
 	ro.calls = append(ro.calls, highestReceivedBlockSlotCalled)
+	return 0
+}
+
+func (ro *mockROForkchoice) HighestReceivedBlockDelay() primitives.Slot {
+	ro.calls = append(ro.calls, highestReceivedBlockDelayCalled)
 	return 0
 }
 

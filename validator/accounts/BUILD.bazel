@@ -17,7 +17,7 @@ go_library(
         "wallet_create.go",
         "wallet_recover.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/validator/accounts",
+    importpath = "github.com/prysmaticlabs/prysm/v5/validator/accounts",
     visibility = [
         "//cmd/validator:__subpackages__",
         "//validator:__pkg__",
@@ -72,7 +72,7 @@ go_test(
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/rpc/eth/shared:go_default_library",
+        "//api/server/structs:go_default_library",
         "//build/bazel:go_default_library",
         "//cmd/validator/flags:go_default_library",
         "//config/fieldparams:go_default_library",

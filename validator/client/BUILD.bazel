@@ -19,7 +19,7 @@ go_library(
         "validator.go",
         "wait_for_activation.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/validator/client",
+    importpath = "github.com/prysmaticlabs/prysm/v5/validator/client",
     visibility = [
         "//cmd:__subpackages__",
         "//validator:__subpackages__",
@@ -32,6 +32,7 @@ go_library(
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//cache/lru:go_default_library",
+        "//cmd:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",

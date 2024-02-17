@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
-	iface2 "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
+	iface2 "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 )
 
 // Wallet contains an in-memory, simulated wallet implementation.
@@ -55,19 +55,19 @@ func (w *Wallet) Password() string {
 }
 
 // WriteFileAtPath --
-func (w *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) error {
+func (w *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) (bool, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 	if w.HasWriteFileError {
 		// reset the flag to not contaminate other tests
 		w.HasWriteFileError = false
-		return errors.New("could not write keystore file for accounts")
+		return false, errors.New("could not write keystore file for accounts")
 	}
 	if w.Files[pathName] == nil {
 		w.Files[pathName] = make(map[string][]byte)
 	}
 	w.Files[pathName][fileName] = data
-	return nil
+	return true, nil
 }
 
 // ReadFileAtPath --
@@ -92,7 +92,7 @@ type Validator struct {
 	proposerSettings *validatorserviceconfig.ProposerSettings
 }
 
-func (_ *Validator) LogSyncCommitteeMessagesSubmitted() {}
+func (_ *Validator) LogSubmittedSyncCommitteeMessages() {}
 
 func (_ *Validator) Done() {
 	panic("implement me")
@@ -154,7 +154,7 @@ func (_ *Validator) SubmitSignedContributionAndProof(_ context.Context, _ primit
 	panic("implement me")
 }
 
-func (_ *Validator) LogAttestationsSubmitted() {
+func (_ *Validator) LogSubmittedAtts(_ primitives.Slot) {
 	panic("implement me")
 }
 
@@ -211,4 +211,16 @@ func (m *Validator) ProposerSettings() *validatorserviceconfig.ProposerSettings 
 func (m *Validator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
 	m.proposerSettings = settings
 	return nil
+}
+
+func (_ *Validator) StartEventStream(_ context.Context) error {
+	panic("implement me")
+}
+
+func (_ *Validator) EventStreamIsRunning() bool {
+	panic("implement me")
+}
+
+func (_ *Validator) NodeIsHealthy(ctx context.Context) bool {
+	panic("implement me")
 }

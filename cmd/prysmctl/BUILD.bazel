@@ -5,12 +5,11 @@ load("//tools:prysm_image.bzl", "prysm_image_upload")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/prysmaticlabs/prysm/v4/cmd/prysmctl",
+    importpath = "github.com/prysmaticlabs/prysm/v5/cmd/prysmctl",
     visibility = ["//visibility:private"],
     deps = [
         "//cmd/prysmctl/checkpointsync:go_default_library",
         "//cmd/prysmctl/db:go_default_library",
-        "//cmd/prysmctl/deprecated:go_default_library",
         "//cmd/prysmctl/p2p:go_default_library",
         "//cmd/prysmctl/testnet:go_default_library",
         "//cmd/prysmctl/validator:go_default_library",
@@ -33,7 +32,7 @@ prysm_image_upload(
     entrypoint = ["/prysmctl"],
     repository = "gcr.io/prysmaticlabs/prysm/cmd/prysmctl",
     symlinks = {
-        # Backwards compatiability for images that depended on the old filepath.
+        # Backwards compatibility for images that depended on the old filepath.
         "/app/cmd/prysmctl/prysmctl": "/prysmctl",
     },
     tags = ["manual"],

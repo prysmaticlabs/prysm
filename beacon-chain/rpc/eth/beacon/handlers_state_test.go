@@ -13,18 +13,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
-	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestGetStateRoot(t *testing.T) {
@@ -61,7 +62,7 @@ func TestGetStateRoot(t *testing.T) {
 
 	s.GetStateRoot(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetStateRootResponse{}
+	resp := &structs.GetStateRootResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	assert.Equal(t, hexutil.Encode(stateRoot[:]), resp.Data.Root)
 
@@ -85,7 +86,7 @@ func TestGetStateRoot(t *testing.T) {
 
 		s.GetStateRoot(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetStateRootResponse{}
+		resp := &structs.GetStateRootResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
 	})
@@ -116,7 +117,7 @@ func TestGetStateRoot(t *testing.T) {
 
 		s.GetStateRoot(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetStateRootResponse{}
+		resp := &structs.GetStateRootResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.DeepEqual(t, true, resp.Finalized)
 	})
@@ -163,7 +164,7 @@ func TestGetRandao(t *testing.T) {
 
 		s.GetRandao(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetRandaoResponse{}
+		resp := &structs.GetRandaoResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, hexutil.Encode(mixCurrent[:]), resp.Data.Randao)
 	})
@@ -175,7 +176,7 @@ func TestGetRandao(t *testing.T) {
 
 		s.GetRandao(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetRandaoResponse{}
+		resp := &structs.GetRandaoResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, hexutil.Encode(mixCurrent[:]), resp.Data.Randao)
 	})
@@ -187,7 +188,7 @@ func TestGetRandao(t *testing.T) {
 
 		s.GetRandao(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetRandaoResponse{}
+		resp := &structs.GetRandaoResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, hexutil.Encode(mixOld[:]), resp.Data.Randao)
 	})
@@ -203,7 +204,7 @@ func TestGetRandao(t *testing.T) {
 
 		s.GetRandao(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetRandaoResponse{}
+		resp := &structs.GetRandaoResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, hexutil.Encode(headRandao[:]), resp.Data.Randao)
 	})
@@ -262,7 +263,7 @@ func TestGetRandao(t *testing.T) {
 
 		s.GetRandao(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetRandaoResponse{}
+		resp := &structs.GetRandaoResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
 	})
@@ -299,7 +300,7 @@ func TestGetRandao(t *testing.T) {
 
 		s.GetRandao(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetRandaoResponse{}
+		resp := &structs.GetRandaoResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.DeepEqual(t, true, resp.Finalized)
 	})
@@ -458,7 +459,7 @@ func TestGetSyncCommittees(t *testing.T) {
 
 	s.GetSyncCommittees(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetSyncCommitteeResponse{}
+	resp := &structs.GetSyncCommitteeResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	committeeVals := resp.Data.Validators
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(committeeVals)))
@@ -508,7 +509,7 @@ func TestGetSyncCommittees(t *testing.T) {
 
 		s.GetSyncCommittees(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetSyncCommitteeResponse{}
+		resp := &structs.GetSyncCommitteeResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -552,7 +553,7 @@ func TestGetSyncCommittees(t *testing.T) {
 
 		s.GetSyncCommittees(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetSyncCommitteeResponse{}
+		resp := &structs.GetSyncCommitteeResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Finalized)
 	})
@@ -629,7 +630,7 @@ func TestGetSyncCommittees_Future(t *testing.T) {
 	writer.Body = &bytes.Buffer{}
 	s.GetSyncCommittees(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetSyncCommitteeResponse{}
+	resp := &structs.GetSyncCommitteeResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	committeeVals := resp.Data.Validators
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(committeeVals)))

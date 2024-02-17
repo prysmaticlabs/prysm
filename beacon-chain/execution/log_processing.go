@@ -13,21 +13,21 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	coreState "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/types"
-	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	coreState "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
+	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	contracts "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,6 +41,7 @@ const defaultEth1HeaderReqLimit = uint64(1000)
 const depositLogRequestLimit = 10000
 const additiveFactorMultiplier = 0.10
 const multiplicativeDecreaseDivisor = 2
+const depositLoggingInterval = 1024
 
 var errTimedOut = errors.New("net/http: request canceled")
 
@@ -195,16 +196,19 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gethtypes.L
 		s.cfg.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, root)
 	}
 	if validData {
-		log.WithFields(logrus.Fields{
-			"eth1Block":       depositLog.BlockNumber,
-			"publicKey":       fmt.Sprintf("%#x", depositData.PublicKey),
-			"merkleTreeIndex": index,
-		}).Debug("Deposit registered from deposit contract")
+		// Log the deposit received periodically
+		if index%depositLoggingInterval == 0 {
+			log.WithFields(logrus.Fields{
+				"eth1Block":       depositLog.BlockNumber,
+				"publicKey":       fmt.Sprintf("%#x", depositData.PublicKey),
+				"merkleTreeIndex": index,
+			}).Debug("Deposit registered from deposit contract")
+		}
 		validDepositsCount.Inc()
 		// Notify users what is going on, from time to time.
 		if !s.chainStartData.Chainstarted {
 			deposits := len(s.chainStartData.ChainstartDeposits)
-			if deposits%512 == 0 {
+			if deposits%depositLoggingInterval == 0 {
 				valCount, err := helpers.ActiveValidatorCount(ctx, s.preGenesisState, 0)
 				if err != nil {
 					log.WithError(err).Error("Could not determine active validator count from pre genesis state")
@@ -312,6 +316,11 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 	batchSize := s.cfg.eth1HeaderReqLimit
 	additiveFactor := uint64(float64(batchSize) * additiveFactorMultiplier)
+
+	log.WithFields(logrus.Fields{
+		"currentEth1Block": latestFollowHeight,
+		"currentLogCount":  logCount,
+	}).Debug("Processing historical deposit logs")
 
 	for currentBlockNum < latestFollowHeight {
 		currentBlockNum, batchSize, err = s.processBlockInBatch(ctx, currentBlockNum, latestFollowHeight, batchSize, additiveFactor, logCount, headersMap)

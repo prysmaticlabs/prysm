@@ -10,26 +10,26 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	dbtest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
@@ -37,6 +37,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
+	service := &Service{}
 	validators := uint64(32)
 	s, _ := util.DeterministicGenesisState(t, validators)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -51,10 +52,14 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	assert.NoError(t, err)
 	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
-	require.NoError(t, validateIndexInCommittee(ctx, s, att, primitives.ValidatorIndex(indices[0])))
+	result, err := service.validateIndexInCommittee(ctx, s, att, primitives.ValidatorIndex(indices[0]))
+	require.NoError(t, err)
+	assert.Equal(t, pubsub.ValidationAccept, result)
 
 	wanted := "validator index 1000 is not within the committee"
-	assert.ErrorContains(t, wanted, validateIndexInCommittee(ctx, s, att, 1000))
+	result, err = service.validateIndexInCommittee(ctx, s, att, 1000)
+	assert.ErrorContains(t, wanted, err)
+	assert.Equal(t, pubsub.ValidationReject, result)
 }
 
 func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
@@ -66,18 +71,40 @@ func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, validators)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	bf := []byte{0xff}
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Epoch: 0}},
-		AggregationBits: bf}
+		Target: &ethpb.Checkpoint{Epoch: 0}}}
 
 	committee, err := helpers.BeaconCommitteeFromState(context.Background(), s, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
 
-	require.NoError(t, validateIndexInCommittee(ctx, s, att, committee[0]))
+	bl := bitfield.NewBitlist(uint64(len(committee)))
+	att.AggregationBits = bl
+
+	service := &Service{}
+	result, err := service.validateIndexInCommittee(ctx, s, att, committee[0])
+	require.ErrorContains(t, "no attesting indices", err)
+	assert.Equal(t, pubsub.ValidationReject, result)
+
+	att.AggregationBits.SetBitAt(0, true)
+
+	result, err = service.validateIndexInCommittee(ctx, s, att, committee[0])
+	require.NoError(t, err)
+	assert.Equal(t, pubsub.ValidationAccept, result)
 
 	wanted := "validator index 1000 is not within the committee"
-	assert.ErrorContains(t, wanted, validateIndexInCommittee(ctx, s, att, 1000))
+	result, err = service.validateIndexInCommittee(ctx, s, att, 1000)
+	assert.ErrorContains(t, wanted, err)
+	assert.Equal(t, pubsub.ValidationReject, result)
+
+	att.AggregationBits = bitfield.NewBitlist(1)
+	result, err = service.validateIndexInCommittee(ctx, s, att, committee[0])
+	require.ErrorContains(t, "wanted participants bitfield length 4, got: 1", err)
+	assert.Equal(t, pubsub.ValidationReject, result)
+
+	att.Data.CommitteeIndex = 10000
+	result, err = service.validateIndexInCommittee(ctx, s, att, committee[0])
+	require.ErrorContains(t, "committee index 10000 > 2", err)
+	assert.Equal(t, pubsub.ValidationReject, result)
 }
 
 func TestVerifySelection_NotAnAggregator(t *testing.T) {

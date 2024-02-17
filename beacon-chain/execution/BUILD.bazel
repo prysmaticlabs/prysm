@@ -16,7 +16,7 @@ go_library(
         "rpc_connection.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//cmd/beacon-chain:__subpackages__",

@@ -5,25 +5,27 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/go-bitfield"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, validatorKey, finish := setup(t)
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -39,7 +41,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				PublicKey: validatorKey.PublicKey().Marshal(),
 			},
@@ -78,7 +80,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				PublicKey: validatorKey.PublicKey().Marshal(),
 			},
@@ -114,6 +116,63 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	).Return(&ethpb.SignedAggregateSubmitResponse{AttestationDataRoot: make([]byte, 32)}, nil)
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, pubKey)
+}
+
+func TestSubmitAggregateAndProof_Distributed(t *testing.T) {
+	validatorIdx := primitives.ValidatorIndex(123)
+	slot := primitives.Slot(456)
+	ctx := context.Background()
+
+	validator, m, validatorKey, finish := setup(t)
+	defer finish()
+
+	var pubKey [fieldparams.BLSPubkeyLength]byte
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.duties = &ethpb.DutiesResponse{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				PublicKey:      validatorKey.PublicKey().Marshal(),
+				ValidatorIndex: validatorIdx,
+				AttesterSlot:   slot,
+			},
+		},
+	}
+
+	validator.distributed = true
+	validator.attSelections = make(map[attSelectionKey]iface.BeaconCommitteeSelection)
+	validator.attSelections[attSelectionKey{
+		slot:  slot,
+		index: 123,
+	}] = iface.BeaconCommitteeSelection{
+		SelectionProof: make([]byte, 96),
+		Slot:           slot,
+		ValidatorIndex: validatorIdx,
+	}
+
+	m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
+	).Return(&ethpb.AggregateSelectionResponse{
+		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
+			AggregatorIndex: 0,
+			Aggregate: util.HydrateAttestation(&ethpb.Attestation{
+				AggregationBits: make([]byte, 1),
+			}),
+			SelectionProof: make([]byte, 96),
+		},
+	}, nil)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+
+	m.validatorClient.EXPECT().SubmitSignedAggregateSelectionProof(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.SignedAggregateSubmitRequest{}),
+	).Return(&ethpb.SignedAggregateSubmitResponse{AttestationDataRoot: make([]byte, 32)}, nil)
+
+	validator.SubmitAggregateAndProof(ctx, slot, pubKey)
 }
 
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {

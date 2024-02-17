@@ -8,16 +8,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
-	"github.com/wealdtech/go-bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"go.opencensus.io/trace"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/wealdtech/go-bytesutil"
+
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // GetLightClientBootstrap - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/bootstrap.yaml
@@ -52,7 +54,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	response := &LightClientBootstrapResponse{
+	response := &structs.LightClientBootstrapResponse{
 		Version: version.String(blk.Version()),
 		Data:    bootstrap,
 	}
@@ -117,7 +119,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	}
 
 	// Populate updates
-	var updates []*LightClientUpdateWithVersion
+	var updates []*structs.LightClientUpdateWithVersion
 	for period := startPeriod; period <= endPeriod; period++ {
 		// Get the last known state of the period,
 		//    1. We wish the block has a parent in the same period if possible
@@ -207,7 +209,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		)
 
 		if err == nil {
-			updates = append(updates, &LightClientUpdateWithVersion{
+			updates = append(updates, &structs.LightClientUpdateWithVersion{
 				Version: version.String(attestedState.Version()),
 				Data:    update,
 			})
@@ -219,11 +221,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	response := &LightClientUpdatesByRangeResponse{
-		Updates: updates,
-	}
-
-	httputil.WriteJson(w, response)
+	httputil.WriteJson(w, updates)
 }
 
 // GetLightClientFinalityUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/finality_update.yaml
@@ -285,7 +283,7 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	response := &LightClientUpdateWithVersion{
+	response := &structs.LightClientUpdateWithVersion{
 		Version: version.String(attestedState.Version()),
 		Data:    update,
 	}
@@ -342,7 +340,7 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 		return
 	}
 
-	response := &LightClientUpdateWithVersion{
+	response := &structs.LightClientUpdateWithVersion{
 		Version: version.String(attestedState.Version()),
 		Data:    update,
 	}

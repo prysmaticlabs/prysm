@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/logging"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
@@ -102,7 +102,9 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return nil
 	}
 	if bs.pruner != nil {
-		bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot())
+		if err := bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot(), sidecar.Index); err != nil {
+			return errors.Wrapf(err, "problem maintaining pruning cache/metrics for sidecar with root=%#x", sidecar.BlockRoot())
+		}
 	}
 
 	// Serialize the ethpb.BlobSidecar to binary data using SSZ.
@@ -156,7 +158,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	}
 	partialMoved = true
 	blobsWrittenCounter.Inc()
-	blobSaveLatency.Observe(time.Since(startTime).Seconds())
+	blobSaveLatency.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
 }
 
@@ -180,9 +182,15 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 		return blocks.VerifiedROBlob{}, err
 	}
 	defer func() {
-		blobFetchLatency.Observe(time.Since(startTime).Seconds())
+		blobFetchLatency.Observe(float64(time.Since(startTime).Milliseconds()))
 	}()
 	return verification.BlobSidecarNoop(ro)
+}
+
+// Remove removes all blobs for a given root.
+func (bs *BlobStorage) Remove(root [32]byte) error {
+	rootDir := blobNamer{root: root}.dir()
+	return bs.fs.RemoveAll(rootDir)
 }
 
 // Indices generates a bitmap representing which BlobSidecar.Index values are present on disk for a given root.
@@ -220,6 +228,20 @@ func (bs *BlobStorage) Indices(root [32]byte) ([fieldparams.MaxBlobsPerBlock]boo
 		mask[u] = true
 	}
 	return mask, nil
+}
+
+// Clear deletes all files on the filesystem.
+func (bs *BlobStorage) Clear() error {
+	dirs, err := listDir(bs.fs, ".")
+	if err != nil {
+		return err
+	}
+	for _, dir := range dirs {
+		if err := bs.fs.RemoveAll(dir); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type blobNamer struct {

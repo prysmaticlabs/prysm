@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"google.golang.org/grpc"
 )
 
@@ -27,6 +27,10 @@ func (c *grpcNodeClient) GetVersion(ctx context.Context, in *empty.Empty) (*ethp
 
 func (c *grpcNodeClient) ListPeers(ctx context.Context, in *empty.Empty) (*ethpb.Peers, error) {
 	return c.nodeClient.ListPeers(ctx, in)
+}
+
+func (c *grpcNodeClient) IsHealthy(context.Context) bool {
+	panic("function not supported for gRPC client")
 }
 
 func NewNodeClient(cc grpc.ClientConnInterface) iface.NodeClient {

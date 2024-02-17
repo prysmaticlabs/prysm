@@ -14,17 +14,17 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/types"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -260,7 +260,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		if err != nil {
 			return nil, nil, false, handleRPCError(err)
 		}
-		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, blocks.PayloadValueToGwei(result.Value))
+		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, blocks.PayloadValueToWei(result.Value))
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -273,7 +273,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		if err != nil {
 			return nil, nil, false, handleRPCError(err)
 		}
-		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, blocks.PayloadValueToGwei(result.Value))
+		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, blocks.PayloadValueToWei(result.Value))
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -493,7 +493,12 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 		return result, nil
 	}
 	err := s.rpcClient.CallContext(ctx, &result, GetPayloadBodiesByHashV1, executionBlockHashes)
-
+	if err != nil {
+		return nil, handleRPCError(err)
+	}
+	if len(result) != len(executionBlockHashes) {
+		return nil, fmt.Errorf("mismatch of payloads retrieved from the execution client: %d vs %d", len(result), len(executionBlockHashes))
+	}
 	for i, item := range result {
 		if item == nil {
 			result[i] = &pb.ExecutionPayloadBodyV1{
@@ -502,7 +507,7 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 			}
 		}
 	}
-	return result, handleRPCError(err)
+	return result, nil
 }
 
 // GetPayloadBodiesByRange returns the relevant payload bodies for the provided range.
@@ -635,6 +640,8 @@ func (s *Service) retrievePayloadFromExecutionHash(ctx context.Context, executio
 	return fullPayloadFromPayloadBody(header, bdy, version)
 }
 
+// This method assumes that the provided execution hashes are all valid and part of the
+// canonical chain.
 func (s *Service) retrievePayloadsFromExecutionHashes(
 	ctx context.Context,
 	executionHashes []common.Hash,
@@ -734,7 +741,7 @@ func fullPayloadFromExecutionBlock(
 			BlockHash:     blockHash[:],
 			Transactions:  txs,
 			Withdrawals:   block.Withdrawals,
-		}, 0) // We can't get the block value and don't care about the block value for this instance
+		}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 	case version.Deneb:
 		ebg, err := header.ExcessBlobGas()
 		if err != nil {
@@ -761,9 +768,9 @@ func fullPayloadFromExecutionBlock(
 				BlockHash:     blockHash[:],
 				Transactions:  txs,
 				Withdrawals:   block.Withdrawals,
-				ExcessBlobGas: ebg,
 				BlobGasUsed:   bgu,
-			}, 0) // We can't get the block value and don't care about the block value for this instance
+				ExcessBlobGas: ebg,
+			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version %d", block.Version)
 	}
@@ -811,7 +818,7 @@ func fullPayloadFromPayloadBody(
 			BlockHash:     header.BlockHash(),
 			Transactions:  body.Transactions,
 			Withdrawals:   body.Withdrawals,
-		}, 0) // We can't get the block value and don't care about the block value for this instance
+		}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 	case version.Deneb:
 		ebg, err := header.ExcessBlobGas()
 		if err != nil {
@@ -840,7 +847,7 @@ func fullPayloadFromPayloadBody(
 				Withdrawals:   body.Withdrawals,
 				ExcessBlobGas: ebg,
 				BlobGasUsed:   bgu,
-			}, 0) // We can't get the block value and don't care about the block value for this instance
+			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version for payload %d", bVersion)
 	}
@@ -941,10 +948,10 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
-			ExtraData:     make([]byte, 0),
 		}, nil
 	case version.Capella:
 		return &pb.ExecutionPayloadCapella{
@@ -954,10 +961,10 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
-			ExtraData:     make([]byte, 0),
 			Withdrawals:   make([]*pb.Withdrawal, 0),
 		}, nil
 	case version.Deneb:
@@ -968,10 +975,10 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
-			ExtraData:     make([]byte, 0),
 			Withdrawals:   make([]*pb.Withdrawal, 0),
 		}, nil
 	default:
