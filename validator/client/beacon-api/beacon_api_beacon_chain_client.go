@@ -357,14 +357,10 @@ func (c beaconApiBeaconChainClient) GetValidatorParticipation(ctx context.Contex
 	panic("beaconApiBeaconChainClient.GetValidatorParticipation is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
 }
 
-func (c beaconApiBeaconChainClient) MultipleEndpointResolver(ctx context.Context, beaconApiUrls []string) {
-	c.jsonRestHandler.SwitchBeaconEndpoint(ctx, beaconApiUrls)
-}
-
 func NewBeaconApiBeaconChainClientWithFallback(host string, timeout time.Duration, fallbackClient iface.BeaconChainClient) iface.BeaconChainClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
-		host:       func() string { return host },
+		host:       host,
 	}
 
 	return &beaconApiBeaconChainClient{
