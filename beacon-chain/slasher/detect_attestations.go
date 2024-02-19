@@ -253,6 +253,16 @@ func (s *Service) updatedChunkByChunkIndex(
 			epochToWrite = 0
 		}
 
+		if latestEpochWritten == currentEpoch {
+			// If the latest epoch written is the current epoch, we do not need to update the chunk.
+			continue
+		}
+
+		// Latest epoch written should not be greater than the current epoch.
+		if latestEpochWritten > currentEpoch {
+			return nil, errors.Errorf("epoch to write `%d` should not be greater than the current epoch `%d`", epochToWrite, currentEpoch)
+		}
+
 		// It is useless to update more than `historyLength` epochs, since
 		// the chunks are circular and we will be overwritten at least one.
 		if currentEpoch-epochToWrite >= s.params.historyLength {
