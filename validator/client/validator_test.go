@@ -1251,7 +1251,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 		},
 	).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
 
-	aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
+	aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 0)
 	require.NoError(t, err)
 	require.Equal(t, false, aggregator)
 
@@ -1272,7 +1272,64 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 		},
 	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []primitives.CommitteeIndex{0}}, nil /*err*/)
 
-	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
+	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 0)
+	require.NoError(t, err)
+	require.Equal(t, true, aggregator)
+}
+
+func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	v, m, validatorKey, finish := setup(t)
+	defer finish()
+
+	v.distributed = true
+	slot := primitives.Slot(1)
+	pubKey := validatorKey.PublicKey().Marshal()
+
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: validatorKey.PublicKey().Marshal(),
+			Slot:      1,
+		},
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
+
+	aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 0)
+	require.NoError(t, err)
+	require.Equal(t, false, aggregator)
+
+	c := params.BeaconConfig().Copy()
+	c.TargetAggregatorsPerSyncSubcommittee = math.MaxUint64
+	params.OverrideBeaconConfig(c)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/).Times(2)
+
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: validatorKey.PublicKey().Marshal(),
+			Slot:      1,
+		},
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []primitives.CommitteeIndex{0}}, nil /*err*/)
+
+	sig, err := v.signSyncSelectionData(context.Background(), bytesutil.ToBytes48(pubKey), 0, slot)
+	require.NoError(t, err)
+
+	selection := iface.SyncCommitteeSelection{
+		SelectionProof:    sig,
+		Slot:              1,
+		ValidatorIndex:    123,
+		SubcommitteeIndex: 0,
+	}
+	m.validatorClient.EXPECT().GetAggregatedSyncSelections(
+		gomock.Any(), // ctx
+		[]iface.SyncCommitteeSelection{selection},
+	).Return([]iface.SyncCommitteeSelection{selection}, nil)
+
+	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 123)
 	require.NoError(t, err)
 	require.Equal(t, true, aggregator)
 }
