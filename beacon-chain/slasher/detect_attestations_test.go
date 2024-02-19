@@ -1278,7 +1278,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 		emptyChunk = EmptyMaxSpanChunksSlice(defaultParams)
 	}
 	chunkIdx := uint64(2)
-	received, err := s.loadChunks(ctx, 0, kind, []uint64{chunkIdx})
+	received, err := s.loadChunksFromDisk(ctx, 0, kind, []uint64{chunkIdx})
 	require.NoError(t, err)
 	wanted := map[uint64]Chunker{
 		chunkIdx: emptyChunk,
@@ -1318,7 +1318,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	err = s.saveChunksToDisk(ctx, kind, chunkByChunkIndexByValidatorChunkIndex)
 	require.NoError(t, err)
 	// Check if the retrieved chunks match what we just saved to disk.
-	received, err = s.loadChunks(ctx, 0, kind, []uint64{2, 4, 6})
+	received, err = s.loadChunksFromDisk(ctx, 0, kind, []uint64{2, 4, 6})
 	require.NoError(t, err)
 	require.DeepEqual(t, updatedChunks, received)
 }

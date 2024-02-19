@@ -476,7 +476,7 @@ func (s *Service) getChunkFromDatabase(
 	chunkIndex uint64,
 ) (Chunker, error) {
 	// We can ensure we load the appropriate chunk we need by fetching from the DB.
-	diskChunks, err := s.loadChunks(ctx, validatorChunkIndex, chunkKind, []uint64{chunkIndex})
+	diskChunks, err := s.loadChunksFromDisk(ctx, validatorChunkIndex, chunkKind, []uint64{chunkIndex})
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not load chunk at index %d", chunkIndex)
 	}
@@ -491,7 +491,7 @@ func (s *Service) getChunkFromDatabase(
 // Load chunks for a specified list of chunk indices. We attempt to load it from the database.
 // If the data exists, then we initialize a chunk of a specified kind. Otherwise, we create
 // an empty chunk, add it to our map, and then return it to the caller.
-func (s *Service) loadChunks(
+func (s *Service) loadChunksFromDisk(
 	ctx context.Context,
 	validatorChunkIndex uint64,
 	chunkKind slashertypes.ChunkKind,
@@ -500,17 +500,32 @@ func (s *Service) loadChunks(
 	ctx, span := trace.StartSpan(ctx, "Slasher.loadChunks")
 	defer span.End()
 
-	chunkKeys := make([][]byte, 0, len(chunkIndexes))
+	chunksCount := len(chunkIndexes)
+
+	// Build chunk keys.
+	chunkKeys := make([][]byte, 0, chunksCount)
 	for _, chunkIndex := range chunkIndexes {
-		chunkKeys = append(chunkKeys, s.params.flatSliceID(validatorChunkIndex, chunkIndex))
+		chunkKey := s.params.flatSliceID(validatorChunkIndex, chunkIndex)
+		chunkKeys = append(chunkKeys, chunkKey)
 	}
 
+	// Load the chunks from the database.
 	rawChunks, chunksExist, err := s.serviceCfg.Database.LoadSlasherChunks(ctx, chunkKind, chunkKeys)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not load slasher chunk index")
 	}
 
-	chunksByChunkIdx := make(map[uint64]Chunker, len(rawChunks))
+	// Perform basic checks.
+	if len(rawChunks) != chunksCount {
+		return nil, errors.Errorf("expected %d chunks, got %d", chunksCount, len(rawChunks))
+	}
+
+	if len(chunksExist) != chunksCount {
+		return nil, errors.Errorf("expected %d chunks exist, got %d", chunksCount, len(chunksExist))
+	}
+
+	// Initialize the chunks.
+	chunksByChunkIdx := make(map[uint64]Chunker, chunksCount)
 	for i := 0; i < len(rawChunks); i++ {
 		// If the chunk exists in the database, we initialize it from the raw bytes data.
 		// If it does not exist, we initialize an empty chunk.
