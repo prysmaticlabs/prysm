@@ -56,6 +56,11 @@ func (s *Service) checkSurroundVotes(
 	attWrappers []*slashertypes.IndexedAttestationWrapper,
 	currentEpoch primitives.Epoch,
 ) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
+	// With 256 validators and 16 epochs per chunk, there is 4096 `uint16` elements per chunk.
+	// 4096 `uint16` elements = 8192 bytes = 8KB
+	// 25_600 chunks * 8KB = 200MB
+	const maxChunkBeforeFlush = 25_600
+
 	slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
 
 	// Group attestation wrappers by validator chunk index.
@@ -64,6 +69,8 @@ func (s *Service) checkSurroundVotes(
 
 	minChunkByChunkIndexByValidatorChunkIndex := make(map[uint64]map[uint64]Chunker, attWrappersByValidatorChunkIndexCount)
 	maxChunkByChunkIndexByValidatorChunkIndex := make(map[uint64]map[uint64]Chunker, attWrappersByValidatorChunkIndexCount)
+
+	chunksCounts := 0
 
 	for validatorChunkIndex, attWrappers := range attWrappersByValidatorChunkIndex {
 		minChunkByChunkIndex, err := s.updatedChunkByChunkIndex(ctx, slashertypes.MinSpan, currentEpoch, validatorChunkIndex)
@@ -75,6 +82,8 @@ func (s *Service) checkSurroundVotes(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not update updatedMaxChunks")
 		}
+
+		chunksCounts += len(minChunkByChunkIndex) + len(maxChunkByChunkIndex)
 
 		// Group (already grouped by validator chunk index) attestation wrappers by chunk index.
 		attWrappersByChunkIndex := s.groupByChunkIndex(attWrappers)
@@ -102,6 +111,24 @@ func (s *Service) checkSurroundVotes(
 		// Memoize the updated chunks for the current validator chunk index.
 		minChunkByChunkIndexByValidatorChunkIndex[validatorChunkIndex] = minChunkByChunkIndex
 		maxChunkByChunkIndexByValidatorChunkIndex[validatorChunkIndex] = maxChunkByChunkIndex
+
+		if chunksCounts >= maxChunkBeforeFlush {
+			// Save the updated chunks to disk if we have reached the maximum number of chunks to store in memory.
+			if err := s.saveChunksToDisk(ctx, slashertypes.MinSpan, minChunkByChunkIndexByValidatorChunkIndex); err != nil {
+				return nil, errors.Wrap(err, "could not save updated min chunks to disk")
+			}
+
+			if err := s.saveChunksToDisk(ctx, slashertypes.MaxSpan, maxChunkByChunkIndexByValidatorChunkIndex); err != nil {
+				return nil, errors.Wrap(err, "could not save updated max chunks to disk")
+			}
+
+			// Reset the chunks counts.
+			chunksCounts = 0
+
+			// Reset memoized chunks.
+			minChunkByChunkIndexByValidatorChunkIndex = make(map[uint64]map[uint64]Chunker, attWrappersByValidatorChunkIndexCount)
+			maxChunkByChunkIndexByValidatorChunkIndex = make(map[uint64]map[uint64]Chunker, attWrappersByValidatorChunkIndexCount)
+		}
 
 		// Update the latest updated epoch for all validators involved to the current chunk.
 		indexes := s.params.validatorIndexesInChunk(validatorChunkIndex)

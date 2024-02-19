@@ -834,7 +834,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Could not detect")
 }
 
-func Test_epochUpdateForValidators(t *testing.T) {
+func Test_updatedChunkByChunkIndex(t *testing.T) {
 	neutralMin, neutralMax := uint16(65535), uint16(0)
 
 	testCases := []struct {
