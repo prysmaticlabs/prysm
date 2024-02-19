@@ -138,61 +138,113 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 }
 
 func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
+	// Define test parameters.
+	const (
+		elemsPerChunk = 16
+		totalChunks   = 11_000
+	)
+
+	// Create context.
 	ctx := context.Background()
+
+	// Create database.
 	beaconDB := setupDB(t)
-	elemsPerChunk := 16
-	totalChunks := 64
-	chunkKeys := make([][]byte, totalChunks)
-	chunks := make([][]uint16, totalChunks)
+
+	// Create min chunk keys and chunks.
+	minChunkKeys := make([][]byte, totalChunks)
+	minChunks := make([][]uint16, totalChunks)
+
 	for i := 0; i < totalChunks; i++ {
+		// Create chunk key.
+		chunkKey := ssz.MarshalUint64(make([]byte, 0), uint64(i))
+		minChunkKeys[i] = chunkKey
+
+		// Create chunk.
 		chunk := make([]uint16, elemsPerChunk)
+
 		for j := 0; j < len(chunk); j++ {
-			chunk[j] = uint16(0)
+			chunk[j] = uint16(i + j)
 		}
-		chunks[i] = chunk
-		chunkKeys[i] = ssz.MarshalUint64(make([]byte, 0), uint64(i))
+
+		minChunks[i] = chunk
 	}
 
-	// We save chunks for min spans.
-	err := beaconDB.SaveSlasherChunks(ctx, slashertypes.MinSpan, chunkKeys, chunks)
+	// Create max chunk keys and chunks.
+	maxChunkKeys := make([][]byte, totalChunks)
+	maxChunks := make([][]uint16, totalChunks)
+
+	for i := 0; i < totalChunks; i++ {
+		// Create chunk key.
+		chunkKey := ssz.MarshalUint64(make([]byte, 0), uint64(i+1))
+		maxChunkKeys[i] = chunkKey
+
+		// Create chunk.
+		chunk := make([]uint16, elemsPerChunk)
+
+		for j := 0; j < len(chunk); j++ {
+			chunk[j] = uint16(i + j + 1)
+		}
+
+		maxChunks[i] = chunk
+	}
+
+	// Save chunks for min spans.
+	err := beaconDB.SaveSlasherChunks(ctx, slashertypes.MinSpan, minChunkKeys, minChunks)
 	require.NoError(t, err)
 
-	// We expect no chunks to be stored for max spans.
+	// Expect no chunks to be stored for max spans.
 	_, chunksExist, err := beaconDB.LoadSlasherChunks(
-		ctx, slashertypes.MaxSpan, chunkKeys,
+		ctx, slashertypes.MaxSpan, minChunkKeys,
 	)
 	require.NoError(t, err)
-	require.Equal(t, len(chunks), len(chunksExist))
+	require.Equal(t, len(minChunks), len(chunksExist))
+
 	for _, exists := range chunksExist {
 		require.Equal(t, false, exists)
 	}
 
-	// We check we saved the right chunks.
+	// Check the right chunks are saved.
 	retrievedChunks, chunksExist, err := beaconDB.LoadSlasherChunks(
-		ctx, slashertypes.MinSpan, chunkKeys,
+		ctx, slashertypes.MinSpan, minChunkKeys,
 	)
 	require.NoError(t, err)
-	require.Equal(t, len(chunks), len(retrievedChunks))
-	require.Equal(t, len(chunks), len(chunksExist))
+	require.Equal(t, len(minChunks), len(retrievedChunks))
+	require.Equal(t, len(minChunks), len(chunksExist))
+
 	for i, exists := range chunksExist {
 		require.Equal(t, true, exists)
-		require.DeepEqual(t, chunks[i], retrievedChunks[i])
+		require.DeepEqual(t, minChunks[i], retrievedChunks[i])
 	}
 
-	// We save chunks for max spans.
-	err = beaconDB.SaveSlasherChunks(ctx, slashertypes.MaxSpan, chunkKeys, chunks)
+	// Save chunks for max spans.
+	err = beaconDB.SaveSlasherChunks(ctx, slashertypes.MaxSpan, maxChunkKeys, maxChunks)
 	require.NoError(t, err)
 
-	// We check we saved the right chunks.
+	// Check right chunks are saved.
 	retrievedChunks, chunksExist, err = beaconDB.LoadSlasherChunks(
-		ctx, slashertypes.MaxSpan, chunkKeys,
+		ctx, slashertypes.MaxSpan, maxChunkKeys,
 	)
 	require.NoError(t, err)
-	require.Equal(t, len(chunks), len(retrievedChunks))
-	require.Equal(t, len(chunks), len(chunksExist))
+
+	require.Equal(t, len(maxChunks), len(retrievedChunks))
+	require.Equal(t, len(maxChunks), len(chunksExist))
+
 	for i, exists := range chunksExist {
 		require.Equal(t, true, exists)
-		require.DeepEqual(t, chunks[i], retrievedChunks[i])
+		require.DeepEqual(t, maxChunks[i], retrievedChunks[i])
+	}
+
+	// Check the right chunks are still saved for min span.
+	retrievedChunks, chunksExist, err = beaconDB.LoadSlasherChunks(
+		ctx, slashertypes.MinSpan, minChunkKeys,
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(minChunks), len(retrievedChunks))
+	require.Equal(t, len(minChunks), len(chunksExist))
+
+	for i, exists := range chunksExist {
+		require.Equal(t, true, exists)
+		require.DeepEqual(t, minChunks[i], retrievedChunks[i])
 	}
 }
 
