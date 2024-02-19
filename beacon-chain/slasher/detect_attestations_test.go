@@ -1067,7 +1067,7 @@ func Test_epochUpdateForValidators(t *testing.T) {
 					historyLength:      tt.historyLength,
 				},
 				serviceCfg:                     &ServiceConfig{Database: slasherDB},
-				latestEpochWrittenForValidator: tt.latestUpdatedEpochByValidatorIndex,
+				latestEpochUpdatedForValidator: tt.latestUpdatedEpochByValidatorIndex,
 			}
 
 			// Save min initial chunks if they exist.

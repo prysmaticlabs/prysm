@@ -103,10 +103,10 @@ func (s *Service) checkSurroundVotes(
 		minChunkByChunkIndexByValidatorChunkIndex[validatorChunkIndex] = minChunkByChunkIndex
 		maxChunkByChunkIndexByValidatorChunkIndex[validatorChunkIndex] = maxChunkByChunkIndex
 
-		// Update the latest written epoch for all validators involved to the current chunk.
-		indices := s.params.validatorIndexesInChunk(validatorChunkIndex)
-		for _, idx := range indices {
-			s.latestEpochWrittenForValidator[idx] = currentEpoch
+		// Update the latest updated epoch for all validators involved to the current chunk.
+		indexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
+		for _, index := range indexes {
+			s.latestEpochUpdatedForValidator[index] = currentEpoch
 		}
 	}
 
@@ -228,7 +228,7 @@ func (s *Service) checkDoubleVotes(
 // updatedChunkByChunkIndex loads the chunks from the database for validators corresponding to
 // the `validatorChunkIndex`.
 // It then updates the chunks with the neutral element for corresponding validators from
-// the epoch just after the latest epoch written to the current epoch.
+// the epoch just after the latest updated epoch to the current epoch.
 // A mapping between chunk index and chunk is returned to the caller.
 func (s *Service) updatedChunkByChunkIndex(
 	ctx context.Context,
@@ -243,21 +243,21 @@ func (s *Service) updatedChunkByChunkIndex(
 	//   Thus, then there is no first epoch to update.
 	// - In all other cases, the first epoch to update is the latest updated epoch + 1.
 
-	// epochToWriteMin is set to the smallest first epoch to update for all validators in the chunk
+	// minFirstEpochToUpdate is set to the smallest first epoch to update for all validators in the chunk
 	// corresponding to the `validatorChunkIndex`.
-	var epochToWriteMin *primitives.Epoch
+	var minFirstEpochToUpdate *primitives.Epoch
 
 	neededChunkIndexesMap := map[uint64]bool{}
 
 	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
 	for _, validatorIndex := range validatorIndexes {
 		// Retrieve the first epoch to write for the validator index.
-		isAnEpochToWrite, firstEpochToWrite, err := s.firstEpochToWrite(validatorIndex, currentEpoch)
+		isAnEpochToUpdate, firstEpochToUpdate, err := s.firstEpochToUpdate(validatorIndex, currentEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get first epoch to write for validator index %d with current epoch %d", validatorIndex, currentEpoch)
 		}
 
-		if !isAnEpochToWrite {
+		if !isAnEpochToUpdate {
 			// If there is no epoch to write, skip.
 			continue
 		}
@@ -265,14 +265,14 @@ func (s *Service) updatedChunkByChunkIndex(
 		// If, for this validator index, the chunk corresponding to the first epoch to write
 		// (and all following epochs until the current epoch) are already flagged as needed,
 		// skip.
-		if epochToWriteMin != nil && *epochToWriteMin <= firstEpochToWrite {
+		if minFirstEpochToUpdate != nil && *minFirstEpochToUpdate <= firstEpochToUpdate {
 			continue
 		}
 
-		epochToWriteMin = &firstEpochToWrite
+		minFirstEpochToUpdate = &firstEpochToUpdate
 
 		// Add new needed chunk indexes to the map.
-		for i := firstEpochToWrite; i <= currentEpoch; i++ {
+		for i := firstEpochToUpdate; i <= currentEpoch; i++ {
 			chunkIndex := s.params.chunkIndex(i)
 			neededChunkIndexesMap[chunkIndex] = true
 		}
@@ -292,21 +292,21 @@ func (s *Service) updatedChunkByChunkIndex(
 
 	for _, validatorIndex := range validatorIndexes {
 		// Retrieve the first epoch to write for the validator index.
-		isAnEpochToWrite, firstEpochToWrite, err := s.firstEpochToWrite(validatorIndex, currentEpoch)
+		isAnEpochToUpdate, firstEpochToUpdate, err := s.firstEpochToUpdate(validatorIndex, currentEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get first epoch to write for validator index %d with current epoch %d", validatorIndex, currentEpoch)
 		}
 
-		if !isAnEpochToWrite {
+		if !isAnEpochToUpdate {
 			// If there is no epoch to write, skip.
 			continue
 		}
 
-		epochToWrite := firstEpochToWrite
+		epochToUpdate := firstEpochToUpdate
 
-		for epochToWrite <= currentEpoch {
+		for epochToUpdate <= currentEpoch {
 			// Get the chunk index for the ecpoh to write.
-			chunkIndex := s.params.chunkIndex(epochToWrite)
+			chunkIndex := s.params.chunkIndex(epochToUpdate)
 
 			// Get the chunk corresponding to the chunk index from the `chunkByChunkIndex` map.
 			currentChunk, ok := chunkByChunkIndex[chunkIndex]
@@ -315,18 +315,18 @@ func (s *Service) updatedChunkByChunkIndex(
 			}
 
 			// Update the current chunk with the neutral element for the validator index for the epoch to write.
-			for s.params.chunkIndex(epochToWrite) == chunkIndex && epochToWrite <= currentEpoch {
+			for s.params.chunkIndex(epochToUpdate) == chunkIndex && epochToUpdate <= currentEpoch {
 				if err := setChunkRawDistance(
 					s.params,
 					currentChunk.Chunk(),
 					validatorIndex,
-					epochToWrite,
+					epochToUpdate,
 					currentChunk.NeutralElement(),
 				); err != nil {
 					return nil, err
 				}
 
-				epochToWrite++
+				epochToUpdate++
 			}
 
 			chunkByChunkIndex[chunkIndex] = currentChunk
@@ -336,38 +336,38 @@ func (s *Service) updatedChunkByChunkIndex(
 	return chunkByChunkIndex, nil
 }
 
-// firstEpochToWrite, given a validator index and the current epoch, returns a boolean indicating
+// firstEpochToUpdate, given a validator index and the current epoch, returns a boolean indicating
 // if there is an epoch to write. If it is the case, it returns the first epoch to write.
-func (s *Service) firstEpochToWrite(validatorIndex primitives.ValidatorIndex, currentEpoch primitives.Epoch) (bool, primitives.Epoch, error) {
-	latestEpochWritten, ok := s.latestEpochWrittenForValidator[validatorIndex]
+func (s *Service) firstEpochToUpdate(validatorIndex primitives.ValidatorIndex, currentEpoch primitives.Epoch) (bool, primitives.Epoch, error) {
+	latestEpochUpdated, ok := s.latestEpochUpdatedForValidator[validatorIndex]
 
-	// Start from the epoch just after the latest epoch written.
-	epochToWrite, err := latestEpochWritten.SafeAdd(1)
+	// Start from the epoch just after the latest updated epoch.
+	epochToUpdate, err := latestEpochUpdated.SafeAdd(1)
 	if err != nil {
-		return false, primitives.Epoch(0), errors.Wrap(err, "could not add 1 to latest epoch written")
+		return false, primitives.Epoch(0), errors.Wrap(err, "could not add 1 to latest updated epoch")
 	}
 
 	if !ok {
-		epochToWrite = 0
+		epochToUpdate = 0
 	}
 
-	if latestEpochWritten == currentEpoch {
-		// If the latest epoch written is the current epoch, we do not need to update anything.
+	if latestEpochUpdated == currentEpoch {
+		// If the latest updated epoch is the current epoch, we do not need to update anything.
 		return false, primitives.Epoch(0), nil
 	}
 
-	// Latest epoch written should not be greater than the current epoch.
-	if latestEpochWritten > currentEpoch {
-		return false, primitives.Epoch(0), errors.Errorf("epoch to write `%d` should not be greater than the current epoch `%d`", epochToWrite, currentEpoch)
+	// Latest updated epoch should not be greater than the current epoch.
+	if latestEpochUpdated > currentEpoch {
+		return false, primitives.Epoch(0), errors.Errorf("epoch to write `%d` should not be greater than the current epoch `%d`", epochToUpdate, currentEpoch)
 	}
 
 	// It is useless to update more than `historyLength` epochs, since
 	// the chunks are circular and we will be overwritten at least one.
-	if currentEpoch-epochToWrite >= s.params.historyLength {
-		epochToWrite = currentEpoch + 1 - s.params.historyLength
+	if currentEpoch-epochToUpdate >= s.params.historyLength {
+		epochToUpdate = currentEpoch + 1 - s.params.historyLength
 	}
 
-	return true, epochToWrite, nil
+	return true, epochToUpdate, nil
 }
 
 // Updates spans and detects any slashable attester offenses along the way.
