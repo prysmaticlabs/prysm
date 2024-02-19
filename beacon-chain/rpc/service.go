@@ -327,7 +327,7 @@ func (s *Service) Start() {
 					e.handler,
 				),
 			),
-		)
+		).Methods(e.methods...)
 	}
 
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
