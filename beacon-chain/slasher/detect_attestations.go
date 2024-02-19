@@ -236,54 +236,85 @@ func (s *Service) updatedChunkByChunkIndex(
 	currentEpoch primitives.Epoch,
 	validatorChunkIndex uint64,
 ) (map[uint64]Chunker, error) {
-	chunkByChunkIndex := map[uint64]Chunker{}
+	// Every validator may have a first epoch to update.
+	// For a given validator,
+	// - If it has no latest updated epoch, then the first epoch to update is set to 0.
+	// - If the latest updated epoch is the current epoch, then there is no epoch to update.
+	//   Thus, then there is no first epoch to update.
+	// - In all other cases, the first epoch to update is the latest updated epoch + 1.
+
+	// epochToWriteMin is set to the smallest first epoch to update for all validators in the chunk
+	// corresponding to the `validatorChunkIndex`.
+	var epochToWriteMin *primitives.Epoch
+
+	neededChunkIndexesMap := map[uint64]bool{}
 
 	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
 	for _, validatorIndex := range validatorIndexes {
-		// Retrieve the latest epoch written for the validator.
-		latestEpochWritten, ok := s.latestEpochWrittenForValidator[validatorIndex]
-
-		// Start from the epoch just after the latest epoch written.
-		epochToWrite, err := latestEpochWritten.SafeAdd(1)
+		// Retrieve the first epoch to write for the validator index.
+		isAnEpochToWrite, firstEpochToWrite, err := s.firstEpochToWrite(validatorIndex, currentEpoch)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not add 1 to latest epoch written")
+			return nil, errors.Wrapf(err, "could not get first epoch to write for validator index %d with current epoch %d", validatorIndex, currentEpoch)
 		}
 
-		if !ok {
-			epochToWrite = 0
-		}
-
-		if latestEpochWritten == currentEpoch {
-			// If the latest epoch written is the current epoch, we do not need to update the chunk.
+		if !isAnEpochToWrite {
+			// If there is no epoch to write, skip.
 			continue
 		}
 
-		// Latest epoch written should not be greater than the current epoch.
-		if latestEpochWritten > currentEpoch {
-			return nil, errors.Errorf("epoch to write `%d` should not be greater than the current epoch `%d`", epochToWrite, currentEpoch)
+		// If, for this validator index, the chunk corresponding to the first epoch to write
+		// (and all following epochs until the current epoch) are already flagged as needed,
+		// skip.
+		if epochToWriteMin != nil && *epochToWriteMin <= firstEpochToWrite {
+			continue
 		}
 
-		// It is useless to update more than `historyLength` epochs, since
-		// the chunks are circular and we will be overwritten at least one.
-		if currentEpoch-epochToWrite >= s.params.historyLength {
-			epochToWrite = currentEpoch + 1 - s.params.historyLength
+		epochToWriteMin = &firstEpochToWrite
+
+		// Add new needed chunk indexes to the map.
+		for i := firstEpochToWrite; i <= currentEpoch; i++ {
+			chunkIndex := s.params.chunkIndex(i)
+			neededChunkIndexesMap[chunkIndex] = true
 		}
+	}
+
+	// Get the list of needed chunk indexes.
+	neededChunkIndexes := make([]uint64, 0, len(neededChunkIndexesMap))
+	for chunkIndex := range neededChunkIndexesMap {
+		neededChunkIndexes = append(neededChunkIndexes, chunkIndex)
+	}
+
+	// Retrieve needed chunks from the database.
+	chunkByChunkIndex, err := s.loadChunksFromDisk(ctx, validatorChunkIndex, chunkKind, neededChunkIndexes)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load chunks from disk")
+	}
+
+	for _, validatorIndex := range validatorIndexes {
+		// Retrieve the first epoch to write for the validator index.
+		isAnEpochToWrite, firstEpochToWrite, err := s.firstEpochToWrite(validatorIndex, currentEpoch)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get first epoch to write for validator index %d with current epoch %d", validatorIndex, currentEpoch)
+		}
+
+		if !isAnEpochToWrite {
+			// If there is no epoch to write, skip.
+			continue
+		}
+
+		epochToWrite := firstEpochToWrite
 
 		for epochToWrite <= currentEpoch {
-			// Get the chunk index for the latest epoch written.
+			// Get the chunk index for the ecpoh to write.
 			chunkIndex := s.params.chunkIndex(epochToWrite)
 
 			// Get the chunk corresponding to the chunk index from the `chunkByChunkIndex` map.
 			currentChunk, ok := chunkByChunkIndex[chunkIndex]
 			if !ok {
-				// If the chunk is not in the map, retrieve it from the database.
-				currentChunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
-				if err != nil {
-					return nil, errors.Wrap(err, "could not get chunk")
-				}
+				return nil, errors.Errorf("chunk at index %d does not exist", chunkIndex)
 			}
 
-			// Update the current chunk with the neutral element for the validator index for the latest epoch written.
+			// Update the current chunk with the neutral element for the validator index for the epoch to write.
 			for s.params.chunkIndex(epochToWrite) == chunkIndex && epochToWrite <= currentEpoch {
 				if err := setChunkRawDistance(
 					s.params,
@@ -303,6 +334,40 @@ func (s *Service) updatedChunkByChunkIndex(
 	}
 
 	return chunkByChunkIndex, nil
+}
+
+// firstEpochToWrite, given a validator index and the current epoch, returns a boolean indicating
+// if there is an epoch to write. If it is the case, it returns the first epoch to write.
+func (s *Service) firstEpochToWrite(validatorIndex primitives.ValidatorIndex, currentEpoch primitives.Epoch) (bool, primitives.Epoch, error) {
+	latestEpochWritten, ok := s.latestEpochWrittenForValidator[validatorIndex]
+
+	// Start from the epoch just after the latest epoch written.
+	epochToWrite, err := latestEpochWritten.SafeAdd(1)
+	if err != nil {
+		return false, primitives.Epoch(0), errors.Wrap(err, "could not add 1 to latest epoch written")
+	}
+
+	if !ok {
+		epochToWrite = 0
+	}
+
+	if latestEpochWritten == currentEpoch {
+		// If the latest epoch written is the current epoch, we do not need to update anything.
+		return false, primitives.Epoch(0), nil
+	}
+
+	// Latest epoch written should not be greater than the current epoch.
+	if latestEpochWritten > currentEpoch {
+		return false, primitives.Epoch(0), errors.Errorf("epoch to write `%d` should not be greater than the current epoch `%d`", epochToWrite, currentEpoch)
+	}
+
+	// It is useless to update more than `historyLength` epochs, since
+	// the chunks are circular and we will be overwritten at least one.
+	if currentEpoch-epochToWrite >= s.params.historyLength {
+		epochToWrite = currentEpoch + 1 - s.params.historyLength
+	}
+
+	return true, epochToWrite, nil
 }
 
 // Updates spans and detects any slashable attester offenses along the way.
@@ -511,6 +576,10 @@ func (s *Service) loadChunksFromDisk(
 	defer span.End()
 
 	chunksCount := len(chunkIndexes)
+
+	if chunksCount == 0 {
+		return map[uint64]Chunker{}, nil
+	}
 
 	// Build chunk keys.
 	chunkKeys := make([][]byte, 0, chunksCount)
