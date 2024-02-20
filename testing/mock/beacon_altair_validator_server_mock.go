@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
 	v2 "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	gomock "go.uber.org/mock/gomock"
 	metadata "google.golang.org/grpc/metadata"
 )
 

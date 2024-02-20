@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -29,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/derived"
 	constant "github.com/prysmaticlabs/prysm/v5/validator/testing"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

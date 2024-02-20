@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"go.uber.org/mock/gomock"
 )
 
 func TestGetValidatorCount(t *testing.T) {
