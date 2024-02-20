@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -202,6 +203,6 @@ func (b *BeaconState) addDirtyIndices(index types.FieldIndex, indices []uint64) 
 		b.rebuildTrie[index] = true
 		b.dirtyIndices[index] = []uint64{}
 	} else {
-		b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
+		b.dirtyIndices[index] = slice.SetUint64(append(b.dirtyIndices[index], indices...))
 	}
 }
