@@ -259,14 +259,25 @@ func (s *Store) AttestationRecordForValidator(
 // then only the first one is (arbitrarily) saved in the `attestationDataRootsBucket` bucket.
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
-	attestations []*slashertypes.IndexedAttestationWrapper,
+	attWrappers []*slashertypes.IndexedAttestationWrapper,
 ) error {
 	_, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
-	encodedTargetEpoch := make([][]byte, len(attestations))
-	encodedRecords := make([][]byte, len(attestations))
 
-	for i, attestation := range attestations {
+	const batchSize = 10_000
+
+	attWrappersCount := len(attWrappers)
+
+	// If no attestations are provided, skip.
+	if attWrappersCount == 0 {
+		return nil
+	}
+
+	// Build encoded target epochs and encoded records
+	encodedTargetEpoch := make([][]byte, attWrappersCount)
+	encodedRecords := make([][]byte, attWrappersCount)
+
+	for i, attestation := range attWrappers {
 		encEpoch := encodeTargetEpoch(attestation.IndexedAttestation.Data.Target.Epoch)
 
 		value, err := encodeAttestationRecord(attestation)
@@ -278,29 +289,57 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		encodedRecords[i] = value
 	}
 
-	return s.db.Update(func(tx *bolt.Tx) error {
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
-		dataRootsBkt := tx.Bucket(attestationDataRootsBucket)
+	// Save attestation records in the database by batch.
+	for stop := attWrappersCount; stop >= 0; stop -= batchSize {
+		start := max(0, stop-batchSize)
 
-		for i := len(attestations) - 1; i >= 0; i-- {
-			attestation := attestations[i]
+		attWrappersBatch := attWrappers[start:stop]
+		encodedTargetEpochBatch := encodedTargetEpoch[start:stop]
+		encodedRecordsBatch := encodedRecords[start:stop]
 
-			if err := attRecordsBkt.Put(attestation.DataRoot[:], encodedRecords[i]); err != nil {
-				return err
-			}
-
-			for _, valIdx := range attestation.IndexedAttestation.AttestingIndices {
-				encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))
-
-				key := append(encodedTargetEpoch[i], encIdx...)
-				if err := dataRootsBkt.Put(key, attestation.DataRoot[:]); err != nil {
-					return err
-				}
-			}
+		// Perform basic check.
+		if len(encodedTargetEpochBatch) != len(encodedRecordsBatch) {
+			return fmt.Errorf(
+				"cannot save attestation records, got %d target epochs and %d records",
+				len(encodedTargetEpochBatch), len(encodedRecordsBatch),
+			)
 		}
 
-		return nil
-	})
+		currentBatchSize := len(encodedTargetEpochBatch)
+
+		// Save attestation records in the database.
+		if err := s.db.Update(func(tx *bolt.Tx) error {
+			attRecordsBkt := tx.Bucket(attestationRecordsBucket)
+			dataRootsBkt := tx.Bucket(attestationDataRootsBucket)
+
+			for i := currentBatchSize - 1; i >= 0; i-- {
+				attWrapper := attWrappersBatch[i]
+				dataRoot := attWrapper.DataRoot
+
+				encodedTargetEpoch := encodedTargetEpochBatch[i]
+				encodedRecord := encodedRecordsBatch[i]
+
+				if err := attRecordsBkt.Put(dataRoot[:], encodedRecord); err != nil {
+					return err
+				}
+
+				for _, validatorIndex := range attWrapper.IndexedAttestation.AttestingIndices {
+					encodedIndex := encodeValidatorIndex(primitives.ValidatorIndex(validatorIndex))
+
+					key := append(encodedTargetEpoch, encodedIndex...)
+					if err := dataRootsBkt.Put(key, dataRoot[:]); err != nil {
+						return err
+					}
+				}
+			}
+
+			return nil
+		}); err != nil {
+			return errors.Wrap(err, "failed to save attestation records")
+		}
+	}
+
+	return nil
 }
 
 // LoadSlasherChunks given a chunk kind and a disk keys, retrieves chunks for a validator

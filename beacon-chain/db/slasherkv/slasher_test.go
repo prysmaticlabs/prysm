@@ -14,33 +14,56 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := setupDB(t)
-	valIdx := primitives.ValidatorIndex(1)
-	target := primitives.Epoch(5)
-	source := primitives.Epoch(4)
-	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
-	require.NoError(t, err)
-	require.Equal(t, true, attRecord == nil)
+	const attestationsCount = 11_000
 
-	sr := [32]byte{1}
-	err = beaconDB.SaveAttestationRecordsForValidators(
-		ctx,
-		[]*slashertypes.IndexedAttestationWrapper{
-			createAttestationWrapper(source, target, []uint64{uint64(valIdx)}, sr[:]),
-		},
-	)
+	// Create context.
+	ctx := context.Background()
+
+	// Create database.
+	beaconDB := setupDB(t)
+
+	// Define the validator index.
+	validatorIndex := primitives.ValidatorIndex(1)
+
+	// Defines attestations to save and retrieve.
+	attWrappers := make([]*slashertypes.IndexedAttestationWrapper, attestationsCount)
+	for i := 0; i < attestationsCount; i++ {
+		var dataRoot [32]byte
+		binary.LittleEndian.PutUint64(dataRoot[:], uint64(i))
+
+		attWrapper := createAttestationWrapper(
+			primitives.Epoch(i),
+			primitives.Epoch(i+1),
+			[]uint64{uint64(validatorIndex)},
+			dataRoot[:],
+		)
+
+		attWrappers[i] = attWrapper
+	}
+
+	// Check on a sample of validators that no attestation records are available.
+	for i := 0; i < attestationsCount; i += 100 {
+		attRecord, err := beaconDB.AttestationRecordForValidator(ctx, validatorIndex, primitives.Epoch(i+1))
+		require.NoError(t, err)
+		require.Equal(t, true, attRecord == nil)
+	}
+
+	// Save the attestation records to the database.
+	err := beaconDB.SaveAttestationRecordsForValidators(ctx, attWrappers)
 	require.NoError(t, err)
-	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
-	require.NoError(t, err)
-	assert.DeepEqual(t, target, attRecord.IndexedAttestation.Data.Target.Epoch)
-	assert.DeepEqual(t, source, attRecord.IndexedAttestation.Data.Source.Epoch)
-	assert.DeepEqual(t, sr, attRecord.DataRoot)
+
+	// Check on a sample of validators that attestation records are available.
+	for i := 0; i < attestationsCount; i += 100 {
+		expected := attWrappers[i]
+		actual, err := beaconDB.AttestationRecordForValidator(ctx, validatorIndex, primitives.Epoch(i+1))
+		require.NoError(t, err)
+
+		require.DeepEqual(t, expected.IndexedAttestation.Data.Source.Epoch, actual.IndexedAttestation.Data.Source.Epoch)
+	}
 }
 
 func TestStore_LastEpochWrittenForValidators(t *testing.T) {
