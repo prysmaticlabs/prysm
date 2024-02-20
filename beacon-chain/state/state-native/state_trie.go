@@ -924,7 +924,7 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	for i, f := range b.stateFieldLeaves {
 		numOfRefs := uint64(f.FieldReference().Refs())
 		f.RLock()
-		if !f.Empty() {
+		if !f.Empty() && !f.Compressed() {
 			refMap[i.String()+"_trie"] = numOfRefs
 		}
 		f.RUnlock()
@@ -1155,6 +1155,21 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 		fTrie.FieldReference().MinusRef()
 		fTrieMutex.Unlock()
 		return b.stateFieldLeaves[index].TrieRoot()
+	}
+
+	if fTrie.Compressed() {
+		err := fTrie.ExpandTrie()
+		if err != nil {
+			fTrieMutex.Unlock()
+			return [32]byte{}, err
+		}
+	}
+
+	if fTrie.FieldReference().Refs() > 1 && index == types.Validators {
+		fTrie.FieldReference().MinusRef()
+		newTrie := fTrie.CompressTrie()
+		b.stateFieldLeaves[index] = newTrie
+		fTrie = newTrie
 	}
 
 	if fTrie.FieldReference().Refs() > 1 {

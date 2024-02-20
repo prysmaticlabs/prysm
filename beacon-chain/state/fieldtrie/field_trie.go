@@ -12,8 +12,12 @@ import (
 )
 
 var (
-	ErrInvalidFieldTrie = errors.New("invalid field trie")
-	ErrEmptyFieldTrie   = errors.New("empty field trie")
+	ErrInvalidFieldTrie      = errors.New("invalid field trie")
+	ErrEmptyFieldTrie        = errors.New("empty field trie")
+	ErrUncompressedFieldTrie = errors.New("uncompressed field trie")
+	ErrCompressedFieldTrie   = errors.New("compressed field trie")
+
+	ErrNonCompatibleDataType = errors.New("non compatible data type provided")
 )
 
 // sliceAccessor describes an interface for a multivalue slice
@@ -35,6 +39,7 @@ type FieldTrie struct {
 	length        uint64
 	numOfElems    int
 	isTransferred bool
+	isCompressed  bool
 }
 
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
@@ -232,10 +237,64 @@ func (f *FieldTrie) TransferTrie() *FieldTrie {
 	return nTrie
 }
 
+func (f *FieldTrie) CompressTrie() *FieldTrie {
+	if f.fieldLayers == nil {
+		return &FieldTrie{
+			field:      f.field,
+			dataType:   f.dataType,
+			reference:  stateutil.NewRef(1),
+			RWMutex:    new(sync.RWMutex),
+			length:     f.length,
+			numOfElems: f.numOfElems,
+		}
+	}
+	f.isCompressed = true
+	nTrie := &FieldTrie{
+		fieldLayers: f.fieldLayers,
+		field:       f.field,
+		dataType:    f.dataType,
+		reference:   stateutil.NewRef(1),
+		RWMutex:     new(sync.RWMutex),
+		length:      f.length,
+		numOfElems:  f.numOfElems,
+	}
+	// Zero out field layers here.
+	compressedLayer := make([][]*[32]byte, 1)
+	compressedLayer[0] = make([]*[32]byte, len(f.fieldLayers[0]))
+	copy(compressedLayer[0], f.fieldLayers[0])
+	f.fieldLayers = compressedLayer
+
+	return nTrie
+}
+
+func (f *FieldTrie) ExpandTrie() error {
+	if !f.Compressed() {
+		return ErrUncompressedFieldTrie
+	}
+	// Currently we will only support composite data types for ease of
+	// implementation.
+	if f.dataType != types.CompositeArray {
+		return ErrNonCompatibleDataType
+	}
+	if len(f.fieldLayers) != 1 {
+		return errors.Errorf("invalid compression detected, wanted 1 layer received %d", len(f.fieldLayers))
+	}
+	elements := make([][32]byte, 0, len(f.fieldLayers[0]))
+	for _, e := range f.fieldLayers[0] {
+		elements = append(elements, *e)
+	}
+	f.fieldLayers = stateutil.ReturnTrieLayerVariable(elements, f.length)
+	f.isCompressed = false
+	return nil
+}
+
 // TrieRoot returns the corresponding root of the trie.
 func (f *FieldTrie) TrieRoot() ([32]byte, error) {
 	if f.Empty() {
 		return [32]byte{}, ErrEmptyFieldTrie
+	}
+	if f.Compressed() {
+		return [32]byte{}, ErrCompressedFieldTrie
 	}
 	if len(f.fieldLayers[len(f.fieldLayers)-1]) == 0 {
 		return [32]byte{}, ErrInvalidFieldTrie
@@ -264,6 +323,10 @@ func (f *FieldTrie) FieldReference() *stateutil.Reference {
 // empty or not.
 func (f *FieldTrie) Empty() bool {
 	return f == nil || len(f.fieldLayers) == 0 || f.isTransferred
+}
+
+func (f *FieldTrie) Compressed() bool {
+	return f.isCompressed
 }
 
 // InsertFieldLayer manually inserts a field layer. This method
