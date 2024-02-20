@@ -48,7 +48,7 @@ func (s *Service) endpoints(
 	endpoints = append(endpoints, s.configEndpoints()...)
 	endpoints = append(endpoints, s.lightClientEndpoints(blocker, stater)...)
 	endpoints = append(endpoints, s.eventsEndpoints()...)
-	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch)...)
+	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch, stater)...)
 	endpoints = append(endpoints, s.prysmNodeEndpoints()...)
 	endpoints = append(endpoints, s.prysmValidatorEndpoints(coreService, stater)...)
 	if enableDebug {
@@ -661,7 +661,7 @@ func (s *Service) eventsEndpoints() []endpoint {
 
 // Prysm custom endpoints
 
-func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory) []endpoint {
+func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater lookup.Stater) []endpoint {
 	server := &beaconprysm.Server{
 		SyncChecker:           s.cfg.SyncService,
 		HeadFetcher:           s.cfg.HeadFetcher,
@@ -669,6 +669,9 @@ func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory) []endpoint
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		CanonicalHistory:      ch,
 		BeaconDB:              s.cfg.BeaconDB,
+		Stater:                stater,
+		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 	}
 
 	const namespace = "prysm.beacon"
