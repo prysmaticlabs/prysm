@@ -56,7 +56,7 @@ func testBlocksWithKeys(t *testing.T, nBlocks uint64, nBlobs int, vr []byte) ([]
 
 func TestVerify(t *testing.T) {
 	vr := make([]byte, 32)
-	copy(vr, []byte("yooooo"))
+	copy(vr, "yooooo")
 	blks, _, _, pks := testBlocksWithKeys(t, 2, 0, vr)
 	pubkeys := make([][fieldparams.BLSPubkeyLength]byte, len(pks))
 	for i := range pks {
