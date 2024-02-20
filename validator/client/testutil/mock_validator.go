@@ -297,3 +297,9 @@ func (fv *FakeValidator) EventStreamIsRunning() bool {
 func (fv *FakeValidator) NodeIsHealthy(context.Context) bool {
 	return true
 }
+
+func (fv *FakeValidator) RetrieveHost() string {
+	return "127.0.0.1:0"
+}
+
+func (fv *FakeValidator) UpdateHost(host string) {}
