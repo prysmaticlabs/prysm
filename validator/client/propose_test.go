@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -28,6 +27,7 @@ import (
 	testing2 "github.com/prysmaticlabs/prysm/v5/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"go.uber.org/mock/gomock"
 )
 
 type mocks struct {

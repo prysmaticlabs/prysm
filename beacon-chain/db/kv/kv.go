@@ -100,37 +100,24 @@ func StoreDatafilePath(dirPath string) string {
 }
 
 var Buckets = [][]byte{
-	attestationsBucket,
 	blocksBucket,
 	stateBucket,
-	proposerSlashingsBucket,
-	attesterSlashingsBucket,
-	voluntaryExitsBucket,
 	chainMetadataBucket,
 	checkpointBucket,
 	powchainBucket,
 	stateSummaryBucket,
 	stateValidatorsBucket,
 	// Indices buckets.
-	attestationHeadBlockRootBucket,
-	attestationSourceRootIndicesBucket,
-	attestationSourceEpochIndicesBucket,
-	attestationTargetRootIndicesBucket,
-	attestationTargetEpochIndicesBucket,
 	blockSlotIndicesBucket,
 	stateSlotIndicesBucket,
 	blockParentRootIndicesBucket,
 	finalizedBlockRootsIndexBucket,
 	blockRootValidatorHashesBucket,
-	// State management service bucket.
-	newStateServiceCompatibleBucket,
 	// Migrations
 	migrationsBucket,
 
 	feeRecipientBucket,
 	registrationBucket,
-
-	blobsBucket,
 }
 
 // KVStoreOption is a functional option that modifies a kv.Store.
