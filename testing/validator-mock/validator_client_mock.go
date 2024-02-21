@@ -282,20 +282,6 @@ func (mr *MockValidatorClientMockRecorder) ProposeExit(arg0, arg1 any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeExit", reflect.TypeOf((*MockValidatorClient)(nil).ProposeExit), arg0, arg1)
 }
 
-// RetrieveHost mocks base method.
-func (m *MockValidatorClient) RetrieveHost() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RetrieveHost")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// RetrieveHost indicates an expected call of RetrieveHost.
-func (mr *MockValidatorClientMockRecorder) RetrieveHost() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetrieveHost", reflect.TypeOf((*MockValidatorClient)(nil).RetrieveHost))
-}
-
 // StartEventStream mocks base method.
 func (m *MockValidatorClient) StartEventStream(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -413,18 +399,6 @@ func (m *MockValidatorClient) SubscribeCommitteeSubnets(arg0 context.Context, ar
 func (mr *MockValidatorClientMockRecorder) SubscribeCommitteeSubnets(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeCommitteeSubnets", reflect.TypeOf((*MockValidatorClient)(nil).SubscribeCommitteeSubnets), arg0, arg1, arg2)
-}
-
-// UpdateHost mocks base method.
-func (m *MockValidatorClient) UpdateHost(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateHost", arg0)
-}
-
-// UpdateHost indicates an expected call of UpdateHost.
-func (mr *MockValidatorClientMockRecorder) UpdateHost(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHost", reflect.TypeOf((*MockValidatorClient)(nil).UpdateHost), arg0)
 }
 
 // ValidatorIndex mocks base method.
