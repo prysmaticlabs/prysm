@@ -12,7 +12,7 @@ var (
 	// This flag will be removed onced backfill is enabled by default.
 	EnableExperimentalBackfill = &cli.BoolFlag{
 		Name: "enable-experimental-backfill",
-		Usage: "Backfill is still experimental at this time." +
+		Usage: "Backfill is still experimental at this time. " +
 			"It will only be enabled if this flag is specified and the node was started using checkpoint sync.",
 	}
 	// BackfillBatchSize allows users to tune block backfill request sizes to maximize network utilization
@@ -32,7 +32,7 @@ var (
 			"A larger number will better utilize network resources, up to a system-dependent limit, but will also " +
 			"consume more system memory to hold batches in memory during processing. Multiply by backfill-batch-size and " +
 			"average block size (~2MB before deneb) to find the right number for your system. " +
-			"This has a multiplicatice effect with " + backfillBatchSizeName,
+			"This has a multiplicative effect with " + backfillBatchSizeName,
 		Value: 2,
 	}
 )
