@@ -171,6 +171,7 @@ func maxBatchLimit() int {
 	castedMaxLimit, err := math.Int(maxLimit)
 	if err != nil {
 		// Should be impossible to hit this case.
+		log.WithError(err).Error("Unable to calculate the max batch limit")
 		return currLimit
 	}
 	if currLimit > castedMaxLimit {
