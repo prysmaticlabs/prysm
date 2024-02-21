@@ -153,3 +153,11 @@ func (c *grpcValidatorClient) StartEventStream(context.Context) error {
 func (c *grpcValidatorClient) EventStreamIsRunning() bool {
 	panic("function not supported for gRPC client")
 }
+
+func (c *grpcValidatorClient) RetrieveHost() string {
+	panic("function not supported for gRPC client")
+}
+
+func (c *grpcValidatorClient) UpdateHost(_ string) {
+	panic("function not supported for gRPC client")
+}
