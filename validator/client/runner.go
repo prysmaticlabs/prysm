@@ -306,10 +306,10 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 				log.WithError(ctx.Err()).Error("Context cancelled")
 				return
 			}
-			newStatus := v.NodeIsHealthy(ctx)
-			tracker.UpdateNodeHealth(newStatus)
+			isHealthy := v.NodeIsHealthy(ctx)
+			tracker.UpdateNodeHealth(isHealthy)
 			// in case of node returning healthy but event stream died
-			if !v.EventStreamIsRunning() {
+			if isHealthy && !v.EventStreamIsRunning() {
 				log.Info("Event stream reconnecting...")
 				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
 			}
