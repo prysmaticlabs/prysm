@@ -628,11 +628,11 @@ func (r *testRunner) multiScenarioMulticlient(ec *e2etypes.EvaluationContext, ep
 	}
 	lastForkEpoch := forks.LastForkEpoch()
 	freezeStartEpoch := lastForkEpoch + 1
-	freezeEndEpoch := lastForkEpoch + 2
-	optimisticStartEpoch := lastForkEpoch + 6
-	optimisticEndEpoch := lastForkEpoch + 7
-	recoveryEpochStart, recoveryEpochEnd := lastForkEpoch+3, lastForkEpoch+4
-	secondRecoveryEpochStart, secondRecoveryEpochEnd := lastForkEpoch+8, lastForkEpoch+9
+	freezeEndEpoch := lastForkEpoch + 4
+	optimisticStartEpoch := lastForkEpoch + 8
+	optimisticEndEpoch := lastForkEpoch + 9
+	recoveryEpochStart, recoveryEpochEnd := lastForkEpoch+5, lastForkEpoch+6
+	secondRecoveryEpochStart, secondRecoveryEpochEnd := lastForkEpoch+10, lastForkEpoch+11
 
 	newPayloadMethod := "engine_newPayloadV3"
 	forkChoiceUpdatedMethod := "engine_forkchoiceUpdatedV3"
@@ -643,6 +643,8 @@ func (r *testRunner) multiScenarioMulticlient(ec *e2etypes.EvaluationContext, ep
 	}
 
 	switch primitives.Epoch(epoch) {
+	case lastForkEpoch + 2, lastForkEpoch + 3:
+		return true
 	case freezeStartEpoch:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
