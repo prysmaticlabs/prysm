@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path"
+	"sync"
 	"testing"
 	"time"
 
@@ -100,6 +101,30 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		// After clearing, the blob should not exist in the db.
 		_, err = b.Get(blob.BlockRoot(), blob.Index)
 		require.ErrorIs(t, err, os.ErrNotExist)
+	})
+
+	t.Run("race conditions", func(t *testing.T) {
+		// There was a bug where saving the same blob in multiple go routines would cause a partial blob
+		// to be empty. This test ensures that several routines can safely save the same blob at the
+		// same time. This isn't ideal behavior from the caller, but should be handled safely anyway.
+		// See https://github.com/prysmaticlabs/prysm/pull/13648
+		b, err := NewBlobStorage(t.TempDir())
+		require.NoError(t, err)
+		blob := testSidecars[0]
+
+		var wg sync.WaitGroup
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				require.NoError(t, b.Save(blob))
+			}()
+		}
+
+		wg.Wait()
+		res, err := b.Get(blob.BlockRoot(), blob.Index)
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, blob, res)
 	})
 }
 
