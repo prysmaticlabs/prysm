@@ -199,10 +199,15 @@ func (b *BeaconState) addDirtyIndices(index types.FieldIndex, indices []uint64) 
 		return
 	}
 	totalIndicesLen := len(b.dirtyIndices[index]) + len(indices)
+	// Reduce duplicates to verify that these are indeed unique.
+	if totalIndicesLen > indicesLimit {
+		b.dirtyIndices[index] = slice.SetUint64(b.dirtyIndices[index])
+	}
+	totalIndicesLen = len(b.dirtyIndices[index]) + len(indices)
 	if totalIndicesLen > indicesLimit {
 		b.rebuildTrie[index] = true
 		b.dirtyIndices[index] = make([]uint64, 0, indicesLimit)
 	} else {
-		b.dirtyIndices[index] = slice.SetUint64(append(b.dirtyIndices[index], indices...))
+		b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
 	}
 }
