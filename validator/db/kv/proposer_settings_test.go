@@ -67,7 +67,7 @@ func TestStore_ProposerSettings_ReadAndWrite(t *testing.T) {
 		}
 		err = db.SaveProposerSettings(ctx, settings)
 		require.NoError(t, err)
-		upatedDefault := &validatorServiceConfig.ProposerOption{
+		updatedDefault := &validatorServiceConfig.ProposerOption{
 			FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x9995733c5af9B61374A128e6F85f553aF09ff89B"),
 			},
@@ -76,13 +76,14 @@ func TestStore_ProposerSettings_ReadAndWrite(t *testing.T) {
 				GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 			},
 		}
-		err = db.UpdateProposerSettingsDefault(ctx, upatedDefault)
+		settings.DefaultConfig = updatedDefault
+		err = db.SaveProposerSettings(ctx, settings)
 		require.NoError(t, err)
 
 		dbSettings, err := db.ProposerSettings(ctx)
 		require.NoError(t, err)
 		require.NotNil(t, dbSettings)
-		require.DeepEqual(t, dbSettings.DefaultConfig, upatedDefault)
+		require.DeepEqual(t, dbSettings.DefaultConfig, updatedDefault)
 		option := &validatorServiceConfig.ProposerOption{
 			FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
@@ -92,13 +93,15 @@ func TestStore_ProposerSettings_ReadAndWrite(t *testing.T) {
 				GasLimit: validator.Uint64(40000000),
 			},
 		}
-		err = db.UpdateProposerSettingsForPubkey(ctx, bytesutil.ToBytes48(key1), option)
+
+		dbSettings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{bytesutil.ToBytes48(key1): option}
+		err = db.SaveProposerSettings(ctx, dbSettings)
 		require.NoError(t, err)
 
 		newSettings, err := db.ProposerSettings(ctx)
 		require.NoError(t, err)
 		require.NotNil(t, newSettings)
-		require.DeepEqual(t, newSettings.DefaultConfig, upatedDefault)
+		require.DeepEqual(t, newSettings.DefaultConfig, updatedDefault)
 		op, ok := newSettings.ProposeConfig[bytesutil.ToBytes48(key1)]
 		require.Equal(t, ok, true)
 		require.DeepEqual(t, op, option)
