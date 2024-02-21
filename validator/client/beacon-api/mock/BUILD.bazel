@@ -15,6 +15,6 @@ go_library(
         "//api/server/structs:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "@com_github_golang_mock//gomock:go_default_library",
+        "@org_uber_go_mock//gomock:go_default_library",
     ],
 )
