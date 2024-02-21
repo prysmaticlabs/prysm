@@ -21,6 +21,7 @@ import (
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
+	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/gateway"
 	"github.com/prysmaticlabs/prysm/v5/api/server"
@@ -734,4 +735,8 @@ func clearDB(ctx context.Context, dataDir string, force bool) error {
 	}
 
 	return nil
+}
+
+func configureFastSSZHashingAlgorithm() {
+	fastssz.EnableVectorizedHTR = true
 }
