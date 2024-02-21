@@ -27,7 +27,7 @@ type BeaconApiJsonRestHandler struct {
 
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
-func (c BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) error {
+func (c *BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) error {
 	url := c.Host() + endpoint
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -50,7 +50,7 @@ func (c BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp
 
 // Post sends a POST request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
-func (c BeaconApiJsonRestHandler) Post(
+func (c *BeaconApiJsonRestHandler) Post(
 	ctx context.Context,
 	apiEndpoint string,
 	headers map[string]string,
@@ -119,11 +119,11 @@ func decodeResp(httpResp *http.Response, resp interface{}) error {
 	return nil
 }
 
-func (c BeaconApiJsonRestHandler) GetHost() string {
+func (c *BeaconApiJsonRestHandler) GetHost() string {
 	return c.Host()
 }
 
-func (c BeaconApiJsonRestHandler) SetHost(newHost string) {
+func (c *BeaconApiJsonRestHandler) SetHost(newHost string) {
 	c.Host = func() string {
 		return newHost
 	}

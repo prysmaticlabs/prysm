@@ -223,8 +223,9 @@ func Test_Host(t *testing.T) {
 	servers := []string{"127.0.0.1:0", "127.0.0.2:0"}
 	jsonRestHandler := BeaconApiJsonRestHandler{
 		HttpClient: http.Client{Timeout: time.Second * 5},
-		Host:       func() string { return servers[0] },
+		Host:       func() string { return "" },
 	}
+	jsonRestHandler.SetHost(servers[0])
 
 	host := jsonRestHandler.GetHost()
 	require.Equal(t, servers[0], host)
