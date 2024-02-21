@@ -13,7 +13,6 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v5/api/client/event"
 	primitives "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
