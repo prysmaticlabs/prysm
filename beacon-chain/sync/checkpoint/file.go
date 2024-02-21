@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
-	log "github.com/sirupsen/logrus"
 )
 
 // Initializer describes a type that is able to obtain the checkpoint sync data (BeaconState and SignedBeaconBlock)
@@ -45,7 +44,7 @@ type FileInitializer struct {
 func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error {
 	origin, err := d.OriginCheckpointBlockRoot(ctx)
 	if err == nil && origin != params.BeaconConfig().ZeroHash {
-		log.Warnf("origin checkpoint root %#x found in db, ignoring checkpoint sync flags", origin)
+		log.Warnf("Origin checkpoint root %#x found in db, ignoring checkpoint sync flags", origin)
 		return nil
 	} else {
 		if !errors.Is(err, db.ErrNotFound) {
