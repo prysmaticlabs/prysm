@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/logging"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
 
@@ -83,7 +83,7 @@ func (bs *BlobStorage) WarmCache() {
 	}
 	go func() {
 		if err := bs.pruner.prune(0); err != nil {
-			log.WithError(err).Error("Error encountered while warming up blob pruner cache.")
+			log.WithError(err).Error("Error encountered while warming up blob pruner cache")
 		}
 	}()
 }
@@ -98,7 +98,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return err
 	}
 	if exists {
-		log.WithFields(logging.BlobFields(sidecar.ROBlob)).Debug("ignoring a duplicate blob sidecar Save attempt")
+		log.WithFields(logging.BlobFields(sidecar.ROBlob)).Debug("Ignoring a duplicate blob sidecar save attempt")
 		return nil
 	}
 	if bs.pruner != nil {
@@ -126,9 +126,9 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		// It's expected to error if the save is successful.
 		err = bs.fs.Remove(partPath)
 		if err == nil {
-			log.WithFields(log.Fields{
+			log.WithFields(logrus.Fields{
 				"partPath": partPath,
-			}).Debugf("removed partial file")
+			}).Debugf("Removed partial file")
 		}
 	}()
 

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "blob.go",
         "ephemeral.go",
+        "log.go",
         "metrics.go",
         "pruner.go",
     ],
