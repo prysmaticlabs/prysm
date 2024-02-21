@@ -27,6 +27,7 @@ const (
 	onlyDB
 )
 
+// ProposerSettingsLoader is an interface for loading proposer settings
 type ProposerSettingsLoader interface {
 	Load(cliCtx *cli.Context) (*validatorService.ProposerSettings, error)
 }
@@ -44,8 +45,10 @@ type flagOptions struct {
 	hasGasLimitFlag bool
 }
 
+// ProposerSettingsLoaderOption sets additional flag checks that affect the proposer settings
 type ProposerSettingsLoaderOption func(cliCtx *cli.Context, psl *proposerSettingsLoader) error
 
+// WithBuilderConfig applies the --enable-builder flag to proposer settings
 func WithBuilderConfig() ProposerSettingsLoaderOption {
 	return func(cliCtx *cli.Context, psl *proposerSettingsLoader) error {
 		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
@@ -58,6 +61,7 @@ func WithBuilderConfig() ProposerSettingsLoaderOption {
 	}
 }
 
+// WithGasLimit applies the --suggested-gas-limit flag to proposer settings
 func WithGasLimit() ProposerSettingsLoaderOption {
 	return func(cliCtx *cli.Context, psl *proposerSettingsLoader) error {
 		sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
@@ -73,6 +77,50 @@ func WithGasLimit() ProposerSettingsLoaderOption {
 	}
 }
 
+// NewProposerSettingsLoader returns a new proposer settings loader that can process the proposer settings based on flag options
+func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts ...ProposerSettingsLoaderOption) (ProposerSettingsLoader, error) {
+	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		return nil, fmt.Errorf("cannot specify both %s and %s flags; choose one method for specifying proposer settings", flags.ProposerSettingsFlag.Name, flags.ProposerSettingsURLFlag.Name)
+	}
+	psExists, err := db.ProposerSettingsExists(cliCtx.Context)
+	if err != nil {
+		return nil, err
+	}
+	psl := &proposerSettingsLoader{Db: db, options: &flagOptions{}}
+
+	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+		psl.LoadMethods = append(psl.LoadMethods, defaultFlag)
+	}
+	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
+		psl.LoadMethods = append(psl.LoadMethods, fileFlag)
+	}
+	if cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		psl.LoadMethods = append(psl.LoadMethods, urlFlag)
+	}
+	if !cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) &&
+		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
+		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		method := none
+		if psExists {
+			// override with db
+			method = onlyDB
+		}
+		psl.LoadMethods = append(psl.LoadMethods, method)
+	}
+
+	if psExists {
+		psl.ExistsInDB = true
+	}
+	for _, o := range opts {
+		if err := o(cliCtx, psl); err != nil {
+			return nil, err
+		}
+	}
+
+	return psl, nil
+}
+
+// Load saves the proposer settings to the database
 func (psl *proposerSettingsLoader) Load(cliCtx *cli.Context) (*validatorService.ProposerSettings, error) {
 	var fileConfig *validatorpb.ProposerSettingsPayload
 
@@ -228,48 +276,6 @@ func (psl *proposerSettingsLoader) processProposerSettings(loadedSettings, dbSet
 	}
 
 	return loadedSettings
-}
-
-func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts ...ProposerSettingsLoaderOption) (ProposerSettingsLoader, error) {
-	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
-		return nil, fmt.Errorf("cannot specify both %s and %s flags; choose one method for specifying proposer settings", flags.ProposerSettingsFlag.Name, flags.ProposerSettingsURLFlag.Name)
-	}
-	psExists, err := db.ProposerSettingsExists(cliCtx.Context)
-	if err != nil {
-		return nil, err
-	}
-	psl := &proposerSettingsLoader{Db: db, options: &flagOptions{}}
-
-	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
-		psl.LoadMethods = append(psl.LoadMethods, defaultFlag)
-	}
-	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
-		psl.LoadMethods = append(psl.LoadMethods, fileFlag)
-	}
-	if cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
-		psl.LoadMethods = append(psl.LoadMethods, urlFlag)
-	}
-	if !cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) &&
-		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
-		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
-		method := none
-		if psExists {
-			// override with db
-			method = onlyDB
-		}
-		psl.LoadMethods = append(psl.LoadMethods, method)
-	}
-
-	if psExists {
-		psl.ExistsInDB = true
-	}
-	for _, o := range opts {
-		if err := o(cliCtx, psl); err != nil {
-			return nil, err
-		}
-	}
-
-	return psl, nil
 }
 
 func reviewGasLimit(gasLimit validator.Uint64) validator.Uint64 {
