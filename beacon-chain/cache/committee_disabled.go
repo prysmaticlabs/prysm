@@ -79,6 +79,6 @@ func (c *FakeCommitteeCache) ExpandCommitteeCache() {
 	return
 }
 
-func (c *FakeCommitteeCache) ContractCommitteeCache() {
+func (c *FakeCommitteeCache) CompressCommitteeCache() {
 	return
 }
