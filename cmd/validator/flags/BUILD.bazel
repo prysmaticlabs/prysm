@@ -10,9 +10,9 @@ go_library(
     visibility = [
         "//cmd/prysmctl:__subpackages__",
         "//cmd/validator:__subpackages__",
+        "//config:__subpackages__",
         "//testing/endtoend:__subpackages__",
         "//validator:__subpackages__",
-        "//config:__subpackages__",
     ],
     deps = [
         "//config/params:go_default_library",
