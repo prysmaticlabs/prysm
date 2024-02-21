@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	mock "github.com/prysmaticlabs/prysm/v5/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"go.uber.org/mock/gomock"
 )
 
 func TestGetValidatorCount(t *testing.T) {

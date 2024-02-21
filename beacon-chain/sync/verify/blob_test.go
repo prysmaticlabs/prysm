@@ -54,7 +54,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 				require.NoError(t, err)
 				rob, err := blocks.NewROBlock(blk)
 				require.NoError(t, err)
-				return rob, []blocks.ROBlob{blocks.ROBlob{}}
+				return rob, []blocks.ROBlob{{}}
 			},
 		},
 	}
