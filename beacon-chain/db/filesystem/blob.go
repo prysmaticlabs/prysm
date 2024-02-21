@@ -21,7 +21,9 @@ import (
 )
 
 var (
-	errIndexOutOfBounds = errors.New("blob index in file name >= MaxBlobsPerBlock")
+	errIndexOutOfBounds    = errors.New("blob index in file name >= MaxBlobsPerBlock")
+	errEmptyBlobWritten    = errors.New("zero bytes written to disk when saving blob sidecar")
+	errSidecarEmptySSZData = errors.New("sidecar marshalled to an empty ssz byte slice")
 )
 
 const (
@@ -111,7 +113,10 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	sidecarData, err := sidecar.MarshalSSZ()
 	if err != nil {
 		return errors.Wrap(err, "failed to serialize sidecar data")
+	} else if len(sidecarData) == 0 {
+		return errSidecarEmptySSZData
 	}
+
 	if err := bs.fs.MkdirAll(fname.dir(), directoryPermissions); err != nil {
 		return err
 	}
@@ -138,7 +143,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return errors.Wrap(err, "failed to create partial file")
 	}
 
-	_, err = partialFile.Write(sidecarData)
+	n, err := partialFile.Write(sidecarData)
 	if err != nil {
 		closeErr := partialFile.Close()
 		if closeErr != nil {
@@ -149,6 +154,14 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	err = partialFile.Close()
 	if err != nil {
 		return err
+	}
+
+	if n != len(sidecarData) {
+		return fmt.Errorf("failed to write the full bytes of sidecarData, wrote only %d of %d bytes", n, len(sidecarData))
+	}
+
+	if n == 0 {
+		return errEmptyBlobWritten
 	}
 
 	// Atomically rename the partial file to its final name.
