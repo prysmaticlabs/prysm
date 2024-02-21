@@ -23,6 +23,10 @@ import (
 const (
 	attestationRecordKeySize = 32 // Bytes.
 	rootSize                 = 32 // Bytes.
+
+	// For database performance reasons, database read/write operations
+	// are chunked into batches of maximum `batchSize` elements.
+	batchSize = 10_000
 )
 
 // LastEpochWrittenForValidators given a list of validator indices returns the latest
@@ -264,8 +268,6 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	_, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
 
-	const batchSize = 10_000
-
 	attWrappersCount := len(attWrappers)
 
 	// If no attestations are provided, skip.
@@ -350,8 +352,6 @@ func (s *Store) LoadSlasherChunks(
 	_, span := trace.StartSpan(ctx, "BeaconDB.LoadSlasherChunk")
 	defer span.End()
 
-	const chunkSize = 10_000
-
 	keysCount := len(chunkKeys)
 
 	chunks := make([][]uint16, 0, keysCount)
@@ -368,8 +368,8 @@ func (s *Store) LoadSlasherChunks(
 	}
 
 	// Read chunks from the database by batch.
-	for start := 0; start < keysCount; start += chunkSize {
-		stop := min(start+chunkSize, len(encodedKeys))
+	for start := 0; start < keysCount; start += batchSize {
+		stop := min(start+batchSize, len(encodedKeys))
 		encodedKeysBatch := encodedKeys[start:stop]
 
 		if err := s.db.View(func(tx *bolt.Tx) error {
@@ -410,8 +410,6 @@ func (s *Store) SaveSlasherChunks(
 	_, span := trace.StartSpan(ctx, "BeaconDB.SaveSlasherChunks")
 	defer span.End()
 
-	const chunkSize = 10_000
-
 	// Ensure we have the same number of keys and chunks.
 	if len(chunkKeys) != len(chunks) {
 		return fmt.Errorf(
@@ -443,8 +441,8 @@ func (s *Store) SaveSlasherChunks(
 	}
 
 	// Save chunks in the database by batch.
-	for start := 0; start < chunksCount; start += chunkSize {
-		stop := min(start+chunkSize, len(encodedKeys))
+	for start := 0; start < chunksCount; start += batchSize {
+		stop := min(start+batchSize, len(encodedKeys))
 		encodedKeysBatch := encodedKeys[start:stop]
 		encodedChunksBatch := encodedChunks[start:stop]
 		batchSize := len(encodedKeysBatch)
