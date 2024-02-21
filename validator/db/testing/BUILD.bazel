@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/validator/db/testing",
     visibility = [
         "//cmd:__subpackages__",
+        "//config:__subpackages__",
         "//validator:__subpackages__",
     ],
     deps = [
