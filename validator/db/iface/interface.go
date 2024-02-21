@@ -67,7 +67,5 @@ type ValidatorDB interface {
 	// ProposerSettings related methods
 	ProposerSettings(context.Context) (*validatorServiceConfig.ProposerSettings, error)
 	ProposerSettingsExists(ctx context.Context) (bool, error)
-	UpdateProposerSettingsDefault(context.Context, *validatorServiceConfig.ProposerOption) error
-	UpdateProposerSettingsForPubkey(context.Context, [fieldparams.BLSPubkeyLength]byte, *validatorServiceConfig.ProposerOption) error
 	SaveProposerSettings(ctx context.Context, settings *validatorServiceConfig.ProposerSettings) error
 }

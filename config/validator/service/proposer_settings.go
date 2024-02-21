@@ -6,24 +6,31 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/config"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 )
 
-// ToSettings converts struct to ProposerSettings
-func ToSettings(ps *validatorpb.ProposerSettingsPayload) (*ProposerSettings, error) {
+// ProposerSettingFromConsensus converts struct to ProposerSettings while verifying the fields
+func ProposerSettingFromConsensus(ps *validatorpb.ProposerSettingsPayload) (*ProposerSettings, error) {
 	settings := &ProposerSettings{}
-	if ps.ProposerConfig != nil {
+	if ps.ProposerConfig != nil && len(ps.ProposerConfig) != 0 {
 		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption)
 		for key, optionPayload := range ps.ProposerConfig {
 			if optionPayload.FeeRecipient == "" {
 				continue
 			}
-			b, err := hexutil.Decode(key)
+			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("cannot decode public key %s", key))
+			}
+			if len(decodedKey) != fieldparams.BLSPubkeyLength {
+				return nil, fmt.Errorf("%v  is not a bls public key", key)
+			}
+			if err := verifyOption(key, optionPayload); err != nil {
+				return nil, err
 			}
 			p := &ProposerOption{
 				FeeRecipientConfig: &FeeRecipientConfig{
@@ -31,24 +38,43 @@ func ToSettings(ps *validatorpb.ProposerSettingsPayload) (*ProposerSettings, err
 				},
 			}
 			if optionPayload.Builder != nil {
-				p.BuilderConfig = ToBuilderConfig(optionPayload.Builder)
+				p.BuilderConfig = BuilderConfigFromConsensus(optionPayload.Builder)
 			}
-			settings.ProposeConfig[bytesutil.ToBytes48(b)] = p
+			settings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = p
 		}
 	}
 	if ps.DefaultConfig != nil {
 		d := &ProposerOption{}
 		if ps.DefaultConfig.FeeRecipient != "" {
+			if !common.IsHexAddress(ps.DefaultConfig.FeeRecipient) {
+				return nil, errors.New("default fee recipient is not a valid eth1 address")
+			}
+			if err := config.WarnNonChecksummedAddress(ps.DefaultConfig.FeeRecipient); err != nil {
+				return nil, err
+			}
 			d.FeeRecipientConfig = &FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress(ps.DefaultConfig.FeeRecipient),
 			}
 		}
 		if ps.DefaultConfig.Builder != nil {
-			d.BuilderConfig = ToBuilderConfig(ps.DefaultConfig.Builder)
+			d.BuilderConfig = BuilderConfigFromConsensus(ps.DefaultConfig.Builder)
 		}
 		settings.DefaultConfig = d
 	}
 	return settings, nil
+}
+
+func verifyOption(key string, option *validatorpb.ProposerOptionPayload) error {
+	if option == nil {
+		return fmt.Errorf("fee recipient is required for proposer %s", key)
+	}
+	if !common.IsHexAddress(option.FeeRecipient) {
+		return errors.New("fee recipient is not a valid eth1 address")
+	}
+	if err := config.WarnNonChecksummedAddress(option.FeeRecipient); err != nil {
+		return err
+	}
+	return nil
 }
 
 // BuilderConfig is the struct representation of the JSON config file set in the validator through the CLI.
@@ -59,8 +85,8 @@ type BuilderConfig struct {
 	Relays   []string         `json:"relays,omitempty" yaml:"relays,omitempty"`
 }
 
-// ToBuilderConfig converts protobuf to a builder config used in inmemory storage
-func ToBuilderConfig(from *validatorpb.BuilderConfig) *BuilderConfig {
+// BuilderConfigFromConsensus converts protobuf to a builder config used in inmemory storage
+func BuilderConfigFromConsensus(from *validatorpb.BuilderConfig) *BuilderConfig {
 	if from == nil {
 		return nil
 	}
@@ -73,7 +99,6 @@ func ToBuilderConfig(from *validatorpb.BuilderConfig) *BuilderConfig {
 		copy(relays, from.Relays)
 		config.Relays = relays
 	}
-
 	return config
 }
 
@@ -93,8 +118,8 @@ func (settings *ProposerSettings) ShouldBeSaved() bool {
 	return settings != nil && (settings.ProposeConfig != nil || settings.DefaultConfig != nil && settings.DefaultConfig.FeeRecipientConfig != nil)
 }
 
-// ToPayload converts struct to ProposerSettingsPayload
-func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
+// ToConsensus converts struct to ProposerSettingsPayload
+func (ps *ProposerSettings) ToConsensus() *validatorpb.ProposerSettingsPayload {
 	if ps == nil {
 		return nil
 	}
@@ -102,25 +127,11 @@ func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
 	if ps.ProposeConfig != nil {
 		payload.ProposerConfig = make(map[string]*validatorpb.ProposerOptionPayload)
 		for key, option := range ps.ProposeConfig {
-			p := &validatorpb.ProposerOptionPayload{}
-			if option.FeeRecipientConfig != nil {
-				p.FeeRecipient = option.FeeRecipientConfig.FeeRecipient.Hex()
-			}
-			if option.BuilderConfig != nil {
-				p.Builder = option.BuilderConfig.ToPayload()
-			}
-			payload.ProposerConfig[hexutil.Encode(key[:])] = p
+			payload.ProposerConfig[hexutil.Encode(key[:])] = option.ToConsensus()
 		}
 	}
 	if ps.DefaultConfig != nil {
-		p := &validatorpb.ProposerOptionPayload{}
-		if ps.DefaultConfig.FeeRecipientConfig != nil {
-			p.FeeRecipient = ps.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex()
-		}
-		if ps.DefaultConfig.BuilderConfig != nil {
-			p.Builder = ps.DefaultConfig.BuilderConfig.ToPayload()
-		}
-		payload.DefaultConfig = p
+		payload.DefaultConfig = ps.DefaultConfig.ToConsensus()
 	}
 	return payload
 }
@@ -134,6 +145,35 @@ type FeeRecipientConfig struct {
 type ProposerOption struct {
 	FeeRecipientConfig *FeeRecipientConfig
 	BuilderConfig      *BuilderConfig
+}
+
+// Clone creates a deep copy of proposer option
+func (po *ProposerOption) Clone() *ProposerOption {
+	if po == nil {
+		return nil
+	}
+	p := &ProposerOption{}
+	if po.FeeRecipientConfig != nil {
+		p.FeeRecipientConfig = po.FeeRecipientConfig.Clone()
+	}
+	if po.BuilderConfig != nil {
+		p.BuilderConfig = po.BuilderConfig.Clone()
+	}
+	return p
+}
+
+func (po *ProposerOption) ToConsensus() *validatorpb.ProposerOptionPayload {
+	if po == nil {
+		return nil
+	}
+	p := &validatorpb.ProposerOptionPayload{}
+	if po.FeeRecipientConfig != nil {
+		p.FeeRecipient = po.FeeRecipientConfig.FeeRecipient.Hex()
+	}
+	if po.BuilderConfig != nil {
+		p.Builder = po.BuilderConfig.ToConsensus()
+	}
+	return p
 }
 
 // Clone creates a deep copy of the proposer settings
@@ -182,8 +222,8 @@ func (bc *BuilderConfig) Clone() *BuilderConfig {
 	return config
 }
 
-// ToPayload converts Builder Config to the protobuf object
-func (bc *BuilderConfig) ToPayload() *validatorpb.BuilderConfig {
+// ToConsensus converts Builder Config to the protobuf object
+func (bc *BuilderConfig) ToConsensus() *validatorpb.BuilderConfig {
 	if bc == nil {
 		return nil
 	}
@@ -197,19 +237,4 @@ func (bc *BuilderConfig) ToPayload() *validatorpb.BuilderConfig {
 	}
 	config.GasLimit = bc.GasLimit
 	return config
-}
-
-// Clone creates a deep copy of proposer option
-func (po *ProposerOption) Clone() *ProposerOption {
-	if po == nil {
-		return nil
-	}
-	p := &ProposerOption{}
-	if po.FeeRecipientConfig != nil {
-		p.FeeRecipientConfig = po.FeeRecipientConfig.Clone()
-	}
-	if po.BuilderConfig != nil {
-		p.BuilderConfig = po.BuilderConfig.Clone()
-	}
-	return p
 }

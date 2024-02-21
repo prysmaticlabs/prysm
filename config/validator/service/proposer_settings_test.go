@@ -59,15 +59,15 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 		require.NotEqual(t, settings.DefaultConfig.BuilderConfig.GasLimit, clone.GasLimit)
 	})
 
-	t.Run("Happy Path ToBuilderConfig", func(t *testing.T) {
+	t.Run("Happy Path BuilderConfigFromConsensus", func(t *testing.T) {
 		clone := settings.DefaultConfig.BuilderConfig.Clone()
-		config := ToBuilderConfig(clone.ToPayload())
+		config := BuilderConfigFromConsensus(clone.ToConsensus())
 		require.DeepEqual(t, config.Relays, clone.Relays)
 		require.Equal(t, config.Enabled, clone.Enabled)
 		require.Equal(t, config.GasLimit, clone.GasLimit)
 	})
-	t.Run("To Payload and ToSettings", func(t *testing.T) {
-		payload := settings.ToPayload()
+	t.Run("To Payload and ProposerSettingFromConsensus", func(t *testing.T) {
+		payload := settings.ToConsensus()
 		option, ok := settings.ProposeConfig[bytesutil.ToBytes48(key1)]
 		require.Equal(t, true, ok)
 		fee := option.FeeRecipientConfig.FeeRecipient.Hex()
@@ -77,7 +77,7 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 		require.Equal(t, settings.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex(), payload.DefaultConfig.FeeRecipient)
 		require.Equal(t, settings.DefaultConfig.BuilderConfig.Enabled, payload.DefaultConfig.Builder.Enabled)
 		potion.FeeRecipient = ""
-		newSettings, err := ToSettings(payload)
+		newSettings, err := ProposerSettingFromConsensus(payload)
 		require.NoError(t, err)
 
 		// when converting to settings if a fee recipient is empty string then it will be skipped
@@ -88,7 +88,7 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 
 		// if fee recipient is set it will not skip
 		potion.FeeRecipient = fee
-		newSettings, err = ToSettings(payload)
+		newSettings, err = ProposerSettingFromConsensus(payload)
 		require.NoError(t, err)
 		noption, ok = newSettings.ProposeConfig[bytesutil.ToBytes48(key1)]
 		require.Equal(t, true, ok)
