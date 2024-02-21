@@ -748,6 +748,7 @@ func Test_ProposerSettingsLoaderWithOnlyBuilder_DoesNotSaveInDB(t *testing.T) {
 	)
 	require.NoError(t, err)
 	got, err := loader.Load(cliCtx)
+	require.NoError(t, err)
 	_, err = validatorDB.ProposerSettings(cliCtx.Context)
 	require.ErrorContains(t, "no proposer settings found in bucket", err)
 	want := &validatorserviceconfig.ProposerSettings{
