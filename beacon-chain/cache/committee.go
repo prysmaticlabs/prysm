@@ -83,7 +83,6 @@ func (c *CommitteeCache) ExpandCommitteeCache() {
 	}
 	c.CommitteeCache.Resize(expandedCommitteeCacheSize)
 	c.size = expandedCommitteeCacheSize
-	return
 }
 
 func (c *CommitteeCache) CompressCommitteeCache() {
@@ -95,7 +94,6 @@ func (c *CommitteeCache) CompressCommitteeCache() {
 	}
 	c.CommitteeCache.Resize(maxCommitteesCacheSize)
 	c.size = maxCommitteesCacheSize
-	return
 }
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
