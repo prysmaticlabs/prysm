@@ -27,7 +27,7 @@ func ProposerSettingFromConsensus(ps *validatorpb.ProposerSettingsPayload) (*Pro
 				return nil, errors.Wrap(err, fmt.Sprintf("cannot decode public key %s", key))
 			}
 			if len(decodedKey) != fieldparams.BLSPubkeyLength {
-				return nil, fmt.Errorf("%v  is not a bls public key", key)
+				return nil, fmt.Errorf("%v is not a bls public key", key)
 			}
 			if err := verifyOption(key, optionPayload); err != nil {
 				return nil, err
