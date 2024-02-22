@@ -97,9 +97,7 @@ func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts .
 	if cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		psl.LoadMethods = append(psl.LoadMethods, urlFlag)
 	}
-	if !cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) &&
-		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
-		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+	if len(psl.LoadMethods) == 0 {
 		method := none
 		if psExists {
 			// override with db
