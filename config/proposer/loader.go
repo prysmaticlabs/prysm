@@ -45,7 +45,7 @@ type flagOptions struct {
 	hasGasLimitFlag bool
 }
 
-// ProposerSettingsLoaderOption sets additional flag checks that affect the proposer settings
+// ProposerSettingsLoaderOption sets additional options that affect the proposer settings
 type ProposerSettingsLoaderOption func(cliCtx *cli.Context, psl *proposerSettingsLoader) error
 
 // WithBuilderConfig applies the --enable-builder flag to proposer settings
