@@ -190,13 +190,15 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 		copy(dstFieldTrie[i], layer)
 	}
 	return &FieldTrie{
-		fieldLayers: dstFieldTrie,
-		field:       f.field,
-		dataType:    f.dataType,
-		reference:   stateutil.NewRef(1),
-		RWMutex:     new(sync.RWMutex),
-		length:      f.length,
-		numOfElems:  f.numOfElems,
+		fieldLayers:   dstFieldTrie,
+		field:         f.field,
+		dataType:      f.dataType,
+		reference:     stateutil.NewRef(1),
+		RWMutex:       new(sync.RWMutex),
+		length:        f.length,
+		numOfElems:    f.numOfElems,
+		isTransferred: f.isTransferred,
+		isCompressed:  f.isCompressed,
 	}
 }
 
