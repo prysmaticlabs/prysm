@@ -120,7 +120,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	if err := bs.fs.MkdirAll(fname.dir(), directoryPermissions); err != nil {
 		return err
 	}
-	partPath := fname.partPath()
+	partPath := fname.partPath(fmt.Sprintf("%p", sidecarData))
 
 	partialMoved := false
 	// Ensure the partial file is deleted.
@@ -270,16 +270,12 @@ func (p blobNamer) dir() string {
 	return rootString(p.root)
 }
 
-func (p blobNamer) fname(ext string) string {
-	return path.Join(p.dir(), fmt.Sprintf("%d.%s", p.index, ext))
-}
-
-func (p blobNamer) partPath() string {
-	return p.fname(partExt)
+func (p blobNamer) partPath(entropy string) string {
+	return path.Join(p.dir(), fmt.Sprintf("%s-%d.%s", entropy, p.index, partExt))
 }
 
 func (p blobNamer) path() string {
-	return p.fname(sszExt)
+	return path.Join(p.dir(), fmt.Sprintf("%d.%s", p.index, sszExt))
 }
 
 func rootString(root [32]byte) string {
