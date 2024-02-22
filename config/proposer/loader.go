@@ -27,30 +27,25 @@ const (
 	onlyDB
 )
 
-// ProposerSettingsLoader is an interface for loading proposer settings
-type ProposerSettingsLoader interface {
-	Load(cliCtx *cli.Context) (*validatorService.ProposerSettings, error)
-}
-
-type proposerSettingsLoader struct {
-	LoadMethods []SettingsType
-	ExistsInDB  bool
-	Db          iface.ValidatorDB
+type SettingsLoader struct {
+	loadMethods []SettingsType
+	existsInDB  bool
+	db          iface.ValidatorDB
 	options     *flagOptions
 }
 
 type flagOptions struct {
-	builderConfig   *validatorService.BuilderConfig
-	gasLimit        validator.Uint64
-	hasGasLimitFlag bool
+	builderConfig *validatorService.BuilderConfig
+	gasLimit      validator.Uint64
+	hasGasLimit   bool
 }
 
-// ProposerSettingsLoaderOption sets additional options that affect the proposer settings
-type ProposerSettingsLoaderOption func(cliCtx *cli.Context, psl *proposerSettingsLoader) error
+// SettingsLoaderOption sets additional options that affect the proposer settings
+type SettingsLoaderOption func(cliCtx *cli.Context, psl *SettingsLoader) error
 
 // WithBuilderConfig applies the --enable-builder flag to proposer settings
-func WithBuilderConfig() ProposerSettingsLoaderOption {
-	return func(cliCtx *cli.Context, psl *proposerSettingsLoader) error {
+func WithBuilderConfig() SettingsLoaderOption {
+	return func(cliCtx *cli.Context, psl *SettingsLoader) error {
 		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
 			psl.options.builderConfig = &validatorService.BuilderConfig{
 				Enabled:  true,
@@ -62,8 +57,8 @@ func WithBuilderConfig() ProposerSettingsLoaderOption {
 }
 
 // WithGasLimit applies the --suggested-gas-limit flag to proposer settings
-func WithGasLimit() ProposerSettingsLoaderOption {
-	return func(cliCtx *cli.Context, psl *proposerSettingsLoader) error {
+func WithGasLimit() SettingsLoaderOption {
+	return func(cliCtx *cli.Context, psl *SettingsLoader) error {
 		sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
 		if sgl != "" {
 			gl, err := strconv.ParseUint(sgl, 10, 64)
@@ -71,14 +66,14 @@ func WithGasLimit() ProposerSettingsLoaderOption {
 				return errors.New("Gas Limit is not a uint64")
 			}
 			psl.options.gasLimit = reviewGasLimit(validator.Uint64(gl))
-			psl.options.hasGasLimitFlag = true
+			psl.options.hasGasLimit = true
 		}
 		return nil
 	}
 }
 
 // NewProposerSettingsLoader returns a new proposer settings loader that can process the proposer settings based on flag options
-func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts ...ProposerSettingsLoaderOption) (ProposerSettingsLoader, error) {
+func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts ...SettingsLoaderOption) (*SettingsLoader, error) {
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, fmt.Errorf("cannot specify both %s and %s flags; choose one method for specifying proposer settings", flags.ProposerSettingsFlag.Name, flags.ProposerSettingsURLFlag.Name)
 	}
@@ -86,28 +81,28 @@ func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts .
 	if err != nil {
 		return nil, err
 	}
-	psl := &proposerSettingsLoader{Db: db, options: &flagOptions{}}
+	psl := &SettingsLoader{db: db, options: &flagOptions{}}
 
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
-		psl.LoadMethods = append(psl.LoadMethods, defaultFlag)
+		psl.loadMethods = append(psl.loadMethods, defaultFlag)
 	}
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
-		psl.LoadMethods = append(psl.LoadMethods, fileFlag)
+		psl.loadMethods = append(psl.loadMethods, fileFlag)
 	}
 	if cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
-		psl.LoadMethods = append(psl.LoadMethods, urlFlag)
+		psl.loadMethods = append(psl.loadMethods, urlFlag)
 	}
-	if len(psl.LoadMethods) == 0 {
+	if len(psl.loadMethods) == 0 {
 		method := none
 		if psExists {
 			// override with db
 			method = onlyDB
 		}
-		psl.LoadMethods = append(psl.LoadMethods, method)
+		psl.loadMethods = append(psl.loadMethods, method)
 	}
 
 	if psExists {
-		psl.ExistsInDB = true
+		psl.existsInDB = true
 	}
 	for _, o := range opts {
 		if err := o(cliCtx, psl); err != nil {
@@ -119,17 +114,17 @@ func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts .
 }
 
 // Load saves the proposer settings to the database
-func (psl *proposerSettingsLoader) Load(cliCtx *cli.Context) (*validatorService.ProposerSettings, error) {
+func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.ProposerSettings, error) {
 	var fileConfig *validatorpb.ProposerSettingsPayload
 
 	// override settings based on other options
-	if psl.options.builderConfig != nil && psl.options.hasGasLimitFlag {
+	if psl.options.builderConfig != nil && psl.options.hasGasLimit {
 		psl.options.builderConfig.GasLimit = psl.options.gasLimit
 	}
 
 	// check if database has settings already
-	if psl.ExistsInDB {
-		dbps, err := psl.Db.ProposerSettings(cliCtx.Context)
+	if psl.existsInDB {
+		dbps, err := psl.db.ProposerSettings(cliCtx.Context)
 		if err != nil {
 			return nil, err
 		}
@@ -137,7 +132,7 @@ func (psl *proposerSettingsLoader) Load(cliCtx *cli.Context) (*validatorService.
 	}
 
 	// start to process based on load method
-	for _, method := range psl.LoadMethods {
+	for _, method := range psl.loadMethods {
 		switch method {
 		case defaultFlag:
 			suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
@@ -203,13 +198,13 @@ func (psl *proposerSettingsLoader) Load(cliCtx *cli.Context) (*validatorService.
 	if err != nil {
 		return nil, err
 	}
-	if err := psl.Db.SaveProposerSettings(cliCtx.Context, ps); err != nil {
+	if err := psl.db.SaveProposerSettings(cliCtx.Context, ps); err != nil {
 		return nil, err
 	}
 	return ps, nil
 }
 
-func (psl *proposerSettingsLoader) processProposerSettings(loadedSettings, dbSettings *validatorpb.ProposerSettingsPayload) *validatorpb.ProposerSettingsPayload {
+func (psl *SettingsLoader) processProposerSettings(loadedSettings, dbSettings *validatorpb.ProposerSettingsPayload) *validatorpb.ProposerSettingsPayload {
 	dbOnly := false
 	if loadedSettings == nil && dbSettings == nil {
 		return nil
@@ -246,7 +241,7 @@ func (psl *proposerSettingsLoader) processProposerSettings(loadedSettings, dbSet
 			} else {
 				loadedSettings.DefaultConfig.Builder = o
 			}
-		} else if psl.options.hasGasLimitFlag && loadedSettings.DefaultConfig.Builder != nil {
+		} else if psl.options.hasGasLimit && loadedSettings.DefaultConfig.Builder != nil {
 			loadedSettings.DefaultConfig.Builder.GasLimit = psl.options.gasLimit
 		}
 	}
@@ -267,7 +262,7 @@ func (psl *proposerSettingsLoader) processProposerSettings(loadedSettings, dbSet
 				} else {
 					option.Builder = o
 				}
-			} else if psl.options.hasGasLimitFlag && option.Builder != nil {
+			} else if psl.options.hasGasLimit && option.Builder != nil {
 				option.Builder.GasLimit = psl.options.gasLimit
 			}
 		}
