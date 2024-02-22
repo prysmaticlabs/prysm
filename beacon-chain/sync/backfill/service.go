@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/proto/dbval"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	log "github.com/sirupsen/logrus"
 )
 
 type Service struct {
@@ -149,12 +148,12 @@ func (s *Service) initVerifier(ctx context.Context) (*verifier, sync.ContextByte
 	}
 	keys, err := cps.PublicKeys()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "Unable to retrieve public keys for all validators in the origin state")
+		return nil, nil, errors.Wrap(err, "unable to retrieve public keys for all validators in the origin state")
 	}
 	vr := cps.GenesisValidatorsRoot()
 	ctxMap, err := sync.ContextByteVersionsForValRoot(bytesutil.ToBytes32(vr))
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "unable to initialize context version map using genesis validator root = %#x", vr)
+		return nil, nil, errors.Wrapf(err, "unable to initialize context version map using genesis validator root %#x", vr)
 	}
 	v, err := newBackfillVerifier(vr, keys)
 	return v, ctxMap, err
@@ -164,10 +163,10 @@ func (s *Service) updateComplete() bool {
 	b, err := s.pool.complete()
 	if err != nil {
 		if errors.Is(err, errEndSequence) {
-			log.WithField("backfill_slot", b.begin).Info("Backfill is complete.")
+			log.WithField("backfillSlot", b.begin).Info("Backfill is complete")
 			return true
 		}
-		log.WithError(err).Error("Backfill service received unhandled error from worker pool.")
+		log.WithError(err).Error("Backfill service received unhandled error from worker pool")
 		return true
 	}
 	s.batchSeq.update(b)
@@ -187,11 +186,11 @@ func (s *Service) importBatches(ctx context.Context) {
 	for i := range importable {
 		ib := importable[i]
 		if len(ib.results) == 0 {
-			log.WithFields(ib.logFields()).Error("Batch with no results, skipping importer.")
+			log.WithFields(ib.logFields()).Error("Batch with no results, skipping importer")
 		}
 		_, err := s.batchImporter(ctx, current, ib, s.store)
 		if err != nil {
-			log.WithError(err).WithFields(ib.logFields()).Debug("Backfill batch failed to import.")
+			log.WithError(err).WithFields(ib.logFields()).Debug("Backfill batch failed to import")
 			s.downscore(ib)
 			s.batchSeq.update(ib.withState(batchErrRetryable))
 			// If a batch fails, the subsequent batches are no longer considered importable.
@@ -204,8 +203,8 @@ func (s *Service) importBatches(ctx context.Context) {
 
 	nt := s.batchSeq.numTodo()
 	log.WithField("imported", imported).WithField("importable", len(importable)).
-		WithField("batches_remaining", nt).
-		Info("Backfill batches processed.")
+		WithField("batchesRemaining", nt).
+		Info("Backfill batches processed")
 
 	backfillRemainingBatches.Set(float64(nt))
 }
@@ -220,7 +219,7 @@ func (s *Service) scheduleTodos() {
 		// and then we'll have the parent_root expected by 90 to ensure it matches the root for 89,
 		// at which point we know we can process [80..90).
 		if errors.Is(err, errMaxBatches) {
-			log.Debug("Backfill batches waiting for descendent batch to complete.")
+			log.Debug("Backfill batches waiting for descendent batch to complete")
 			return
 		}
 	}
@@ -232,17 +231,17 @@ func (s *Service) scheduleTodos() {
 // Start begins the runloop of backfill.Service in the current goroutine.
 func (s *Service) Start() {
 	if !s.enabled {
-		log.Info("Backfill service not enabled.")
+		log.Info("Backfill service not enabled")
 		return
 	}
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer func() {
-		log.Info("Backfill service is shutting down.")
+		log.Info("Backfill service is shutting down")
 		cancel()
 	}()
 	clock, err := s.cw.WaitForClock(ctx)
 	if err != nil {
-		log.WithError(err).Error("Backfill service failed to start while waiting for genesis data.")
+		log.WithError(err).Error("Backfill service failed to start while waiting for genesis data")
 		return
 	}
 	s.clock = clock
@@ -250,39 +249,39 @@ func (s *Service) Start() {
 	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
 
 	if err != nil {
-		log.WithError(err).Error("Could not initialize blob verifier in backfill service.")
+		log.WithError(err).Error("Could not initialize blob verifier in backfill service")
 		return
 	}
 
 	if s.store.isGenesisSync() {
-		log.Info("Backfill short-circuit; node synced from genesis.")
+		log.Info("Backfill short-circuit; node synced from genesis")
 		return
 	}
 	status := s.store.status()
 	// Exit early if there aren't going to be any batches to backfill.
 	if primitives.Slot(status.LowSlot) <= s.ms(s.clock.CurrentSlot()) {
-		log.WithField("minimum_required_slot", s.ms(s.clock.CurrentSlot())).
-			WithField("backfill_lowest_slot", status.LowSlot).
-			Info("Exiting backfill service; minimum block retention slot > lowest backfilled block.")
+		log.WithField("minimumRequiredSlot", s.ms(s.clock.CurrentSlot())).
+			WithField("backfillLowestSlot", status.LowSlot).
+			Info("Exiting backfill service; minimum block retention slot > lowest backfilled block")
 		return
 	}
 	s.verifier, s.ctxMap, err = s.initVerifier(ctx)
 	if err != nil {
-		log.WithError(err).Error("Unable to initialize backfill verifier.")
+		log.WithError(err).Error("Unable to initialize backfill verifier")
 		return
 	}
 
 	if s.initSyncWaiter != nil {
-		log.Info("Backfill service waiting for initial-sync to reach head before starting.")
+		log.Info("Backfill service waiting for initial-sync to reach head before starting")
 		if err := s.initSyncWaiter(); err != nil {
-			log.WithError(err).Error("Error waiting for init-sync to complete.")
+			log.WithError(err).Error("Error waiting for init-sync to complete")
 			return
 		}
 	}
 	s.pool.spawn(ctx, s.nWorkers, clock, s.pa, s.verifier, s.ctxMap, s.newBlobVerifier, s.blobStore)
 	s.batchSeq = newBatchSequencer(s.nWorkers, s.ms(s.clock.CurrentSlot()), primitives.Slot(status.LowSlot), primitives.Slot(s.batchSize))
 	if err = s.initBatches(); err != nil {
-		log.WithError(err).Error("Non-recoverable error in backfill service.")
+		log.WithError(err).Error("Non-recoverable error in backfill service")
 		return
 	}
 
@@ -296,7 +295,7 @@ func (s *Service) Start() {
 		s.importBatches(ctx)
 		batchesWaiting.Set(float64(s.batchSeq.countWithState(batchImportable)))
 		if err := s.batchSeq.moveMinimum(s.ms(s.clock.CurrentSlot())); err != nil {
-			log.WithError(err).Error("Non-recoverable error while adjusting backfill minimum slot.")
+			log.WithError(err).Error("Non-recoverable error while adjusting backfill minimum slot")
 		}
 		s.scheduleTodos()
 	}
