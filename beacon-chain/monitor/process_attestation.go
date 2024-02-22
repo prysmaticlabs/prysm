@@ -44,11 +44,11 @@ func attestingIndices(ctx context.Context, state state.BeaconState, att *ethpb.A
 // logMessageTimelyFlagsForIndex returns the log message with performance info for the attestation (head, source, target)
 func logMessageTimelyFlagsForIndex(idx primitives.ValidatorIndex, data *ethpb.AttestationData) logrus.Fields {
 	return logrus.Fields{
-		"ValidatorIndex": idx,
-		"Slot":           data.Slot,
-		"Source":         fmt.Sprintf("%#x", bytesutil.Trunc(data.Source.Root)),
-		"Target":         fmt.Sprintf("%#x", bytesutil.Trunc(data.Target.Root)),
-		"Head":           fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot)),
+		"validatorIndex": idx,
+		"slot":           data.Slot,
+		"source":         fmt.Sprintf("%#x", bytesutil.Trunc(data.Source.Root)),
+		"target":         fmt.Sprintf("%#x", bytesutil.Trunc(data.Target.Root)),
+		"head":           fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot)),
 	}
 }
 
@@ -146,12 +146,12 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 					aggregatedPerf.totalCorrectTarget++
 				}
 			}
-			logFields["CorrectHead"] = latestPerf.timelyHead
-			logFields["CorrectSource"] = latestPerf.timelySource
-			logFields["CorrectTarget"] = latestPerf.timelyTarget
-			logFields["InclusionSlot"] = latestPerf.inclusionSlot
-			logFields["NewBalance"] = balance
-			logFields["BalanceChange"] = balanceChg
+			logFields["correctHead"] = latestPerf.timelyHead
+			logFields["correctSource"] = latestPerf.timelySource
+			logFields["correctTarget"] = latestPerf.timelyTarget
+			logFields["inclusionSlot"] = latestPerf.inclusionSlot
+			logFields["newBalance"] = balance
+			logFields["balanceChange"] = balanceChg
 
 			s.latestPerformance[primitives.ValidatorIndex(idx)] = latestPerf
 			s.aggregatedPerformance[primitives.ValidatorIndex(idx)] = aggregatedPerf
@@ -167,7 +167,7 @@ func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb
 	root := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	st := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if st == nil {
-		log.WithField("BeaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
+		log.WithField("beaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
 			"Skipping unaggregated attestation due to state not found in cache")
 		return
 	}
@@ -190,13 +190,13 @@ func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.A
 	defer s.Unlock()
 	if s.trackedIndex(att.AggregatorIndex) {
 		log.WithFields(logrus.Fields{
-			"AggregatorIndex": att.AggregatorIndex,
-			"Slot":            att.Aggregate.Data.Slot,
-			"BeaconBlockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
+			"aggregatorIndex": att.AggregatorIndex,
+			"slot":            att.Aggregate.Data.Slot,
+			"beaconBlockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
 				att.Aggregate.Data.BeaconBlockRoot)),
-			"SourceRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
+			"sourceRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
 				att.Aggregate.Data.Source.Root)),
-			"TargetRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
+			"targetRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
 				att.Aggregate.Data.Target.Root)),
 		}).Info("Processed attestation aggregation")
 		aggregatedPerf := s.aggregatedPerformance[att.AggregatorIndex]
@@ -209,7 +209,7 @@ func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.A
 	copy(root[:], att.Aggregate.Data.BeaconBlockRoot)
 	st := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if st == nil {
-		log.WithField("BeaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
+		log.WithField("beaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
 			"Skipping aggregated attestation due to state not found in cache")
 		return
 	}

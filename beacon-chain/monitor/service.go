@@ -111,7 +111,7 @@ func (s *Service) Start() {
 	sort.Slice(tracked, func(i, j int) bool { return tracked[i] < tracked[j] })
 
 	log.WithFields(logrus.Fields{
-		"ValidatorIndices": tracked,
+		"validatorIndices": tracked,
 	}).Info("Starting service")
 
 	go s.run()
@@ -134,7 +134,7 @@ func (s *Service) run() {
 	}
 
 	epoch := slots.ToEpoch(st.Slot())
-	log.WithField("Epoch", epoch).Info("Synced to head epoch, starting reporting performance")
+	log.WithField("epoch", epoch).Info("Synced to head epoch, starting reporting performance")
 
 	s.Lock()
 	s.initializePerformanceStructures(st, epoch)
@@ -157,7 +157,7 @@ func (s *Service) initializePerformanceStructures(state state.BeaconState, epoch
 	for idx := range s.TrackedValidators {
 		balance, err := state.BalanceAtIndex(idx)
 		if err != nil {
-			log.WithError(err).WithField("ValidatorIndex", idx).Error(
+			log.WithError(err).WithField("validatorIndex", idx).Error(
 				"Could not fetch starting balance, skipping aggregated logs.")
 			balance = 0
 		}
@@ -276,7 +276,7 @@ func (s *Service) updateSyncCommitteeTrackedVals(state state.BeaconState) {
 	for idx := range s.TrackedValidators {
 		syncIdx, err := helpers.CurrentPeriodSyncSubcommitteeIndices(state, idx)
 		if err != nil {
-			log.WithError(err).WithField("ValidatorIndex", idx).Error(
+			log.WithError(err).WithField("validatorIndex", idx).Error(
 				"Sync committee assignments will not be reported")
 			delete(s.trackedSyncCommitteeIndices, idx)
 		} else if len(syncIdx) == 0 {

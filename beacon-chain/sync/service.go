@@ -295,11 +295,11 @@ func (s *Service) waitForChainStart() {
 	}
 	s.cfg.clock = clock
 	startTime := clock.GenesisTime()
-	log.WithField("starttime", startTime).Debug("Received state initialized event")
+	log.WithField("startTime", startTime).Debug("Received state initialized event")
 
 	ctxMap, err := ContextByteVersionsForValRoot(clock.GenesisValidatorsRoot())
 	if err != nil {
-		log.WithError(err).WithField("genesis_validator_root", clock.GenesisValidatorsRoot()).
+		log.WithError(err).WithField("genesisValidatorRoot", clock.GenesisValidatorsRoot()).
 			Error("sync service failed to initialize context version map")
 		return
 	}
@@ -311,7 +311,7 @@ func (s *Service) waitForChainStart() {
 	if startTime.After(prysmTime.Now()) {
 		time.Sleep(prysmTime.Until(startTime))
 	}
-	log.WithField("starttime", startTime).Debug("Chain started in sync service")
+	log.WithField("startTime", startTime).Debug("Chain started in sync service")
 	s.markForChainStart()
 }
 

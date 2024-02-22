@@ -426,7 +426,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
-	log.WithField("database-path", dbPath).Info("Checking DB")
+	log.WithField("databasePath", dbPath).Info("Checking DB")
 
 	d, err := kv.NewKVStore(b.ctx, dbPath)
 	if err != nil {
@@ -529,7 +529,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
-	log.WithField("database-path", dbPath).Info("Checking DB")
+	log.WithField("databasePath", dbPath).Info("Checking DB")
 
 	d, err := slasherkv.NewKVStore(b.ctx, dbPath)
 	if err != nil {
