@@ -199,6 +199,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 // Start a blockchain service's main event loop.
 func (s *Service) Start() {
 	saved := s.cfg.FinalizedStateAtStartUp
+	defer s.removeStartupState()
 
 	if saved != nil && !saved.IsNil() {
 		if err := s.StartFromSavedState(saved); err != nil {
@@ -548,6 +549,10 @@ func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
 	}
 
 	return s.cfg.BeaconDB.HasBlock(ctx, root)
+}
+
+func (s *Service) removeStartupState() {
+	s.cfg.FinalizedStateAtStartUp = nil
 }
 
 func spawnCountdownIfPreGenesis(ctx context.Context, genesisTime time.Time, db db.HeadAccessDatabase) {

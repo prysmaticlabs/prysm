@@ -326,6 +326,10 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 	beacon.collector = c
 
+	// Do not store the finalized state as it has been provided to the respective services during
+	// their initialization.
+	beacon.finalizedStateAtStartUp = nil
+
 	return beacon, nil
 }
 func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
