@@ -190,7 +190,7 @@ func (psl *proposerSettingsLoader) Load(cliCtx *cli.Context) (*validatorService.
 				fileConfig.DefaultConfig = option.ToConsensus()
 			}
 		default:
-			return nil, errors.New("load method for proposer settings does not exit")
+			return nil, errors.New("load method for proposer settings does not exist")
 		}
 	}
 
