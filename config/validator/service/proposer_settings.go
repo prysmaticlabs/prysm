@@ -47,7 +47,7 @@ func ProposerSettingFromConsensus(ps *validatorpb.ProposerSettingsPayload) (*Pro
 		d := &ProposerOption{}
 		if ps.DefaultConfig.FeeRecipient != "" {
 			if !common.IsHexAddress(ps.DefaultConfig.FeeRecipient) {
-				return nil, errors.New("default fee recipient is not a valid eth1 address")
+				return nil, errors.New("default fee recipient is not a valid Ethereum address")
 			}
 			if err := config.WarnNonChecksummedAddress(ps.DefaultConfig.FeeRecipient); err != nil {
 				return nil, err
