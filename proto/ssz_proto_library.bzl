@@ -29,6 +29,7 @@ mainnet = {
     "max_inclusion_list.size": "16", #MAX_TRANSACTIONS_PER_INCLUSION_LIST
     "ptc.size": "32", #PTC_SIZE
     "ptc.type": "github.com/prysmaticlabs/go-bitfield.Bitvector256",
+    "payload_attestation.size": "2",
 }
 
 minimal = {
@@ -54,6 +55,7 @@ minimal = {
     "max_inclusion_list.size": "16", #MAX_TRANSACTIONS_PER_INCLUSION_LIST
     "ptc.size": "4", #PTC_SIZE
     "ptc.type": "github.com/prysmaticlabs/go-bitfield.Bitvector32",
+    "payload_attestation.size": "2",
 }
 
 ###### Rules definitions #######
