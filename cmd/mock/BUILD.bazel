@@ -6,5 +6,5 @@ go_library(
     srcs = ["password_reader_mock.go"],
     importpath = "github.com/prysmaticlabs/prysm/v5/cmd/mock",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_golang_mock//gomock:go_default_library"],
+    deps = ["@org_uber_go_mock//gomock:go_default_library"],
 )

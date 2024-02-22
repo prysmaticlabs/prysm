@@ -112,7 +112,7 @@ func (bbv *blobBatchVerifier) newVerifier(rb blocks.ROBlob) verification.BlobVer
 	return m[rb.Index]
 }
 
-func (bbv blobBatchVerifier) VerifiedROBlobs(_ context.Context, blk blocks.ROBlock, _ []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
+func (bbv *blobBatchVerifier) VerifiedROBlobs(_ context.Context, blk blocks.ROBlock, _ []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
 	m, ok := bbv.verifiers[blk.Root()]
 	if !ok {
 		return nil, errors.Wrapf(verification.ErrMissingVerification, "no record of verifiers for root %#x", blk.Root())

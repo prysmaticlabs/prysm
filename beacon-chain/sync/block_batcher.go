@@ -151,14 +151,14 @@ func newBlockBatch(start, reqEnd primitives.Slot, size uint64) (blockBatch, bool
 	return nb, true
 }
 
-func (bat blockBatch) next(reqEnd primitives.Slot, size uint64) (blockBatch, bool) {
-	if bat.error() != nil {
-		return bat, false
+func (bb blockBatch) next(reqEnd primitives.Slot, size uint64) (blockBatch, bool) {
+	if bb.error() != nil {
+		return bb, false
 	}
-	if bat.nonLinear() {
+	if bb.nonLinear() {
 		return blockBatch{}, false
 	}
-	return newBlockBatch(bat.end.Add(1), reqEnd, size)
+	return newBlockBatch(bb.end.Add(1), reqEnd, size)
 }
 
 // blocks returns the list of linear, canonical blocks read from the db.

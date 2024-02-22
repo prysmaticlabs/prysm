@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

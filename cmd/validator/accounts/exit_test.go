@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v5/build/bazel"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -18,6 +17,7 @@ import (
 	validatormock "github.com/prysmaticlabs/prysm/v5/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

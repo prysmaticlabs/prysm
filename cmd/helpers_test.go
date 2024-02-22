@@ -6,12 +6,12 @@ import (
 	"os/user"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/cmd/mock"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/urfave/cli/v2"
+	"go.uber.org/mock/gomock"
 )
 
 func TestEnterPassword(t *testing.T) {

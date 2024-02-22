@@ -7,6 +7,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//crypto/bls/common:go_default_library",
-        "@com_github_golang_mock//gomock:go_default_library",
+        "@org_uber_go_mock//gomock:go_default_library",
     ],
 )

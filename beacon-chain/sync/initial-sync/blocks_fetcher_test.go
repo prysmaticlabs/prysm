@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 	"sync"
@@ -1141,4 +1142,27 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	}
 	// We delete each entry we've seen, so if we see all expected commits, the map should be empty at the end.
 	require.Equal(t, 0, len(expectedCommits))
+}
+
+func TestBatchLimit(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	testCfg := params.BeaconConfig().Copy()
+	testCfg.DenebForkEpoch = math.MaxUint64
+	params.OverrideBeaconConfig(testCfg)
+
+	resetFlags := flags.Get()
+	flags.Init(&flags.GlobalFlags{
+		BlockBatchLimit:            640,
+		BlockBatchLimitBurstFactor: 10,
+	})
+	defer func() {
+		flags.Init(resetFlags)
+	}()
+
+	assert.Equal(t, 640, maxBatchLimit())
+
+	testCfg.DenebForkEpoch = 100000
+	params.OverrideBeaconConfig(testCfg)
+
+	assert.Equal(t, params.BeaconConfig().MaxRequestBlocksDeneb, uint64(maxBatchLimit()))
 }
