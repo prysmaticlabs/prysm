@@ -195,7 +195,8 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	urls := strings.Split(v.conn.GetBeaconApiUrl(), ",")
+	u := strings.Replace(v.conn.GetBeaconApiUrl(), " ", "", -1)
+	urls := strings.Split(u, ",")
 	restHandler := &beaconApi.BeaconApiJsonRestHandler{
 		HttpClient: http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
 		Host: func() string {
@@ -379,6 +380,7 @@ func runNodeSwitcherRoutine(ctx context.Context, v iface.Validator, endpoints []
 					for i, url := range endpoints {
 						if url == v.RetrieveHost() {
 							next := (i + 1) % len(endpoints)
+							log.Info("Beacon node at %s is not responding, switching to %s", url, endpoints[next])
 							v.UpdateHost(endpoints[next])
 						}
 					}
