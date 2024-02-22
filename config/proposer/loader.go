@@ -196,7 +196,7 @@ func (psl *proposerSettingsLoader) Load(cliCtx *cli.Context) (*validatorService.
 
 	// exit early if nothing is provided
 	if fileConfig == nil {
-		log.Warn("no proposer settings were provided...")
+		log.Warn("No proposer settings were provided")
 		return nil, nil
 	}
 	ps, err := validatorService.ProposerSettingFromConsensus(fileConfig)
