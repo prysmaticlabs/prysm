@@ -583,6 +583,9 @@ func (s *Service) run(done <-chan struct{}) {
 	s.runError = nil
 
 	s.initPOWService()
+	// Do not keep storing the finalized state as it is
+	// no longer of use.
+	s.removeStartupState()
 
 	chainstartTicker := time.NewTicker(logPeriod)
 	defer chainstartTicker.Stop()
@@ -909,4 +912,8 @@ func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error
 	}
 	s.depositTrie = newDepositTrie
 	return nil
+}
+
+func (s *Service) removeStartupState() {
+	s.cfg.finalizedStateAtStartup = nil
 }
