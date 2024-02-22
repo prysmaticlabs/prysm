@@ -69,7 +69,7 @@ func verifyOption(key string, option *validatorpb.ProposerOptionPayload) error {
 		return fmt.Errorf("fee recipient is required for proposer %s", key)
 	}
 	if !common.IsHexAddress(option.FeeRecipient) {
-		return errors.New("fee recipient is not a valid eth1 address")
+		return errors.New("fee recipient is not a valid Ethereum address")
 	}
 	if err := config.WarnNonChecksummedAddress(option.FeeRecipient); err != nil {
 		return err
