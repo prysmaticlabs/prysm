@@ -36,7 +36,7 @@ func UnmarshalFromURL(ctx context.Context, from string, to interface{}) error {
 	defer func(Body io.ReadCloser) {
 		err = Body.Close()
 		if err != nil {
-			log.WithError(err).Error("failed to close response body")
+			log.WithError(err).Error("Failed to close response body")
 		}
 	}(resp.Body)
 	if resp.StatusCode != http.StatusOK {
