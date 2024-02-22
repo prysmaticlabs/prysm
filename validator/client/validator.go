@@ -1178,7 +1178,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 		enabled := false
 
 		if v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig == nil && v.ProposerSettings().DefaultConfig.BuilderConfig != nil {
-			log.Warn("builder is `enabled` in default config but will be ignored because no fee recipient was provided!!")
+			log.Warn("Builder is `enabled` in default config but will be ignored because no fee recipient was provided!")
 		}
 
 		if v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig != nil {
