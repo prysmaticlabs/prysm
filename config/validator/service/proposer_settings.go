@@ -85,7 +85,7 @@ type BuilderConfig struct {
 	Relays   []string         `json:"relays,omitempty" yaml:"relays,omitempty"`
 }
 
-// BuilderConfigFromConsensus converts protobuf to a builder config used in inmemory storage
+// BuilderConfigFromConsensus converts protobuf to a builder config used in in-memory storage
 func BuilderConfigFromConsensus(from *validatorpb.BuilderConfig) *BuilderConfig {
 	if from == nil {
 		return nil
