@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	log "github.com/sirupsen/logrus"
 )
 
 type batchWorkerPool interface {

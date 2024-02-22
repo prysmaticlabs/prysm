@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // ErrChainBroken indicates a backfill batch can't be imported to the db because it is not known to be the ancestor
@@ -73,9 +73,9 @@ type batch struct {
 	bs             *blobSync
 }
 
-func (b batch) logFields() log.Fields {
+func (b batch) logFields() logrus.Fields {
 	return map[string]interface{}{
-		"batch_id":  b.id(),
+		"batchId":   b.id(),
 		"state":     b.state.String(),
 		"scheduled": b.scheduled.String(),
 		"seq":       b.seq,
@@ -139,7 +139,7 @@ func (b batch) withResults(results verifiedROBlocks, bs *blobSync) batch {
 
 func (b batch) postBlobSync() batch {
 	if b.blobsNeeded() > 0 {
-		log.WithFields(b.logFields()).WithField("blobs_missing", b.blobsNeeded()).Error("batch still missing blobs after downloading from peer")
+		log.WithFields(b.logFields()).WithField("blobsMissing", b.blobsNeeded()).Error("Batch still missing blobs after downloading from peer")
 		b.bs = nil
 		b.results = []blocks.ROBlock{}
 		return b.withState(batchErrRetryable)
@@ -153,14 +153,14 @@ func (b batch) withState(s batchState) batch {
 		switch b.state {
 		case batchErrRetryable:
 			b.retries += 1
-			log.WithFields(b.logFields()).Info("sequencing batch for retry")
+			log.WithFields(b.logFields()).Info("Sequencing batch for retry")
 		case batchInit, batchNil:
 			b.firstScheduled = b.scheduled
 		}
 	}
 	if s == batchImportComplete {
 		backfillBatchTimeRoundtrip.Observe(float64(time.Since(b.firstScheduled).Milliseconds()))
-		log.WithFields(b.logFields()).Debug("Backfill batch imported.")
+		log.WithFields(b.logFields()).Debug("Backfill batch imported")
 	}
 	b.state = s
 	b.seq += 1

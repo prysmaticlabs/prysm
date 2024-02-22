@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
-	log "github.com/sirupsen/logrus"
 )
 
 type workerId int
@@ -31,14 +30,14 @@ func (w *p2pWorker) run(ctx context.Context) {
 	for {
 		select {
 		case b := <-w.todo:
-			log.WithFields(b.logFields()).WithField("backfill_worker", w.id).Debug("Backfill worker received batch.")
+			log.WithFields(b.logFields()).WithField("backfillWorker", w.id).Debug("Backfill worker received batch")
 			if b.state == batchBlobSync {
 				w.done <- w.handleBlobs(ctx, b)
 			} else {
 				w.done <- w.handleBlocks(ctx, b)
 			}
 		case <-ctx.Done():
-			log.WithField("backfill_worker", w.id).Info("Backfill worker exiting after context canceled.")
+			log.WithField("backfillWorker", w.id).Info("Backfill worker exiting after context canceled")
 			return
 		}
 	}
@@ -73,7 +72,7 @@ func (w *p2pWorker) handleBlocks(ctx context.Context, b batch) batch {
 		bdl += vb[i].SizeSSZ()
 	}
 	backfillBlocksApproximateBytes.Add(float64(bdl))
-	log.WithFields(b.logFields()).WithField("dlbytes", bdl).Debug("backfill batch block bytes downloaded")
+	log.WithFields(b.logFields()).WithField("dlbytes", bdl).Debug("Backfill batch block bytes downloaded")
 	bs, err := newBlobSync(cs, vb, &blobSyncConfig{retentionStart: blobRetentionStart, nbv: w.nbv, store: w.bfs})
 	if err != nil {
 		return b.withRetryableError(err)
@@ -97,7 +96,7 @@ func (w *p2pWorker) handleBlobs(ctx context.Context, b batch) batch {
 		// All blobs are the same size, so we can compute 1 and use it for all in the batch.
 		sz := blobs[0].SizeSSZ() * len(blobs)
 		backfillBlobsApproximateBytes.Add(float64(sz))
-		log.WithFields(b.logFields()).WithField("dlbytes", sz).Debug("backfill batch blob bytes downloaded")
+		log.WithFields(b.logFields()).WithField("dlbytes", sz).Debug("Backfill batch blob bytes downloaded")
 	}
 	return b.postBlobSync()
 }
