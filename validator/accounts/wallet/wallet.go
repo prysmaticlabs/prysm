@@ -247,7 +247,7 @@ func OpenOrCreateNewWallet(cliCtx *cli.Context) (*Wallet, error) {
 	if err := w.SaveWallet(); err != nil {
 		return nil, errors.Wrap(err, "could not save wallet to disk")
 	}
-	log.WithField("wallet-path", walletDir).Info(
+	log.WithField("walletPath", walletDir).Info(
 		"Successfully created new wallet",
 	)
 	return w, nil
