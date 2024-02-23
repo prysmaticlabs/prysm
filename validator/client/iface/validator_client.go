@@ -85,7 +85,7 @@ func (s SyncCommitteeSelection) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (s SyncCommitteeSelection) UnmarshalJSON(input []byte) error {
+func (s *SyncCommitteeSelection) UnmarshalJSON(input []byte) error {
 	var resJson syncCommitteeSelectionJson
 	err := json.Unmarshal(input, &resJson)
 	if err != nil {
