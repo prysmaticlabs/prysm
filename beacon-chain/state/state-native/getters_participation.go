@@ -58,12 +58,9 @@ func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, er
 	}
 
 	if features.Get().EnableExperimentalState {
-		return stateutil.UnrealizedCheckpointBalances(cp, pp, stateutil.ValMultiValueSliceReader{
-			ValMVSlice: b.validatorsMultiValue,
-			Idenitifer: b,
-		}, currentEpoch)
+		return stateutil.UnrealizedCheckpointBalances(cp, pp, stateutil.NewValMultiValueSliceReader(b.validatorsMultiValue, b), currentEpoch)
 	} else {
-		return stateutil.UnrealizedCheckpointBalances(cp, pp, stateutil.ValSliceReader{Validators: b.validators}, currentEpoch)
+		return stateutil.UnrealizedCheckpointBalances(cp, pp, stateutil.NewValSliceReader(b.validators), currentEpoch)
 	}
 }
 
