@@ -436,8 +436,8 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithROBlobs, blobs []blocks.ROBlo
 		if err != nil {
 			if errors.Is(err, consensus_types.ErrUnsupportedField) {
 				log.
-					WithField("block_slot", block.Slot()).
-					WithField("retention_start", blobWindowStart).
+					WithField("blockSlot", block.Slot()).
+					WithField("retentionStart", blobWindowStart).
 					Warn("block with slot within blob retention period has version which does not support commitments")
 				continue
 			}
