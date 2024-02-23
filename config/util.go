@@ -48,10 +48,7 @@ func UnmarshalFromURL(ctx context.Context, from string, to interface{}) error {
 	return nil
 }
 
-func UnmarshalFromFile(ctx context.Context, from string, to interface{}) error {
-	if ctx == nil {
-		return errors.New("node: nil context passed to unmarshalFromFile")
-	}
+func UnmarshalFromFile(_ context.Context, from string, to interface{}) error {
 	cleanpath := filepath.Clean(from)
 	b, err := os.ReadFile(cleanpath)
 	if err != nil {
