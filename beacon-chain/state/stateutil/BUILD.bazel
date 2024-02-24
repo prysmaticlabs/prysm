@@ -17,6 +17,7 @@ go_library(
         "trie_helpers.go",
         "unrealized_justification.go",
         "validator_map_handler.go",
+        "validator_reader.go",
         "validator_root.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil",
