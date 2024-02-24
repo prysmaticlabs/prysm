@@ -43,6 +43,15 @@ func WithBlobStorage(bs *filesystem.BlobStorage) Option {
 	}
 }
 
+// WithBlobStorageOptions appends 1 or more filesystem.BlobStorageOption on the beacon node,
+// to be used when initializing blob storage.
+func WithBlobStorageOptions(opt ...filesystem.BlobStorageOption) Option {
+	return func(bn *BeaconNode) error {
+		bn.BlobStorageOptions = append(bn.BlobStorageOptions, opt...)
+		return nil
+	}
+}
+
 // WithBlobRetentionEpochs sets the blobRetentionEpochs value, used in kv store initialization.
 func WithBlobRetentionEpochs(e primitives.Epoch) Option {
 	return func(bn *BeaconNode) error {

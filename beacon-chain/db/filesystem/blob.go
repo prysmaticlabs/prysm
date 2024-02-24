@@ -24,6 +24,7 @@ var (
 	errIndexOutOfBounds    = errors.New("blob index in file name >= MaxBlobsPerBlock")
 	errEmptyBlobWritten    = errors.New("zero bytes written to disk when saving blob sidecar")
 	errSidecarEmptySSZData = errors.New("sidecar marshalled to an empty ssz byte slice")
+	errNoBasePath          = errors.New("BlobStorage base path not specified in init")
 )
 
 const (
@@ -36,14 +37,26 @@ const (
 // BlobStorageOption is a functional option for configuring a BlobStorage.
 type BlobStorageOption func(*BlobStorage) error
 
+// WithBasePath is a required option that sets the base path of blob storage.
+func WithBasePath(base string) BlobStorageOption {
+	return func(b *BlobStorage) error {
+		b.base = base
+		return nil
+	}
+}
+
 // WithBlobRetentionEpochs is an option that changes the number of epochs blobs will be persisted.
 func WithBlobRetentionEpochs(e primitives.Epoch) BlobStorageOption {
 	return func(b *BlobStorage) error {
-		pruner, err := newBlobPruner(b.fs, e)
-		if err != nil {
-			return err
-		}
-		b.pruner = pruner
+		b.retentionEpochs = e
+		return nil
+	}
+}
+
+// WithSaveFsync is an option that causes Save to call fsync before renaming part files for improved durability.
+func WithSaveFsync(fsync bool) BlobStorageOption {
+	return func(b *BlobStorage) error {
+		b.fsync = fsync
 		return nil
 	}
 }
@@ -51,30 +64,36 @@ func WithBlobRetentionEpochs(e primitives.Epoch) BlobStorageOption {
 // NewBlobStorage creates a new instance of the BlobStorage object. Note that the implementation of BlobStorage may
 // attempt to hold a file lock to guarantee exclusive control of the blob storage directory, so this should only be
 // initialized once per beacon node.
-func NewBlobStorage(base string, opts ...BlobStorageOption) (*BlobStorage, error) {
-	base = path.Clean(base)
-	if err := file.MkdirAll(base); err != nil {
-		return nil, fmt.Errorf("failed to create blob storage at %s: %w", base, err)
-	}
-	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
-	b := &BlobStorage{
-		fs: fs,
-	}
+func NewBlobStorage(opts ...BlobStorageOption) (*BlobStorage, error) {
+	b := &BlobStorage{}
 	for _, o := range opts {
 		if err := o(b); err != nil {
-			return nil, fmt.Errorf("failed to create blob storage at %s: %w", base, err)
+			return nil, errors.Wrap(err, "failed to create blob storage")
 		}
 	}
-	if b.pruner == nil {
-		log.Warn("Initializing blob filesystem storage with pruning disabled")
+	if b.base == "" {
+		return nil, errNoBasePath
 	}
+	b.base = path.Clean(b.base)
+	if err := file.MkdirAll(b.base); err != nil {
+		return nil, errors.Wrapf(err, "failed to create blob storage at %s", b.base)
+	}
+	b.fs = afero.NewBasePathFs(afero.NewOsFs(), b.base)
+	pruner, err := newBlobPruner(b.fs, b.retentionEpochs)
+	if err != nil {
+		return nil, err
+	}
+	b.pruner = pruner
 	return b, nil
 }
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	fs     afero.Fs
-	pruner *blobPruner
+	base            string
+	retentionEpochs primitives.Epoch
+	fsync           bool
+	fs              afero.Fs
+	pruner          *blobPruner
 }
 
 // WarmCache runs the prune routine with an expiration of slot of 0, so nothing will be pruned, but the pruner's cache
@@ -151,8 +170,13 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		}
 		return errors.Wrap(err, "failed to write to partial file")
 	}
-	err = partialFile.Close()
-	if err != nil {
+	if bs.fsync {
+		if err := partialFile.Sync(); err != nil {
+			return err
+		}
+	}
+
+	if err := partialFile.Close(); err != nil {
 		return err
 	}
 

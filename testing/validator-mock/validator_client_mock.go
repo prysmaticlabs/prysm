@@ -102,6 +102,21 @@ func (mr *MockValidatorClientMockRecorder) GetAggregatedSelections(arg0, arg1 an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAggregatedSelections", reflect.TypeOf((*MockValidatorClient)(nil).GetAggregatedSelections), arg0, arg1)
 }
 
+// GetAggregatedSyncSelections mocks base method.
+func (m *MockValidatorClient) GetAggregatedSyncSelections(arg0 context.Context, arg1 []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAggregatedSyncSelections", arg0, arg1)
+	ret0, _ := ret[0].([]iface.SyncCommitteeSelection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAggregatedSyncSelections indicates an expected call of GetAggregatedSyncSelections.
+func (mr *MockValidatorClientMockRecorder) GetAggregatedSyncSelections(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAggregatedSyncSelections", reflect.TypeOf((*MockValidatorClient)(nil).GetAggregatedSyncSelections), arg0, arg1)
+}
+
 // GetAttestationData mocks base method.
 func (m *MockValidatorClient) GetAttestationData(arg0 context.Context, arg1 *eth.AttestationDataRequest) (*eth.AttestationData, error) {
 	m.ctrl.T.Helper()
