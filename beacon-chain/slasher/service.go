@@ -58,7 +58,7 @@ type Service struct {
 	attsSlotTicker                 *slots.SlotTicker
 	blocksSlotTicker               *slots.SlotTicker
 	pruningSlotTicker              *slots.SlotTicker
-	latestEpochWrittenForValidator map[primitives.ValidatorIndex]primitives.Epoch
+	latestEpochUpdatedForValidator map[primitives.ValidatorIndex]primitives.Epoch
 	wg                             sync.WaitGroup
 }
 
@@ -74,7 +74,7 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 		blksQueue:                      newBlocksQueue(),
 		ctx:                            ctx,
 		cancel:                         cancel,
-		latestEpochWrittenForValidator: make(map[primitives.ValidatorIndex]primitives.Epoch),
+		latestEpochUpdatedForValidator: make(map[primitives.ValidatorIndex]primitives.Epoch),
 	}, nil
 }
 
@@ -111,7 +111,7 @@ func (s *Service) run() {
 		return
 	}
 	for _, item := range epochsByValidator {
-		s.latestEpochWrittenForValidator[item.ValidatorIndex] = item.Epoch
+		s.latestEpochUpdatedForValidator[item.ValidatorIndex] = item.Epoch
 	}
 	log.WithField("elapsed", time.Since(start)).Info(
 		"Finished retrieving last epoch written per validator",
@@ -162,7 +162,7 @@ func (s *Service) Stop() error {
 	defer innerCancel()
 	log.Info("Flushing last epoch written for each validator to disk, please wait")
 	if err := s.serviceCfg.Database.SaveLastEpochsWrittenForValidators(
-		ctx, s.latestEpochWrittenForValidator,
+		ctx, s.latestEpochUpdatedForValidator,
 	); err != nil {
 		log.Error(err)
 	}

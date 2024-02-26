@@ -583,6 +583,9 @@ func (s *Service) run(done <-chan struct{}) {
 	s.runError = nil
 
 	s.initPOWService()
+	// Do not keep storing the finalized state as it is
+	// no longer of use.
+	s.removeStartupState()
 
 	chainstartTicker := time.NewTicker(logPeriod)
 	defer chainstartTicker.Stop()
@@ -636,7 +639,7 @@ func (s *Service) logTillChainStart(ctx context.Context) {
 	}
 
 	fields := logrus.Fields{
-		"Additional validators needed": valNeeded,
+		"additionalValidatorsNeeded": valNeeded,
 	}
 	if secondsLeft > 0 {
 		fields["Generating genesis state in"] = time.Duration(secondsLeft) * time.Second
@@ -909,4 +912,8 @@ func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error
 	}
 	s.depositTrie = newDepositTrie
 	return nil
+}
+
+func (s *Service) removeStartupState() {
+	s.cfg.finalizedStateAtStartup = nil
 }

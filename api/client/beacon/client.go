@@ -310,8 +310,8 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*stru
 		for _, failure := range errorJson.Failures {
 			w := request[failure.Index].Message
 			log.WithFields(log.Fields{
-				"validator_index":    w.ValidatorIndex,
-				"withdrawal_address": w.ToExecutionAddress,
+				"validatorIndex":    w.ValidatorIndex,
+				"withdrawalAddress": w.ToExecutionAddress,
 			}).Error(failure.Message)
 		}
 		return errors.Errorf("POST error %d: %s", errorJson.Code, errorJson.Message)

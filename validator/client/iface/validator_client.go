@@ -62,6 +62,64 @@ func (b *BeaconCommitteeSelection) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
+type SyncCommitteeSelection struct {
+	SelectionProof    []byte
+	Slot              primitives.Slot
+	SubcommitteeIndex primitives.CommitteeIndex
+	ValidatorIndex    primitives.ValidatorIndex
+}
+
+type syncCommitteeSelectionJson struct {
+	SelectionProof    string `json:"selection_proof"`
+	Slot              string `json:"slot"`
+	SubcommitteeIndex string `json:"subcommittee_index"`
+	ValidatorIndex    string `json:"validator_index"`
+}
+
+func (s SyncCommitteeSelection) MarshalJSON() ([]byte, error) {
+	return json.Marshal(syncCommitteeSelectionJson{
+		SelectionProof:    hexutil.Encode(s.SelectionProof),
+		Slot:              strconv.FormatUint(uint64(s.Slot), 10),
+		SubcommitteeIndex: strconv.FormatUint(uint64(s.SubcommitteeIndex), 10),
+		ValidatorIndex:    strconv.FormatUint(uint64(s.ValidatorIndex), 10),
+	})
+}
+
+func (s *SyncCommitteeSelection) UnmarshalJSON(input []byte) error {
+	var resJson syncCommitteeSelectionJson
+	err := json.Unmarshal(input, &resJson)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal sync committee selection")
+	}
+
+	slot, err := strconv.ParseUint(resJson.Slot, 10, 64)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse slot")
+	}
+
+	vIdx, err := strconv.ParseUint(resJson.ValidatorIndex, 10, 64)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse validator index")
+	}
+
+	subcommIdx, err := strconv.ParseUint(resJson.SubcommitteeIndex, 10, 64)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse subcommittee index")
+	}
+
+	selectionProof, err := hexutil.Decode(resJson.SelectionProof)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse selection proof")
+	}
+
+	s.Slot = primitives.Slot(slot)
+	s.SelectionProof = selectionProof
+	s.ValidatorIndex = primitives.ValidatorIndex(vIdx)
+	s.SubcommitteeIndex = primitives.CommitteeIndex(subcommIdx)
+
+	return nil
+}
+
 type ValidatorClient interface {
 	GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error)
 	DomainData(ctx context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error)
@@ -91,4 +149,5 @@ type ValidatorClient interface {
 	StartEventStream(ctx context.Context) error
 	EventStreamIsRunning() bool
 	GetAggregatedSelections(ctx context.Context, selections []BeaconCommitteeSelection) ([]BeaconCommitteeSelection, error)
+	GetAggregatedSyncSelections(ctx context.Context, selections []SyncCommitteeSelection) ([]SyncCommitteeSelection, error)
 }

@@ -128,7 +128,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		defer func() {
 			if r := recover(); r != nil {
 				log.WithField("error", r).
-					WithField("recovered_at", "registerRPC").
+					WithField("recoveredAt", "registerRPC").
 					WithField("stack", string(debug.Stack())).
 					Error("Panic occurred")
 			}

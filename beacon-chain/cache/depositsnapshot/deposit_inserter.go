@@ -33,10 +33,10 @@ func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum ui
 	}
 	if d == nil {
 		log.WithFields(logrus.Fields{
-			"block":        blockNum,
-			"deposit":      d,
-			"index":        index,
-			"deposit root": hex.EncodeToString(depositRoot[:]),
+			"block":       blockNum,
+			"deposit":     d,
+			"index":       index,
+			"depositRoot": hex.EncodeToString(depositRoot[:]),
 		}).Warn("Ignoring nil deposit insertion")
 		return errors.New("nil deposit inserted into the cache")
 	}

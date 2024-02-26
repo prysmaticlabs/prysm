@@ -118,6 +118,7 @@ type BeaconNode struct {
 	BackfillOpts            []backfill.ServiceOption
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
+	BlobStorageOptions      []filesystem.BlobStorageOption
 	blobRetentionEpochs     primitives.Epoch
 	verifyInitWaiter        *verification.InitializerWaiter
 	syncChecker             *initialsync.SyncChecker
@@ -207,6 +208,16 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {
 		return nil, err
+	}
+
+	// Allow tests to set it as an opt.
+	if beacon.BlobStorage == nil {
+		beacon.BlobStorageOptions = append(beacon.BlobStorageOptions, filesystem.WithSaveFsync(features.Get().BlobSaveFsync))
+		blobs, err := filesystem.NewBlobStorage(beacon.BlobStorageOptions...)
+		if err != nil {
+			return nil, err
+		}
+		beacon.BlobStorage = blobs
 	}
 
 	log.Debugln("Starting DB")
@@ -326,6 +337,10 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 	beacon.collector = c
 
+	// Do not store the finalized state as it has been provided to the respective services during
+	// their initialization.
+	beacon.finalizedStateAtStartUp = nil
+
 	return beacon, nil
 }
 func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
@@ -422,7 +437,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
-	log.WithField("database-path", dbPath).Info("Checking DB")
+	log.WithField("databasePath", dbPath).Info("Checking DB")
 
 	d, err := kv.NewKVStore(b.ctx, dbPath)
 	if err != nil {
@@ -525,7 +540,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
-	log.WithField("database-path", dbPath).Info("Checking DB")
+	log.WithField("databasePath", dbPath).Info("Checking DB")
 
 	d, err := slasherkv.NewKVStore(b.ctx, dbPath)
 	if err != nil {
