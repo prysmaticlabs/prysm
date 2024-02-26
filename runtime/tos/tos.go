@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/io/prompt"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/io/prompt"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -35,11 +35,13 @@ var (
 	log = logrus.WithField("prefix", "tos")
 )
 
-// VerifyTosAcceptedOrPrompt check if Tos was accepted before or asks to accept.
+// VerifyTosAcceptedOrPrompt checks if Tos was accepted before or asks to accept.
 func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
-	if file.Exists(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename)) {
+	tosFilePath := filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename)
+	if file.Exists(tosFilePath) {
 		return nil
 	}
+
 	if ctx.Bool(cmd.AcceptTosFlag.Name) {
 		saveTosAccepted(ctx)
 		return nil
@@ -49,6 +51,7 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 	if err != nil {
 		return errors.New(acceptTosPromptErrText)
 	}
+
 	if !strings.EqualFold(input, "accept") {
 		return errors.New("you have to accept Terms and Conditions in order to continue")
 	}

@@ -13,11 +13,11 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/v5/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v5/testing/endtoend/types"
 )
 
 var _ e2etypes.ComponentRunner = (*LighthouseBeaconNode)(nil)
@@ -183,7 +183,6 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index*2),         // multiply by 2 because LH adds 1 for quic4 port
 		fmt.Sprintf("--http-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort+index),
 		fmt.Sprintf("--target-peers=%d", 10),
-		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort+prysmNodeCount+index),
 		fmt.Sprintf("--execution-endpoint=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1ProxyPort+prysmNodeCount+index),
 		fmt.Sprintf("--jwt-secrets=%s", jwtPath),
 		fmt.Sprintf("--boot-nodes=%s", node.enr),
@@ -193,7 +192,6 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		"--http-allow-sync-stalled",
 		"--enable-private-discovery",
 		"--debug-level=debug",
-		"--merge",
 		"--suggested-fee-recipient=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
 	}
 	if node.config.UseFixedPeerIDs {
@@ -292,9 +290,9 @@ func (node *LighthouseBeaconNode) saveGenesis(ctx context.Context, testNetDir st
 	if err != nil {
 		return err
 	}
-	log.WithField("fork_version", g.Fork().CurrentVersion).
-		WithField("latest_block_header.root", fmt.Sprintf("%#x", lbhr)).
-		WithField("state_root", fmt.Sprintf("%#x", root)).
+	log.WithField("forkVersion", g.Fork().CurrentVersion).
+		WithField("latestBlockHeaderRoot", fmt.Sprintf("%#x", lbhr)).
+		WithField("stateRoot", fmt.Sprintf("%#x", root)).
 		Infof("BeaconState info")
 
 	genesisBytes, err := g.MarshalSSZ()

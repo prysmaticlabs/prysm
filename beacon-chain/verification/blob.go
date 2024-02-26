@@ -4,14 +4,14 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/runtime/logging"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -62,6 +62,9 @@ var InitsyncSidecarRequirements = []Requirement{
 	RequireBlobIndexInBounds,
 	RequireSidecarInclusionProven,
 }
+
+// BackfillSidecarRequirements is the same as InitsyncSidecarRequirements
+var BackfillSidecarRequirements = InitsyncSidecarRequirements
 
 var (
 	ErrBlobInvalid = errors.New("blob failed verification")
@@ -247,7 +250,7 @@ func (bv *ROBlobVerifier) SidecarParentSlotLower() (err error) {
 // -- i.e. get_checkpoint_block(store, block_header.parent_root, store.finalized_checkpoint.epoch) == store.finalized_checkpoint.root.
 func (bv *ROBlobVerifier) SidecarDescendsFromFinalized() (err error) {
 	defer bv.recordResult(RequireSidecarDescendsFromFinalized, &err)
-	if !bv.fc.IsCanonical(bv.blob.ParentRoot()) {
+	if !bv.fc.HasNode(bv.blob.ParentRoot()) {
 		return ErrSidecarNotFinalizedDescendent
 	}
 	return nil
@@ -307,7 +310,7 @@ func (bv *ROBlobVerifier) SidecarProposerExpected(ctx context.Context) (err erro
 	}
 	if idx != bv.blob.ProposerIndex() {
 		log.WithError(ErrSidecarUnexpectedProposer).
-			WithFields(logging.BlobFields(bv.blob)).WithField("expected_proposer", idx).
+			WithFields(logging.BlobFields(bv.blob)).WithField("expectedProposer", idx).
 			Debug("unexpected blob proposer")
 		return ErrSidecarUnexpectedProposer
 	}

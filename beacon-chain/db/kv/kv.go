@@ -14,11 +14,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	prombolt "github.com/prysmaticlabs/prombbolt"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -100,37 +100,24 @@ func StoreDatafilePath(dirPath string) string {
 }
 
 var Buckets = [][]byte{
-	attestationsBucket,
 	blocksBucket,
 	stateBucket,
-	proposerSlashingsBucket,
-	attesterSlashingsBucket,
-	voluntaryExitsBucket,
 	chainMetadataBucket,
 	checkpointBucket,
 	powchainBucket,
 	stateSummaryBucket,
 	stateValidatorsBucket,
 	// Indices buckets.
-	attestationHeadBlockRootBucket,
-	attestationSourceRootIndicesBucket,
-	attestationSourceEpochIndicesBucket,
-	attestationTargetRootIndicesBucket,
-	attestationTargetEpochIndicesBucket,
 	blockSlotIndicesBucket,
 	stateSlotIndicesBucket,
 	blockParentRootIndicesBucket,
 	finalizedBlockRootsIndexBucket,
 	blockRootValidatorHashesBucket,
-	// State management service bucket.
-	newStateServiceCompatibleBucket,
 	// Migrations
 	migrationsBucket,
 
 	feeRecipientBucket,
 	registrationBucket,
-
-	blobsBucket,
 }
 
 // KVStoreOption is a functional option that modifies a kv.Store.
@@ -213,6 +200,9 @@ func NewKVStore(ctx context.Context, dirPath string, opts ...KVStoreOption) (*St
 
 // ClearDB removes the previously stored database in the data directory.
 func (s *Store) ClearDB() error {
+	if err := s.Close(); err != nil {
+		return fmt.Errorf("failed to close db: %w", err)
+	}
 	if _, err := os.Stat(s.databasePath); os.IsNotExist(err) {
 		return nil
 	}

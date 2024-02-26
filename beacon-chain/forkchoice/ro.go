@@ -1,9 +1,9 @@
 package forkchoice
 
 import (
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // ROForkChoice is an implementation of forkchoice.Getter which calls `Rlock`/`RUnlock`
@@ -112,6 +112,13 @@ func (ro *ROForkChoice) HighestReceivedBlockSlot() primitives.Slot {
 	ro.l.RLock()
 	defer ro.l.RUnlock()
 	return ro.getter.HighestReceivedBlockSlot()
+}
+
+// HighestReceivedBlockDelay delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) HighestReceivedBlockDelay() primitives.Slot {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.HighestReceivedBlockDelay()
 }
 
 // ReceivedBlocksLastEpoch delegates to the underlying forkchoice call, under a lock.

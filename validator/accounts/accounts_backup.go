@@ -10,8 +10,8 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 )
 
 var (
@@ -83,7 +83,7 @@ func zipKeystoresToOutputDir(keystoresToBackup []*keymanager.Keystore, outputDir
 		}
 	}
 	log.WithField(
-		"backup-path", archivePath,
+		"backupPath", archivePath,
 	).Infof("Successfully backed up %d accounts", len(keystoresToBackup))
 	return nil
 }

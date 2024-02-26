@@ -9,19 +9,20 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
@@ -598,6 +599,91 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestSeqBlobValid(t *testing.T) {
+	one, oneBlobs := generateTestBlockWithSidecars(t, [32]byte{}, 0, 3)
+	r1, err := one.Block.HashTreeRoot()
+	require.NoError(t, err)
+	two, twoBlobs := generateTestBlockWithSidecars(t, r1, 1, 3)
+	r2, err := two.Block.HashTreeRoot()
+	require.NoError(t, err)
+	_, oops := generateTestBlockWithSidecars(t, r2, 0, 4)
+	oops[1].SignedBlockHeader.Header.ParentRoot = bytesutil.PadTo([]byte("derp"), 32)
+	wrongRoot, err := blocks.NewROBlobWithRoot(oops[2].BlobSidecar, bytesutil.ToBytes32([]byte("parentderp")))
+	require.NoError(t, err)
+	oob := oops[3]
+	oob.Index = fieldparams.MaxBlobsPerBlock
+
+	cases := []struct {
+		name  string
+		seq   []blocks.ROBlob
+		err   error
+		errAt int
+	}{
+		{
+			name: "all valid",
+			seq:  append(append([]blocks.ROBlob{}, oneBlobs...), twoBlobs...),
+		},
+		{
+			name: "idx out of bounds",
+			seq:  []blocks.ROBlob{oob},
+			err:  errBlobIndexOutOfBounds,
+		},
+		{
+			name: "first index is not zero",
+			seq:  []blocks.ROBlob{oneBlobs[1]},
+			err:  errChunkResponseIndexNotAsc,
+		},
+		{
+			name: "index out of order, same block",
+			seq:  []blocks.ROBlob{oneBlobs[1], oneBlobs[0]},
+			err:  errChunkResponseIndexNotAsc,
+		},
+		{
+			name:  "second block starts at idx 1",
+			seq:   []blocks.ROBlob{oneBlobs[0], twoBlobs[1]},
+			err:   errChunkResponseIndexNotAsc,
+			errAt: 1,
+		},
+		{
+			name:  "slots not ascending",
+			seq:   append(append([]blocks.ROBlob{}, twoBlobs...), oops...),
+			err:   errChunkResponseSlotNotAsc,
+			errAt: len(twoBlobs),
+		},
+		{
+			name:  "same slot, different root",
+			seq:   []blocks.ROBlob{oops[0], wrongRoot},
+			err:   errChunkResponseBlockMismatch,
+			errAt: 1,
+		},
+		{
+			name:  "same slot, different parent root",
+			seq:   []blocks.ROBlob{oops[0], oops[1]},
+			err:   errChunkResponseBlockMismatch,
+			errAt: 1,
+		},
+		{
+			name:  "next slot, different parent root",
+			seq:   []blocks.ROBlob{oops[0], twoBlobs[0]},
+			err:   errChunkResponseParentMismatch,
+			errAt: 1,
+		},
+	}
+	for _, c := range cases {
+		sbv := newSequentialBlobValidator()
+		t.Run(c.name, func(t *testing.T) {
+			for i := range c.seq {
+				err := sbv(c.seq[i])
+				if c.err != nil && i == c.errAt {
+					require.ErrorIs(t, err, c.err)
+					return
+				}
+				require.NoError(t, err)
+			}
 		})
 	}
 }

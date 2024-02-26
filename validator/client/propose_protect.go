@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/sirupsen/logrus"
 )
 
@@ -89,9 +89,9 @@ func (v *validator) slashableProposalCheck(
 
 func blockLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, blk interfaces.ReadOnlyBeaconBlock, sig []byte) logrus.Fields {
 	fields := logrus.Fields{
-		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
-		"proposerIndex":     blk.ProposerIndex(),
-		"blockSlot":         blk.Slot(),
+		"pubkey":        fmt.Sprintf("%#x", pubKey),
+		"proposerIndex": blk.ProposerIndex(),
+		"slot":          blk.Slot(),
 	}
 	if sig != nil {
 		fields["signature"] = fmt.Sprintf("%#x", sig)

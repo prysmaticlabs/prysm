@@ -6,7 +6,7 @@ go_library(
         "log.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
@@ -44,7 +44,6 @@ go_library(
         "//beacon-chain/rpc/prysm/v1alpha1/node:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/validator:go_default_library",
         "//beacon-chain/rpc/prysm/validator:go_default_library",
-        "//beacon-chain/slasher:go_default_library",
         "//beacon-chain/startup:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/sync:go_default_library",

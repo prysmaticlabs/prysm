@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	mathutil "github.com/prysmaticlabs/prysm/v4/math"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	mathutil "github.com/prysmaticlabs/prysm/v5/math"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 )
 
 // MaxSlotBuffer specifies the max buffer given to slots from
@@ -96,6 +96,16 @@ func EpochStart(epoch primitives.Epoch) (primitives.Slot, error) {
 		return slot, errors.Errorf("start slot calculation overflows: %v", err)
 	}
 	return slot, nil
+}
+
+// UnsafeEpochStart is a version of EpochStart that panics if there is an overflow. It can be safely used by code
+// that first guarantees epoch <= MaxSafeEpoch.
+func UnsafeEpochStart(epoch primitives.Epoch) primitives.Slot {
+	es, err := EpochStart(epoch)
+	if err != nil {
+		panic(err)
+	}
+	return es
 }
 
 // EpochEnd returns the last slot number of the
@@ -270,4 +280,9 @@ func TimeIntoSlot(genesisTime uint64) time.Duration {
 func WithinVotingWindow(genesisTime uint64, slot primitives.Slot) bool {
 	votingWindow := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
 	return time.Since(StartTime(genesisTime, slot)) < time.Duration(votingWindow)*time.Second
+}
+
+// MaxSafeEpoch gives the largest epoch value that can be safely converted to a slot.
+func MaxSafeEpoch() primitives.Epoch {
+	return primitives.Epoch(math.MaxUint64 / uint64(params.BeaconConfig().SlotsPerEpoch))
 }
