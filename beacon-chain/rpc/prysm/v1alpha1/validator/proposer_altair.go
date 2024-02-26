@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	synccontribution "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/sync_contribution"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -20,7 +21,7 @@ func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.SignedBea
 		return
 	}
 
-	syncAggregate, err := vs.getSyncAggregate(ctx, blk.Block().Slot()-1, blk.Block().ParentRoot())
+	syncAggregate, err := vs.getSyncAggregate(ctx, slots.PrevSlot(blk.Block().Slot()), blk.Block().ParentRoot())
 	if err != nil {
 		log.WithError(err).Error("Could not get sync aggregate")
 		emptySig := [96]byte{0xC0}
