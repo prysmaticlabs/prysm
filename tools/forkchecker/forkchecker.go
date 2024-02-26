@@ -123,21 +123,21 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 func logHead(endpt string, head *pb.ChainHead) {
 	log.WithFields(
 		logrus.Fields{
-			"HeadSlot":       head.HeadSlot,
-			"HeadRoot":       hex.EncodeToString(head.HeadBlockRoot),
-			"JustifiedEpoch": head.JustifiedEpoch,
-			"JustifiedRoot":  hex.EncodeToString(head.JustifiedBlockRoot),
-			"FinalizedEpoch": head.FinalizedEpoch,
-			"FinalizedRoot":  hex.EncodeToString(head.FinalizedBlockRoot),
+			"headSlot":       head.HeadSlot,
+			"headRoot":       hex.EncodeToString(head.HeadBlockRoot),
+			"justifiedEpoch": head.JustifiedEpoch,
+			"justifiedRoot":  hex.EncodeToString(head.JustifiedBlockRoot),
+			"finalizedEpoch": head.FinalizedEpoch,
+			"finalizedRoot":  hex.EncodeToString(head.FinalizedBlockRoot),
 		}).Info("Head from beacon node ", endpt)
 }
 
 func logParticipation(endpt string, p *pb.ValidatorParticipation) {
 	log.WithFields(
 		logrus.Fields{
-			"VotedEther":        p.VotedEther,
-			"TotalEther":        p.EligibleEther,
-			"ParticipationRate": p.GlobalParticipationRate,
+			"votedEther":        p.VotedEther,
+			"totalEther":        p.EligibleEther,
+			"participationRate": p.GlobalParticipationRate,
 		}).Info("Participation rate from beacon node ", endpt)
 }
 

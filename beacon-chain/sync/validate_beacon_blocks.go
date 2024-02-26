@@ -272,7 +272,7 @@ func (s *Service) validatePhase0Block(ctx context.Context, blk interfaces.ReadOn
 		return nil, err
 	}
 
-	if err := blocks.VerifyBlockSignatureUsingCurrentFork(parentState, blk); err != nil {
+	if err := blocks.VerifyBlockSignatureUsingCurrentFork(parentState, blk, blockRoot); err != nil {
 		return nil, err
 	}
 	// In the event the block is more than an epoch ahead from its
@@ -373,7 +373,7 @@ func (s *Service) verifyPendingBlockSignature(ctx context.Context, blk interface
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if err := blocks.VerifyBlockSignatureUsingCurrentFork(roState, blk); err != nil {
+	if err := blocks.VerifyBlockSignatureUsingCurrentFork(roState, blk, blkRoot); err != nil {
 		s.setBadBlock(ctx, blkRoot)
 		return pubsub.ValidationReject, err
 	}

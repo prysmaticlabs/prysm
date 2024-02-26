@@ -256,6 +256,12 @@ func (s *Service) validatorEndpoints(
 			handler:  server.BeaconCommitteeSelections,
 			methods:  []string{http.MethodPost},
 		},
+		{
+			template: "/eth/v1/validator/sync_committee_selections",
+			name:     namespace + ".SyncCommittee Selections",
+			handler:  server.SyncCommitteeSelections,
+			methods:  []string{http.MethodPost},
+		},
 	}
 }
 

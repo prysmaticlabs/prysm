@@ -94,7 +94,7 @@ func UnionUint64(s ...[]uint64) []uint64 {
 // values from the provided list of indices.
 func SetUint64(a []uint64) []uint64 {
 	// Remove duplicates indices.
-	intMap := map[uint64]bool{}
+	intMap := make(map[uint64]bool, len(a))
 	cleanedIndices := make([]uint64, 0, len(a))
 	for _, idx := range a {
 		if intMap[idx] {

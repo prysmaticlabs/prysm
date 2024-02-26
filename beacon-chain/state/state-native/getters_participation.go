@@ -58,9 +58,9 @@ func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, er
 	}
 
 	if features.Get().EnableExperimentalState {
-		return stateutil.UnrealizedCheckpointBalances(cp, pp, b.validatorsVal(), currentEpoch)
+		return stateutil.UnrealizedCheckpointBalances(cp, pp, stateutil.NewValMultiValueSliceReader(b.validatorsMultiValue, b), currentEpoch)
 	} else {
-		return stateutil.UnrealizedCheckpointBalances(cp, pp, b.validators, currentEpoch)
+		return stateutil.UnrealizedCheckpointBalances(cp, pp, stateutil.NewValSliceReader(b.validators), currentEpoch)
 	}
 }
 

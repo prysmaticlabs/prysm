@@ -216,6 +216,10 @@ func (c *beaconApiValidatorClient) GetAggregatedSelections(ctx context.Context, 
 	return c.getAggregatedSelection(ctx, selections)
 }
 
+func (c *beaconApiValidatorClient) GetAggregatedSyncSelections(ctx context.Context, selections []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
+	return c.getAggregatedSyncSelections(ctx, selections)
+}
+
 func wrapInMetrics[Resp any](action string, f func() (Resp, error)) (Resp, error) {
 	now := time.Now()
 	resp, err := f()

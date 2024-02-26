@@ -83,7 +83,7 @@ func zipKeystoresToOutputDir(keystoresToBackup []*keymanager.Keystore, outputDir
 		}
 	}
 	log.WithField(
-		"backup-path", archivePath,
+		"backupPath", archivePath,
 	).Infof("Successfully backed up %d accounts", len(keystoresToBackup))
 	return nil
 }

@@ -3,6 +3,7 @@ package slasher
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -833,7 +834,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Could not detect")
 }
 
-func Test_epochUpdateForValidators(t *testing.T) {
+func Test_updatedChunkByChunkIndex(t *testing.T) {
 	neutralMin, neutralMax := uint16(65535), uint16(0)
 
 	testCases := []struct {
@@ -1066,7 +1067,7 @@ func Test_epochUpdateForValidators(t *testing.T) {
 					historyLength:      tt.historyLength,
 				},
 				serviceCfg:                     &ServiceConfig{Database: slasherDB},
-				latestEpochWrittenForValidator: tt.latestUpdatedEpochByValidatorIndex,
+				latestEpochUpdatedForValidator: tt.latestUpdatedEpochByValidatorIndex,
 			}
 
 			// Save min initial chunks if they exist.
@@ -1076,7 +1077,11 @@ func Test_epochUpdateForValidators(t *testing.T) {
 					minChunkerByChunkerIndex[chunkIndex] = &MinSpanChunksSlice{data: minChunk}
 				}
 
-				err := service.saveUpdatedChunks(ctx, minChunkerByChunkerIndex, slashertypes.MinSpan, tt.validatorChunkIndex)
+				minChunkerByChunkerIndexByValidatorChunkerIndex := map[uint64]map[uint64]Chunker{
+					tt.validatorChunkIndex: minChunkerByChunkerIndex,
+				}
+
+				err := service.saveChunksToDisk(ctx, slashertypes.MinSpan, minChunkerByChunkerIndexByValidatorChunkerIndex)
 				require.NoError(t, err)
 			}
 
@@ -1087,7 +1092,11 @@ func Test_epochUpdateForValidators(t *testing.T) {
 					maxChunkerByChunkerIndex[chunkIndex] = &MaxSpanChunksSlice{data: maxChunk}
 				}
 
-				err := service.saveUpdatedChunks(ctx, maxChunkerByChunkerIndex, slashertypes.MaxSpan, tt.validatorChunkIndex)
+				maxChunkerByChunkerIndexByValidatorChunkerIndex := map[uint64]map[uint64]Chunker{
+					tt.validatorChunkIndex: maxChunkerByChunkerIndex,
+				}
+
+				err := service.saveChunksToDisk(ctx, slashertypes.MaxSpan, maxChunkerByChunkerIndexByValidatorChunkerIndex)
 				require.NoError(t, err)
 			}
 
@@ -1269,7 +1278,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 		emptyChunk = EmptyMaxSpanChunksSlice(defaultParams)
 	}
 	chunkIdx := uint64(2)
-	received, err := s.loadChunks(ctx, 0, kind, []uint64{chunkIdx})
+	received, err := s.loadChunksFromDisk(ctx, 0, kind, []uint64{chunkIdx})
 	require.NoError(t, err)
 	wanted := map[uint64]Chunker{
 		chunkIdx: emptyChunk,
@@ -1301,15 +1310,15 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 		4: existingChunk,
 		6: existingChunk,
 	}
-	err = s.saveUpdatedChunks(
-		ctx,
-		updatedChunks,
-		kind,
-		0, // validatorChunkIndex
-	)
+
+	chunkByChunkIndexByValidatorChunkIndex := map[uint64]map[uint64]Chunker{
+		0: updatedChunks,
+	}
+
+	err = s.saveChunksToDisk(ctx, kind, chunkByChunkIndexByValidatorChunkIndex)
 	require.NoError(t, err)
 	// Check if the retrieved chunks match what we just saved to disk.
-	received, err = s.loadChunks(ctx, 0, kind, []uint64{2, 4, 6})
+	received, err = s.loadChunksFromDisk(ctx, 0, kind, []uint64{2, 4, 6})
 	require.NoError(t, err)
 	require.DeepEqual(t, updatedChunks, received)
 }
@@ -1351,7 +1360,54 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	tickerChan <- 1
 	cancel()
 	s.wg.Wait()
-	assert.LogsContain(t, hook, "Processing queued")
+	assert.LogsContain(t, hook, "Start processing queued attestations")
+	assert.LogsContain(t, hook, "Done processing queued attestations")
+}
+
+func Benchmark_saveChunksToDisk(b *testing.B) {
+	// Define the parameters.
+	const (
+		chunkKind                    = slashertypes.MinSpan
+		validatorsChunksCount        = 6000 // Corresponds to 1_536_000 validators x 256 validators / chunk
+		chunkIndex            uint64 = 13
+		validatorChunkIndex   uint64 = 42
+	)
+
+	params := DefaultParams()
+
+	// Get a context.
+	ctx := context.Background()
+
+	chunkByChunkIndexByValidatorChunkIndex := make(map[uint64]map[uint64]Chunker, validatorsChunksCount)
+
+	// Populate the chunkers.
+	for i := 0; i < validatorsChunksCount; i++ {
+		data := make([]uint16, params.chunkSize)
+		for j := 0; j < int(params.chunkSize); j++ {
+			data[j] = uint16(rand.Intn(1 << 16))
+		}
+
+		chunker := map[uint64]Chunker{chunkIndex: &MinSpanChunksSlice{params: params, data: data}}
+		chunkByChunkIndexByValidatorChunkIndex[uint64(i)] = chunker
+	}
+
+	// Initialize the slasher database.
+	slasherDB := dbtest.SetupSlasherDB(b)
+
+	// Initialize the slasher service.
+	service, err := New(ctx, &ServiceConfig{Database: slasherDB})
+	require.NoError(b, err)
+
+	// Reset the benchmark timer.
+	b.ResetTimer()
+
+	// Run the benchmark.
+	for i := 0; i < b.N; i++ {
+		b.StartTimer()
+		err = service.saveChunksToDisk(ctx, slashertypes.MinSpan, chunkByChunkIndexByValidatorChunkIndex)
+		b.StopTimer()
+		require.NoError(b, err)
+	}
 }
 
 func BenchmarkCheckSlashableAttestations(b *testing.B) {
@@ -1440,6 +1496,66 @@ func runAttestationsBenchmark(b *testing.B, s *Service, numAtts, numValidators u
 
 		epoch := slots.EpochsSinceGenesis(genesisTime)
 		_, err := s.checkSlashableAttestations(context.Background(), epoch, atts)
+		require.NoError(b, err)
+	}
+}
+
+func Benchmark_checkSurroundVotes(b *testing.B) {
+	const (
+		// Approximatively the number of Holesky active validators on 2024-02-16
+		// This number is both a multiple of 32 (the number of slots per epoch) and 256 (the number of validators per chunk)
+		validatorsCount = 1_638_400
+		slotsPerEpoch   = 32
+
+		targetEpoch  = 42
+		sourceEpoch  = 43
+		currentEpoch = 43
+	)
+	// Create a context.
+	ctx := context.Background()
+
+	// Initialize the slasher database.
+	slasherDB := dbtest.SetupSlasherDB(b)
+
+	// Initialize the slasher service.
+	service, err := New(ctx, &ServiceConfig{Database: slasherDB})
+	require.NoError(b, err)
+
+	// Create the attesting validators indexes.
+	// The best case scenario would be to have all validators attesting for a slot with contiguous indexes.
+	// So for 1_638_400 validators with 32 slots per epoch, we would have 48_000 attestation wrappers per slot.
+	// With 256 validators per chunk, we would have only 188 modified chunks.
+	//
+	// In this benchmark, we use the worst case scenario where attestating validators are evenly splitted across all validators chunks.
+	// We also suppose that only one chunk per validator chunk index is modified.
+	// For one given validator index, multiple chunk indexes could be modified.
+	//
+	// With 1_638_400 validators we have 6400 chunks. If exactly 8 validators per chunks attest, we have:
+	// 6_400 chunks * 8 = 51_200 validators attesting per slot. And 51_200 validators * 32 slots = 1_638_400
+	// attesting validators per epoch.
+	// ==> Attesting validator indexes will be computed as follows:
+	//         validator chunk index 0               validator chunk index 1                   validator chunk index 6_399
+	// [0, 32, 64, 96, 128, 160, 192, 224 | 256, 288, 320, 352, 384, 416, 448, 480 | ... | ..., 1_638_606,  1_638_368, 1_638_400]
+	//
+
+	attestingValidatorsCount := validatorsCount / slotsPerEpoch
+	validatorIndexes := make([]uint64, attestingValidatorsCount)
+	for i := 0; i < attestingValidatorsCount; i++ {
+		validatorIndexes[i] = 32 * uint64(i)
+	}
+
+	// Create the attestation wrapper.
+	// This benchmark assume that all validators produced the exact same head, source and target votes.
+	attWrapper := createAttestationWrapperEmptySig(b, sourceEpoch, targetEpoch, validatorIndexes, nil)
+	attWrappers := []*slashertypes.IndexedAttestationWrapper{attWrapper}
+
+	// Run the benchmark.
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StartTimer()
+		_, err = service.checkSurroundVotes(ctx, attWrappers, currentEpoch)
+		b.StopTimer()
+
 		require.NoError(b, err)
 	}
 }
