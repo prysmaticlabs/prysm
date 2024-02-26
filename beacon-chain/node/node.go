@@ -118,6 +118,7 @@ type BeaconNode struct {
 	BackfillOpts            []backfill.ServiceOption
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
+	BlobStorageOptions      []filesystem.BlobStorageOption
 	blobRetentionEpochs     primitives.Epoch
 	verifyInitWaiter        *verification.InitializerWaiter
 	syncChecker             *initialsync.SyncChecker
@@ -207,6 +208,16 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {
 		return nil, err
+	}
+
+	// Allow tests to set it as an opt.
+	if beacon.BlobStorage == nil {
+		beacon.BlobStorageOptions = append(beacon.BlobStorageOptions, filesystem.WithSaveFsync(features.Get().BlobSaveFsync))
+		blobs, err := filesystem.NewBlobStorage(beacon.BlobStorageOptions...)
+		if err != nil {
+			return nil, err
+		}
+		beacon.BlobStorage = blobs
 	}
 
 	log.Debugln("Starting DB")
