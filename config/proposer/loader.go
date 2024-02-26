@@ -115,7 +115,7 @@ func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts .
 
 // Load saves the proposer settings to the database
 func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.ProposerSettings, error) {
-	var fileConfig *validatorpb.ProposerSettingsPayload
+	var loadConfig *validatorpb.ProposerSettingsPayload
 
 	// override settings based on other options
 	if psl.options.builderConfig != nil && psl.options.hasGasLimit {
@@ -128,7 +128,7 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 		if err != nil {
 			return nil, err
 		}
-		fileConfig = dbps.ToConsensus()
+		loadConfig = dbps.ToConsensus()
 	}
 
 	// start to process based on load method
@@ -148,10 +148,10 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 			if psl.options.builderConfig != nil {
 				defaultConfig.Builder = psl.options.builderConfig.ToConsensus()
 			}
-			if fileConfig == nil {
-				fileConfig = &validatorpb.ProposerSettingsPayload{}
+			if loadConfig == nil {
+				loadConfig = &validatorpb.ProposerSettingsPayload{}
 			}
-			fileConfig.DefaultConfig = defaultConfig
+			loadConfig.DefaultConfig = defaultConfig
 		case fileFlag:
 			var settingFromFile *validatorpb.ProposerSettingsPayload
 			if err := config.UnmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ProposerSettingsFlag.Name), &settingFromFile); err != nil {
@@ -160,7 +160,7 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 			if settingFromFile == nil {
 				return nil, errors.New("proposer settings is empty after unmarshalling from file")
 			}
-			fileConfig = psl.processProposerSettings(settingFromFile, fileConfig)
+			loadConfig = psl.processProposerSettings(settingFromFile, loadConfig)
 		case urlFlag:
 			var settingFromURL *validatorpb.ProposerSettingsPayload
 			if err := config.UnmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ProposerSettingsURLFlag.Name), &settingFromURL); err != nil {
@@ -169,9 +169,9 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 			if settingFromURL == nil {
 				return nil, errors.New("proposer settings is empty after unmarshalling from url")
 			}
-			fileConfig = psl.processProposerSettings(settingFromURL, fileConfig)
+			loadConfig = psl.processProposerSettings(settingFromURL, loadConfig)
 		case onlyDB:
-			fileConfig = psl.processProposerSettings(nil, fileConfig)
+			loadConfig = psl.processProposerSettings(nil, loadConfig)
 		case none:
 			if psl.options.builderConfig != nil {
 				// if there are no proposer settings provided, create a default where fee recipient is not populated, this will be skipped for validator registration on validators that don't have a fee recipient set.
@@ -179,10 +179,10 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 				option := &validatorService.ProposerOption{
 					BuilderConfig: psl.options.builderConfig.Clone(),
 				}
-				if fileConfig == nil {
-					fileConfig = &validatorpb.ProposerSettingsPayload{}
+				if loadConfig == nil {
+					loadConfig = &validatorpb.ProposerSettingsPayload{}
 				}
-				fileConfig.DefaultConfig = option.ToConsensus()
+				loadConfig.DefaultConfig = option.ToConsensus()
 			}
 		default:
 			return nil, errors.New("load method for proposer settings does not exist")
@@ -190,11 +190,11 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 	}
 
 	// exit early if nothing is provided
-	if fileConfig == nil {
+	if loadConfig == nil {
 		log.Warn("No proposer settings were provided")
 		return nil, nil
 	}
-	ps, err := validatorService.ProposerSettingFromConsensus(fileConfig)
+	ps, err := validatorService.ProposerSettingFromConsensus(loadConfig)
 	if err != nil {
 		return nil, err
 	}
