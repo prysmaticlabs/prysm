@@ -1531,6 +1531,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 // 12 and recover. Notice that it takes two epochs to fully recover, and we stay
 // optimistic for the whole time.
 func TestStore_NoViableHead_Liveness(t *testing.T) {
+	t.Skip("Requires #13664 to be fixed")
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.SlotsPerEpoch = 6
