@@ -39,7 +39,7 @@ func (s *Service) processBlock(ctx context.Context, b interfaces.ReadOnlySignedB
 	}
 	st := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if st == nil {
-		log.WithField("BeaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
+		log.WithField("beaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
 			"Skipping block collection due to state not found in cache")
 		return
 	}
@@ -90,13 +90,13 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 
 		parentRoot := blk.ParentRoot()
 		log.WithFields(logrus.Fields{
-			"ProposerIndex": blk.ProposerIndex(),
-			"Slot":          blk.Slot(),
-			"Version":       blk.Version(),
-			"ParentRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(parentRoot[:])),
-			"BlockRoot":     fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
-			"NewBalance":    balance,
-			"BalanceChange": balanceChg,
+			"proposerIndex": blk.ProposerIndex(),
+			"slot":          blk.Slot(),
+			"version":       blk.Version(),
+			"parentRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(parentRoot[:])),
+			"blockRoot":     fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
+			"newBalance":    balance,
+			"balanceChange": balanceChg,
 		}).Info("Proposed beacon block was included")
 	}
 }
@@ -109,11 +109,11 @@ func (s *Service) processSlashings(blk interfaces.ReadOnlyBeaconBlock) {
 		idx := slashing.Header_1.Header.ProposerIndex
 		if s.trackedIndex(idx) {
 			log.WithFields(logrus.Fields{
-				"ProposerIndex": idx,
-				"Slot":          blk.Slot(),
-				"SlashingSlot":  slashing.Header_1.Header.Slot,
-				"BodyRoot1":     fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Header_1.Header.BodyRoot)),
-				"BodyRoot2":     fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Header_2.Header.BodyRoot)),
+				"proposerIndex": idx,
+				"slot":          blk.Slot(),
+				"slashingSlot":  slashing.Header_1.Header.Slot,
+				"bodyRoot1":     fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Header_1.Header.BodyRoot)),
+				"bodyRoot2":     fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Header_2.Header.BodyRoot)),
 			}).Info("Proposer slashing was included")
 		}
 	}
@@ -122,16 +122,16 @@ func (s *Service) processSlashings(blk interfaces.ReadOnlyBeaconBlock) {
 		for _, idx := range blocks.SlashableAttesterIndices(slashing) {
 			if s.trackedIndex(primitives.ValidatorIndex(idx)) {
 				log.WithFields(logrus.Fields{
-					"AttesterIndex":      idx,
-					"BlockInclusionSlot": blk.Slot(),
-					"AttestationSlot1":   slashing.Attestation_1.Data.Slot,
-					"BeaconBlockRoot1":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_1.Data.BeaconBlockRoot)),
-					"SourceEpoch1":       slashing.Attestation_1.Data.Source.Epoch,
-					"TargetEpoch1":       slashing.Attestation_1.Data.Target.Epoch,
-					"AttestationSlot2":   slashing.Attestation_2.Data.Slot,
-					"BeaconBlockRoot2":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_2.Data.BeaconBlockRoot)),
-					"SourceEpoch2":       slashing.Attestation_2.Data.Source.Epoch,
-					"TargetEpoch2":       slashing.Attestation_2.Data.Target.Epoch,
+					"attesterIndex":      idx,
+					"blockInclusionSlot": blk.Slot(),
+					"attestationSlot1":   slashing.Attestation_1.Data.Slot,
+					"beaconBlockRoot1":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_1.Data.BeaconBlockRoot)),
+					"sourceEpoch1":       slashing.Attestation_1.Data.Source.Epoch,
+					"targetEpoch1":       slashing.Attestation_1.Data.Target.Epoch,
+					"attestationSlot2":   slashing.Attestation_2.Data.Slot,
+					"beaconBlockRoot2":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_2.Data.BeaconBlockRoot)),
+					"sourceEpoch2":       slashing.Attestation_2.Data.Source.Epoch,
+					"targetEpoch2":       slashing.Attestation_2.Data.Target.Epoch,
 				}).Info("Attester slashing was included")
 			}
 		}
@@ -159,19 +159,19 @@ func (s *Service) logAggregatedPerformance() {
 		percentCorrectTarget := float64(p.totalCorrectTarget) / float64(p.totalAttestedCount)
 
 		log.WithFields(logrus.Fields{
-			"ValidatorIndex":           idx,
-			"StartEpoch":               p.startEpoch,
-			"StartBalance":             p.startBalance,
-			"TotalRequested":           p.totalRequestedCount,
-			"AttestationInclusion":     fmt.Sprintf("%.2f%%", percentAtt*100),
-			"BalanceChangePct":         fmt.Sprintf("%.2f%%", percentBal*100),
-			"CorrectlyVotedSourcePct":  fmt.Sprintf("%.2f%%", percentCorrectSource*100),
-			"CorrectlyVotedTargetPct":  fmt.Sprintf("%.2f%%", percentCorrectTarget*100),
-			"CorrectlyVotedHeadPct":    fmt.Sprintf("%.2f%%", percentCorrectHead*100),
-			"AverageInclusionDistance": fmt.Sprintf("%.1f", percentDistance),
-			"TotalProposedBlocks":      p.totalProposedCount,
-			"TotalAggregations":        p.totalAggregations,
-			"TotalSyncContributions":   p.totalSyncCommitteeContributions,
+			"validatorIndex":           idx,
+			"startEpoch":               p.startEpoch,
+			"startBalance":             p.startBalance,
+			"totalRequested":           p.totalRequestedCount,
+			"attestationInclusion":     fmt.Sprintf("%.2f%%", percentAtt*100),
+			"balanceChangePct":         fmt.Sprintf("%.2f%%", percentBal*100),
+			"correctlyVotedSourcePct":  fmt.Sprintf("%.2f%%", percentCorrectSource*100),
+			"correctlyVotedTargetPct":  fmt.Sprintf("%.2f%%", percentCorrectTarget*100),
+			"correctlyVotedHeadPct":    fmt.Sprintf("%.2f%%", percentCorrectHead*100),
+			"averageInclusionDistance": fmt.Sprintf("%.1f", percentDistance),
+			"totalProposedBlocks":      p.totalProposedCount,
+			"totalAggregations":        p.totalAggregations,
+			"totalSyncContributions":   p.totalSyncCommitteeContributions,
 		}).Info("Aggregated performance since launch")
 	}
 }

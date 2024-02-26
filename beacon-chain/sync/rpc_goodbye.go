@@ -106,7 +106,7 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code p2ptypes.RPCGoodb
 	}
 	defer closeStream(stream, log)
 
-	log := log.WithField("Reason", goodbyeMessage(code))
+	log := log.WithField("reason", goodbyeMessage(code))
 	log.WithField("peer", stream.Conn().RemotePeer()).Trace("Sending Goodbye message to peer")
 
 	// Wait up to the response timeout for the peer to receive the goodbye

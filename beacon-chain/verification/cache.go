@@ -53,11 +53,11 @@ type SignatureData struct {
 
 func (d SignatureData) logFields() log.Fields {
 	return log.Fields{
-		"root":        fmt.Sprintf("%#x", d.Root),
-		"parent_root": fmt.Sprintf("%#x", d.Parent),
-		"signature":   fmt.Sprintf("%#x", d.Signature),
-		"proposer":    d.Proposer,
-		"slot":        d.Slot,
+		"root":       fmt.Sprintf("%#x", d.Root),
+		"parentRoot": fmt.Sprintf("%#x", d.Parent),
+		"signature":  fmt.Sprintf("%#x", d.Signature),
+		"proposer":   d.Proposer,
+		"slot":       d.Slot,
 	}
 }
 

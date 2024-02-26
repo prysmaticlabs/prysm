@@ -419,7 +419,7 @@ func (s *Service) startFromExecutionChain() error {
 						log.Error("event data is not type *statefeed.ChainStartedData")
 						return
 					}
-					log.WithField("starttime", data.StartTime).Debug("Received chain start event")
+					log.WithField("startTime", data.StartTime).Debug("Received chain start event")
 					s.onExecutionChainStart(s.ctx, data.StartTime)
 					return
 				}

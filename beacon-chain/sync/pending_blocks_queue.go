@@ -99,7 +99,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			// Skip blocks that are already being processed.
 			if s.cfg.chain.BlockBeingSynced(blkRoot) {
-				log.WithField("BlockRoot", fmt.Sprintf("%#x", blkRoot)).Info("Skipping pending block already being processed")
+				log.WithField("blockRoot", fmt.Sprintf("%#x", blkRoot)).Info("Skipping pending block already being processed")
 				continue
 			}
 

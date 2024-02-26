@@ -639,7 +639,7 @@ func (s *Service) logTillChainStart(ctx context.Context) {
 	}
 
 	fields := logrus.Fields{
-		"Additional validators needed": valNeeded,
+		"additionalValidatorsNeeded": valNeeded,
 	}
 	if secondsLeft > 0 {
 		fields["Generating genesis state in"] = time.Duration(secondsLeft) * time.Second

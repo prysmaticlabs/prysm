@@ -108,7 +108,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		// to be empty. This test ensures that several routines can safely save the same blob at the
 		// same time. This isn't ideal behavior from the caller, but should be handled safely anyway.
 		// See https://github.com/prysmaticlabs/prysm/pull/13648
-		b, err := NewBlobStorage(t.TempDir())
+		b, err := NewBlobStorage(WithBasePath(t.TempDir()))
 		require.NoError(t, err)
 		blob := testSidecars[0]
 
@@ -268,6 +268,8 @@ func BenchmarkPruning(b *testing.B) {
 }
 
 func TestNewBlobStorage(t *testing.T) {
-	_, err := NewBlobStorage(path.Join(t.TempDir(), "good"))
+	_, err := NewBlobStorage()
+	require.ErrorIs(t, err, errNoBasePath)
+	_, err = NewBlobStorage(WithBasePath(path.Join(t.TempDir(), "good")))
 	require.NoError(t, err)
 }
