@@ -108,10 +108,10 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	}
 
 	log.
-		WithField("block_slot", b.Block().Slot()).
-		WithField("state_slot", s.Slot()).
-		WithField("state_root", hexutil.Encode(sr[:])).
-		WithField("block_root", hexutil.Encode(br[:])).
+		WithField("blockSlot", b.Block().Slot()).
+		WithField("stateSlot", s.Slot()).
+		WithField("stateRoot", hexutil.Encode(sr[:])).
+		WithField("blockRoot", hexutil.Encode(br[:])).
 		Info("Downloaded checkpoint sync state and block.")
 	return &OriginData{
 		st: s,
