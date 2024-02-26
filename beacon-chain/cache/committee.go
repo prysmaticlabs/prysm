@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -74,6 +75,7 @@ func (c *CommitteeCache) Clear() {
 	c.size = maxCommitteesCacheSize
 }
 
+// ExpandCommitteeCache expands the size of the committee cache.
 func (c *CommitteeCache) ExpandCommitteeCache() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -83,8 +85,10 @@ func (c *CommitteeCache) ExpandCommitteeCache() {
 	}
 	c.CommitteeCache.Resize(expandedCommitteeCacheSize)
 	c.size = expandedCommitteeCacheSize
+	log.Warnf("Expanding committee cache size from %d to %d", maxCommitteesCacheSize, expandedCommitteeCacheSize)
 }
 
+// CompressCommitteeCache compresses the size of the committee cache.
 func (c *CommitteeCache) CompressCommitteeCache() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -94,6 +98,7 @@ func (c *CommitteeCache) CompressCommitteeCache() {
 	}
 	c.CommitteeCache.Resize(maxCommitteesCacheSize)
 	c.size = maxCommitteesCacheSize
+	log.Warnf("Reducing committee cache size from %d to %d", expandedCommitteeCacheSize, maxCommitteesCacheSize)
 }
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
