@@ -5,9 +5,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // ProcessEth1DataInBlock is an operation performed on each

@@ -3,11 +3,11 @@ package builder
 import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // SignedBid is an interface describing the method set of a signed builder bid.
@@ -165,7 +165,7 @@ func WrappedBuilderBidCapella(p *ethpb.BuilderBidCapella) (Bid, error) {
 // Header returns the execution data interface.
 func (b builderBidCapella) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, blocks.PayloadValueToGwei(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, blocks.PayloadValueToWei(b.p.Value))
 }
 
 // BlobKzgCommitments --
@@ -249,7 +249,7 @@ func (b builderBidDeneb) HashTreeRootWith(hh *ssz.Hasher) error {
 // Header --
 func (b builderBidDeneb) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return blocks.WrappedExecutionPayloadHeaderDeneb(b.p.Header, blocks.PayloadValueToGwei(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderDeneb(b.p.Header, blocks.PayloadValueToWei(b.p.Value))
 }
 
 // BlobKzgCommitments --

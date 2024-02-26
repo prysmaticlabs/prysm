@@ -8,21 +8,20 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	e2eparams "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	e2eparams "github.com/prysmaticlabs/prysm/v5/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v5/testing/endtoend/policies"
+	"github.com/prysmaticlabs/prysm/v5/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -135,7 +134,7 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 	}
 	if partRate < expected {
 		path := fmt.Sprintf("http://localhost:%d/eth/v2/debug/beacon/states/head", e2eparams.TestParams.Ports.PrysmBeaconNodeGatewayPort)
-		resp := debug.GetBeaconStateV2Response{}
+		resp := structs.GetBeaconStateV2Response{}
 		httpResp, err := http.Get(path) // #nosec G107 -- path can't be constant because it depends on port param
 		if err != nil {
 			return err
@@ -156,19 +155,19 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 		case version.String(version.Phase0):
 		// Do Nothing
 		case version.String(version.Altair):
-			st := &shared.BeaconStateAltair{}
+			st := &structs.BeaconStateAltair{}
 			if err = json.Unmarshal(resp.Data, st); err != nil {
 				return err
 			}
 			respPrevEpochParticipation = st.PreviousEpochParticipation
 		case version.String(version.Bellatrix):
-			st := &shared.BeaconStateBellatrix{}
+			st := &structs.BeaconStateBellatrix{}
 			if err = json.Unmarshal(resp.Data, st); err != nil {
 				return err
 			}
 			respPrevEpochParticipation = st.PreviousEpochParticipation
 		case version.String(version.Capella):
-			st := &shared.BeaconStateCapella{}
+			st := &structs.BeaconStateCapella{}
 			if err = json.Unmarshal(resp.Data, st); err != nil {
 				return err
 			}

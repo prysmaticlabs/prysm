@@ -4,11 +4,11 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // BlockIfaceToV1BlockHeader converts a signed beacon block interface into a signed beacon block header.

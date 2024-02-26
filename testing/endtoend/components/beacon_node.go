@@ -14,17 +14,17 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	cmdshared "github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/genesis"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	cmdshared "github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/sync/genesis"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v5/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/v5/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v5/testing/endtoend/types"
 )
 
 var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
@@ -185,9 +185,9 @@ func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.WithField("fork_version", g.Fork().CurrentVersion).
-		WithField("latest_block_header.root", fmt.Sprintf("%#x", lbhr)).
-		WithField("state_root", fmt.Sprintf("%#x", root)).
+	log.WithField("forkVersion", g.Fork().CurrentVersion).
+		WithField("latestBlockHeaderRoot", fmt.Sprintf("%#x", lbhr)).
+		WithField("stateRoot", fmt.Sprintf("%#x", root)).
 		Infof("BeaconState info")
 
 	genesisBytes, err := g.MarshalSSZ()
@@ -283,7 +283,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	// on our features or the beacon index is a multiplier of 2 (idea is to split nodes
 	// equally down the line with one group having feature flags and the other without
 	// feature flags; this is to allow A-B testing on new features)
-	if !config.TestFeature || index%2 == 0 {
+	if !config.TestFeature || index != 1 {
 		args = append(args, features.E2EBeaconChainFlags...)
 	}
 	if config.UseBuilder {

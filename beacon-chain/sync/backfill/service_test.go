@@ -5,26 +5,32 @@ import (
 	"testing"
 	"time"
 
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/proto/dbval"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 type mockMinimumSlotter struct {
 	min primitives.Slot
 }
 
-var _ minimumSlotter = &mockMinimumSlotter{}
-
-func (m mockMinimumSlotter) minimumSlot() primitives.Slot {
+func (m mockMinimumSlotter) minimumSlot(_ primitives.Slot) primitives.Slot {
 	return m.min
 }
 
-func (m mockMinimumSlotter) setClock(*startup.Clock) {
+type mockInitalizerWaiter struct {
+}
+
+func (mi *mockInitalizerWaiter) WaitForInitializer(ctx context.Context) (*verification.Initializer, error) {
+	return &verification.Initializer{}, nil
 }
 
 func TestServiceInit(t *testing.T) {
@@ -50,11 +56,13 @@ func TestServiceInit(t *testing.T) {
 	require.NoError(t, cw.SetClock(startup.NewClock(time.Now(), [32]byte{})))
 	pool := &mockPool{todoChan: make(chan batch, nWorkers), finishedChan: make(chan batch, nWorkers)}
 	p2pt := p2ptest.NewTestP2P(t)
-	srv, err := NewService(ctx, su, cw, p2pt, &mockAssigner{}, WithBatchSize(batchSize), WithWorkerCount(nWorkers), WithEnableBackfill(true))
+	bfs := filesystem.NewEphemeralBlobStorage(t)
+	srv, err := NewService(ctx, su, bfs, cw, p2pt, &mockAssigner{},
+		WithBatchSize(batchSize), WithWorkerCount(nWorkers), WithEnableBackfill(true), WithVerifierWaiter(&mockInitalizerWaiter{}))
 	require.NoError(t, err)
-	srv.ms = mockMinimumSlotter{min: primitives.Slot(high - batchSize*uint64(nBatches))}
+	srv.ms = mockMinimumSlotter{min: primitives.Slot(high - batchSize*uint64(nBatches))}.minimumSlot
 	srv.pool = pool
-	srv.batchImporter = func(context.Context, batch, *Store) (*dbval.BackfillStatus, error) {
+	srv.batchImporter = func(context.Context, primitives.Slot, batch, *Store) (*dbval.BackfillStatus, error) {
 		return &dbval.BackfillStatus{}, nil
 	}
 	go srv.Start()
@@ -73,6 +81,20 @@ func TestServiceInit(t *testing.T) {
 	for i := remaining; i < remaining+nWorkers; i++ {
 		require.Equal(t, batchEndSequence, todo[i].state)
 	}
+}
+
+func TestMinimumBackfillSlot(t *testing.T) {
+	oe := helpers.MinEpochsForBlockRequests()
+
+	currSlot := (oe + 100).Mul(uint64(params.BeaconConfig().SlotsPerEpoch))
+	minSlot := minimumBackfillSlot(primitives.Slot(currSlot))
+	require.Equal(t, 100*params.BeaconConfig().SlotsPerEpoch, minSlot)
+
+	oe = helpers.MinEpochsForBlockRequests()
+
+	currSlot = oe.Mul(uint64(params.BeaconConfig().SlotsPerEpoch))
+	minSlot = minimumBackfillSlot(primitives.Slot(currSlot))
+	require.Equal(t, primitives.Slot(1), minSlot)
 }
 
 func testReadN(t *testing.T, ctx context.Context, c chan batch, n int, into []batch) []batch {

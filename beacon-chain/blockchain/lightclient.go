@@ -5,14 +5,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v4/proto/migration"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v5/proto/migration"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 const (

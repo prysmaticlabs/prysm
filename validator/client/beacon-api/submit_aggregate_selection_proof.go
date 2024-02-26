@@ -7,11 +7,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
@@ -88,13 +88,13 @@ func (c *beaconApiValidatorClient) getAggregateAttestation(
 	ctx context.Context,
 	slot primitives.Slot,
 	attestationDataRoot []byte,
-) (*validator.AggregateAttestationResponse, error) {
+) (*structs.AggregateAttestationResponse, error) {
 	params := url.Values{}
 	params.Add("slot", strconv.FormatUint(uint64(slot), 10))
 	params.Add("attestation_data_root", hexutil.Encode(attestationDataRoot))
 	endpoint := buildURL("/eth/v1/validator/aggregate_attestation", params)
 
-	var aggregateAttestationResponse validator.AggregateAttestationResponse
+	var aggregateAttestationResponse structs.AggregateAttestationResponse
 	if err := c.jsonRestHandler.Get(ctx, endpoint, &aggregateAttestationResponse); err != nil {
 		return nil, err
 	}

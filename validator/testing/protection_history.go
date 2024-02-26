@@ -3,14 +3,14 @@ package testing
 import (
 	"fmt"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history/format"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 )
 
 // MockSlashingProtectionJSON creates a mock, full slashing protection JSON struct

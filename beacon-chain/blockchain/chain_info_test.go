@@ -5,21 +5,21 @@ import (
 	"testing"
 	"time"
 
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -592,27 +592,4 @@ func TestService_IsFinalized(t *testing.T) {
 	require.Equal(t, true, c.IsFinalized(ctx, r1))
 	require.Equal(t, true, c.IsFinalized(ctx, br))
 	require.Equal(t, false, c.IsFinalized(ctx, [32]byte{'c'}))
-}
-
-func TestService_inRegularSync(t *testing.T) {
-	ctx := context.Background()
-	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New()}, head: &head{root: [32]byte{'b'}}}
-	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	st, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
-	require.Equal(t, false, c.inRegularSync())
-	c.SetGenesisTime(time.Now().Add(time.Second * time.Duration(-1*int64(params.BeaconConfig().SlotsPerEpoch)*int64(params.BeaconConfig().SecondsPerSlot))))
-	st, blkRoot, err = prepareForkchoiceState(ctx, 128, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
-	require.Equal(t, false, c.inRegularSync())
-
-	c.SetGenesisTime(time.Now().Add(time.Second * time.Duration(-5*int64(params.BeaconConfig().SlotsPerEpoch)*int64(params.BeaconConfig().SecondsPerSlot))))
-	require.Equal(t, true, c.inRegularSync())
-
-	c.SetGenesisTime(time.Now().Add(time.Second * time.Duration(-1*int64(params.BeaconConfig().SlotsPerEpoch)*int64(params.BeaconConfig().SecondsPerSlot))))
-	c.cfg.ForkChoiceStore.SetGenesisTime(uint64(time.Now().Unix()))
-	require.Equal(t, true, c.inRegularSync())
 }

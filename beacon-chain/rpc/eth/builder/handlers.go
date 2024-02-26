@@ -8,13 +8,14 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // ExpectedWithdrawals get the withdrawals computed from the specified state, that will be included in the block that gets built on the specified state.
@@ -103,17 +104,17 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	httputil.WriteJson(w, &ExpectedWithdrawalsResponse{
+	httputil.WriteJson(w, &structs.ExpectedWithdrawalsResponse{
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           isFinalized,
 		Data:                buildExpectedWithdrawalsData(withdrawals),
 	})
 }
 
-func buildExpectedWithdrawalsData(withdrawals []*enginev1.Withdrawal) []*ExpectedWithdrawal {
-	data := make([]*ExpectedWithdrawal, len(withdrawals))
+func buildExpectedWithdrawalsData(withdrawals []*enginev1.Withdrawal) []*structs.ExpectedWithdrawal {
+	data := make([]*structs.ExpectedWithdrawal, len(withdrawals))
 	for i, withdrawal := range withdrawals {
-		data[i] = &ExpectedWithdrawal{
+		data[i] = &structs.ExpectedWithdrawal{
 			Address:        hexutil.Encode(withdrawal.Address),
 			Amount:         strconv.FormatUint(withdrawal.Amount, 10),
 			Index:          strconv.FormatUint(withdrawal.Index, 10),

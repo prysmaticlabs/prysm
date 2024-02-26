@@ -3,10 +3,10 @@ package stateutil
 import (
 	"sync"
 
-	coreutils "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition/stateutils"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	coreutils "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition/stateutils"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // ValidatorMapHandler is a container to hold the map and a reference tracker for how many

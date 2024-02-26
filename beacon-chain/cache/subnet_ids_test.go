@@ -3,8 +3,8 @@ package cache
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
 
 func TestSubnetIDsCache_RoundTrip(t *testing.T) {

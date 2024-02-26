@@ -5,9 +5,9 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"google.golang.org/grpc"
 )
 
@@ -136,6 +136,14 @@ func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
 	in *ethpb.AggregatedSigAndAggregationBitsRequest,
 ) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
 	return c.beaconNodeValidatorClient.AggregatedSigAndAggregationBits(ctx, in)
+}
+
+func (grpcValidatorClient) GetAggregatedSelections(context.Context, []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
+	return nil, iface.ErrNotSupported
+}
+
+func (grpcValidatorClient) GetAggregatedSyncSelections(context.Context, []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
+	return nil, iface.ErrNotSupported
 }
 
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {

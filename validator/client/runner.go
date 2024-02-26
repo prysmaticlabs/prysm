@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -244,7 +244,7 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 				case iface.RoleSyncCommitteeAggregator:
 					v.SubmitSignedContributionAndProof(slotCtx, slot, pubKey)
 				case iface.RoleUnknown:
-					log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
+					log.WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
 				default:
 					log.Warnf("Unhandled role %v", role)
 				}
@@ -258,14 +258,14 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 		defer span.End()
 		defer func() {
 			if err := recover(); err != nil { // catch any panic in logging
-				log.WithField("err", err).
+				log.WithField("error", err).
 					Error("Panic occurred when logging validator report. This" +
 						" should never happen! Please file a report at github.com/prysmaticlabs/prysm/issues/new")
 			}
 		}()
-		// Log this client performance in the previous epoch
-		v.LogAttestationsSubmitted()
-		v.LogSyncCommitteeMessagesSubmitted()
+		// Log performance in the previous slot
+		v.LogSubmittedAtts(slot)
+		v.LogSubmittedSyncCommitteeMessages()
 		if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 			log.WithError(err).Error("Could not report validator's rewards/penalties")
 		}
@@ -284,7 +284,7 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 			"epoch", slot/params.BeaconConfig().SlotsPerEpoch,
 		).Warn("Validator not yet assigned to epoch")
 	} else {
-		log.WithField("error", err).Error("Failed to update assignments")
+		log.WithError(err).Error("Failed to update assignments")
 	}
 }
 

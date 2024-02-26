@@ -12,34 +12,34 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -911,7 +911,6 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state older than Bellatrix, nil payload",
 			stateVersion: 1,
 			payload:      nil,
-			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state older than Bellatrix, empty payload",
@@ -940,7 +939,6 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, nil payload",
 			stateVersion: 2,
 			payload:      nil,
-			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state is Bellatrix, empty payload",
@@ -2048,7 +2046,9 @@ func TestFillMissingBlockPayloadId_PrepareAllPayloads(t *testing.T) {
 // boost. It alters the genesisTime tracked by the store.
 func driftGenesisTime(s *Service, slot, delay int64) {
 	offset := slot*int64(params.BeaconConfig().SecondsPerSlot) + delay
-	s.SetGenesisTime(time.Unix(time.Now().Unix()-offset, 0))
+	newTime := time.Unix(time.Now().Unix()-offset, 0)
+	s.SetGenesisTime(newTime)
+	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(newTime.Unix()))
 }
 
 func TestMissingIndices(t *testing.T) {

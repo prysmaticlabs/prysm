@@ -9,20 +9,20 @@ import (
 
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async/abool"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/runtime"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/async/abool"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/runtime"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -69,6 +69,29 @@ func WithVerifierWaiter(viw *verification.InitializerWaiter) Option {
 	return func(s *Service) {
 		s.verifierWaiter = viw
 	}
+}
+
+// WithSyncChecker registers the initial sync service
+// in the checker.
+func WithSyncChecker(checker *SyncChecker) Option {
+	return func(service *Service) {
+		checker.Svc = service
+	}
+}
+
+// SyncChecker allows other services to check the current status of
+// initial-sync and use that internally in their service.
+type SyncChecker struct {
+	Svc *Service
+}
+
+// Synced returns the status of the service.
+func (s *SyncChecker) Synced() bool {
+	if s.Svc == nil {
+		log.Warn("Calling sync checker with a nil service initialized")
+		return false
+	}
+	return s.Svc.Synced()
 }
 
 // NewService configures the initial sync service responsible for bringing the node up to the

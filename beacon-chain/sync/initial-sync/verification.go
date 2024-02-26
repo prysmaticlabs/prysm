@@ -4,18 +4,18 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 )
 
 var (
 	// ErrBatchSignatureMismatch is returned by VerifiedROBlobs when any of the blobs in the batch have a signature
 	// which does not match the signature for the block with a corresponding root.
 	ErrBatchSignatureMismatch = errors.New("Sidecar block header signature does not match signed block")
-	// ErrBlockRootMismatch is returned by VerifiedROBlobs in the scenario where the root of the given signed block
+	// ErrBatchBlockRootMismatch is returned by VerifiedROBlobs in the scenario where the root of the given signed block
 	// does not match the block header in one of the corresponding sidecars.
 	ErrBatchBlockRootMismatch = errors.New("Sidecar block header root does not match signed block")
 )

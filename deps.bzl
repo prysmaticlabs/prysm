@@ -1798,6 +1798,7 @@ def prysm_deps():
         patches = [
             "//third_party:com_github_grpc_ecosystem_grpc_gateway_v2.patch",
             "//third_party:com_github_grpc_ecosystem_grpc_gateway_v2_fix_emptypb.patch",
+            "//third_party:com_github_grpc_ecosystem_grpc_gateway_v2_prysm_v5.patch",
         ],
         replace = "github.com/prysmaticlabs/grpc-gateway/v2",
         repo_mapping = {"@go_googleapis": "@googleapis"},
@@ -3561,8 +3562,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_gohashtree",
         importpath = "github.com/prysmaticlabs/gohashtree",
-        sum = "h1:1EVinCWdb3Lorq7xn8DYQHf48nCcdAM3Vb18KsFlRWY=",
-        version = "v0.0.3-alpha",
+        sum = "h1:H/EbCuXPeTV3lpKeXGPpEV9gsUpkqOOVnWapUyeWro4=",
+        version = "v0.0.4-beta",
     )
 
     go_repository(

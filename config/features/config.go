@@ -26,8 +26,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -69,7 +69,8 @@ type Flags struct {
 	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
-
+	// BlobSaveFsync requires blob saving to block on fsync to ensure blobs are durably persisted before passing DA.
+	BlobSaveFsync bool
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
@@ -223,9 +224,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableFullSSZDataLogging)
 		cfg.EnableFullSSZDataLogging = true
 	}
-	if ctx.IsSet(enableVerboseSigVerification.Name) {
-		logEnabled(enableVerboseSigVerification)
-		cfg.EnableVerboseSigVerification = true
+	cfg.EnableVerboseSigVerification = true
+	if ctx.IsSet(disableVerboseSigVerification.Name) {
+		logEnabled(disableVerboseSigVerification)
+		cfg.EnableVerboseSigVerification = false
 	}
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)
@@ -235,14 +237,20 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
 	}
-	if ctx.IsSet(EnableEIP4881.Name) {
-		logEnabled(EnableEIP4881)
-		cfg.EnableEIP4881 = true
+	cfg.EnableEIP4881 = true
+	if ctx.IsSet(DisableEIP4881.Name) {
+		logEnabled(DisableEIP4881)
+		cfg.EnableEIP4881 = false
 	}
 	if ctx.IsSet(EnableLightClient.Name) {
 		logEnabled(EnableLightClient)
 		cfg.EnableLightClient = true
 	}
+	if ctx.IsSet(BlobSaveFsync.Name) {
+		logEnabled(BlobSaveFsync)
+		cfg.BlobSaveFsync = true
+	}
+
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil
