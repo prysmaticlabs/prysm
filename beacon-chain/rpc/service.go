@@ -155,6 +155,39 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	s.listener = lis
 	log.WithField("address", address).Info("gRPC server listening on port")
 
+	opts := []grpc.ServerOption{
+		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
+		grpc.StreamInterceptor(middleware.ChainStreamServer(
+			recovery.StreamServerInterceptor(
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
+			),
+			grpcprometheus.StreamServerInterceptor,
+			grpcopentracing.StreamServerInterceptor(),
+			s.validatorStreamConnectionInterceptor,
+		)),
+		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
+			recovery.UnaryServerInterceptor(
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
+			),
+			grpcprometheus.UnaryServerInterceptor,
+			grpcopentracing.UnaryServerInterceptor(),
+			s.validatorUnaryConnectionInterceptor,
+		)),
+		grpc.MaxRecvMsgSize(s.cfg.MaxMsgSize),
+	}
+	if s.cfg.CertFlag != "" && s.cfg.KeyFlag != "" {
+		creds, err := credentials.NewServerTLSFromFile(s.cfg.CertFlag, s.cfg.KeyFlag)
+		if err != nil {
+			log.WithError(err).Fatal("Could not load TLS keys")
+		}
+		opts = append(opts, grpc.Creds(creds))
+	} else {
+		log.Warn("You are using an insecure gRPC server. If you are running your beacon node and " +
+			"validator on the same machines, you can ignore this message. If you want to know " +
+			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
+	}
+	s.grpcServer = grpc.NewServer(opts...)
+
 	var stateCache stategen.CachedGetter
 	if s.cfg.StateGen != nil {
 		stateCache = s.cfg.StateGen.CombinedCache()
@@ -416,38 +449,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
 	})
 	s.initializePrysmValidatorServerRoutes(&validatorprysm.Server{CoreService: coreService})
-	opts := []grpc.ServerOption{
-		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
-		grpc.StreamInterceptor(middleware.ChainStreamServer(
-			recovery.StreamServerInterceptor(
-				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
-			),
-			grpcprometheus.StreamServerInterceptor,
-			grpcopentracing.StreamServerInterceptor(),
-			s.validatorStreamConnectionInterceptor,
-		)),
-		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
-			recovery.UnaryServerInterceptor(
-				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
-			),
-			grpcprometheus.UnaryServerInterceptor,
-			grpcopentracing.UnaryServerInterceptor(),
-			s.validatorUnaryConnectionInterceptor,
-		)),
-		grpc.MaxRecvMsgSize(s.cfg.MaxMsgSize),
-	}
-	if s.cfg.CertFlag != "" && s.cfg.KeyFlag != "" {
-		creds, err := credentials.NewServerTLSFromFile(s.cfg.CertFlag, s.cfg.KeyFlag)
-		if err != nil {
-			log.WithError(err).Fatal("Could not load TLS keys")
-		}
-		opts = append(opts, grpc.Creds(creds))
-	} else {
-		log.Warn("You are using an insecure gRPC server. If you are running your beacon node and " +
-			"validator on the same machines, you can ignore this message. If you want to know " +
-			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
-	}
-	s.grpcServer = grpc.NewServer(opts...)
+
 	return s
 }
 
