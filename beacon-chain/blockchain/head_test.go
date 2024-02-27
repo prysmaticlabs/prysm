@@ -63,7 +63,7 @@ func TestSaveHead_Different(t *testing.T) {
 	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot()-1, wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
+	state, blkRoot, err = prepareForkchoiceState(ctx, slots.PrevSlot(wsb.Block().Slot()), wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
@@ -238,7 +238,7 @@ func TestRetrieveHead_ReadOnly(t *testing.T) {
 	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err := prepareForkchoiceState(ctx, wsb.Block().Slot()-1, wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
+	state, blkRoot, err := prepareForkchoiceState(ctx, slots.PrevSlot(wsb.Block().Slot()), wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
