@@ -119,21 +119,21 @@ func InitWithReset(c *Flags) func() {
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context) error {
 	if ctx.Bool(PraterTestnet.Name) {
-		log.Warn("Running on the Prater Testnet")
+		log.Info("Running on the Prater Testnet")
 		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
 			return err
 		}
 		applyPraterFeatureFlags(ctx)
 		params.UsePraterNetworkConfig()
 	} else if ctx.Bool(SepoliaTestnet.Name) {
-		log.Warn("Running on the Sepolia Beacon Chain Testnet")
+		log.Info("Running on the Sepolia Beacon Chain Testnet")
 		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
 			return err
 		}
 		applySepoliaFeatureFlags(ctx)
 		params.UseSepoliaNetworkConfig()
 	} else if ctx.Bool(HoleskyTestnet.Name) {
-		log.Warn("Running on the Holesky Beacon Chain Testnet")
+		log.Info("Running on the Holesky Beacon Chain Testnet")
 		if err := params.SetActive(params.HoleskyConfig().Copy()); err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ func configureTestnet(ctx *cli.Context) error {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
 		} else {
-			log.Warn("Running on Ethereum Mainnet")
+			log.Info("Running on Ethereum Mainnet")
 		}
 		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
 			return err
