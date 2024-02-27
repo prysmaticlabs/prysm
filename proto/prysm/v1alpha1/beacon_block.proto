@@ -788,10 +788,10 @@ message BlobSidecars {
 
 message BeaconBlockePBS {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte root of the parent block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -841,11 +841,8 @@ message BeaconBlockBodyePBS {
     // Signed execution payload header envelope. New in ePBS
     ethereum.engine.v1.SignedExecutionPayloadHeaderEnvelope signed_execution_payload_header_envelope = 11; 
 
-    // Signed inclusion list summary. New in ePBS
-    ethereum.engine.v1.SignedInclusionListSummary inclusion_list_summary = 12;
-
     // Payload attestations. New in ePBS
-    repeated ethereum.engine.v1.PayloadAttestation payload_attestations = 13 [(ethereum.eth.ext.ssz_max) = "payload_attestation.size"];
+    repeated ethereum.engine.v1.PayloadAttestation payload_attestations = 12 [(ethereum.eth.ext.ssz_max) = "payload_attestation.size"];
 }
 
 message SignedBeaconBlockePBS {
