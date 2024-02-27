@@ -3,13 +3,15 @@ new file mode 100644
 index 0000000..f15d38e
 --- /dev/null
 +++ b/BUILD.bazel
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,133 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 +load("@rules_cc//cc:defs.bzl", "cc_library")
 +
 +cc_library(
 +    name = "zstd_cc",
 +    srcs = [
++        "allocations.h",
++        "bits.h",
 +        "bitstream.h",
 +        "clevels.h",
 +        "compiler.h",
