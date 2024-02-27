@@ -26,7 +26,7 @@ func TestBlockSignature(t *testing.T) {
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	assert.NoError(t, err)
 
-	assert.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
+	assert.NoError(t, beaconState.SetSlot(slots.PrevSlot(beaconState.Slot())))
 	epoch := slots.ToEpoch(block.Block.Slot)
 	blockSig, err := signing.ComputeDomainAndSign(beaconState, epoch, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)

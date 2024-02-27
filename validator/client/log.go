@@ -138,7 +138,9 @@ func (v *validator) LogSubmittedAtts(slot primitives.Slot) {
 
 // LogSubmittedSyncCommitteeMessages logs info about submitted sync committee messages.
 func (v *validator) LogSubmittedSyncCommitteeMessages() {
-	log.WithField("messages", v.syncCommitteeStats.totalMessagesSubmitted).Debug("Submitted sync committee messages successfully to beacon node")
-	// Reset the amount.
-	atomic.StoreUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 0)
+	if v.syncCommitteeStats.totalMessagesSubmitted > 0 {
+		log.WithField("messages", v.syncCommitteeStats.totalMessagesSubmitted).Debug("Submitted sync committee messages successfully to beacon node")
+		// Reset the amount.
+		atomic.StoreUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 0)
+	}
 }
