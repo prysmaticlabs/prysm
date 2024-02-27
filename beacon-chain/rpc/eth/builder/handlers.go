@@ -80,7 +80,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, handleWrapError(err, "could not get optimistic mode info", http.StatusInternalServerError))
 		return
 	}
-	root, err := helpers.BlockRootAtSlot(st, st.Slot()-1)
+	root, err := helpers.BlockRootAtSlot(st, slots.PrevSlot(st.Slot()))
 	if err != nil {
 		httputil.WriteError(w, handleWrapError(err, "could not get block root", http.StatusInternalServerError))
 		return

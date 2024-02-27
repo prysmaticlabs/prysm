@@ -221,7 +221,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.ValidatorIndex = primitives.ValidatorIndex(chosenVal)
 				msg.Slot = slots.PrevSlot(hState.Slot())
 
-				gt := time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1))
+				gt := time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(slots.PrevSlot(hState.Slot())))
 				vr := [32]byte{'A'}
 				clock := startup.NewClock(gt, vr)
 				digest, err := forks.CreateForkDigest(gt, vr[:])
@@ -268,7 +268,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.ValidatorIndex = primitives.ValidatorIndex(chosenVal)
 				msg.Slot = slots.PrevSlot(hState.Slot())
 
-				gt := time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1))
+				gt := time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(slots.PrevSlot(hState.Slot())))
 				vr := [32]byte{'A'}
 				digest, err := forks.CreateForkDigest(gt, vr[:])
 				assert.NoError(t, err)
@@ -322,7 +322,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				}
 
 				// Set Topic and Subnet
-				gt := time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1))
+				gt := time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(slots.PrevSlot(hState.Slot())))
 				vr := [32]byte{'A'}
 				digest, err := forks.CreateForkDigest(gt, vr[:])
 				assert.NoError(t, err)
@@ -380,7 +380,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Slot = slots.PrevSlot(hState.Slot())
 
 				// Set Topic and Subnet
-				gt := time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1))
+				gt := time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(slots.PrevSlot(hState.Slot())))
 				vr := [32]byte{'A'}
 				digest, err := forks.CreateForkDigest(gt, vr[:])
 				assert.NoError(t, err)
