@@ -152,6 +152,7 @@ func (b batch) withState(s batchState) batch {
 		b.scheduled = time.Now()
 		switch b.state {
 		case batchErrRetryable:
+			backfillBatchRetries.Inc()
 			b.retries += 1
 			log.WithFields(b.logFields()).Info("Sequencing batch for retry")
 		case batchInit, batchNil:

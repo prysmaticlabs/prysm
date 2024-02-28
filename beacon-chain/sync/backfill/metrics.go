@@ -57,6 +57,12 @@ var (
 			Help: "Number of BeaconBlock values downloaded from peers for backfill.",
 		},
 	)
+	backfillBatchRetries = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "backfill_batch_retries",
+			Help: "Number of times batches have failed with a retryable error.",
+		},
+	)
 	backfillBatchTimeRoundtrip = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "backfill_batch_time_roundtrip",
