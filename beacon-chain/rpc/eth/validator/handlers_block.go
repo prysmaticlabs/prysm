@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
@@ -21,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -220,13 +218,11 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	now := time.Now()
 	consensusBlockValue, httpError := getConsensusBlockValue(ctx, s.BlockRewardFetcher, v1alpha1resp.Block)
 	if httpError != nil {
 		httputil.WriteError(w, httpError)
 		return
 	}
-	log.Infof("getConsensusBlockValue took %d milliseconds", time.Since(now).Milliseconds())
 
 	w.Header().Set(api.ExecutionPayloadBlindedHeader, fmt.Sprintf("%v", v1alpha1resp.IsBlinded))
 	w.Header().Set(api.ExecutionPayloadValueHeader, v1alpha1resp.PayloadValue)

@@ -104,7 +104,7 @@ func TestReplayToSlot(t *testing.T) {
 	hist := newMockHistory(t, specs, five+1)
 	ch := NewCanonicalHistory(hist, hist, hist)
 
-	st, err := ch.ReplayerForSlot(53).ReplayToSlot(ctx, 53)
+	st, err := ch.ReplayerForSlot(five).ReplayToSlot(ctx, five)
 	require.NoError(t, err)
 	expected := hist.hiddenStates[hist.slotMap[five]]
 	expectedHTR, err := expected.HashTreeRoot(ctx)
