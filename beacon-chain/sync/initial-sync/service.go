@@ -313,7 +313,7 @@ func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
 	}
 	blk, err := s.cfg.DB.Block(s.ctx, r)
 	if err != nil {
-		log.WithField("root", r).Error("Block for checkpoint sync origin root not found in db")
+		log.WithField("root", fmt.Sprintf("%#x", r)).Error("Block for checkpoint sync origin root not found in db")
 		return err
 	}
 	rob, err := blocks.NewROBlockWithRoot(blk, r)
