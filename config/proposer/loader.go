@@ -137,7 +137,7 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 		case defaultFlag:
 			suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
 			if !common.IsHexAddress(suggestedFee) {
-				return nil, errors.New("default fee recipient is not a valid Ethereum address")
+				return nil, errors.Errorf("--%s is not a valid Ethereum address", flags.SuggestedFeeRecipientFlag.Name)
 			}
 			if err := config.WarnNonChecksummedAddress(suggestedFee); err != nil {
 				return nil, err
