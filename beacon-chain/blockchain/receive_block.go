@@ -32,6 +32,9 @@ import (
 // This defines how many epochs since finality the run time will begin to save hot state on to the DB.
 var epochsSinceFinalitySaveHotStateDB = primitives.Epoch(100)
 
+// This defines how many epochs since finality the run time will begin to expand our respective cache sizes.
+var epochsSinceFinalityExpandCache = primitives.Epoch(4)
+
 // BlockReceiver interface defines the methods of chain service for receiving and processing new blocks.
 type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, avs das.AvailabilityStore) error
@@ -185,6 +188,11 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 
 	// Have we been finalizing? Should we start saving hot states to db?
 	if err := s.checkSaveHotStateDB(ctx); err != nil {
+		return err
+	}
+
+	// We apply the same heuristic to some of our more important caches.
+	if err := s.handleCaches(); err != nil {
 		return err
 	}
 
@@ -359,6 +367,27 @@ func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	}
 
 	return s.cfg.StateGen.DisableSaveHotStateToDB(ctx)
+}
+
+func (s *Service) handleCaches() error {
+	currentEpoch := slots.ToEpoch(s.CurrentSlot())
+	// Prevent `sinceFinality` going underflow.
+	var sinceFinality primitives.Epoch
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
+	if currentEpoch > finalized.Epoch {
+		sinceFinality = currentEpoch - finalized.Epoch
+	}
+
+	if sinceFinality >= epochsSinceFinalityExpandCache {
+		helpers.ExpandCommitteeCache()
+		return nil
+	}
+
+	helpers.CompressCommitteeCache()
+	return nil
 }
 
 // This performs the state transition function and returns the poststate or an
