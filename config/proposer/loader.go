@@ -158,7 +158,7 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 				return nil, err
 			}
 			if settingFromFile == nil {
-				return nil, errors.New("proposer settings is empty after unmarshalling from file")
+				return nil, errors.Errorf("proposer settings is empty after unmarshalling from file specified by %s flag", flags.ProposerSettingsFlag.Name)
 			}
 			loadConfig = psl.processProposerSettings(settingFromFile, loadConfig)
 		case urlFlag:
