@@ -227,7 +227,7 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current primitives.Slo
 	for _, spec := range hist {
 		// call process_slots and process_block separately, because process_slots updates values used in randao mix
 		// which influences proposer_index.
-		s, err := ReplayProcessSlots(ctx, ps, [32]byte{}, spec.slot)
+		s, err := ReplayProcessSlots(ctx, ps, spec.slot)
 		require.NoError(t, err)
 
 		// create proposer block, setting values in the order seen in the validator.md spec
