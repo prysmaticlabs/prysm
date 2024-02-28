@@ -64,7 +64,7 @@ func WithGasLimit() SettingsLoaderOption {
 			gl, err := strconv.ParseUint(sgl, 10, 64)
 			if err != nil {
 				return errors.New("Gas Limit is not a uint64")
-			}
+				return errors.Errorf("Value set by --%s is not a uint64", flags.BuilderGasLimitFlag.Name)
 			psl.options.gasLimit = reviewGasLimit(validator.Uint64(gl))
 			psl.options.hasGasLimit = true
 		}
