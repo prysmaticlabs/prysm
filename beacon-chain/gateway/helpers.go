@@ -11,7 +11,6 @@ import (
 
 // MuxConfig contains configuration that should be used when registering the beacon node in the gateway.
 type MuxConfig struct {
-	Handler      gateway.MuxHandler
 	EthPbMux     *gateway.PbMux
 	V1AlphaPbMux *gateway.PbMux
 }

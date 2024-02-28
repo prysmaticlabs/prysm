@@ -74,3 +74,11 @@ func (c *FakeCommitteeCache) MarkNotInProgress(seed [32]byte) error {
 func (c *FakeCommitteeCache) Clear() {
 	return
 }
+
+func (c *FakeCommitteeCache) ExpandCommitteeCache() {
+	return
+}
+
+func (c *FakeCommitteeCache) CompressCommitteeCache() {
+	return
+}
