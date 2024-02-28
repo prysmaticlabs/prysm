@@ -75,7 +75,7 @@ func WithGasLimit() SettingsLoaderOption {
 // NewProposerSettingsLoader returns a new proposer settings loader that can process the proposer settings based on flag options
 func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts ...SettingsLoaderOption) (*SettingsLoader, error) {
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
-		return nil, fmt.Errorf("cannot specify both %s and %s flags; choose one method for specifying proposer settings", flags.ProposerSettingsFlag.Name, flags.ProposerSettingsURLFlag.Name)
+		return nil, fmt.Errorf("cannot specify both --%s and --%s flags; choose one method for specifying proposer settings", flags.ProposerSettingsFlag.Name, flags.ProposerSettingsURLFlag.Name)
 	}
 	psExists, err := db.ProposerSettingsExists(cliCtx.Context)
 	if err != nil {
