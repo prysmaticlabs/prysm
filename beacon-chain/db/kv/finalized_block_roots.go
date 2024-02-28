@@ -234,7 +234,7 @@ func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (in
 }
 
 func pathToFinalizedCheckpoint(ctx context.Context, roots [][]byte, checkpointRoot []byte, tx *bolt.Tx) (bool, [][]byte) {
-	if len(roots) == 1 && roots[0] == nil {
+	if len(roots) == 0 || (len(roots) == 1 && roots[0] == nil) {
 		return false, nil
 	}
 
@@ -242,8 +242,11 @@ func pathToFinalizedCheckpoint(ctx context.Context, roots [][]byte, checkpointRo
 		if bytes.Equal(r, checkpointRoot) {
 			return true, [][]byte{r}
 		}
-		children := lookupValuesForIndices(ctx, map[string][]byte{string(blockParentRootIndicesBucket): r}, tx)[0]
-		isPath, path := pathToFinalizedCheckpoint(ctx, children, checkpointRoot, tx)
+		children := lookupValuesForIndices(ctx, map[string][]byte{string(blockParentRootIndicesBucket): r}, tx)
+		if len(children) == 0 {
+			children = [][][]byte{nil}
+		}
+		isPath, path := pathToFinalizedCheckpoint(ctx, children[0], checkpointRoot, tx)
 		if isPath {
 			return true, append([][]byte{r}, path...)
 		}
