@@ -154,7 +154,6 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo primitives.S
 	}
 	if err == nil {
 		if nss := transition.NextSlotState(r[:], replayTo); nss != nil {
-			log.Info("CACHE HIT")
 			s = nss
 		}
 	}
