@@ -16,7 +16,8 @@ import (
 func TestUnmarshalFromURL_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"key":"value"}`)) // Mock JSON response
+		_, err := w.Write([]byte(`{"key":"value"}`))
+		require.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -36,7 +37,7 @@ func TestUnmarshalFromFile_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create temporary file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name()) // Clean up
+	defer require.NoError(t, os.Remove(tmpFile.Name())) // Clean up
 
 	content := []byte("key: value")
 	_, err = tmpFile.Write(content)
