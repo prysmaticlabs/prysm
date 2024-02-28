@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
@@ -15,7 +14,6 @@ import (
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
-	"github.com/sirupsen/logrus"
 )
 
 // BlockRewardsFetcher is a interface that provides access to reward related responses
@@ -39,12 +37,10 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 		}
 	}
 
-	start := time.Now()
 	st, httpErr := rs.GetStateForRewards(ctx, blk)
 	if httpErr != nil {
 		return nil, httpErr
 	}
-	logrus.Infof("GetStateForRewards took %d milliseconds", time.Since(start).Milliseconds())
 
 	proposerIndex := blk.ProposerIndex()
 	initBalance, err := st.BalanceAtIndex(proposerIndex)
@@ -54,8 +50,6 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 			Code:    http.StatusInternalServerError,
 		}
 	}
-
-	start = time.Now()
 	st, err = altair.ProcessAttestationsNoVerifySignature(ctx, st, blk)
 	if err != nil {
 		return nil, &httputil.DefaultJsonError{
@@ -63,8 +57,6 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 			Code:    http.StatusInternalServerError,
 		}
 	}
-	logrus.Infof("ProcessAttestationsNoVerifySignature took %d milliseconds", time.Since(start).Milliseconds())
-
 	attBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
 		return nil, &httputil.DefaultJsonError{
@@ -72,8 +64,6 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 			Code:    http.StatusInternalServerError,
 		}
 	}
-
-	start = time.Now()
 	st, err = coreblocks.ProcessAttesterSlashings(ctx, st, blk.Body().AttesterSlashings(), validators.SlashValidator)
 	if err != nil {
 		return nil, &httputil.DefaultJsonError{
@@ -81,8 +71,6 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 			Code:    http.StatusInternalServerError,
 		}
 	}
-	logrus.Infof("ProcessAttesterSlashings took %d milliseconds", time.Since(start).Milliseconds())
-
 	attSlashingsBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
 		return nil, &httputil.DefaultJsonError{
@@ -90,8 +78,6 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 			Code:    http.StatusInternalServerError,
 		}
 	}
-
-	start = time.Now()
 	st, err = coreblocks.ProcessProposerSlashings(ctx, st, blk.Body().ProposerSlashings(), validators.SlashValidator)
 	if err != nil {
 		return nil, &httputil.DefaultJsonError{
@@ -99,8 +85,6 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 			Code:    http.StatusInternalServerError,
 		}
 	}
-	logrus.Infof("ProcessProposerSlashings took %d milliseconds", time.Since(start).Milliseconds())
-
 	proposerSlashingsBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
 		return nil, &httputil.DefaultJsonError{
@@ -115,8 +99,6 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 			Code:    http.StatusInternalServerError,
 		}
 	}
-
-	start = time.Now()
 	var syncCommitteeReward uint64
 	_, syncCommitteeReward, err = altair.ProcessSyncAggregate(ctx, st, sa)
 	if err != nil {
@@ -125,7 +107,6 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 			Code:    http.StatusInternalServerError,
 		}
 	}
-	logrus.Infof("ProcessSyncAggregate took %d milliseconds", time.Since(start).Milliseconds())
 
 	return &structs.BlockRewards{
 		ProposerIndex:     strconv.FormatUint(uint64(proposerIndex), 10),
