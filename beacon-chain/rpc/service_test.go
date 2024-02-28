@@ -3,12 +3,17 @@ package rpc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v5/api/gateway"
+	"github.com/prysmaticlabs/prysm/v5/api/server"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/beacon"
@@ -25,11 +30,56 @@ import (
 	validatorprysm "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func TestRoute(t *testing.T) {
+	r := mux.NewRouter()
+	r.Use(server.CorsHandler(nil))
+	s := NewService(context.Background(), &Config{
+		Router: r,
+	})
+	address := fmt.Sprintf("%s:%s", flags.RPCHost.Value, fmt.Sprintf("%d", flags.RPCPort.Value))
+	lis, err := net.Listen("tcp", address)
+	if err != nil {
+		log.Warn(err.Error())
+	}
+	//var wg sync.WaitGroup
+	//wg.Add(2)
+	go func() {
+		//defer wg.Done()
+		s.initializeNodeServerRoutes(&node.Server{})
+		if err := s.grpcServer.Serve(lis); err != nil {
+			log.Warn(err.Error())
+		}
+	}()
+	go func() {
+		//defer wg.Done()
+		g, err := gateway.New(context.Background(), gateway.WithRouter(r))
+		if err != nil {
+			log.Warn(err)
+		}
+		g.Start()
+	}()
+
+	// Wait for all goroutines to finish
+	//wg.Wait()
+	req, err := http.NewRequest("GET", "/eth/v1/node/version", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	s.cfg.Router.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)

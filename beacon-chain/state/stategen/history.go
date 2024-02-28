@@ -110,6 +110,7 @@ func (c *CanonicalHistory) chainForSlot(ctx context.Context, target primitives.S
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "no canonical block root found below slot=%d", target)
 	}
+
 	b, err := c.h.Block(ctx, r)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "unable to retrieve canonical block for slot, root=%#x", r)

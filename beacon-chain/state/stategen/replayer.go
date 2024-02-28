@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -59,6 +60,7 @@ var _ Replayer = &stateReplayer{}
 // chainer is responsible for supplying the chain components necessary to rebuild a state,
 // namely a starting BeaconState and all available blocks from the starting state up to and including the target slot
 type chainer interface {
+	BlockRootForSlot(ctx context.Context, target primitives.Slot) ([32]byte, error)
 	chainForSlot(ctx context.Context, target primitives.Slot) (state.BeaconState, []interfaces.ReadOnlySignedBeaconBlock, error)
 }
 
@@ -137,13 +139,24 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo primitives.S
 
 	s, err := rs.ReplayBlocks(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to ReplayBlocks")
+		return nil, errors.Wrap(err, "failed to replay blocks")
 	}
 	if replayTo < s.Slot() {
 		return nil, errors.Wrapf(ErrReplayTargetSlotExceeded, "slot desired=%d, state.slot=%d", replayTo, s.Slot())
 	}
 	if replayTo == s.Slot() {
 		return s, nil
+	}
+
+	r, err := rs.chainer.BlockRootForSlot(ctx, s.Slot())
+	if err != nil && !errors.Is(err, ErrNoCanonicalBlockForSlot) {
+		return nil, errors.Wrap(err, "could not get block root for replayed state's slot")
+	}
+	if err == nil {
+		if nss := transition.NextSlotState(r[:], replayTo); nss != nil {
+			log.Info("CACHE HIT")
+			s = nss
+		}
 	}
 
 	start := time.Now()
