@@ -72,10 +72,6 @@ func TestProposerSettingsLoader(t *testing.T) {
 						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
 						},
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{
-							Enabled:  true,
-							GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
-						},
 					},
 				}
 			},
@@ -95,7 +91,7 @@ func TestProposerSettingsLoader(t *testing.T) {
 			},
 		},
 		{
-			name: "db settings override file settings if file proposer config is missing",
+			name: "db settings override file settings if file proposer config is missing and enable builder is true",
 			args: args{
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/default-only-proposer-config.json",
@@ -147,6 +143,7 @@ func TestProposerSettingsLoader(t *testing.T) {
 				}
 				return db.SaveProposerSettings(context.Background(), settings)
 			},
+			validatorRegistrationEnabled: true,
 		},
 		{
 			name: "Empty json file loaded throws a warning",
@@ -402,6 +399,44 @@ func TestProposerSettingsLoader(t *testing.T) {
 			},
 			wantErr:                      "",
 			validatorRegistrationEnabled: true,
+		},
+		{
+			name: "File with default gas that overrides",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config.yaml",
+					url:        "",
+					defaultfee: "",
+					defaultgas: "50000000",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
+							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+								Enabled:  true,
+								GasLimit: 50000000,
+							},
+						},
+					},
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							Enabled:  false,
+							GasLimit: validator.Uint64(50000000),
+						},
+					},
+				}
+			},
+			wantErr: "",
 		},
 		{
 			name: "Suggested Fee does not Override Config",

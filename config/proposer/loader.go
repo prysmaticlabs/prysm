@@ -36,8 +36,7 @@ type SettingsLoader struct {
 
 type flagOptions struct {
 	builderConfig *validatorService.BuilderConfig
-	gasLimit      validator.Uint64
-	hasGasLimit   bool
+	gasLimit      *validator.Uint64
 }
 
 // SettingsLoaderOption sets additional options that affect the proposer settings
@@ -63,10 +62,10 @@ func WithGasLimit() SettingsLoaderOption {
 		if sgl != "" {
 			gl, err := strconv.ParseUint(sgl, 10, 64)
 			if err != nil {
-				return errors.New("Gas Limit is not a uint64")
 				return errors.Errorf("Value set by --%s is not a uint64", flags.BuilderGasLimitFlag.Name)
-			psl.options.gasLimit = reviewGasLimit(validator.Uint64(gl))
-			psl.options.hasGasLimit = true
+			}
+			rgl := reviewGasLimit(validator.Uint64(gl))
+			psl.options.gasLimit = &rgl
 		}
 		return nil
 	}
@@ -81,7 +80,7 @@ func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts .
 	if err != nil {
 		return nil, err
 	}
-	psl := &SettingsLoader{db: db, options: &flagOptions{}}
+	psl := &SettingsLoader{db: db, existsInDB: psExists, options: &flagOptions{}}
 
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		psl.loadMethods = append(psl.loadMethods, defaultFlag)
@@ -101,9 +100,6 @@ func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts .
 		psl.loadMethods = append(psl.loadMethods, method)
 	}
 
-	if psExists {
-		psl.existsInDB = true
-	}
 	for _, o := range opts {
 		if err := o(cliCtx, psl); err != nil {
 			return nil, err
@@ -115,11 +111,11 @@ func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts .
 
 // Load saves the proposer settings to the database
 func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.ProposerSettings, error) {
-	var loadConfig *validatorpb.ProposerSettingsPayload
+	loadConfig := &validatorpb.ProposerSettingsPayload{}
 
 	// override settings based on other options
-	if psl.options.builderConfig != nil && psl.options.hasGasLimit {
-		psl.options.builderConfig.GasLimit = psl.options.gasLimit
+	if psl.options.builderConfig != nil && psl.options.gasLimit != nil {
+		psl.options.builderConfig.GasLimit = *psl.options.gasLimit
 	}
 
 	// check if database has settings already
@@ -148,13 +144,10 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 			if psl.options.builderConfig != nil {
 				defaultConfig.Builder = psl.options.builderConfig.ToConsensus()
 			}
-			if loadConfig == nil {
-				loadConfig = &validatorpb.ProposerSettingsPayload{}
-			}
 			loadConfig.DefaultConfig = defaultConfig
 		case fileFlag:
 			var settingFromFile *validatorpb.ProposerSettingsPayload
-			if err := config.UnmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ProposerSettingsFlag.Name), &settingFromFile); err != nil {
+			if err := config.UnmarshalFromFile(cliCtx.String(flags.ProposerSettingsFlag.Name), &settingFromFile); err != nil {
 				return nil, err
 			}
 			if settingFromFile == nil {
@@ -179,9 +172,6 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 				option := &validatorService.ProposerOption{
 					BuilderConfig: psl.options.builderConfig.Clone(),
 				}
-				if loadConfig == nil {
-					loadConfig = &validatorpb.ProposerSettingsPayload{}
-				}
 				loadConfig.DefaultConfig = option.ToConsensus()
 			}
 		default:
@@ -190,7 +180,7 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 	}
 
 	// exit early if nothing is provided
-	if loadConfig == nil {
+	if loadConfig == nil || (loadConfig.ProposerConfig == nil && loadConfig.DefaultConfig == nil) {
 		log.Warn("No proposer settings were provided")
 		return nil, nil
 	}
@@ -205,70 +195,79 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 }
 
 func (psl *SettingsLoader) processProposerSettings(loadedSettings, dbSettings *validatorpb.ProposerSettingsPayload) *validatorpb.ProposerSettingsPayload {
-	dbOnly := false
 	if loadedSettings == nil && dbSettings == nil {
 		return nil
 	}
-	// fill in missing data from db
-	if loadedSettings == nil && dbSettings != nil {
-		dbOnly = true
-		loadedSettings = dbSettings
+
+	// loaded settings have higher priority than db settings
+	newSettings := &validatorpb.ProposerSettingsPayload{}
+
+	var builderConfig *validatorpb.BuilderConfig
+	var gasLimitOnly *validator.Uint64
+
+	if psl.options != nil {
+		if psl.options.builderConfig != nil {
+			builderConfig = psl.options.builderConfig.ToConsensus()
+		}
+		if psl.options.gasLimit != nil {
+			gasLimitOnly = psl.options.gasLimit
+		}
 	}
-	if loadedSettings.DefaultConfig == nil && dbSettings != nil && dbSettings.DefaultConfig != nil {
-		loadedSettings.DefaultConfig = dbSettings.DefaultConfig
+
+	if dbSettings != nil && dbSettings.DefaultConfig != nil {
+		if builderConfig == nil {
+			dbSettings.DefaultConfig.Builder = nil
+		}
+		newSettings.DefaultConfig = dbSettings.DefaultConfig
 	}
-	if loadedSettings.ProposerConfig == nil && dbSettings != nil && dbSettings.ProposerConfig != nil {
-		loadedSettings.ProposerConfig = dbSettings.ProposerConfig
+	if loadedSettings != nil && loadedSettings.DefaultConfig != nil {
+		newSettings.DefaultConfig = loadedSettings.DefaultConfig
 	}
+
+	// process any builder overrides on defaults
+	if newSettings.DefaultConfig != nil {
+		newSettings.DefaultConfig.Builder = processBuilderConfig(newSettings.DefaultConfig.Builder, builderConfig, gasLimitOnly)
+	}
+
+	if dbSettings != nil && len(dbSettings.ProposerConfig) != 0 {
+		for _, option := range dbSettings.ProposerConfig {
+			if builderConfig == nil {
+				option.Builder = nil
+			}
+		}
+		newSettings.ProposerConfig = dbSettings.ProposerConfig
+	}
+	if loadedSettings != nil && len(loadedSettings.ProposerConfig) != 0 {
+		newSettings.ProposerConfig = loadedSettings.ProposerConfig
+	}
+
+	// process any overrides for proposer config
+	for _, option := range newSettings.ProposerConfig {
+		if option != nil {
+			option.Builder = processBuilderConfig(option.Builder, builderConfig, gasLimitOnly)
+		}
+	}
+
 	// if default and proposer configs are both missing even after db setting
-	if loadedSettings.DefaultConfig == nil && loadedSettings.ProposerConfig == nil {
+	if newSettings.DefaultConfig == nil && newSettings.ProposerConfig == nil {
 		return nil
 	}
 
-	if loadedSettings.DefaultConfig != nil {
-		if loadedSettings.DefaultConfig.Builder != nil {
-			loadedSettings.DefaultConfig.Builder.GasLimit = reviewGasLimit(loadedSettings.DefaultConfig.Builder.GasLimit)
-		}
-		// override the db settings with the results based on whether the --enable-builder flag is provided.
-		if psl.options.builderConfig == nil && dbOnly {
-			loadedSettings.DefaultConfig.Builder = nil
-		}
-		if psl.options.builderConfig != nil {
-			o := psl.options.builderConfig.ToConsensus()
-			if loadedSettings.DefaultConfig.Builder != nil {
-				// only override the enabled if builder settings exist
-				loadedSettings.DefaultConfig.Builder.Enabled = o.Enabled
-			} else {
-				loadedSettings.DefaultConfig.Builder = o
-			}
-		} else if psl.options.hasGasLimit && loadedSettings.DefaultConfig.Builder != nil {
-			loadedSettings.DefaultConfig.Builder.GasLimit = psl.options.gasLimit
-		}
-	}
-	if loadedSettings.ProposerConfig != nil && len(loadedSettings.ProposerConfig) != 0 {
-		for _, option := range loadedSettings.ProposerConfig {
-			if option.Builder != nil {
-				option.Builder.GasLimit = reviewGasLimit(option.Builder.GasLimit)
-			}
-			// override the db settings with the results based on whether the --enable-builder flag is provided.
-			if psl.options.builderConfig == nil && dbOnly {
-				option.Builder = nil
-			}
-			if psl.options.builderConfig != nil {
-				o := psl.options.builderConfig.ToConsensus()
-				if option.Builder != nil {
-					// only override the enabled if builder settings exist
-					option.Builder.Enabled = o.Enabled
-				} else {
-					option.Builder = o
-				}
-			} else if psl.options.hasGasLimit && option.Builder != nil {
-				option.Builder.GasLimit = psl.options.gasLimit
-			}
-		}
-	}
+	return newSettings
+}
 
-	return loadedSettings
+func processBuilderConfig(current *validatorpb.BuilderConfig, override *validatorpb.BuilderConfig, gasLimitOnly *validator.Uint64) *validatorpb.BuilderConfig {
+	if current != nil {
+		current.GasLimit = reviewGasLimit(current.GasLimit)
+		if override != nil {
+			current.Enabled = override.Enabled
+		}
+		if gasLimitOnly != nil {
+			current.GasLimit = *gasLimitOnly
+		}
+		return current
+	}
+	return override
 }
 
 func reviewGasLimit(gasLimit validator.Uint64) validator.Uint64 {
