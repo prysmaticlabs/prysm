@@ -320,7 +320,6 @@ func TestHandleCaches_EnablingLargeSize(t *testing.T) {
 
 func TestHandleCaches_DisablingLargeSize(t *testing.T) {
 	hook := logTest.NewGlobal()
-
 	s, _ := minimalTestService(t)
 
 	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
