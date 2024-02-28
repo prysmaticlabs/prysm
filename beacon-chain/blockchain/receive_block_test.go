@@ -308,6 +308,29 @@ func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
 	assert.LogsDoNotContain(t, hook, "Entering mode to save hot states in DB")
 }
 
+func TestHandleCaches_EnablingLargeSize(t *testing.T) {
+	hook := logTest.NewGlobal()
+	s, _ := minimalTestService(t)
+	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
+	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+
+	require.NoError(t, s.handleCaches())
+	assert.LogsContain(t, hook, "Expanding committee cache size")
+}
+
+func TestHandleCaches_DisablingLargeSize(t *testing.T) {
+	hook := logTest.NewGlobal()
+	s, _ := minimalTestService(t)
+
+	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
+	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+	require.NoError(t, s.handleCaches())
+	s.genesisTime = time.Now()
+
+	require.NoError(t, s.handleCaches())
+	assert.LogsContain(t, hook, "Reducing committee cache size")
+}
+
 func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 	service, tr := minimalTestService(t)
 	pool := tr.blsPool
