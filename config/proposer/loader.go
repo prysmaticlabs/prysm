@@ -64,6 +64,9 @@ func WithGasLimit() SettingsLoaderOption {
 			if err != nil {
 				return errors.Errorf("Value set by --%s is not a uint64", flags.BuilderGasLimitFlag.Name)
 			}
+			if gl == 0 {
+				log.Warn("Gas limit was intentionally set to 0, this will be replaced with the default gas limit of %d", params.BeaconConfig().DefaultBuilderGasLimit)
+			}
 			rgl := reviewGasLimit(validator.Uint64(gl))
 			psl.options.gasLimit = &rgl
 		}
