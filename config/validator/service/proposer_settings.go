@@ -149,6 +149,9 @@ type ProposerOption struct {
 
 // Clone creates a deep copy of proposer option
 func (po *ProposerOption) Clone() *ProposerOption {
+	if po == nil {
+		return nil
+	}
 	p := &ProposerOption{}
 	if po.FeeRecipientConfig != nil {
 		p.FeeRecipientConfig = po.FeeRecipientConfig.Clone()
@@ -160,6 +163,9 @@ func (po *ProposerOption) Clone() *ProposerOption {
 }
 
 func (po *ProposerOption) ToConsensus() *validatorpb.ProposerOptionPayload {
+	if po == nil {
+		return nil
+	}
 	p := &validatorpb.ProposerOptionPayload{}
 	if po.FeeRecipientConfig != nil {
 		p.FeeRecipient = po.FeeRecipientConfig.FeeRecipient.Hex()
@@ -172,6 +178,9 @@ func (po *ProposerOption) ToConsensus() *validatorpb.ProposerOptionPayload {
 
 // Clone creates a deep copy of the proposer settings
 func (ps *ProposerSettings) Clone() *ProposerSettings {
+	if ps == nil {
+		return nil
+	}
 	clone := &ProposerSettings{}
 	if ps.DefaultConfig != nil {
 		clone.DefaultConfig = ps.DefaultConfig.Clone()

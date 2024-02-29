@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -33,15 +34,13 @@ func TestUnmarshalFromURL_Success(t *testing.T) {
 
 func TestUnmarshalFromFile_Success(t *testing.T) {
 	// Temporarily create a YAML file
-	tmpFile, err := os.CreateTemp("", "example.*.yaml")
-	if err != nil {
-		t.Fatalf("Unable to create temporary file: %v", err)
-	}
+	tmpFile, err := os.CreateTemp(t.TempDir(), "example.*.yaml")
+	require.NoError(t, err)
 	defer require.NoError(t, os.Remove(tmpFile.Name())) // Clean up
 
 	content := []byte("key: value")
-	_, err = tmpFile.Write(content)
-	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(tmpFile.Name(), content, params.BeaconIoConfig().ReadWritePermissions))
 	require.NoError(t, tmpFile.Close())
 
 	var result map[string]string

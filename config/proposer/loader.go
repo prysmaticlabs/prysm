@@ -27,7 +27,7 @@ const (
 	onlyDB
 )
 
-type SettingsLoader struct {
+type settingsLoader struct {
 	loadMethods []SettingsType
 	existsInDB  bool
 	db          iface.ValidatorDB
@@ -40,11 +40,11 @@ type flagOptions struct {
 }
 
 // SettingsLoaderOption sets additional options that affect the proposer settings
-type SettingsLoaderOption func(cliCtx *cli.Context, psl *SettingsLoader) error
+type SettingsLoaderOption func(cliCtx *cli.Context, psl *settingsLoader) error
 
 // WithBuilderConfig applies the --enable-builder flag to proposer settings
 func WithBuilderConfig() SettingsLoaderOption {
-	return func(cliCtx *cli.Context, psl *SettingsLoader) error {
+	return func(cliCtx *cli.Context, psl *settingsLoader) error {
 		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
 			psl.options.builderConfig = &validatorService.BuilderConfig{
 				Enabled:  true,
@@ -57,7 +57,7 @@ func WithBuilderConfig() SettingsLoaderOption {
 
 // WithGasLimit applies the --suggested-gas-limit flag to proposer settings
 func WithGasLimit() SettingsLoaderOption {
-	return func(cliCtx *cli.Context, psl *SettingsLoader) error {
+	return func(cliCtx *cli.Context, psl *settingsLoader) error {
 		sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
 		if sgl != "" {
 			gl, err := strconv.ParseUint(sgl, 10, 64)
@@ -72,7 +72,7 @@ func WithGasLimit() SettingsLoaderOption {
 }
 
 // NewProposerSettingsLoader returns a new proposer settings loader that can process the proposer settings based on flag options
-func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts ...SettingsLoaderOption) (*SettingsLoader, error) {
+func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts ...SettingsLoaderOption) (*settingsLoader, error) {
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, fmt.Errorf("cannot specify both --%s and --%s flags; choose one method for specifying proposer settings", flags.ProposerSettingsFlag.Name, flags.ProposerSettingsURLFlag.Name)
 	}
@@ -80,7 +80,7 @@ func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts .
 	if err != nil {
 		return nil, err
 	}
-	psl := &SettingsLoader{db: db, existsInDB: psExists, options: &flagOptions{}}
+	psl := &settingsLoader{db: db, existsInDB: psExists, options: &flagOptions{}}
 
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		psl.loadMethods = append(psl.loadMethods, defaultFlag)
@@ -110,7 +110,7 @@ func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts .
 }
 
 // Load saves the proposer settings to the database
-func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.ProposerSettings, error) {
+func (psl *settingsLoader) Load(cliCtx *cli.Context) (*validatorService.ProposerSettings, error) {
 	loadConfig := &validatorpb.ProposerSettingsPayload{}
 
 	// override settings based on other options
@@ -194,7 +194,7 @@ func (psl *SettingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 	return ps, nil
 }
 
-func (psl *SettingsLoader) processProposerSettings(loadedSettings, dbSettings *validatorpb.ProposerSettingsPayload) *validatorpb.ProposerSettingsPayload {
+func (psl *settingsLoader) processProposerSettings(loadedSettings, dbSettings *validatorpb.ProposerSettingsPayload) *validatorpb.ProposerSettingsPayload {
 	if loadedSettings == nil && dbSettings == nil {
 		return nil
 	}
