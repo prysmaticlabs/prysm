@@ -2874,8 +2874,8 @@ func TestProposer_GetParentHeadState(t *testing.T) {
 		Eth1BlockFetcher:  &mockExecution.Chain{},
 		StateGen:          stategen.New(db, doublylinkedtree.New()),
 	}
-	t.Run("failed reorg", func(tt *testing.T) {
-		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, parentRoot, headRoot)
+	t.Run("successful reorg", func(tt *testing.T) {
+		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, parentRoot, parentRoot, headRoot)
 		require.NoError(t, err)
 		st := parentState.Copy()
 		st, err = transition.ProcessSlots(ctx, st, st.Slot()+1)
@@ -2892,7 +2892,7 @@ func TestProposer_GetParentHeadState(t *testing.T) {
 
 	t.Run("no reorg", func(tt *testing.T) {
 		require.NoError(t, transition.UpdateNextSlotCache(ctx, headRoot[:], headState))
-		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, headRoot, headRoot)
+		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, headRoot, headRoot, headRoot)
 		require.NoError(t, err)
 		st := headState.Copy()
 		st, err = transition.ProcessSlots(ctx, st, st.Slot()+1)
@@ -2905,5 +2905,24 @@ func TestProposer_GetParentHeadState(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, [32]byte(str), [32]byte(headStr))
 		require.NotEqual(t, [32]byte(str), [32]byte(genesisStr))
+	})
+
+	t.Run("failed reorg", func(tt *testing.T) {
+		hook := logTest.NewGlobal()
+		require.NoError(t, transition.UpdateNextSlotCache(ctx, headRoot[:], headState))
+		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, parentRoot, headRoot, headRoot)
+		require.NoError(t, err)
+		st := headState.Copy()
+		st, err = transition.ProcessSlots(ctx, st, st.Slot()+1)
+		require.NoError(t, err)
+		str, err := st.StateRootAtIndex(0)
+		require.NoError(t, err)
+		headStr, err := head.StateRootAtIndex(0)
+		require.NoError(t, err)
+		genesisStr, err := parentState.StateRootAtIndex(0)
+		require.NoError(t, err)
+		require.Equal(t, [32]byte(str), [32]byte(headStr))
+		require.NotEqual(t, [32]byte(str), [32]byte(genesisStr))
+		require.LogsContain(t, hook, "late block attempted reorg failed")
 	})
 }
