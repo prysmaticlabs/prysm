@@ -163,7 +163,7 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	parentHash, totalDifficulty, err := service.getBlkParentHashAndTD(ctx, h[:])
 	require.NoError(t, err)
 	require.Equal(t, p, bytesutil.ToBytes32(parentHash))
-	require.Equal(t, td, totalDifficulty.String())
+	require.Equal(t, td, totalDifficulty.Hex())
 
 	_, _, err = service.getBlkParentHashAndTD(ctx, []byte{'c'})
 	require.ErrorContains(t, "could not get pow block: block not found", err)
