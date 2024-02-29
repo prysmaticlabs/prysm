@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/mock"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"go.uber.org/mock/gomock"
 )
 
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {

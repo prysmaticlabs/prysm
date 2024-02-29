@@ -2,6 +2,7 @@
 
 # Script to update mock files after proto/prysm/v1alpha1/services.proto changes.
 # Use a space to separate mock destination from its interfaces.
+# Be sure to install mockgen before use: https://github.com/uber-go/mock
 
 mock_path="testing/mock"
 iface_mock_path="testing/validator-mock"

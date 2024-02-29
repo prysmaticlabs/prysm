@@ -416,6 +416,26 @@ func TestCopyAllTries(t *testing.T) {
 	assert.NotEqual(t, rt, newRt)
 }
 
+func TestDuplicateDirtyIndices(t *testing.T) {
+	newState := &BeaconState{
+		rebuildTrie:  make(map[types.FieldIndex]bool),
+		dirtyIndices: make(map[types.FieldIndex][]uint64),
+	}
+	for i := uint64(0); i < indicesLimit-5; i++ {
+		newState.dirtyIndices[types.Balances] = append(newState.dirtyIndices[types.Balances], i)
+	}
+	// Append duplicates
+	newState.dirtyIndices[types.Balances] = append(newState.dirtyIndices[types.Balances], []uint64{0, 1, 2, 3, 4}...)
+
+	// We would remove the duplicates and stay under the threshold
+	newState.addDirtyIndices(types.Balances, []uint64{9997, 9998})
+	assert.Equal(t, false, newState.rebuildTrie[types.Balances])
+
+	// We would trigger above the threshold.
+	newState.addDirtyIndices(types.Balances, []uint64{10000, 10001, 10002, 10003})
+	assert.Equal(t, true, newState.rebuildTrie[types.Balances])
+}
+
 func generateState(t *testing.T) state.BeaconState {
 	count := uint64(100)
 	vals := make([]*ethpb.Validator, 0, count)

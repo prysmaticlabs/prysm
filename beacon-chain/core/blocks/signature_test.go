@@ -79,11 +79,13 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 	}
 	domain, err := signing.Domain(fData, 100, params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorsRoot())
 	assert.NoError(t, err)
+	blkRoot, err := altairBlk.Block.HashTreeRoot()
+	assert.NoError(t, err)
 	rt, err := signing.ComputeSigningRoot(altairBlk.Block, domain)
 	assert.NoError(t, err)
 	sig := keys[0].Sign(rt[:]).Marshal()
 	altairBlk.Signature = sig
 	wsb, err := consensusblocks.NewSignedBeaconBlock(altairBlk)
 	require.NoError(t, err)
-	assert.NoError(t, blocks.VerifyBlockSignatureUsingCurrentFork(bState, wsb))
+	assert.NoError(t, blocks.VerifyBlockSignatureUsingCurrentFork(bState, wsb, blkRoot))
 }

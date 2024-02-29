@@ -69,7 +69,8 @@ type Flags struct {
 	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
-
+	// BlobSaveFsync requires blob saving to block on fsync to ensure blobs are durably persisted before passing DA.
+	BlobSaveFsync bool
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
@@ -118,21 +119,21 @@ func InitWithReset(c *Flags) func() {
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context) error {
 	if ctx.Bool(PraterTestnet.Name) {
-		log.Warn("Running on the Prater Testnet")
+		log.Info("Running on the Prater Testnet")
 		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
 			return err
 		}
 		applyPraterFeatureFlags(ctx)
 		params.UsePraterNetworkConfig()
 	} else if ctx.Bool(SepoliaTestnet.Name) {
-		log.Warn("Running on the Sepolia Beacon Chain Testnet")
+		log.Info("Running on the Sepolia Beacon Chain Testnet")
 		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
 			return err
 		}
 		applySepoliaFeatureFlags(ctx)
 		params.UseSepoliaNetworkConfig()
 	} else if ctx.Bool(HoleskyTestnet.Name) {
-		log.Warn("Running on the Holesky Beacon Chain Testnet")
+		log.Info("Running on the Holesky Beacon Chain Testnet")
 		if err := params.SetActive(params.HoleskyConfig().Copy()); err != nil {
 			return err
 		}
@@ -142,7 +143,7 @@ func configureTestnet(ctx *cli.Context) error {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
 		} else {
-			log.Warn("Running on Ethereum Mainnet")
+			log.Info("Running on Ethereum Mainnet")
 		}
 		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
 			return err
@@ -245,6 +246,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(EnableLightClient)
 		cfg.EnableLightClient = true
 	}
+	if ctx.IsSet(BlobSaveFsync.Name) {
+		logEnabled(BlobSaveFsync)
+		cfg.BlobSaveFsync = true
+	}
+
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil

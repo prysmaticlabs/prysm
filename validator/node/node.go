@@ -271,8 +271,8 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 			c.wallet = w
 			// TODO(#9883) - Remove this when we have a better way to handle this.
 			log.WithFields(logrus.Fields{
-				"wallet":          w.AccountsDir(),
-				"keymanager-kind": w.KeymanagerKind().String(),
+				"wallet":         w.AccountsDir(),
+				"keymanagerKind": w.KeymanagerKind().String(),
 			}).Info("Opened validator wallet")
 		}
 	}

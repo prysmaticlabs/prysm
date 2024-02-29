@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	blockchainTesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
@@ -22,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/v5/testing/mock"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestProduceBlockV2(t *testing.T) {

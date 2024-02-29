@@ -36,7 +36,7 @@ func (acm *CLIManager) WalletCreate(ctx context.Context) (*wallet.Wallet, error)
 		if err != nil {
 			return nil, err
 		}
-		log.WithField("--wallet-dir", acm.walletDir).Info(
+		log.WithField("walletDir", acm.walletDir).Info(
 			"Successfully created wallet with ability to import keystores",
 		)
 	case keymanager.Derived:
@@ -50,7 +50,7 @@ func (acm *CLIManager) WalletCreate(ctx context.Context) (*wallet.Wallet, error)
 		); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
-		log.WithField("--wallet-dir", acm.walletDir).Info(
+		log.WithField("walletDir", acm.walletDir).Info(
 			"Successfully created HD wallet from mnemonic and regenerated accounts",
 		)
 	case keymanager.Web3Signer:
