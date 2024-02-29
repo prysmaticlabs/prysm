@@ -17,10 +17,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-type SettingsType int
+type settingsType int
 
 const (
-	none SettingsType = iota
+	none settingsType = iota
 	defaultFlag
 	fileFlag
 	urlFlag
@@ -28,7 +28,7 @@ const (
 )
 
 type settingsLoader struct {
-	loadMethods []SettingsType
+	loadMethods []settingsType
 	existsInDB  bool
 	db          iface.ValidatorDB
 	options     *flagOptions

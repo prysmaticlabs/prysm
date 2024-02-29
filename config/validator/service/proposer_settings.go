@@ -1,4 +1,4 @@
-package validator_service_config
+package service
 
 import (
 	"fmt"

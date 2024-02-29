@@ -47,6 +47,7 @@ func TestProposerSettingsLoader(t *testing.T) {
 		wantLog                      string
 		withdb                       func(db iface.ValidatorDB) error
 		validatorRegistrationEnabled bool
+		skipDBSavedCheck             bool
 	}{
 		{
 			name: "db settings override file settings if file default config is missing",
@@ -157,7 +158,8 @@ func TestProposerSettingsLoader(t *testing.T) {
 			want: func() *validatorserviceconfig.ProposerSettings {
 				return nil
 			},
-			wantLog: "No proposer settings were provided",
+			wantLog:          "No proposer settings were provided",
+			skipDBSavedCheck: true,
 		},
 		{
 			name: "Happy Path default only proposer settings file with builder settings,",
@@ -599,6 +601,7 @@ func TestProposerSettingsLoader(t *testing.T) {
 				}
 			},
 			validatorRegistrationEnabled: true,
+			skipDBSavedCheck:             true,
 		},
 		{
 			name: "No Flags but saved to DB with builder and override removed builder data",
@@ -770,7 +773,8 @@ func TestProposerSettingsLoader(t *testing.T) {
 			want: func() *validatorserviceconfig.ProposerSettings {
 				return nil
 			},
-			wantErr: "",
+			wantErr:          "",
+			skipDBSavedCheck: true,
 		},
 		{
 			name: "Bad File Path",
@@ -878,6 +882,11 @@ func TestProposerSettingsLoader(t *testing.T) {
 			}
 			w := tt.want()
 			require.DeepEqual(t, w, got)
+			if !tt.skipDBSavedCheck {
+				dbSettings, err := validatorDB.ProposerSettings(cliCtx.Context)
+				require.NoError(t, err)
+				require.DeepEqual(t, w, dbSettings)
+			}
 		})
 	}
 }
