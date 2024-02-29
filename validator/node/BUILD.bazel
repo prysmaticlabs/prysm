@@ -44,7 +44,7 @@ go_library(
         "//config/features:go_default_library",
         "//config/params:go_default_library",
         "//config/proposer:go_default_library",
-        "//config/validator/service:go_default_library",
+        "//config/proposer/loader:go_default_library",
         "//container/slice:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",

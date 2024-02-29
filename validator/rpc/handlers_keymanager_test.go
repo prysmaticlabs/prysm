@@ -16,7 +16,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -849,20 +849,20 @@ func TestServer_GetGasLimit(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		args   *validatorserviceconfig.ProposerSettings
+		args   *proposer.Settings
 		pubkey [48]byte
 		want   uint64
 	}{
 		{
 			name: "ProposerSetting for specific pubkey exists",
-			args: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			args: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(byteval): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
+						BuilderConfig: &proposer.BuilderConfig{GasLimit: 123456789},
 					},
 				},
-				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
+				DefaultConfig: &proposer.Option{
+					BuilderConfig: &proposer.BuilderConfig{GasLimit: 987654321},
 				},
 			},
 			pubkey: bytesutil.ToBytes48(byteval),
@@ -870,14 +870,14 @@ func TestServer_GetGasLimit(t *testing.T) {
 		},
 		{
 			name: "ProposerSetting for specific pubkey does not exist",
-			args: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			args: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(byteval): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
+						BuilderConfig: &proposer.BuilderConfig{GasLimit: 123456789},
 					},
 				},
-				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
+				DefaultConfig: &proposer.Option{
+					BuilderConfig: &proposer.BuilderConfig{GasLimit: 987654321},
 				},
 			},
 			// no settings for the following validator, so the gaslimit returned is the default value.
@@ -941,7 +941,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 		name             string
 		pubkey           []byte
 		newGasLimit      uint64
-		proposerSettings *validatorserviceconfig.ProposerSettings
+		proposerSettings *proposer.Settings
 		w                []*want
 		beaconReturn     *beaconResp
 		wantErr          string
@@ -957,7 +957,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 			name:        "ProposerSettings.ProposeConfig is nil AND ProposerSettings.DefaultConfig is nil",
 			pubkey:      pubkey1,
 			newGasLimit: 9999,
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
+			proposerSettings: &proposer.Settings{
 				ProposeConfig: nil,
 				DefaultConfig: nil,
 			},
@@ -967,9 +967,9 @@ func TestServer_SetGasLimit(t *testing.T) {
 			name:        "ProposerSettings.ProposeConfig is nil AND ProposerSettings.DefaultConfig.BuilderConfig is nil",
 			pubkey:      pubkey1,
 			newGasLimit: 9999,
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
+			proposerSettings: &proposer.Settings{
 				ProposeConfig: nil,
-				DefaultConfig: &validatorserviceconfig.ProposerOption{
+				DefaultConfig: &proposer.Option{
 					BuilderConfig: nil,
 				},
 			},
@@ -979,8 +979,8 @@ func TestServer_SetGasLimit(t *testing.T) {
 			name:        "ProposerSettings.ProposeConfig is defined for pubkey, BuilderConfig is nil AND ProposerSettings.DefaultConfig is nil",
 			pubkey:      pubkey1,
 			newGasLimit: 9999,
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(pubkey1): {
 						BuilderConfig: nil,
 					},
@@ -993,10 +993,10 @@ func TestServer_SetGasLimit(t *testing.T) {
 			name:        "ProposerSettings.ProposeConfig is defined for pubkey, BuilderConfig is defined AND ProposerSettings.DefaultConfig is nil",
 			pubkey:      pubkey1,
 			newGasLimit: 9999,
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(pubkey1): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{},
+						BuilderConfig: &proposer.BuilderConfig{},
 					},
 				},
 				DefaultConfig: nil,
@@ -1007,10 +1007,10 @@ func TestServer_SetGasLimit(t *testing.T) {
 			name:        "ProposerSettings.ProposeConfig is NOT defined for pubkey, BuilderConfig is defined AND ProposerSettings.DefaultConfig is nil",
 			pubkey:      pubkey2,
 			newGasLimit: 9999,
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(pubkey2): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						BuilderConfig: &proposer.BuilderConfig{
 							Enabled:  true,
 							GasLimit: 12345,
 						},
@@ -1028,14 +1028,14 @@ func TestServer_SetGasLimit(t *testing.T) {
 			name:        "ProposerSettings.ProposeConfig is defined for pubkey, BuilderConfig is nil AND ProposerSettings.DefaultConfig.BuilderConfig is defined",
 			pubkey:      pubkey1,
 			newGasLimit: 9999,
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(pubkey2): {
 						BuilderConfig: nil,
 					},
 				},
-				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+				DefaultConfig: &proposer.Option{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled: true,
 					},
 				},
@@ -1149,24 +1149,24 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 	tests := []struct {
 		name             string
 		pubkey           []byte
-		proposerSettings *validatorserviceconfig.ProposerSettings
+		proposerSettings *proposer.Settings
 		wantError        error
 		w                []want
 	}{
 		{
 			name:   "delete existing gas limit with default config",
 			pubkey: pubkey1,
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(pubkey1): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(987654321)},
+						BuilderConfig: &proposer.BuilderConfig{GasLimit: validator.Uint64(987654321)},
 					},
 					bytesutil.ToBytes48(pubkey2): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(123456789)},
+						BuilderConfig: &proposer.BuilderConfig{GasLimit: validator.Uint64(123456789)},
 					},
 				},
-				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(5555)},
+				DefaultConfig: &proposer.Option{
+					BuilderConfig: &proposer.BuilderConfig{GasLimit: validator.Uint64(5555)},
 				},
 			},
 			wantError: nil,
@@ -1185,13 +1185,13 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 		{
 			name:   "delete existing gas limit with no default config",
 			pubkey: pubkey1,
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(pubkey1): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(987654321)},
+						BuilderConfig: &proposer.BuilderConfig{GasLimit: validator.Uint64(987654321)},
 					},
 					bytesutil.ToBytes48(pubkey2): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(123456789)},
+						BuilderConfig: &proposer.BuilderConfig{GasLimit: validator.Uint64(123456789)},
 					},
 				},
 			},
@@ -1211,10 +1211,10 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 		{
 			name:   "delete nonexist gas limit",
 			pubkey: pubkey2,
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(pubkey1): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(987654321)},
+						BuilderConfig: &proposer.BuilderConfig{GasLimit: validator.Uint64(987654321)},
 					},
 				},
 			},
@@ -1444,22 +1444,22 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		args   *validatorserviceconfig.ProposerSettings
+		args   *proposer.Settings
 		want   *want
 		cached *eth.FeeRecipientByPubKeyResponse
 	}{
 		{
 			name: "ProposerSettings.ProposeConfig.FeeRecipientConfig defined for pubkey (and ProposerSettings.DefaultConfig.FeeRecipientConfig defined)",
-			args: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			args: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(byteval): {
-						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 						},
 					},
 				},
-				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				DefaultConfig: &proposer.Option{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
 					},
 				},
@@ -1470,10 +1470,10 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 		},
 		{
 			name: "ProposerSettings.ProposeConfig.FeeRecipientConfig NOT defined for pubkey and ProposerSettings.DefaultConfig.FeeRecipientConfig defined",
-			args: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{},
-				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+			args: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{},
+				DefaultConfig: &proposer.Option{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 					},
 				},
@@ -1576,7 +1576,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 	tests := []struct {
 		name             string
 		args             string
-		proposerSettings *validatorserviceconfig.ProposerSettings
+		proposerSettings *proposer.Settings
 		want             *want
 		wantErr          bool
 		beaconReturn     *beaconResp
@@ -1597,7 +1597,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 		{
 			name: "ProposerSetting.ProposeConfig is nil",
 			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
+			proposerSettings: &proposer.Settings{
 				ProposeConfig: nil,
 			},
 			want: &want{
@@ -1612,9 +1612,9 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 		{
 			name: "ProposerSetting.ProposeConfig is nil AND ProposerSetting.Defaultconfig is defined",
 			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
+			proposerSettings: &proposer.Settings{
 				ProposeConfig: nil,
-				DefaultConfig: &validatorserviceconfig.ProposerOption{},
+				DefaultConfig: &proposer.Option{},
 			},
 			want: &want{
 				valEthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
@@ -1628,8 +1628,8 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 		{
 			name: "ProposerSetting.ProposeConfig is defined for pubkey",
 			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(byteval): {},
 				},
 			},
@@ -1645,8 +1645,8 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 		{
 			name: "ProposerSetting.ProposeConfig not defined for pubkey",
 			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{},
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{},
 			},
 			want: &want{
 				valEthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
@@ -1660,8 +1660,8 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 		{
 			name: "ProposerSetting.ProposeConfig is nil for pubkey",
 			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(byteval): nil,
 				},
 			},
@@ -1677,11 +1677,11 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 		{
 			name: "ProposerSetting.ProposeConfig is nil for pubkey AND DefaultConfig is not nil",
 			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(byteval): nil,
 				},
-				DefaultConfig: &validatorserviceconfig.ProposerOption{},
+				DefaultConfig: &proposer.Option{},
 			},
 			want: &want{
 				valEthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
@@ -1777,22 +1777,22 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 	}
 	tests := []struct {
 		name             string
-		proposerSettings *validatorserviceconfig.ProposerSettings
+		proposerSettings *proposer.Settings
 		want             *want
 		wantErr          bool
 	}{
 		{
 			name: "Happy Path Test",
-			proposerSettings: &validatorserviceconfig.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+			proposerSettings: &proposer.Settings{
+				ProposeConfig: map[[48]byte]*proposer.Option{
 					bytesutil.ToBytes48(byteval): {
-						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9738D5"),
 						},
 					},
 				},
-				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				DefaultConfig: &proposer.Option{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 					},
 				},

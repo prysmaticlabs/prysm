@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	validatorServiceConfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -15,8 +15,8 @@ import (
 var ErrNoProposerSettingsFound = errors.New("no proposer settings found in bucket")
 
 // ProposerSettings gets the current proposer settings
-func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.ProposerSettings, error) {
-	_, span := trace.StartSpan(ctx, "validator.db.ProposerSettings")
+func (s *Store) ProposerSettings(ctx context.Context) (*proposer.Settings, error) {
+	_, span := trace.StartSpan(ctx, "validator.db.Settings")
 	defer span.End()
 	to := &validatorpb.ProposerSettingsPayload{}
 	if err := s.db.View(func(tx *bolt.Tx) error {
@@ -32,7 +32,7 @@ func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.P
 	}); err != nil {
 		return nil, err
 	}
-	return validatorServiceConfig.ProposerSettingFromConsensus(to)
+	return proposer.SettingFromConsensus(to)
 }
 
 // ProposerSettingsExists returns true or false if the settings exist or not
@@ -51,7 +51,7 @@ func (s *Store) ProposerSettingsExists(ctx context.Context) (bool, error) {
 }
 
 // SaveProposerSettings saves the entire proposer setting overriding the existing settings
-func (s *Store) SaveProposerSettings(ctx context.Context, settings *validatorServiceConfig.ProposerSettings) error {
+func (s *Store) SaveProposerSettings(ctx context.Context, settings *proposer.Settings) error {
 	_, span := trace.StartSpan(ctx, "validator.db.SaveProposerSettings")
 	defer span.End()
 	// nothing to save

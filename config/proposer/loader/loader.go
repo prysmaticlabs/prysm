@@ -1,4 +1,4 @@
-package proposer
+package loader
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v5/config"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	validatorService "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
@@ -35,7 +35,7 @@ type settingsLoader struct {
 }
 
 type flagOptions struct {
-	builderConfig *validatorService.BuilderConfig
+	builderConfig *proposer.BuilderConfig
 	gasLimit      *validator.Uint64
 }
 
@@ -46,7 +46,7 @@ type SettingsLoaderOption func(cliCtx *cli.Context, psl *settingsLoader) error
 func WithBuilderConfig() SettingsLoaderOption {
 	return func(cliCtx *cli.Context, psl *settingsLoader) error {
 		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
-			psl.options.builderConfig = &validatorService.BuilderConfig{
+			psl.options.builderConfig = &proposer.BuilderConfig{
 				Enabled:  true,
 				GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 			}
@@ -113,7 +113,7 @@ func NewProposerSettingsLoader(cliCtx *cli.Context, db iface.ValidatorDB, opts .
 }
 
 // Load saves the proposer settings to the database
-func (psl *settingsLoader) Load(cliCtx *cli.Context) (*validatorService.ProposerSettings, error) {
+func (psl *settingsLoader) Load(cliCtx *cli.Context) (*proposer.Settings, error) {
 	loadConfig := &validatorpb.ProposerSettingsPayload{}
 
 	// override settings based on other options
@@ -172,7 +172,7 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 			if psl.options.builderConfig != nil {
 				// if there are no proposer settings provided, create a default where fee recipient is not populated, this will be skipped for validator registration on validators that don't have a fee recipient set.
 				// skip saving to DB if only builder settings are provided until a trigger like keymanager API updates with fee recipient values
-				option := &validatorService.ProposerOption{
+				option := &proposer.Option{
 					BuilderConfig: psl.options.builderConfig.Clone(),
 				}
 				loadConfig.DefaultConfig = option.ToConsensus()
@@ -187,7 +187,7 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*validatorService.Proposer
 		log.Warn("No proposer settings were provided")
 		return nil, nil
 	}
-	ps, err := validatorService.ProposerSettingFromConsensus(loadConfig)
+	ps, err := proposer.SettingFromConsensus(loadConfig)
 	if err != nil {
 		return nil, err
 	}

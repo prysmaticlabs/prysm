@@ -1,4 +1,4 @@
-package service
+package proposer
 
 import (
 	"fmt"
@@ -13,11 +13,11 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 )
 
-// ProposerSettingFromConsensus converts struct to ProposerSettings while verifying the fields
-func ProposerSettingFromConsensus(ps *validatorpb.ProposerSettingsPayload) (*ProposerSettings, error) {
-	settings := &ProposerSettings{}
+// SettingFromConsensus converts struct to Settings while verifying the fields
+func SettingFromConsensus(ps *validatorpb.ProposerSettingsPayload) (*Settings, error) {
+	settings := &Settings{}
 	if ps.ProposerConfig != nil && len(ps.ProposerConfig) != 0 {
-		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption)
+		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*Option)
 		for key, optionPayload := range ps.ProposerConfig {
 			if optionPayload.FeeRecipient == "" {
 				continue
@@ -32,7 +32,7 @@ func ProposerSettingFromConsensus(ps *validatorpb.ProposerSettingsPayload) (*Pro
 			if err := verifyOption(key, optionPayload); err != nil {
 				return nil, err
 			}
-			p := &ProposerOption{
+			p := &Option{
 				FeeRecipientConfig: &FeeRecipientConfig{
 					FeeRecipient: common.HexToAddress(optionPayload.FeeRecipient),
 				},
@@ -44,7 +44,7 @@ func ProposerSettingFromConsensus(ps *validatorpb.ProposerSettingsPayload) (*Pro
 		}
 	}
 	if ps.DefaultConfig != nil {
-		d := &ProposerOption{}
+		d := &Option{}
 		if ps.DefaultConfig.FeeRecipient != "" {
 			if !common.IsHexAddress(ps.DefaultConfig.FeeRecipient) {
 				return nil, errors.New("default fee recipient is not a valid Ethereum address")
@@ -90,23 +90,23 @@ func BuilderConfigFromConsensus(from *validatorpb.BuilderConfig) *BuilderConfig 
 	if from == nil {
 		return nil
 	}
-	config := &BuilderConfig{
+	c := &BuilderConfig{
 		Enabled:  from.Enabled,
 		GasLimit: from.GasLimit,
 	}
 	if from.Relays != nil {
 		relays := make([]string, len(from.Relays))
 		copy(relays, from.Relays)
-		config.Relays = relays
+		c.Relays = relays
 	}
-	return config
+	return c
 }
 
-// ProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.
-// validatorpb.ProposerSettingsPayload maps to ProposerSettings on import through the CLI.
-type ProposerSettings struct {
-	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption
-	DefaultConfig *ProposerOption
+// Settings is a Prysm internal representation of the fee recipient config on the validator client.
+// validatorpb.ProposerSettingsPayload maps to Settings on import through the CLI.
+type Settings struct {
+	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*Option
+	DefaultConfig *Option
 }
 
 // ShouldBeSaved goes through checks to see if the value should be saveable
@@ -114,12 +114,12 @@ type ProposerSettings struct {
 // 1. settings are not nil
 // 2. proposeconfig is not nil (this defines specific settings for each validator key), default config can be nil in this case and fall back to beacon node settings
 // 3. defaultconfig is not nil, meaning it has at least fee recipient settings (this defines general settings for all validator keys but keys will use settings from propose config if available), propose config can be nil in this case
-func (settings *ProposerSettings) ShouldBeSaved() bool {
-	return settings != nil && (settings.ProposeConfig != nil || settings.DefaultConfig != nil && settings.DefaultConfig.FeeRecipientConfig != nil)
+func (ps *Settings) ShouldBeSaved() bool {
+	return ps != nil && (ps.ProposeConfig != nil || ps.DefaultConfig != nil && ps.DefaultConfig.FeeRecipientConfig != nil)
 }
 
 // ToConsensus converts struct to ProposerSettingsPayload
-func (ps *ProposerSettings) ToConsensus() *validatorpb.ProposerSettingsPayload {
+func (ps *Settings) ToConsensus() *validatorpb.ProposerSettingsPayload {
 	if ps == nil {
 		return nil
 	}
@@ -141,18 +141,18 @@ type FeeRecipientConfig struct {
 	FeeRecipient common.Address
 }
 
-// ProposerOption is a Prysm internal representation of the ProposerOptionPayload on the validator client in bytes format instead of hex.
-type ProposerOption struct {
+// Option is a Prysm internal representation of the ProposerOptionPayload on the validator client in bytes format instead of hex.
+type Option struct {
 	FeeRecipientConfig *FeeRecipientConfig
 	BuilderConfig      *BuilderConfig
 }
 
 // Clone creates a deep copy of proposer option
-func (po *ProposerOption) Clone() *ProposerOption {
+func (po *Option) Clone() *Option {
 	if po == nil {
 		return nil
 	}
-	p := &ProposerOption{}
+	p := &Option{}
 	if po.FeeRecipientConfig != nil {
 		p.FeeRecipientConfig = po.FeeRecipientConfig.Clone()
 	}
@@ -162,7 +162,7 @@ func (po *ProposerOption) Clone() *ProposerOption {
 	return p
 }
 
-func (po *ProposerOption) ToConsensus() *validatorpb.ProposerOptionPayload {
+func (po *Option) ToConsensus() *validatorpb.ProposerOptionPayload {
 	if po == nil {
 		return nil
 	}
@@ -177,16 +177,16 @@ func (po *ProposerOption) ToConsensus() *validatorpb.ProposerOptionPayload {
 }
 
 // Clone creates a deep copy of the proposer settings
-func (ps *ProposerSettings) Clone() *ProposerSettings {
+func (ps *Settings) Clone() *Settings {
 	if ps == nil {
 		return nil
 	}
-	clone := &ProposerSettings{}
+	clone := &Settings{}
 	if ps.DefaultConfig != nil {
 		clone.DefaultConfig = ps.DefaultConfig.Clone()
 	}
 	if ps.ProposeConfig != nil {
-		clone.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption)
+		clone.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*Option)
 		for k, v := range ps.ProposeConfig {
 			keyCopy := k
 			valCopy := v.Clone()
@@ -210,16 +210,16 @@ func (bc *BuilderConfig) Clone() *BuilderConfig {
 	if bc == nil {
 		return nil
 	}
-	config := &BuilderConfig{}
-	config.Enabled = bc.Enabled
-	config.GasLimit = bc.GasLimit
+	c := &BuilderConfig{}
+	c.Enabled = bc.Enabled
+	c.GasLimit = bc.GasLimit
 	var relays []string
 	if bc.Relays != nil {
 		relays = make([]string, len(bc.Relays))
 		copy(relays, bc.Relays)
-		config.Relays = relays
+		c.Relays = relays
 	}
-	return config
+	return c
 }
 
 // ToConsensus converts Builder Config to the protobuf object
@@ -227,14 +227,14 @@ func (bc *BuilderConfig) ToConsensus() *validatorpb.BuilderConfig {
 	if bc == nil {
 		return nil
 	}
-	config := &validatorpb.BuilderConfig{}
-	config.Enabled = bc.Enabled
+	c := &validatorpb.BuilderConfig{}
+	c.Enabled = bc.Enabled
 	var relays []string
 	if bc.Relays != nil {
 		relays = make([]string, len(bc.Relays))
 		copy(relays, bc.Relays)
-		config.Relays = relays
+		c.Relays = relays
 	}
-	config.GasLimit = bc.GasLimit
-	return config
+	c.GasLimit = bc.GasLimit
+	return c
 }

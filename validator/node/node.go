@@ -31,7 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
-	validatorServiceConfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer/loader"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
@@ -547,17 +547,17 @@ func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 	return web3signerConfig, nil
 }
 
-func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServiceConfig.ProposerSettings, error) {
-	loader, err := proposer.NewProposerSettingsLoader(
+func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*proposer.Settings, error) {
+	l, err := loader.NewProposerSettingsLoader(
 		cliCtx,
 		db,
-		proposer.WithBuilderConfig(),
-		proposer.WithGasLimit(),
+		loader.WithBuilderConfig(),
+		loader.WithGasLimit(),
 	)
 	if err != nil {
 		return nil, err
 	}
-	return loader.Load(cliCtx)
+	return l.Load(cliCtx)
 }
 
 func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
