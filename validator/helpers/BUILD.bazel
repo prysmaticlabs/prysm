@@ -14,9 +14,7 @@ go_library(
         "//consensus-types/primitives:go_default_library",
         "//validator/db/iface:go_default_library",
         "//validator/slashing-protection-history/format:go_default_library",
-        "@com_github_k0kubun_go_ansi//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_schollz_progressbar_v3//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],
 )
