@@ -56,12 +56,10 @@ type SetupConfig struct {
 type Keymanager struct {
 	client                internal.HttpSignerClient
 	genesisValidatorsRoot []byte
-	publicKeysURL         string
 	providedPublicKeys    [][48]byte
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
 	Wallet                iface.Wallet
-	publicKeysUrlCalled   bool
 }
 
 // NewKeymanager instantiates a new web3signer key manager.
@@ -84,76 +82,46 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		return nil, errors.New("wallet is not meant for remote signer use")
 	}
 
-	k := &Keymanager{
+	km := &Keymanager{
 		client:                internal.HttpSignerClient(client),
 		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
-		publicKeysURL:         cfg.PublicKeysURL,
-		providedPublicKeys:    cfg.ProvidedPublicKeys,
 		validator:             validator.New(),
 		Wallet:                cfg.Wallet,
-		publicKeysUrlCalled:   false,
 	}
 
-	if err := k.initializeRemoteKeyPersistence(); err != nil {
-		return nil, err
+	var ppk [][fieldparams.BLSPubkeyLength]byte
+
+	if cfg.PublicKeysURL != "" {
+		providedPublicKeys, err := km.client.GetPublicKeys(ctx, cfg.PublicKeysURL)
+		if err != nil {
+			erroredResponsesTotal.Inc()
+			return nil, errors.Wrap(err, fmt.Sprintf("could not get public keys from remote server url: %v", cfg.PublicKeysURL))
+		}
+		// makes sure that if the public keys are deleted the validator does not call URL again.
+		ppk = providedPublicKeys
+	} else {
+		ppk = cfg.ProvidedPublicKeys
+	}
+	if len(ppk) != 0 {
+		if err := km.saveProvidedPublicKeys(ppk); err != nil {
+			return nil, err
+		}
 	}
 
-	if k.publicKeysURL == "" {
-		go k.refreshRemoteKeysFromFileChanges(ctx)
-	}
+	go km.refreshRemoteKeysFromFileChanges(ctx)
 
-	return k, nil
+	return km, nil
 }
 
-func (km *Keymanager) initializeRemoteKeyPersistence() error {
+func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys [][fieldparams.BLSPubkeyLength]byte) error {
 	remoteKeysFile := filepath.Join(km.Wallet.Dir(), remoteKeysFileName)
-	if file.Exists(remoteKeysFile) {
-		f, err := os.Open(filepath.Clean(remoteKeysFile))
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if err := f.Close(); err != nil {
-				log.Error(err)
-			}
-		}()
-
-		// Use a map to track and skip duplicate lines
-		seenLines := make(map[string]bool)
-		keys := make([][48]byte, 0)
-		// Create a new scanner to read the file line by line
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			line := scanner.Text()
-			// Check if the line has already been seen
-			if _, found := seenLines[line]; !found {
-				// If it's a new line, mark it as seen and process it
-				seenLines[line] = true
-				decoded, err := hexutil.Decode(line)
-				if err != nil {
-					return err
-				}
-				// Process the unique line here. For now, we'll just print it.
-				keys = append(keys, bytesutil.ToBytes48(decoded))
-			}
-		}
-
-		// Check for any errors encountered while reading
-		if err := scanner.Err(); err != nil {
-			return fmt.Errorf("error reading file %s: %w", remoteKeysFile, err)
-		}
-
-		km.providedPublicKeys = keys
-
-		return nil
-	}
 	if err := file.MkdirAll(km.Wallet.Dir()); err != nil {
 		return errors.Wrapf(err, "could not create directory %s", km.Wallet.Dir())
 	}
 
 	var bytesBuf bytes.Buffer
-	for _, key := range km.providedPublicKeys {
+	for _, key := range providedPublicKeys {
 		bytesBuf.Write(key[:])
 		bytesBuf.WriteString("\n")
 	}
@@ -161,6 +129,7 @@ func (km *Keymanager) initializeRemoteKeyPersistence() error {
 	if err := file.WriteFile(remoteKeysFile, bytesBuf.Bytes()); err != nil {
 		return errors.Wrapf(err, "could not write to file %s", remoteKeysFile)
 	}
+	km.providedPublicKeys = providedPublicKeys
 	return nil
 }
 
@@ -184,13 +153,40 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 		select {
 		case <-watcher.Events:
 			// If a file was modified, we attempt to read that file
-			// and parse it into our accounts store.
-			token, err := km.initializeAuthToken(s.walletDir)
+			f, err := os.Open(filepath.Clean(remoteKeysFile))
 			if err != nil {
-				log.WithError(err).Errorf("Could not watch for file changes for: %s", authTokenPath)
-				continue
+				log.WithError(err).Error("Could not open file")
 			}
+			defer func() {
+				if err := f.Close(); err != nil {
+					log.Error(err)
+				}
+			}()
 
+			// Use a map to track and skip duplicate lines
+			seenLines := make(map[string]bool)
+			keys := make([][48]byte, 0)
+			// Create a new scanner to read the file line by line
+			scanner := bufio.NewScanner(f)
+			for scanner.Scan() {
+				line := scanner.Text()
+				// Check if the line has already been seen
+				if _, found := seenLines[line]; !found {
+					// If it's a new line, mark it as seen and process it
+					seenLines[line] = true
+					decoded, err := hexutil.Decode(line)
+					if err != nil {
+						log.WithError(err).Error("could not decode line")
+					}
+					// Process the unique line here. For now, we'll just print it.
+					keys = append(keys, bytesutil.ToBytes48(decoded))
+				}
+			}
+			// Check for any errors encountered while reading
+			if err := scanner.Err(); err != nil {
+				log.WithError(fmt.Errorf("error reading file %s: %w", remoteKeysFile, err)).Error("Could not finish scanning")
+			}
+			km.providedPublicKeys = keys
 		case err := <-watcher.Errors:
 			log.WithError(err).Errorf("Could not watch for file changes for: %s", remoteKeysFile)
 		case <-ctx.Done():
@@ -200,19 +196,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys
-// from the remote server or from the provided keys if there are no existing public keys set
-// or provides the existing keys in the keymanager.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	if km.publicKeysURL != "" && !km.publicKeysUrlCalled {
-		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
-		if err != nil {
-			erroredResponsesTotal.Inc()
-			return nil, errors.Wrap(err, fmt.Sprintf("could not get public keys from remote server url: %v", km.publicKeysURL))
-		}
-		// makes sure that if the public keys are deleted the validator does not call URL again.
-		km.publicKeysUrlCalled = true
-		km.providedPublicKeys = providedPublicKeys
-	}
 	return km.providedPublicKeys, nil
 }
 
@@ -547,8 +531,15 @@ func DisplayRemotePublicKeys(validatingPubKeys [][48]byte) {
 }
 
 // AddPublicKeys imports a list of public keys into the keymanager for web3signer use. Returns status with message.
-func (km *Keymanager) AddPublicKeys(pubKeys []string) []*keymanager.KeyStatus {
+func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, error) {
 	importedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(pubKeys))
+	// Initialize a new slice of [48]byte arrays with the same length as providedPublicKeys
+	tempPublicKeys := make([][48]byte, len(providedPublicKeys))
+
+	// Copy each [48]byte array from the original slice to the new slice
+	for i, publicKey := range providedPublicKeys {
+		tempPublicKeys[i] = publicKey
+	}
 	for i, pubkey := range pubKeys {
 		found := false
 		pubkeyBytes, err := hexutil.Decode(pubkey)
@@ -586,8 +577,14 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) []*keymanager.KeyStatus {
 		}
 		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", pubkey)
 	}
+
+	if err := km.saveProvidedPublicKeys(); err != nil {
+		return nil, err
+	}
+
 	km.accountsChangedFeed.Send(km.providedPublicKeys)
-	return importedRemoteKeysStatuses
+
+	return importedRemoteKeysStatuses, nil
 }
 
 // DeletePublicKeys removes a list of public keys from the keymanager for web3signer use. Returns status with message.
@@ -636,6 +633,10 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 			}
 		}
 	}
+	if err := km.saveProvidedPublicKeys(); err != nil {
+		return nil, err
+	}
+
 	km.accountsChangedFeed.Send(km.providedPublicKeys)
 	return deletedRemoteKeysStatuses
 }

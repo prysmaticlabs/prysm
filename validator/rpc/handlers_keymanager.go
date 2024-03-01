@@ -484,7 +484,12 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		log.Warnf("Setting web3signer base url for IMPORTED keys is not supported. Prysm only uses the url from --validators-external-signer-url flag for web3signerKeymanagerKind.")
 	}
 
-	httputil.WriteJson(w, &RemoteKeysResponse{Data: adder.AddPublicKeys(remoteKeys)})
+	ks, err := adder.AddPublicKeys(remoteKeys)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, &RemoteKeysResponse{Data: ks})
 }
 
 // DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
