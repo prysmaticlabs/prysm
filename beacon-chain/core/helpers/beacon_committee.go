@@ -391,6 +391,16 @@ func UpdateCachedCheckpointToStateRoot(state state.ReadOnlyBeaconState, cp *fork
 	return nil
 }
 
+// ExpandCommitteeCache resizes the cache to a higher limit.
+func ExpandCommitteeCache() {
+	committeeCache.ExpandCommitteeCache()
+}
+
+// CompressCommitteeCache resizes the cache to a lower limit.
+func CompressCommitteeCache() {
+	committeeCache.CompressCommitteeCache()
+}
+
 // ClearCache clears the beacon committee cache and sync committee cache.
 func ClearCache() {
 	committeeCache.Clear()
