@@ -26,6 +26,8 @@ type Wallet struct {
 	UnlockAccounts    bool
 	lock              sync.RWMutex
 	HasWriteFileError bool
+	WalletDir         string
+	Kind              keymanager.Kind
 }
 
 // AccountNames --
@@ -42,6 +44,16 @@ func (w *Wallet) AccountNames() ([]string, error) {
 // AccountsDir --
 func (w *Wallet) AccountsDir() string {
 	return w.InnerAccountsDir
+}
+
+// Dir for the wallet.
+func (w *Wallet) Dir() string {
+	return w.WalletDir
+}
+
+// KeymanagerKind --
+func (w *Wallet) KeymanagerKind() keymanager.Kind {
+	return w.Kind
 }
 
 // Exists --

@@ -1,13 +1,16 @@
 package remote_web3signer
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/fsnotify/fsnotify"
 	"github.com/go-playground/validator/v10"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
@@ -15,6 +18,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/petnames"
@@ -23,6 +27,10 @@ import (
 	web3signerv1 "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+)
+
+const (
+	remoteKeysFileName = "remote_keys"
 )
 
 // SetupConfig includes configuration values for initializing.
@@ -58,7 +66,7 @@ type Keymanager struct {
 
 // NewKeymanager instantiates a new web3signer key manager.
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
-	_, span := trace.StartSpan(ctx, "remoteKeymanager")
+	ctx, span := trace.StartSpan(ctx, "remoteKeymanager")
 	defer span.End()
 	if cfg.BaseEndpoint == "" || !bytesutil.IsValidRoot(cfg.GenesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
@@ -67,7 +75,16 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create apiClient")
 	}
-	return &Keymanager{
+
+	if cfg.Wallet == nil {
+		return nil, errors.New("wallet is empty")
+	}
+
+	if cfg.Wallet.KeymanagerKind() != keymanager.Web3Signer {
+		return nil, errors.New("wallet is not meant for remote signer use")
+	}
+
+	k := &Keymanager{
 		client:                internal.HttpSignerClient(client),
 		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
@@ -76,7 +93,110 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		validator:             validator.New(),
 		Wallet:                cfg.Wallet,
 		publicKeysUrlCalled:   false,
-	}, nil
+	}
+
+	if err := k.initializeRemoteKeyPersistence(); err != nil {
+		return nil, err
+	}
+
+	if k.publicKeysURL == "" {
+		go k.refreshRemoteKeysFromFileChanges(ctx)
+	}
+
+	return k, nil
+}
+
+func (km *Keymanager) initializeRemoteKeyPersistence() error {
+	remoteKeysFile := filepath.Join(km.Wallet.Dir(), remoteKeysFileName)
+	if file.Exists(remoteKeysFile) {
+		f, err := os.Open(filepath.Clean(remoteKeysFile))
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err := f.Close(); err != nil {
+				log.Error(err)
+			}
+		}()
+
+		// Use a map to track and skip duplicate lines
+		seenLines := make(map[string]bool)
+		keys := make([][48]byte, 0)
+		// Create a new scanner to read the file line by line
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			line := scanner.Text()
+			// Check if the line has already been seen
+			if _, found := seenLines[line]; !found {
+				// If it's a new line, mark it as seen and process it
+				seenLines[line] = true
+				decoded, err := hexutil.Decode(line)
+				if err != nil {
+					return err
+				}
+				// Process the unique line here. For now, we'll just print it.
+				keys = append(keys, bytesutil.ToBytes48(decoded))
+			}
+		}
+
+		// Check for any errors encountered while reading
+		if err := scanner.Err(); err != nil {
+			return fmt.Errorf("error reading file %s: %w", remoteKeysFile, err)
+		}
+
+		km.providedPublicKeys = keys
+
+		return nil
+	}
+	if err := file.MkdirAll(km.Wallet.Dir()); err != nil {
+		return errors.Wrapf(err, "could not create directory %s", km.Wallet.Dir())
+	}
+
+	var bytesBuf bytes.Buffer
+	for _, key := range km.providedPublicKeys {
+		bytesBuf.Write(key[:])
+		bytesBuf.WriteString("\n")
+	}
+
+	if err := file.WriteFile(remoteKeysFile, bytesBuf.Bytes()); err != nil {
+		return errors.Wrapf(err, "could not write to file %s", remoteKeysFile)
+	}
+	return nil
+}
+
+func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
+	remoteKeysFile := filepath.Join(km.Wallet.Dir(), remoteKeysFileName)
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.WithError(err).Error("Could not initialize file watcher")
+		return
+	}
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			log.WithError(err).Error("Could not close file watcher")
+		}
+	}()
+	if err := watcher.Add(remoteKeysFile); err != nil {
+		log.WithError(err).Errorf("Could not add file %s to file watcher", remoteKeysFile)
+		return
+	}
+	for {
+		select {
+		case <-watcher.Events:
+			// If a file was modified, we attempt to read that file
+			// and parse it into our accounts store.
+			token, err := km.initializeAuthToken(s.walletDir)
+			if err != nil {
+				log.WithError(err).Errorf("Could not watch for file changes for: %s", authTokenPath)
+				continue
+			}
+
+		case err := <-watcher.Errors:
+			log.WithError(err).Errorf("Could not watch for file changes for: %s", remoteKeysFile)
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys

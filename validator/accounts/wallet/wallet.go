@@ -254,14 +254,22 @@ func OpenOrCreateNewWallet(cliCtx *cli.Context) (*Wallet, error) {
 }
 
 // NewWalletForWeb3Signer returns a new wallet for web3 signer which is temporary and not stored locally.
-func NewWalletForWeb3Signer() *Wallet {
+func NewWalletForWeb3Signer(cliCtx *cli.Context) (*Wallet, error) {
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	exists, err := Exists(walletDir)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to open wallet dir")
+	}
+	if exists {
+		return nil, fmt.Errorf("an valid prysm wallet already exists at %s", walletDir)
+	}
 	// wallet is just a temporary wallet for web3 signer used to call initialize keymanager.
 	return &Wallet{
-		walletDir:      "",
+		walletDir:      walletDir,
 		accountsPath:   "",
 		keymanagerKind: keymanager.Web3Signer,
 		walletPassword: "",
-	}
+	}, nil
 }
 
 // OpenWallet instantiates a wallet from a specified path. It checks the
@@ -318,6 +326,11 @@ func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
 }
 
+// Dir for the wallet.
+func (w *Wallet) Dir() string {
+	return w.walletDir
+}
+
 // Password for the wallet.
 func (w *Wallet) Password() string {
 	return w.walletPassword
@@ -355,6 +368,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		if !bytesutil.IsValidRoot(config.GenesisValidatorsRoot) {
 			return nil, errors.New("web3signer requires a genesis validators root value")
 		}
+		config.Wallet = w
 		km, err = remoteweb3signer.NewKeymanager(ctx, config)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize web3signer keymanager")
