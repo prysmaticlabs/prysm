@@ -16,17 +16,20 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/internal"
 	web3signerv1 "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // SetupConfig includes configuration values for initializing.
 // a keymanager, such as passwords, the wallet, and more.
 // Web3Signer contains one public keys option. Either through a URL or a static key list.
 type SetupConfig struct {
+	Wallet                iface.Wallet
 	BaseEndpoint          string
 	GenesisValidatorsRoot []byte
 
@@ -49,11 +52,14 @@ type Keymanager struct {
 	providedPublicKeys    [][48]byte
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
+	Wallet                iface.Wallet
 	publicKeysUrlCalled   bool
 }
 
 // NewKeymanager instantiates a new web3signer key manager.
-func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
+	_, span := trace.StartSpan(ctx, "remoteKeymanager")
+	defer span.End()
 	if cfg.BaseEndpoint == "" || !bytesutil.IsValidRoot(cfg.GenesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
 	}
@@ -68,6 +74,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		publicKeysURL:         cfg.PublicKeysURL,
 		providedPublicKeys:    cfg.ProvidedPublicKeys,
 		validator:             validator.New(),
+		Wallet:                cfg.Wallet,
 		publicKeysUrlCalled:   false,
 	}, nil
 }
