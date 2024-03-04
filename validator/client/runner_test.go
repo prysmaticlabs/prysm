@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -225,9 +225,9 @@ func notActive(t *testing.T) [fieldparams.BLSPubkeyLength]byte {
 
 func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
-		DefaultConfig: &validatorserviceconfig.ProposerOption{
-			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+	err := v.SetProposerSettings(context.Background(), &proposer.Settings{
+		DefaultConfig: &proposer.Option{
+			FeeRecipientConfig: &proposer.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 			},
 		},
@@ -250,9 +250,9 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 
 func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot-1) * time.Second}
-	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
-		DefaultConfig: &validatorserviceconfig.ProposerOption{
-			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+	err := v.SetProposerSettings(context.Background(), &proposer.Settings{
+		DefaultConfig: &proposer.Option{
+			FeeRecipientConfig: &proposer.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 			},
 		},
@@ -279,9 +279,9 @@ func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *test
 		ProposerSettingsErr: errors.Wrap(ErrBuilderValidatorRegistration, errSomeotherError.Error()),
 		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 	}
-	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
-		DefaultConfig: &validatorserviceconfig.ProposerOption{
-			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+	err := v.SetProposerSettings(context.Background(), &proposer.Settings{
+		DefaultConfig: &proposer.Option{
+			FeeRecipientConfig: &proposer.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 			},
 		},

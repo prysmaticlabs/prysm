@@ -6,7 +6,7 @@ import (
 	"io"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	validatorServiceConfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/backup"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -65,9 +65,7 @@ type ValidatorDB interface {
 	GraffitiOrderedIndex(ctx context.Context, fileHash [32]byte) (uint64, error)
 
 	// ProposerSettings related methods
-	ProposerSettings(context.Context) (*validatorServiceConfig.ProposerSettings, error)
+	ProposerSettings(context.Context) (*proposer.Settings, error)
 	ProposerSettingsExists(ctx context.Context) (bool, error)
-	UpdateProposerSettingsDefault(context.Context, *validatorServiceConfig.ProposerOption) error
-	UpdateProposerSettingsForPubkey(context.Context, [fieldparams.BLSPubkeyLength]byte, *validatorServiceConfig.ProposerOption) error
-	SaveProposerSettings(ctx context.Context, settings *validatorServiceConfig.ProposerSettings) error
+	SaveProposerSettings(ctx context.Context, settings *proposer.Settings) error
 }
