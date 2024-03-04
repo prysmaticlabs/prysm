@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -419,4 +420,70 @@ func TestService_Synced(t *testing.T) {
 	assert.Equal(t, false, s.Synced())
 	s.synced.Set()
 	assert.Equal(t, true, s.Synced())
+}
+
+func TestMissingBlobRequest(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(t *testing.T) (blocks.ROBlock, *filesystem.BlobStorage)
+		nReq  int
+		err   error
+	}{
+		{
+			name: "pre-deneb",
+			setup: func(t *testing.T) (blocks.ROBlock, *filesystem.BlobStorage) {
+				cb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+				require.NoError(t, err)
+				rob, err := blocks.NewROBlockWithRoot(cb, [32]byte{})
+				require.NoError(t, err)
+				return rob, nil
+			},
+			nReq: 0,
+		},
+		{
+			name: "deneb zero commitments",
+			setup: func(t *testing.T) (blocks.ROBlock, *filesystem.BlobStorage) {
+				bk, _ := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 0)
+				return bk, nil
+			},
+			nReq: 0,
+		},
+		{
+			name: "2 commitments, all missing",
+			setup: func(t *testing.T) (blocks.ROBlock, *filesystem.BlobStorage) {
+				bk, _ := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 2)
+				fs := filesystem.NewEphemeralBlobStorage(t)
+				return bk, fs
+			},
+			nReq: 2,
+		},
+		{
+			name: "2 commitments, 1 missing",
+			setup: func(t *testing.T) (blocks.ROBlock, *filesystem.BlobStorage) {
+				bk, _ := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 2)
+				bm, fs := filesystem.NewEphemeralBlobStorageWithMocker(t)
+				require.NoError(t, bm.CreateFakeIndices(bk.Root(), 1))
+				return bk, fs
+			},
+			nReq: 1,
+		},
+		{
+			name: "2 commitments, 0 missing",
+			setup: func(t *testing.T) (blocks.ROBlock, *filesystem.BlobStorage) {
+				bk, _ := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 2)
+				bm, fs := filesystem.NewEphemeralBlobStorageWithMocker(t)
+				require.NoError(t, bm.CreateFakeIndices(bk.Root(), 0, 1))
+				return bk, fs
+			},
+			nReq: 0,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			blk, store := c.setup(t)
+			req, err := missingBlobRequest(blk, store)
+			require.NoError(t, err)
+			require.Equal(t, c.nReq, len(req))
+		})
+	}
 }
