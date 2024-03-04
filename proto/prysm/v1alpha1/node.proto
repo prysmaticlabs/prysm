@@ -102,7 +102,7 @@ service Node {
 }
 
 message HealthRequest {
-    uint64 syncing_status = 2;
+    uint64 syncing_status = 1;
 }
 
 // Information about the current network sync status of the node.

@@ -297,6 +297,7 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 }
 
 func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan chan<- *event.Event) {
+	log.Info("Starting health check routine for beacon node apis")
 	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	tracker := v.NodeHealthTracker(ctx)
 	go func() {
