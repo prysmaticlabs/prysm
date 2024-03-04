@@ -14,12 +14,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
-	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	beaconState "github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -224,9 +223,16 @@ func (s *Service) SubmitSignedContributionAndProof(
 
 	errs, ctx := errgroup.WithContext(ctx)
 
-	err := s.validateSignedContributionAndProof(ctx, req)
+	sigRoot, aggKey, msgErr := verification.SignedContributionAndProofValidationSetup(ctx, s.HeadFetcher, req)
+	if msgErr != nil {
+		return &RpcError{Err: msgErr.Err, Reason: BadRequest}
+	}
+	valid, err := bls.VerifySignature(req.Signature, sigRoot, aggKey)
 	if err != nil {
-		return &RpcError{Err: err, Reason: BadRequest}
+		return &RpcError{Err: err, Reason: Internal}
+	}
+	if !valid {
+		return &RpcError{Err: errors.New("request signature invalid based on request message"), Reason: BadRequest}
 	}
 
 	// Broadcasting and saving contribution into the pool in parallel. As one fail should not affect another.
@@ -251,47 +257,6 @@ func (s *Service) SubmitSignedContributionAndProof(
 		},
 	})
 
-	return nil
-}
-
-func (s *Service) validateSignedContributionAndProof(ctx context.Context,
-	req *ethpb.SignedContributionAndProof) error {
-	var activeRawPubkeys [][]byte
-	syncPubkeys, err := s.HeadFetcher.HeadSyncCommitteePubKeys(ctx, req.Message.Contribution.Slot, primitives.CommitteeIndex(req.Message.Contribution.SubcommitteeIndex))
-	if err != nil {
-		return err
-	}
-	bVector := req.Message.Contribution.AggregationBits
-	// In the event no bit is set for the
-	// sync contribution, we reject the message.
-	if bVector.Count() == 0 {
-		return errors.New("bitvector count is 0")
-	}
-	for i, pk := range syncPubkeys {
-		if bVector.BitAt(uint64(i)) {
-			activeRawPubkeys = append(activeRawPubkeys, pk)
-		}
-	}
-	d, err := s.HeadFetcher.HeadSyncCommitteeDomain(ctx, req.Message.Contribution.Slot)
-	if err != nil {
-		return err
-	}
-	rawBytes := p2ptypes.SSZBytes(req.Message.Contribution.BlockRoot)
-	sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)
-	if err != nil {
-		return err
-	}
-	aggKey, err := bls.AggregatePublicKeys(activeRawPubkeys)
-	if err != nil {
-		return err
-	}
-	valid, err := bls.VerifySignature(req.Signature, sigRoot, aggKey)
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return errors.New("request signature invalid based on request message")
-	}
 	return nil
 }
 
