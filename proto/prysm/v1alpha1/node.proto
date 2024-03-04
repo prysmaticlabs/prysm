@@ -34,7 +34,7 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
 // it supports, chain information and node version.
 service Node {
     // Retrieve the current network sync status of the node.
-	  rpc GetSyncStatus(google.protobuf.Empty) returns (SyncStatus) {
+	rpc GetSyncStatus(google.protobuf.Empty) returns (SyncStatus) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/node/syncing"
         };
