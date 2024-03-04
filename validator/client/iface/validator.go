@@ -6,7 +6,7 @@ import (
 	"time"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -62,8 +62,8 @@ type Validator interface {
 	CheckDoppelGanger(ctx context.Context) error
 	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
-	ProposerSettings() *validatorserviceconfig.ProposerSettings
-	SetProposerSettings(context.Context, *validatorserviceconfig.ProposerSettings) error
+	ProposerSettings() *proposer.Settings
+	SetProposerSettings(context.Context, *proposer.Settings) error
 	GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error)
 	SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error
 	DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error

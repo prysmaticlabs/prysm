@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -106,7 +106,7 @@ type validator struct {
 	voteStats                          voteStats
 	syncCommitteeStats                 syncCommitteeStats
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
-	proposerSettings                   *validatorserviceconfig.ProposerSettings
+	proposerSettings                   *proposer.Settings
 	walletInitializedChannel           chan *wallet.Wallet
 	validatorsRegBatchSize             int
 }
@@ -1028,12 +1028,12 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 }
 
 // ProposerSettings gets the current proposer settings saved in memory validator
-func (v *validator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+func (v *validator) ProposerSettings() *proposer.Settings {
 	return v.proposerSettings
 }
 
 // SetProposerSettings sets and saves the passed in proposer settings overriding the in memory one
-func (v *validator) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+func (v *validator) SetProposerSettings(ctx context.Context, settings *proposer.Settings) error {
 	if v.db == nil {
 		return errors.New("db is not set")
 	}
@@ -1195,6 +1195,10 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
 		enabled := false
+
+		if v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig == nil && v.ProposerSettings().DefaultConfig.BuilderConfig != nil {
+			log.Warn("Builder is `enabled` in default config but will be ignored because no fee recipient was provided!")
+		}
 
 		if v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig != nil {
 			defaultConfig := v.ProposerSettings().DefaultConfig
