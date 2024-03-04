@@ -207,7 +207,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 		BlobStorage:        s.cfg.BlobStorage,
 	}
-	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
+	rewardFetcher := &rewards.BlockRewardService{Replayer: ch, DB: s.cfg.BeaconDB}
 
 	s.initializeRewardServerRoutes(&rewards.Server{
 		Blocker:               blocker,
