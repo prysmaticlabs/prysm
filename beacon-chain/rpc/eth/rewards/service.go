@@ -132,7 +132,7 @@ func (rs *BlockRewardService) GetStateForRewards(ctx context.Context, blk interf
 	_, prevSlotRoots, err := rs.DB.BlockRootsBySlot(ctx, slots.PrevSlot(blk.Slot()))
 	if err != nil {
 		return nil, &httputil.DefaultJsonError{
-			Message: "Could not get blocks for previous slot: " + err.Error(),
+			Message: "Could not get roots for previous slot: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
