@@ -54,12 +54,6 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 	assert.DeepEqual(t, expectedResp, resp)
 }
 
-func TestBeaconApiValidatorClient_GetAttestationDataNilInput(t *testing.T) {
-	validatorClient := beaconApiValidatorClient{}
-	_, err := validatorClient.GetAttestationData(context.Background(), nil)
-	assert.ErrorContains(t, "GetAttestationData received nil argument `in`", err)
-}
-
 func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 	const slot = primitives.Slot(1)
 	const committeeIndex = primitives.CommitteeIndex(2)
