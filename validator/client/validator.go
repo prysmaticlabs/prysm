@@ -1096,7 +1096,7 @@ func (v *validator) ProcessEvent(event *eventClient.Event) {
 		v.setHighestSlot(primitives.Slot(uintSlot))
 	default:
 		// just keep going and log the error
-		log.Warnf("Received an unknown event type of %s with contents %s", event.EventType, string(event.Data))
+		log.WithField("type", event.EventType).WithField("data", string(event.Data)).Warn("Received an unknown event")
 	}
 }
 
