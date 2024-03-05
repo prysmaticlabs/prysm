@@ -57,7 +57,8 @@ type Flags struct {
 	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
 
 	EnableSlasher                   bool // Enable slasher in the beacon node runtime.
-	EnableSlashingProtectionPruning bool // EnableSlashingProtectionPruning for the validator client.
+	EnableSlashingProtectionPruning bool // Enable slashing protection pruning for the validator client.
+	EnableMinimalSlashingProtection bool // Enable minimal slashing protection database for the validator client.
 
 	SaveFullExecutionPayloads bool // Save full beacon blocks with execution payloads in the database.
 	EnableStartOptimistic     bool // EnableStartOptimistic treats every block as optimistic at startup.
@@ -275,6 +276,10 @@ func ConfigureValidator(ctx *cli.Context) error {
 	if ctx.Bool(enableSlashingProtectionPruning.Name) {
 		logEnabled(enableSlashingProtectionPruning)
 		cfg.EnableSlashingProtectionPruning = true
+	}
+	if ctx.Bool(EnableMinimalSlashingProtection.Name) {
+		logEnabled(EnableMinimalSlashingProtection)
+		cfg.EnableMinimalSlashingProtection = true
 	}
 	if ctx.Bool(enableDoppelGangerProtection.Name) {
 		logEnabled(enableDoppelGangerProtection)

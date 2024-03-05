@@ -26,6 +26,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
+
 // SubmitAttestation completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
@@ -135,7 +137,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 
 	// Set the signature of the attestation and send it out to the beacon node.
 	indexedAtt.Signature = sig
-	if err := v.slashableAttestationCheck(ctx, indexedAtt, pubKey, signingRoot); err != nil {
+	if err := v.db.SlashableAttestationCheck(ctx, indexedAtt, pubKey, signingRoot, v.emitAccountMetrics, ValidatorAttestFailVec); err != nil {
 		log.WithError(err).Error("Failed attestation slashing protection check")
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
