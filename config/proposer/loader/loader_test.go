@@ -820,102 +820,108 @@ func TestProposerSettingsLoader(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+			t.Run(fmt.Sprintf("%v-minimal:%v", tt.name, isSlashingProtectionMinimal), func(t *testing.T) {
+				app := cli.App{}
+				set := flag.NewFlagSet("test", 0)
+				if tt.args.proposerSettingsFlagValues.dir != "" {
+					set.String(flags.ProposerSettingsFlag.Name, tt.args.proposerSettingsFlagValues.dir, "")
+					require.NoError(t, set.Set(flags.ProposerSettingsFlag.Name, tt.args.proposerSettingsFlagValues.dir))
+				}
+				if tt.args.proposerSettingsFlagValues.url != "" {
+					content, err := os.ReadFile(tt.args.proposerSettingsFlagValues.url)
+					require.NoError(t, err)
+					srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(200)
+						w.Header().Set("Content-Type", "application/json")
+						_, err := fmt.Fprintf(w, "%s", content)
+						require.NoError(t, err)
+					}))
+					defer srv.Close()
+
+					set.String(flags.ProposerSettingsURLFlag.Name, tt.args.proposerSettingsFlagValues.url, "")
+					require.NoError(t, set.Set(flags.ProposerSettingsURLFlag.Name, srv.URL))
+				}
+				if tt.args.proposerSettingsFlagValues.defaultfee != "" {
+					set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee, "")
+					require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee))
+				}
+				if tt.args.proposerSettingsFlagValues.defaultgas != "" {
+					set.String(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas, "")
+					require.NoError(t, set.Set(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas))
+				}
+				if tt.validatorRegistrationEnabled {
+					set.Bool(flags.EnableBuilderFlag.Name, true, "")
+				}
+				cliCtx := cli.NewContext(&app, set, nil)
+				validatorDB := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
+				if tt.withdb != nil {
+					err := tt.withdb(validatorDB)
+					require.NoError(t, err)
+				}
+				loader, err := NewProposerSettingsLoader(
+					cliCtx,
+					validatorDB,
+					WithBuilderConfig(),
+					WithGasLimit(),
+				)
+				if tt.wantInitErr != "" {
+					require.ErrorContains(t, tt.wantInitErr, err)
+					return
+				} else {
+					require.NoError(t, err)
+				}
+				got, err := loader.Load(cliCtx)
+				if tt.wantErr != "" {
+					require.ErrorContains(t, tt.wantErr, err)
+					return
+				}
+				if tt.wantLog != "" {
+					assert.LogsContain(t, hook,
+						tt.wantLog,
+					)
+				}
+				w := tt.want()
+				require.DeepEqual(t, w, got)
+				if !tt.skipDBSavedCheck {
+					dbSettings, err := validatorDB.ProposerSettings(cliCtx.Context)
+					require.NoError(t, err)
+					require.DeepEqual(t, w, dbSettings)
+				}
+			})
+		}
+	}
+}
+
+func Test_ProposerSettingsLoaderWithOnlyBuilder_DoesNotSaveInDB(t *testing.T) {
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		t.Run(fmt.Sprintf("minimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet("test", 0)
-			if tt.args.proposerSettingsFlagValues.dir != "" {
-				set.String(flags.ProposerSettingsFlag.Name, tt.args.proposerSettingsFlagValues.dir, "")
-				require.NoError(t, set.Set(flags.ProposerSettingsFlag.Name, tt.args.proposerSettingsFlagValues.dir))
-			}
-			if tt.args.proposerSettingsFlagValues.url != "" {
-				content, err := os.ReadFile(tt.args.proposerSettingsFlagValues.url)
-				require.NoError(t, err)
-				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(200)
-					w.Header().Set("Content-Type", "application/json")
-					_, err := fmt.Fprintf(w, "%s", content)
-					require.NoError(t, err)
-				}))
-				defer srv.Close()
-
-				set.String(flags.ProposerSettingsURLFlag.Name, tt.args.proposerSettingsFlagValues.url, "")
-				require.NoError(t, set.Set(flags.ProposerSettingsURLFlag.Name, srv.URL))
-			}
-			if tt.args.proposerSettingsFlagValues.defaultfee != "" {
-				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee, "")
-				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee))
-			}
-			if tt.args.proposerSettingsFlagValues.defaultgas != "" {
-				set.String(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas, "")
-				require.NoError(t, set.Set(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas))
-			}
-			if tt.validatorRegistrationEnabled {
-				set.Bool(flags.EnableBuilderFlag.Name, true, "")
-			}
+			set.Bool(flags.EnableBuilderFlag.Name, true, "")
 			cliCtx := cli.NewContext(&app, set, nil)
-			validatorDB := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
-			if tt.withdb != nil {
-				err := tt.withdb(validatorDB)
-				require.NoError(t, err)
-			}
+			validatorDB := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
 			loader, err := NewProposerSettingsLoader(
 				cliCtx,
 				validatorDB,
 				WithBuilderConfig(),
 				WithGasLimit(),
 			)
-			if tt.wantInitErr != "" {
-				require.ErrorContains(t, tt.wantInitErr, err)
-				return
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 			got, err := loader.Load(cliCtx)
-			if tt.wantErr != "" {
-				require.ErrorContains(t, tt.wantErr, err)
-				return
+			require.NoError(t, err)
+			_, err = validatorDB.ProposerSettings(cliCtx.Context)
+			require.ErrorContains(t, "no proposer settings found in bucket", err)
+			want := &proposer.Settings{
+				DefaultConfig: &proposer.Option{
+					BuilderConfig: &proposer.BuilderConfig{
+						Enabled:  true,
+						GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+						Relays:   nil,
+					},
+				},
 			}
-			if tt.wantLog != "" {
-				assert.LogsContain(t, hook,
-					tt.wantLog,
-				)
-			}
-			w := tt.want()
-			require.DeepEqual(t, w, got)
-			if !tt.skipDBSavedCheck {
-				dbSettings, err := validatorDB.ProposerSettings(cliCtx.Context)
-				require.NoError(t, err)
-				require.DeepEqual(t, w, dbSettings)
-			}
+			require.DeepEqual(t, want, got)
 		})
 	}
-}
-
-func Test_ProposerSettingsLoaderWithOnlyBuilder_DoesNotSaveInDB(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.Bool(flags.EnableBuilderFlag.Name, true, "")
-	cliCtx := cli.NewContext(&app, set, nil)
-	validatorDB := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
-	loader, err := NewProposerSettingsLoader(
-		cliCtx,
-		validatorDB,
-		WithBuilderConfig(),
-		WithGasLimit(),
-	)
-	require.NoError(t, err)
-	got, err := loader.Load(cliCtx)
-	require.NoError(t, err)
-	_, err = validatorDB.ProposerSettings(cliCtx.Context)
-	require.ErrorContains(t, "no proposer settings found in bucket", err)
-	want := &proposer.Settings{
-		DefaultConfig: &proposer.Option{
-			BuilderConfig: &proposer.BuilderConfig{
-				Enabled:  true,
-				GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
-				Relays:   nil,
-			},
-		},
-	}
-	require.DeepEqual(t, want, got)
 }

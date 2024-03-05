@@ -37,7 +37,7 @@ import (
 	beacon_api "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	vdb "github.com/prysmaticlabs/prysm/v5/validator/db"
-	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	dbCommon "github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
@@ -517,7 +517,7 @@ func buildDuplicateError(response []*ethpb.DoppelGangerResponse_ValidatorRespons
 }
 
 // Ensures that the latest attestation history is retrieved.
-func retrieveLatestRecord(recs []*kv.AttestationRecord) *kv.AttestationRecord {
+func retrieveLatestRecord(recs []*dbCommon.AttestationRecord) *dbCommon.AttestationRecord {
 	if len(recs) == 0 {
 		return nil
 	}

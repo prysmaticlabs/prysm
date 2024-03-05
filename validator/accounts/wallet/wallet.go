@@ -378,7 +378,10 @@ func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, d
 		}
 	}
 	fullPath := filepath.Join(accountPath, fileName)
-	existedPreviously := file.Exists(fullPath)
+	existedPreviously, err := file.Exists(fullPath, file.Regular)
+	if err != nil {
+		return false, errors.Wrapf(err, "could not check if file exists: %s", fullPath)
+	}
 	if err := file.WriteFile(fullPath, data); err != nil {
 		return false, errors.Wrapf(err, "could not write %s", filePath)
 	}
@@ -439,7 +442,12 @@ func (w *Wallet) FileNameAtPath(_ context.Context, filePath, fileName string) (s
 // for reading if it exists at the wallet path.
 func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser, error) {
 	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
-	if !file.Exists(configFilePath) {
+	exists, err := file.Exists(configFilePath, file.Regular)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if file exists: %s", configFilePath)
+	}
+
+	if !exists {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
 	w.configFilePath = configFilePath
