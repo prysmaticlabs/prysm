@@ -2,17 +2,20 @@ package kv
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/slashings"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -24,35 +27,26 @@ type SlashingKind int
 // with the appropriate call context.
 type AttestationRecordSaveRequest struct {
 	ctx    context.Context
-	record *AttestationRecord
-}
-
-// AttestationRecord which can be represented by these simple values
-// for manipulation by database methods.
-type AttestationRecord struct {
-	PubKey      [fieldparams.BLSPubkeyLength]byte
-	Source      primitives.Epoch
-	Target      primitives.Epoch
-	SigningRoot []byte
+	record *common.AttestationRecord
 }
 
 // NewQueuedAttestationRecords constructor allocates the underlying slice and
 // required attributes for managing pending attestation records.
 func NewQueuedAttestationRecords() *QueuedAttestationRecords {
 	return &QueuedAttestationRecords{
-		records: make([]*AttestationRecord, 0, attestationBatchCapacity),
+		records: make([]*common.AttestationRecord, 0, attestationBatchCapacity),
 	}
 }
 
 // QueuedAttestationRecords is a thread-safe struct for managing a queue of
 // attestation records to save to validator database.
 type QueuedAttestationRecords struct {
-	records []*AttestationRecord
+	records []*common.AttestationRecord
 	lock    sync.RWMutex
 }
 
 // Append a new attestation record to the queue.
-func (p *QueuedAttestationRecords) Append(ar *AttestationRecord) {
+func (p *QueuedAttestationRecords) Append(ar *common.AttestationRecord) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.records = append(p.records, ar)
@@ -60,11 +54,11 @@ func (p *QueuedAttestationRecords) Append(ar *AttestationRecord) {
 
 // Flush all records. This method returns the current pending records and resets
 // the pending records slice.
-func (p *QueuedAttestationRecords) Flush() []*AttestationRecord {
+func (p *QueuedAttestationRecords) Flush() []*common.AttestationRecord {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	recs := p.records
-	p.records = make([]*AttestationRecord, 0, attestationBatchCapacity)
+	p.records = make([]*common.AttestationRecord, 0, attestationBatchCapacity)
 	return recs
 }
 
@@ -93,15 +87,16 @@ const (
 )
 
 var (
-	doubleVoteMessage      = "double vote found, existing attestation at target epoch %d with conflicting signing root %#x"
-	surroundingVoteMessage = "attestation with (source %d, target %d) surrounds another with (source %d, target %d)"
-	surroundedVoteMessage  = "attestation with (source %d, target %d) is surrounded by another with (source %d, target %d)"
+	doubleVoteMessage           = "double vote found, existing attestation at target epoch %d with conflicting signing root %#x"
+	surroundingVoteMessage      = "attestation with (source %d, target %d) surrounds another with (source %d, target %d)"
+	surroundedVoteMessage       = "attestation with (source %d, target %d) is surrounded by another with (source %d, target %d)"
+	failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
 )
 
 // AttestationHistoryForPubKey retrieves a list of attestation records for data
 // we have stored in the database for the given validator public key.
-func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*AttestationRecord, error) {
-	records := make([]*AttestationRecord, 0)
+func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*common.AttestationRecord, error) {
+	records := make([]*common.AttestationRecord, 0)
 	_, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKey")
 	defer span.End()
 	err := s.view(func(tx *bolt.Tx) error {
@@ -121,7 +116,7 @@ func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [fieldpa
 			}
 			sourceEpoch := bytesutil.BytesToEpochBigEndian(sourceBytes)
 			for _, targetEpoch := range targetEpochs {
-				record := &AttestationRecord{
+				record := &common.AttestationRecord{
 					PubKey: pubKey,
 					Source: sourceEpoch,
 					Target: targetEpoch,
@@ -137,6 +132,79 @@ func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [fieldpa
 		})
 	})
 	return records, err
+}
+
+// SlashableAttestationCheck checks if an attestation is slashable by comparing it with the attesting
+// history for the given public key in our complete slashing protection database defined by EIP-3076.
+// If it is not, it updates the database.
+func (s *Store) SlashableAttestationCheck(
+	ctx context.Context,
+	indexedAtt *ethpb.IndexedAttestation,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	signingRoot32 [32]byte,
+	emitAccountMetrics bool,
+	validatorAttestFailVec *prometheus.CounterVec,
+) error {
+	ctx, span := trace.StartSpan(ctx, "validator.postAttSignUpdate")
+	defer span.End()
+
+	signingRoot := signingRoot32[:]
+
+	// Based on EIP-3076, validator should refuse to sign any attestation with source epoch less
+	// than the minimum source epoch present in that signer’s attestations.
+	lowestSourceEpoch, exists, err := s.LowestSignedSourceEpoch(ctx, pubKey)
+	if err != nil {
+		return err
+	}
+	if exists && indexedAtt.Data.Source.Epoch < lowestSourceEpoch {
+		return fmt.Errorf(
+			"could not sign attestation lower than lowest source epoch in db, %d < %d",
+			indexedAtt.Data.Source.Epoch,
+			lowestSourceEpoch,
+		)
+	}
+	existingSigningRoot, err := s.SigningRootAtTargetEpoch(ctx, pubKey, indexedAtt.Data.Target.Epoch)
+	if err != nil {
+		return err
+	}
+	signingRootsDiffer := slashings.SigningRootsDiffer(existingSigningRoot, signingRoot)
+
+	// Based on EIP-3076, validator should refuse to sign any attestation with target epoch less
+	// than or equal to the minimum target epoch present in that signer’s attestations, except
+	// if it is a repeat signing as determined by the signingRoot.
+	lowestTargetEpoch, exists, err := s.LowestSignedTargetEpoch(ctx, pubKey)
+	if err != nil {
+		return err
+	}
+	if signingRootsDiffer && exists && indexedAtt.Data.Target.Epoch <= lowestTargetEpoch {
+		return fmt.Errorf(
+			"could not sign attestation lower than or equal to lowest target epoch in db if signing roots differ, %d <= %d",
+			indexedAtt.Data.Target.Epoch,
+			lowestTargetEpoch,
+		)
+	}
+	fmtKey := "0x" + hex.EncodeToString(pubKey[:])
+	slashingKind, err := s.CheckSlashableAttestation(ctx, pubKey, signingRoot, indexedAtt)
+	if err != nil {
+		if emitAccountMetrics {
+			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		switch slashingKind {
+		case DoubleVote:
+			log.Warn("Attestation is slashable as it is a double vote")
+		case SurroundingVote:
+			log.Warn("Attestation is slashable as it is surrounding a previous attestation")
+		case SurroundedVote:
+			log.Warn("Attestation is slashable as it is surrounded by a previous attestation")
+		}
+		return errors.Wrap(err, failedAttLocalProtectionErr)
+	}
+
+	if err := s.SaveAttestationForPubKey(ctx, pubKey, signingRoot32, indexedAtt); err != nil {
+		return errors.Wrap(err, "could not save attestation history for validator public key")
+	}
+
+	return nil
 }
 
 // CheckSlashableAttestation verifies an incoming attestation is
@@ -200,7 +268,7 @@ func (s *Store) CheckSlashableAttestation(
 }
 
 // Iterate from the back of the bucket since we are looking for target_epoch > att.target_epoch
-func (_ *Store) checkSurroundedVote(
+func (*Store) checkSurroundedVote(
 	targetEpochsBucket *bolt.Bucket, att *ethpb.IndexedAttestation,
 ) (SlashingKind, error) {
 	c := targetEpochsBucket.Cursor()
@@ -240,7 +308,7 @@ func (_ *Store) checkSurroundedVote(
 }
 
 // Iterate from the back of the bucket since we are looking for source_epoch > att.source_epoch
-func (_ *Store) checkSurroundingVote(
+func (*Store) checkSurroundingVote(
 	sourceEpochsBucket *bolt.Bucket, att *ethpb.IndexedAttestation,
 ) (SlashingKind, error) {
 	c := sourceEpochsBucket.Cursor()
@@ -292,9 +360,9 @@ func (s *Store) SaveAttestationsForPubKey(
 			len(atts),
 		)
 	}
-	records := make([]*AttestationRecord, len(atts))
+	records := make([]*common.AttestationRecord, len(atts))
 	for i, a := range atts {
-		records[i] = &AttestationRecord{
+		records[i] = &common.AttestationRecord{
 			PubKey:      pubKey,
 			Source:      a.Data.Source.Epoch,
 			Target:      a.Data.Target.Epoch,
@@ -307,13 +375,13 @@ func (s *Store) SaveAttestationsForPubKey(
 // SaveAttestationForPubKey saves an attestation for a validator public
 // key for local validator slashing protection.
 func (s *Store) SaveAttestationForPubKey(
-	ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
+	ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signingRoot [fieldparams.RootLength]byte, att *ethpb.IndexedAttestation,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationForPubKey")
 	defer span.End()
 	s.batchedAttestationsChan <- &AttestationRecordSaveRequest{
 		ctx: ctx,
-		record: &AttestationRecord{
+		record: &common.AttestationRecord{
 			PubKey:      pubKey,
 			Source:      att.Data.Source.Epoch,
 			Target:      att.Data.Target.Epoch,
@@ -385,7 +453,7 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 // and resets the list of batched attestations for future writes.
 // This function notifies all subscribers for flushed attestations
 // of the result of the save operation.
-func (s *Store) flushAttestationRecords(ctx context.Context, records []*AttestationRecord) {
+func (s *Store) flushAttestationRecords(ctx context.Context, records []*common.AttestationRecord) {
 	ctx, span := trace.StartSpan(ctx, "validatorDB.flushAttestationRecords")
 	defer span.End()
 
@@ -422,7 +490,7 @@ func (s *Store) flushAttestationRecords(ctx context.Context, records []*Attestat
 // Saves a list of attestation records to the database in a single boltDB
 // transaction to minimize write lock contention compared to doing them
 // all in individual, isolated boltDB transactions.
-func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationRecord) error {
+func (s *Store) saveAttestationRecords(ctx context.Context, atts []*common.AttestationRecord) error {
 	_, span := trace.StartSpan(ctx, "Validator.saveAttestationRecords")
 	defer span.End()
 	return s.update(func(tx *bolt.Tx) error {

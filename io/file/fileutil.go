@@ -14,7 +14,13 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	log "github.com/sirupsen/logrus"
+)
+
+type ObjType int
+
+const (
+	Regular ObjType = iota
+	Directory
 )
 
 // ExpandPath given a string which may be a relative path.
@@ -85,7 +91,13 @@ func WriteFile(file string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	if Exists(expanded) {
+
+	exists, err := Exists(expanded, Regular)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if file exists at path %s", expanded)
+	}
+
+	if exists {
 		info, err := os.Stat(expanded)
 		if err != nil {
 			return err
@@ -136,19 +148,28 @@ func HasReadWritePermissions(itemPath string) (bool, error) {
 
 // Exists returns true if a file is not a directory and exists
 // at the specified path.
-func Exists(filename string) bool {
+func Exists(filename string, objType ObjType) (bool, error) {
 	filePath, err := ExpandPath(filename)
 	if err != nil {
-		return false
+		return false, errors.Wrapf(err, "could not expend path of file %s", filename)
 	}
+
 	info, err := os.Stat(filePath)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			log.WithError(err).Info("Checking for file existence returned an error")
+		if os.IsNotExist(err) {
+			return false, nil
 		}
-		return false
+
+		return false, errors.Wrapf(err, "could not get file info for file %s", filename)
 	}
-	return info != nil && !info.IsDir()
+
+	if info == nil {
+		return false, errors.New("file info is nil")
+	}
+
+	isDir := info.IsDir()
+
+	return objType == Directory && isDir || objType == Regular && !isDir, nil
 }
 
 // RecursiveFileFind returns true, and the path,  if a file is not a directory and exists
@@ -183,6 +204,40 @@ func RecursiveFileFind(filename, dir string) (bool, string, error) {
 	return found, fpath, nil
 }
 
+// RecursiveDirFind searches for directory in a directory and its subdirectories.
+func RecursiveDirFind(dirname, dir string) (bool, string, error) {
+	var (
+		found bool
+		fpath string
+	)
+
+	dir = filepath.Clean(dir)
+	found = false
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return errors.Wrapf(err, "error walking directory %s", dir)
+		}
+
+		// Checks if its a file  and has the exact name as the dirname
+		// need to break the walk function by using a non-fatal error
+		if info.IsDir() && dirname == info.Name() {
+			found = true
+			fpath = path
+			return errStopWalk
+		}
+
+		// No errors or file found
+		return nil
+	})
+
+	if err != nil && err != errStopWalk {
+		return false, "", errors.Wrapf(err, "error walking directory %s", dir)
+	}
+
+	return found, fpath, nil
+}
+
 // ReadFileAsBytes expands a file name's absolute path and reads it as bytes from disk.
 func ReadFileAsBytes(filename string) ([]byte, error) {
 	filePath, err := ExpandPath(filename)
@@ -194,7 +249,12 @@ func ReadFileAsBytes(filename string) ([]byte, error) {
 
 // CopyFile copy a file from source to destination path.
 func CopyFile(src, dst string) error {
-	if !Exists(src) {
+	exists, err := Exists(src, Regular)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if file exists at path %s", src)
+	}
+
+	if !exists {
 		return errors.New("source file does not exist at provided path")
 	}
 	f, err := os.Open(src) // #nosec G304

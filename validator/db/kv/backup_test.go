@@ -9,6 +9,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 )
 
 func TestStore_Backup(t *testing.T) {
@@ -92,7 +93,7 @@ func TestStore_NestedBackup(t *testing.T) {
 
 	hist, err := backedDB.AttestationHistoryForPubKey(context.Background(), keys[0])
 	require.NoError(t, err)
-	require.DeepEqual(t, &AttestationRecord{
+	require.DeepEqual(t, &common.AttestationRecord{
 		PubKey:      keys[0],
 		Source:      10,
 		Target:      0,
@@ -101,7 +102,7 @@ func TestStore_NestedBackup(t *testing.T) {
 
 	hist, err = backedDB.AttestationHistoryForPubKey(context.Background(), keys[1])
 	require.NoError(t, err)
-	require.DeepEqual(t, &AttestationRecord{
+	require.DeepEqual(t, &common.AttestationRecord{
 		PubKey:      keys[1],
 		Source:      10,
 		Target:      0,
