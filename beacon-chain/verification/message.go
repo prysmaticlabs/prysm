@@ -5,7 +5,6 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -21,7 +20,12 @@ type MsgVerifError struct {
 	Err          error
 }
 
-func SignedContributionAndProofValidationSetup(ctx context.Context, headFetcher blockchain.HeadFetcher, req *ethpb.SignedContributionAndProof) ([fieldparams.RootLength]byte, bls.PublicKey, *MsgVerifError) {
+type syncCommitteeSigPrereqFetcher interface {
+	HeadSyncCommitteePubKeys(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) ([][]byte, error)
+	HeadSyncCommitteeDomain(ctx context.Context, slot primitives.Slot) ([]byte, error)
+}
+
+func SignedContributionAndProofValidationSetup(ctx context.Context, headFetcher syncCommitteeSigPrereqFetcher, req *ethpb.SignedContributionAndProof) ([fieldparams.RootLength]byte, bls.PublicKey, *MsgVerifError) {
 	ctx, span := trace.StartSpan(ctx, "verification.SignedContributionAndProofValidationSetup")
 	defer span.End()
 	// The aggregate signature is valid for the message `beacon_block_root` and aggregate pubkey
