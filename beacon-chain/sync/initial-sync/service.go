@@ -316,6 +316,9 @@ func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
 		log.WithField("root", fmt.Sprintf("%#x", r)).Error("Block for checkpoint sync origin root not found in db")
 		return err
 	}
+	if !params.WithinDAPeriod(slots.ToEpoch(blk.Block().Slot()), slots.ToEpoch(s.clock.CurrentSlot())) {
+		return nil
+	}
 	rob, err := blocks.NewROBlockWithRoot(blk, r)
 	if err != nil {
 		return err
