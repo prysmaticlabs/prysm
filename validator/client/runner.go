@@ -130,12 +130,10 @@ func run(ctx context.Context, v iface.Validator) {
 				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
 				if err != nil {
 					log.WithError(err).Error("Failed to re initialize validator and get head slot")
-					beaconHealthTracker.UpdateNodeHealth(false)
 					continue
 				}
 				if err := v.UpdateDuties(ctx, headSlot); err != nil {
 					handleAssignmentError(err, headSlot)
-					beaconHealthTracker.UpdateNodeHealth(false)
 					continue
 				}
 			}
