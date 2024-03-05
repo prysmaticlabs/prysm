@@ -15,7 +15,13 @@ import (
 func MigrateUp(cliCtx *cli.Context) error {
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 
-	if !file.Exists(path.Join(dataDir, kv.ProtectionDbFileName)) {
+	dbFilePath := path.Join(dataDir, kv.ProtectionDbFileName)
+	exists, err := file.Exists(dbFilePath, file.Regular)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if file exists: %s", dbFilePath)
+	}
+
+	if !exists {
 		return errors.New("No validator db found at path, nothing to migrate")
 	}
 
@@ -33,7 +39,13 @@ func MigrateUp(cliCtx *cli.Context) error {
 func MigrateDown(cliCtx *cli.Context) error {
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 
-	if !file.Exists(path.Join(dataDir, kv.ProtectionDbFileName)) {
+	dbFilePath := path.Join(dataDir, kv.ProtectionDbFileName)
+	exists, err := file.Exists(dbFilePath, file.Regular)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if file exists: %s", dbFilePath)
+	}
+
+	if !exists {
 		return errors.New("No validator db found at path, nothing to rollback")
 	}
 
