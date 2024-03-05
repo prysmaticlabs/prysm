@@ -77,6 +77,7 @@ go_test(
         "//beacon-chain/das:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filesystem:go_default_library",
+        "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/p2p/peers:go_default_library",

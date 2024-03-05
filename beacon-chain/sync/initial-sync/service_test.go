@@ -6,10 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/prysmaticlabs/prysm/v5/async/abool"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
@@ -486,4 +488,26 @@ func TestMissingBlobRequest(t *testing.T) {
 			require.Equal(t, c.nReq, len(req))
 		})
 	}
+}
+
+func TestOriginOutsideRetention(t *testing.T) {
+	ctx := context.Background()
+	bdb := dbtest.SetupDB(t)
+	genesis := time.Unix(0, 0)
+	secsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
+	retentionSeconds := time.Second * time.Duration(uint64(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest+1)*secsPerEpoch)
+	outsideRetention := genesis.Add(retentionSeconds)
+	now := func() time.Time {
+		return outsideRetention
+	}
+	clock := startup.NewClock(genesis, [32]byte{}, startup.WithNower(now))
+	s := &Service{ctx: ctx, cfg: &Config{DB: bdb}, clock: clock}
+	blk, _ := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 1)
+	require.NoError(t, bdb.SaveBlock(ctx, blk))
+	concreteDB, ok := bdb.(*kv.Store)
+	require.Equal(t, true, ok)
+	require.NoError(t, concreteDB.SaveOriginCheckpointBlockRoot(ctx, blk.Root()))
+	// This would break due to missing service dependencies, but will return nil fast due to being outside retention.
+	require.Equal(t, false, params.WithinDAPeriod(slots.ToEpoch(blk.Block().Slot()), slots.ToEpoch(clock.CurrentSlot())))
+	require.NoError(t, s.fetchOriginBlobs([]peer.ID{}))
 }
