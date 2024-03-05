@@ -15,17 +15,19 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// MsgVerifError is an error wrapper for the validation setup responses
 type MsgVerifError struct {
 	PubsubResult pubsub.ValidationResult
 	Err          error
 }
 
-type syncCommitteeSigPrereqFetcher interface {
+type syncSigPrerequisiteFetcher interface {
 	HeadSyncCommitteePubKeys(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) ([][]byte, error)
 	HeadSyncCommitteeDomain(ctx context.Context, slot primitives.Slot) ([]byte, error)
 }
 
-func SignedContributionAndProofValidationSetup(ctx context.Context, headFetcher syncCommitteeSigPrereqFetcher, req *ethpb.SignedContributionAndProof) ([fieldparams.RootLength]byte, bls.PublicKey, *MsgVerifError) {
+// SignedContributionAndProofValidationSetup returns components used for a bls signature valuation
+func SignedContributionAndProofValidationSetup(ctx context.Context, headFetcher syncSigPrerequisiteFetcher, req *ethpb.SignedContributionAndProof) ([fieldparams.RootLength]byte, bls.PublicKey, *MsgVerifError) {
 	ctx, span := trace.StartSpan(ctx, "verification.SignedContributionAndProofValidationSetup")
 	defer span.End()
 	// The aggregate signature is valid for the message `beacon_block_root` and aggregate pubkey
