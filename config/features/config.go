@@ -57,7 +57,8 @@ type Flags struct {
 	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
 
 	EnableSlasher                   bool // Enable slasher in the beacon node runtime.
-	EnableSlashingProtectionPruning bool // EnableSlashingProtectionPruning for the validator client.
+	EnableSlashingProtectionPruning bool // Enable slashing protection pruning for the validator client.
+	EnableMinimalSlashingProtection bool // Enable minimal slashing protection database for the validator client.
 
 	SaveFullExecutionPayloads bool // Save full beacon blocks with execution payloads in the database.
 	EnableStartOptimistic     bool // EnableStartOptimistic treats every block as optimistic at startup.
@@ -119,21 +120,21 @@ func InitWithReset(c *Flags) func() {
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context) error {
 	if ctx.Bool(PraterTestnet.Name) {
-		log.Warn("Running on the Prater Testnet")
+		log.Info("Running on the Prater Testnet")
 		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
 			return err
 		}
 		applyPraterFeatureFlags(ctx)
 		params.UsePraterNetworkConfig()
 	} else if ctx.Bool(SepoliaTestnet.Name) {
-		log.Warn("Running on the Sepolia Beacon Chain Testnet")
+		log.Info("Running on the Sepolia Beacon Chain Testnet")
 		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
 			return err
 		}
 		applySepoliaFeatureFlags(ctx)
 		params.UseSepoliaNetworkConfig()
 	} else if ctx.Bool(HoleskyTestnet.Name) {
-		log.Warn("Running on the Holesky Beacon Chain Testnet")
+		log.Info("Running on the Holesky Beacon Chain Testnet")
 		if err := params.SetActive(params.HoleskyConfig().Copy()); err != nil {
 			return err
 		}
@@ -143,7 +144,7 @@ func configureTestnet(ctx *cli.Context) error {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
 		} else {
-			log.Warn("Running on Ethereum Mainnet")
+			log.Info("Running on Ethereum Mainnet")
 		}
 		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
 			return err
@@ -275,6 +276,10 @@ func ConfigureValidator(ctx *cli.Context) error {
 	if ctx.Bool(enableSlashingProtectionPruning.Name) {
 		logEnabled(enableSlashingProtectionPruning)
 		cfg.EnableSlashingProtectionPruning = true
+	}
+	if ctx.Bool(EnableMinimalSlashingProtection.Name) {
+		logEnabled(EnableMinimalSlashingProtection)
+		cfg.EnableMinimalSlashingProtection = true
 	}
 	if ctx.Bool(enableDoppelGangerProtection.Name) {
 		logEnabled(enableDoppelGangerProtection)

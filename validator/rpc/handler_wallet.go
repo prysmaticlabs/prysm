@@ -366,7 +366,12 @@ func writeWalletPasswordToDisk(walletDir, password string) error {
 		return nil
 	}
 	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	if file.Exists(passwordFilePath) {
+	exists, err := file.Exists(passwordFilePath, file.Regular)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if file exists: %s", passwordFilePath)
+	}
+
+	if exists {
 		return fmt.Errorf("cannot write wallet password file as it already exists %s", passwordFilePath)
 	}
 	return file.WriteFile(passwordFilePath, []byte(password))

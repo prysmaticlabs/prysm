@@ -87,6 +87,7 @@ type Service struct {
 	credentialError      error
 	connectedRPCClients  map[net.Addr]bool
 	clientConnectionLock sync.Mutex
+	validatorServer      *validatorv1alpha1.Server
 }
 
 // Config options for the beacon node RPC server.
@@ -195,17 +196,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	return s
-}
-
-// paranoid build time check to ensure ChainInfoFetcher implements required interfaces
-var _ stategen.CanonicalChecker = blockchain.ChainInfoFetcher(nil)
-var _ stategen.CurrentSlotter = blockchain.ChainInfoFetcher(nil)
-
-// Start the gRPC server.
-func (s *Service) Start() {
-	grpcprometheus.EnableHandlingTimeHistogram()
-
 	var stateCache stategen.CachedGetter
 	if s.cfg.StateGen != nil {
 		stateCache = s.cfg.StateGen.CombinedCache()
@@ -277,6 +267,7 @@ func (s *Service) Start() {
 		TrackedValidatorsCache: s.cfg.TrackedValidatorsCache,
 		PayloadIDCache:         s.cfg.PayloadIDCache,
 	}
+	s.validatorServer = validatorServer
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logs.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
@@ -350,8 +341,17 @@ func (s *Service) Start() {
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 
-	validatorServer.PruneBlobsBundleCacheRoutine()
+	return s
+}
 
+// paranoid build time check to ensure ChainInfoFetcher implements required interfaces
+var _ stategen.CanonicalChecker = blockchain.ChainInfoFetcher(nil)
+var _ stategen.CurrentSlotter = blockchain.ChainInfoFetcher(nil)
+
+// Start the gRPC server.
+func (s *Service) Start() {
+	grpcprometheus.EnableHandlingTimeHistogram()
+	s.validatorServer.PruneBlobsBundleCacheRoutine()
 	go func() {
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
