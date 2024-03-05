@@ -300,7 +300,7 @@ func (s *Service) Host() host.Host {
 }
 
 // SetStreamHandler sets the protocol handler on the p2p host multiplexer.
-// This method is a pass through to libp2pcore.Host.SetStreamHandler.
+// This method is a pass through to libp2pcore.host.SetStreamHandler.
 func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) {
 	s.host.SetStreamHandler(protocol.ID(topic), handler)
 }

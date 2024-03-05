@@ -12,7 +12,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-// MockHost is a fake implementation of libp2p2's Host interface.
+// MockHost is a fake implementation of libp2p2's host interface.
 type MockHost struct {
 	Addresses []ma.Multiaddr
 }

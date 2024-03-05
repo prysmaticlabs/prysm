@@ -58,7 +58,7 @@ func (ns *Server) GetHealth(ctx context.Context, request *ethpb.HealthRequest) (
 	}
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
 		if request.SyncingStatus != 0 {
-			// override the 200 success with the provided
+			// override the 200 success with the provided request status
 			if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.FormatUint(request.SyncingStatus, 10))); err != nil {
 				return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
 			}

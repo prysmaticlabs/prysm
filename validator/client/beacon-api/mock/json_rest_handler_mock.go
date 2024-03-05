@@ -36,11 +36,11 @@ func NewMockJsonRestHandler(ctrl *gomock.Controller) *MockJsonRestHandler {
 	return mock
 }
 
-func (mr *MockJsonRestHandler) GetHttpClient() *http.Client {
+func (mr *MockJsonRestHandler) HttpClient() *http.Client {
 	return nil
 }
 
-func (mr *MockJsonRestHandler) GetHost() string {
+func (mr *MockJsonRestHandler) Host() string {
 	return ""
 }
 
