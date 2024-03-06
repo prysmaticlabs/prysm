@@ -27,18 +27,23 @@ func UnrealizedCheckpointBalances(cp, pp []byte, validators ValReader, currentEp
 		if err != nil {
 			return 0, 0, 0, err
 		}
-		active := v.ActivationEpoch <= currentEpoch && currentEpoch < v.ExitEpoch
-		if active && !v.Slashed {
+		activeCurrent := v.ActivationEpoch <= currentEpoch && currentEpoch < v.ExitEpoch
+		activePrevious := v.ActivationEpoch+1 <= currentEpoch && currentEpoch < v.ExitEpoch+1
+		if activeCurrent || activePrevious {
 			activeBalance, err = math.Add64(activeBalance, v.EffectiveBalance)
 			if err != nil {
 				return 0, 0, 0, err
 			}
+		}
+		if activeCurrent && !v.Slashed {
 			if ((cp[i] >> targetIdx) & 1) == 1 {
 				currentTarget, err = math.Add64(currentTarget, v.EffectiveBalance)
 				if err != nil {
 					return 0, 0, 0, err
 				}
 			}
+		}
+		if activePrevious && !v.Slashed {
 			if ((pp[i] >> targetIdx) & 1) == 1 {
 				prevTarget, err = math.Add64(prevTarget, v.EffectiveBalance)
 				if err != nil {
