@@ -38,4 +38,3 @@ prysm_image_upload(
     symlinks = {},
     tags = ["manual"],
 )
-
