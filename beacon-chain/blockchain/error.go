@@ -13,8 +13,6 @@ var (
 	errNilFinalizedInStore = errors.New("nil finalized checkpoint returned from store")
 	// errNilFinalizedCheckpoint is returned when a nil finalized checkpt is returned from a state.
 	errNilFinalizedCheckpoint = errors.New("nil finalized checkpoint returned from state")
-	// errNilJustifiedCheckpoint is returned when a nil justified checkpt is returned from a state.
-	errNilJustifiedCheckpoint = errors.New("nil justified checkpoint returned from state")
 	// errBlockDoesNotExist is returned when a block does not exist for a particular state summary.
 	errBlockDoesNotExist = errors.New("could not find block in DB")
 	// errBlockNotFoundInCacheOrDB is returned when a block is not found in the cache or DB.
