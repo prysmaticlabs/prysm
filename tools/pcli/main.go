@@ -13,6 +13,7 @@ import (
 	"github.com/kr/pretty"
 	"github.com/pkg/errors"
 	fssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
@@ -143,8 +144,53 @@ func main() {
 			},
 		},
 		{
+			Name:     "unrealized-checkpoints",
+			Category: "state-computations",
+			Usage:    "Subcommand to compute manually the unrealized checkpoints",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:        "state-path",
+					Usage:       "Path to state file(ssz)",
+					Destination: &preStatePath,
+				},
+			},
+			Action: func(c *cli.Context) error {
+				if preStatePath == "" {
+					log.Info("State path not provided, please provide path")
+					reader := bufio.NewReader(os.Stdin)
+					text, err := reader.ReadString('\n')
+					if err != nil {
+						log.Fatal(err)
+					}
+					if text = strings.ReplaceAll(text, "\n", ""); text == "" {
+						log.Fatal("Empty state path given")
+					}
+					preStatePath = text
+				}
+				stateObj, err := detectState(preStatePath)
+				if err != nil {
+					log.Fatal(err)
+				}
+				preStateRoot, err := stateObj.HashTreeRoot(context.Background())
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Infof(
+					"Computing unrealized justification for state at slot %d and root %#x",
+					stateObj.Slot(),
+					preStateRoot,
+				)
+				uj, uf, err := precompute.UnrealizedCheckpoints(stateObj)
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Infof("Computed:\nUnrealized Justified: (Root: %#x, Epoch: %d)\nUnrealized Finalized: (Root: %#x, Epoch: %d).", uj.Root, uj.Epoch, uf.Root, uf.Epoch)
+				return nil
+			},
+		},
+		{
 			Name:     "state-transition",
-			Category: "state-transition",
+			Category: "state-computations",
 			Usage:    "Subcommand to run manual state transitions",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
