@@ -227,6 +227,7 @@ func writeForkchoiceDump(ctx context.Context, storageClient *storage.Client) (*s
 	log.Info("Attempting to write forkchoice dump")
 	var forkchoiceDump map[string]interface{}
 	url := monitorFlags.httpEndpoint + forkchoiceDebugMethod
+	// #nosec G107
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err

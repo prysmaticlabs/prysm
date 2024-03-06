@@ -1525,6 +1525,7 @@ def prysm_deps():
     go_repository(
         name = "com_github_googleapis_gax_go_v2",
         importpath = "github.com/googleapis/gax-go/v2",
+        build_file_proto_mode = "disable_global",
         sum = "h1:9F8GV9r9ztXyAi00gsMQHNoF51xPZm8uj1dpYt2ZETM=",
         version = "v2.12.1",
     )
