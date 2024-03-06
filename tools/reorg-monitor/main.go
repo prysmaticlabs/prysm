@@ -269,13 +269,21 @@ type reorgEvent struct {
 
 func (r *reorgEvent) String() string {
 	var b strings.Builder
+	//nolint:errcheck
 	fmt.Fprintf(&b, "slot=%s\n", r.ev.Slot)
+	//nolint:errcheck
 	fmt.Fprintf(&b, "depth=%s\n", r.ev.Depth)
+	//nolint:errcheck
 	fmt.Fprintf(&b, "old_head_block=%#x\n", r.ev.OldHeadBlock)
+	//nolint:errcheck
 	fmt.Fprintf(&b, "new_head_block=%#x\n", r.ev.NewHeadBlock)
+	//nolint:errcheck
 	fmt.Fprintf(&b, "old_head_state=%#x\n", r.ev.OldHeadState)
+	//nolint:errcheck
 	fmt.Fprintf(&b, "old_head_state=%#x\n", r.ev.NewHeadState)
+	//nolint:errcheck
 	fmt.Fprintf(&b, "epoch=%s\n", r.ev.Epoch)
+	//nolint:errcheck
 	fmt.Fprintf(&b, "execution_optimistic=%v\n", r.ev.ExecutionOptimistic)
 	return b.String()
 }
