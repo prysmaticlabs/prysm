@@ -26,18 +26,18 @@ var (
 	forkchoiceDebugMethod = "/eth/v1/debug/fork_choice"
 	monitorFlags          = struct {
 		fluentd            bool
-		httpEndpoint       string
-		storeDumpsInterval time.Duration
-		purgeDumpsInterval time.Duration
 		useSendgrid        bool
-		sendFrom           string
-		smtpHost           string
-		smtpPort           string
-		smtpPasswordFile   string
-		smtpUsername       string
-		projectId          string
-		bucketName         string
 		onReorgDepth       uint64
+		purgeDumpsInterval time.Duration
+		storeDumpsInterval time.Duration
+		httpEndpoint       string
+		bucketName         string
+		projectId          string
+		smtpPasswordFile   string
+		smtpPort           string
+		smtpHost           string
+		sendFrom           string
+		smtpUsername       string
 		sendTo             cli.StringSlice
 	}{}
 )
