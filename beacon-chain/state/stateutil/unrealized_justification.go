@@ -24,23 +24,27 @@ func UnrealizedCheckpointBalances(cp, pp []byte, validators []*ethpb.Validator, 
 
 	var err error
 	for i, v := range validators {
-		active := v.ActivationEpoch <= currentEpoch && currentEpoch < v.ExitEpoch
-		if active && !v.Slashed {
+		activeCurrent := v.ActivationEpoch <= currentEpoch && currentEpoch < v.ExitEpoch
+		if activeCurrent {
 			activeBalance, err = math.Add64(activeBalance, v.EffectiveBalance)
 			if err != nil {
 				return 0, 0, 0, err
 			}
-			if ((cp[i] >> targetIdx) & 1) == 1 {
-				currentTarget, err = math.Add64(currentTarget, v.EffectiveBalance)
-				if err != nil {
-					return 0, 0, 0, err
-				}
+		}
+		if v.Slashed {
+			continue
+		}
+		if activeCurrent && ((cp[i]>>targetIdx)&1) == 1 {
+			currentTarget, err = math.Add64(currentTarget, v.EffectiveBalance)
+			if err != nil {
+				return 0, 0, 0, err
 			}
-			if ((pp[i] >> targetIdx) & 1) == 1 {
-				prevTarget, err = math.Add64(prevTarget, v.EffectiveBalance)
-				if err != nil {
-					return 0, 0, 0, err
-				}
+		}
+		activePrevious := v.ActivationEpoch+1 <= currentEpoch && currentEpoch <= v.ExitEpoch
+		if activePrevious && ((pp[i]>>targetIdx)&1) == 1 {
+			prevTarget, err = math.Add64(prevTarget, v.EffectiveBalance)
+			if err != nil {
+				return 0, 0, 0, err
 			}
 		}
 	}
