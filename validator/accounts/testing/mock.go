@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
@@ -90,7 +90,8 @@ func (_ *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerC
 
 type Validator struct {
 	Km               keymanager.IKeymanager
-	proposerSettings *validatorserviceconfig.ProposerSettings
+	graffiti         string
+	proposerSettings *proposer.Settings
 }
 
 func (_ *Validator) LogSubmittedSyncCommitteeMessages() {}

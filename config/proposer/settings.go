@@ -1,4 +1,4 @@
-package validator_service_config
+package proposer
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/config"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -182,7 +183,7 @@ func (po *Option) ToConsensus() *validatorpb.ProposerOptionPayload {
 		p.Builder = po.BuilderConfig.ToConsensus()
 	}
 	if po.GraffitiConfig != nil {
-		p.GraffitiConfig = po.GraffitiConfig.Clone()
+		p.Graffiti = po.GraffitiConfig.Graffiti
 	}
 	return p
 }
