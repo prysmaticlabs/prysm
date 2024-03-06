@@ -32,6 +32,10 @@ const (
 	EventConnectionError             = "connection_error"
 )
 
+var (
+	_ = EventStreamClient(&EventStream{})
+)
+
 var DefaultEventTopics = []string{EventHead}
 
 type EventStreamClient interface {
