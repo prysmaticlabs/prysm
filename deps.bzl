@@ -4375,6 +4375,10 @@ def prysm_deps():
         importpath = "cloud.google.com/go/iam",
         sum = "h1:bEa06k05IO4f4uJonbB5iAgKTPpABy1ayxaIZV/GHVc=",
         version = "v1.1.6",
+        build_directives = [
+            # See: https://github.com/bazelbuild/rules_go/issues/3423
+            "gazelle:resolve go google.golang.org/genproto/googleapis/api/annotations @googleapis//google/api:annotations_go_proto",
+        ],
     )
     go_repository(
         name = "com_google_cloud_go_iap",
@@ -4649,6 +4653,10 @@ def prysm_deps():
         importpath = "cloud.google.com/go/storage",
         sum = "h1:brbjUa4hbDHhpQf48tjqMaXEV+f1OGoaTmQau9tmCsA=",
         version = "v1.39.0",
+        build_directives = [
+            # See: https://github.com/bazelbuild/rules_go/issues/3423
+            "gazelle:resolve go google.golang.org/genproto/googleapis/api/annotations @googleapis//google/api:annotations_go_proto",
+        ],
     )
     go_repository(
         name = "com_google_cloud_go_storagetransfer",
