@@ -13,6 +13,10 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+var (
+	_ = iface.NodeClient(&beaconApiNodeClient{})
+)
+
 type beaconApiNodeClient struct {
 	fallbackClient  iface.NodeClient
 	jsonRestHandler JsonRestHandler

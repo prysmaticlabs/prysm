@@ -45,8 +45,6 @@ func run(ctx context.Context, v iface.Validator) {
 		handleAssignmentError(err, headSlot)
 	}
 	eventsChan := make(chan *event.Event, 1)
-
-	beaconHealthTracker := v.NodeHealthTracker(ctx)
 	runHealthCheckRoutine(ctx, v, eventsChan)
 
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
@@ -79,7 +77,7 @@ func run(ctx context.Context, v iface.Validator) {
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
-			if !beaconHealthTracker.IsHealthy() {
+			if !v.NodeHealthTracker(ctx).IsHealthy() {
 				continue
 			}
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
@@ -125,7 +123,7 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
-		case isHealthyAgain := <-beaconHealthTracker.HealthUpdates():
+		case isHealthyAgain := <-v.NodeHealthTracker(ctx).HealthUpdates():
 			if isHealthyAgain {
 				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
 				if err != nil {

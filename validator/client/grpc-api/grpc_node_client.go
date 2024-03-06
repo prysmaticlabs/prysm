@@ -10,6 +10,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	_ = iface.NodeClient(&grpcNodeClient{})
+)
+
 type grpcNodeClient struct {
 	nodeClient ethpb.NodeClient
 }
