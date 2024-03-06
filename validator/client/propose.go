@@ -28,9 +28,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const domainDataErr = "could not get domain data"
-const signingRootErr = "could not get signing root"
-const signExitErr = "could not sign voluntary exit proposal"
+const (
+	domainDataErr           = "could not get domain data"
+	signingRootErr          = "could not get signing root"
+	signExitErr             = "could not sign voluntary exit proposal"
+	failedBlockSignLocalErr = "block rejected by local protection"
+)
 
 // ProposeBlock proposes a new beacon block for a given slot. This method collects the
 // previous beacon block, any pending deposits, and ETH1 data from the beacon
@@ -111,7 +114,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		return
 	}
 
-	if err := v.slashableProposalCheck(ctx, pubKey, blk, signingRoot); err != nil {
+	if err := v.db.SlashableProposalCheck(ctx, pubKey, blk, signingRoot, v.emitAccountMetrics, ValidatorProposeFailVec); err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, wb, nil),
 		).WithError(err).Error("Failed block slashing protection check")
@@ -428,4 +431,16 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 	}
 
 	return []byte{}, nil
+}
+
+func blockLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, blk interfaces.ReadOnlyBeaconBlock, sig []byte) logrus.Fields {
+	fields := logrus.Fields{
+		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
+		"proposerIndex":     blk.ProposerIndex(),
+		"blockSlot":         blk.Slot(),
+	}
+	if sig != nil {
+		fields["signature"] = fmt.Sprintf("%#x", sig)
+	}
+	return fields
 }

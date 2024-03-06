@@ -21,8 +21,12 @@ func TestMigrateUp_NoDBFound(t *testing.T) {
 	assert.ErrorContains(t, "No validator db found at path", err)
 }
 
+// TestMigrateUp_OK tests that a migration up is successful.
+// Migration is not needed nor supported for minimal slashing protection database.
+// This, it is tested only for complete slashing protection database.
 func TestMigrateUp_OK(t *testing.T) {
-	validatorDB := dbtest.SetupDB(t, nil)
+	isSlashingProtectionMinimal := false
+	validatorDB := dbtest.SetupDB(t, nil, isSlashingProtectionMinimal)
 	dbPath := validatorDB.DatabasePath()
 	require.NoError(t, validatorDB.Close())
 	app := cli.App{}
@@ -43,8 +47,12 @@ func TestMigrateDown_NoDBFound(t *testing.T) {
 	assert.ErrorContains(t, "No validator db found at path", err)
 }
 
+// TestMigrateUp_OK tests that a migration down is successful.
+// Migration is not needed nor supported for minimal slashing protection database.
+// This, it is tested only for complete slashing protection database.
 func TestMigrateDown_OK(t *testing.T) {
-	validatorDB := dbtest.SetupDB(t, nil)
+	isSlashingProtectionMinimal := false
+	validatorDB := dbtest.SetupDB(t, nil, isSlashingProtectionMinimal)
 	dbPath := validatorDB.DatabasePath()
 	require.NoError(t, validatorDB.Close())
 	app := cli.App{}
