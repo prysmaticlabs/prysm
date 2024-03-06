@@ -19,7 +19,7 @@ func TestState_UnrealizedCheckpointBalances(t *testing.T) {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 	base := &ethpb.BeaconStateAltair{
-		Slot:        2,
+		Slot:        66,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 
 		Validators:                 validators,
@@ -57,7 +57,7 @@ func TestState_UnrealizedCheckpointBalances(t *testing.T) {
 	require.NoError(t, err)
 	active, previous, current, err = state.UnrealizedCheckpointBalances()
 	require.NoError(t, err)
-	require.Equal(t, allActive-params.BeaconConfig().MaxEffectiveBalance, active)
+	require.Equal(t, allActive, active)
 	require.Equal(t, uint64(0), current)
 	require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, previous)
 

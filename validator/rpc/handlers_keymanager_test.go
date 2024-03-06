@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -204,7 +205,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 		resp := &ImportKeystoresResponse{}
 		require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
-		require.Equal(t, keymanager.StatusError, resp.Data[0].Status)
+		require.Equal(t, fmt.Sprintf("%v", keymanager.StatusError), strings.ToLower(string(resp.Data[0].Status))) // make sure it's lower case
 	})
 	t.Run("200 response even if number of passwords does not match number of keystores", func(t *testing.T) {
 		request := &ImportKeystoresRequest{
@@ -1406,6 +1407,7 @@ func TestServer_ImportRemoteKeys(t *testing.T) {
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
 		for i := 0; i < len(resp.Data); i++ {
 			require.DeepEqual(t, expectedStatuses[i], resp.Data[i])
+			require.Equal(t, fmt.Sprintf("%v", expectedStatuses[i].Status), strings.ToLower(string(resp.Data[i].Status)))
 		}
 	})
 }

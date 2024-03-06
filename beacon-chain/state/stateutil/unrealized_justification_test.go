@@ -79,7 +79,6 @@ func TestState_UnrealizedCheckpointBalances(t *testing.T) {
 		validators[1].Slashed = true
 		active, previous, current, err := UnrealizedCheckpointBalances(cp, pp, NewValSliceReader(validators), 1)
 		require.NoError(tt, err)
-		expectedActive -= params.BeaconConfig().MaxEffectiveBalance
 		require.Equal(tt, expectedActive, active)
 		require.Equal(tt, params.BeaconConfig().MaxEffectiveBalance-params.BeaconConfig().MinDepositAmount, current)
 		require.Equal(tt, 2*params.BeaconConfig().MaxEffectiveBalance, previous)
@@ -169,7 +168,6 @@ func TestState_MVSlice_UnrealizedCheckpointBalances(t *testing.T) {
 		validators[1].Slashed = true
 		active, previous, current, err := UnrealizedCheckpointBalances(cp, pp, NewValMultiValueSliceReader(mv, &testObject{id: 0}), 1)
 		require.NoError(tt, err)
-		expectedActive -= params.BeaconConfig().MaxEffectiveBalance
 		require.Equal(tt, expectedActive, active)
 		require.Equal(tt, params.BeaconConfig().MaxEffectiveBalance-params.BeaconConfig().MinDepositAmount, current)
 		require.Equal(tt, 2*params.BeaconConfig().MaxEffectiveBalance, previous)
