@@ -176,8 +176,6 @@ func monitorEvents(ctx context.Context, sender emailSender) error {
 			log.Info("Context canceled")
 			return nil
 		case ev := <-events:
-			log.Info("Received a head event")
-			log.Infof("%+v", ev)
 			resp := &structs.ChainReorgEvent{}
 			if err := json.Unmarshal(ev.Data, &resp); err != nil {
 				log.WithError(err).Error("Could not unmarshal head response")
