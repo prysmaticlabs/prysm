@@ -3,9 +3,9 @@ package attestations
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 )
 
 // pruneAttsPool prunes attestations pool on every slot interval.

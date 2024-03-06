@@ -11,23 +11,23 @@ import (
 
 	joonix "github.com/joonix/log"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	accountcommands "github.com/prysmaticlabs/prysm/v4/cmd/validator/accounts"
-	dbcommands "github.com/prysmaticlabs/prysm/v4/cmd/validator/db"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	slashingprotectioncommands "github.com/prysmaticlabs/prysm/v4/cmd/validator/slashing-protection"
-	walletcommands "github.com/prysmaticlabs/prysm/v4/cmd/validator/wallet"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/web"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/io/logs"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/journald"
-	"github.com/prysmaticlabs/prysm/v4/runtime/debug"
-	prefixed "github.com/prysmaticlabs/prysm/v4/runtime/logging/logrus-prefixed-formatter"
-	_ "github.com/prysmaticlabs/prysm/v4/runtime/maxprocs"
-	"github.com/prysmaticlabs/prysm/v4/runtime/tos"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/validator/node"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	accountcommands "github.com/prysmaticlabs/prysm/v5/cmd/validator/accounts"
+	dbcommands "github.com/prysmaticlabs/prysm/v5/cmd/validator/db"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	slashingprotectioncommands "github.com/prysmaticlabs/prysm/v5/cmd/validator/slashing-protection"
+	walletcommands "github.com/prysmaticlabs/prysm/v5/cmd/validator/wallet"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/web"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/io/logs"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/journald"
+	"github.com/prysmaticlabs/prysm/v5/runtime/debug"
+	prefixed "github.com/prysmaticlabs/prysm/v5/runtime/logging/logrus-prefixed-formatter"
+	_ "github.com/prysmaticlabs/prysm/v5/runtime/maxprocs"
+	"github.com/prysmaticlabs/prysm/v5/runtime/tos"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/validator/node"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -74,6 +74,7 @@ var appFlags = []cli.Flag{
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
 	flags.GraffitiFileFlag,
+	flags.EnableDistributed,
 	// Consensys' Web3Signer flags
 	flags.Web3SignerURLFlag,
 	flags.Web3SignerPublicValidatorKeysFlag,
@@ -126,7 +127,8 @@ func main() {
 		Version: version.Version(),
 		Action: func(ctx *cli.Context) error {
 			if err := startNode(ctx); err != nil {
-				return cli.Exit(err.Error(), 1)
+				log.Fatal(err.Error())
+				return err
 			}
 			return nil
 		},

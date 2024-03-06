@@ -5,10 +5,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	forkchoice2 "github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	forkchoice2 "github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // ProcessAttestationsThreshold  is the number of seconds after which we
@@ -93,13 +93,13 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 // Any node with different finalized or justified epoch than
 // the ones in fork choice store should not be viable to head.
 func (n *Node) viableForHead(justifiedEpoch, currentEpoch primitives.Epoch) bool {
-	justified := justifiedEpoch == n.justifiedEpoch || justifiedEpoch == 0
-	if !justified && justifiedEpoch+1 == currentEpoch {
-		if n.unrealizedJustifiedEpoch+1 >= currentEpoch && n.justifiedEpoch+2 >= currentEpoch {
-			justified = true
-		}
+	if justifiedEpoch == 0 {
+		return true
 	}
-	return justified
+	// We use n.justifiedEpoch as the voting source because:
+	//   1. if this node is from current epoch, n.justifiedEpoch is the realized justification epoch.
+	//   2. if this node is from a previous epoch, n.justifiedEpoch has already been updated to the unrealized justification epoch.
+	return n.justifiedEpoch == justifiedEpoch || n.justifiedEpoch+2 >= currentEpoch
 }
 
 func (n *Node) leadsToViableHead(justifiedEpoch, currentEpoch primitives.Epoch) bool {

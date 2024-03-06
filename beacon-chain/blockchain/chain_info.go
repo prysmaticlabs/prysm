@@ -8,19 +8,19 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	f "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	f "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which
@@ -557,17 +557,9 @@ func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
 	return s.cfg.ForkChoiceStore.Slot(root)
 }
 
-// inRegularSync applies the following heuristics to decide if the node is in
-// regular sync mode vs init sync mode using only forkchoice.
-// It checks that the highest received block is behind the current time by at least 2 epochs
-// and that it was imported at least one epoch late if both of these
-// tests pass then the node is in init sync. The caller of this function MUST
-// have a lock on forkchoice
+// inRegularSync queries the initial sync service to
+// determine if the node is in regular sync or is still
+// syncing to the head of the chain.
 func (s *Service) inRegularSync() bool {
-	currentSlot := s.CurrentSlot()
-	fc := s.cfg.ForkChoiceStore
-	if currentSlot-fc.HighestReceivedBlockSlot() < 2*params.BeaconConfig().SlotsPerEpoch {
-		return true
-	}
-	return fc.HighestReceivedBlockDelay() < params.BeaconConfig().SlotsPerEpoch
+	return s.cfg.SyncChecker.Synced()
 }

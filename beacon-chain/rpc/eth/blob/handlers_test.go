@@ -7,26 +7,26 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
-
-func TestParseIndices(t *testing.T) {
-	assert.DeepEqual(t, []uint64{1, 2, 3}, parseIndices(&url.URL{RawQuery: "indices=100&indices=1&indices=2&indices=foo&indices=1&indices=3&bar=bar"}))
-}
 
 func TestBlobs(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
@@ -70,8 +70,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{Root: blockRoot[:]},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -80,7 +83,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 		sidecar := resp.Data[0]
@@ -115,8 +118,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -125,7 +131,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 	})
@@ -136,8 +142,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{CurrentJustifiedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -146,7 +155,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 	})
@@ -156,7 +165,10 @@ func TestBlobs(t *testing.T) {
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
-			BeaconDB:    db,
+			BeaconDB: db,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
 			BlobStorage: bs,
 		}
 		s := &Server{
@@ -166,7 +178,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 	})
@@ -176,7 +188,10 @@ func TestBlobs(t *testing.T) {
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
-			BeaconDB:    db,
+			BeaconDB: db,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
 			BlobStorage: bs,
 		}
 		s := &Server{
@@ -186,7 +201,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 	})
@@ -197,8 +212,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -207,7 +225,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		sidecar := resp.Data[0]
@@ -224,8 +242,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      filesystem.NewEphemeralBlobStorage(t), // new ephemeral storage
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: filesystem.NewEphemeralBlobStorage(t), // new ephemeral storage
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -233,9 +254,62 @@ func TestBlobs(t *testing.T) {
 
 		s.Blobs(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, len(resp.Data), 0)
+	})
+	t.Run("outside retention period returns 200 w/ empty list ", func(t *testing.T) {
+		u := "http://foo.example/123"
+		request := httptest.NewRequest("GET", u, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		moc := &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}}
+		blocker := &lookup.BeaconDbBlocker{
+			ChainInfoFetcher:   moc,
+			GenesisTimeFetcher: moc, // genesis time is set to 0 here, so it results in current epoch being extremely large
+			BeaconDB:           db,
+			BlobStorage:        bs,
+		}
+		s := &Server{
+			Blocker: blocker,
+		}
+
+		s.Blobs(writer, request)
+
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.SidecarsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 0, len(resp.Data))
+	})
+	t.Run("block without commitments returns 200 w/empty list ", func(t *testing.T) {
+		denebBlock, _ := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 333, 0)
+		commitments, err := denebBlock.Block().Body().BlobKzgCommitments()
+		require.NoError(t, err)
+		require.Equal(t, len(commitments), 0)
+		require.NoError(t, db.SaveBlock(context.Background(), denebBlock))
+
+		u := "http://foo.example/333"
+		request := httptest.NewRequest("GET", u, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		blocker := &lookup.BeaconDbBlocker{
+			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
+		}
+		s := &Server{
+			Blocker: blocker,
+		}
+
+		s.Blobs(writer, request)
+
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.SidecarsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 0, len(resp.Data))
 	})
 	t.Run("slot before Deneb fork", func(t *testing.T) {
 		u := "http://foo.example/31"
@@ -281,8 +355,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -291,4 +368,47 @@ func TestBlobs(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		require.Equal(t, len(writer.Body.Bytes()), 131932)
 	})
+}
+
+func Test_parseIndices(t *testing.T) {
+	tests := []struct {
+		name    string
+		query   string
+		want    []uint64
+		wantErr string
+	}{
+		{
+			name:  "happy path with duplicate indices within bound and other query parameters ignored",
+			query: "indices=1&indices=2&indices=1&indices=3&bar=bar",
+			want:  []uint64{1, 2, 3},
+		},
+		{
+			name:    "out of bounds indices throws error",
+			query:   "indices=6&indices=7",
+			wantErr: "requested blob indices [6 7] are invalid",
+		},
+		{
+			name:    "negative indices",
+			query:   "indices=-1&indices=-8",
+			wantErr: "requested blob indices [-1 -8] are invalid",
+		},
+		{
+			name:    "invalid indices",
+			query:   "indices=foo&indices=bar",
+			wantErr: "requested blob indices [foo bar] are invalid",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseIndices(&url.URL{RawQuery: tt.query})
+			if err != nil && tt.wantErr != "" {
+				require.StringContains(t, tt.wantErr, err.Error())
+				return
+			}
+			require.NoError(t, err)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseIndices() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

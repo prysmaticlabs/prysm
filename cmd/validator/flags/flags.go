@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -174,12 +174,7 @@ var (
 		Name:  "mnemonic-language",
 		Usage: "Allows specifying mnemonic language. Supported languages are: english|chinese_traditional|chinese_simplified|czech|french|japanese|korean|italian|spanish.",
 	}
-	// ShowDepositDataFlag for accounts.
-	ShowDepositDataFlag = &cli.BoolFlag{
-		Name:  "show-deposit-data",
-		Usage: "Displays raw eth1 tx deposit data for validator accounts.",
-		Value: false,
-	}
+
 	// ShowPrivateKeysFlag for accounts.
 	ShowPrivateKeysFlag = &cli.BoolFlag{
 		Name:  "show-private-keys",
@@ -376,6 +371,13 @@ var (
 		Name:  "validators-registration-batch-size",
 		Usage: "Sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.",
 		Value: 0,
+	}
+
+	// EnableDistributed enables the usage of prysm validator client in a Distributed Validator Cluster.
+	EnableDistributed = &cli.BoolFlag{
+		Name:  "distributed",
+		Usage: "To enable the use of prysm validator client in Distributed Validator Cluster",
+		Value: false,
 	}
 )
 

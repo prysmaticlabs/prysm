@@ -9,19 +9,22 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
-	log "github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/logging"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
 
 var (
-	errIndexOutOfBounds = errors.New("blob index in file name >= MaxBlobsPerBlock")
+	errIndexOutOfBounds    = errors.New("blob index in file name >= MaxBlobsPerBlock")
+	errEmptyBlobWritten    = errors.New("zero bytes written to disk when saving blob sidecar")
+	errSidecarEmptySSZData = errors.New("sidecar marshalled to an empty ssz byte slice")
+	errNoBasePath          = errors.New("BlobStorage base path not specified in init")
 )
 
 const (
@@ -34,14 +37,26 @@ const (
 // BlobStorageOption is a functional option for configuring a BlobStorage.
 type BlobStorageOption func(*BlobStorage) error
 
+// WithBasePath is a required option that sets the base path of blob storage.
+func WithBasePath(base string) BlobStorageOption {
+	return func(b *BlobStorage) error {
+		b.base = base
+		return nil
+	}
+}
+
 // WithBlobRetentionEpochs is an option that changes the number of epochs blobs will be persisted.
 func WithBlobRetentionEpochs(e primitives.Epoch) BlobStorageOption {
 	return func(b *BlobStorage) error {
-		pruner, err := newBlobPruner(b.fs, e)
-		if err != nil {
-			return err
-		}
-		b.pruner = pruner
+		b.retentionEpochs = e
+		return nil
+	}
+}
+
+// WithSaveFsync is an option that causes Save to call fsync before renaming part files for improved durability.
+func WithSaveFsync(fsync bool) BlobStorageOption {
+	return func(b *BlobStorage) error {
+		b.fsync = fsync
 		return nil
 	}
 }
@@ -49,30 +64,36 @@ func WithBlobRetentionEpochs(e primitives.Epoch) BlobStorageOption {
 // NewBlobStorage creates a new instance of the BlobStorage object. Note that the implementation of BlobStorage may
 // attempt to hold a file lock to guarantee exclusive control of the blob storage directory, so this should only be
 // initialized once per beacon node.
-func NewBlobStorage(base string, opts ...BlobStorageOption) (*BlobStorage, error) {
-	base = path.Clean(base)
-	if err := file.MkdirAll(base); err != nil {
-		return nil, fmt.Errorf("failed to create blob storage at %s: %w", base, err)
-	}
-	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
-	b := &BlobStorage{
-		fs: fs,
-	}
+func NewBlobStorage(opts ...BlobStorageOption) (*BlobStorage, error) {
+	b := &BlobStorage{}
 	for _, o := range opts {
 		if err := o(b); err != nil {
-			return nil, fmt.Errorf("failed to create blob storage at %s: %w", base, err)
+			return nil, errors.Wrap(err, "failed to create blob storage")
 		}
 	}
-	if b.pruner == nil {
-		log.Warn("Initializing blob filesystem storage with pruning disabled")
+	if b.base == "" {
+		return nil, errNoBasePath
 	}
+	b.base = path.Clean(b.base)
+	if err := file.MkdirAll(b.base); err != nil {
+		return nil, errors.Wrapf(err, "failed to create blob storage at %s", b.base)
+	}
+	b.fs = afero.NewBasePathFs(afero.NewOsFs(), b.base)
+	pruner, err := newBlobPruner(b.fs, b.retentionEpochs)
+	if err != nil {
+		return nil, err
+	}
+	b.pruner = pruner
 	return b, nil
 }
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	fs     afero.Fs
-	pruner *blobPruner
+	base            string
+	retentionEpochs primitives.Epoch
+	fsync           bool
+	fs              afero.Fs
+	pruner          *blobPruner
 }
 
 // WarmCache runs the prune routine with an expiration of slot of 0, so nothing will be pruned, but the pruner's cache
@@ -83,7 +104,7 @@ func (bs *BlobStorage) WarmCache() {
 	}
 	go func() {
 		if err := bs.pruner.prune(0); err != nil {
-			log.WithError(err).Error("Error encountered while warming up blob pruner cache.")
+			log.WithError(err).Error("Error encountered while warming up blob pruner cache")
 		}
 	}()
 }
@@ -98,22 +119,27 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return err
 	}
 	if exists {
-		log.WithFields(logging.BlobFields(sidecar.ROBlob)).Debug("ignoring a duplicate blob sidecar Save attempt")
+		log.WithFields(logging.BlobFields(sidecar.ROBlob)).Debug("Ignoring a duplicate blob sidecar save attempt")
 		return nil
 	}
 	if bs.pruner != nil {
-		bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot())
+		if err := bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot(), sidecar.Index); err != nil {
+			return errors.Wrapf(err, "problem maintaining pruning cache/metrics for sidecar with root=%#x", sidecar.BlockRoot())
+		}
 	}
 
 	// Serialize the ethpb.BlobSidecar to binary data using SSZ.
 	sidecarData, err := sidecar.MarshalSSZ()
 	if err != nil {
 		return errors.Wrap(err, "failed to serialize sidecar data")
+	} else if len(sidecarData) == 0 {
+		return errSidecarEmptySSZData
 	}
+
 	if err := bs.fs.MkdirAll(fname.dir(), directoryPermissions); err != nil {
 		return err
 	}
-	partPath := fname.partPath()
+	partPath := fname.partPath(fmt.Sprintf("%p", sidecarData))
 
 	partialMoved := false
 	// Ensure the partial file is deleted.
@@ -124,9 +150,9 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		// It's expected to error if the save is successful.
 		err = bs.fs.Remove(partPath)
 		if err == nil {
-			log.WithFields(log.Fields{
+			log.WithFields(logrus.Fields{
 				"partPath": partPath,
-			}).Debugf("removed partial file")
+			}).Debugf("Removed partial file")
 		}
 	}()
 
@@ -136,7 +162,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return errors.Wrap(err, "failed to create partial file")
 	}
 
-	_, err = partialFile.Write(sidecarData)
+	n, err := partialFile.Write(sidecarData)
 	if err != nil {
 		closeErr := partialFile.Close()
 		if closeErr != nil {
@@ -144,9 +170,22 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		}
 		return errors.Wrap(err, "failed to write to partial file")
 	}
-	err = partialFile.Close()
-	if err != nil {
+	if bs.fsync {
+		if err := partialFile.Sync(); err != nil {
+			return err
+		}
+	}
+
+	if err := partialFile.Close(); err != nil {
 		return err
+	}
+
+	if n != len(sidecarData) {
+		return fmt.Errorf("failed to write the full bytes of sidecarData, wrote only %d of %d bytes", n, len(sidecarData))
+	}
+
+	if n == 0 {
+		return errEmptyBlobWritten
 	}
 
 	// Atomically rename the partial file to its final name.
@@ -228,6 +267,20 @@ func (bs *BlobStorage) Indices(root [32]byte) ([fieldparams.MaxBlobsPerBlock]boo
 	return mask, nil
 }
 
+// Clear deletes all files on the filesystem.
+func (bs *BlobStorage) Clear() error {
+	dirs, err := listDir(bs.fs, ".")
+	if err != nil {
+		return err
+	}
+	for _, dir := range dirs {
+		if err := bs.fs.RemoveAll(dir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type blobNamer struct {
 	root  [32]byte
 	index uint64
@@ -241,16 +294,12 @@ func (p blobNamer) dir() string {
 	return rootString(p.root)
 }
 
-func (p blobNamer) fname(ext string) string {
-	return path.Join(p.dir(), fmt.Sprintf("%d.%s", p.index, ext))
-}
-
-func (p blobNamer) partPath() string {
-	return p.fname(partExt)
+func (p blobNamer) partPath(entropy string) string {
+	return path.Join(p.dir(), fmt.Sprintf("%s-%d.%s", entropy, p.index, partExt))
 }
 
 func (p blobNamer) path() string {
-	return p.fname(sszExt)
+	return path.Join(p.dir(), fmt.Sprintf("%d.%s", p.index, sszExt))
 }
 
 func rootString(root [32]byte) string {

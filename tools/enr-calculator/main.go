@@ -10,9 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p/core/crypto"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	_ "github.com/prysmaticlabs/prysm/v4/runtime/maxprocs"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	_ "github.com/prysmaticlabs/prysm/v5/runtime/maxprocs"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -5,13 +5,13 @@ import (
 	"context"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -52,7 +52,7 @@ type FakeValidator struct {
 	IndexToPubkeyMap                  map[uint64][fieldparams.BLSPubkeyLength]byte
 	PubkeyToIndexMap                  map[[fieldparams.BLSPubkeyLength]byte]uint64
 	PubkeysToStatusesMap              map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus
-	proposerSettings                  *validatorserviceconfig.ProposerSettings
+	proposerSettings                  *proposer.Settings
 	ProposerSettingWait               time.Duration
 	Km                                keymanager.IKeymanager
 }
@@ -69,7 +69,7 @@ func (fv *FakeValidator) WaitForKeymanagerInitialization(_ context.Context) erro
 }
 
 // LogSyncCommitteeMessagesSubmitted --
-func (fv *FakeValidator) LogSyncCommitteeMessagesSubmitted() {}
+func (fv *FakeValidator) LogSubmittedSyncCommitteeMessages() {}
 
 // WaitForChainStart for mocking.
 func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
@@ -181,8 +181,8 @@ func (*FakeValidator) SubmitAggregateAndProof(_ context.Context, _ primitives.Sl
 func (*FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
-// LogAttestationsSubmitted for mocking.
-func (*FakeValidator) LogAttestationsSubmitted() {}
+// LogSubmittedAtts for mocking.
+func (*FakeValidator) LogSubmittedAtts(_ primitives.Slot) {}
 
 // UpdateDomainDataCaches for mocking.
 func (*FakeValidator) UpdateDomainDataCaches(context.Context, primitives.Slot) {}
@@ -276,12 +276,12 @@ func (*FakeValidator) SignValidatorRegistrationRequest(_ context.Context, _ ifac
 }
 
 // ProposerSettings for mocking
-func (fv *FakeValidator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+func (fv *FakeValidator) ProposerSettings() *proposer.Settings {
 	return fv.proposerSettings
 }
 
 // SetProposerSettings for mocking
-func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *proposer.Settings) error {
 	fv.proposerSettings = settings
 	return nil
 }

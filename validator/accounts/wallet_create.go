@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
 )
 
 // WalletCreate creates wallet specified by configuration options.
@@ -36,7 +36,7 @@ func (acm *CLIManager) WalletCreate(ctx context.Context) (*wallet.Wallet, error)
 		if err != nil {
 			return nil, err
 		}
-		log.WithField("--wallet-dir", acm.walletDir).Info(
+		log.WithField("walletDir", acm.walletDir).Info(
 			"Successfully created wallet with ability to import keystores",
 		)
 	case keymanager.Derived:
@@ -50,7 +50,7 @@ func (acm *CLIManager) WalletCreate(ctx context.Context) (*wallet.Wallet, error)
 		); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
-		log.WithField("--wallet-dir", acm.walletDir).Info(
+		log.WithField("walletDir", acm.walletDir).Info(
 			"Successfully created HD wallet from mnemonic and regenerated accounts",
 		)
 	case keymanager.Web3Signer:

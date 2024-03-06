@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"strconv"
 
-	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,19 +21,23 @@ func (s *Service) groupByValidatorChunkIndex(
 	attestations []*slashertypes.IndexedAttestationWrapper,
 ) map[uint64][]*slashertypes.IndexedAttestationWrapper {
 	groupedAttestations := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
-	for _, att := range attestations {
-		validatorChunkIndices := make(map[uint64]bool)
-		for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
-			validatorChunkIndex := s.params.validatorChunkIndex(primitives.ValidatorIndex(validatorIdx))
-			validatorChunkIndices[validatorChunkIndex] = true
+
+	for _, attestation := range attestations {
+		validatorChunkIndexes := make(map[uint64]bool)
+
+		for _, validatorIndex := range attestation.IndexedAttestation.AttestingIndices {
+			validatorChunkIndex := s.params.validatorChunkIndex(primitives.ValidatorIndex(validatorIndex))
+			validatorChunkIndexes[validatorChunkIndex] = true
 		}
-		for validatorChunkIndex := range validatorChunkIndices {
+
+		for validatorChunkIndex := range validatorChunkIndexes {
 			groupedAttestations[validatorChunkIndex] = append(
 				groupedAttestations[validatorChunkIndex],
-				att,
+				attestation,
 			)
 		}
 	}
+
 	return groupedAttestations
 }
 
@@ -42,22 +46,24 @@ func (s *Service) groupByChunkIndex(
 	attestations []*slashertypes.IndexedAttestationWrapper,
 ) map[uint64][]*slashertypes.IndexedAttestationWrapper {
 	attestationsByChunkIndex := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
-	for _, att := range attestations {
-		chunkIdx := s.params.chunkIndex(att.IndexedAttestation.Data.Source.Epoch)
-		attestationsByChunkIndex[chunkIdx] = append(attestationsByChunkIndex[chunkIdx], att)
+
+	for _, attestation := range attestations {
+		chunkIndex := s.params.chunkIndex(attestation.IndexedAttestation.Data.Source.Epoch)
+		attestationsByChunkIndex[chunkIndex] = append(attestationsByChunkIndex[chunkIndex], attestation)
 	}
+
 	return attestationsByChunkIndex
 }
 
 // This function returns a list of valid attestations, a list of attestations that are
 // valid in the future, and the number of attestations dropped.
 func (s *Service) filterAttestations(
-	atts []*slashertypes.IndexedAttestationWrapper, currentEpoch primitives.Epoch,
+	attWrappers []*slashertypes.IndexedAttestationWrapper, currentEpoch primitives.Epoch,
 ) (valid, validInFuture []*slashertypes.IndexedAttestationWrapper, numDropped int) {
-	valid = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
-	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
+	valid = make([]*slashertypes.IndexedAttestationWrapper, 0, len(attWrappers))
+	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(attWrappers))
 
-	for _, attWrapper := range atts {
+	for _, attWrapper := range attWrappers {
 		if attWrapper == nil || !validateAttestationIntegrity(attWrapper.IndexedAttestation) {
 			numDropped++
 			continue
@@ -73,18 +79,19 @@ func (s *Service) filterAttestations(
 		// If an attestations's target epoch is in the future, we defer processing for later.
 		if attWrapper.IndexedAttestation.Data.Target.Epoch > currentEpoch {
 			validInFuture = append(validInFuture, attWrapper)
-		} else {
-			valid = append(valid, attWrapper)
+			continue
 		}
+
+		// The attestation is valid.
+		valid = append(valid, attWrapper)
 	}
 	return
 }
 
 // Validates the attestation data integrity, ensuring we have no nil values for
-// source, epoch, and that the source epoch of the attestation must be less than
-// the target epoch, which is a precondition for performing slashing detection.
-// This function also checks the attestation source epoch is within the history size
-// we keep track of for slashing detection.
+// source and target epochs, and that the source epoch of the attestation must
+// be less than the target epoch, which is a precondition for performing slashing
+// detection (except for the genesis epoch).
 func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 	// If an attestation is malformed, we drop it.
 	if att == nil ||
