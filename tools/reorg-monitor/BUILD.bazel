@@ -35,6 +35,7 @@ prysm_image_upload(
     binary = ":reorg-monitor",
     entrypoint = ["/reorg-monitor"],
     repository = "gcr.io/prysmaticlabs/prysm/reorg-monitor",
+    symlinks = {},
     tags = ["manual"],
 )
 
