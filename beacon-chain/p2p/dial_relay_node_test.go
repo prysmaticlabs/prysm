@@ -34,5 +34,5 @@ func TestDialRelayNode_OK(t *testing.T) {
 	relayAddr := fmt.Sprintf("%s/p2p/%s", relay.Addrs()[0], relay.ID().String())
 
 	assert.NoError(t, dialRelayNode(ctx, host, relayAddr), "Unexpected error when dialing relay node")
-	assert.Equal(t, relay.ID(), host.Peerstore().PeerInfo(relay.ID()).ID, "host peerstore does not have peer info on relay node")
+	assert.Equal(t, relay.ID(), host.Peerstore().PeerInfo(relay.ID()).ID, "Host peerstore does not have peer info on relay node")
 }

@@ -60,7 +60,7 @@ var (
 	// RPCHost defines the host on which the RPC server should listen.
 	RPCHost = &cli.StringFlag{
 		Name:  "rpc-host",
-		Usage: "host on which the RPC server should listen.",
+		Usage: "Host on which the RPC server should listen.",
 		Value: "127.0.0.1",
 	}
 	// RPCPort defines a validator client RPC port to open.
@@ -111,7 +111,7 @@ var (
 	// GRPCGatewayHost specifies a gRPC gateway host for the validator client.
 	GRPCGatewayHost = &cli.StringFlag{
 		Name:  "grpc-gateway-host",
-		Usage: "host on which the gateway server runs on.",
+		Usage: "Host on which the gateway server runs on.",
 		Value: DefaultGatewayHost,
 	}
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for the validator client.

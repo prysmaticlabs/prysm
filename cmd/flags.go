@@ -77,7 +77,7 @@ var (
 	// MonitoringHostFlag defines the host used to serve prometheus metrics.
 	MonitoringHostFlag = &cli.StringFlag{
 		Name:  "monitoring-host",
-		Usage: "host used for listening and responding metrics for prometheus.",
+		Usage: "Host used for listening and responding metrics for prometheus.",
 		Value: "127.0.0.1",
 	}
 	// DisableMonitoringFlag defines a flag to disable the metrics collection.
