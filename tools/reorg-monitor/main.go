@@ -30,7 +30,6 @@ var (
 		storeDumpsInterval time.Duration
 		purgeDumpsInterval time.Duration
 		useSendgrid        bool
-		sendTo             cli.StringSlice
 		sendFrom           string
 		smtpHost           string
 		smtpPort           string
@@ -39,6 +38,7 @@ var (
 		projectId          string
 		bucketName         string
 		onReorgDepth       uint64
+		sendTo             cli.StringSlice
 	}{}
 )
 
