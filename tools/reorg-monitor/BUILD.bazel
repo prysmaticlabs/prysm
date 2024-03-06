@@ -1,5 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary")
 load("@prysm//tools/go:def.bzl", "go_library")
+load("//tools:prysm_image.bzl", "prysm_image_upload")
 
 go_library(
     name = "go_default_library",
@@ -28,3 +29,12 @@ go_binary(
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )
+
+prysm_image_upload(
+    name = "push_images",
+    binary = ":reorg-monitor",
+    entrypoint = ["/reorg-monitor"],
+    repository = "gcr.io/prysmaticlabs/prysm/reorg-monitor",
+    tags = ["manual"],
+)
+
