@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/proto/dbval"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/sirupsen/logrus"
 )
 
 // SaveOrigin loads an ssz serialized Block & BeaconState from an io.Reader
@@ -27,7 +28,11 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return fmt.Errorf("config mismatch, beacon node configured to connect to %s, detected state is for %s", params.BeaconConfig().ConfigName, cf.Config.ConfigName)
 	}
 
-	log.Infof("detected supported config for state & block version, config name=%s, fork name=%s", cf.Config.ConfigName, version.String(cf.Fork))
+	log.WithFields(logrus.Fields{
+		"configName": cf.Config.ConfigName,
+		"forkName":   version.String(cf.Fork),
+	}).Info("Detected supported config for state & block version")
+
 	state, err := cf.UnmarshalBeaconState(serState)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize origin state w/ bytes + config+fork")
@@ -57,13 +62,13 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return errors.Wrap(err, "unable to save backfill status data to db for checkpoint sync")
 	}
 
-	log.Infof("saving checkpoint block to db, w/ root=%#x", blockRoot)
+	log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Info("Saving checkpoint block to db")
 	if err := s.SaveBlock(ctx, wblk); err != nil {
 		return errors.Wrap(err, "could not save checkpoint block")
 	}
 
 	// save state
-	log.Infof("calling SaveState w/ blockRoot=%x", blockRoot)
+	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Info("Calling SaveState")
 	if err = s.SaveState(ctx, state, blockRoot); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
