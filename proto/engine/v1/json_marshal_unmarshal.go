@@ -105,14 +105,24 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		}
 		e.Withdrawals = ws
 
-		edg, has := decoded["excessBlobGas"]
-		if has && edg != nil {
+		ebg, has := decoded["excessBlobGas"]
+		if has && ebg != nil {
 			e.Version = version.Deneb
 		}
 
-		dgu, has := decoded["blobGasUsed"]
-		if has && dgu != nil {
+		bgu, has := decoded["blobGasUsed"]
+		if has && bgu != nil {
 			e.Version = version.Deneb
+		}
+
+		// If one is set, ensure both are set.
+		if e.Version >= version.Deneb {
+			if ebg == nil {
+				return errors.New("excessBlobGas is nil")
+			}
+			if bgu == nil {
+				return errors.New("blobGasUsed is nil")
+			}
 		}
 	}
 
@@ -123,7 +133,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	}
 	txsList, ok := rawTxList.([]interface{})
 	if !ok {
-		return errors.Errorf("expected transaction list to be of a slice interface type.")
+		return errors.New("expected transaction list to be of a slice interface type")
 	}
 	for _, tx := range txsList {
 		// If the transaction is just a hex string, do not attempt to
