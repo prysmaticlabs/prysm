@@ -156,6 +156,11 @@ func (s *PremineGenesisConfig) empty() (state.BeaconState, error) {
 		if err != nil {
 			return nil, err
 		}
+	case version.Electra:
+		e, err = state_native.InitializeFromProtoElectra(&ethpb.BeaconStateElectra{})
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, errUnsupportedVersion
 	}
@@ -335,6 +340,8 @@ func (s *PremineGenesisConfig) setFork(g state.BeaconState) error {
 		pv, cv = params.BeaconConfig().BellatrixForkVersion, params.BeaconConfig().CapellaForkVersion
 	case version.Deneb:
 		pv, cv = params.BeaconConfig().CapellaForkVersion, params.BeaconConfig().DenebForkVersion
+	case version.Electra:
+		pv, cv = params.BeaconConfig().DenebForkVersion, params.BeaconConfig().ElectraForkVersion
 	default:
 		return errUnsupportedVersion
 	}
@@ -523,6 +530,37 @@ func (s *PremineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 			BlsToExecutionChanges: make([]*ethpb.SignedBLSToExecutionChange, 0),
 			BlobKzgCommitments:    make([][]byte, 0),
 		}
+	case version.Electra:
+		body = &ethpb.BeaconBlockBodyElectra{
+			RandaoReveal: make([]byte, 96),
+			Eth1Data: &ethpb.Eth1Data{
+				DepositRoot: make([]byte, 32),
+				BlockHash:   make([]byte, 32),
+			},
+			Graffiti: make([]byte, 32),
+			SyncAggregate: &ethpb.SyncAggregate{
+				SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),
+				SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+			},
+			ExecutionPayload: &enginev1.ExecutionPayloadElectra{
+				ParentHash:         make([]byte, 32),
+				FeeRecipient:       make([]byte, 20),
+				StateRoot:          make([]byte, 32),
+				ReceiptsRoot:       make([]byte, 32),
+				LogsBloom:          make([]byte, 256),
+				PrevRandao:         make([]byte, 32),
+				ExtraData:          make([]byte, 0),
+				BaseFeePerGas:      make([]byte, 32),
+				BlockHash:          make([]byte, 32),
+				Transactions:       make([][]byte, 0),
+				Withdrawals:        make([]*enginev1.Withdrawal, 0),
+				DepositReceipts:    make([]*enginev1.DepositReceipt, 0),
+				WithdrawalRequests: make([]*enginev1.ExecutionLayerWithdrawalRequest, 0),
+			},
+			BlsToExecutionChanges: make([]*ethpb.SignedBLSToExecutionChange, 0),
+			BlobKzgCommitments:    make([][]byte, 0),
+			Consolidations:        make([]*ethpb.SignedConsolidation, 0),
+		}
 	default:
 		return errUnsupportedVersion
 	}
@@ -636,6 +674,44 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 			return err
 		}
 		ed, err = blocks.WrappedExecutionPayloadHeaderDeneb(eph)
+		if err != nil {
+			return err
+		}
+	case version.Electra:
+		payload := &enginev1.ExecutionPayloadElectra{
+			ParentHash:         gb.ParentHash().Bytes(),
+			FeeRecipient:       gb.Coinbase().Bytes(),
+			StateRoot:          gb.Root().Bytes(),
+			ReceiptsRoot:       gb.ReceiptHash().Bytes(),
+			LogsBloom:          gb.Bloom().Bytes(),
+			PrevRandao:         params.BeaconConfig().ZeroHash[:],
+			BlockNumber:        gb.NumberU64(),
+			GasLimit:           gb.GasLimit(),
+			GasUsed:            gb.GasUsed(),
+			Timestamp:          gb.Time(),
+			ExtraData:          gb.Extra()[:32],
+			BaseFeePerGas:      bytesutil.PadTo(bytesutil.ReverseByteOrder(gb.BaseFee().Bytes()), fieldparams.RootLength),
+			BlockHash:          gb.Hash().Bytes(),
+			Transactions:       make([][]byte, 0),
+			Withdrawals:        make([]*enginev1.Withdrawal, 0),
+			ExcessBlobGas:      *gb.ExcessBlobGas(),
+			BlobGasUsed:        *gb.BlobGasUsed(),
+			DepositReceipts:    make([]*enginev1.DepositReceipt, 0),
+			WithdrawalRequests: make([]*enginev1.ExecutionLayerWithdrawalRequest, 0),
+		}
+		wep, err := blocks.WrappedExecutionPayloadElectra(payload)
+		if err != nil {
+			return err
+		}
+		wepe, ok := wep.(interfaces.ExecutionDataElectra)
+		if !ok {
+			return errors.New("unexpected execution type data is not electra")
+		}
+		eph, err := blocks.PayloadToHeaderElectra(wepe)
+		if err != nil {
+			return err
+		}
+		ed, err = blocks.WrappedExecutionPayloadHeaderElectra(eph)
 		if err != nil {
 			return err
 		}

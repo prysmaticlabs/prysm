@@ -118,56 +118,46 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 // ProcessWithdrawals processes the validator withdrawals from the provided execution payload
 // into the beacon state.
 //
-// Spec pseudocode definition:
+// Spec definition:
 //
-// def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
+//	def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
+//	    expected_withdrawals, partial_withdrawals_count = get_expected_withdrawals(state)  # [Modified in Electra:EIP7251]
 //
-//	expected_withdrawals = get_expected_withdrawals(state)
-//	assert len(payload.withdrawals) == len(expected_withdrawals)
+//	    assert len(payload.withdrawals) == len(expected_withdrawals)
 //
-//	for expected_withdrawal, withdrawal in zip(expected_withdrawals, payload.withdrawals):
-//	    assert withdrawal == expected_withdrawal
-//	    decrease_balance(state, withdrawal.validator_index, withdrawal.amount)
+//	    for expected_withdrawal, withdrawal in zip(expected_withdrawals, payload.withdrawals):
+//	        assert withdrawal == expected_withdrawal
+//	        decrease_balance(state, withdrawal.validator_index, withdrawal.amount)
 //
-//	# Update the next withdrawal index if this block contained withdrawals
-//	if len(expected_withdrawals) != 0:
-//	    latest_withdrawal = expected_withdrawals[-1]
-//	    state.next_withdrawal_index = WithdrawalIndex(latest_withdrawal.index + 1)
+//	    # Update pending partial withdrawals [New in Electra:EIP7251]
+//	    state.pending_partial_withdrawals = state.pending_partial_withdrawals[partial_withdrawals_count:]
 //
-//	# Update the next validator index to start the next withdrawal sweep
-//	if len(expected_withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:
-//	    # Next sweep starts after the latest withdrawal's validator index
-//	    next_validator_index = ValidatorIndex((expected_withdrawals[-1].validator_index + 1) % len(state.validators))
-//	    state.next_withdrawal_validator_index = next_validator_index
-//	else:
-//	    # Advance sweep by the max length of the sweep if there was not a full set of withdrawals
-//	    next_index = state.next_withdrawal_validator_index + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
-//	    next_validator_index = ValidatorIndex(next_index % len(state.validators))
-//	    state.next_withdrawal_validator_index = next_validator_index
+//	    # Update the next withdrawal index if this block contained withdrawals
+//	    if len(expected_withdrawals) != 0:
+//	        latest_withdrawal = expected_withdrawals[-1]
+//	        state.next_withdrawal_index = WithdrawalIndex(latest_withdrawal.index + 1)
+//
+//	    # Update the next validator index to start the next withdrawal sweep
+//	    if len(expected_withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:
+//	        # Next sweep starts after the latest withdrawal's validator index
+//	        next_validator_index = ValidatorIndex((expected_withdrawals[-1].validator_index + 1) % len(state.validators))
+//	        state.next_withdrawal_validator_index = next_validator_index
+//	    else:
+//	        # Advance sweep by the max length of the sweep if there was not a full set of withdrawals
+//	        next_index = state.next_withdrawal_validator_index + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
+//	        next_validator_index = ValidatorIndex(next_index % len(state.validators))
+//	        state.next_withdrawal_validator_index = next_validator_index
 func ProcessWithdrawals(st state.BeaconState, executionData interfaces.ExecutionData) (state.BeaconState, error) {
-	expectedWithdrawals, _, err := st.ExpectedWithdrawals()
+	expectedWithdrawals, partials, err := st.ExpectedWithdrawals()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals")
 	}
 
-	var wdRoot [32]byte
-	if executionData.IsBlinded() {
-		r, err := executionData.WithdrawalsRoot()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
-		wdRoot = bytesutil.ToBytes32(r)
-	} else {
-		wds, err := executionData.Withdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals")
-		}
-		wdRoot, err = ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
+	// Instead of checking "assert withdrawal == expected_withdrawal", we check the withdrawals root.
+	wdRoot, err := withdrawalsRootFromMaybeBlindedExecutionData(executionData)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get withdrawals root")
 	}
-
 	expectedRoot, err := ssz.WithdrawalSliceRoot(expectedWithdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals root")
@@ -182,6 +172,13 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 			return nil, errors.Wrap(err, "could not decrease balance")
 		}
 	}
+
+	if partials > 0 {
+		if err := st.DequeuePartialWithdrawals(partials); err != nil {
+			return nil, fmt.Errorf("could not dequeue partial withdrawals: %w", err)
+		}
+	}
+
 	if len(expectedWithdrawals) > 0 {
 		if err := st.SetNextWithdrawalIndex(expectedWithdrawals[len(expectedWithdrawals)-1].Index + 1); err != nil {
 			return nil, errors.Wrap(err, "could not set next withdrawal index")
@@ -205,6 +202,21 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
 	}
 	return st, nil
+}
+
+func withdrawalsRootFromMaybeBlindedExecutionData(ed interfaces.ExecutionData) ([32]byte, error) {
+	if ed.IsBlinded() {
+		r, err := ed.WithdrawalsRoot()
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not get withdrawals root from blinded execution data")
+		}
+		return bytesutil.ToBytes32(r), nil
+	}
+	wds, err := ed.Withdrawals()
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get withdrawals")
+	}
+	return ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 }
 
 // BLSChangesSignatureBatch extracts the relevant signatures from the provided execution change

@@ -209,3 +209,4 @@ message SyncAggregate {
     // BLS aggregated signature of the sync committee for the ones that voted.
     bytes sync_committee_signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
+
