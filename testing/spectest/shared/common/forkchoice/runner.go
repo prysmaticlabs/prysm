@@ -342,9 +342,33 @@ func runBlobStep(t *testing.T,
 			require.NoError(t, err)
 			ini, err := builder.vwait.WaitForInitializer(context.Background())
 			require.NoError(t, err)
-			bv := ini.NewBlobVerifier(ro, verification.GossipSidecarRequirements)
+			bv := ini.NewBlobVerifier(ro, verification.SpectestSidecarRequirements)
+			// WIP: still skipped
+			//  //RequireNotFromFutureSlot,
+			//  //RequireSlotAboveFinalized,
+			//  //RequireSidecarParentSeen,
+			//  //RequireSidecarParentValid,
+			//  //RequireSidecarParentSlotLower,
+			//  //RequireSidecarDescendsFromFinalized,
+			//  //RequireSidecarProposerExpected,
+			ctx := context.Background()
+			require.NoError(t, bv.BlobIndexInBounds())
+			require.NoError(t, bv.SidecarInclusionProven())
+			require.NoError(t, bv.SidecarKzgProofVerified())
+			require.NoError(t, bv.ValidProposerSignature(ctx))
 			vsc, err := bv.VerifiedROBlob()
-			require.NoError(t, err)
+			if err != nil {
+				require.ErrorIs(t, err, verification.ErrBlobInvalid)
+				me, ok := err.(verification.VerificationMultiError)
+				require.Equal(t, true, ok)
+				fails := me.Failures()
+				// we haven't performed any verification, so all the results should be this type
+				msg := ""
+				for _, v := range fails {
+					msg += fmt.Sprintf("; %s", v.Error())
+				}
+				t.Fatal(msg)
+			}
 			require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
 		}
 	}
