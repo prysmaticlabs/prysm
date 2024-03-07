@@ -537,6 +537,8 @@ message DutiesResponse {
 
         // Whether the validator belongs in the sync committee and has to perform sync committee duty.
         bool is_sync_committee = 8;
+
+        uint64 committees_at_slot = 9;
     }
 }
 
