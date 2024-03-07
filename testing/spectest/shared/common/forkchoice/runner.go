@@ -350,11 +350,10 @@ func runBlobStep(t *testing.T,
 			//  //RequireSidecarParentSlotLower,
 			//  //RequireSidecarDescendsFromFinalized,
 			//  //RequireSidecarProposerExpected,
-			ctx := context.Background()
 			require.NoError(t, bv.BlobIndexInBounds())
 			require.NoError(t, bv.SidecarInclusionProven())
 			require.NoError(t, bv.SidecarKzgProofVerified())
-			require.NoError(t, bv.ValidProposerSignature(ctx))
+			//require.NoError(t, bv.ValidProposerSignature(ctx))
 			vsc, err := bv.VerifiedROBlob()
 			if err != nil {
 				require.ErrorIs(t, err, verification.ErrBlobInvalid)

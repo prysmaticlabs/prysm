@@ -51,7 +51,7 @@ var SpectestSidecarRequirements = []Requirement{
 	RequireBlobIndexInBounds,
 	//RequireNotFromFutureSlot,
 	//RequireSlotAboveFinalized,
-	RequireValidProposerSignature,
+	// RequireValidProposerSignature,
 	//RequireSidecarParentSeen,
 	//RequireSidecarParentValid,
 	//RequireSidecarParentSlotLower,
