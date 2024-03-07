@@ -463,7 +463,7 @@ func (e *ExecutionPayloadCapellaWithValue) UnmarshalJSON(enc []byte) error {
 		return errors.New("missing required field 'stateRoot' for ExecutionPayload")
 	}
 	if dec.ExecutionPayload.ReceiptsRoot == nil {
-		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
+		return errors.New("missing required field 'receiptsRoot' for ExecutionPayload")
 	}
 	if dec.ExecutionPayload.LogsBloom == nil {
 		return errors.New("missing required field 'logsBloom' for ExecutionPayload")
@@ -520,6 +520,11 @@ func (e *ExecutionPayloadCapellaWithValue) UnmarshalJSON(enc []byte) error {
 		dec.ExecutionPayload.Withdrawals = make([]*Withdrawal, 0)
 	}
 	e.Payload.Withdrawals = dec.ExecutionPayload.Withdrawals
+	for i, w := range e.Payload.Withdrawals {
+		if w == nil {
+			return errors.Errorf("withdrawal %v is nil", i)
+		}
+	}
 
 	v, err := hexutil.DecodeBig(dec.BlockValue)
 	if err != nil {
@@ -634,6 +639,11 @@ func (p *PayloadAttributesV3) UnmarshalJSON(enc []byte) error {
 		withdrawals = make([]*Withdrawal, 0)
 	}
 	p.Withdrawals = withdrawals
+	for i, w := range p.Withdrawals {
+		if w == nil {
+			return errors.Errorf("withdrawal %v is nil", i)
+		}
+	}
 	p.ParentBeaconBlockRoot = dec.ParentBeaconBlockRoot
 	return nil
 }
@@ -780,7 +790,7 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 		return errors.New("missing required field 'stateRoot' for ExecutionPayload")
 	}
 	if dec.ExecutionPayload.ReceiptsRoot == nil {
-		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
+		return errors.New("missing required field 'receiptsRoot' for ExecutionPayload")
 	}
 	if dec.ExecutionPayload.LogsBloom == nil {
 		return errors.New("missing required field 'logsBloom' for ExecutionPayload")
@@ -847,6 +857,11 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 		dec.ExecutionPayload.Withdrawals = make([]*Withdrawal, 0)
 	}
 	e.Payload.Withdrawals = dec.ExecutionPayload.Withdrawals
+	for i, w := range dec.ExecutionPayload.Withdrawals {
+		if w == nil {
+			return errors.Errorf("withdrawal %v is nil", i)
+		}
+	}
 
 	v, err := hexutil.DecodeBig(dec.BlockValue)
 	if err != nil {
@@ -923,5 +938,10 @@ func (b *ExecutionPayloadBodyV1) UnmarshalJSON(enc []byte) error {
 	}
 	b.Transactions = transactions
 	b.Withdrawals = decoded.Withdrawals
+	for i, w := range b.Withdrawals {
+		if w == nil {
+			return errors.Errorf("withdrawal %v is nil", i)
+		}
+	}
 	return nil
 }
