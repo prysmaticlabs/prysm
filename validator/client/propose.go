@@ -455,23 +455,28 @@ func (v *validator) SetGraffiti(ctx context.Context, pubkey [fieldparams.BLSPubk
 	if graffiti == nil {
 		return nil
 	}
+	var settings *proposer.Settings
 	if v.proposerSettings == nil {
-		settings := &proposer.Settings{}
+		settings = &proposer.Settings{}
+	} else {
+		settings = v.proposerSettings.Clone()
+	}
+	if settings.ProposeConfig == nil {
+		settings.ProposeConfig = map[[48]byte]*proposer.Option{pubkey: {GraffitiConfig: &proposer.GraffitiConfig{Graffiti: string(graffiti)}}}
 		return v.SetProposerSettings(ctx, settings)
 	}
-	if v.proposerSettings.ProposeConfig == nil {
-		ps := v.proposerSettings.Clone()
-		ps.ProposeConfig = map[[48]byte]*proposer.Option{pubkey: {GraffitiConfig: &proposer.GraffitiConfig{Graffiti: string(graffiti)}}}
-		return v.SetProposerSettings(ctx, ps)
-	}
-	ps := v.proposerSettings.Clone()
+	ps := settings.Clone()
 	var option *proposer.Option
 	option, ok := ps.ProposeConfig[pubkey]
 	if !ok || option == nil {
-		return fmt.Errorf("attempted to set graffiti but proposer settings are missing for pubkey:%s", hexutil.Encode(pubkey[:]))
-	}
-	option.GraffitiConfig = &proposer.GraffitiConfig{
-		Graffiti: string(graffiti),
+		ps.ProposeConfig[pubkey] = &proposer.Option{GraffitiConfig: &proposer.GraffitiConfig{
+			Graffiti: string(graffiti),
+		}}
+	} else {
+		option.GraffitiConfig = &proposer.GraffitiConfig{
+			Graffiti: string(graffiti),
+		}
+		ps.ProposeConfig[pubkey] = option
 	}
 	return v.SetProposerSettings(ctx, ps) // save the proposer settings
 }

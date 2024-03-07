@@ -1179,10 +1179,11 @@ func Test_validator_DeleteGraffiti(t *testing.T) {
 func Test_validator_SetGraffiti(t *testing.T) {
 	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
 	tests := []struct {
-		name             string
-		graffiti         string
-		proposerSettings *proposer.Settings
-		wantErr          string
+		name                 string
+		graffiti             string
+		proposerSettings     *proposer.Settings
+		wantProposerSettings *proposer.Settings
+		wantErr              string
 	}{
 		{
 			name:     "setting existing graffiti ok",
@@ -1223,10 +1224,19 @@ func Test_validator_SetGraffiti(t *testing.T) {
 					return config
 				}(),
 			},
-			wantErr: fmt.Sprintf("attempted to set graffiti but proposer settings are missing for pubkey:%s", hexutil.Encode(pubKey[:])),
 		},
 		{
-			name: "set without proposer settings",
+			name:     "set without proposer settings",
+			graffiti: "specific graffiti",
+			wantProposerSettings: func() *proposer.Settings {
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
+				config[pubKey] = &proposer.Option{
+					GraffitiConfig: &proposer.GraffitiConfig{
+						Graffiti: "specific graffiti",
+					},
+				}
+				return &proposer.Settings{ProposeConfig: config}
+			}(),
 		},
 	}
 	for _, tt := range tests {
@@ -1240,7 +1250,12 @@ func Test_validator_SetGraffiti(t *testing.T) {
 				require.ErrorContains(t, tt.wantErr, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, v.proposerSettings.ProposeConfig[pubKey].GraffitiConfig.Graffiti, tt.graffiti)
+				if tt.wantProposerSettings != nil {
+					require.DeepEqual(t, tt.wantProposerSettings, v.proposerSettings)
+				} else {
+					require.Equal(t, v.proposerSettings.ProposeConfig[pubKey].GraffitiConfig.Graffiti, tt.graffiti)
+				}
+
 			}
 		})
 	}
