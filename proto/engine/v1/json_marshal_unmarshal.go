@@ -98,6 +98,9 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		}
 		ws := make([]*Withdrawal, len(j.Withdrawals))
 		for i, wj := range j.Withdrawals {
+			if wj == nil {
+				return errors.Errorf("withdrawal %v is nil", i)
+			}
 			ws[i], err = wj.ToWithdrawal()
 			if err != nil {
 				return err
