@@ -340,7 +340,10 @@ func runBlobStep(t *testing.T,
 			}
 			ro, err := blocks.NewROBlobWithRoot(pb, root)
 			require.NoError(t, err)
-			vsc, err := verification.BlobSidecarNoop(ro)
+			ini, err := builder.vwait.WaitForInitializer(context.Background())
+			require.NoError(t, err)
+			bv := ini.NewBlobVerifier(ro, verification.GossipSidecarRequirements)
+			vsc, err := bv.VerifiedROBlob()
 			require.NoError(t, err)
 			require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
 		}

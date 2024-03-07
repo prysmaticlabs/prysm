@@ -10,7 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -23,16 +25,20 @@ type Builder struct {
 	service  *blockchain.Service
 	lastTick int64
 	execMock *engineMock
+	vwait    *verification.InitializerWaiter
 }
 
 func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock interfaces.ReadOnlySignedBeaconBlock) *Builder {
 	execMock := &engineMock{
 		powBlocks: make(map[[32]byte]*ethpb.PowBlock),
 	}
-	service := startChainService(t, initialState, initialBlock, execMock)
+	cw := startup.NewClockSynchronizer()
+	service, sg, fc := startChainService(t, initialState, initialBlock, execMock, cw)
+	bvw := verification.NewInitializerWaiter(cw, fc, sg)
 	return &Builder{
 		service:  service,
 		execMock: execMock,
+		vwait:    bvw,
 	}
 }
 
