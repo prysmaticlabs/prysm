@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -855,7 +856,11 @@ func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
 
 	graffiti, err := s.validatorService.GetGraffiti(ctx, bytesutil.ToBytes48(pubkey))
 	if err != nil {
-		httputil.HandleError(w, errors.Wrap(err, "graffiti was not set").Error(), http.StatusNotFound)
+		if strings.Contains(err.Error(), "unavailable") {
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		httputil.HandleError(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -893,13 +898,8 @@ func (s *Server) SetGraffiti(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Graffiti == "" {
-		httputil.HandleError(w, "graffiti is empty", http.StatusBadRequest)
-		return
-	}
-
 	if err := s.validatorService.SetGraffiti(ctx, bytesutil.ToBytes48(pubkey), []byte(req.Graffiti)); err != nil {
-		httputil.HandleError(w, err.Error(), http.StatusNotFound)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
