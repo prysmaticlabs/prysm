@@ -79,9 +79,10 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 	}
 	_, err := server.SubmitSyncMessage(context.Background(), msg)
 	require.NoError(t, err)
-	savedMsgs, err := server.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
+	savedMsgs, unlock, err := server.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
 	require.NoError(t, err)
 	require.DeepEqual(t, []*ethpb.SyncCommitteeMessage{msg}, savedMsgs)
+	unlock()
 }
 
 func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
