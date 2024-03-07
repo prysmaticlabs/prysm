@@ -1490,7 +1490,7 @@ type executionPayloadElectra struct {
 }
 
 // WrappedExecutionPayloadElectra is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadElectra(p *enginev1.ExecutionPayloadElectra, value math.Wei) (interfaces.ExecutionData, error) {
+func WrappedExecutionPayloadElectra(p *enginev1.ExecutionPayloadElectra, value math.Wei) (interfaces.ExecutionDataElectra, error) {
 	w := executionPayloadElectra{p: p, weiValue: value, gweiValue: uint64(math.WeiToGwei(value))}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped

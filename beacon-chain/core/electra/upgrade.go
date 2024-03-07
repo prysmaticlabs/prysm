@@ -310,3 +310,4 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 
 	return post, nil
 }
+

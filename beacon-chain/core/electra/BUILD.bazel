@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "churn.go",
         "consolidations.go",
+        "epoch_processing.go",
         "transition.go",
         "upgrade.go",
         "validator.go",
@@ -14,9 +15,11 @@ go_library(
     deps = [
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/epoch:go_default_library",
+        "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/time:go_default_library",
+        "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
         "//config/params:go_default_library",

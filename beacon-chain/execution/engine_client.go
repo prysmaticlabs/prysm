@@ -208,7 +208,7 @@ func (s *Service) ForkchoiceUpdated(
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
-	case version.Deneb:
+	case version.Deneb, version.Electra: // TODO: Confirm no changes in electra here.
 		a, err := attrs.PbV3()
 		if err != nil {
 			return nil, nil, err
@@ -771,6 +771,41 @@ func fullPayloadFromExecutionBlock(
 				BlobGasUsed:   bgu,
 				ExcessBlobGas: ebg,
 			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
+	case version.Electra:
+		h, ok := header.(interfaces.ExecutionDataElectra)
+		if !ok {
+			return nil, errors.New("header is not an Electra execution data")
+		}
+		ebg, err := h.ExcessBlobGas()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from execution payload header")
+		}
+		bgu, err := h.BlobGasUsed()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from execution payload header")
+		}
+		return blocks.WrappedExecutionPayloadElectra(
+			&pb.ExecutionPayloadElectra{
+				ParentHash:         h.ParentHash(),
+				FeeRecipient:       h.FeeRecipient(),
+				StateRoot:          h.StateRoot(),
+				ReceiptsRoot:       h.ReceiptsRoot(),
+				LogsBloom:          h.LogsBloom(),
+				PrevRandao:         h.PrevRandao(),
+				BlockNumber:        h.BlockNumber(),
+				GasLimit:           h.GasLimit(),
+				GasUsed:            h.GasUsed(),
+				Timestamp:          h.Timestamp(),
+				ExtraData:          h.ExtraData(),
+				BaseFeePerGas:      h.BaseFeePerGas(),
+				BlockHash:          blockHash[:],
+				Transactions:       txs,
+				Withdrawals:        block.Withdrawals,
+				BlobGasUsed:        bgu,
+				ExcessBlobGas:      ebg,
+				DepositReceipts:    h.DepositReceipts(),
+				WithdrawalRequests: h.WithdrawalRequests(),
+			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version %d", block.Version)
 	}
@@ -847,6 +882,41 @@ func fullPayloadFromPayloadBody(
 				Withdrawals:   body.Withdrawals,
 				ExcessBlobGas: ebg,
 				BlobGasUsed:   bgu,
+			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
+	case version.Electra:
+		h, ok := header.(interfaces.ExecutionDataElectra)
+		if !ok {
+			return nil, errors.New("header is not an Electra execution data")
+		}
+		ebg, err := h.ExcessBlobGas()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from execution payload header")
+		}
+		bgu, err := h.BlobGasUsed()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from execution payload header")
+		}
+		return blocks.WrappedExecutionPayloadElectra(
+			&pb.ExecutionPayloadElectra{
+				ParentHash:         h.ParentHash(),
+				FeeRecipient:       h.FeeRecipient(),
+				StateRoot:          h.StateRoot(),
+				ReceiptsRoot:       h.ReceiptsRoot(),
+				LogsBloom:          h.LogsBloom(),
+				PrevRandao:         h.PrevRandao(),
+				BlockNumber:        h.BlockNumber(),
+				GasLimit:           h.GasLimit(),
+				GasUsed:            h.GasUsed(),
+				Timestamp:          h.Timestamp(),
+				ExtraData:          h.ExtraData(),
+				BaseFeePerGas:      h.BaseFeePerGas(),
+				BlockHash:          h.BlockHash(),
+				Transactions:       body.Transactions,
+				Withdrawals:        body.Withdrawals,
+				ExcessBlobGas:      ebg,
+				BlobGasUsed:        bgu,
+				DepositReceipts:    h.DepositReceipts(),
+				WithdrawalRequests: h.WithdrawalRequests(),
 			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version for payload %d", bVersion)
@@ -981,6 +1051,8 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*pb.Withdrawal, 0),
 		}, nil
+	case version.Electra:
+		panic("implement me")
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedVersion, "version=%s", version.String(v))
 	}
