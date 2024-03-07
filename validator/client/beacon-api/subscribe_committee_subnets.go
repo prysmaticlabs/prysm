@@ -22,7 +22,6 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context,
 
 	jsonCommitteeSubscriptions := make([]*structs.BeaconCommitteeSubscription, len(in.CommitteeIds))
 	for index := range in.CommitteeIds {
-
 		jsonCommitteeSubscriptions[index] = &structs.BeaconCommitteeSubscription{
 			CommitteeIndex:   strconv.FormatUint(uint64(in.CommitteeIds[index]), 10),
 			CommitteesAtSlot: strconv.FormatUint(duties[index].CommitteesAtSlot, 10),
