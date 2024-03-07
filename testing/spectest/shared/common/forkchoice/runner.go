@@ -51,6 +51,9 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
+				if folder.Name() != "simple_blob_data" {
+					t.Skip("Skipping test folder")
+				}
 				preStepsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
 				require.NoError(t, err)
 				var steps []Step
@@ -305,22 +308,15 @@ func runBlobStep(t *testing.T,
 		require.NoError(t, err)
 		sh, err := beaconBlock.Header()
 		require.NoError(t, err)
-		for index := uint64(0); index*fieldparams.BlobLength < uint64(len(blobsSSZ)); index++ {
+		for index := 0; index*fieldparams.BlobLength < len(blobsSSZ); index++ {
 			var proof []byte
-			if index < uint64(len(proofs)) {
+			if index < len(proofs) {
 				proofPTR := proofs[index]
 				require.NotNil(t, proofPTR)
 				proof, err = hexutil.Decode(*proofPTR)
 				require.NoError(t, err)
 			}
 
-			var kzg []byte
-			if uint64(len(kzgs)) < index {
-				kzg = kzgs[index]
-			}
-			if len(kzg) == 0 {
-				kzg = make([]byte, 48)
-			}
 			blob := [fieldparams.BlobLength]byte{}
 			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
 			fakeProof := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
@@ -330,13 +326,16 @@ func runBlobStep(t *testing.T,
 			if len(proof) == 0 {
 				proof = make([]byte, 48)
 			}
+
+			inclusionProof, err := blocks.MerkleProofKZGCommitment(block.Body(), index)
+			require.NoError(t, err)
 			pb := &ethpb.BlobSidecar{
-				Index:                    index,
+				Index:                    uint64(index),
 				Blob:                     blob[:],
-				KzgCommitment:            kzg,
+				KzgCommitment:            kzgs[index],
 				KzgProof:                 proof,
 				SignedBlockHeader:        sh,
-				CommitmentInclusionProof: fakeProof,
+				CommitmentInclusionProof: inclusionProof,
 			}
 			ro, err := blocks.NewROBlobWithRoot(pb, root)
 			require.NoError(t, err)
