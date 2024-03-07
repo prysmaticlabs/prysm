@@ -97,7 +97,7 @@ var (
 	}
 	EnableMinimalSlashingProtection = &cli.BoolFlag{
 		Name:  "enable-minimal-slashing-protection",
-		Usage: "Enables the minimal slashing protection. See EIP-3076 for more details.",
+		Usage: "(Experimental): Enables the minimal slashing protection. See EIP-3076 for more details.",
 	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
