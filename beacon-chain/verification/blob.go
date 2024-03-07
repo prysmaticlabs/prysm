@@ -49,16 +49,16 @@ var GossipSidecarRequirements = []Requirement{
 // must satisfy in order to upgrade an ROBlob to a VerifiedROBlob.
 var SpectestSidecarRequirements = []Requirement{
 	RequireBlobIndexInBounds,
-	//RequireNotFromFutureSlot,
-	//RequireSlotAboveFinalized,
-	// RequireValidProposerSignature,
+	RequireNotFromFutureSlot,
+	RequireSlotAboveFinalized,
+	//RequireValidProposerSignature,
+	RequireSidecarParentSlotLower,
 	//RequireSidecarParentSeen,
 	//RequireSidecarParentValid,
-	//RequireSidecarParentSlotLower,
-	//RequireSidecarDescendsFromFinalized,
+	RequireSidecarDescendsFromFinalized,
 	RequireSidecarInclusionProven,
 	RequireSidecarKzgProofVerified,
-	//RequireSidecarProposerExpected,
+	RequireSidecarProposerExpected,
 }
 
 // InitsyncSidecarRequirements is the list of verification requirements to be used by the init-sync service

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -51,9 +52,6 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
-				if folder.Name() != "simple_blob_data" {
-					t.Skip("Skipping test folder")
-				}
 				preStepsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
 				require.NoError(t, err)
 				var steps []Step
@@ -118,7 +116,7 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 							t.Fatalf("unknown fork version: %v", fork)
 						}
 					}
-					runBlobStep(t, step.Blobs, beaconBlock, fork, folder, testsFolderPath, step.Proofs, builder)
+					runBlobStep(t, step, beaconBlock, fork, folder, testsFolderPath, builder)
 					if beaconBlock != nil {
 						if step.Valid != nil && !*step.Valid {
 							builder.InvalidBlock(t, beaconBlock)
@@ -284,14 +282,15 @@ func unmarshalSignedDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeacon
 }
 
 func runBlobStep(t *testing.T,
-	blobs *string,
+	step Step,
 	beaconBlock interfaces.ReadOnlySignedBeaconBlock,
 	fork int,
 	folder os.DirEntry,
 	testsFolderPath string,
-	proofs []*string,
 	builder *Builder,
 ) {
+	blobs := step.Blobs
+	proofs := step.Proofs
 	if blobs != nil && *blobs != "null" {
 		require.NotNil(t, beaconBlock)
 		require.Equal(t, true, fork >= version.Deneb)
@@ -308,6 +307,7 @@ func runBlobStep(t *testing.T,
 		require.NoError(t, err)
 		sh, err := beaconBlock.Header()
 		require.NoError(t, err)
+		requireVerifyExpected := errAssertionForStep(step, verification.ErrBlobInvalid)
 		for index := 0; index*fieldparams.BlobLength < len(blobsSSZ); index++ {
 			var proof []byte
 			if index < len(proofs) {
@@ -319,10 +319,6 @@ func runBlobStep(t *testing.T,
 
 			blob := [fieldparams.BlobLength]byte{}
 			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
-			fakeProof := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
-			for i := range fakeProof {
-				fakeProof[i] = make([]byte, fieldparams.RootLength)
-			}
 			if len(proof) == 0 {
 				proof = make([]byte, 48)
 			}
@@ -342,32 +338,71 @@ func runBlobStep(t *testing.T,
 			ini, err := builder.vwait.WaitForInitializer(context.Background())
 			require.NoError(t, err)
 			bv := ini.NewBlobVerifier(ro, verification.SpectestSidecarRequirements)
+			ctx := context.Background()
 			// WIP: still skipped
-			//  //RequireNotFromFutureSlot,
-			//  //RequireSlotAboveFinalized,
 			//  //RequireSidecarParentSeen,
 			//  //RequireSidecarParentValid,
-			//  //RequireSidecarParentSlotLower,
 			//  //RequireSidecarDescendsFromFinalized,
 			//  //RequireSidecarProposerExpected,
-			require.NoError(t, bv.BlobIndexInBounds())
-			require.NoError(t, bv.SidecarInclusionProven())
-			require.NoError(t, bv.SidecarKzgProofVerified())
-			//require.NoError(t, bv.ValidProposerSignature(ctx))
-			vsc, err := bv.VerifiedROBlob()
-			if err != nil {
-				require.ErrorIs(t, err, verification.ErrBlobInvalid)
-				me, ok := err.(verification.VerificationMultiError)
-				require.Equal(t, true, ok)
-				fails := me.Failures()
-				// we haven't performed any verification, so all the results should be this type
-				msg := ""
-				for _, v := range fails {
-					msg += fmt.Sprintf("; %s", v.Error())
-				}
-				t.Fatal(msg)
+			if err := bv.BlobIndexInBounds(); err != nil {
+				t.Logf("BlobIndexInBounds error: %s", err.Error())
 			}
-			require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
+
+			if err := bv.NotFromFutureSlot(); err != nil {
+				t.Logf("NotFromFutureSlot error: %s", err.Error())
+			}
+			if err := bv.SlotAboveFinalized(); err != nil {
+				t.Logf("SlotAboveFinalized error: %s", err.Error())
+			}
+			if err := bv.SidecarInclusionProven(); err != nil {
+				t.Logf("SidecarInclusionProven error: %s", err.Error())
+			}
+			if err := bv.SidecarKzgProofVerified(); err != nil {
+				t.Logf("SidecarKzgProofVerified error: %s", err.Error())
+			}
+			/*
+				if err := bv.ValidProposerSignature(ctx); err != nil {
+					t.Logf("ValidProposerSignature error: %s", err.Error())
+				}
+			*/
+			if err := bv.SidecarParentSlotLower(); err != nil {
+				t.Logf("SidecarParentSlotLower error: %s", err.Error())
+			}
+			if err := bv.SidecarDescendsFromFinalized(); err != nil {
+				t.Logf("SidecarDescendsFromFinalized error: %s", err.Error())
+			}
+			if err := bv.SidecarProposerExpected(ctx); err != nil {
+				t.Logf("SidecarProposerExpected error: %s", err.Error())
+			}
+
+			vsc, err := bv.VerifiedROBlob()
+			requireVerifyExpected(t, err)
+
+			if err == nil {
+				require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
+			}
+		}
+	}
+}
+
+func errAssertionForStep(step Step, expect error) func(t *testing.T, err error) {
+	if !*step.Valid {
+		return func(t *testing.T, err error) {
+			require.ErrorIs(t, err, expect)
+		}
+	}
+	return func(t *testing.T, err error) {
+		if err != nil {
+			require.ErrorIs(t, err, verification.ErrBlobInvalid)
+			me, ok := err.(verification.VerificationMultiError)
+			require.Equal(t, true, ok)
+			fails := me.Failures()
+			// we haven't performed any verification, so all the results should be this type
+			fmsg := make([]string, 0, len(fails))
+			for k, v := range fails {
+				fmsg = append(fmsg, fmt.Sprintf("%s - %s", v.Error(), k.String()))
+			}
+			t.Fatal(strings.Join(fmsg, ";"))
 		}
 	}
 }

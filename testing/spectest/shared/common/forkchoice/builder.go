@@ -94,7 +94,7 @@ func (bb *Builder) block(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) [
 // InvalidBlock receives the invalid block and notifies forkchoice.
 func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
 	r := bb.block(t, b)
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 	defer cancel()
 	require.Equal(t, true, bb.service.ReceiveBlock(ctx, b, r, nil) != nil)
 }
@@ -102,7 +102,7 @@ func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconB
 // ValidBlock receives the valid block and notifies forkchoice.
 func (bb *Builder) ValidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
 	r := bb.block(t, b)
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 	defer cancel()
 	require.NoError(t, bb.service.ReceiveBlock(ctx, b, r, nil))
 }
