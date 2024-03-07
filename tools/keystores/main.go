@@ -156,7 +156,13 @@ func encrypt(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "could not expand path: %s", outputPath)
 	}
-	if file.Exists(fullPath) {
+
+	exists, err := file.Exists(fullPath, file.Regular)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if file exists: %s", fullPath)
+	}
+
+	if exists {
 		response, err := prompt.ValidatePrompt(
 			os.Stdin,
 			fmt.Sprintf("file at path %s already exists, are you sure you want to overwrite it? [y/n]", fullPath),

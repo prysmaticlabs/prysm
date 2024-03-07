@@ -57,8 +57,8 @@ func (*requestLogger) observe(r *http.Request) (e error) {
 	b := bytes.NewBuffer(nil)
 	if r.Body == nil {
 		log.WithFields(log.Fields{
-			"body-base64": "(nil value)",
-			"url":         r.URL.String(),
+			"bodyBase64": "(nil value)",
+			"url":        r.URL.String(),
 		}).Info("builder http request")
 		return nil
 	}
@@ -74,8 +74,8 @@ func (*requestLogger) observe(r *http.Request) (e error) {
 	}
 	r.Body = io.NopCloser(b)
 	log.WithFields(log.Fields{
-		"body-base64": string(body),
-		"url":         r.URL.String(),
+		"bodyBase64": string(body),
+		"url":        r.URL.String(),
 	}).Info("builder http request")
 
 	return nil

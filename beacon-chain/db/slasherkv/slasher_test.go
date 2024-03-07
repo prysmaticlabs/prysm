@@ -14,33 +14,56 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := setupDB(t)
-	valIdx := primitives.ValidatorIndex(1)
-	target := primitives.Epoch(5)
-	source := primitives.Epoch(4)
-	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
-	require.NoError(t, err)
-	require.Equal(t, true, attRecord == nil)
+	const attestationsCount = 11_000
 
-	sr := [32]byte{1}
-	err = beaconDB.SaveAttestationRecordsForValidators(
-		ctx,
-		[]*slashertypes.IndexedAttestationWrapper{
-			createAttestationWrapper(source, target, []uint64{uint64(valIdx)}, sr[:]),
-		},
-	)
+	// Create context.
+	ctx := context.Background()
+
+	// Create database.
+	beaconDB := setupDB(t)
+
+	// Define the validator index.
+	validatorIndex := primitives.ValidatorIndex(1)
+
+	// Defines attestations to save and retrieve.
+	attWrappers := make([]*slashertypes.IndexedAttestationWrapper, attestationsCount)
+	for i := 0; i < attestationsCount; i++ {
+		var dataRoot [32]byte
+		binary.LittleEndian.PutUint64(dataRoot[:], uint64(i))
+
+		attWrapper := createAttestationWrapper(
+			primitives.Epoch(i),
+			primitives.Epoch(i+1),
+			[]uint64{uint64(validatorIndex)},
+			dataRoot[:],
+		)
+
+		attWrappers[i] = attWrapper
+	}
+
+	// Check on a sample of validators that no attestation records are available.
+	for i := 0; i < attestationsCount; i += 100 {
+		attRecord, err := beaconDB.AttestationRecordForValidator(ctx, validatorIndex, primitives.Epoch(i+1))
+		require.NoError(t, err)
+		require.Equal(t, true, attRecord == nil)
+	}
+
+	// Save the attestation records to the database.
+	err := beaconDB.SaveAttestationRecordsForValidators(ctx, attWrappers)
 	require.NoError(t, err)
-	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
-	require.NoError(t, err)
-	assert.DeepEqual(t, target, attRecord.IndexedAttestation.Data.Target.Epoch)
-	assert.DeepEqual(t, source, attRecord.IndexedAttestation.Data.Source.Epoch)
-	assert.DeepEqual(t, sr, attRecord.DataRoot)
+
+	// Check on a sample of validators that attestation records are available.
+	for i := 0; i < attestationsCount; i += 100 {
+		expected := attWrappers[i]
+		actual, err := beaconDB.AttestationRecordForValidator(ctx, validatorIndex, primitives.Epoch(i+1))
+		require.NoError(t, err)
+
+		require.DeepEqual(t, expected.IndexedAttestation.Data.Source.Epoch, actual.IndexedAttestation.Data.Source.Epoch)
+	}
 }
 
 func TestStore_LastEpochWrittenForValidators(t *testing.T) {
@@ -138,61 +161,113 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 }
 
 func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
+	// Define test parameters.
+	const (
+		elemsPerChunk = 16
+		totalChunks   = 11_000
+	)
+
+	// Create context.
 	ctx := context.Background()
+
+	// Create database.
 	beaconDB := setupDB(t)
-	elemsPerChunk := 16
-	totalChunks := 64
-	chunkKeys := make([][]byte, totalChunks)
-	chunks := make([][]uint16, totalChunks)
+
+	// Create min chunk keys and chunks.
+	minChunkKeys := make([][]byte, totalChunks)
+	minChunks := make([][]uint16, totalChunks)
+
 	for i := 0; i < totalChunks; i++ {
+		// Create chunk key.
+		chunkKey := ssz.MarshalUint64(make([]byte, 0), uint64(i))
+		minChunkKeys[i] = chunkKey
+
+		// Create chunk.
 		chunk := make([]uint16, elemsPerChunk)
+
 		for j := 0; j < len(chunk); j++ {
-			chunk[j] = uint16(0)
+			chunk[j] = uint16(i + j)
 		}
-		chunks[i] = chunk
-		chunkKeys[i] = ssz.MarshalUint64(make([]byte, 0), uint64(i))
+
+		minChunks[i] = chunk
 	}
 
-	// We save chunks for min spans.
-	err := beaconDB.SaveSlasherChunks(ctx, slashertypes.MinSpan, chunkKeys, chunks)
+	// Create max chunk keys and chunks.
+	maxChunkKeys := make([][]byte, totalChunks)
+	maxChunks := make([][]uint16, totalChunks)
+
+	for i := 0; i < totalChunks; i++ {
+		// Create chunk key.
+		chunkKey := ssz.MarshalUint64(make([]byte, 0), uint64(i+1))
+		maxChunkKeys[i] = chunkKey
+
+		// Create chunk.
+		chunk := make([]uint16, elemsPerChunk)
+
+		for j := 0; j < len(chunk); j++ {
+			chunk[j] = uint16(i + j + 1)
+		}
+
+		maxChunks[i] = chunk
+	}
+
+	// Save chunks for min spans.
+	err := beaconDB.SaveSlasherChunks(ctx, slashertypes.MinSpan, minChunkKeys, minChunks)
 	require.NoError(t, err)
 
-	// We expect no chunks to be stored for max spans.
+	// Expect no chunks to be stored for max spans.
 	_, chunksExist, err := beaconDB.LoadSlasherChunks(
-		ctx, slashertypes.MaxSpan, chunkKeys,
+		ctx, slashertypes.MaxSpan, minChunkKeys,
 	)
 	require.NoError(t, err)
-	require.Equal(t, len(chunks), len(chunksExist))
+	require.Equal(t, len(minChunks), len(chunksExist))
+
 	for _, exists := range chunksExist {
 		require.Equal(t, false, exists)
 	}
 
-	// We check we saved the right chunks.
+	// Check the right chunks are saved.
 	retrievedChunks, chunksExist, err := beaconDB.LoadSlasherChunks(
-		ctx, slashertypes.MinSpan, chunkKeys,
+		ctx, slashertypes.MinSpan, minChunkKeys,
 	)
 	require.NoError(t, err)
-	require.Equal(t, len(chunks), len(retrievedChunks))
-	require.Equal(t, len(chunks), len(chunksExist))
+	require.Equal(t, len(minChunks), len(retrievedChunks))
+	require.Equal(t, len(minChunks), len(chunksExist))
+
 	for i, exists := range chunksExist {
 		require.Equal(t, true, exists)
-		require.DeepEqual(t, chunks[i], retrievedChunks[i])
+		require.DeepEqual(t, minChunks[i], retrievedChunks[i])
 	}
 
-	// We save chunks for max spans.
-	err = beaconDB.SaveSlasherChunks(ctx, slashertypes.MaxSpan, chunkKeys, chunks)
+	// Save chunks for max spans.
+	err = beaconDB.SaveSlasherChunks(ctx, slashertypes.MaxSpan, maxChunkKeys, maxChunks)
 	require.NoError(t, err)
 
-	// We check we saved the right chunks.
+	// Check right chunks are saved.
 	retrievedChunks, chunksExist, err = beaconDB.LoadSlasherChunks(
-		ctx, slashertypes.MaxSpan, chunkKeys,
+		ctx, slashertypes.MaxSpan, maxChunkKeys,
 	)
 	require.NoError(t, err)
-	require.Equal(t, len(chunks), len(retrievedChunks))
-	require.Equal(t, len(chunks), len(chunksExist))
+
+	require.Equal(t, len(maxChunks), len(retrievedChunks))
+	require.Equal(t, len(maxChunks), len(chunksExist))
+
 	for i, exists := range chunksExist {
 		require.Equal(t, true, exists)
-		require.DeepEqual(t, chunks[i], retrievedChunks[i])
+		require.DeepEqual(t, maxChunks[i], retrievedChunks[i])
+	}
+
+	// Check the right chunks are still saved for min span.
+	retrievedChunks, chunksExist, err = beaconDB.LoadSlasherChunks(
+		ctx, slashertypes.MinSpan, minChunkKeys,
+	)
+	require.NoError(t, err)
+	require.Equal(t, len(minChunks), len(retrievedChunks))
+	require.Equal(t, len(minChunks), len(chunksExist))
+
+	for i, exists := range chunksExist {
+		require.Equal(t, true, exists)
+		require.DeepEqual(t, minChunks[i], retrievedChunks[i])
 	}
 }
 

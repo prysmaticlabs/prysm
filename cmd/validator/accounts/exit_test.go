@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v5/build/bazel"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -18,6 +17,7 @@ import (
 	validatormock "github.com/prysmaticlabs/prysm/v5/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -395,5 +395,7 @@ func TestExitAccountsCli_WriteJSON_NoBroadcast(t *testing.T) {
 	require.Equal(t, 1, len(formattedExitedKeys))
 	assert.Equal(t, "0x"+keystore.Pubkey[:12], formattedExitedKeys[0])
 
-	require.Equal(t, true, file.Exists(path.Join(out, "validator-exit-1.json")), "Expected file to exist")
+	exists, err := file.Exists(path.Join(out, "validator-exit-1.json"), file.Regular)
+	require.NoError(t, err, "could not check if exit file exists")
+	require.Equal(t, true, exists, "Expected file to exist")
 }

@@ -202,7 +202,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 			if r := recover(); r != nil {
 				tracing.AnnotateError(span, fmt.Errorf("panic occurred: %v", r))
 				log.WithField("error", r).
-					WithField("recovered_at", "subscribeWithBase").
+					WithField("recoveredAt", "subscribeWithBase").
 					WithField("stack", string(debug.Stack())).
 					Error("Panic occurred")
 			}
@@ -290,9 +290,9 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 			fields := logrus.Fields{
 				"topic":        topic,
 				"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
-				"peer id":      pid.String(),
+				"peerID":       pid.String(),
 				"agent":        agentString(pid, s.cfg.p2p.Host()),
-				"gossip score": s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
+				"gossipScore":  s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
 			}
 			if features.Get().EnableFullSSZDataLogging {
 				fields["message"] = hexutil.Encode(msg.Data)
@@ -305,9 +305,9 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 				log.WithError(err).WithFields(logrus.Fields{
 					"topic":        topic,
 					"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
-					"peer id":      pid.String(),
+					"peerID":       pid.String(),
 					"agent":        agentString(pid, s.cfg.p2p.Host()),
-					"gossip score": s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
+					"gossipScore":  s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
 				}).Debugf("Gossip message was ignored")
 			}
 			messageIgnoredValidationCounter.WithLabelValues(topic).Inc()

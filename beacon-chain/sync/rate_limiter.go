@@ -210,5 +210,5 @@ func (l *limiter) retrieveCollector(topic string) (*leakybucket.Collector, error
 }
 
 func (_ *limiter) topicLogger(topic string) *logrus.Entry {
-	return log.WithField("rate limiter", topic)
+	return log.WithField("rateLimiter", topic)
 }

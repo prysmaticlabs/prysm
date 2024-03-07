@@ -6,6 +6,7 @@ go_library(
         "batch.go",
         "batcher.go",
         "blobs.go",
+        "log.go",
         "metrics.go",
         "pool.go",
         "service.go",

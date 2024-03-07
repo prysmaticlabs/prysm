@@ -95,6 +95,10 @@ var (
 		Name:  "enable-slashing-protection-history-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protection database.",
 	}
+	EnableMinimalSlashingProtection = &cli.BoolFlag{
+		Name:  "enable-minimal-slashing-protection",
+		Usage: "(Experimental): Enables the minimal slashing protection. See EIP-3076 for more details.",
+	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
 		Usage: `Enables the validator to perform a doppelganger check.
@@ -149,11 +153,15 @@ var (
 		Name:  "disable-resource-manager",
 		Usage: "Disables running the libp2p resource manager.",
 	}
-
 	// DisableRegistrationCache a flag for disabling the validator registration cache and use db instead.
 	DisableRegistrationCache = &cli.BoolFlag{
 		Name:  "disable-registration-cache",
 		Usage: "Temporary flag for disabling the validator registration cache instead of using the DB. Note: registrations do not clear on restart while using the DB.",
+	}
+	// BlobSaveFsync enforces durable filesystem writes for use cases where blob availability is critical.
+	BlobSaveFsync = &cli.BoolFlag{
+		Name:  "blob-save-fsync",
+		Usage: "Forces new blob files to be fysnc'd before continuing, ensuring durable blob writes.",
 	}
 )
 
@@ -173,6 +181,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
 	enableSlashingProtectionPruning,
+	EnableMinimalSlashingProtection,
 	enableDoppelGangerProtection,
 	EnableBeaconRESTApi,
 }...)
@@ -209,6 +218,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disableResourceManager,
 	DisableRegistrationCache,
 	EnableLightClient,
+	BlobSaveFsync,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

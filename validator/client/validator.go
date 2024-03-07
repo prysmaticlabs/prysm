@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -37,7 +37,7 @@ import (
 	beacon_api "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	vdb "github.com/prysmaticlabs/prysm/v5/validator/db"
-	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	dbCommon "github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
@@ -106,7 +106,7 @@ type validator struct {
 	voteStats                          voteStats
 	syncCommitteeStats                 syncCommitteeStats
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
-	proposerSettings                   *validatorserviceconfig.ProposerSettings
+	proposerSettings                   *proposer.Settings
 	walletInitializedChannel           chan *wallet.Wallet
 	validatorsRegBatchSize             int
 }
@@ -517,7 +517,7 @@ func buildDuplicateError(response []*ethpb.DoppelGangerResponse_ValidatorRespons
 }
 
 // Ensures that the latest attestation history is retrieved.
-func retrieveLatestRecord(recs []*kv.AttestationRecord) *kv.AttestationRecord {
+func retrieveLatestRecord(recs []*dbCommon.AttestationRecord) *dbCommon.AttestationRecord {
 	if len(recs) == 0 {
 		return nil
 	}
@@ -753,7 +753,7 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 			}
 		}
 		if inSyncCommittee {
-			aggregator, err := v.isSyncCommitteeAggregator(ctx, slot, bytesutil.ToBytes48(duty.PublicKey))
+			aggregator, err := v.isSyncCommitteeAggregator(ctx, slot, bytesutil.ToBytes48(duty.PublicKey), duty.ValidatorIndex)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not check if a validator is a sync committee aggregator")
 			}
@@ -818,7 +818,7 @@ func (v *validator) isAggregator(ctx context.Context, committee []primitives.Val
 //
 //	modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //	return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
-func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) (bool, error) {
+func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte, validatorIndex primitives.ValidatorIndex) (bool, error) {
 	res, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
 		Slot:      slot,
@@ -827,6 +827,7 @@ func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot primitiv
 		return false, err
 	}
 
+	var selections []iface.SyncCommitteeSelection
 	for _, index := range res.Indices {
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 		subnet := uint64(index) / subCommitteeSize
@@ -834,7 +835,25 @@ func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot primitiv
 		if err != nil {
 			return false, err
 		}
-		isAggregator, err := altair.IsSyncCommitteeAggregator(sig)
+
+		selections = append(selections, iface.SyncCommitteeSelection{
+			SelectionProof:    sig,
+			Slot:              slot,
+			SubcommitteeIndex: primitives.CommitteeIndex(subnet),
+			ValidatorIndex:    validatorIndex,
+		})
+	}
+
+	// Override selections with aggregated ones if the node is part of a Distributed Validator.
+	if v.distributed && len(selections) > 0 {
+		selections, err = v.validatorClient.GetAggregatedSyncSelections(ctx, selections)
+		if err != nil {
+			return false, errors.Wrap(err, "failed to get aggregated sync selections")
+		}
+	}
+
+	for _, s := range selections {
+		isAggregator, err := altair.IsSyncCommitteeAggregator(s.SelectionProof)
 		if err != nil {
 			return false, err
 		}
@@ -1009,12 +1028,12 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 }
 
 // ProposerSettings gets the current proposer settings saved in memory validator
-func (v *validator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+func (v *validator) ProposerSettings() *proposer.Settings {
 	return v.proposerSettings
 }
 
 // SetProposerSettings sets and saves the passed in proposer settings overriding the in memory one
-func (v *validator) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+func (v *validator) SetProposerSettings(ctx context.Context, settings *proposer.Settings) error {
 	if v.db == nil {
 		return errors.New("db is not set")
 	}
@@ -1176,6 +1195,10 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
 		enabled := false
+
+		if v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig == nil && v.ProposerSettings().DefaultConfig.BuilderConfig != nil {
+			log.Warn("Builder is `enabled` in default config but will be ignored because no fee recipient was provided!")
+		}
 
 		if v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig != nil {
 			defaultConfig := v.ProposerSettings().DefaultConfig

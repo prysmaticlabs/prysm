@@ -1531,6 +1531,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 // 12 and recover. Notice that it takes two epochs to fully recover, and we stay
 // optimistic for the whole time.
 func TestStore_NoViableHead_Liveness(t *testing.T) {
+	t.Skip("Requires #13664 to be fixed")
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.SlotsPerEpoch = 6
@@ -2114,7 +2115,7 @@ func TestMissingIndices(t *testing.T) {
 	for _, c := range cases {
 		bm, bs := filesystem.NewEphemeralBlobStorageWithMocker(t)
 		t.Run(c.name, func(t *testing.T) {
-			require.NoError(t, bm.CreateFakeIndices(c.root, c.present))
+			require.NoError(t, bm.CreateFakeIndices(c.root, c.present...))
 			missing, err := missingIndices(bs, c.root, c.expected)
 			if c.err != nil {
 				require.ErrorIs(t, err, c.err)

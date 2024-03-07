@@ -85,11 +85,19 @@ func TestForkChoice_ShouldOverrideFCU(t *testing.T) {
 		require.Equal(t, false, f.ShouldOverrideFCU())
 		f.store.headNode.parent = saved
 	})
-	t.Run("parent is weak", func(t *testing.T) {
+	t.Run("parent is weak early call", func(t *testing.T) {
 		saved := f.store.headNode.parent.weight
+		f.store.headNode.parent.weight = 0
+		require.Equal(t, true, f.ShouldOverrideFCU())
+		f.store.headNode.parent.weight = saved
+	})
+	t.Run("parent is weak late call", func(t *testing.T) {
+		saved := f.store.headNode.parent.weight
+		driftGenesisTime(f, 2, 11)
 		f.store.headNode.parent.weight = 0
 		require.Equal(t, false, f.ShouldOverrideFCU())
 		f.store.headNode.parent.weight = saved
+		driftGenesisTime(f, 2, orphanLateBlockFirstThreshold+1)
 	})
 	t.Run("Head is strong", func(t *testing.T) {
 		f.store.headNode.weight = f.store.committeeWeight

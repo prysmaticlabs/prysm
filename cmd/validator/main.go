@@ -127,7 +127,8 @@ func main() {
 		Version: version.Version(),
 		Action: func(ctx *cli.Context) error {
 			if err := startNode(ctx); err != nil {
-				return cli.Exit(err.Error(), 1)
+				log.Fatal(err.Error())
+				return err
 			}
 			return nil
 		},

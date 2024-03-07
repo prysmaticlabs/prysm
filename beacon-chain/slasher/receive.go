@@ -129,7 +129,7 @@ func (s *Service) processAttestations(
 	validAttestationsCount := len(validAttestations)
 	validInFutureAttestationsCount := len(validInFutureAttestations)
 
-	// Log useful infrormation
+	// Log useful information.
 	log.WithFields(logrus.Fields{
 		"currentSlot":     currentSlot,
 		"currentEpoch":    currentEpoch,
@@ -137,7 +137,9 @@ func (s *Service) processAttestations(
 		"numDeferredAtts": validInFutureAttestationsCount,
 		"numDroppedAtts":  numDropped,
 		"attsQueueSize":   queuedAttestationsCount,
-	}).Info("Processing queued attestations for slashing detection")
+	}).Info("Start processing queued attestations")
+
+	start := time.Now()
 
 	// Check for attestatinos slashings (double, sourrounding, surrounded votes).
 	slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAttestations)
@@ -152,6 +154,13 @@ func (s *Service) processAttestations(
 	if err != nil {
 		log.WithError(err).Error(couldNotProcessAttesterSlashings)
 		return nil
+	}
+
+	end := time.Since(start)
+	log.WithField("elapsed", end).Info("Done processing queued attestations")
+
+	if len(slashings) > 0 {
+		log.WithField("numSlashings", len(slashings)).Warn("Slashable attestation offenses found")
 	}
 
 	return processedAttesterSlashings

@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	log "github.com/sirupsen/logrus"
 )
 
 // APIInitializer manages initializing the beacon node using checkpoint sync, retrieving the checkpoint state and root
@@ -31,7 +30,7 @@ func NewAPIInitializer(beaconNodeHost string) (*APIInitializer, error) {
 func (dl *APIInitializer) Initialize(ctx context.Context, d db.Database) error {
 	origin, err := d.OriginCheckpointBlockRoot(ctx)
 	if err == nil && origin != params.BeaconConfig().ZeroHash {
-		log.Warnf("origin checkpoint root %#x found in db, ignoring checkpoint sync flags", origin)
+		log.Warnf("Origin checkpoint root %#x found in db, ignoring checkpoint sync flags", origin)
 		return nil
 	} else {
 		if !errors.Is(err, db.ErrNotFound) {

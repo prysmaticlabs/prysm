@@ -310,7 +310,7 @@ func (bv *ROBlobVerifier) SidecarProposerExpected(ctx context.Context) (err erro
 	}
 	if idx != bv.blob.ProposerIndex() {
 		log.WithError(ErrSidecarUnexpectedProposer).
-			WithFields(logging.BlobFields(bv.blob)).WithField("expected_proposer", idx).
+			WithFields(logging.BlobFields(bv.blob)).WithField("expectedProposer", idx).
 			Debug("unexpected blob proposer")
 		return ErrSidecarUnexpectedProposer
 	}
