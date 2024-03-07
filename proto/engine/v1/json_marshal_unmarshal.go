@@ -121,10 +121,10 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		// If one is set, ensure both are set.
 		if e.Version >= version.Deneb {
 			if ebg == nil {
-				return errors.New("excessBlobGas is nil")
+				return errors.New("expected `excessBlobGas` field in JSON response")
 			}
 			if bgu == nil {
-				return errors.New("blobGasUsed is nil")
+				return errors.New("expected `blobGasUsed` field in JSON response")
 			}
 		}
 	}
