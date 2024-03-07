@@ -138,7 +138,10 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	if !ok {
 		return errors.New("expected transaction list to be of a slice interface type")
 	}
-	for _, tx := range txsList {
+	for i, tx := range txsList {
+		if tx == nil {
+			return errors.Errorf("transaction %v is nil", i)
+		}
 		// If the transaction is just a hex string, do not attempt to
 		// unmarshal into a full transaction object.
 		if txItem, ok := tx.(string); ok && strings.HasPrefix(txItem, "0x") {
