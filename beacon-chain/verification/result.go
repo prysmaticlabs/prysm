@@ -3,6 +3,54 @@ package verification
 // Requirement represents a validation check that needs to pass in order for a Verified form a consensus type to be issued.
 type Requirement int
 
+var unknownRequirementName = "unknown"
+
+func (r Requirement) String() string {
+	switch r {
+	case RequireBlobIndexInBounds:
+		return "RequireBlobIndexInBounds"
+	case RequireNotFromFutureSlot:
+		return "RequireNotFromFutureSlot"
+	case RequireSlotAboveFinalized:
+		return "RequireSlotAboveFinalized"
+	case RequireValidProposerSignature:
+		return "RequireValidProposerSignature"
+	case RequireSidecarParentSeen:
+		return "RequireSidecarParentSeen"
+	case RequireSidecarParentValid:
+		return "RequireSidecarParentValid"
+	case RequireSidecarParentSlotLower:
+		return "RequireSidecarParentSlotLower"
+	case RequireSidecarDescendsFromFinalized:
+		return "RequireSidecarDescendsFromFinalized"
+	case RequireSidecarInclusionProven:
+		return "RequireSidecarInclusionProven"
+	case RequireSidecarKzgProofVerified:
+		return "RequireSidecarKzgProofVerified"
+	case RequireSidecarProposerExpected:
+		return "RequireSidecarProposerExpected"
+	default:
+		return unknownRequirementName
+	}
+}
+
+type requirementList []Requirement
+
+func (rl requirementList) excluding(minus ...Requirement) []Requirement {
+	rm := make(map[Requirement]struct{})
+	nl := make([]Requirement, 0, len(rl)-len(minus))
+	for i := range minus {
+		rm[minus[i]] = struct{}{}
+	}
+	for i := range rl {
+		if _, excluded := rm[rl[i]]; excluded {
+			continue
+		}
+		nl = append(nl, rl[i])
+	}
+	return nl
+}
+
 // results collects positive verification results.
 // This bitmap can be used to test which verifications have been successfully completed in order to
 // decide whether it is safe to issue a "Verified" type variant.

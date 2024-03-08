@@ -16,6 +16,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
@@ -34,7 +35,8 @@ func startChainService(t testing.TB,
 	st state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	engineMock *engineMock,
-) *blockchain.Service {
+	clockSync *startup.ClockSynchronizer,
+) (*blockchain.Service, *stategen.State, forkchoice.ForkChoicer) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	require.NoError(t, db.SaveBlock(ctx, block))
@@ -58,28 +60,30 @@ func startChainService(t testing.TB,
 	require.NoError(t, err)
 
 	fc := doublylinkedtree.New()
+	sg := stategen.New(db, fc)
 	opts := append([]blockchain.Option{},
 		blockchain.WithExecutionEngineCaller(engineMock),
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
 		blockchain.WithForkChoiceStore(fc),
-		blockchain.WithStateGen(stategen.New(db, fc)),
+		blockchain.WithStateGen(sg),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
 		blockchain.WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
 		blockchain.WithPayloadIDCache(cache.NewPayloadIDCache()),
-		blockchain.WithClockSynchronizer(startup.NewClockSynchronizer()),
+		blockchain.WithClockSynchronizer(clockSync),
 		blockchain.WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
 		blockchain.WithSyncChecker(mock.MockChecker{}),
+		blockchain.WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)
 	// force start kzg context here until Deneb fork epoch is decided
 	require.NoError(t, kzg.Start())
 	require.NoError(t, service.StartFromSavedState(st))
-	return service
+	return service, sg, fc
 }
 
 type engineMock struct {

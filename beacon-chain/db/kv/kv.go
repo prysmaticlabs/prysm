@@ -137,7 +137,7 @@ func NewKVStore(ctx context.Context, dirPath string, opts ...KVStoreOption) (*St
 		}
 	}
 	datafile := StoreDatafilePath(dirPath)
-	log.Infof("Opening Bolt DB at %s", datafile)
+	log.WithField("path", datafile).Info("Opening Bolt DB")
 	boltDB, err := bolt.Open(
 		datafile,
 		params.BeaconIoConfig().ReadWritePermissions,

@@ -10,7 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -23,16 +25,27 @@ type Builder struct {
 	service  *blockchain.Service
 	lastTick int64
 	execMock *engineMock
+	vwait    *verification.InitializerWaiter
 }
 
 func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock interfaces.ReadOnlySignedBeaconBlock) *Builder {
 	execMock := &engineMock{
 		powBlocks: make(map[[32]byte]*ethpb.PowBlock),
 	}
-	service := startChainService(t, initialState, initialBlock, execMock)
+	cw := startup.NewClockSynchronizer()
+	service, sg, fc := startChainService(t, initialState, initialBlock, execMock, cw)
+	// blob spectests use a weird Fork in the genesis beacon state that has different previous and current versions.
+	// This trips up the lite fork lookup code in the blob verifier that figures out the fork
+	// based on the slot of the block. So just for spectests we override that behavior and get the fork from the state
+	// which matches the behavior of block verification.
+	getFork := func(targetEpoch primitives.Epoch) (*ethpb.Fork, error) {
+		return initialState.Fork(), nil
+	}
+	bvw := verification.NewInitializerWaiter(cw, fc, sg, verification.WithForkLookup(getFork))
 	return &Builder{
 		service:  service,
 		execMock: execMock,
+		vwait:    bvw,
 	}
 }
 
@@ -88,7 +101,7 @@ func (bb *Builder) block(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) [
 // InvalidBlock receives the invalid block and notifies forkchoice.
 func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
 	r := bb.block(t, b)
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 	defer cancel()
 	require.Equal(t, true, bb.service.ReceiveBlock(ctx, b, r, nil) != nil)
 }
@@ -96,7 +109,7 @@ func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconB
 // ValidBlock receives the valid block and notifies forkchoice.
 func (bb *Builder) ValidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
 	r := bb.block(t, b)
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 	defer cancel()
 	require.NoError(t, bb.service.ReceiveBlock(ctx, b, r, nil))
 }
