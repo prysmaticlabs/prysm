@@ -199,16 +199,20 @@ func (s *Service) createListener(
 			localNode.SetFallbackIP(firstIP)
 		}
 	}
-	dv5Cfg := discover.Config{
-		PrivateKey: privKey,
-	}
-	dv5Cfg.Bootnodes = []*enode.Node{}
+
+	bootnodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddr))
 	for _, addr := range s.cfg.Discv5BootStrapAddr {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not bootstrap addr")
 		}
-		dv5Cfg.Bootnodes = append(dv5Cfg.Bootnodes, bootNode)
+
+		bootnodes = append(bootnodes, bootNode)
+	}
+
+	dv5Cfg := discover.Config{
+		PrivateKey: privKey,
+		Bootnodes:  bootnodes,
 	}
 
 	listener, err := discover.ListenV5(conn, localNode, dv5Cfg)
