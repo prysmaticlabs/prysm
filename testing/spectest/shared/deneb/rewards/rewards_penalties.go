@@ -70,8 +70,16 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 
 	vp, bp, err := altair.InitializePrecomputeValidators(ctx, preBeaconState)
 	require.NoError(t, err)
+
 	vp, bp, err = altair.ProcessEpochParticipation(ctx, preBeaconState, bp, vp)
 	require.NoError(t, err)
+
+	activeBal, targetPrevious, targetCurrent, err := preBeaconState.UnrealizedCheckpointBalances()
+	require.NoError(t, err)
+	require.Equal(t, bp.ActiveCurrentEpoch, activeBal)
+	require.Equal(t, bp.CurrentEpochTargetAttested, targetCurrent)
+	require.Equal(t, bp.PrevEpochTargetAttested, targetPrevious)
+
 	deltas, err := altair.AttestationsDelta(preBeaconState, bp, vp)
 	require.NoError(t, err)
 
