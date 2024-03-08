@@ -243,13 +243,13 @@ func (s *Service) logBatchSyncStatus(genesis time.Time, firstBlk blocks.ROBlock,
 	firstRoot := firstBlk.Root()
 	timeRemaining := time.Duration(float64(slots.Since(genesis)-firstBlk.Block().Slot())/rate) * time.Second
 	log.WithFields(logrus.Fields{
-		"peers":           len(s.cfg.P2P.Peers().Connected()),
-		"blocksPerSecond": fmt.Sprintf("%.1f", rate),
-	}).Infof(
-		"Processing block batch of size %d starting from  %s %d/%d - estimated time remaining %s",
-		nBlocks, fmt.Sprintf("0x%s...", hex.EncodeToString(firstRoot[:])[:8]),
-		firstBlk.Block().Slot(), slots.Since(genesis), timeRemaining,
-	)
+		"peers":                           len(s.cfg.P2P.Peers().Connected()),
+		"blocksPerSecond":                 fmt.Sprintf("%.1f", rate),
+		"batchSize":                       nBlocks,
+		"startingFrom":                    fmt.Sprintf("0x%s...", hex.EncodeToString(firstRoot[:])[:8]),
+		"latestProcessedSlot/currentSlot": fmt.Sprintf("%d/%d", firstBlk.Block().Slot(), slots.Since(genesis)),
+		"estimatedTimeRemaining":          timeRemaining,
+	}).Info("Processing blocks")
 }
 
 // processBlock performs basic checks on incoming block, and triggers receiver function.

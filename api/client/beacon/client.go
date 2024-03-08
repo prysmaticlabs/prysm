@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -309,7 +309,7 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*stru
 		}
 		for _, failure := range errorJson.Failures {
 			w := request[failure.Index].Message
-			log.WithFields(log.Fields{
+			log.WithFields(logrus.Fields{
 				"validatorIndex":    w.ValidatorIndex,
 				"withdrawalAddress": w.ToExecutionAddress,
 			}).Error(failure.Message)
@@ -341,9 +341,9 @@ type forkScheduleResponse struct {
 func (fsr *forkScheduleResponse) OrderedForkSchedule() (forks.OrderedSchedule, error) {
 	ofs := make(forks.OrderedSchedule, 0)
 	for _, d := range fsr.Data {
-		epoch, err := strconv.Atoi(d.Epoch)
+		epoch, err := strconv.ParseUint(d.Epoch, 10, 64)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "error parsing epoch %s", d.Epoch)
 		}
 		vSlice, err := hexutil.Decode(d.CurrentVersion)
 		if err != nil {
@@ -355,7 +355,7 @@ func (fsr *forkScheduleResponse) OrderedForkSchedule() (forks.OrderedSchedule, e
 		version := bytesutil.ToBytes4(vSlice)
 		ofs = append(ofs, forks.ForkScheduleEntry{
 			Version: version,
-			Epoch:   primitives.Epoch(uint64(epoch)),
+			Epoch:   primitives.Epoch(epoch),
 		})
 	}
 	sort.Sort(ofs)
