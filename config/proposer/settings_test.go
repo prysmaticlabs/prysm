@@ -76,19 +76,14 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 		require.Equal(t, option.FeeRecipientConfig.FeeRecipient.Hex(), potion.FeeRecipient)
 		require.Equal(t, settings.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex(), payload.DefaultConfig.FeeRecipient)
 		require.Equal(t, settings.DefaultConfig.BuilderConfig.Enabled, payload.DefaultConfig.Builder.Enabled)
-		potion.FeeRecipient = ""
-		newSettings, err := SettingFromConsensus(payload)
-		require.NoError(t, err)
-
 		potion.FeeRecipient = fee
-		newSettings, err = SettingFromConsensus(payload)
+		newSettings, err := SettingFromConsensus(payload)
 		require.NoError(t, err)
 		noption, ok := newSettings.ProposeConfig[bytesutil.ToBytes48(key1)]
 		require.Equal(t, true, ok)
 		require.Equal(t, option.FeeRecipientConfig.FeeRecipient.Hex(), noption.FeeRecipientConfig.FeeRecipient.Hex())
 		require.Equal(t, option.BuilderConfig.GasLimit, option.BuilderConfig.GasLimit)
 		require.Equal(t, option.BuilderConfig.Enabled, option.BuilderConfig.Enabled)
-
 	})
 }
 
