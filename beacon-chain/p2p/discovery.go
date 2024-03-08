@@ -204,8 +204,8 @@ func (s *Service) createListener(
 		}
 	}
 
-	bootnodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddr))
-	for _, addr := range s.cfg.Discv5BootStrapAddr {
+	bootnodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddrs))
+	for _, addr := range s.cfg.Discv5BootStrapAddrs {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not bootstrap addr")

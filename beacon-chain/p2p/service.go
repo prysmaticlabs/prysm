@@ -99,7 +99,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddrs)
 
-	cfg.Discv5BootStrapAddr = dv5Nodes
+	cfg.Discv5BootStrapAddrs = dv5Nodes
 
 	ipAddr := prysmnetwork.IPAddr()
 	s.privKey, err = privKey(s.cfg)
@@ -451,8 +451,8 @@ func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error
 }
 
 func (s *Service) connectToBootnodes() error {
-	nodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddr))
-	for _, addr := range s.cfg.Discv5BootStrapAddr {
+	nodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddrs))
+	for _, addr := range s.cfg.Discv5BootStrapAddrs {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return err

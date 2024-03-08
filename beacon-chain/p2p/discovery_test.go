@@ -103,8 +103,8 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	for i := 1; i <= 5; i++ {
 		port = 3000 + i
 		cfg := &Config{
-			Discv5BootStrapAddr: []string{bootNode.String()},
-			UDPPort:             uint(port),
+			Discv5BootStrapAddrs: []string{bootNode.String()},
+			UDPPort:              uint(port),
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
