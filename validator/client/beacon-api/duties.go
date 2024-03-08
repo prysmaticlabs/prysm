@@ -97,7 +97,10 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 	}
 	slotCommittees := make(map[string]uint64)
 	for _, c := range committees {
-		n := slotCommittees[c.Slot]
+		n, ok := slotCommittees[c.Slot]
+		if !ok {
+			n = 0
+		}
 		slotCommittees[c.Slot] = n + 1
 	}
 
