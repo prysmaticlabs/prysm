@@ -34,6 +34,11 @@ type Listener interface {
 	LocalNode() *enode.LocalNode
 }
 
+const (
+	udp4 = iota
+	udp6
+)
+
 // RefreshENR uses an epoch to refresh the enr entry for our node
 // with the tracked committee ids for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee ids.
@@ -139,9 +144,9 @@ func (s *Service) createListener(
 	// by default we will listen to all interfaces.
 	var bindIP net.IP
 	switch udpVersionFromIP(ipAddr) {
-	case "udp4":
+	case udp4:
 		bindIP = net.IPv4zero
-	case "udp6":
+	case udp6:
 		bindIP = net.IPv6zero
 	default:
 		return nil, errors.New("invalid ip provided")
@@ -486,9 +491,9 @@ func multiAddrFromString(address string) (ma.Multiaddr, error) {
 	return ma.NewMultiaddr(address)
 }
 
-func udpVersionFromIP(ipAddr net.IP) string {
+func udpVersionFromIP(ipAddr net.IP) int {
 	if ipAddr.To4() != nil {
-		return "udp4"
+		return udp4
 	}
-	return "udp6"
+	return udp6
 }
