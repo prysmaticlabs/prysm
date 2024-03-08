@@ -80,17 +80,10 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 		newSettings, err := SettingFromConsensus(payload)
 		require.NoError(t, err)
 
-		// when converting to settings if a fee recipient is empty string then it will be skipped
-		noption, ok := newSettings.ProposeConfig[bytesutil.ToBytes48(key1)]
-		require.Equal(t, false, ok)
-		require.Equal(t, true, noption == nil)
-		require.DeepEqual(t, newSettings.DefaultConfig, settings.DefaultConfig)
-
-		// if fee recipient is set it will not skip
 		potion.FeeRecipient = fee
 		newSettings, err = SettingFromConsensus(payload)
 		require.NoError(t, err)
-		noption, ok = newSettings.ProposeConfig[bytesutil.ToBytes48(key1)]
+		noption, ok := newSettings.ProposeConfig[bytesutil.ToBytes48(key1)]
 		require.Equal(t, true, ok)
 		require.Equal(t, option.FeeRecipientConfig.FeeRecipient.Hex(), noption.FeeRecipientConfig.FeeRecipient.Hex())
 		require.Equal(t, option.BuilderConfig.GasLimit, option.BuilderConfig.GasLimit)

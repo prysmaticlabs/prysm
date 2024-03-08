@@ -201,7 +201,6 @@ func (psl *settingsLoader) processProposerSettings(loadedSettings, dbSettings *v
 	if loadedSettings == nil && dbSettings == nil {
 		return nil
 	}
-
 	// loaded settings have higher priority than db settings
 	newSettings := &validatorpb.ProposerSettingsPayload{}
 

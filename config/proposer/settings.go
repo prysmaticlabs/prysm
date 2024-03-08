@@ -19,9 +19,6 @@ func SettingFromConsensus(ps *validatorpb.ProposerSettingsPayload) (*Settings, e
 	if ps.ProposerConfig != nil && len(ps.ProposerConfig) != 0 {
 		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*Option)
 		for key, optionPayload := range ps.ProposerConfig {
-			if optionPayload.FeeRecipient == "" {
-				continue
-			}
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("cannot decode public key %s", key))
@@ -29,13 +26,15 @@ func SettingFromConsensus(ps *validatorpb.ProposerSettingsPayload) (*Settings, e
 			if len(decodedKey) != fieldparams.BLSPubkeyLength {
 				return nil, fmt.Errorf("%v is not a bls public key", key)
 			}
-			if err := verifyOption(key, optionPayload); err != nil {
-				return nil, err
+			p := &Option{}
+			if optionPayload.Graffiti != nil {
+				p.GraffitiConfig = &GraffitiConfig{*optionPayload.Graffiti}
 			}
-			p := &Option{
-				FeeRecipientConfig: &FeeRecipientConfig{
-					FeeRecipient: common.HexToAddress(optionPayload.FeeRecipient),
-				},
+			if optionPayload.FeeRecipient != "" {
+				if err := verifyOption(key, optionPayload); err != nil {
+					return nil, err
+				}
+				p.FeeRecipientConfig = &FeeRecipientConfig{FeeRecipient: common.HexToAddress(optionPayload.FeeRecipient)}
 			}
 			if optionPayload.Builder != nil {
 				p.BuilderConfig = BuilderConfigFromConsensus(optionPayload.Builder)
@@ -183,7 +182,7 @@ func (po *Option) ToConsensus() *validatorpb.ProposerOptionPayload {
 		p.Builder = po.BuilderConfig.ToConsensus()
 	}
 	if po.GraffitiConfig != nil {
-		p.Graffiti = po.GraffitiConfig.Graffiti
+		p.Graffiti = &po.GraffitiConfig.Graffiti
 	}
 	return p
 }
