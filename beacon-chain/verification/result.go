@@ -3,6 +3,8 @@ package verification
 // Requirement represents a validation check that needs to pass in order for a Verified form a consensus type to be issued.
 type Requirement int
 
+var unknownRequirementName = "unknown"
+
 func (r Requirement) String() string {
 	switch r {
 	case RequireBlobIndexInBounds:
@@ -28,8 +30,25 @@ func (r Requirement) String() string {
 	case RequireSidecarProposerExpected:
 		return "RequireSidecarProposerExpected"
 	default:
-		return "unknown"
+		return unknownRequirementName
 	}
+}
+
+type requirementList []Requirement
+
+func (rl requirementList) excluding(minus ...Requirement) []Requirement {
+	rm := make(map[Requirement]struct{})
+	nl := make([]Requirement, 0, len(rl)-len(minus))
+	for i := range minus {
+		rm[minus[i]] = struct{}{}
+	}
+	for i := range rl {
+		if _, excluded := rm[rl[i]]; excluded {
+			continue
+		}
+		nl = append(nl, rl[i])
+	}
+	return nl
 }
 
 // results collects positive verification results.

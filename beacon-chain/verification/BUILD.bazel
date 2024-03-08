@@ -45,6 +45,7 @@ go_test(
         "blob_test.go",
         "cache_test.go",
         "initializer_test.go",
+        "result_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
