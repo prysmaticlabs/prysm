@@ -95,6 +95,14 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get committees for epoch `%d`", epoch)
 	}
+	slotCommittees := make(map[string]uint64)
+	for _, c := range committees {
+		n, ok := slotCommittees[c.Slot]
+		if !ok {
+			n = 0
+		}
+		slotCommittees[c.Slot] = n + 1
+	}
 
 	// Mapping from a validator index to its attesting committee's index and slot
 	attesterDutiesMapping := make(map[primitives.ValidatorIndex]committeeIndexSlotPair)
@@ -195,14 +203,15 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		}
 
 		duties[index] = &ethpb.DutiesResponse_Duty{
-			Committee:       committeeValidatorIndices,
-			CommitteeIndex:  committeeIndex,
-			AttesterSlot:    attesterSlot,
-			ProposerSlots:   proposerDutySlots[validatorIndex],
-			PublicKey:       pubkey,
-			Status:          validatorStatus.Status,
-			ValidatorIndex:  validatorIndex,
-			IsSyncCommittee: syncDutiesMapping[validatorIndex],
+			Committee:        committeeValidatorIndices,
+			CommitteeIndex:   committeeIndex,
+			AttesterSlot:     attesterSlot,
+			ProposerSlots:    proposerDutySlots[validatorIndex],
+			PublicKey:        pubkey,
+			Status:           validatorStatus.Status,
+			ValidatorIndex:   validatorIndex,
+			IsSyncCommittee:  syncDutiesMapping[validatorIndex],
+			CommitteesAtSlot: slotCommittees[strconv.FormatUint(uint64(attesterSlot), 10)],
 		}
 	}
 
