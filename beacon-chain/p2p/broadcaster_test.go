@@ -240,7 +240,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	var hosts []host.Host
 	// setup other nodes.
 	cfg = &Config{
-		BootstrapNodeAddr:   []string{bootNode.String()},
+		BootstrapNodeAddrs:  []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
 	}

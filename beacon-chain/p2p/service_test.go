@@ -213,7 +213,7 @@ func TestListenForNewNodes(t *testing.T) {
 	// setup other nodes.
 	cs := startup.NewClockSynchronizer()
 	cfg = &Config{
-		BootstrapNodeAddr:   []string{bootNode.String()},
+		BootstrapNodeAddrs:  []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
 		ClockWaiter:         cs,
