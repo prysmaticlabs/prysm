@@ -7,6 +7,7 @@ go_library(
         "client.go",
         "doc.go",
         "health.go",
+        "log.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/api/client/beacon",
     visibility = ["//visibility:public"],

@@ -167,9 +167,9 @@ func (c *beaconApiValidatorClient) SubmitValidatorRegistrations(ctx context.Cont
 	})
 }
 
-func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []primitives.ValidatorIndex) (*empty.Empty, error) {
+func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, duties []*ethpb.DutiesResponse_Duty) (*empty.Empty, error) {
 	return wrapInMetrics[*empty.Empty]("SubscribeCommitteeSubnets", func() (*empty.Empty, error) {
-		return new(empty.Empty), c.subscribeCommitteeSubnets(ctx, in, validatorIndices)
+		return new(empty.Empty), c.subscribeCommitteeSubnets(ctx, in, duties)
 	})
 }
 

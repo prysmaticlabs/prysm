@@ -103,7 +103,7 @@ func (c *grpcValidatorClient) SubmitValidatorRegistrations(ctx context.Context, 
 	return c.beaconNodeValidatorClient.SubmitValidatorRegistrations(ctx, in)
 }
 
-func (c *grpcValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, _ []primitives.ValidatorIndex) (*empty.Empty, error) {
+func (c *grpcValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, _ []*ethpb.DutiesResponse_Duty) (*empty.Empty, error) {
 	return c.beaconNodeValidatorClient.SubscribeCommitteeSubnets(ctx, in)
 }
 

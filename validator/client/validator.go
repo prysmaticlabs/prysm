@@ -606,7 +606,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 	subscribeSlots := make([]primitives.Slot, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	subscribeCommitteeIndices := make([]primitives.CommitteeIndex, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	subscribeIsAggregator := make([]bool, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
-	subscribeValidatorIndices := make([]primitives.ValidatorIndex, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
+	activeDuties := make([]*ethpb.DutiesResponse_Duty, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	alreadySubscribed := make(map[[64]byte]bool)
 
 	if v.distributed {
@@ -639,7 +639,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			subscribeSlots = append(subscribeSlots, attesterSlot)
 			subscribeCommitteeIndices = append(subscribeCommitteeIndices, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
-			subscribeValidatorIndices = append(subscribeValidatorIndices, validatorIndex)
+			activeDuties = append(activeDuties, duty)
 		}
 	}
 
@@ -665,7 +665,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			subscribeSlots = append(subscribeSlots, attesterSlot)
 			subscribeCommitteeIndices = append(subscribeCommitteeIndices, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
-			subscribeValidatorIndices = append(subscribeValidatorIndices, validatorIndex)
+			activeDuties = append(activeDuties, duty)
 		}
 	}
 
@@ -675,7 +675,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			CommitteeIds: subscribeCommitteeIndices,
 			IsAggregator: subscribeIsAggregator,
 		},
-		subscribeValidatorIndices,
+		activeDuties,
 	)
 
 	return err

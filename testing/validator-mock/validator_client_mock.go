@@ -429,7 +429,7 @@ func (mr *MockValidatorClientMockRecorder) SubmitValidatorRegistrations(arg0, ar
 }
 
 // SubscribeCommitteeSubnets mocks base method.
-func (m *MockValidatorClient) SubscribeCommitteeSubnets(arg0 context.Context, arg1 *eth.CommitteeSubnetsSubscribeRequest, arg2 []primitives.ValidatorIndex) (*emptypb.Empty, error) {
+func (m *MockValidatorClient) SubscribeCommitteeSubnets(arg0 context.Context, arg1 *eth.CommitteeSubnetsSubscribeRequest, arg2 []*eth.DutiesResponse_Duty) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubscribeCommitteeSubnets", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*emptypb.Empty)

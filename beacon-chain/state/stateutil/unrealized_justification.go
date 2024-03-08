@@ -43,7 +43,7 @@ func UnrealizedCheckpointBalances(cp, pp []byte, validators ValReader, currentEp
 				return 0, 0, 0, err
 			}
 		}
-		activePrevious := v.ActivationEpoch+1 <= currentEpoch && currentEpoch <= v.ExitEpoch
+		activePrevious := v.ActivationEpoch < currentEpoch && currentEpoch <= v.ExitEpoch
 		if activePrevious && ((pp[i]>>targetIdx)&1) == 1 {
 			prevTarget, err = math.Add64(prevTarget, v.EffectiveBalance)
 			if err != nil {
@@ -51,5 +51,20 @@ func UnrealizedCheckpointBalances(cp, pp []byte, validators ValReader, currentEp
 			}
 		}
 	}
+	activeBalance, prevTarget, currentTarget = ensureLowerBound(activeBalance, prevTarget, currentTarget)
 	return activeBalance, prevTarget, currentTarget, nil
+}
+
+func ensureLowerBound(activeCurrEpoch, prevTargetAttested, currTargetAttested uint64) (uint64, uint64, uint64) {
+	ebi := params.BeaconConfig().EffectiveBalanceIncrement
+	if ebi > activeCurrEpoch {
+		activeCurrEpoch = ebi
+	}
+	if ebi > prevTargetAttested {
+		prevTargetAttested = ebi
+	}
+	if ebi > currTargetAttested {
+		currTargetAttested = ebi
+	}
+	return activeCurrEpoch, prevTargetAttested, currTargetAttested
 }
