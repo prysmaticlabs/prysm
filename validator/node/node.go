@@ -524,7 +524,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		return err
 	}
 
-	proposerSettings, err := proposerSettings(c.cliCtx, c.db)
+	ps, err := proposerSettings(c.cliCtx, c.db)
 	if err != nil {
 		return err
 	}
@@ -547,7 +547,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             graffitiStruct,
 		Web3SignerConfig:           web3signerConfig,
-		ProposerSettings:           proposerSettings,
+		ProposerSettings:           ps,
 		BeaconApiTimeout:           time.Second * 30,
 		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 		ValidatorsRegBatchSize:     c.cliCtx.Int(flags.ValidatorsRegistrationBatchSizeFlag.Name),
