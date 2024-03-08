@@ -43,7 +43,7 @@ func UnrealizedCheckpointBalances(cp, pp []byte, validators ValReader, currentEp
 				return 0, 0, 0, err
 			}
 		}
-		activePrevious := v.ActivationEpoch < params.BeaconConfig().FarFutureEpoch && v.ActivationEpoch+1 <= currentEpoch && currentEpoch <= v.ExitEpoch
+		activePrevious := v.ActivationEpoch < currentEpoch && currentEpoch <= v.ExitEpoch
 		if activePrevious && ((pp[i]>>targetIdx)&1) == 1 {
 			prevTarget, err = math.Add64(prevTarget, v.EffectiveBalance)
 			if err != nil {
