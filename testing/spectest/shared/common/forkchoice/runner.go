@@ -339,15 +339,9 @@ func runBlobStep(t *testing.T,
 			require.NoError(t, err)
 			bv := ini.NewBlobVerifier(ro, verification.SpectestSidecarRequirements)
 			ctx := context.Background()
-			// WIP: still skipped
-			//  //RequireSidecarParentSeen,
-			//  //RequireSidecarParentValid,
-			//  //RequireSidecarDescendsFromFinalized,
-			//  //RequireSidecarProposerExpected,
 			if err := bv.BlobIndexInBounds(); err != nil {
 				t.Logf("BlobIndexInBounds error: %s", err.Error())
 			}
-
 			if err := bv.NotFromFutureSlot(); err != nil {
 				t.Logf("NotFromFutureSlot error: %s", err.Error())
 			}
@@ -360,11 +354,9 @@ func runBlobStep(t *testing.T,
 			if err := bv.SidecarKzgProofVerified(); err != nil {
 				t.Logf("SidecarKzgProofVerified error: %s", err.Error())
 			}
-			/*
-				if err := bv.ValidProposerSignature(ctx); err != nil {
-					t.Logf("ValidProposerSignature error: %s", err.Error())
-				}
-			*/
+			if err := bv.ValidProposerSignature(ctx); err != nil {
+				t.Logf("ValidProposerSignature error: %s", err.Error())
+			}
 			if err := bv.SidecarParentSlotLower(); err != nil {
 				t.Logf("SidecarParentSlotLower error: %s", err.Error())
 			}

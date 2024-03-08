@@ -34,7 +34,14 @@ func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock inter
 	}
 	cw := startup.NewClockSynchronizer()
 	service, sg, fc := startChainService(t, initialState, initialBlock, execMock, cw)
-	bvw := verification.NewInitializerWaiter(cw, fc, sg)
+	// blob spectests use a weird Fork in the genesis beacon state that has different previous and current versions.
+	// This trips up the lite fork lookup code in the blob verifier that figures out the fork
+	// based on the slot of the block. So just for spectests we override that behavior and get the fork from the state
+	// which matches the behavior of block verification.
+	getFork := func(targetEpoch primitives.Epoch) (*ethpb.Fork, error) {
+		return initialState.Fork(), nil
+	}
+	bvw := verification.NewInitializerWaiter(cw, fc, sg, verification.WithForkLookup(getFork))
 	return &Builder{
 		service:  service,
 		execMock: execMock,
