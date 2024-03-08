@@ -67,22 +67,12 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 	preBeaconState, err := state_native.InitializeFromProtoDeneb(preBeaconStateBase)
 	require.NoError(t, err)
-	//	currentEpoch := time.CurrentEpoch(preBeaconState)
 
 	vp, bp, err := altair.InitializePrecomputeValidators(ctx, preBeaconState)
 	require.NoError(t, err)
 
 	vp, bp, err = altair.ProcessEpochParticipation(ctx, preBeaconState, bp, vp)
 	require.NoError(t, err)
-	//	vals := preBeaconState.Validators()
-	/*
-		for i, v := range vals {
-			activeCurrent := v.ActivationEpoch <= currentEpoch && currentEpoch < v.ExitEpoch
-			require.Equal(t, activeCurrent, vp[i].IsActiveCurrentEpoch, fmt.Sprintf("index %d has a mismatch", i))
-			activePrevious := v.ActivationEpoch+1 <= currentEpoch && currentEpoch <= v.ExitEpoch
-			require.Equal(t, activePrevious, vp[i].IsActivePrevEpoch, fmt.Sprintf("index %d has a mismatch", i))
-		}
-	*/
 
 	activeBal, targetPrevious, targetCurrent, err := preBeaconState.UnrealizedCheckpointBalances()
 	require.NoError(t, err)
