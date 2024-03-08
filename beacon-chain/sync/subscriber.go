@@ -248,7 +248,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 	}
 
 	go messageLoop()
-	log.WithField("topic", topic).Info("Subscribed to topic")
+	log.WithField("topic", topic).Info("Subscribed to")
 	return sub
 }
 

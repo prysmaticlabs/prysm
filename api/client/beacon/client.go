@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -309,7 +309,7 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*stru
 		}
 		for _, failure := range errorJson.Failures {
 			w := request[failure.Index].Message
-			log.WithFields(log.Fields{
+			log.WithFields(logrus.Fields{
 				"validatorIndex":    w.ValidatorIndex,
 				"withdrawalAddress": w.ToExecutionAddress,
 			}).Error(failure.Message)

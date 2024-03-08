@@ -227,9 +227,9 @@ func (s *Service) Start() {
 	async.RunEvery(s.ctx, refreshRate, s.RefreshENR)
 	async.RunEvery(s.ctx, 1*time.Minute, func() {
 		log.WithFields(logrus.Fields{
-			"inbound":     len(s.peers.InboundConnected()),
-			"outbound":    len(s.peers.OutboundConnected()),
-			"activePeers": len(s.peers.Active()),
+			"inbound":  len(s.peers.InboundConnected()),
+			"outbound": len(s.peers.OutboundConnected()),
+			"active":   len(s.peers.Active()),
 		}).Info("Peer summary")
 	})
 
