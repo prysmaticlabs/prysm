@@ -97,6 +97,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	eg, _ := errgroup.WithContext(ctx)
 	var postState state.BeaconState
 	eg.Go(func() error {
+		var err error
 		postState, err = s.validateStateTransition(ctx, preState, blockCopy)
 		if err != nil {
 			return errors.Wrap(err, "failed to validate consensus state transition function")
@@ -105,6 +106,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	})
 	var isValidPayload bool
 	eg.Go(func() error {
+		var err error
 		isValidPayload, err = s.validateExecutionOnBlock(ctx, preStateVersion, preStateHeader, blockCopy, blockRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not notify the engine of the new payload")
