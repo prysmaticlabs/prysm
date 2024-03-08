@@ -248,7 +248,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 	}
 
 	go messageLoop()
-	log.WithField("topic", topic).Info("Subscribed to topic")
+	log.WithField("topic", topic).Info("Subscribed to")
 	return sub
 }
 
@@ -687,7 +687,7 @@ func (s *Service) retrievePersistentSubs(currSlot primitives.Slot) []uint64 {
 	return slice.SetUint64(append(persistentSubs, wantedSubs...))
 }
 
-func (_ *Service) retrieveActiveSyncSubnets(currEpoch primitives.Epoch) []uint64 {
+func (*Service) retrieveActiveSyncSubnets(currEpoch primitives.Epoch) []uint64 {
 	subs := cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
 	return slice.SetUint64(subs)
 }
@@ -742,17 +742,17 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 }
 
 // Add fork digest to topic.
-func (_ *Service) addDigestToTopic(topic string, digest [4]byte) string {
+func (*Service) addDigestToTopic(topic string, digest [4]byte) string {
 	if !strings.Contains(topic, "%x") {
-		log.Fatal("Topic does not have appropriate formatter for digest")
+		log.Error("Topic does not have appropriate formatter for digest")
 	}
 	return fmt.Sprintf(topic, digest)
 }
 
 // Add the digest and index to subnet topic.
-func (_ *Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uint64) string {
+func (*Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uint64) string {
 	if !strings.Contains(topic, "%x") {
-		log.Fatal("Topic does not have appropriate formatter for digest")
+		log.Error("Topic does not have appropriate formatter for digest")
 	}
 	return fmt.Sprintf(topic, digest, idx)
 }
