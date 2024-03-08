@@ -277,7 +277,7 @@ func (bv *ROBlobVerifier) SidecarDescendsFromFinalized() (err error) {
 func (bv *ROBlobVerifier) SidecarInclusionProven() (err error) {
 	defer bv.recordResult(RequireSidecarInclusionProven, &err)
 	if err = blocks.VerifyKZGInclusionProof(bv.blob); err != nil {
-		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Error("sidecar inclusion proof verification failed")
+		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("sidecar inclusion proof verification failed")
 		return ErrSidecarInclusionProofInvalid
 	}
 	return nil
