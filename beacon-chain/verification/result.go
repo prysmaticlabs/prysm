@@ -4,7 +4,6 @@ package verification
 type Requirement int
 
 func (r Requirement) String() string {
-
 	switch r {
 	case RequireBlobIndexInBounds:
 		return "RequireBlobIndexInBounds"
