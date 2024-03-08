@@ -171,6 +171,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 
 	registry := runtime.NewServiceRegistry()
 
+	synchronizer := startup.NewClockSynchronizer()
+
 	ctx := cliCtx.Context
 	beacon := &BeaconNode{
 		cliCtx:                  cliCtx,
@@ -191,6 +193,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
 		serviceFlagOpts:         &serviceFlagOpts{},
+		forkChoicer:             doublylinkedtree.New(),
+		clockWaiter:             synchronizer,
 	}
 
 	beacon.initialSyncComplete = make(chan struct{})
@@ -201,10 +205,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		}
 	}
 
-	synchronizer := startup.NewClockSynchronizer()
-	beacon.clockWaiter = synchronizer
-
-	beacon.forkChoicer = doublylinkedtree.New()
 	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {
 		return nil, err
