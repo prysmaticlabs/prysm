@@ -62,8 +62,14 @@ func (s *Service) RefreshENR() {
 	// Compare current epoch with our fork epochs
 	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
 	switch {
-	// Altair Behaviour
-	case currEpoch >= altairForkEpoch:
+	case currEpoch < altairForkEpoch:
+		// Phase 0 behaviour.
+		if bytes.Equal(bitV, currentBitV) {
+			// return early if bitfield hasn't changed
+			return
+		}
+		s.updateSubnetRecordWithMetadata(bitV)
+	default:
 		// Retrieve sync subnets from application level
 		// cache.
 		bitS := bitfield.Bitvector4{byte(0x00)}
@@ -82,13 +88,6 @@ func (s *Service) RefreshENR() {
 			return
 		}
 		s.updateSubnetRecordWithMetadataV2(bitV, bitS)
-	default:
-		// Phase 0 behaviour.
-		if bytes.Equal(bitV, currentBitV) {
-			// return early if bitfield hasn't changed
-			return
-		}
-		s.updateSubnetRecordWithMetadata(bitV)
 	}
 	// ping all peers to inform them of new metadata
 	s.pingPeers()
