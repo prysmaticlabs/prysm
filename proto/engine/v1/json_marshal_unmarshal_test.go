@@ -2,7 +2,6 @@ package enginev1_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -132,7 +131,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		ts := hexutil.Uint64(4)
 
 		resp := &enginev1.GetPayloadV2ResponseJson{
-			BlockValue: fmt.Sprint("0x123"),
+			BlockValue: "0x123",
 			ExecutionPayload: &enginev1.ExecutionPayloadCapellaJSON{
 				ParentHash:    &parentHash,
 				FeeRecipient:  &feeRecipient,
@@ -204,7 +203,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 				Proofs:      []hexutil.Bytes{{'e'}, {'f'}, {'g'}, {'h'}},
 				Blobs:       []hexutil.Bytes{{'i'}, {'j'}, {'k'}, {'l'}},
 			},
-			BlockValue: fmt.Sprint("0x123"),
+			BlockValue: "0x123",
 			ExecutionPayload: &enginev1.ExecutionPayloadDenebJSON{
 				ParentHash:    &parentHash,
 				FeeRecipient:  &feeRecipient,
