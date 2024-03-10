@@ -387,8 +387,8 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 		Addresses: []common.Address{
 			s.cfg.depositContractAddr,
 		},
-		FromBlock: big.NewInt(0).SetUint64(start),
-		ToBlock:   big.NewInt(0).SetUint64(end),
+		FromBlock: new(big.Int).SetUint64(start),
+		ToBlock:   new(big.Int).SetUint64(end),
 	}
 	remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
 	// only change the end block if the remaining logs are below the required log limit.
@@ -396,7 +396,7 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 	withinLimit := remainingLogs < depositLogRequestLimit
 	aboveFollowHeight := end >= latestFollowHeight
 	if withinLimit && aboveFollowHeight {
-		query.ToBlock = big.NewInt(0).SetUint64(latestFollowHeight)
+		query.ToBlock = new(big.Int).SetUint64(latestFollowHeight)
 		end = latestFollowHeight
 	}
 	logs, err := s.httpLogger.FilterLogs(ctx, query)
@@ -478,11 +478,11 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	}
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		// Cache eth1 block header here.
-		_, err := s.BlockHashByHeight(ctx, big.NewInt(0).SetUint64(i))
+		_, err := s.BlockHashByHeight(ctx, new(big.Int).SetUint64(i))
 		if err != nil {
 			return err
 		}
-		err = s.ProcessETH1Block(ctx, big.NewInt(0).SetUint64(i))
+		err = s.ProcessETH1Block(ctx, new(big.Int).SetUint64(i))
 		if err != nil {
 			return err
 		}
