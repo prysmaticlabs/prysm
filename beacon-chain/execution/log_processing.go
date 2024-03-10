@@ -298,9 +298,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	// Start from the deployment block if our last requested block
 	// is behind it. This is as the deposit logs can only start from the
 	// block of the deployment of the deposit contract.
-	if deploymentBlock > currentBlockNum {
-		currentBlockNum = deploymentBlock
-	}
+	currentBlockNum = max(currentBlockNum, deploymentBlock)
 	// To store all blocks.
 	headersMap := make(map[uint64]*types.HeaderInfo)
 	rawLogCount, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
@@ -384,9 +382,7 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 	end := currentBlockNum + batchSize
 	// Appropriately bound the request, as we do not
 	// want request blocks beyond the current follow distance.
-	if end > latestFollowHeight {
-		end = latestFollowHeight
-	}
+	end = min(end, latestFollowHeight)
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			s.cfg.depositContractAddr,
