@@ -9,6 +9,10 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+var (
+	_ = healthNode(&MockHealthClient{})
+)
+
 // MockHealthClient is a mock of HealthClient interface.
 type MockHealthClient struct {
 	ctrl          *gomock.Controller
@@ -25,7 +29,10 @@ type MockHealthClientMockRecorder struct {
 func (m *MockHealthClient) IsHealthy(arg0 context.Context) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsHealthy", arg0)
-	ret0, _ := ret[0].(bool)
+	ret0, ok := ret[0].(bool)
+	if !ok {
+		return false
+	}
 	return ret0
 }
 
