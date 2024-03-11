@@ -97,7 +97,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	s.cfg = validateConfig(s.cfg)
 
-	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddrs)
+	dv5Nodes := ParseBootStrapAddrs(s.cfg.BootstrapNodeAddrs)
 
 	cfg.Discv5BootStrapAddrs = dv5Nodes
 

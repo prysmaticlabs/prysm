@@ -371,7 +371,7 @@ func PeersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 	return allAddrs, nil
 }
 
-func parseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
+func ParseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
 	discv5Nodes, _ = parseGenericAddrs(addrs)
 	if len(discv5Nodes) == 0 {
 		log.Warn("No bootstrap addresses supplied")
