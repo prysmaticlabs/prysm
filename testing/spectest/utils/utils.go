@@ -44,12 +44,12 @@ func TestFolders(t testing.TB, config, forkOrPhase, folderPath string) ([]os.Dir
 	if len(testFolders) == 0 {
 		t.Fatalf("No test folders found at %s", testsFolderPath)
 	}
-	err = SaveSpecTest(testsFolderPath)
+	err = saveSpecTest(testsFolderPath)
 	require.NoError(t, err)
 	return testFolders, testsFolderPath
 }
 
-func SaveSpecTest(testFolder string) error {
+func saveSpecTest(testFolder string) error {
 	baseDir := os.Getenv("TEST_UNDECLARED_OUTPUTS_DIR")
 	fullPath := path.Join(baseDir, fmt.Sprintf("%x_tests.txt", testFolder))
 	fmt.Printf("Writing output.zip to %s\n", fullPath)
