@@ -82,38 +82,43 @@ type Service struct {
 // NewService initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
-	var err error
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
+
+	cfg = validateConfig(cfg)
+	privKey, err := privKey(cfg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate p2p private key")
+	}
+
+	metaData, err := metaDataFromConfig(cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to create peer metadata")
+		return nil, err
+	}
+
+	addrFilter, err := configureFilter(cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to create address filter")
+		return nil, err
+	}
+
+	ipLimiter := leakybucket.NewCollector(ipLimit, ipBurst, 30*time.Second, true /* deleteEmptyBuckets */)
 
 	s := &Service{
 		ctx:          ctx,
 		cancel:       cancel,
 		cfg:          cfg,
+		addrFilter:   addrFilter,
+		ipLimiter:    ipLimiter,
+		privKey:      privKey,
+		metaData:     metaData,
 		isPreGenesis: true,
 		joinedTopics: make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
 		subnetsLock:  make(map[uint64]*sync.RWMutex),
 	}
 
-	s.cfg = validateConfig(s.cfg)
-
 	ipAddr := prysmnetwork.IPAddr()
-	s.privKey, err = privKey(s.cfg)
-	if err != nil {
-		log.WithError(err).Error("Failed to generate p2p private key")
-		return nil, err
-	}
-	s.metaData, err = metaDataFromConfig(s.cfg)
-	if err != nil {
-		log.WithError(err).Error("Failed to create peer metadata")
-		return nil, err
-	}
-	s.addrFilter, err = configureFilter(s.cfg)
-	if err != nil {
-		log.WithError(err).Error("Failed to create address filter")
-		return nil, err
-	}
-	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, 30*time.Second, true /* deleteEmptyBuckets */)
 
 	opts := s.buildOptions(ipAddr, s.privKey)
 	h, err := libp2p.New(opts...)
