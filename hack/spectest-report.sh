@@ -22,7 +22,7 @@ done > $start_directory/tests.txt
 
 cd "$temp_dir" && find tests -maxdepth 3 -mindepth 3 -type d > $start_directory/spec.txt
 
-for i in `cat $start_directory/spec.txt`; do if grep $i $start_directory/tests.txt > /dev/null; then echo "found $i"; else echo "missing $i";
+for i in $(cat "$start_directory/spec.txt"); do if grep $i $start_directory/tests.txt > /dev/null; then echo "found $i"; else echo "missing $i";
 fi; done > $start_directory/report.txt
 
 {
@@ -34,4 +34,4 @@ fi; done > $start_directory/report.txt
 } > $start_directory/temp_report.txt && mv $start_directory/temp_report.txt $start_directory/report.txt
 
 # Clean up
-rm -rf $temp_dir $start_directory/tests.txt $start_directory/spec.txt
+rm -rf "$temp_dir" $start_directory/tests.txt $start_directory/spec.txt
