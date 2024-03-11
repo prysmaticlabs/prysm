@@ -1,47 +1,57 @@
 package beacon
 
 import (
+	"context"
 	"sync"
 )
 
-type NodeHealth struct {
-	isHealthy  bool
+type NodeHealthTracker struct {
+	isHealthy  *bool
 	healthChan chan bool
+	node       healthNode
 	sync.RWMutex
 }
 
-func NewNodeHealth(initialStatus bool) *NodeHealth {
-	return &NodeHealth{
-		isHealthy:  initialStatus,
+type healthNode interface {
+	IsHealthy(ctx context.Context) bool
+}
+
+func NewNodeHealthTracker(node healthNode) *NodeHealthTracker {
+	return &NodeHealthTracker{
+		node:       node,
 		healthChan: make(chan bool, 1),
 	}
 }
 
 // HealthUpdates provides a read-only channel for health updates.
-func (n *NodeHealth) HealthUpdates() <-chan bool {
+func (n *NodeHealthTracker) HealthUpdates() <-chan bool {
 	return n.healthChan
 }
 
-func (n *NodeHealth) IsHealthy() bool {
+func (n *NodeHealthTracker) IsHealthy() bool {
 	n.RLock()
 	defer n.RUnlock()
-	return n.isHealthy
+	if n.isHealthy == nil {
+		return false
+	}
+	return *n.isHealthy
 }
 
-func (n *NodeHealth) UpdateNodeHealth(newStatus bool) {
+func (n *NodeHealthTracker) CheckHealth(ctx context.Context) bool {
 	n.RLock()
-	isStatusChanged := newStatus != n.isHealthy
+	newStatus := n.node.IsHealthy(ctx)
+	if n.isHealthy == nil {
+		n.isHealthy = &newStatus
+	}
+	isStatusChanged := newStatus != *n.isHealthy
 	n.RUnlock()
 
 	if isStatusChanged {
 		n.Lock()
 		// Double-check the condition to ensure it hasn't changed since the first check.
-		if newStatus != n.isHealthy {
-			n.isHealthy = newStatus
-			n.Unlock() // It's better to unlock as soon as the protected section is over.
-			n.healthChan <- newStatus
-		} else {
-			n.Unlock()
-		}
+		n.isHealthy = &newStatus
+		n.Unlock() // It's better to unlock as soon as the protected section is over.
+		n.healthChan <- newStatus
 	}
+	return newStatus
 }

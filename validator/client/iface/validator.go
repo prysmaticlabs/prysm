@@ -64,8 +64,7 @@ type Validator interface {
 	ProposerSettings() *proposer.Settings
 	SetProposerSettings(context.Context, *proposer.Settings) error
 	EventStreamIsRunning() bool
-	NodeIsHealthy(ctx context.Context) bool
-	NodeHealthTracker(ctx context.Context) *beacon.NodeHealth
+	HealthTracker() *beacon.NodeHealthTracker
 }
 
 // SigningFunc interface defines a type for the a function that signs a message

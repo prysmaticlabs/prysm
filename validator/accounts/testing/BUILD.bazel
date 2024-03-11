@@ -10,7 +10,6 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
-        "//api/client/beacon:go_default_library",
         "//api/client/event:go_default_library",
         "//config/proposer:go_default_library",
         "//consensus-types/primitives:go_default_library",

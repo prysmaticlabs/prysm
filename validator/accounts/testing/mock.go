@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v5/api/client/event"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -224,13 +223,5 @@ func (*Validator) ProcessEvent(event *event.Event) {
 }
 
 func (*Validator) EventStreamIsRunning() bool {
-	panic("implement me")
-}
-
-func (*Validator) NodeIsHealthy(_ context.Context) bool {
-	panic("implement me")
-}
-
-func (*Validator) NodeHealthTracker(_ context.Context) *beacon.NodeHealth {
 	panic("implement me")
 }

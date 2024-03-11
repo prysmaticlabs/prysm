@@ -45,6 +45,7 @@ func run(ctx context.Context, v iface.Validator) {
 		handleAssignmentError(err, headSlot)
 	}
 	eventsChan := make(chan *event.Event, 1)
+	healthTracker := v.HealthTracker()
 	runHealthCheckRoutine(ctx, v, eventsChan)
 
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
@@ -77,7 +78,7 @@ func run(ctx context.Context, v iface.Validator) {
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
-			if !v.NodeHealthTracker(ctx).IsHealthy() {
+			if !healthTracker.IsHealthy() {
 				continue
 			}
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
@@ -123,7 +124,7 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
-		case isHealthyAgain := <-v.NodeHealthTracker(ctx).HealthUpdates():
+		case isHealthyAgain := <-healthTracker.HealthUpdates():
 			if isHealthyAgain {
 				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
 				if err != nil {
@@ -295,7 +296,7 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan chan<- *event.Event) {
 	log.Info("Starting health check routine for beacon node apis")
 	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-	tracker := v.NodeHealthTracker(ctx)
+	tracker := v.HealthTracker()
 	go func() {
 		// trigger the healthcheck immediately the first time
 		for ; true; <-healthCheckTicker.C {
@@ -303,8 +304,7 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 				log.WithError(ctx.Err()).Error("Context cancelled")
 				return
 			}
-			isHealthy := v.NodeIsHealthy(ctx)
-			tracker.UpdateNodeHealth(isHealthy)
+			isHealthy := tracker.CheckHealth(ctx)
 			// in case of node returning healthy but event stream died
 			if isHealthy && !v.EventStreamIsRunning() {
 				log.Info("Event stream reconnecting...")

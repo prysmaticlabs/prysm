@@ -340,10 +340,10 @@ func (mr *MockValidatorClientMockRecorder) NodeIsHealthy(arg0 interface{}) *gomo
 }
 
 // NodeHealthTracker mocks base method.
-func (m *MockValidatorClient) NodeHealthTracker() *beacon.NodeHealth {
+func (m *MockValidatorClient) NodeHealthTracker() *beacon.NodeHealthTracker {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NodeHealthTracker")
-	ret0, _ := ret[0].(*beacon.NodeHealth)
+	ret0, _ := ret[0].(*beacon.NodeHealthTracker)
 	return ret0
 }
 

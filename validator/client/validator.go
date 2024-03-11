@@ -113,7 +113,6 @@ type validator struct {
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
 	proposerSettings                   *proposer.Settings
 	walletInitializedChannel           chan *wallet.Wallet
-	beaconNodeHealth                   *beacon.NodeHealth
 	validatorsRegBatchSize             int
 }
 
@@ -1104,16 +1103,8 @@ func (v *validator) EventStreamIsRunning() bool {
 	return v.validatorClient.EventStreamIsRunning()
 }
 
-func (v *validator) NodeIsHealthy(ctx context.Context) bool {
-	return v.nodeClient.IsHealthy(ctx)
-}
-
-func (v *validator) NodeHealthTracker(ctx context.Context) *beacon.NodeHealth {
-	if v.beaconNodeHealth == nil {
-		sts := v.NodeIsHealthy(ctx)
-		v.beaconNodeHealth = beacon.NewNodeHealth(sts)
-	}
-	return v.beaconNodeHealth
+func (v *validator) HealthTracker() *beacon.NodeHealthTracker {
+	return v.nodeClient.HealthTracker()
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {

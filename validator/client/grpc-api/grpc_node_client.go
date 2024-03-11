@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	log "github.com/sirupsen/logrus"
@@ -15,7 +16,8 @@ var (
 )
 
 type grpcNodeClient struct {
-	nodeClient ethpb.NodeClient
+	nodeClient    ethpb.NodeClient
+	healthTracker *beacon.NodeHealthTracker
 }
 
 func (c *grpcNodeClient) GetSyncStatus(ctx context.Context, in *empty.Empty) (*ethpb.SyncStatus, error) {
@@ -43,6 +45,12 @@ func (c *grpcNodeClient) IsHealthy(ctx context.Context) bool {
 	return true
 }
 
+func (c *grpcNodeClient) HealthTracker() *beacon.NodeHealthTracker {
+	return c.healthTracker
+}
+
 func NewNodeClient(cc grpc.ClientConnInterface) iface.NodeClient {
-	return &grpcNodeClient{ethpb.NewNodeClient(cc)}
+	g := &grpcNodeClient{nodeClient: ethpb.NewNodeClient(cc)}
+	g.healthTracker = beacon.NewNodeHealthTracker(g)
+	return g
 }
