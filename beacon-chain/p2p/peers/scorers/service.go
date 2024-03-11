@@ -132,14 +132,14 @@ func (s *Service) IsBadPeer(pid peer.ID) bool {
 
 // IsBadPeerNoLock is a lock-free version of IsBadPeer.
 func (s *Service) IsBadPeerNoLock(pid peer.ID) bool {
-	if s.scorers.badResponsesScorer.isBadPeer(pid) {
+	if s.scorers.badResponsesScorer.isBadPeerNoLock(pid) {
 		return true
 	}
-	if s.scorers.peerStatusScorer.isBadPeer(pid) {
+	if s.scorers.peerStatusScorer.isBadPeerNoLock(pid) {
 		return true
 	}
 	if features.Get().EnablePeerScorer {
-		if s.scorers.gossipScorer.isBadPeer(pid) {
+		if s.scorers.gossipScorer.isBadPeerNoLock(pid) {
 			return true
 		}
 	}
