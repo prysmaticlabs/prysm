@@ -15,8 +15,6 @@ import (
 )
 
 var (
-	// ErrEmptyExecutionBlock occurs when the execution block is nil.
-	ErrEmptyExecutionBlock = errors.New("empty execution block")
 	// ErrInvalidSnapshotRoot occurs when the snapshot root does not match the calculated root.
 	ErrInvalidSnapshotRoot = errors.New("snapshot root is invalid")
 	// ErrInvalidDepositCount occurs when the value for mix in length is 0.

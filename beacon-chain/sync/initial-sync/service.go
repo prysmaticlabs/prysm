@@ -194,7 +194,7 @@ func (s *Service) Start() {
 		}
 		panic(err)
 	}
-	log.Infof("Synced up to slot %d", s.cfg.Chain.HeadSlot())
+	log.WithField("slot", s.cfg.Chain.HeadSlot()).Info("Synced up to")
 	s.markSynced()
 }
 
