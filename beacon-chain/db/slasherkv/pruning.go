@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/kv"
 
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -14,7 +15,7 @@ import (
 // PruneAttestationsAtEpoch deletes all attestations from the slasher DB with target epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneAttestationsAtEpoch(
-	_ context.Context, maxEpoch primitives.Epoch,
+	ctx context.Context, maxEpoch primitives.Epoch,
 ) (numPruned uint, err error) {
 	// We can prune everything less than the current epoch - history length.
 	encodedEndPruneEpoch := fssz.MarshalUint64([]byte{}, uint64(maxEpoch))
@@ -66,10 +67,10 @@ func (s *Store) PruneAttestationsAtEpoch(
 			//  (target_epoch ++ _) => encode(attestation)
 			// so it is possible we have a few adjacent objects that have the same slot, such as
 			//  (target_epoch = 3 ++ _) => encode(attestation)
-			if err := signingRootsBkt.Delete(k); err != nil {
+			if err := kv.DeleteKey(ctx, signingRootsBkt, k, "PruneAttestationsAtEpoch"); err != nil {
 				return err
 			}
-			if err := attRecordsBkt.Delete(v); err != nil {
+			if err := kv.DeleteKey(ctx, attRecordsBkt, v, "PruneAttestationsAtEpoch"); err != nil {
 				return err
 			}
 			slasherAttestationsPrunedTotal.Inc()

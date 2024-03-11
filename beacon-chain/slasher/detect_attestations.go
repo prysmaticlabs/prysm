@@ -131,7 +131,7 @@ func (s *Service) checkSurroundVotes(
 		}
 
 		// Update the latest updated epoch for all validators involved to the current chunk.
-		indexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
+		indexes := s.params.ValidatorIndexesInChunk(validatorChunkIndex)
 		for _, index := range indexes {
 			s.latestEpochUpdatedForValidator[index] = currentEpoch
 		}
@@ -253,7 +253,7 @@ func (s *Service) checkDoubleVotes(
 }
 
 // updatedChunkByChunkIndex loads the chunks from the database for validators corresponding to
-// the `validatorChunkIndex`.
+// the `ValidatorChunkIndex`.
 // It then updates the chunks with the neutral element for corresponding validators from
 // the epoch just after the latest updated epoch to the current epoch.
 // A mapping between chunk index and chunk is returned to the caller.
@@ -271,12 +271,12 @@ func (s *Service) updatedChunkByChunkIndex(
 	// - In all other cases, the first epoch to update is the latest updated epoch + 1.
 
 	// minFirstEpochToUpdate is set to the smallest first epoch to update for all validators in the chunk
-	// corresponding to the `validatorChunkIndex`.
+	// corresponding to the `ValidatorChunkIndex`.
 	var minFirstEpochToUpdate *primitives.Epoch
 
 	neededChunkIndexesMap := map[uint64]bool{}
 
-	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
+	validatorIndexes := s.params.ValidatorIndexesInChunk(validatorChunkIndex)
 	for _, validatorIndex := range validatorIndexes {
 		// Retrieve the first epoch to write for the validator index.
 		isAnEpochToUpdate, firstEpochToUpdate, err := s.firstEpochToUpdate(validatorIndex, currentEpoch)
@@ -424,7 +424,7 @@ func (s *Service) updateSpans(
 		for _, attWrapper := range attWrappers {
 			for _, validatorIdx := range attWrapper.IndexedAttestation.AttestingIndices {
 				validatorIndex := primitives.ValidatorIndex(validatorIdx)
-				computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
+				computedValidatorChunkIdx := s.params.ValidatorChunkIndex(validatorIndex)
 
 				// Every validator chunk index represents a range of validators.
 				// It is possible that the validator index in this loop iteration is

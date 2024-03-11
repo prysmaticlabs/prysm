@@ -621,7 +621,7 @@ func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
 	epochInChunk := primitives.Epoch(1)
 
 	// We expect a chunk with the wrong length to throw an error.
-	_, err := chunkDataAtEpoch(params, []uint16{}, validatorIdx, epochInChunk)
+	_, err := ChunkDataAtEpoch(params, []uint16{}, validatorIdx, epochInChunk)
 	require.ErrorContains(t, "chunk has wrong length", err)
 
 	// We update the value for epoch 1 using target epoch 6.
@@ -630,7 +630,7 @@ func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
 	require.NoError(t, err)
 
 	// We expect the retrieved value at epoch 1 is the target epoch 6.
-	received, err := chunkDataAtEpoch(params, chunk, validatorIdx, epochInChunk)
+	received, err := ChunkDataAtEpoch(params, chunk, validatorIdx, epochInChunk)
 	require.NoError(t, err)
 	assert.Equal(t, targetEpoch, received)
 }

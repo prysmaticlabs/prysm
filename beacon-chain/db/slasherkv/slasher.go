@@ -280,14 +280,16 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	encodedRecords := make([][]byte, attWrappersCount)
 
 	for i, attestation := range attWrappers {
-		encEpoch := encodeTargetEpoch(attestation.IndexedAttestation.Data.Target.Epoch)
 
 		value, err := encodeAttestationRecord(attestation)
 		if err != nil {
-			return err
+			return errors.Wrap(
+				err,
+				"cannot encode attestation record",
+			)
 		}
 
-		encodedTargetEpoch[i] = encEpoch
+		encodedTargetEpoch[i] = encodeTargetEpoch(attestation.IndexedAttestation.Data.Target.Epoch)
 		encodedRecords[i] = value
 	}
 
@@ -321,16 +323,23 @@ func (s *Store) SaveAttestationRecordsForValidators(
 				encodedTargetEpoch := encodedTargetEpochBatch[i]
 				encodedRecord := encodedRecordsBatch[i]
 
-				if err := attRecordsBkt.Put(dataRoot[:], encodedRecord); err != nil {
-					return err
+				dataRootSlice := dataRoot[:]
+				if err := attRecordsBkt.Put(dataRootSlice, encodedRecord); err != nil {
+					return errors.Wrap(
+						err,
+						fmt.Sprintf("cannot put in attestation records buckets for key %s", string(dataRootSlice)),
+					)
 				}
 
 				for _, validatorIndex := range attWrapper.IndexedAttestation.AttestingIndices {
 					encodedIndex := encodeValidatorIndex(primitives.ValidatorIndex(validatorIndex))
 
 					key := append(encodedTargetEpoch, encodedIndex...)
-					if err := dataRootsBkt.Put(key, dataRoot[:]); err != nil {
-						return err
+					if err := dataRootsBkt.Put(key, dataRootSlice); err != nil {
+						return errors.Wrap(
+							err,
+							fmt.Sprintf("cannot put in data roots bucket for key %s", string(key)),
+						)
 					}
 				}
 			}

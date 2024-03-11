@@ -114,3 +114,10 @@ func splitRoots(b []byte) ([][32]byte, error) {
 	}
 	return rl, nil
 }
+
+func DeleteKey(ctx context.Context, bkt *bolt.Bucket, key []byte, from string) error {
+	_, span := trace.StartSpan(ctx, "BeaconDB.DeleteKey")
+	defer span.End()
+	log.Infof("Deleting key %x from %s", key, from)
+	return bkt.Delete(key)
+}

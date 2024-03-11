@@ -189,7 +189,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	sourceEpoch := incomingAttWrapper.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := incomingAttWrapper.IndexedAttestation.Data.Target.Epoch
 
-	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
+	minTarget, err := ChunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "could not get min target for validator %d at epoch %d", validatorIdx, sourceEpoch,
@@ -268,7 +268,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	sourceEpoch := incomingAttWrapper.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := incomingAttWrapper.IndexedAttestation.Data.Target.Epoch
 
-	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
+	maxTarget, err := ChunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "could not get max target for validator %d at epoch %d", validatorIdx, sourceEpoch,
@@ -398,7 +398,7 @@ func (m *MinSpanChunksSlice) Update(
 	// a for loop.
 	for m.params.chunkIndex(epochInChunk) == chunkIndex && epochInChunk >= minEpoch {
 		var chunkTarget primitives.Epoch
-		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
+		chunkTarget, err = ChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
 			err = errors.Wrapf(err, "could not get chunk data at epoch %d", epochInChunk)
 			return
@@ -443,7 +443,7 @@ func (m *MaxSpanChunksSlice) Update(
 	// we proceed with a for loop.
 	for m.params.chunkIndex(epochInChunk) == chunkIndex && epochInChunk <= currentEpoch {
 		var chunkTarget primitives.Epoch
-		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
+		chunkTarget, err = ChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
 			err = errors.Wrapf(err, "could not get chunk data at epoch %d", epochInChunk)
 			return
@@ -555,9 +555,9 @@ func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) pr
 	return m.params.firstEpoch(m.params.chunkIndex(startEpoch) + 1)
 }
 
-// Given a validator index and epoch, retrieves the target epoch at its specific
+// ChunkDataAtEpoch Given a validator index and epoch, retrieves the target epoch at its specific
 // index for the validator index and epoch in a min/max span chunk.
-func chunkDataAtEpoch(
+func ChunkDataAtEpoch(
 	params *Parameters, chunk []uint16, validatorIdx primitives.ValidatorIndex, epoch primitives.Epoch,
 ) (primitives.Epoch, error) {
 	requiredLen := params.chunkSize * params.validatorChunkSize

@@ -16,6 +16,18 @@ type Parameters struct {
 	historyLength      primitives.Epoch // H - defines how many epochs we keep of min or max spans.
 }
 
+func (p *Parameters) ChunkSize() uint64 {
+	return p.chunkSize
+}
+
+func (p *Parameters) ValidatorChunkSize() uint64 {
+	return p.validatorChunkSize
+}
+
+func (p *Parameters) HistoryLength() primitives.Epoch {
+	return p.historyLength
+}
+
 // DefaultParams defines default values for slasher's important parameters, defined
 // based on optimization analysis for best and worst case scenarios for
 // slasher's performance.
@@ -32,6 +44,14 @@ func DefaultParams() *Parameters {
 	}
 }
 
+func NewParams(chunkSize, validatorChunkSize uint64, historyLength primitives.Epoch) *Parameters {
+	return &Parameters{
+		chunkSize:          chunkSize,
+		validatorChunkSize: validatorChunkSize,
+		historyLength:      historyLength,
+	}
+}
+
 // Validator min and max spans are split into chunks of length C = chunkSize.
 // That is, if we are keeping N epochs worth of attesting history, finding what
 // chunk a certain epoch, e, falls into can be computed as (e % N) / C. For example,
@@ -45,10 +65,10 @@ func (p *Parameters) chunkIndex(epoch primitives.Epoch) uint64 {
 	return uint64(epoch.Mod(uint64(p.historyLength)).Div(p.chunkSize))
 }
 
-// When storing data on disk, we take K validators' chunks. To figure out
+// ValidatorChunkIndex When storing data on disk, we take K validators' chunks. To figure out
 // which validator chunk index a validator index is for, we simply divide
 // the validator index, i, by K.
-func (p *Parameters) validatorChunkIndex(validatorIndex primitives.ValidatorIndex) uint64 {
+func (p *Parameters) ValidatorChunkIndex(validatorIndex primitives.ValidatorIndex) uint64 {
 	return uint64(validatorIndex.Div(p.validatorChunkSize))
 }
 
@@ -124,7 +144,7 @@ func (p *Parameters) validatorOffset(validatorIndex primitives.ValidatorIndex) u
 // If chunkSize C = 3 and validatorChunkSize K = 3, and historyLength H = 12,
 // if we are looking for epoch 6 and validator 6, then
 //
-//	validatorChunkIndex = 6 / 3 = 2
+//	ValidatorChunkIndex = 6 / 3 = 2
 //	chunkIndex = (6 % historyLength) / 3 = (6 % 12) / 3 = 2
 //
 // Then we compute how many chunks there are per max span, known as the "width"
@@ -133,15 +153,15 @@ func (p *Parameters) validatorOffset(validatorIndex primitives.ValidatorIndex) u
 //
 // So every span has 4 chunks. Then, we have a disk key calculated by
 //
-//	validatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
+//	ValidatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
 func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) []byte {
 	width := p.historyLength.Div(p.chunkSize)
 	return ssz.MarshalUint64(make([]byte, 0), uint64(width.Mul(validatorChunkIndex).Add(chunkIndex)))
 }
 
-// Given a validator chunk index, we determine all of the validator
+// ValidatorIndexesInChunk Given a validator chunk index, we determine all of the validators
 // indices that will belong in that chunk.
-func (p *Parameters) validatorIndexesInChunk(validatorChunkIndex uint64) []primitives.ValidatorIndex {
+func (p *Parameters) ValidatorIndexesInChunk(validatorChunkIndex uint64) []primitives.ValidatorIndex {
 	validatorIndices := make([]primitives.ValidatorIndex, 0)
 	low := validatorChunkIndex * p.validatorChunkSize
 	high := (validatorChunkIndex + 1) * p.validatorChunkSize

@@ -2,6 +2,10 @@ package slasher
 
 import (
 	"bytes"
+	"context"
+	"fmt"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/slasherkv"
 	"strconv"
 
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
@@ -26,7 +30,7 @@ func (s *Service) groupByValidatorChunkIndex(
 		validatorChunkIndexes := make(map[uint64]bool)
 
 		for _, validatorIndex := range attestation.IndexedAttestation.AttestingIndices {
-			validatorChunkIndex := s.params.validatorChunkIndex(primitives.ValidatorIndex(validatorIndex))
+			validatorChunkIndex := s.params.ValidatorChunkIndex(primitives.ValidatorIndex(validatorIndex))
 			validatorChunkIndexes[validatorChunkIndex] = true
 		}
 
@@ -158,4 +162,52 @@ func isDoubleProposal(incomingSigningRoot, existingSigningRoot [32]byte) bool {
 		return false
 	}
 	return incomingSigningRoot != existingSigningRoot
+}
+
+type GetChunkFromDatabaseFilters struct {
+	ChunkKind                     slashertypes.ChunkKind
+	ValidatorIndex                primitives.ValidatorIndex
+	SourceEpoch                   primitives.Epoch
+	IsDisplayAllValidatorsInChunk bool
+	IsDisplayAllEpochsInChunk     bool
+}
+
+// GetChunkFromDatabase Utility function aiming at retrieving a chunk from the
+// database.
+func GetChunkFromDatabase(
+	ctx context.Context,
+	dbPath string,
+	filters GetChunkFromDatabaseFilters,
+	params *Parameters,
+) (Chunker, error) {
+
+	d, err := slasherkv.NewKVStore(ctx, dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not open database at path %s: %v", dbPath, err)
+	}
+	defer func(d *slasherkv.Store) {
+		err := d.Close()
+		if err != nil {
+			log.WithError(err).Error("could not close database")
+		}
+	}(d)
+
+	s := Service{
+		params: params,
+		serviceCfg: &ServiceConfig{
+			Database: d,
+		},
+	}
+
+	validatorIndex := filters.ValidatorIndex
+	sourceEpoch := filters.SourceEpoch
+	chunkKind := filters.ChunkKind
+	validatorChunkIndex := s.params.ValidatorChunkIndex(validatorIndex)
+	chunkIndex := s.params.chunkIndex(sourceEpoch)
+	chunk, err := s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
+	}
+
+	return chunk, nil
 }
