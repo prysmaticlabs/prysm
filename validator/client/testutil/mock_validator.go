@@ -58,7 +58,7 @@ type FakeValidator struct {
 	proposerSettings                  *proposer.Settings
 	ProposerSettingWait               time.Duration
 	Km                                keymanager.IKeymanager
-	healthTracker                     *beacon.NodeHealthTracker
+	Tracker                           *beacon.NodeHealthTracker
 }
 
 // Done for mocking.
@@ -292,5 +292,5 @@ func (*FakeValidator) EventStreamIsRunning() bool {
 }
 
 func (fv *FakeValidator) HealthTracker() *beacon.NodeHealthTracker {
-	return fv.healthTracker
+	return fv.Tracker
 }

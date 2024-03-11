@@ -8,15 +8,15 @@ import (
 type NodeHealthTracker struct {
 	isHealthy  *bool
 	healthChan chan bool
-	node       healthNode
+	node       HealthNode
 	sync.RWMutex
 }
 
-type healthNode interface {
+type HealthNode interface {
 	IsHealthy(ctx context.Context) bool
 }
 
-func NewNodeHealthTracker(node healthNode) *NodeHealthTracker {
+func NewNodeHealthTracker(node HealthNode) *NodeHealthTracker {
 	return &NodeHealthTracker{
 		node:       node,
 		healthChan: make(chan bool, 1),

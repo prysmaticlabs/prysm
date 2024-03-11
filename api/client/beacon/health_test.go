@@ -2,58 +2,12 @@ package beacon
 
 import (
 	"context"
-	"reflect"
 	"sync"
 	"testing"
 
+	healthTesting "github.com/prysmaticlabs/prysm/v5/api/client/beacon/testing"
 	"go.uber.org/mock/gomock"
 )
-
-var (
-	_ = healthNode(&MockHealthClient{})
-)
-
-// MockHealthClient is a mock of HealthClient interface.
-type MockHealthClient struct {
-	ctrl          *gomock.Controller
-	recorder      *MockHealthClientMockRecorder
-	healthTracker *NodeHealthTracker
-}
-
-// MockHealthClientMockRecorder is the mock recorder for MockHealthClient.
-type MockHealthClientMockRecorder struct {
-	mock *MockHealthClient
-}
-
-// IsHealthy mocks base method.
-func (m *MockHealthClient) IsHealthy(arg0 context.Context) bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsHealthy", arg0)
-	ret0, ok := ret[0].(bool)
-	if !ok {
-		return false
-	}
-	return ret0
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockHealthClient) EXPECT() *MockHealthClientMockRecorder {
-	return m.recorder
-}
-
-// IsHealthy indicates an expected call of IsHealthy.
-func (mr *MockHealthClientMockRecorder) IsHealthy(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsHealthy", reflect.TypeOf((*MockHealthClient)(nil).IsHealthy), arg0)
-}
-
-// NewMockHealthClient creates a new mock instance.
-func NewMockHealthClient(ctrl *gomock.Controller) *MockHealthClient {
-	mock := &MockHealthClient{ctrl: ctrl}
-	mock.recorder = &MockHealthClientMockRecorder{mock}
-	mock.healthTracker = NewNodeHealthTracker(mock)
-	return mock
-}
 
 func TestNodeHealth_IsHealthy(t *testing.T) {
 	tests := []struct {
@@ -93,7 +47,7 @@ func TestNodeHealth_UpdateNodeHealth(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			client := NewMockHealthClient(ctrl)
+			client := healthTesting.NewMockHealthClient(ctrl)
 			client.EXPECT().IsHealthy(gomock.Any()).Return(tt.newStatus)
 			n := &NodeHealthTracker{
 				isHealthy:  &tt.initial,
@@ -126,7 +80,7 @@ func TestNodeHealth_UpdateNodeHealth(t *testing.T) {
 func TestNodeHealth_Concurrency(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := NewMockHealthClient(ctrl)
+	client := healthTesting.NewMockHealthClient(ctrl)
 	n := NewNodeHealthTracker(client)
 	var wg sync.WaitGroup
 
