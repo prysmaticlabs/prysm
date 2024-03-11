@@ -72,6 +72,9 @@ type Flags struct {
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 	// BlobSaveFsync requires blob saving to block on fsync to ensure blobs are durably persisted before passing DA.
 	BlobSaveFsync bool
+
+	SaveInvalidBlock bool // SaveInvalidBlock saves invalid block to temp.
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
@@ -185,6 +188,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		logEnabled(writeSSZStateTransitionsFlag)
 		cfg.WriteSSZStateTransitions = true
+	}
+
+	if ctx.Bool(saveInvalidBlockTempFlag.Name) {
+		logEnabled(saveInvalidBlockTempFlag)
+		cfg.SaveInvalidBlock = true
 	}
 
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
