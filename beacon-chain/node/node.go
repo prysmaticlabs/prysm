@@ -1078,9 +1078,9 @@ func (b *BeaconNode) registerBuilderService(cliCtx *cli.Context) error {
 		return err
 	}
 
-	opts := append(b.serviceFlagOpts.builderOpts,
-		builder.WithHeadFetcher(chainService),
-		builder.WithDatabase(b.db))
+	opts := b.serviceFlagOpts.builderOpts
+	opts = append(opts, builder.WithHeadFetcher(chainService), builder.WithDatabase(b.db))
+
 	// make cache the default.
 	if !cliCtx.Bool(features.DisableRegistrationCache.Name) {
 		opts = append(opts, builder.WithRegistrationCache())
