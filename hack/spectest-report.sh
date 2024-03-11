@@ -22,7 +22,8 @@ done > $start_directory/tests.txt
 
 cd "$temp_dir" && find tests -maxdepth 3 -mindepth 3 -type d > "$start_directory/spec.txt"
 
-for i in $(cat "$start_directory/spec.txt"); do if grep $i "$start_directory/tests.txt" > /dev/null; then echo "found $i"; else echo "missing $i";
+# shellcheck disable=SC2013
+for i in $(cat "$start_directory/spec.txt"); do if grep "$i" "$start_directory/tests.txt" > /dev/null; then echo "found $i"; else echo "missing $i";
 fi; done > "$start_directory/report.txt"
 
 {
