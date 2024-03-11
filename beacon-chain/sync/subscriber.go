@@ -286,6 +286,11 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 			return pubsub.ValidationIgnore
 		}
 		b, err := v(ctx, pid, msg)
+		// We do not penalize peers if we are hitting pubsub timeouts
+		// trying to process those messages.
+		if b == pubsub.ValidationReject && ctx.Err() != nil {
+			b = pubsub.ValidationIgnore
+		}
 		if b == pubsub.ValidationReject {
 			fields := logrus.Fields{
 				"topic":        topic,
