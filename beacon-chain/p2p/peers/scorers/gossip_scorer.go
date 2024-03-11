@@ -38,11 +38,11 @@ func newGossipScorer(store *peerdata.Store, config *GossipScorerConfig) *GossipS
 func (s *GossipScorer) Score(pid peer.ID) float64 {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.score(pid)
+	return s.scoreNoLock(pid)
 }
 
-// score is a lock-free version of Score.
-func (s *GossipScorer) score(pid peer.ID) float64 {
+// scoreNoLock is a lock-free version of Score.
+func (s *GossipScorer) scoreNoLock(pid peer.ID) float64 {
 	peerData, ok := s.store.PeerData(pid)
 	if !ok {
 		return 0

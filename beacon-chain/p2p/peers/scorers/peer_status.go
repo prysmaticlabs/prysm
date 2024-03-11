@@ -41,11 +41,11 @@ func newPeerStatusScorer(store *peerdata.Store, config *PeerStatusScorerConfig) 
 func (s *PeerStatusScorer) Score(pid peer.ID) float64 {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.score(pid)
+	return s.scoreNoLock(pid)
 }
 
-// score is a lock-free version of Score.
-func (s *PeerStatusScorer) score(pid peer.ID) float64 {
+// scoreNoLock is a lock-free version of Score.
+func (s *PeerStatusScorer) scoreNoLock(pid peer.ID) float64 {
 	if s.isBadPeer(pid) {
 		return BadPeerScore
 	}
