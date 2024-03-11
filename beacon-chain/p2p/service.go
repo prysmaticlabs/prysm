@@ -120,7 +120,11 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	ipAddr := prysmnetwork.IPAddr()
 
-	opts := s.buildOptions(ipAddr, s.privKey)
+	opts, err := s.buildOptions(ipAddr, s.privKey)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to build p2p options")
+	}
+
 	h, err := libp2p.New(opts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to create p2p host")

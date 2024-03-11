@@ -31,7 +31,7 @@ func MultiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
 }
 
 // buildOptions for the libp2p host.
-func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Option {
+func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Option, error) {
 	cfg := s.cfg
 	listen, err := MultiAddressBuilder(ip.String(), cfg.TCPPort)
 	if err != nil {
@@ -39,8 +39,9 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	}
 	if cfg.LocalIP != "" {
 		if net.ParseIP(cfg.LocalIP) == nil {
-			log.Fatalf("Invalid local ip provided: %s", cfg.LocalIP)
+			return nil, errors.Wrapf(err, "invalid local ip provided: %s", cfg.LocalIP)
 		}
+
 		listen, err = MultiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
 		if err != nil {
 			log.WithError(err).Fatal("Failed to p2p listen")
@@ -103,7 +104,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	if features.Get().DisableResourceManager {
 		options = append(options, libp2p.ResourceManager(&network.NullResourceManager{}))
 	}
-	return options
+	return options, nil
 }
 
 func multiAddressBuilderWithID(ipAddr, protocol string, port uint, id peer.ID) (ma.Multiaddr, error) {
