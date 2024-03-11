@@ -40,7 +40,7 @@ var (
 	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
-		Usage: "Writes SSZ states to disk after attempted state transitio.",
+		Usage: "Writes failed SSZ block to disk after attempted importing block and state transition.",
 	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
