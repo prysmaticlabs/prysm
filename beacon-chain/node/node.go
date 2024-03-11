@@ -7,9 +7,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -976,11 +978,13 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 	if b.cliCtx.Bool(flags.DisableGRPCGateway.Name) {
 		return nil
 	}
-	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
 	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
+	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
 	rpcHost := b.cliCtx.String(flags.RPCHost.Name)
-	selfAddress := fmt.Sprintf("%s:%d", rpcHost, b.cliCtx.Int(flags.RPCPort.Name))
-	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	rpcPort := b.cliCtx.Int(flags.RPCPort.Name)
+
+	selfAddress := net.JoinHostPort(rpcHost, strconv.Itoa(rpcPort))
+	gatewayAddress := net.JoinHostPort(gatewayHost, strconv.Itoa(gatewayPort))
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
