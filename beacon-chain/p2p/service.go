@@ -97,10 +97,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	s.cfg = validateConfig(s.cfg)
 
-	dv5Nodes := ParseBootStrapAddrs(s.cfg.BootstrapNodeAddrs)
-
-	cfg.Discv5BootStrapAddrs = dv5Nodes
-
 	ipAddr := prysmnetwork.IPAddr()
 	s.privKey, err = privKey(s.cfg)
 	if err != nil {

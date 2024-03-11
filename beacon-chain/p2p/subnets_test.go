@@ -57,7 +57,6 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		port = 3000 + i
 		cfg := &Config{
-			BootstrapNodeAddrs:   []string{bootNode.String()},
 			Discv5BootStrapAddrs: []string{bootNode.String()},
 			MaxPeers:             30,
 			UDPPort:              uint(port),
@@ -88,7 +87,6 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	port = 4001
 	gs := startup.NewClockSynchronizer()
 	cfg := &Config{
-		BootstrapNodeAddrs:   []string{bootNode.String()},
 		Discv5BootStrapAddrs: []string{bootNode.String()},
 		MaxPeers:             30,
 		UDPPort:              uint(port),

@@ -16,7 +16,6 @@ type Config struct {
 	EnableUPnP           bool
 	StaticPeerID         bool
 	StaticPeers          []string
-	BootstrapNodeAddrs   []string
 	Discv5BootStrapAddrs []string
 	RelayNodeAddr        string
 	LocalIP              string
