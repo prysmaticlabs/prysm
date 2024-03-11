@@ -77,7 +77,7 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 			if currClient != nil {
 				currClient.Close()
 			}
-			log.Infof("Connected to new endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
+			log.WithField("endpoint", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url)).Info("Connected to new endpoint")
 			return
 		case <-s.ctx.Done():
 			log.Debug("Received cancelled context,closing existing powchain service")

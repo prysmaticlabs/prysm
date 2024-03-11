@@ -124,13 +124,18 @@ func ConvertDatabase(ctx context.Context, sourceDataDir string, targetDataDir st
 	// -----------------
 	// Get the proposer settings.
 	proposerSettings, err := sourceDatabase.ProposerSettings(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get proposer settings from source database")
-	}
 
-	// Save the proposer settings.
-	if err := targetDatabase.SaveProposerSettings(ctx, proposerSettings); err != nil {
-		return errors.Wrap(err, "could not save proposer settings")
+	switch err {
+	case nil:
+		// Save the proposer settings.
+		if err := targetDatabase.SaveProposerSettings(ctx, proposerSettings); err != nil {
+			return errors.Wrap(err, "could not save proposer settings")
+		}
+
+	case kv.ErrNoProposerSettingsFound, filesystem.ErrNoProposerSettingsFound:
+		// Nothing to do.
+	default:
+		return errors.Wrap(err, "could not get proposer settings from source database")
 	}
 
 	// Attestations

@@ -32,7 +32,11 @@ func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, st state
 	require.NoError(t, err)
 	_, bp, err = altair.ProcessEpochParticipation(ctx, st, bp, vp)
 	require.NoError(t, err)
-
+	activeBal, targetPrevious, targetCurrent, err := st.UnrealizedCheckpointBalances()
+	require.NoError(t, err)
+	require.Equal(t, bp.ActiveCurrentEpoch, activeBal)
+	require.Equal(t, bp.CurrentEpochTargetAttested, targetCurrent)
+	require.Equal(t, bp.PrevEpochTargetAttested, targetPrevious)
 	st, err = precompute.ProcessJustificationAndFinalizationPreCompute(st, bp)
 	require.NoError(t, err, "Could not process justification")
 

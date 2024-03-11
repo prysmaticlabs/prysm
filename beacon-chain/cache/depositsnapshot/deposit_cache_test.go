@@ -1189,11 +1189,3 @@ func BenchmarkDepositTree_HashTreeRootOldImplementation(b *testing.B) {
 		require.NoError(b, err)
 	}
 }
-
-func emptyEth1data() *ethpb.Eth1Data {
-	return &ethpb.Eth1Data{
-		DepositRoot:  make([]byte, 32),
-		DepositCount: 0,
-		BlockHash:    make([]byte, 32),
-	}
-}

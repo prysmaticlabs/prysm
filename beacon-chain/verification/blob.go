@@ -29,9 +29,7 @@ const (
 	RequireSidecarProposerExpected
 )
 
-// GossipSidecarRequirements defines the set of requirements that BlobSidecars received on gossip
-// must satisfy in order to upgrade an ROBlob to a VerifiedROBlob.
-var GossipSidecarRequirements = []Requirement{
+var allSidecarRequirements = []Requirement{
 	RequireBlobIndexInBounds,
 	RequireNotFromFutureSlot,
 	RequireSlotAboveFinalized,
@@ -45,26 +43,32 @@ var GossipSidecarRequirements = []Requirement{
 	RequireSidecarProposerExpected,
 }
 
+// GossipSidecarRequirements defines the set of requirements that BlobSidecars received on gossip
+// must satisfy in order to upgrade an ROBlob to a VerifiedROBlob.
+var GossipSidecarRequirements = requirementList(allSidecarRequirements).excluding()
+
+// SpectestSidecarRequirements is used by the forkchoice spectests when verifying blobs used in the on_block tests.
+// The only requirements we exclude for these tests are the parent validity and seen tests, as these are specific to
+// gossip processing and require the bad block cache that we only use there.
+var SpectestSidecarRequirements = requirementList(GossipSidecarRequirements).excluding(
+	RequireSidecarParentSeen, RequireSidecarParentValid)
+
 // InitsyncSidecarRequirements is the list of verification requirements to be used by the init-sync service
 // for batch-mode syncing. Because we only perform batch verification as part of the IsDataAvailable method
 // for blobs after the block has been verified, and the blobs to be verified are keyed in the cache by the
-// block root, it is safe to skip the following verifications.
-// RequireSidecarProposerExpected
-// RequireNotFromFutureSlot,
-// RequireSlotAboveFinalized,
-// RequireSidecarParentSeen,
-// RequireSidecarParentValid,
-// RequireSidecarParentSlotLower,
-// RequireSidecarDescendsFromFinalized,
-var InitsyncSidecarRequirements = []Requirement{
-	RequireValidProposerSignature,
-	RequireSidecarKzgProofVerified,
-	RequireBlobIndexInBounds,
-	RequireSidecarInclusionProven,
-}
+// block root, the list of required verifications is much shorter than gossip.
+var InitsyncSidecarRequirements = requirementList(GossipSidecarRequirements).excluding(
+	RequireNotFromFutureSlot,
+	RequireSlotAboveFinalized,
+	RequireSidecarParentSeen,
+	RequireSidecarParentValid,
+	RequireSidecarParentSlotLower,
+	RequireSidecarDescendsFromFinalized,
+	RequireSidecarProposerExpected,
+)
 
-// BackfillSidecarRequirements is the same as InitsyncSidecarRequirements
-var BackfillSidecarRequirements = InitsyncSidecarRequirements
+// BackfillSidecarRequirements is the same as InitsyncSidecarRequirements.
+var BackfillSidecarRequirements = requirementList(InitsyncSidecarRequirements).excluding()
 
 var (
 	ErrBlobInvalid = errors.New("blob failed verification")
