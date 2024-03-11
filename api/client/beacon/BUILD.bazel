@@ -13,6 +13,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//api/client:go_default_library",
+        "//api/client/beacon/iface:go_default_library",
         "//api/server:go_default_library",
         "//api/server/structs:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",

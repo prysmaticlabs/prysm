@@ -4,19 +4,18 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon/iface"
 	"go.uber.org/mock/gomock"
 )
 
 var (
-	_ = beacon.HealthNode(&MockHealthClient{})
+	_ = iface.HealthNode(&MockHealthClient{})
 )
 
 // MockHealthClient is a mock of HealthClient interface.
 type MockHealthClient struct {
-	ctrl          *gomock.Controller
-	recorder      *MockHealthClientMockRecorder
-	healthTracker *beacon.NodeHealthTracker
+	ctrl     *gomock.Controller
+	recorder *MockHealthClientMockRecorder
 }
 
 // MockHealthClientMockRecorder is the mock recorder for MockHealthClient.
@@ -50,12 +49,5 @@ func (mr *MockHealthClientMockRecorder) IsHealthy(arg0 any) *gomock.Call {
 func NewMockHealthClient(ctrl *gomock.Controller) *MockHealthClient {
 	mock := &MockHealthClient{ctrl: ctrl}
 	mock.recorder = &MockHealthClientMockRecorder{mock}
-	mock.healthTracker = beacon.NewNodeHealthTracker(mock)
 	return mock
-}
-
-// NewMockNodeHealthTracker returns a mock tracker with mock health client
-func NewMockNodeHealthTracker(ctrl *gomock.Controller) (*beacon.NodeHealthTracker, *MockHealthClient) {
-	client := NewMockHealthClient(ctrl)
-	return beacon.NewNodeHealthTracker(client), client
 }
