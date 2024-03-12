@@ -74,6 +74,7 @@ type Flags struct {
 	BlobSaveFsync bool
 
 	SaveInvalidBlock bool // SaveInvalidBlock saves invalid block to temp.
+	SaveInvalidBlob  bool // SaveInvalidBlob saves invalid blob to temp.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -193,6 +194,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(saveInvalidBlockTempFlag.Name) {
 		logEnabled(saveInvalidBlockTempFlag)
 		cfg.SaveInvalidBlock = true
+	}
+
+	if ctx.Bool(saveInvalidBlobTempFlag.Name) {
+		logEnabled(saveInvalidBlobTempFlag)
+		cfg.SaveInvalidBlob = true
 	}
 
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {

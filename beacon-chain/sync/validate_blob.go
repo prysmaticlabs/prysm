@@ -3,17 +3,21 @@ package sync
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 	"strings"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -109,6 +113,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 
 	if err := vf.SidecarKzgProofVerified(); err != nil {
+		saveInvalidBlobToTemp(blob)
 		return pubsub.ValidationReject, err
 	}
 
@@ -164,4 +169,22 @@ func blobFields(b blocks.ROBlob) logrus.Fields {
 
 func computeSubnetForBlobSidecar(index uint64) uint64 {
 	return index % params.BeaconConfig().BlobsidecarSubnetCount
+}
+
+// saveInvalidBlobToTemp as a block ssz. Writes to temp directory.
+func saveInvalidBlobToTemp(b blocks.ROBlob) {
+	if !features.Get().SaveInvalidBlob {
+		return
+	}
+	filename := fmt.Sprintf("blob_sidecar_%d.ssz", b.Slot())
+	fp := path.Join(os.TempDir(), filename)
+	log.Warnf("Writing invalid blob sidecar to disk at %s", fp)
+	enc, err := b.MarshalSSZ()
+	if err != nil {
+		log.WithError(err).Error("Failed to ssz encode blob sidecar")
+		return
+	}
+	if err := file.WriteFile(fp, enc); err != nil {
+		log.WithError(err).Error("Failed to write to disk")
+	}
 }
