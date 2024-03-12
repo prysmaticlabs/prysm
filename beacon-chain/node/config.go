@@ -2,11 +2,15 @@ package node
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	storageFlags "github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/storage/flags"
+	backfill "github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/sync/backfill/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	tracing2 "github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
@@ -196,6 +200,37 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	log.Infof("Default fee recipient is set to %s, recipient may be overwritten from validator client and persist in db."+
 		" Default fee recipient will be used as a fall back", checksumAddress.Hex())
 	return params.SetActive(c)
+}
+
+func configureArchivalNode(cliCtx *cli.Context) error {
+	if cliCtx.IsSet(flags.ArchivalNodeFlag.Name) {
+		log.Info("Enabling Archival mode on the beacon node")
+		if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
+			log.Infof("Changing slots per archived point from %d to %d", cliCtx.Int(flags.SlotsPerArchivedPoint.Name), 32)
+		}
+		if err := cliCtx.Set(flags.SlotsPerArchivedPoint.Name, fmt.Sprintf("%d", 32)); err != nil {
+			return err
+		}
+		if !cliCtx.IsSet(features.SaveFullExecutionPayloads.Name) {
+			log.Info("Saving full execution payloads")
+			if err := cliCtx.Set(features.SaveFullExecutionPayloads.Name, "true"); err != nil {
+				return err
+			}
+		}
+		if !cliCtx.IsSet(backfill.EnableExperimentalBackfill.Name) {
+			log.Info("Enabling backfill on nodes")
+			if err := cliCtx.Set(backfill.EnableExperimentalBackfill.Name, "true"); err != nil {
+				return err
+			}
+		}
+		if cliCtx.IsSet(storageFlags.BlobRetentionEpochFlag.Name) {
+			log.Infof("Changing slots per archived point from %d to %d", cliCtx.Uint64(storageFlags.BlobRetentionEpochFlag.Name), math.MaxUint32)
+		}
+		if err := cliCtx.Set(storageFlags.BlobRetentionEpochFlag.Name, fmt.Sprintf("%d", math.MaxUint32)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func configureFastSSZHashingAlgorithm() {

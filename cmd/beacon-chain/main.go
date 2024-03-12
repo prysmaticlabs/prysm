@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	jwtcommands "github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/jwt"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/storage"
+	storageFlags "github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/storage/flags"
 	backfill "github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/sync/backfill"
 	bflags "github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/sync/backfill/flags"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/sync/checkpoint"
@@ -138,8 +139,9 @@ var appFlags = []cli.Flag{
 	genesis.BeaconAPIURL,
 	flags.SlasherDirFlag,
 	flags.JwtId,
-	storage.BlobStoragePathFlag,
-	storage.BlobRetentionEpochFlag,
+	flags.ArchivalNodeFlag,
+	storageFlags.BlobStoragePathFlag,
+	storageFlags.BlobRetentionEpochFlag,
 	bflags.EnableExperimentalBackfill,
 	bflags.BackfillBatchSize,
 	bflags.BackfillWorkerCount,

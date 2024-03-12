@@ -259,4 +259,9 @@ var (
 		Usage: "Directory for the slasher database",
 		Value: cmd.DefaultDataDir(),
 	}
+	// ArchivalNodeFlag defines the flag that enables archival mode on a prysm beacon node.
+	ArchivalNodeFlag = &cli.BoolFlag{
+		Name:  "archive",
+		Usage: "Enables archival mode on a prysm beacon node.",
+	}
 )

@@ -7,23 +7,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/storage/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/urfave/cli/v2"
-)
-
-var (
-	// BlobStoragePathFlag defines a flag to start the beacon chain from a give genesis state file.
-	BlobStoragePathFlag = &cli.PathFlag{
-		Name:  "blob-path",
-		Usage: "Location for blob storage. Default location will be a 'blobs' directory next to the beacon db.",
-	}
-	BlobRetentionEpochFlag = &cli.Uint64Flag{
-		Name:    "blob-retention-epochs",
-		Usage:   "Override the default blob retention period (measured in epochs). The node will exit with an error at startup if the value is less than the default of 4096 epochs.",
-		Value:   uint64(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest),
-		Aliases: []string{"extend-blob-retention-epoch"},
-	}
 )
 
 // BeaconNodeOptions sets configuration values on the node.BeaconNode value at node startup.
@@ -42,7 +29,7 @@ func BeaconNodeOptions(c *cli.Context) ([]node.Option, error) {
 }
 
 func blobStoragePath(c *cli.Context) string {
-	blobsPath := c.Path(BlobStoragePathFlag.Name)
+	blobsPath := c.Path(flags.BlobStoragePathFlag.Name)
 	if blobsPath == "" {
 		// append a "blobs" subdir to the end of the data dir path
 		blobsPath = path.Join(c.String(cmd.DataDirFlag.Name), "blobs")
@@ -57,14 +44,14 @@ var errInvalidBlobRetentionEpochs = errors.New("value is smaller than spec minim
 // smaller than the spec default, an error will be returned.
 func blobRetentionEpoch(cliCtx *cli.Context) (primitives.Epoch, error) {
 	spec := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
-	if !cliCtx.IsSet(BlobRetentionEpochFlag.Name) {
+	if !cliCtx.IsSet(flags.BlobRetentionEpochFlag.Name) {
 		return spec, nil
 	}
 
-	re := primitives.Epoch(cliCtx.Uint64(BlobRetentionEpochFlag.Name))
+	re := primitives.Epoch(cliCtx.Uint64(flags.BlobRetentionEpochFlag.Name))
 	// Validate the epoch value against the spec default.
 	if re < params.BeaconConfig().MinEpochsForBlobsSidecarsRequest {
-		return spec, errors.Wrapf(errInvalidBlobRetentionEpochs, "%s=%d, spec=%d", BlobRetentionEpochFlag.Name, re, spec)
+		return spec, errors.Wrapf(errInvalidBlobRetentionEpochs, "%s=%d, spec=%d", flags.BlobRetentionEpochFlag.Name, re, spec)
 	}
 
 	return re, nil
