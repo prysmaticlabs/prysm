@@ -455,7 +455,7 @@ func (v *validator) SetGraffiti(ctx context.Context, pubkey [fieldparams.BLSPubk
 	if graffiti == nil {
 		return nil
 	}
-    settings = &proposer.Settings{}
+	settings := &proposer.Settings{}
 	if v.proposerSettings != nil {
 		settings = v.proposerSettings.Clone()
 	}
@@ -463,20 +463,18 @@ func (v *validator) SetGraffiti(ctx context.Context, pubkey [fieldparams.BLSPubk
 		settings.ProposeConfig = map[[48]byte]*proposer.Option{pubkey: {GraffitiConfig: &proposer.GraffitiConfig{Graffiti: string(graffiti)}}}
 		return v.SetProposerSettings(ctx, settings)
 	}
-	ps := settings.Clone()
 	var option *proposer.Option
-	option, ok := ps.ProposeConfig[pubkey]
+	option, ok := settings.ProposeConfig[pubkey]
 	if !ok || option == nil {
-		ps.ProposeConfig[pubkey] = &proposer.Option{GraffitiConfig: &proposer.GraffitiConfig{
+		settings.ProposeConfig[pubkey] = &proposer.Option{GraffitiConfig: &proposer.GraffitiConfig{
 			Graffiti: string(graffiti),
 		}}
 	} else {
 		option.GraffitiConfig = &proposer.GraffitiConfig{
 			Graffiti: string(graffiti),
 		}
-		ps.ProposeConfig[pubkey] = option
 	}
-	return v.SetProposerSettings(ctx, ps) // save the proposer settings
+	return v.SetProposerSettings(ctx, settings) // save the proposer settings
 }
 
 func (v *validator) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
