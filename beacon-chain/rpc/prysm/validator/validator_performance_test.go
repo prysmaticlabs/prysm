@@ -11,19 +11,20 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestServer_GetValidatorPerformance(t *testing.T) {
@@ -67,7 +68,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
 		}
-		want := &ValidatorPerformanceResponse{
+		want := &structs.GetValidatorPerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -78,7 +79,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 		}
 
-		request := &ValidatorPerformanceRequest{
+		request := &structs.GetValidatorPerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 		}
 		var buf bytes.Buffer
@@ -98,7 +99,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &structs.GetValidatorPerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})
@@ -133,7 +134,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, err)
 		extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 
-		want := &ValidatorPerformanceResponse{
+		want := &structs.GetValidatorPerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -143,7 +144,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			BalancesAfterEpochTransition:  []uint64{vp[1].AfterEpochTransitionBalance, vp[2].AfterEpochTransitionBalance},
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 		}
-		request := &ValidatorPerformanceRequest{
+		request := &structs.GetValidatorPerformanceRequest{
 			Indices: []primitives.ValidatorIndex{2, 1, 0},
 		}
 		var buf bytes.Buffer
@@ -163,7 +164,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &structs.GetValidatorPerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})
@@ -198,7 +199,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, err)
 		extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 
-		want := &ValidatorPerformanceResponse{
+		want := &structs.GetValidatorPerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -208,7 +209,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			BalancesAfterEpochTransition:  []uint64{vp[1].AfterEpochTransitionBalance, vp[2].AfterEpochTransitionBalance},
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 		}
-		request := &ValidatorPerformanceRequest{
+		request := &structs.GetValidatorPerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:]}, Indices: []primitives.ValidatorIndex{1, 2},
 		}
 		var buf bytes.Buffer
@@ -228,7 +229,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &structs.GetValidatorPerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})
@@ -259,7 +260,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
 		}
-		want := &ValidatorPerformanceResponse{
+		want := &structs.GetValidatorPerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -270,7 +271,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 			InactivityScores:              []uint64{0, 0},
 		}
-		request := &ValidatorPerformanceRequest{
+		request := &structs.GetValidatorPerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 		}
 		var buf bytes.Buffer
@@ -290,7 +291,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &structs.GetValidatorPerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})
@@ -321,7 +322,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
 		}
-		want := &ValidatorPerformanceResponse{
+		want := &structs.GetValidatorPerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -332,7 +333,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 			InactivityScores:              []uint64{0, 0},
 		}
-		request := &ValidatorPerformanceRequest{
+		request := &structs.GetValidatorPerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 		}
 		var buf bytes.Buffer
@@ -352,7 +353,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &structs.GetValidatorPerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})
@@ -383,7 +384,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
 		}
-		want := &ValidatorPerformanceResponse{
+		want := &structs.GetValidatorPerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -394,7 +395,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 			InactivityScores:              []uint64{0, 0},
 		}
-		request := &ValidatorPerformanceRequest{
+		request := &structs.GetValidatorPerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 		}
 		var buf bytes.Buffer
@@ -414,7 +415,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &structs.GetValidatorPerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})

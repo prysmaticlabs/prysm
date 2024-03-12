@@ -3,10 +3,10 @@ package accounts
 import (
 	"os"
 
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/runtime/tos"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/runtime/tos"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -17,7 +17,7 @@ var log = logrus.WithField("prefix", "accounts")
 var Commands = &cli.Command{
 	Name:     "accounts",
 	Category: "accounts",
-	Usage:    "defines commands for interacting with Ethereum validator accounts",
+	Usage:    "Defines commands for interacting with Ethereum validator accounts.",
 	Subcommands: []*cli.Command{
 		{
 			Name:        "delete",
@@ -54,7 +54,6 @@ var Commands = &cli.Command{
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
-				flags.ShowDepositDataFlag,
 				flags.ShowPrivateKeysFlag,
 				flags.ListValidatorIndices,
 				flags.BeaconRPCProviderFlag,
@@ -188,7 +187,7 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				log.Info("This command will be deprecated in the future in favor of `prysmctl validator exit`")
-				if err := AccountsExit(cliCtx, os.Stdin); err != nil {
+				if err := Exit(cliCtx, os.Stdin); err != nil {
 					log.WithError(err).Fatal("Could not perform voluntary exit")
 				}
 				return nil

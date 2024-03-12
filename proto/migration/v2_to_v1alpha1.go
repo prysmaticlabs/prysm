@@ -2,9 +2,8 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -111,66 +110,4 @@ func BlindedDenebToV1Alpha1SignedBlock(denebBlk *ethpbv2.SignedBlindedBeaconBloc
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
 	return v1alpha1Block, nil
-}
-
-// SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs converts an array of v2 SignedBlindedBlobSidecar objects to its v1alpha1 equivalent.
-func SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(sidecars []*ethpbv2.SignedBlindedBlobSidecar) []*ethpbalpha.SignedBlindedBlobSidecar {
-	result := make([]*ethpbalpha.SignedBlindedBlobSidecar, len(sidecars))
-	for i, sc := range sidecars {
-		result[i] = &ethpbalpha.SignedBlindedBlobSidecar{
-			Message: &ethpbalpha.BlindedBlobSidecar{
-				BlockRoot:       bytesutil.SafeCopyBytes(sc.Message.BlockRoot),
-				Index:           sc.Message.Index,
-				Slot:            sc.Message.Slot,
-				BlockParentRoot: bytesutil.SafeCopyBytes(sc.Message.BlockParentRoot),
-				ProposerIndex:   sc.Message.ProposerIndex,
-				BlobRoot:        bytesutil.SafeCopyBytes(sc.Message.BlobRoot),
-				KzgCommitment:   bytesutil.SafeCopyBytes(sc.Message.KzgCommitment),
-				KzgProof:        bytesutil.SafeCopyBytes(sc.Message.KzgProof),
-			},
-			Signature: bytesutil.SafeCopyBytes(sc.Signature),
-		}
-	}
-	return result
-}
-
-// SignedBlobsToV1Alpha1SignedBlobs converts an array of v2 SignedBlobSidecar objects to its v1alpha1 equivalent.
-func SignedBlobsToV1Alpha1SignedBlobs(sidecars []*ethpbv2.SignedBlobSidecar) []*ethpbalpha.SignedBlobSidecar {
-	result := make([]*ethpbalpha.SignedBlobSidecar, len(sidecars))
-	for i, sc := range sidecars {
-		result[i] = &ethpbalpha.SignedBlobSidecar{
-			Message: &ethpbalpha.BlobSidecar{
-				BlockRoot:       bytesutil.SafeCopyBytes(sc.Message.BlockRoot),
-				Index:           sc.Message.Index,
-				Slot:            sc.Message.Slot,
-				BlockParentRoot: bytesutil.SafeCopyBytes(sc.Message.BlockParentRoot),
-				ProposerIndex:   sc.Message.ProposerIndex,
-				Blob:            bytesutil.SafeCopyBytes(sc.Message.Blob),
-				KzgCommitment:   bytesutil.SafeCopyBytes(sc.Message.KzgCommitment),
-				KzgProof:        bytesutil.SafeCopyBytes(sc.Message.KzgProof),
-			},
-			Signature: bytesutil.SafeCopyBytes(sc.Signature),
-		}
-	}
-	return result
-}
-
-// DenebBlockContentsToV1Alpha1 converts signed deneb block contents to signed beacon block and blobs deneb
-func DenebBlockContentsToV1Alpha1(blockcontents *ethpbv2.SignedBeaconBlockContentsDeneb) (*ethpbalpha.SignedBeaconBlockAndBlobsDeneb, error) {
-	block, err := DenebToV1Alpha1SignedBlock(blockcontents.SignedBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert block")
-	}
-	blobs := SignedBlobsToV1Alpha1SignedBlobs(blockcontents.SignedBlobSidecars)
-	return &ethpbalpha.SignedBeaconBlockAndBlobsDeneb{Block: block, Blobs: blobs}, nil
-}
-
-// BlindedDenebBlockContentsToV1Alpha1 converts signed blinded deneb block contents to signed blinded beacon block and blobs deneb
-func BlindedDenebBlockContentsToV1Alpha1(blockcontents *ethpbv2.SignedBlindedBeaconBlockContentsDeneb) (*ethpbalpha.SignedBlindedBeaconBlockAndBlobsDeneb, error) {
-	block, err := BlindedDenebToV1Alpha1SignedBlock(blockcontents.SignedBlindedBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert block")
-	}
-	blobs := SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(blockcontents.SignedBlindedBlobSidecars)
-	return &ethpbalpha.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: block, SignedBlindedBlobSidecars: blobs}, nil
 }

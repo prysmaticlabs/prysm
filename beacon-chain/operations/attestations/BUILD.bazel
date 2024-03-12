@@ -10,7 +10,7 @@ go_library(
         "prune_expired.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
@@ -47,7 +47,6 @@ go_test(
     deps = [
         "//async:go_default_library",
         "//beacon-chain/operations/attestations/kv:go_default_library",
-        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",

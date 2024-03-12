@@ -9,12 +9,17 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
 	"go.opencensus.io/trace"
 )
 
 var (
+	// Delay parameters
+	minDelay    = float64(10)        // 10 nanoseconds
+	maxDelay    = float64(100000000) // 0.1 second
+	delayFactor = 1.1
+
 	// Metrics
 	skipSlotCacheHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "skip_slot_cache_hit",

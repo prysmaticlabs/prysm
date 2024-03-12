@@ -12,15 +12,15 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
@@ -487,4 +487,39 @@ func Test_SyncSubnets(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSubnetComputation(t *testing.T) {
+	db, err := enode.OpenDB("")
+	assert.NoError(t, err)
+	defer db.Close()
+	priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
+	assert.NoError(t, err)
+	convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
+	assert.NoError(t, err)
+	localNode := enode.NewLocalNode(db, convertedKey)
+
+	retrievedSubnets, err := computeSubscribedSubnets(localNode.ID(), 1000)
+	assert.NoError(t, err)
+	assert.Equal(t, retrievedSubnets[0]+1, retrievedSubnets[1])
+}
+
+func TestInitializePersistentSubnets(t *testing.T) {
+	cache.SubnetIDs.EmptyAllCaches()
+	defer cache.SubnetIDs.EmptyAllCaches()
+
+	db, err := enode.OpenDB("")
+	assert.NoError(t, err)
+	defer db.Close()
+	priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
+	assert.NoError(t, err)
+	convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
+	assert.NoError(t, err)
+	localNode := enode.NewLocalNode(db, convertedKey)
+
+	assert.NoError(t, initializePersistentSubnets(localNode.ID(), 10000))
+	subs, ok, expTime := cache.SubnetIDs.GetPersistentSubnets()
+	assert.Equal(t, true, ok)
+	assert.Equal(t, 2, len(subs))
+	assert.Equal(t, true, expTime.After(time.Now()))
 }

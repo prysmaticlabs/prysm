@@ -2,11 +2,12 @@ package interfaces
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
-	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -16,7 +17,7 @@ type ReadOnlySignedBeaconBlock interface {
 	Block() ReadOnlyBeaconBlock
 	Signature() [field_params.BLSSignatureLength]byte
 	IsNil() bool
-	Copy() (ReadOnlySignedBeaconBlock, error)
+	Copy() (SignedBeaconBlock, error)
 	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
@@ -32,6 +33,7 @@ type ReadOnlySignedBeaconBlock interface {
 	ssz.Unmarshaler
 	Version() int
 	IsBlinded() bool
+	ValueInWei() math.Wei
 	ValueInGwei() uint64
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
@@ -59,6 +61,7 @@ type ReadOnlyBeaconBlock interface {
 // ReadOnlyBeaconBlockBody describes the method set employed by an object
 // that is a beacon block body.
 type ReadOnlyBeaconBlockBody interface {
+	Version() int
 	RandaoReveal() [field_params.BLSSignatureLength]byte
 	Eth1Data() *ethpb.Eth1Data
 	Graffiti() [field_params.RootLength]byte
@@ -90,12 +93,12 @@ type SignedBeaconBlock interface {
 	SetGraffiti([]byte)
 	SetEth1Data(*ethpb.Eth1Data)
 	SetRandaoReveal([]byte)
-	SetBlinded(bool)
 	SetStateRoot([]byte)
 	SetParentRoot([]byte)
 	SetProposerIndex(idx primitives.ValidatorIndex)
 	SetSlot(slot primitives.Slot)
 	SetSignature(sig []byte)
+	Unblind(e ExecutionData) error
 }
 
 // ExecutionData represents execution layer information that is contained
@@ -128,5 +131,7 @@ type ExecutionData interface {
 	WithdrawalsRoot() ([]byte, error)
 	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
 	PbBellatrix() (*enginev1.ExecutionPayload, error)
+	PbDeneb() (*enginev1.ExecutionPayloadDeneb, error)
+	ValueInWei() (math.Wei, error)
 	ValueInGwei() (uint64, error)
 }

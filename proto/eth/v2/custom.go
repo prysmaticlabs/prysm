@@ -23,7 +23,7 @@ func (x *SyncCommittee) Equals(other *SyncCommittee) bool {
 }
 
 func FloorLog2(x uint64) int {
-	return bits.Len64(uint64(x - 1))
+	return bits.Len64(x - 1)
 }
 
 func isEmptyWithLength(bb [][]byte, length uint64) bool {

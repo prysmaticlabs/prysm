@@ -3,8 +3,8 @@
 package flags
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -12,7 +12,7 @@ var (
 	// MevRelayEndpoint provides an HTTP access endpoint to a MEV builder network.
 	MevRelayEndpoint = &cli.StringFlag{
 		Name:  "http-mev-relay",
-		Usage: "A MEV builder relay string http endpoint, this wil be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/Builder",
+		Usage: "A MEV builder relay string http endpoint, this will be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/Builder",
 		Value: "",
 	}
 	MaxBuilderConsecutiveMissedSlots = &cli.IntFlag{
@@ -23,7 +23,6 @@ var (
 	MaxBuilderEpochMissedSlots = &cli.IntFlag{
 		Name:  "max-builder-epoch-missed-slots",
 		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
-		Value: 8,
 	}
 	// LocalBlockValueBoost sets a percentage boost for local block construction while using a custom builder.
 	LocalBlockValueBoost = &cli.Uint64Flag{
@@ -55,6 +54,11 @@ var (
 			"This is not required if using an IPC connection.",
 		Value: "",
 	}
+	// JwtId is the id field of the JWT claims. The consensus layer client MAY use this to communicate a unique identifier for the individual consensus layer client
+	JwtId = &cli.StringFlag{
+		Name:  "jwt-id",
+		Usage: "JWT claims id. Could be used to identify the client",
+	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
@@ -76,7 +80,7 @@ var (
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
 		Name:  "monitoring-port",
-		Usage: "Port used to listening and respond metrics for prometheus.",
+		Usage: "Port used to listening and respond metrics for Prometheus.",
 		Value: 8080,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
@@ -138,12 +142,6 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
-	// SafeSlotsToImportOptimistically is deprecated. It should be removed in the next major release.
-	SafeSlotsToImportOptimistically = &cli.IntFlag{
-		Name:   "safe-slots-to-import-optimistically",
-		Usage:  "DEPRECATED. DO NOT USE",
-		Hidden: true,
-	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.
 	SlotsPerArchivedPoint = &cli.IntFlag{
@@ -154,7 +152,7 @@ var (
 	// BlockBatchLimit specifies the requested block batch size.
 	BlockBatchLimit = &cli.IntFlag{
 		Name:  "block-batch-limit",
-		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
+		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch. Maximum 128",
 		Value: 64,
 	}
 	// BlockBatchLimitBurstFactor specifies the factor by which block batch size may increase.
@@ -167,7 +165,7 @@ var (
 	BlobBatchLimit = &cli.IntFlag{
 		Name:  "blob-batch-limit",
 		Usage: "The amount of blobs the local peer is bounded to request and respond to in a batch.",
-		Value: 8,
+		Value: 64,
 	}
 	// BlobBatchLimitBurstFactor specifies the factor by which blob batch size may increase.
 	BlobBatchLimitBurstFactor = &cli.IntFlag{
@@ -260,10 +258,5 @@ var (
 		Name:  "slasher-datadir",
 		Usage: "Directory for the slasher database",
 		Value: cmd.DefaultDataDir(),
-	}
-	BlobRetentionEpoch = &cli.Uint64Flag{
-		Name:  "extend-blob-retention-epoch",
-		Usage: "Extend blob retention epoch period to beyond default 4096 epochs (~18 days). The node will error at start if input value is less than 4096 epochs.",
-		Value: uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest),
 	}
 )

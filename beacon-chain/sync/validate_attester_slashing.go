@@ -6,13 +6,15 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -59,10 +61,15 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationReject, err
 	}
 	isSlashable := false
+	previouslySlashed := false
 	for _, v := range slashedVals {
 		val, err := headState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(v))
 		if err != nil {
 			return pubsub.ValidationIgnore, err
+		}
+		if val.Slashed() {
+			previouslySlashed = true
+			continue
 		}
 		if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), slots.ToEpoch(headState.Slot())) {
 			isSlashable = true
@@ -70,9 +77,20 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		}
 	}
 	if !isSlashable {
+		if previouslySlashed {
+			return pubsub.ValidationIgnore, errors.Errorf("validators were previously slashed: %v", slashedVals)
+		}
 		return pubsub.ValidationReject, errors.Errorf("none of the validators are slashable: %v", slashedVals)
 	}
 	s.cfg.chain.ReceiveAttesterSlashing(ctx, slashing)
+
+	// notify events
+	s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.AttesterSlashingReceived,
+		Data: &operation.AttesterSlashingReceivedData{
+			AttesterSlashing: slashing,
+		},
+	})
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
 	return pubsub.ValidationAccept, nil

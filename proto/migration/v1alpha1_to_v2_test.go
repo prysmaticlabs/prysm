@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestV1Alpha1SignedContributionAndProofToV2(t *testing.T) {
@@ -156,17 +156,6 @@ func Test_V1Alpha1BeaconBlockCapellaToV2Blinded(t *testing.T) {
 	v2Root, err := v2Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, alphaRoot, v2Root)
-}
-
-func Test_V1Alpha1BlobSidecarsToV2(t *testing.T) {
-	sidecar := util.HydrateBlobSidecar(&ethpbalpha.BlobSidecar{})
-	blobs := []*ethpbalpha.BlobSidecar{
-		sidecar,
-	}
-	sidecars, err := V1Alpha1BlobSidecarsToV2(blobs)
-	require.NoError(t, err)
-	require.Equal(t, len(sidecars), len(blobs))
-	assert.DeepEqual(t, sidecars[0].Blob, blobs[0].Blob)
 }
 
 func TestBeaconStateAltairToProto(t *testing.T) {

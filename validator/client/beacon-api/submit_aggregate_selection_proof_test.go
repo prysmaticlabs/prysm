@@ -6,21 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/test-helpers"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	"go.uber.org/mock/gomock"
 )
 
 func TestSubmitAggregateSelectionProof(t *testing.T) {
@@ -37,7 +35,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		committeeIndex               = primitives.CommitteeIndex(1)
 	)
 
-	attesterDuties := []*validator.AttesterDuty{
+	attesterDuties := []*structs.AttesterDuty{
 		{
 			Pubkey:          pubkeyStr,
 			ValidatorIndex:  validatorIndex,
@@ -70,7 +68,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		dutiesErr                  error
 		attestationDataErr         error
 		aggregateAttestationErr    error
-		duties                     []*validator.AttesterDuty
+		duties                     []*structs.AttesterDuty
 		validatorsCalled           int
 		attesterDutiesCalled       int
 		attestationDataCalled      int
@@ -126,11 +124,11 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			attestationDataCalled:      1,
 			aggregateAttestationCalled: 1,
 			aggregateAttestationErr:    errors.New("bad request"),
-			expectedErrorMsg:           "failed to get aggregate attestation",
+			expectedErrorMsg:           "bad request",
 		},
 		{
 			name: "validator is not an aggregator",
-			duties: []*validator.AttesterDuty{
+			duties: []*structs.AttesterDuty{
 				{
 					Pubkey:          pubkeyStr,
 					ValidatorIndex:  validatorIndex,
@@ -145,7 +143,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		},
 		{
 			name:                 "no attester duties",
-			duties:               []*validator.AttesterDuty{},
+			duties:               []*structs.AttesterDuty{},
 			validatorsCalled:     1,
 			attesterDutiesCalled: 1,
 			expectedErrorMsg:     fmt.Sprintf("no attester duty for the given slot %d", slot),
@@ -155,92 +153,117 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			// Call node syncing endpoint to check if head is optimistic.
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				syncingEndpoint,
-				&node.SyncStatusResponse{},
+				&structs.SyncStatusResponse{},
 			).SetArg(
 				2,
-				node.SyncStatusResponse{
-					Data: &node.SyncStatusResponseData{
+				structs.SyncStatusResponse{
+					Data: &structs.SyncStatusResponseData{
 						IsOptimistic: test.isOptimistic,
 					},
 				},
 			).Return(
-				nil,
 				test.syncingErr,
 			).Times(1)
 
+			valsReq := &structs.GetValidatorsRequest{
+				Ids:      []string{stringPubKey},
+				Statuses: []string{},
+			}
+			valReqBytes, err := json.Marshal(valsReq)
+			require.NoError(t, err)
+
 			// Call validators endpoint to get validator index.
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Post(
 				ctx,
-				fmt.Sprintf("%s?id=%s", validatorsEndpoint, pubkeyStr),
-				&beacon.GetValidatorsResponse{},
+				validatorsEndpoint,
+				nil,
+				bytes.NewBuffer(valReqBytes),
+				&structs.GetValidatorsResponse{},
 			).SetArg(
-				2,
-				beacon.GetValidatorsResponse{
-					Data: []*beacon.ValidatorContainer{
+				4,
+				structs.GetValidatorsResponse{
+					Data: []*structs.ValidatorContainer{
 						{
 							Index:  validatorIndex,
 							Status: "active_ongoing",
-							Validator: &beacon.Validator{
+							Validator: &structs.Validator{
 								Pubkey: pubkeyStr,
 							},
 						},
 					},
 				},
 			).Return(
-				nil,
 				test.validatorsErr,
 			).Times(test.validatorsCalled)
+
+			if test.validatorsErr != nil {
+				// Then try the GET call which will also return error.
+				queryParams := url.Values{}
+				for _, id := range valsReq.Ids {
+					queryParams.Add("id", id)
+				}
+				for _, st := range valsReq.Statuses {
+					queryParams.Add("status", st)
+				}
+
+				query := buildURL("/eth/v1/beacon/states/head/validators", queryParams)
+
+				jsonRestHandler.EXPECT().Get(
+					ctx,
+					query,
+					&structs.GetValidatorsResponse{},
+				).Return(
+					test.validatorsErr,
+				).Times(1)
+			}
 
 			// Call attester duties endpoint to get attester duties.
 			validatorIndicesBytes, err := json.Marshal([]string{validatorIndex})
 			require.NoError(t, err)
-			jsonRestHandler.EXPECT().PostRestJson(
+			jsonRestHandler.EXPECT().Post(
 				ctx,
 				fmt.Sprintf("%s/%d", attesterDutiesEndpoint, slots.ToEpoch(slot)),
 				nil,
 				bytes.NewBuffer(validatorIndicesBytes),
-				&validator.GetAttesterDutiesResponse{},
+				&structs.GetAttesterDutiesResponse{},
 			).SetArg(
 				4,
-				validator.GetAttesterDutiesResponse{
+				structs.GetAttesterDutiesResponse{
 					Data: test.duties,
 				},
 			).Return(
-				nil,
 				test.dutiesErr,
 			).Times(test.attesterDutiesCalled)
 
 			// Call attestation data to get attestation data root to query aggregate attestation.
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				fmt.Sprintf("%s?committee_index=%d&slot=%d", attestationDataEndpoint, committeeIndex, slot),
-				&validator.GetAttestationDataResponse{},
+				&structs.GetAttestationDataResponse{},
 			).SetArg(
 				2,
 				attestationDataResponse,
 			).Return(
-				nil,
 				test.attestationDataErr,
 			).Times(test.attestationDataCalled)
 
 			// Call attestation data to get attestation data root to query aggregate attestation.
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				fmt.Sprintf("%s?attestation_data_root=%s&slot=%d", aggregateAttestationEndpoint, hexutil.Encode(attestationDataRootBytes[:]), slot),
-				&apimiddleware.AggregateAttestationResponseJson{},
+				&structs.AggregateAttestationResponse{},
 			).SetArg(
 				2,
-				apimiddleware.AggregateAttestationResponseJson{
+				structs.AggregateAttestationResponse{
 					Data: jsonifyAttestation(aggregateAttestation),
 				},
 			).Return(
-				nil,
 				test.aggregateAttestationErr,
 			).Times(test.aggregateAttestationCalled)
 

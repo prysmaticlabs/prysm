@@ -4,8 +4,8 @@ import (
 	"math"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
@@ -23,32 +23,21 @@ const (
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 	// Bellatrix Fork Epoch for mainnet config.
 	mainnetBellatrixForkEpoch = 144896 // Sept 6, 2022, 11:34:47am UTC
+	// Capella Fork Epoch for mainnet config.
+	mainnetCapellaForkEpoch = 194048 // April 12, 2023, 22:27:35 UTC
+	// Deneb Fork Epoch for mainnet config.
+	mainnetDenebForkEpoch = 269568 // March 13, 2024, 13:55:35 UTC
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                    1 << 20,      // 1 MiB
-	GossipMaxSizeBellatrix:           10 * 1 << 20, // 10 MiB
-	MaxChunkSize:                     1 << 20,      // 1 MiB
-	MaxChunkSizeBellatrix:            10 * 1 << 20, // 10 MiB
-	AttestationSubnetCount:           64,
-	AttestationPropagationSlotRange:  32,
-	MaxRequestBlocks:                 1 << 10, // 1024
-	TtfbTimeout:                      5 * time.Second,
-	RespTimeout:                      10 * time.Second,
-	MaximumGossipClockDisparity:      500 * time.Millisecond,
-	MessageDomainInvalidSnappy:       [4]byte{00, 00, 00, 00},
-	MessageDomainValidSnappy:         [4]byte{01, 00, 00, 00},
-	ETH2Key:                          "eth2",
-	AttSubnetKey:                     "attnets",
-	SyncCommsSubnetKey:               "syncnets",
-	MinimumPeersInSubnetSearch:       20,
-	ContractDeploymentBlock:          11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
-	MinEpochsForBlobsSidecarsRequest: 4096,
-	MaxRequestBlobSidecars:           768,
-	MaxRequestBlocksDeneb:            128,
+	ETH2Key:                    "eth2",
+	AttSubnetKey:               "attnets",
+	SyncCommsSubnetKey:         "syncnets",
+	MinimumPeersInSubnetSearch: 20,
+	ContractDeploymentBlock:    11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
 	BootstrapNodes: []string{
 		// Teku team's bootnode
-		"enr:-KG4QMOEswP62yzDjSwWS4YEjtTZ5PO6r65CPqYBkgTTkrpaedQ8uEUo1uMALtJIvb2w_WWEVmg5yt1UAuK1ftxUU7QDhGV0aDKQu6TalgMAAAD__________4JpZIJ2NIJpcIQEnfA2iXNlY3AyNTZrMaEDfol8oLr6XJ7FsdAYE7lpJhKMls4G_v6qQOGKJUWGb_uDdGNwgiMog3VkcIIjKA",
+		"enr:-KG4QNTx85fjxABbSq_Rta9wy56nQ1fHK0PewJbGjLm1M4bMGx5-3Qq4ZX2-iFJ0pys_O90sVXNNOxp2E7afBsGsBrgDhGV0aDKQu6TalgMAAAD__________4JpZIJ2NIJpcIQEnfA2iXNlY3AyNTZrMaECGXWQ-rQ2KZKRH1aOW4IlPDBkY4XDphxg9pxKytFCkayDdGNwgiMog3VkcIIjKA",
 		"enr:-KG4QF4B5WrlFcRhUU6dZETwY5ZzAXnA0vGC__L1Kdw602nDZwXSTs5RFXFIFUnbQJmhNGVU6OIX7KVrCSTODsz1tK4DhGV0aDKQu6TalgMAAAD__________4JpZIJ2NIJpcIQExNYEiXNlY3AyNTZrMaECQmM9vp7KhaXhI-nqL_R0ovULLCFSFTa9CPPSdb1zPX6DdGNwgiMog3VkcIIjKA",
 		// Prylab team's bootnodes
 		"enr:-Ku4QImhMc1z8yCiNJ1TyUxdcfNucje3BGwEHzodEZUan8PherEo4sF7pPHPSIB1NNuSg5fZy7qFsjmUKs2ea1Whi0EBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD1pf1CAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQOVphkDqal4QzPMksc5wnpuC3gvSC8AfbFOnZY_On34wIN1ZHCCIyg",
@@ -177,7 +166,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
 	DomainApplicationBuilder:          bytesutil.Uint32ToBytes4(0x00000001),
 	DomainBLSToExecutionChange:        bytesutil.Uint32ToBytes4(0x0A000000),
-	DomainBlobSidecar:                 bytesutil.Uint32ToBytes4(0x0B000000),
 
 	// Prysm constants.
 	GweiPerEth:                     1000000000,
@@ -216,9 +204,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
-	CapellaForkEpoch:     194048,
+	CapellaForkEpoch:     mainnetCapellaForkEpoch,
 	DenebForkVersion:     []byte{4, 0, 0, 0},
-	DenebForkEpoch:       math.MaxUint64,
+	DenebForkEpoch:       mainnetDenebForkEpoch,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
@@ -254,6 +242,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
+	MaxRequestLightClientUpdates: 128,
 
 	// Bellatrix
 	TerminalBlockHashActivationEpoch: 18446744073709551615,
@@ -271,7 +260,28 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Subnet value
 	BlobsidecarSubnetCount: 6,
 
-	MaxPerEpochActivationChurnLimit: 8,
+	MaxPerEpochActivationChurnLimit:  8,
+	MinEpochsForBlobsSidecarsRequest: 4096,
+	MaxRequestBlobSidecars:           768,
+	MaxRequestBlocksDeneb:            128,
+
+	// Values related to networking parameters.
+	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
+	MaxChunkSize:                    10 * 1 << 20, // 10 MiB
+	AttestationSubnetCount:          64,
+	AttestationPropagationSlotRange: 32,
+	MaxRequestBlocks:                1 << 10, // 1024
+	TtfbTimeout:                     5,
+	RespTimeout:                     10,
+	MaximumGossipClockDisparity:     500,
+	MessageDomainInvalidSnappy:      [4]byte{00, 00, 00, 00},
+	MessageDomainValidSnappy:        [4]byte{01, 00, 00, 00},
+	MinEpochsForBlockRequests:       33024, // MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT / 2 (= 33024, ~5 months)
+	EpochsPerSubnetSubscription:     256,
+	AttestationSubnetExtraBits:      0,
+	AttestationSubnetPrefixBits:     6,
+	SubnetsPerNode:                  2,
+	NodeIdBits:                      256,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

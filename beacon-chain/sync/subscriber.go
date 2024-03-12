@@ -13,21 +13,21 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/messagehandler"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/messagehandler"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -90,7 +90,7 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 			s.validateCommitteeIndexBeaconAttestation,   /* validator */
 			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
 			digest,
-			params.BeaconNetworkConfig().AttestationSubnetCount,
+			params.BeaconConfig().AttestationSubnetCount,
 		)
 	} else {
 		s.subscribeDynamicWithSubnets(
@@ -202,7 +202,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 			if r := recover(); r != nil {
 				tracing.AnnotateError(span, fmt.Errorf("panic occurred: %v", r))
 				log.WithField("error", r).
-					WithField("recovered_at", "subscribeWithBase").
+					WithField("recoveredAt", "subscribeWithBase").
 					WithField("stack", string(debug.Stack())).
 					Error("Panic occurred")
 			}
@@ -248,7 +248,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 	}
 
 	go messageLoop()
-	log.WithField("topic", topic).Info("Subscribed to topic")
+	log.WithField("topic", topic).Info("Subscribed to")
 	return sub
 }
 
@@ -257,7 +257,8 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, pubsub.ValidatorEx) {
 	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) (res pubsub.ValidationResult) {
 		defer messagehandler.HandlePanic(ctx, msg)
-		res = pubsub.ValidationIgnore // Default: ignore any message that panics.
+		// Default: ignore any message that panics.
+		res = pubsub.ValidationIgnore // nolint:wastedassign
 		ctx, cancel := context.WithTimeout(ctx, pubsubMessageTimeout)
 		defer cancel()
 		messageReceivedCounter.WithLabelValues(topic).Inc()
@@ -285,13 +286,18 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 			return pubsub.ValidationIgnore
 		}
 		b, err := v(ctx, pid, msg)
+		// We do not penalize peers if we are hitting pubsub timeouts
+		// trying to process those messages.
+		if b == pubsub.ValidationReject && ctx.Err() != nil {
+			b = pubsub.ValidationIgnore
+		}
 		if b == pubsub.ValidationReject {
 			fields := logrus.Fields{
 				"topic":        topic,
 				"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
-				"peer id":      pid.String(),
+				"peerID":       pid.String(),
 				"agent":        agentString(pid, s.cfg.p2p.Host()),
-				"gossip score": s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
+				"gossipScore":  s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
 			}
 			if features.Get().EnableFullSSZDataLogging {
 				fields["message"] = hexutil.Encode(msg.Data)
@@ -304,9 +310,9 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 				log.WithError(err).WithFields(logrus.Fields{
 					"topic":        topic,
 					"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
-					"peer id":      pid.String(),
+					"peerID":       pid.String(),
 					"agent":        agentString(pid, s.cfg.p2p.Host()),
-					"gossip score": s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
+					"gossipScore":  s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
 				}).Debugf("Gossip message was ignored")
 			}
 			messageIgnoredValidationCounter.WithLabelValues(topic).Inc()
@@ -686,7 +692,7 @@ func (s *Service) retrievePersistentSubs(currSlot primitives.Slot) []uint64 {
 	return slice.SetUint64(append(persistentSubs, wantedSubs...))
 }
 
-func (_ *Service) retrieveActiveSyncSubnets(currEpoch primitives.Epoch) []uint64 {
+func (*Service) retrieveActiveSyncSubnets(currEpoch primitives.Epoch) []uint64 {
 	subs := cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
 	return slice.SetUint64(subs)
 }
@@ -741,17 +747,17 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 }
 
 // Add fork digest to topic.
-func (_ *Service) addDigestToTopic(topic string, digest [4]byte) string {
+func (*Service) addDigestToTopic(topic string, digest [4]byte) string {
 	if !strings.Contains(topic, "%x") {
-		log.Fatal("Topic does not have appropriate formatter for digest")
+		log.Error("Topic does not have appropriate formatter for digest")
 	}
 	return fmt.Sprintf(topic, digest)
 }
 
 // Add the digest and index to subnet topic.
-func (_ *Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uint64) string {
+func (*Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uint64) string {
 	if !strings.Contains(topic, "%x") {
-		log.Fatal("Topic does not have appropriate formatter for digest")
+		log.Error("Topic does not have appropriate formatter for digest")
 	}
 	return fmt.Sprintf(topic, digest, idx)
 }
@@ -781,10 +787,8 @@ func isDigestValid(digest [4]byte, genesis time.Time, genValRoot [32]byte) (bool
 }
 
 func agentString(pid peer.ID, hst host.Host) string {
-	agString := ""
-	ok := false
 	rawVersion, storeErr := hst.Peerstore().Get(pid, "AgentVersion")
-	agString, ok = rawVersion.(string)
+	agString, ok := rawVersion.(string)
 	if storeErr != nil || !ok {
 		agString = ""
 	}

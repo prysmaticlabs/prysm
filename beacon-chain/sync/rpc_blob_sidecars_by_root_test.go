@@ -6,15 +6,16 @@ import (
 	"testing"
 
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2pTypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func (c *blobsTestCase) defaultOldestSlotByRoot(t *testing.T) types.Slot {
@@ -23,21 +24,22 @@ func (c *blobsTestCase) defaultOldestSlotByRoot(t *testing.T) types.Slot {
 	return oldest
 }
 
-func blobRootRequestFromSidecars(scs []*ethpb.BlobSidecar) interface{} {
+func blobRootRequestFromSidecars(scs []blocks.ROBlob) interface{} {
 	req := make(p2pTypes.BlobSidecarsByRootReq, 0)
-	for _, sc := range scs {
-		req = append(req, &ethpb.BlobIdentifier{BlockRoot: sc.BlockRoot, Index: sc.Index})
+	for i := range scs {
+		sc := scs[i]
+		req = append(req, &ethpb.BlobIdentifier{BlockRoot: sc.BlockRootSlice(), Index: sc.Index})
 	}
 	return &req
 }
 
-func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSidecar, r interface{}) []*expectedBlobChunk {
+func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []blocks.ROBlob, r interface{}) []*expectedBlobChunk {
 	rp, ok := r.(*p2pTypes.BlobSidecarsByRootReq)
 	if !ok {
 		panic("unexpected request type in filterExpectedByRoot")
 	}
 	req := *rp
-	if uint64(len(req)) > params.BeaconNetworkConfig().MaxRequestBlobSidecars {
+	if uint64(len(req)) > params.BeaconConfig().MaxRequestBlobSidecars {
 		return []*expectedBlobChunk{{
 			code:    responseCodeInvalidRequest,
 			message: p2pTypes.ErrBlobLTMinRequest.Error(),
@@ -49,12 +51,13 @@ func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSide
 	if len(scs) == 0 {
 		return expect
 	}
-	lastRoot := bytesutil.ToBytes32(scs[0].BlockRoot)
+	lastRoot := scs[0].BlockRoot()
 	rootToOffset := make(map[[32]byte]int)
 	rootToOffset[lastRoot] = 0
-	scMap := make(map[[32]byte]map[uint64]*ethpb.BlobSidecar)
-	for _, sc := range scs {
-		root := bytesutil.ToBytes32(sc.BlockRoot)
+	scMap := make(map[[32]byte]map[uint64]blocks.ROBlob)
+	for i := range scs {
+		sc := scs[i]
+		root := sc.BlockRoot()
 		if root != lastRoot {
 			blockOffset += 1
 			rootToOffset[root] = blockOffset
@@ -62,11 +65,12 @@ func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSide
 		lastRoot = root
 		_, ok := scMap[root]
 		if !ok {
-			scMap[root] = make(map[uint64]*ethpb.BlobSidecar)
+			scMap[root] = make(map[uint64]blocks.ROBlob)
 		}
 		scMap[root][sc.Index] = sc
 	}
-	for _, scid := range req {
+	for i := range req {
+		scid := req[i]
 		rootMap, ok := scMap[bytesutil.ToBytes32(scid.BlockRoot)]
 		if !ok {
 			panic(fmt.Sprintf("test setup failure, no fixture with root %#x", scid.BlockRoot))
@@ -76,7 +80,7 @@ func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSide
 			panic(fmt.Sprintf("test setup failure, no fixture at index %d with root %#x", scid.Index, scid.BlockRoot))
 		}
 		// Skip sidecars that are supposed to be missing.
-		root := bytesutil.ToBytes32(sc.BlockRoot)
+		root := sc.BlockRoot()
 		if c.missing[rootToOffset[root]] {
 			continue
 		}
@@ -86,14 +90,14 @@ func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSide
 		// will set streamTerminated = true and skip everything else in the test case.
 		if c.expired[rootToOffset[root]] {
 			return append(expect, &expectedBlobChunk{
-				sidecar: sc,
+				sidecar: &sc,
 				code:    responseCodeResourceUnavailable,
 				message: p2pTypes.ErrBlobLTMinRequest.Error(),
 			})
 		}
 
 		expect = append(expect, &expectedBlobChunk{
-			sidecar: sc,
+			sidecar: &sc,
 			code:    responseCodeSuccess,
 			message: "",
 		})
@@ -148,7 +152,7 @@ func readChunkEncodedBlobsLowMax(t *testing.T, s *Service, expect []*expectedBlo
 	encoding := s.cfg.p2p.Encoding()
 	ctxMap, err := ContextByteVersionsForValRoot(s.cfg.clock.GenesisValidatorsRoot())
 	require.NoError(t, err)
-	vf := func(sidecar *ethpb.BlobSidecar) error {
+	vf := func(sidecar blocks.ROBlob) error {
 		return nil
 	}
 	return func(stream network.Stream) {
@@ -161,18 +165,18 @@ func readChunkEncodedBlobsAsStreamReader(t *testing.T, s *Service, expect []*exp
 	encoding := s.cfg.p2p.Encoding()
 	ctxMap, err := ContextByteVersionsForValRoot(s.cfg.clock.GenesisValidatorsRoot())
 	require.NoError(t, err)
-	vf := func(sidecar *ethpb.BlobSidecar) error {
+	vf := func(sidecar blocks.ROBlob) error {
 		return nil
 	}
 	return func(stream network.Stream) {
-		scs, err := readChunkEncodedBlobs(stream, encoding, ctxMap, vf, params.BeaconNetworkConfig().MaxRequestBlobSidecars)
+		scs, err := readChunkEncodedBlobs(stream, encoding, ctxMap, vf, params.BeaconConfig().MaxRequestBlobSidecars)
 		require.NoError(t, err)
 		require.Equal(t, len(expect), len(scs))
 		for i, sc := range scs {
 			esc := expect[i].sidecar
-			require.Equal(t, esc.Slot, sc.Slot)
+			require.Equal(t, esc.Slot(), sc.Slot())
 			require.Equal(t, esc.Index, sc.Index)
-			require.Equal(t, bytesutil.ToBytes32(esc.BlockRoot), bytesutil.ToBytes32(sc.BlockRoot))
+			require.Equal(t, esc.BlockRoot(), sc.BlockRoot())
 		}
 	}
 }
@@ -223,7 +227,7 @@ func TestBlobsByRootValidation(t *testing.T) {
 		},
 		{
 			name:    "exceeds req max",
-			nblocks: int(params.BeaconNetworkConfig().MaxRequestBlobSidecars) + 1,
+			nblocks: int(params.BeaconConfig().MaxRequestBlobSidecars) + 1,
 			err:     p2pTypes.ErrMaxBlobReqExceeded,
 		},
 	}
@@ -257,7 +261,7 @@ func TestBlobsByRootOK(t *testing.T) {
 }
 
 func TestBlobsByRootMinReqEpoch(t *testing.T) {
-	winMin := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	winMin := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	cases := []struct {
 		name      string
 		finalized types.Epoch

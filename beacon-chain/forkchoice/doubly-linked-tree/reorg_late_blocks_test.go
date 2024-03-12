@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestForkChoice_ShouldOverrideFCU(t *testing.T) {
@@ -28,6 +28,7 @@ func TestForkChoice_ShouldOverrideFCU(t *testing.T) {
 	}
 	f.ProcessAttestation(ctx, attesters, root, 0)
 
+	orphanLateBlockFirstThreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
 	driftGenesisTime(f, 2, orphanLateBlockFirstThreshold+1)
 	st, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
 	require.NoError(t, err)
@@ -84,11 +85,19 @@ func TestForkChoice_ShouldOverrideFCU(t *testing.T) {
 		require.Equal(t, false, f.ShouldOverrideFCU())
 		f.store.headNode.parent = saved
 	})
-	t.Run("parent is weak", func(t *testing.T) {
+	t.Run("parent is weak early call", func(t *testing.T) {
 		saved := f.store.headNode.parent.weight
+		f.store.headNode.parent.weight = 0
+		require.Equal(t, true, f.ShouldOverrideFCU())
+		f.store.headNode.parent.weight = saved
+	})
+	t.Run("parent is weak late call", func(t *testing.T) {
+		saved := f.store.headNode.parent.weight
+		driftGenesisTime(f, 2, 11)
 		f.store.headNode.parent.weight = 0
 		require.Equal(t, false, f.ShouldOverrideFCU())
 		f.store.headNode.parent.weight = saved
+		driftGenesisTime(f, 2, orphanLateBlockFirstThreshold+1)
 	})
 	t.Run("Head is strong", func(t *testing.T) {
 		f.store.headNode.weight = f.store.committeeWeight
@@ -125,6 +134,7 @@ func TestForkChoice_GetProposerHead(t *testing.T) {
 	headRoot, err := f.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, root, headRoot)
+	orphanLateBlockFirstThreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
 	f.store.headNode.timestamp -= params.BeaconConfig().SecondsPerSlot - orphanLateBlockFirstThreshold
 	t.Run("head is weak", func(t *testing.T) {
 		require.Equal(t, parentRoot, f.GetProposerHead())

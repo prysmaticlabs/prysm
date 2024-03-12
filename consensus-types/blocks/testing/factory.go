@@ -2,9 +2,9 @@ package testing
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // NewSignedBeaconBlockFromGeneric creates a signed beacon block
@@ -29,7 +29,7 @@ func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (interfac
 	case *eth.GenericSignedBeaconBlock_Deneb:
 		return blocks.NewSignedBeaconBlock(bb.Deneb.Block)
 	case *eth.GenericSignedBeaconBlock_BlindedDeneb:
-		return blocks.NewSignedBeaconBlock(bb.BlindedDeneb.SignedBlindedBlock)
+		return blocks.NewSignedBeaconBlock(bb.BlindedDeneb)
 	// Generic Signed Beacon Block Deneb can't be used here as it is not a block, but block content with blobs
 	default:
 		return nil, errors.Wrapf(blocks.ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", gb)

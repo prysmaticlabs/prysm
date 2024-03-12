@@ -4,13 +4,13 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 func (c *beaconApiValidatorClient) validatorStatus(ctx context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
@@ -29,7 +29,11 @@ func (c *beaconApiValidatorClient) validatorStatus(ctx context.Context, in *ethp
 }
 
 func (c *beaconApiValidatorClient) multipleValidatorStatus(ctx context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
-	publicKeys, indices, statuses, err := c.getValidatorsStatusResponse(ctx, in.PublicKeys, in.Indices)
+	indices := make([]primitives.ValidatorIndex, len(in.Indices))
+	for i, ix := range in.Indices {
+		indices[i] = primitives.ValidatorIndex(ix)
+	}
+	publicKeys, indices, statuses, err := c.getValidatorsStatusResponse(ctx, in.PublicKeys, indices)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validators status response")
 	}
@@ -41,7 +45,7 @@ func (c *beaconApiValidatorClient) multipleValidatorStatus(ctx context.Context, 
 	}, nil
 }
 
-func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Context, inPubKeys [][]byte, inIndexes []int64) (
+func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Context, inPubKeys [][]byte, inIndexes []primitives.ValidatorIndex) (
 	[][]byte,
 	[]primitives.ValidatorIndex,
 	[]*ethpb.ValidatorStatusResponse,
@@ -55,7 +59,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 	stringRetrievedPubKeys := make(map[string]struct{})
 
 	// Contains all keys in targetPubKeys but not in retrievedPubKeys
-	missingPubKeys := [][]byte{}
+	var missingPubKeys [][]byte
 
 	totalLen := len(inPubKeys) + len(inIndexes)
 

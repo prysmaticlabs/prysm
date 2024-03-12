@@ -12,17 +12,17 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestStatus(t *testing.T) {
@@ -788,7 +788,7 @@ func TestPrunePeers_TrustedPeers(t *testing.T) {
 		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
 	}
 
-	trustedPeers := []peer.ID{}
+	var trustedPeers []peer.ID
 	// Set up bad scores for inbound peers.
 	inboundPeers := p.InboundConnected()
 	for i, pid := range inboundPeers {
@@ -1108,7 +1108,7 @@ func TestInbound(t *testing.T) {
 
 	result := p.Inbound()
 	require.Equal(t, 1, len(result))
-	assert.Equal(t, inbound.Pretty(), result[0].Pretty())
+	assert.Equal(t, inbound.String(), result[0].String())
 }
 
 func TestOutbound(t *testing.T) {
@@ -1127,7 +1127,7 @@ func TestOutbound(t *testing.T) {
 
 	result := p.Outbound()
 	require.Equal(t, 1, len(result))
-	assert.Equal(t, outbound.Pretty(), result[0].Pretty())
+	assert.Equal(t, outbound.String(), result[0].String())
 }
 
 // addPeer is a helper to add a peer with a given connection state)

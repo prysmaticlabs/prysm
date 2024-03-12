@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 func (c beaconApiValidatorClient) proposeAttestation(ctx context.Context, attestation *ethpb.Attestation) (*ethpb.AttestResponse, error) {
@@ -19,8 +19,14 @@ func (c beaconApiValidatorClient) proposeAttestation(ctx context.Context, attest
 		return nil, err
 	}
 
-	if _, err := c.jsonRestHandler.PostRestJson(ctx, "/eth/v1/beacon/pool/attestations", nil, bytes.NewBuffer(marshalledAttestation), nil); err != nil {
-		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
+	if err = c.jsonRestHandler.Post(
+		ctx,
+		"/eth/v1/beacon/pool/attestations",
+		nil,
+		bytes.NewBuffer(marshalledAttestation),
+		nil,
+	); err != nil {
+		return nil, err
 	}
 
 	attestationDataRoot, err := attestation.Data.HashTreeRoot()

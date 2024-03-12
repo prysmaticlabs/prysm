@@ -7,23 +7,28 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
-var CommitteeCacheInProgressHit = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "committee_cache_in_progress_hit",
-	Help: "The number of committee requests that are present in the cache.",
-})
+var (
+	CommitteeCacheInProgressHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "committee_cache_in_progress_hit",
+		Help: "The number of committee requests that are present in the cache.",
+	})
+
+	errProposerIndexMiss = errors.New("propoposer index not found in cache")
+)
 
 // IsActiveValidator returns the boolean value on whether the validator
 // is active or not.
@@ -134,6 +139,10 @@ func ActiveValidatorIndices(ctx context.Context, s state.ReadOnlyBeaconState, ep
 		return nil
 	}); err != nil {
 		return nil, err
+	}
+
+	if len(indices) == 0 {
+		return nil, errors.New("no active validator indices")
 	}
 
 	if err := UpdateCommitteeCache(ctx, s, epoch); err != nil {
@@ -255,12 +264,43 @@ func ValidatorActivationChurnLimitDeneb(activeValidatorCount uint64) uint64 {
 //	  indices = get_active_validator_indices(state, epoch)
 //	  return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (primitives.ValidatorIndex, error) {
-	e := time.CurrentEpoch(state)
+	return BeaconProposerIndexAtSlot(ctx, state, state.Slot())
+}
+
+// cachedProposerIndexAtSlot returns the proposer index at the given slot from
+// the cache at the given root key.
+func cachedProposerIndexAtSlot(slot primitives.Slot, root [32]byte) (primitives.ValidatorIndex, error) {
+	proposerIndices, has := proposerIndicesCache.ProposerIndices(slots.ToEpoch(slot), root)
+	if !has {
+		return 0, errProposerIndexMiss
+	}
+	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+		return 0, errProposerIndexMiss
+	}
+	return proposerIndices[slot%params.BeaconConfig().SlotsPerEpoch], nil
+}
+
+// ProposerIndexAtSlotFromCheckpoint returns the proposer index at the given
+// slot from the cache at the given checkpoint
+func ProposerIndexAtSlotFromCheckpoint(c *forkchoicetypes.Checkpoint, slot primitives.Slot) (primitives.ValidatorIndex, error) {
+	proposerIndices, has := proposerIndicesCache.IndicesFromCheckpoint(*c)
+	if !has {
+		return 0, errProposerIndexMiss
+	}
+	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+		return 0, errProposerIndexMiss
+	}
+	return proposerIndices[slot%params.BeaconConfig().SlotsPerEpoch], nil
+}
+
+// BeaconProposerIndexAtSlot returns proposer index at the given slot from the
+// point of view of the given state as head state
+func BeaconProposerIndexAtSlot(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot) (primitives.ValidatorIndex, error) {
+	e := slots.ToEpoch(slot)
 	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
 	// For simplicity, the node will skip caching of genesis epoch.
 	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
-		wantedEpoch := time.PrevEpoch(state)
-		s, err := slots.EpochEnd(wantedEpoch)
+		s, err := slots.EpochEnd(e - 1)
 		if err != nil {
 			return 0, err
 		}
@@ -269,18 +309,16 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 			return 0, err
 		}
 		if r != nil && !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
-			proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
-			if err != nil {
-				return 0, errors.Wrap(err, "could not interface with committee cache")
+			pid, err := cachedProposerIndexAtSlot(slot, [32]byte(r))
+			if err == nil {
+				return pid, nil
 			}
-			if proposerIndices != nil {
-				if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
-					return 0, errors.Errorf("length of proposer indices is not equal %d to slots per epoch", len(proposerIndices))
-				}
-				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
+			if err := UpdateProposerIndicesInCache(ctx, state, e); err != nil {
+				return 0, errors.Wrap(err, "could not update proposer index cache")
 			}
-			if err := UpdateProposerIndicesInCache(ctx, state, time.CurrentEpoch(state)); err != nil {
-				return 0, errors.Wrap(err, "could not update committee cache")
+			pid, err = cachedProposerIndexAtSlot(slot, [32]byte(r))
+			if err == nil {
+				return pid, nil
 			}
 		}
 	}
@@ -290,7 +328,7 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
 
-	seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(state.Slot()))...)
+	seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(slot))...)
 	seedWithSlotHash := hash.Hash(seedWithSlot)
 
 	indices, err := ActiveValidatorIndices(ctx, state, e)

@@ -5,13 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
-	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"go.uber.org/mock/gomock"
 )
 
 func TestGetValidatorCount(t *testing.T) {
@@ -21,21 +20,21 @@ func TestGetValidatorCount(t *testing.T) {
 		name                        string
 		versionEndpointError        error
 		validatorCountEndpointError error
-		versionResponse             node.GetVersionResponse
-		validatorCountResponse      validator2.ValidatorCountResponse
+		versionResponse             structs.GetVersionResponse
+		validatorCountResponse      structs.GetValidatorCountResponse
 		validatorCountCalled        int
 		expectedResponse            []iface.ValidatorCount
 		expectedError               string
 	}{
 		{
 			name: "success",
-			versionResponse: node.GetVersionResponse{
-				Data: &node.Version{Version: nodeVersion},
+			versionResponse: structs.GetVersionResponse{
+				Data: &structs.Version{Version: nodeVersion},
 			},
-			validatorCountResponse: validator2.ValidatorCountResponse{
+			validatorCountResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*validator2.ValidatorCount{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "active",
 						Count:  "10",
@@ -52,8 +51,8 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "not supported beacon node",
-			versionResponse: node.GetVersionResponse{
-				Data: &node.Version{Version: "lighthouse/v0.0.1"},
+			versionResponse: structs.GetVersionResponse{
+				Data: &structs.Version{Version: "lighthouse/v0.0.1"},
 			},
 			expectedError: "endpoint not supported",
 		},
@@ -64,8 +63,8 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "fails to get validator count",
-			versionResponse: node.GetVersionResponse{
-				Data: &node.Version{Version: nodeVersion},
+			versionResponse: structs.GetVersionResponse{
+				Data: &structs.Version{Version: nodeVersion},
 			},
 			validatorCountEndpointError: errors.New("foo error"),
 			validatorCountCalled:        1,
@@ -73,10 +72,10 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "nil validator count data",
-			versionResponse: node.GetVersionResponse{
-				Data: &node.Version{Version: nodeVersion},
+			versionResponse: structs.GetVersionResponse{
+				Data: &structs.Version{Version: nodeVersion},
 			},
-			validatorCountResponse: validator2.ValidatorCountResponse{
+			validatorCountResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
 				Data:                nil,
@@ -86,13 +85,13 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "invalid validator count",
-			versionResponse: node.GetVersionResponse{
-				Data: &node.Version{Version: nodeVersion},
+			versionResponse: structs.GetVersionResponse{
+				Data: &structs.Version{Version: nodeVersion},
 			},
-			validatorCountResponse: validator2.ValidatorCountResponse{
+			validatorCountResponse: structs.GetValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*validator2.ValidatorCount{
+				Data: []*structs.ValidatorCount{
 					{
 						Status: "active",
 						Count:  "10",
@@ -114,29 +113,27 @@ func TestGetValidatorCount(t *testing.T) {
 			defer ctrl.Finish()
 
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			// Expect node version endpoint call.
-			var nodeVersionResponse node.GetVersionResponse
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			var nodeVersionResponse structs.GetVersionResponse
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v1/node/version",
 				&nodeVersionResponse,
 			).Return(
-				nil,
 				test.versionEndpointError,
 			).SetArg(
 				2,
 				test.versionResponse,
 			)
 
-			var validatorCountResponse validator2.ValidatorCountResponse
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			var validatorCountResponse structs.GetValidatorCountResponse
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v1/beacon/states/head/validator_count?status=active",
 				&validatorCountResponse,
 			).Return(
-				nil,
 				test.validatorCountEndpointError,
 			).SetArg(
 				2,
@@ -149,7 +146,7 @@ func TestGetValidatorCount(t *testing.T) {
 				jsonRestHandler: jsonRestHandler,
 			}
 
-			countResponse, err := client.GetValidatorCount(ctx, "head", []validator.ValidatorStatus{validator.Active})
+			countResponse, err := client.GetValidatorCount(ctx, "head", []validator.Status{validator.Active})
 
 			if len(test.expectedResponse) == 0 {
 				require.ErrorContains(t, test.expectedError, err)

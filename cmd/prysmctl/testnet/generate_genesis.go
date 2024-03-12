@@ -15,14 +15,14 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/cmd/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/cmd/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -272,12 +272,16 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 		// set timestamps for genesis and shanghai fork
 		gen.Timestamp = f.GenesisTime
 		gen.Config.ShanghaiTime = interop.GethShanghaiTime(f.GenesisTime, params.BeaconConfig())
-		//gen.Config.CancunTime = interop.GethCancunTime(f.GenesisTime, params.BeaconConfig())
 		gen.Config.CancunTime = interop.GethCancunTime(f.GenesisTime, params.BeaconConfig())
-		log.
-			WithField("shanghai", fmt.Sprintf("%d", *gen.Config.ShanghaiTime)).
-			WithField("cancun", fmt.Sprintf("%d", *gen.Config.CancunTime)).
-			Info("setting fork geth times")
+
+		fields := logrus.Fields{}
+		if gen.Config.ShanghaiTime != nil {
+			fields["shanghai"] = fmt.Sprintf("%d", *gen.Config.ShanghaiTime)
+		}
+		if gen.Config.CancunTime != nil {
+			fields["cancun"] = fmt.Sprintf("%d", *gen.Config.CancunTime)
+		}
+		log.WithFields(fields).Info("Setting fork geth times")
 		if v > version.Altair {
 			// set ttd to zero so EL goes post-merge immediately
 			gen.Config.TerminalTotalDifficulty = big.NewInt(0)

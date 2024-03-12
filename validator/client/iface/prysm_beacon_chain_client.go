@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 )
 
 var ErrNotSupported = errors.New("endpoint not supported")
@@ -16,5 +16,5 @@ type ValidatorCount struct {
 
 // PrysmBeaconChainClient defines an interface required to implement all the prysm specific custom endpoints.
 type PrysmBeaconChainClient interface {
-	GetValidatorCount(context.Context, string, []validator.ValidatorStatus) ([]ValidatorCount, error)
+	GetValidatorCount(context.Context, string, []validator.Status) ([]ValidatorCount, error)
 }

@@ -8,7 +8,7 @@ go_library(
         "htrutils.go",
         "merkleize.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/encoding/ssz",
+    importpath = "github.com/prysmaticlabs/prysm/v5/encoding/ssz",
     visibility = ["//visibility:public"],
     deps = [
         "//config/fieldparams:go_default_library",
@@ -20,6 +20,7 @@ go_library(
         "@com_github_minio_sha256_simd//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@com_github_prysmaticlabs_gohashtree//:go_default_library",
     ],
 )
 

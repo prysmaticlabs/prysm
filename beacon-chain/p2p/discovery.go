@@ -14,11 +14,11 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -42,6 +42,12 @@ func (s *Service) RefreshENR() {
 	if s.dv5Listener == nil || !s.isInitialized() {
 		return
 	}
+	currEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.genesisTime.Unix())))
+	if err := initializePersistentSubnets(s.dv5Listener.LocalNode().ID(), currEpoch); err != nil {
+		log.WithError(err).Error("Could not initialize persistent subnets")
+		return
+	}
+
 	bitV := bitfield.NewBitvector64()
 	committees := cache.SubnetIDs.GetAllSubnets()
 	for _, idx := range committees {
@@ -52,8 +58,8 @@ func (s *Service) RefreshENR() {
 		log.WithError(err).Error("Could not retrieve att bitfield")
 		return
 	}
+
 	// Compare current epoch with our fork epochs
-	currEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.genesisTime.Unix())))
 	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
 	switch {
 	// Altair Behaviour
@@ -461,7 +467,7 @@ func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 }
 
 func peerIdsFromMultiAddrs(addrs []ma.Multiaddr) []peer.ID {
-	peers := []peer.ID{}
+	var peers []peer.ID
 	for _, a := range addrs {
 		info, err := peer.AddrInfoFromP2pAddr(a)
 		if err != nil {

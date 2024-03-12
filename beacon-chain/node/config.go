@@ -5,11 +5,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	fastssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	tracing2 "github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	tracing2 "github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/urfave/cli/v2"
 )
 
@@ -40,7 +40,7 @@ func configureHistoricalSlasher(cliCtx *cli.Context) error {
 			return err
 		}
 		cmdConfig := cmd.Get()
-		// Allow up to 4096 attestations at a time to be requested from the beacon nde.
+		// Allow up to 4096 attestations at a time to be requested from the beacon node.
 		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)) // lint:ignore uintcast -- Page size should not exceed int64 with these constants.
 		cmd.Init(cmdConfig)
 		log.Warnf(
@@ -151,19 +151,19 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.TerminalTotalDifficultyOverride.Name) {
 		c := params.BeaconConfig()
 		c.TerminalTotalDifficulty = cliCtx.String(flags.TerminalTotalDifficultyOverride.Name)
-		log.WithField("terminal block difficult", c.TerminalTotalDifficulty).Warn("Terminal block difficult overridden")
+		log.WithField("terminalBlockDifficulty", c.TerminalTotalDifficulty).Warn("Terminal block difficult overridden")
 		params.OverrideBeaconConfig(c)
 	}
 	if cliCtx.IsSet(flags.TerminalBlockHashOverride.Name) {
 		c := params.BeaconConfig()
 		c.TerminalBlockHash = common.HexToHash(cliCtx.String(flags.TerminalBlockHashOverride.Name))
-		log.WithField("terminal block hash", c.TerminalBlockHash.Hex()).Warn("Terminal block hash overridden")
+		log.WithField("terminalBlockHash", c.TerminalBlockHash.Hex()).Warn("Terminal block hash overridden")
 		params.OverrideBeaconConfig(c)
 	}
 	if cliCtx.IsSet(flags.TerminalBlockHashActivationEpochOverride.Name) {
 		c := params.BeaconConfig()
 		c.TerminalBlockHashActivationEpoch = primitives.Epoch(cliCtx.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name))
-		log.WithField("terminal block hash activation epoch", c.TerminalBlockHashActivationEpoch).Warn("Terminal block hash activation epoch overridden")
+		log.WithField("terminalBlockHashActivationEpoch", c.TerminalBlockHashActivationEpoch).Warn("Terminal block hash activation epoch overridden")
 		params.OverrideBeaconConfig(c)
 	}
 

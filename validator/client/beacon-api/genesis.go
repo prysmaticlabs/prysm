@@ -8,31 +8,33 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-type genesisProvider interface {
-	GetGenesis(ctx context.Context) (*beacon.Genesis, *apimiddleware.DefaultErrorJson, error)
+type GenesisProvider interface {
+	GetGenesis(ctx context.Context) (*structs.Genesis, error)
 }
 
 type beaconApiGenesisProvider struct {
-	jsonRestHandler jsonRestHandler
+	jsonRestHandler JsonRestHandler
 }
 
 func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
-	genesis, httpError, err := c.genesisProvider.GetGenesis(ctx)
+	genesis, err := c.genesisProvider.GetGenesis(ctx)
 
 	for err != nil {
-		if httpError == nil || httpError.Code != http.StatusNotFound {
+		jsonErr := &httputil.DefaultJsonError{}
+		httpNotFound := errors.As(err, &jsonErr) && jsonErr.Code == http.StatusNotFound
+		if !httpNotFound {
 			return nil, errors.Wrap(err, "failed to get genesis data")
 		}
 
 		// Error 404 means that the chain genesis info is not yet known, so we query it every second until it's ready
 		select {
 		case <-time.After(time.Second):
-			genesis, httpError, err = c.genesisProvider.GetGenesis(ctx)
+			genesis, err = c.genesisProvider.GetGenesis(ctx)
 		case <-ctx.Done():
 			return nil, errors.New("context canceled")
 		}
@@ -43,10 +45,6 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 		return nil, errors.Wrapf(err, "failed to parse genesis time: %s", genesis.GenesisTime)
 	}
 
-	chainStartResponse := &ethpb.ChainStartResponse{}
-	chainStartResponse.Started = true
-	chainStartResponse.GenesisTime = genesisTime
-
 	if !validRoot(genesis.GenesisValidatorsRoot) {
 		return nil, errors.Errorf("invalid genesis validators root: %s", genesis.GenesisValidatorsRoot)
 	}
@@ -55,22 +53,26 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode genesis validators root")
 	}
-	chainStartResponse.GenesisValidatorsRoot = genesisValidatorRoot
+
+	chainStartResponse := &ethpb.ChainStartResponse{
+		Started:               true,
+		GenesisTime:           genesisTime,
+		GenesisValidatorsRoot: genesisValidatorRoot,
+	}
 
 	return chainStartResponse, nil
 }
 
 // GetGenesis gets the genesis information from the beacon node via the /eth/v1/beacon/genesis endpoint
-func (c beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, *apimiddleware.DefaultErrorJson, error) {
-	genesisJson := &beacon.GetGenesisResponse{}
-	errorJson, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/genesis", genesisJson)
-	if err != nil {
-		return nil, errorJson, errors.Wrap(err, "failed to get json response")
+func (c beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*structs.Genesis, error) {
+	genesisJson := &structs.GetGenesisResponse{}
+	if err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/genesis", genesisJson); err != nil {
+		return nil, err
 	}
 
 	if genesisJson.Data == nil {
-		return nil, nil, errors.New("genesis data is nil")
+		return nil, errors.New("genesis data is nil")
 	}
 
-	return genesisJson.Data, nil, nil
+	return genesisJson.Data, nil
 }

@@ -5,10 +5,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 func (c beaconApiValidatorClient) getDomainData(ctx context.Context, epoch primitives.Epoch, domainType [4]byte) (*ethpb.DomainResponse, error) {
@@ -19,9 +19,9 @@ func (c beaconApiValidatorClient) getDomainData(ctx context.Context, epoch primi
 	}
 
 	// Get the genesis validator root
-	genesis, _, err := c.genesisProvider.GetGenesis(ctx)
+	genesis, err := c.genesisProvider.GetGenesis(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get genesis info")
+		return nil, errors.Wrapf(err, "failed to get genesis info")
 	}
 
 	if !validRoot(genesis.GenesisValidatorsRoot) {

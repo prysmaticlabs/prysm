@@ -3,18 +3,21 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -50,13 +53,25 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 	v.aggregatedSlotCommitteeIDCache.Add(k, true)
 	v.aggregatedSlotCommitteeIDCacheLock.Unlock()
 
-	slotSig, err := v.signSlotWithSelectionProof(ctx, pubKey, slot)
-	if err != nil {
-		log.WithError(err).Error("Could not sign slot")
-		if v.emitAccountMetrics {
-			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+	var slotSig []byte
+	if v.distributed {
+		slotSig, err = v.getAttSelection(attSelectionKey{slot: slot, index: duty.ValidatorIndex})
+		if err != nil {
+			log.WithError(err).Error("Could not find aggregated selection proof")
+			if v.emitAccountMetrics {
+				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
 		}
-		return
+	} else {
+		slotSig, err = v.signSlotWithSelectionProof(ctx, pubKey, slot)
+		if err != nil {
+			log.WithError(err).Error("Could not sign slot")
+			if v.emitAccountMetrics {
+				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
 	}
 
 	// As specified in spec, an aggregator should wait until two thirds of the way through slot
@@ -71,11 +86,17 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 		SlotSignature:  slotSig,
 	})
 	if err != nil {
+		// handle grpc not found
 		s, ok := status.FromError(err)
-		if ok && s.Code() == codes.NotFound {
+		grpcNotFound := ok && s.Code() == codes.NotFound
+		// handle http not found
+		jsonErr := &httputil.DefaultJsonError{}
+		httpNotFound := errors.As(err, &jsonErr) && jsonErr.Code == http.StatusNotFound
+
+		if grpcNotFound || httpNotFound {
 			log.WithField("slot", slot).WithError(err).Warn("No attestations to aggregate")
 		} else {
-			log.WithField("slot", slot).WithError(err).Error("Could not submit slot signature to beacon node")
+			log.WithField("slot", slot).WithError(err).Error("Could not submit aggregate selection proof to beacon node")
 			if v.emitAccountMetrics {
 				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 			}
@@ -103,7 +124,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 		return
 	}
 
-	if err := v.addIndicesToLog(duty); err != nil {
+	if err := v.saveSubmittedAtt(res.AggregateAndProof.Aggregate.Data, pubKey[:], true); err != nil {
 		log.WithError(err).Error("Could not add aggregator indices to logs")
 		if v.emitAccountMetrics {
 			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
@@ -194,17 +215,4 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 	}
 
 	return sig.Marshal(), nil
-}
-
-func (v *validator) addIndicesToLog(duty *ethpb.DutiesResponse_Duty) error {
-	v.attLogsLock.Lock()
-	defer v.attLogsLock.Unlock()
-
-	for _, log := range v.attLogs {
-		if duty.CommitteeIndex == log.data.CommitteeIndex {
-			log.aggregatorIndices = append(log.aggregatorIndices, duty.ValidatorIndex)
-		}
-	}
-
-	return nil
 }

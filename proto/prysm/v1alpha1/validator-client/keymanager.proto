@@ -6,43 +6,13 @@ import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/beacon_block.proto";
 import "proto/prysm/v1alpha1/beacon_state.proto";
 import "proto/prysm/v1alpha1/sync_committee.proto";
-import "proto/prysm/v1alpha1/blobs.proto";
-import "google/api/annotations.proto";
-import "google/protobuf/empty.proto";
 
 option csharp_namespace = "Ethereum.Validator.Accounts.V2";
-option go_package = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client;validatorpb";
+option go_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client;validatorpb";
 option java_multiple_files = true;
 option java_outer_classname = "KeymanagerProto";
 option java_package = "org.ethereum.validator.accounts.v2";
 option php_namespace = "Ethereum\\Validator\\Accounts\\V2";
-
-// RemoteSigner service API.
-//
-// Defines a remote-signing keymanager which manages eth2
-// validator accounts and can sign respective messages.
-service RemoteSigner {
-    // ListPublicKeysResponse managed by a remote signer.
-    rpc ListValidatingPublicKeys(google.protobuf.Empty) returns (ListPublicKeysResponse) {
-        option (google.api.http) = {
-            get: "/accounts/v2/remote/accounts"
-        };
-    }
-
-    // Sign a remote request via gRPC.
-    rpc Sign(SignRequest) returns (SignResponse) {
-        option (google.api.http) = {
-            post: "/accounts/v2/remote/sign"
-        };
-    }
-}
-
-// ListPublicKeysResponse contains public keys
-// for the validator secrets managed by the remote signer.
-message ListPublicKeysResponse {
-    // List of 48 byte, BLS12-381 validating public keys.
-    repeated bytes validating_public_keys = 2;
-}
 
 // SignRequest is a message type used by a keymanager
 // as part of Prysm's accounts v2 implementation.
@@ -67,8 +37,8 @@ message SignRequest {
         ethereum.eth.v1alpha1.AttestationData attestation_data = 102;
         ethereum.eth.v1alpha1.AggregateAttestationAndProof aggregate_attestation_and_proof = 103;
         ethereum.eth.v1alpha1.VoluntaryExit exit = 104;
-        uint64 slot = 105 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-        uint64 epoch = 106 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+        uint64 slot = 105 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+        uint64 epoch = 106 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
         // Altair objects.
         ethereum.eth.v1alpha1.BeaconBlockAltair block_altair = 107;
@@ -90,11 +60,9 @@ message SignRequest {
         // Deneb objects.
         ethereum.eth.v1alpha1.BeaconBlockDeneb block_deneb = 116;
         ethereum.eth.v1alpha1.BlindedBeaconBlockDeneb blinded_block_deneb = 117;
-        ethereum.eth.v1alpha1.BlobSidecar blob = 118;
-        ethereum.eth.v1alpha1.BlindedBlobSidecar blinded_blob = 119;
     }
     reserved 4, 5; // Reserving old, deleted fields.
-    uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 }
 
 // SignResponse returned by a RemoteSigner gRPC service.
@@ -124,7 +92,7 @@ message ProposerOptionPayload {
 // BuilderConfig is a property of ProposerOptionPayload
 message BuilderConfig {
   bool enabled = 1;
-  uint64 gas_limit = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/validator.Uint64"];
+  uint64 gas_limit = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/validator.Uint64"];
   repeated string relays = 3;
 }
 

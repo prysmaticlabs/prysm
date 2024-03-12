@@ -105,14 +105,6 @@ type ValidatorRegistrationSignRequest struct {
 	ValidatorRegistration *ValidatorRegistration `json:"validator_registration" validate:"required"`
 }
 
-// BlobSidecarSignRequest a request object for web3signer sign api.
-type BlobSidecarSignRequest struct {
-	Type        string        `json:"type" validate:"required"`
-	ForkInfo    *ForkInfo     `json:"fork_info" validate:"required"`
-	SigningRoot hexutil.Bytes `json:"signingRoot"`
-	BlobSidecar *BlobSidecar  `json:"blob_sidecar" validate:"required,dive"`
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // sub properties of Sign Requests /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -343,18 +335,6 @@ type ValidatorRegistration struct {
 	GasLimit     string        `json:"gas_limit" validate:"required"`     /* uint64 */
 	Timestamp    string        `json:"timestamp" validate:"required"`     /* uint64 */
 	Pubkey       hexutil.Bytes `json:"pubkey"  validate:"required"`       /* bls hexadecimal string */
-}
-
-// BlobSidecar a sub property of BlobSidecarSignRequest
-type BlobSidecar struct {
-	BlockRoot       hexutil.Bytes `json:"block_root" validate:"required"`        /* 32 hexadecimal string */
-	Index           string        `json:"index" validate:"required"`             /* uint64 */
-	Slot            string        `json:"slot" validate:"required"`              /* uint64 */
-	BlockParentRoot hexutil.Bytes `json:"block_parent_root" validate:"required"` /* 32 hexadecimal string */
-	ProposerIndex   string        `json:"proposer_index" validate:"required"`    /* uint64 */
-	BlobRoot        hexutil.Bytes `json:"blob_root" validate:"required"`         /* 32 hexadecimal string */
-	KzgCommitment   hexutil.Bytes `json:"kzg_commitment" validate:"required"`    // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
-	KzgProof        hexutil.Bytes `json:"kzg_proof" validate:"required"`         // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
 }
 
 ////////////////////////////////////////////////////////////////////////////////

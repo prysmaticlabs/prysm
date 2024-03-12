@@ -82,12 +82,4 @@ var (
 		Name: "remote_web3signer_validator_registration_sign_requests_total",
 		Help: "Total number of validator registration sign requests",
 	})
-	blobSignRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "remote_web3signer_blob_sign_requests_total",
-		Help: "Total number of blob sign requests",
-	})
-	blindedBlobSignRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "remote_web3signer_blinded_blob_sign_requests_total",
-		Help: "Total number of blinded blob sign requests",
-	})
 )

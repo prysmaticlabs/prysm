@@ -5,34 +5,42 @@ import (
 	"io"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/runtime/debug"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/runtime/debug"
 	"github.com/urfave/cli/v2"
 )
 
 var appHelpTemplate = `NAME:
    {{.App.Name}} - {{.App.Usage}}
+
 USAGE:
    {{.App.HelpName}} [options]{{if .App.Commands}} command [command options]{{end}} {{if .App.ArgsUsage}}{{.App.ArgsUsage}}{{else}}[arguments...]{{end}}
-   {{if .App.Version}}
-AUTHOR:
-   {{range .App.Authors}}{{ . }}{{end}}
-   {{end}}{{if .App.Commands}}
-GLOBAL OPTIONS:
+{{if .App.Version}}
+VERSION:
+	{{.App.Version}}
+{{end -}}
+{{if len .App.Authors}}
+AUTHORS:
+   {{range .App.Authors}}{{ . }}
+   {{end -}}
+{{end -}}
+{{if .App.Commands}}
+global OPTIONS:
    {{range .App.Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}{{end}}{{if .FlagGroups}}
+   {{end -}}
+{{end -}}
+{{if .FlagGroups}}
 {{range .FlagGroups}}{{.Name}} OPTIONS:
   {{range .Flags}}{{.}}
   {{end}}
-{{end}}{{end}}{{if .App.Copyright }}
+{{end -}}
+{{end -}}
+{{if .App.Copyright }}
 COPYRIGHT:
    {{.App.Copyright}}
-VERSION:
-   {{.App.Version}}
-   {{end}}{{if len .App.Authors}}
-   {{end}}
+{{end -}}
 `
 
 type flagGroup struct {
@@ -113,6 +121,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.SuggestedFeeRecipientFlag,
 			flags.EnableBuilderFlag,
 			flags.BuilderGasLimitFlag,
+			flags.ValidatorsRegistrationBatchSizeFlag,
+			flags.EnableDistributed,
 		},
 	},
 	{

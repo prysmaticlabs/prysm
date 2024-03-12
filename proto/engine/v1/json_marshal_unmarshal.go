@@ -10,10 +10,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 var errExecutionUnmarshal = errors.New("unable to unmarshal execution engine data")
@@ -656,50 +656,6 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 	if dec.ValidationError != nil {
 		p.ValidationError = *dec.ValidationError
 	}
-	return nil
-}
-
-type transitionConfigurationJSON struct {
-	TerminalTotalDifficulty *hexutil.Big   `json:"terminalTotalDifficulty"`
-	TerminalBlockHash       common.Hash    `json:"terminalBlockHash"`
-	TerminalBlockNumber     hexutil.Uint64 `json:"terminalBlockNumber"`
-}
-
-// MarshalJSON --
-func (t *TransitionConfiguration) MarshalJSON() ([]byte, error) {
-	num := new(big.Int).SetBytes(t.TerminalBlockNumber)
-	var hexNum *hexutil.Big
-	if t.TerminalTotalDifficulty != "" {
-		ttdNum, err := hexutil.DecodeBig(t.TerminalTotalDifficulty)
-		if err != nil {
-			return nil, err
-		}
-		bHex := hexutil.Big(*ttdNum)
-		hexNum = &bHex
-	}
-	if len(t.TerminalBlockHash) != fieldparams.RootLength {
-		return nil, errors.Errorf("terminal block hash is of the wrong length: %d", len(t.TerminalBlockHash))
-	}
-	return json.Marshal(transitionConfigurationJSON{
-		TerminalTotalDifficulty: hexNum,
-		TerminalBlockHash:       *(*[32]byte)(t.TerminalBlockHash),
-		TerminalBlockNumber:     hexutil.Uint64(num.Uint64()),
-	})
-}
-
-// UnmarshalJSON --
-func (t *TransitionConfiguration) UnmarshalJSON(enc []byte) error {
-	dec := transitionConfigurationJSON{}
-	if err := json.Unmarshal(enc, &dec); err != nil {
-		return err
-	}
-	*t = TransitionConfiguration{}
-	num := big.NewInt(int64(dec.TerminalBlockNumber))
-	if dec.TerminalTotalDifficulty != nil {
-		t.TerminalTotalDifficulty = dec.TerminalTotalDifficulty.String()
-	}
-	t.TerminalBlockHash = dec.TerminalBlockHash[:]
-	t.TerminalBlockNumber = num.Bytes()
 	return nil
 }
 

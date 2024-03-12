@@ -13,18 +13,18 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	testpb "github.com/prysmaticlabs/prysm/v4/proto/testing"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	testpb "github.com/prysmaticlabs/prysm/v5/proto/testing"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -469,18 +469,18 @@ func TestService_BroadcastBlob(t *testing.T) {
 		}),
 	}
 
-	blobSidecar := &ethpb.SignedBlobSidecar{
-		Message: &ethpb.BlobSidecar{
-			BlockRoot:       bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength),
-			Index:           1,
-			Slot:            2,
-			BlockParentRoot: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength),
-			ProposerIndex:   3,
-			Blob:            bytesutil.PadTo([]byte{'C'}, fieldparams.BlobLength),
-			KzgCommitment:   bytesutil.PadTo([]byte{'D'}, fieldparams.BLSPubkeyLength),
-			KzgProof:        bytesutil.PadTo([]byte{'E'}, fieldparams.BLSPubkeyLength),
-		},
-		Signature: bytesutil.PadTo([]byte{'F'}, fieldparams.BLSSignatureLength),
+	header := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{})
+	commitmentInclusionProof := make([][]byte, 17)
+	for i := range commitmentInclusionProof {
+		commitmentInclusionProof[i] = bytesutil.PadTo([]byte{}, 32)
+	}
+	blobSidecar := &ethpb.BlobSidecar{
+		Index:                    1,
+		Blob:                     bytesutil.PadTo([]byte{'C'}, fieldparams.BlobLength),
+		KzgCommitment:            bytesutil.PadTo([]byte{'D'}, fieldparams.BLSPubkeyLength),
+		KzgProof:                 bytesutil.PadTo([]byte{'E'}, fieldparams.BLSPubkeyLength),
+		SignedBlockHeader:        header,
+		CommitmentInclusionProof: commitmentInclusionProof,
 	}
 	subnet := uint64(0)
 
@@ -508,7 +508,7 @@ func TestService_BroadcastBlob(t *testing.T) {
 		incomingMessage, err := sub.Next(ctx)
 		require.NoError(t, err)
 
-		result := &ethpb.SignedBlobSidecar{}
+		result := &ethpb.BlobSidecar{}
 		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
 		require.DeepEqual(t, result, blobSidecar)
 	}(t)

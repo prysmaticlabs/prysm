@@ -4,17 +4,17 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
 
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
-	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
+	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestServer_SubmitProposerSlashing(t *testing.T) {
@@ -43,7 +43,7 @@ func TestServer_SubmitProposerSlashing(t *testing.T) {
 
 	_, err = bs.SubmitProposerSlashing(ctx, slashing)
 	require.NoError(t, err)
-	assert.Equal(t, true, mb.BroadcastCalled, "Expected broadcast to be called")
+	assert.Equal(t, true, mb.BroadcastCalled.Load(), "Expected broadcast to be called")
 }
 
 func TestServer_SubmitAttesterSlashing(t *testing.T) {
@@ -74,7 +74,7 @@ func TestServer_SubmitAttesterSlashing(t *testing.T) {
 	// slashed indices.
 	_, err = bs.SubmitAttesterSlashing(ctx, slashing)
 	require.NoError(t, err)
-	assert.Equal(t, true, mb.BroadcastCalled, "Expected broadcast to be called when flag is set")
+	assert.Equal(t, true, mb.BroadcastCalled.Load(), "Expected broadcast to be called when flag is set")
 }
 
 func TestServer_SubmitProposerSlashing_DontBroadcast(t *testing.T) {
@@ -111,7 +111,7 @@ func TestServer_SubmitProposerSlashing_DontBroadcast(t *testing.T) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
 
-	assert.Equal(t, false, mb.BroadcastCalled, "Expected broadcast not to be called by default")
+	assert.Equal(t, false, mb.BroadcastCalled.Load(), "Expected broadcast not to be called by default")
 
 	slashing, err = util.GenerateProposerSlashingForValidator(st, privs[5], primitives.ValidatorIndex(5))
 	require.NoError(t, err)
@@ -158,7 +158,7 @@ func TestServer_SubmitAttesterSlashing_DontBroadcast(t *testing.T) {
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
-	assert.Equal(t, false, mb.BroadcastCalled, "Expected broadcast not to be called by default")
+	assert.Equal(t, false, mb.BroadcastCalled.Load(), "Expected broadcast not to be called by default")
 
 	slashing, err = util.GenerateAttesterSlashingForValidator(st, privs[5], primitives.ValidatorIndex(5))
 	require.NoError(t, err)

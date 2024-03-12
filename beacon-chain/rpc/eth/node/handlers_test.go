@@ -14,19 +14,20 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
-	syncmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
+	syncmock "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 type dummyIdentity enode.ID
@@ -59,7 +60,7 @@ func TestSyncStatus(t *testing.T) {
 
 	s.GetSyncStatus(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
-	resp := &SyncStatusResponse{}
+	resp := &structs.SyncStatusResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.NotNil(t, resp)
 	assert.Equal(t, "100", resp.Data.HeadSlot)
@@ -81,7 +82,7 @@ func TestGetVersion(t *testing.T) {
 	s := &Server{}
 	s.GetVersion(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetVersionResponse{}
+	resp := &structs.GetVersionResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	assert.StringContains(t, semVer, resp.Data.Version)
 	assert.StringContains(t, os, resp.Data.Version)
@@ -156,9 +157,9 @@ func TestGetIdentity(t *testing.T) {
 
 		s.GetIdentity(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetIdentityResponse{}
+		resp := &structs.GetIdentityResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		expectedID := peer.ID("foo").Pretty()
+		expectedID := peer.ID("foo").String()
 		assert.Equal(t, expectedID, resp.Data.PeerId)
 		expectedEnr, err := p2p.SerializeENR(enrRecord)
 		require.NoError(t, err)
@@ -198,7 +199,7 @@ func TestGetIdentity(t *testing.T) {
 
 		s.GetIdentity(writer, request)
 		require.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Could not obtain enr", e.Message)
@@ -223,7 +224,7 @@ func TestGetIdentity(t *testing.T) {
 
 		s.GetIdentity(writer, request)
 		require.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Could not obtain discovery address", e.Message)

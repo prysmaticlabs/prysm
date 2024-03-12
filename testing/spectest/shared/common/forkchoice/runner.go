@@ -5,21 +5,23 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func init() {
@@ -114,7 +116,7 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 							t.Fatalf("unknown fork version: %v", fork)
 						}
 					}
-					runBlobStep(t, step.Blobs, beaconBlock, fork, folder, testsFolderPath, step.Proofs, builder)
+					runBlobStep(t, step, beaconBlock, fork, folder, testsFolderPath, builder)
 					if beaconBlock != nil {
 						if step.Valid != nil && !*step.Valid {
 							builder.InvalidBlock(t, beaconBlock)
@@ -280,14 +282,15 @@ func unmarshalSignedDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeacon
 }
 
 func runBlobStep(t *testing.T,
-	blobs *string,
+	step Step,
 	beaconBlock interfaces.ReadOnlySignedBeaconBlock,
 	fork int,
 	folder os.DirEntry,
 	testsFolderPath string,
-	proofs []*string,
 	builder *Builder,
 ) {
+	blobs := step.Blobs
+	proofs := step.Proofs
 	if blobs != nil && *blobs != "null" {
 		require.NotNil(t, beaconBlock)
 		require.Equal(t, true, fork >= version.Deneb)
@@ -295,7 +298,6 @@ func runBlobStep(t *testing.T,
 		block := beaconBlock.Block()
 		root, err := block.HashTreeRoot()
 		require.NoError(t, err)
-		parentRoot := block.ParentRoot()
 		kzgs, err := block.Body().BlobKzgCommitments()
 		require.NoError(t, err)
 
@@ -303,32 +305,96 @@ func runBlobStep(t *testing.T,
 		require.NoError(t, err)
 		blobsSSZ, err := snappy.Decode(nil /* dst */, blobsFile)
 		require.NoError(t, err)
-		for index := uint64(0); index*fieldparams.BlobLength < uint64(len(blobsSSZ)); index++ {
+		sh, err := beaconBlock.Header()
+		require.NoError(t, err)
+		requireVerifyExpected := errAssertionForStep(step, verification.ErrBlobInvalid)
+		for index := 0; index*fieldparams.BlobLength < len(blobsSSZ); index++ {
 			var proof []byte
-			if index < uint64(len(proofs)) {
+			if index < len(proofs) {
 				proofPTR := proofs[index]
 				require.NotNil(t, proofPTR)
 				proof, err = hexutil.Decode(*proofPTR)
 				require.NoError(t, err)
 			}
 
-			var kzg []byte
-			if uint64(len(kzgs)) < index {
-				kzg = kzgs[index]
-			}
 			blob := [fieldparams.BlobLength]byte{}
 			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
-			sidecar := &ethpb.BlobSidecar{
-				BlockRoot:       root[:],
-				Index:           index,
-				Slot:            block.Slot(),
-				BlockParentRoot: parentRoot[:],
-				ProposerIndex:   block.ProposerIndex(),
-				Blob:            blob[:],
-				KzgCommitment:   kzg,
-				KzgProof:        proof,
+			if len(proof) == 0 {
+				proof = make([]byte, 48)
 			}
-			require.NoError(t, builder.service.ReceiveBlob(context.Background(), sidecar))
+
+			inclusionProof, err := blocks.MerkleProofKZGCommitment(block.Body(), index)
+			require.NoError(t, err)
+			pb := &ethpb.BlobSidecar{
+				Index:                    uint64(index),
+				Blob:                     blob[:],
+				KzgCommitment:            kzgs[index],
+				KzgProof:                 proof,
+				SignedBlockHeader:        sh,
+				CommitmentInclusionProof: inclusionProof,
+			}
+			ro, err := blocks.NewROBlobWithRoot(pb, root)
+			require.NoError(t, err)
+			ini, err := builder.vwait.WaitForInitializer(context.Background())
+			require.NoError(t, err)
+			bv := ini.NewBlobVerifier(ro, verification.SpectestSidecarRequirements)
+			ctx := context.Background()
+			if err := bv.BlobIndexInBounds(); err != nil {
+				t.Logf("BlobIndexInBounds error: %s", err.Error())
+			}
+			if err := bv.NotFromFutureSlot(); err != nil {
+				t.Logf("NotFromFutureSlot error: %s", err.Error())
+			}
+			if err := bv.SlotAboveFinalized(); err != nil {
+				t.Logf("SlotAboveFinalized error: %s", err.Error())
+			}
+			if err := bv.SidecarInclusionProven(); err != nil {
+				t.Logf("SidecarInclusionProven error: %s", err.Error())
+			}
+			if err := bv.SidecarKzgProofVerified(); err != nil {
+				t.Logf("SidecarKzgProofVerified error: %s", err.Error())
+			}
+			if err := bv.ValidProposerSignature(ctx); err != nil {
+				t.Logf("ValidProposerSignature error: %s", err.Error())
+			}
+			if err := bv.SidecarParentSlotLower(); err != nil {
+				t.Logf("SidecarParentSlotLower error: %s", err.Error())
+			}
+			if err := bv.SidecarDescendsFromFinalized(); err != nil {
+				t.Logf("SidecarDescendsFromFinalized error: %s", err.Error())
+			}
+			if err := bv.SidecarProposerExpected(ctx); err != nil {
+				t.Logf("SidecarProposerExpected error: %s", err.Error())
+			}
+
+			vsc, err := bv.VerifiedROBlob()
+			requireVerifyExpected(t, err)
+
+			if err == nil {
+				require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
+			}
+		}
+	}
+}
+
+func errAssertionForStep(step Step, expect error) func(t *testing.T, err error) {
+	if !*step.Valid {
+		return func(t *testing.T, err error) {
+			require.ErrorIs(t, err, expect)
+		}
+	}
+	return func(t *testing.T, err error) {
+		if err != nil {
+			require.ErrorIs(t, err, verification.ErrBlobInvalid)
+			me, ok := err.(verification.VerificationMultiError)
+			require.Equal(t, true, ok)
+			fails := me.Failures()
+			// we haven't performed any verification, so all the results should be this type
+			fmsg := make([]string, 0, len(fails))
+			for k, v := range fails {
+				fmsg = append(fmsg, fmt.Sprintf("%s - %s", v.Error(), k.String()))
+			}
+			t.Fatal(strings.Join(fmsg, ";"))
 		}
 	}
 }

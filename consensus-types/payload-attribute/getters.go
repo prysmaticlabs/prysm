@@ -1,9 +1,9 @@
 package payloadattribute
 
 import (
-	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // Version returns the version of the payload attribute.
@@ -93,4 +93,24 @@ func (a *data) PbV3() (*enginev1.PayloadAttributesV3, error) {
 		Withdrawals:           a.withdrawals,
 		ParentBeaconBlockRoot: a.parentBeaconBlockRoot,
 	}, nil
+}
+
+// IsEmpty returns whether the given payload attribute is empty
+func (a *data) IsEmpty() bool {
+	if len(a.PrevRandao()) != 0 {
+		return false
+	}
+	if a.Timestamps() != 0 {
+		return false
+	}
+	if len(a.SuggestedFeeRecipient()) != 0 {
+		return false
+	}
+	if a.Version() >= version.Capella && len(a.withdrawals) != 0 {
+		return false
+	}
+	if a.Version() >= version.Deneb && len(a.parentBeaconBlockRoot) != 0 {
+		return false
+	}
+	return true
 }
