@@ -455,10 +455,8 @@ func (v *validator) SetGraffiti(ctx context.Context, pubkey [fieldparams.BLSPubk
 	if graffiti == nil {
 		return nil
 	}
-	var settings *proposer.Settings
-	if v.proposerSettings == nil {
-		settings = &proposer.Settings{}
-	} else {
+    settings = &proposer.Settings{}
+	if v.proposerSettings != nil {
 		settings = v.proposerSettings.Clone()
 	}
 	if settings.ProposeConfig == nil {
