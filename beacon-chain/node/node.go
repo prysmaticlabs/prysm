@@ -433,39 +433,85 @@ func (b *BeaconNode) Close() {
 	close(b.stop)
 }
 
+func (b *BeaconNode) clearDB(clearDB, forceClearDB bool, d *kv.Store, dbPath string) (*kv.Store, error) {
+	var err error
+	clearDBConfirmed := false
+
+	if clearDB && !forceClearDB {
+		const (
+			actionText = "This will delete your beacon chain database stored in your data directory. " +
+				"Your database backups will not be removed - do you want to proceed? (Y/N)"
+
+			deniedText = "Database will not be deleted. No changes have been made."
+		)
+
+		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not confirm action")
+		}
+	}
+
+	if clearDBConfirmed || forceClearDB {
+		log.Warning("Removing database")
+		if err := d.ClearDB(); err != nil {
+			return nil, errors.Wrap(err, "could not clear database")
+		}
+
+		if err := b.BlobStorage.Clear(); err != nil {
+			return nil, errors.Wrap(err, "could not clear blob storage")
+		}
+
+		d, err = kv.NewKVStore(b.ctx, dbPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create new database")
+		}
+	}
+
+	return d, nil
+}
+
+func (b *BeaconNode) checkAndSaveDepositContract(depositAddress string) error {
+	knownContract, err := b.db.DepositContractAddress(b.ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get deposit contract address")
+	}
+
+	addr := common.HexToAddress(depositAddress)
+	if len(knownContract) == 0 {
+		if err := b.db.SaveDepositContractAddress(b.ctx, addr); err != nil {
+			return errors.Wrap(err, "could not save deposit contract")
+		}
+	}
+
+	if len(knownContract) > 0 && !bytes.Equal(addr.Bytes(), knownContract) {
+		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
+			"you are trying to run on a different network than what the database contains. You can run once with "+
+			"--%s to wipe the old database or use an alternative data directory with --%s",
+			knownContract, addr.Bytes(), cmd.ClearDB.Name, cmd.DataDirFlag.Name)
+	}
+
+	return nil
+}
+
 func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
+	var depositCache cache.DepositCache
+
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
 	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
-	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
-	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
+	clearDBRequired := cliCtx.Bool(cmd.ClearDB.Name)
+	forceClearDBRequired := cliCtx.Bool(cmd.ForceClearDB.Name)
 
 	log.WithField("databasePath", dbPath).Info("Checking DB")
 
 	d, err := kv.NewKVStore(b.ctx, dbPath)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "could not create database at %s", dbPath)
 	}
-	clearDBConfirmed := false
-	if clearDB && !forceClearDB {
-		actionText := "This will delete your beacon chain database stored in your data directory. " +
-			"Your database backups will not be removed - do you want to proceed? (Y/N)"
-		deniedText := "Database will not be deleted. No changes have been made."
-		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
+
+	if clearDBRequired || forceClearDBRequired {
+		d, err = b.clearDB(clearDBRequired, forceClearDBRequired, d, dbPath)
 		if err != nil {
-			return err
-		}
-	}
-	if clearDBConfirmed || forceClearDB {
-		log.Warning("Removing database")
-		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
-		}
-		if err := b.BlobStorage.Clear(); err != nil {
-			return errors.Wrap(err, "could not clear blob storage")
-		}
-		d, err = kv.NewKVStore(b.ctx, dbPath)
-		if err != nil {
-			return errors.Wrap(err, "could not create new database")
 		}
 	}
 
@@ -475,7 +521,6 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	b.db = d
 
-	var depositCache cache.DepositCache
 	if features.Get().EnableEIP4881 {
 		depositCache, err = depositsnapshot.New()
 	} else {
@@ -490,16 +535,17 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	if b.GenesisInitializer != nil {
 		if err := b.GenesisInitializer.Initialize(b.ctx, d); err != nil {
 			if err == db.ErrExistingGenesisState {
-				return errors.New("Genesis state flag specified but a genesis state " +
-					"exists already. Run again with --clear-db and/or ensure you are using the " +
-					"appropriate testnet flag to load the given genesis state.")
+				return errors.Errorf("Genesis state flag specified but a genesis state "+
+					"exists already. Run again with --%s and/or ensure you are using the "+
+					"appropriate testnet flag to load the given genesis state.", cmd.ClearDB.Name)
 			}
+
 			return errors.Wrap(err, "could not load genesis from file")
 		}
 	}
 
 	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
-		return err
+		return errors.Wrap(err, "could not ensure embedded genesis")
 	}
 
 	if b.CheckpointInitializer != nil {
@@ -508,23 +554,11 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		}
 	}
 
-	knownContract, err := b.db.DepositContractAddress(b.ctx)
-	if err != nil {
-		return err
+	if err := b.checkAndSaveDepositContract(depositAddress); err != nil {
+		return errors.Wrap(err, "could not check and save deposit contract")
 	}
-	addr := common.HexToAddress(depositAddress)
-	if len(knownContract) == 0 {
-		if err := b.db.SaveDepositContractAddress(b.ctx, addr); err != nil {
-			return errors.Wrap(err, "could not save deposit contract")
-		}
-	}
-	if len(knownContract) > 0 && !bytes.Equal(addr.Bytes(), knownContract) {
-		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
-			"you are trying to run on a different network than what the database contains. You can run once with "+
-			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
-			knownContract, addr.Bytes())
-	}
-	log.Infof("Deposit contract: %#x", addr.Bytes())
+
+	log.WithField("address", depositAddress).Info("Deposit contract")
 	return nil
 }
 
