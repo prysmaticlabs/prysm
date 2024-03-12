@@ -90,8 +90,6 @@ func TestMinimumBackfillSlot(t *testing.T) {
 	minSlot := minimumBackfillSlot(primitives.Slot(currSlot))
 	require.Equal(t, 100*params.BeaconConfig().SlotsPerEpoch, minSlot)
 
-	oe = helpers.MinEpochsForBlockRequests()
-
 	currSlot = oe.Mul(uint64(params.BeaconConfig().SlotsPerEpoch))
 	minSlot = minimumBackfillSlot(primitives.Slot(currSlot))
 	require.Equal(t, primitives.Slot(1), minSlot)
@@ -108,4 +106,29 @@ func testReadN(t *testing.T, ctx context.Context, c chan batch, n int, into []ba
 		}
 	}
 	return into
+}
+
+func TestBackfillMinSlotDefault(t *testing.T) {
+	oe := helpers.MinEpochsForBlockRequests()
+	current := primitives.Slot((oe + 100).Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+	s := &Service{}
+	specMin := minimumBackfillSlot(current)
+
+	t.Run("equal to specMin", func(t *testing.T) {
+		opt := WithMinimumSlot(specMin)
+		require.NoError(t, opt(s))
+		require.Equal(t, specMin, s.ms(current))
+	})
+	t.Run("older than specMin", func(t *testing.T) {
+		opt := WithMinimumSlot(specMin - 1)
+		require.NoError(t, opt(s))
+		// if WithMinimumSlot is older than the spec minimum, we should use it.
+		require.Equal(t, specMin-1, s.ms(current))
+	})
+	t.Run("newer than specMin", func(t *testing.T) {
+		opt := WithMinimumSlot(specMin + 1)
+		require.NoError(t, opt(s))
+		// if WithMinimumSlot is newer than the spec minimum, we should use the spec minimum
+		require.Equal(t, specMin, s.ms(current))
+	})
 }
