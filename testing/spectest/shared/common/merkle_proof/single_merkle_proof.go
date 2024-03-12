@@ -26,7 +26,6 @@ type SingleMerkleProof struct {
 }
 
 func RunMerkleProofTests(t *testing.T, config, forkOrPhase string, unmarshaller ssz_static.Unmarshaller) {
-	t.Skip("testvectors are not available yet")
 	runSingleMerkleProofTests(t, config, forkOrPhase, unmarshaller)
 }
 

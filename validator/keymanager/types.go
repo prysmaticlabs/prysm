@@ -74,13 +74,13 @@ type KeyStatus struct {
 type KeyStatusType string
 
 const (
-	StatusImported  KeyStatusType = "IMPORTED"
-	StatusError     KeyStatusType = "ERROR"
-	StatusDuplicate KeyStatusType = "DUPLICATE"
-	StatusUnknown   KeyStatusType = "UNKNOWN"
-	StatusNotFound  KeyStatusType = "NOT_FOUND"
-	StatusDeleted   KeyStatusType = "DELETED"
-	StatusNotActive KeyStatusType = "NOT_ACTIVE"
+	StatusImported  KeyStatusType = "imported"
+	StatusError     KeyStatusType = "error"
+	StatusDuplicate KeyStatusType = "duplicate"
+	StatusUnknown   KeyStatusType = "unknown"
+	StatusNotFound  KeyStatusType = "not_found"
+	StatusDeleted   KeyStatusType = "deleted"
+	StatusNotActive KeyStatusType = "not_active"
 )
 
 // PublicKeyDeleter allows deleting public keys set in keymanager.

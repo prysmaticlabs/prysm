@@ -49,12 +49,16 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	justifiedBlockRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash justified block")
 
+	slot := primitives.Slot(10000)
+	beaconState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(slot))
 	justifiedCheckpoint := &ethpb.Checkpoint{
 		Epoch: slots.ToEpoch(1500),
 		Root:  justifiedBlockRoot[:],
 	}
-	require.NoError(t, err)
-	slot := primitives.Slot(10000)
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpoint))
+
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
@@ -62,7 +66,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
 			AttestationCache:      cache.NewAttestationCache(),
-			HeadFetcher:           &mock.ChainService{TargetRoot: blockRoot, Root: blockRoot[:]},
+			HeadFetcher:           &mock.ChainService{TargetRoot: blockRoot, Root: blockRoot[:], State: beaconState},
 			GenesisTimeFetcher:    &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 			FinalizedFetcher:      &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
 			OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
