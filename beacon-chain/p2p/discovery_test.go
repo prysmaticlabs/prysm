@@ -42,10 +42,6 @@ import (
 
 var discoveryWaitTime = 1 * time.Second
 
-func init() {
-	rand.Seed(time.Now().Unix())
-}
-
 func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	ip, err := prysmNetwork.ExternalIPv4()
 	require.NoError(t, err, "Could not get ip")
