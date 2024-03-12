@@ -158,7 +158,8 @@ func main() {
 	app.Usage = "this is a beacon chain implementation for Ethereum"
 	app.Action = func(ctx *cli.Context) error {
 		if err := startNode(ctx, cancel); err != nil {
-			return cli.Exit(err.Error(), 1)
+			log.Fatal(err.Error())
+			return err
 		}
 		return nil
 	}
