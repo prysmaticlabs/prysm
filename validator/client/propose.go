@@ -463,7 +463,6 @@ func (v *validator) SetGraffiti(ctx context.Context, pubkey [fieldparams.BLSPubk
 		settings.ProposeConfig = map[[48]byte]*proposer.Option{pubkey: {GraffitiConfig: &proposer.GraffitiConfig{Graffiti: string(graffiti)}}}
 		return v.SetProposerSettings(ctx, settings)
 	}
-	var option *proposer.Option
 	option, ok := settings.ProposeConfig[pubkey]
 	if !ok || option == nil {
 		settings.ProposeConfig[pubkey] = &proposer.Option{GraffitiConfig: &proposer.GraffitiConfig{
