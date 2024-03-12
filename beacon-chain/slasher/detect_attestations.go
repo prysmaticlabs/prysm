@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-
 	"github.com/pkg/errors"
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -217,7 +216,6 @@ func (s *Service) checkDoubleVotes(
 
 	// Check each incoming attestation for double votes against the database.
 	doubleVotes, err := s.serviceCfg.Database.CheckAttesterDoubleVotes(ctx, incomingAttWrappers)
-
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve potential double votes from disk")
 	}
@@ -485,7 +483,6 @@ func (s *Service) applyAttestationForValidator(
 
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
-
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
 	chunkIndex := s.params.chunkIndex(sourceEpoch)
 
@@ -539,6 +536,9 @@ func (s *Service) applyAttestationForValidator(
 			}
 		}
 
+		//if chunkKind == slashertypes.MaxSpan {
+		//	log.Infof("chunkUpdate: %d, %d, %d, %d, %d", chunkIndex, currentEpoch, validatorIndex, startEpoch, targetEpoch)
+		//}
 		keepGoing, err := chunk.Update(
 			chunkIndex,
 			currentEpoch,

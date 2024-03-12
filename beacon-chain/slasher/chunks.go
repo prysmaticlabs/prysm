@@ -441,6 +441,7 @@ func (m *MaxSpanChunksSlice) Update(
 	// We go down the chunk for the validator, updating every value starting at startEpoch up to
 	// and including the current epoch. As long as the epoch, e, is in the same chunk index and e <= currentEpoch,
 	// we proceed with a for loop.
+	hasBeenupdatd := false
 	for m.params.chunkIndex(epochInChunk) == chunkIndex && epochInChunk <= currentEpoch {
 		var chunkTarget primitives.Epoch
 		chunkTarget, err = ChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
@@ -451,16 +452,33 @@ func (m *MaxSpanChunksSlice) Update(
 		// If the newly incoming value is > the existing value, we update
 		// the data in the max span to meet with its definition.
 		if newTargetEpoch > chunkTarget {
+			hasBeenupdatd = true
+			log.Infof("newTargetEpoch %d > chunkTarget %d", newTargetEpoch, chunkTarget)
 			if err = setChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk, newTargetEpoch); err != nil {
 				err = errors.Wrapf(err, "could not set chunk data at epoch %d", epochInChunk)
 				return
 			}
+			log.WithFields(logrus.Fields{
+				"setChunkDataAtEpoch": chunkTarget,
+			}).Infof("setChunkDataAtEpoch: validator %d at epoch %d newTargetEpoch %d", validatorIndex, epochInChunk, newTargetEpoch)
+			chunkTarget, err = ChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
+			if err != nil {
+				err = errors.Wrapf(err, "could not get chunk data at epoch %d", epochInChunk)
+				return
+			}
+			log.WithFields(logrus.Fields{
+				"ChunkDataAtEpoch": chunkTarget,
+			}).Infof("ChunkDataAtEpoch: validator %d at epoch %d newTargetEpoch %d", validatorIndex, epochInChunk, newTargetEpoch)
 		} else {
 			// We can stop because spans are guaranteed to be maxima and
 			// if we did not meet the condition, there is nothing to update.
+			log.Infof("break Update")
 			return
 		}
 		epochInChunk++
+	}
+	if !hasBeenupdatd {
+		log.Infof("exit Update")
 	}
 	// If the epoch to update now lies beyond the current chunk, then
 	// continue to the next chunk to update it.
@@ -574,7 +592,7 @@ func ChunkDataAtEpoch(
 
 // Updates the value at a specific index in a chunk for a validator index + epoch
 // pair given a target epoch. Recall that for min spans, each element in a chunk
-// is the minimum distance between the a given epoch, e, and all attestation target epochs
+// is the minimum distance between a given epoch, e, and all attestation target epochs
 // a validator has created where att.source.epoch > e.
 func setChunkDataAtEpoch(
 	params *Parameters,
@@ -609,7 +627,7 @@ func setChunkRawDistance(
 
 // Computes a distance between two epochs. Given the result stored in
 // min/max spans is at maximum WEAK_SUBJECTIVITY_PERIOD, we are guaranteed the
-// distance can be represented as a uint16 safely.
+// distance can be represented as an uint16 safely.
 func epochDistance(epoch, baseEpoch primitives.Epoch) (uint16, error) {
 	if baseEpoch > epoch {
 		return 0, fmt.Errorf("base epoch %d cannot be less than epoch %d", baseEpoch, epoch)
