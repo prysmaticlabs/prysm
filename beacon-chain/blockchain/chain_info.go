@@ -563,3 +563,9 @@ func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
 func (s *Service) inRegularSync() bool {
 	return s.cfg.SyncChecker.Synced()
 }
+
+// validating returns true if the beacon is tracking some validators that have
+// registered for proposing.
+func (s *Service) validating() bool {
+	return s.cfg.TrackedValidatorsCache.Validating()
+}
