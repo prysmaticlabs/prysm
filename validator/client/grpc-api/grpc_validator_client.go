@@ -163,7 +163,7 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 		}
 		return
 	}
-	// TODO: ONLY WORKS WITH HEAD TOPIC RIGHT NOW/ONLY PROVIDES THE SLOT
+	// TODO(13563): ONLY WORKS WITH HEAD TOPIC RIGHT NOW/ONLY PROVIDES THE SLOT
 	containsHead := false
 	for i := range topics {
 		if topics[i] == eventClient.EventHead {

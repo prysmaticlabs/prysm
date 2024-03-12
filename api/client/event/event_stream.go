@@ -113,7 +113,7 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 			close(eventsChannel)
 			return
 		default:
-			line := scanner.Text() // TODO:#13730 scanner does not handle /r and does not fully adhere to https://html.spec.whatwg.org/multipage/server-sent-events.html#the-eventsource-interface
+			line := scanner.Text() // TODO(13730): scanner does not handle /r and does not fully adhere to https://html.spec.whatwg.org/multipage/server-sent-events.html#the-eventsource-interface
 			// Handle the event based on your specific format
 			if line == "" {
 				// Empty line indicates the end of an event
