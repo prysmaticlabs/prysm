@@ -275,8 +275,13 @@ func Test_AttSubnets(t *testing.T) {
 				assert.ErrorContains(t, tt.errContains, err)
 			}
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("syncSubnets() got = %v, want %v", got, tt.want)
+			want := make(map[uint64]bool, len(tt.want))
+			for _, subnet := range tt.want {
+				want[subnet] = true
+			}
+
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("syncSubnets() got = %v, want %v", got, want)
 			}
 		})
 	}
