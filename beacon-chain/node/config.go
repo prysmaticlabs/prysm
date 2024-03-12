@@ -17,6 +17,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	maxBlobRetentionEpoch         = math.MaxUint32
+	archivalSlotsPerArchivedPoint = 32
+)
+
 func configureTracing(cliCtx *cli.Context) error {
 	return tracing2.Setup(
 		"beacon-chain", // service name
@@ -206,9 +211,9 @@ func configureArchivalNode(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.ArchivalNodeFlag.Name) {
 		log.Info("Enabling Archival mode on the beacon node")
 		if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
-			log.Infof("Changing slots per archived point from %d to %d", cliCtx.Int(flags.SlotsPerArchivedPoint.Name), 32)
+			log.Infof("Changing slots per archived point from %d to %d", cliCtx.Int(flags.SlotsPerArchivedPoint.Name), archivalSlotsPerArchivedPoint)
 		}
-		if err := cliCtx.Set(flags.SlotsPerArchivedPoint.Name, fmt.Sprintf("%d", 32)); err != nil {
+		if err := cliCtx.Set(flags.SlotsPerArchivedPoint.Name, fmt.Sprintf("%d", archivalSlotsPerArchivedPoint)); err != nil {
 			return err
 		}
 		if !cliCtx.IsSet(features.SaveFullExecutionPayloads.Name) {
@@ -224,9 +229,9 @@ func configureArchivalNode(cliCtx *cli.Context) error {
 			}
 		}
 		if cliCtx.IsSet(storageFlags.BlobRetentionEpochFlag.Name) {
-			log.Infof("Changing slots per archived point from %d to %d", cliCtx.Uint64(storageFlags.BlobRetentionEpochFlag.Name), math.MaxUint32)
+			log.Infof("Changing blob retention epochs from %d to %d", cliCtx.Uint64(storageFlags.BlobRetentionEpochFlag.Name), maxBlobRetentionEpoch)
 		}
-		if err := cliCtx.Set(storageFlags.BlobRetentionEpochFlag.Name, fmt.Sprintf("%d", math.MaxUint32)); err != nil {
+		if err := cliCtx.Set(storageFlags.BlobRetentionEpochFlag.Name, fmt.Sprintf("%d", maxBlobRetentionEpoch)); err != nil {
 			return err
 		}
 	}
