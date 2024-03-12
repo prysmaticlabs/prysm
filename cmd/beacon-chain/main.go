@@ -176,38 +176,10 @@ func main() {
 			return err
 		}
 
-		format := ctx.String(cmd.LogFormat.Name)
-		switch format {
-		case "text":
-			formatter := new(prefixed.TextFormatter)
-			formatter.TimestampFormat = "2006-01-02 15:04:05"
-			formatter.FullTimestamp = true
-			// If persistent log files are written - we disable the log messages coloring because
-			// the colors are ANSI codes and seen as gibberish in the log files.
-			formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
-			logrus.SetFormatter(formatter)
-		case "fluentd":
-			f := joonix.NewFormatter()
-			if err := joonix.DisableTimestampFormat(f); err != nil {
-				panic(err)
-			}
-			logrus.SetFormatter(f)
-		case "json":
-			logrus.SetFormatter(&logrus.JSONFormatter{})
-		case "journald":
-			if err := journald.Enable(); err != nil {
-				return err
-			}
-		default:
-			return fmt.Errorf("unknown log format %s", format)
+		if err := configureLogging(ctx.String(cmd.LogFormat.Name), ctx.String(cmd.LogFileName.Name)); err != nil {
+			return err
 		}
 
-		logFileName := ctx.String(cmd.LogFileName.Name)
-		if logFileName != "" {
-			if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
-				log.WithError(err).Error("Failed to configuring logging to disk.")
-			}
-		}
 		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.ExecutionEngineEndpoint); err != nil {
 			return err
 		}
@@ -233,6 +205,41 @@ func main() {
 	if err := app.RunContext(rctx, os.Args); err != nil {
 		log.Error(err.Error())
 	}
+}
+
+func configureLogging(format, outFile string) error {
+	switch format {
+	case "text":
+		formatter := new(prefixed.TextFormatter)
+		formatter.TimestampFormat = "2006-01-02 15:04:05"
+		formatter.FullTimestamp = true
+		// If persistent log files are written - we disable the log messages coloring because
+		// the colors are ANSI codes and seen as gibberish in the log files.
+		formatter.DisableColors = outFile != ""
+		logrus.SetFormatter(formatter)
+	case "fluentd":
+		f := joonix.NewFormatter()
+		if err := joonix.DisableTimestampFormat(f); err != nil {
+			panic(err)
+		}
+		logrus.SetFormatter(f)
+	case "json":
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+	case "journald":
+		if err := journald.Enable(); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown log format %s", format)
+	}
+
+	if outFile != "" {
+		if err := logs.ConfigurePersistentLogging(outFile); err != nil {
+			log.WithError(err).Error("Failed to configuring logging to disk.")
+		}
+	}
+
+	return nil
 }
 
 func startNode(ctx *cli.Context, cancel context.CancelFunc) error {
