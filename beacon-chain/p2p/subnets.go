@@ -110,18 +110,13 @@ func (s *Service) filterPeerForAttSubnet(index uint64) func(node *enode.Node) bo
 		if !s.filterPeer(node) {
 			return false
 		}
+
 		subnets, err := attSubnets(node.Record())
 		if err != nil {
 			return false
 		}
-		indExists := false
-		for _, comIdx := range subnets {
-			if comIdx == index {
-				indExists = true
-				break
-			}
-		}
-		return indExists
+
+		return subnets[index]
 	}
 }
 
@@ -281,19 +276,20 @@ func initializeSyncCommSubnets(node *enode.LocalNode) *enode.LocalNode {
 
 // Reads the attestation subnets entry from a node's ENR and determines
 // the committee indices of the attestation subnets the node is subscribed to.
-func attSubnets(record *enr.Record) ([]uint64, error) {
+func attSubnets(record *enr.Record) (map[uint64]bool, error) {
 	bitV, err := attBitvector(record)
 	if err != nil {
 		return nil, err
 	}
+	committeeIdxs := make(map[uint64]bool)
 	// lint:ignore uintcast -- subnet count can be safely cast to int.
 	if len(bitV) != byteCount(int(attestationSubnetCount)) {
-		return []uint64{}, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
+		return committeeIdxs, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
 	}
-	var committeeIdxs []uint64
+
 	for i := uint64(0); i < attestationSubnetCount; i++ {
 		if bitV.BitAt(i) {
-			committeeIdxs = append(committeeIdxs, i)
+			committeeIdxs[i] = true
 		}
 	}
 	return committeeIdxs, nil
