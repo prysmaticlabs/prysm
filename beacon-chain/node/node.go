@@ -129,53 +129,19 @@ type BeaconNode struct {
 // New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*BeaconNode, error) {
-	if err := configureTracing(cliCtx); err != nil {
-		return nil, err
+	if err := configureBeacon(cliCtx); err != nil {
+		return nil, errors.Wrap(err, "could not configure beacon")
 	}
-	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
-	if hasNetworkFlag(cliCtx) && cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		return nil, fmt.Errorf("%s cannot be passed concurrently with network flag", cmd.ChainConfigFileFlag.Name)
-	}
-	if err := features.ConfigureBeaconChain(cliCtx); err != nil {
-		return nil, err
-	}
-	if err := cmd.ConfigureBeaconChain(cliCtx); err != nil {
-		return nil, err
-	}
-	flags.ConfigureGlobalFlags(cliCtx)
-	if err := configureChainConfig(cliCtx); err != nil {
-		return nil, err
-	}
-	if err := configureHistoricalSlasher(cliCtx); err != nil {
-		return nil, err
-	}
-	err := configureBuilderCircuitBreaker(cliCtx)
-	if err != nil {
-		return nil, err
-	}
-	if err := configureSlotsPerArchivedPoint(cliCtx); err != nil {
-		return nil, err
-	}
-	if err := configureEth1Config(cliCtx); err != nil {
-		return nil, err
-	}
-	configureNetwork(cliCtx)
-	if err := configureInteropConfig(cliCtx); err != nil {
-		return nil, err
-	}
-	if err := configureExecutionSetting(cliCtx); err != nil {
-		return nil, err
-	}
+
 	configureFastSSZHashingAlgorithm()
 
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
 
 	registry := runtime.NewServiceRegistry()
-
 	synchronizer := startup.NewClockSynchronizer()
-
 	ctx := cliCtx.Context
+
 	beacon := &BeaconNode{
 		cliCtx:                  cliCtx,
 		ctx:                     ctx,
@@ -197,10 +163,10 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		serviceFlagOpts:         &serviceFlagOpts{},
 		forkChoicer:             doublylinkedtree.New(),
 		clockWaiter:             synchronizer,
+		initialSyncComplete:     make(chan struct{}),
+		syncChecker:             &initialsync.SyncChecker{},
 	}
 
-	beacon.initialSyncComplete = make(chan struct{})
-	beacon.syncChecker = &initialsync.SyncChecker{}
 	for _, opt := range opts {
 		if err := opt(beacon); err != nil {
 			return nil, err
@@ -222,112 +188,29 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		beacon.BlobStorage = blobs
 	}
 
-	log.Debugln("Starting DB")
-	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
-		return nil, err
-	}
-	beacon.BlobStorage.WarmCache()
-
-	log.Debugln("Starting Slashing DB")
-	if err := beacon.startSlasherDB(cliCtx); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering P2P Service")
-	if err := beacon.registerP2P(cliCtx); err != nil {
-		return nil, err
-	}
-
-	bfs, err := backfill.NewUpdater(ctx, beacon.db)
+	bfs, err := startModules(cliCtx, beacon, depositAddress)
 	if err != nil {
-		return nil, errors.Wrap(err, "backfill status initialization error")
-	}
-
-	log.Debugln("Starting State Gen")
-	if err := beacon.startStateGen(ctx, bfs, beacon.forkChoicer); err != nil {
-		if errors.Is(err, stategen.ErrNoGenesisBlock) {
-			log.Errorf("No genesis block/state is found. Prysm only provides a mainnet genesis "+
-				"state bundled in the application. You must provide the --%s or --%s flag to load "+
-				"a genesis block/state for this network.", "genesis-state", "genesis-beacon-api-url")
-		}
-		return nil, err
+		return nil, errors.Wrap(err, "could not start modules")
 	}
 
 	beacon.verifyInitWaiter = verification.NewInitializerWaiter(
 		beacon.clockWaiter, forkchoice.NewROForkChoice(beacon.forkChoicer), beacon.stateGen)
 
 	pa := peers.NewAssigner(beacon.fetchP2P().Peers(), beacon.forkChoicer)
-	beacon.BackfillOpts = append(beacon.BackfillOpts, backfill.WithVerifierWaiter(beacon.verifyInitWaiter),
-		backfill.WithInitSyncWaiter(initSyncWaiter(ctx, beacon.initialSyncComplete)))
+
+	beacon.BackfillOpts = append(
+		beacon.BackfillOpts,
+		backfill.WithVerifierWaiter(beacon.verifyInitWaiter),
+		backfill.WithInitSyncWaiter(initSyncWaiter(ctx, beacon.initialSyncComplete)),
+	)
+
 	bf, err := backfill.NewService(ctx, bfs, beacon.BlobStorage, beacon.clockWaiter, beacon.fetchP2P(), pa, beacon.BackfillOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "error initializing backfill service")
 	}
-	if err := beacon.services.RegisterService(bf); err != nil {
-		return nil, errors.Wrap(err, "error registering backfill service")
-	}
 
-	log.Debugln("Registering POW Chain Service")
-	if err := beacon.registerPOWChainService(); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering Attestation Pool Service")
-	if err := beacon.registerAttestationPool(); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering Deterministic Genesis Service")
-	if err := beacon.registerDeterministicGenesisService(); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering Blockchain Service")
-	if err := beacon.registerBlockchainService(beacon.forkChoicer, synchronizer, beacon.initialSyncComplete); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering Initial Sync Service")
-	if err := beacon.registerInitialSyncService(beacon.initialSyncComplete); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering Sync Service")
-	if err := beacon.registerSyncService(beacon.initialSyncComplete, bfs); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering Slasher Service")
-	if err := beacon.registerSlasherService(); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering builder service")
-	if err := beacon.registerBuilderService(cliCtx); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering RPC Service")
-	router := newRouter(cliCtx)
-	if err := beacon.registerRPCService(router); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering GRPC Gateway Service")
-	if err := beacon.registerGRPCGateway(router); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering Validator Monitoring Service")
-	if err := beacon.registerValidatorMonitorService(beacon.initialSyncComplete); err != nil {
-		return nil, err
-	}
-
-	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
-		log.Debugln("Registering Prometheus Service")
-		if err := beacon.registerPrometheusService(cliCtx); err != nil {
-			return nil, err
-		}
+	if err := registerServices(cliCtx, beacon, synchronizer, bf, bfs); err != nil {
+		return nil, errors.Wrap(err, "could not register services")
 	}
 
 	// db.DatabasePath is the path to the containing directory
@@ -345,6 +228,170 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 
 	return beacon, nil
 }
+
+func configureBeacon(cliCtx *cli.Context) error {
+	if err := configureTracing(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure tracing")
+	}
+
+	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
+
+	if hasNetworkFlag(cliCtx) && cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		return fmt.Errorf("%s cannot be passed concurrently with network flag", cmd.ChainConfigFileFlag.Name)
+	}
+
+	if err := features.ConfigureBeaconChain(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure beacon chain")
+	}
+
+	if err := cmd.ConfigureBeaconChain(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure beacon chain")
+	}
+
+	flags.ConfigureGlobalFlags(cliCtx)
+
+	if err := configureChainConfig(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure chain config")
+	}
+
+	if err := configureHistoricalSlasher(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure historical slasher")
+	}
+
+	if err := configureBuilderCircuitBreaker(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure builder circuit breaker")
+	}
+
+	if err := configureSlotsPerArchivedPoint(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure slots per archived point")
+	}
+
+	if err := configureEth1Config(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure eth1 config")
+	}
+
+	configureNetwork(cliCtx)
+
+	if err := configureInteropConfig(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure interop config")
+	}
+
+	if err := configureExecutionSetting(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure execution setting")
+	}
+
+	configureFastSSZHashingAlgorithm()
+
+	return nil
+}
+
+func startModules(cliCtx *cli.Context, beacon *BeaconNode, depositAddress string) (*backfill.Store, error) {
+	ctx := cliCtx.Context
+	log.Debugln("Starting DB")
+	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
+		return nil, errors.Wrap(err, "could not start DB")
+	}
+	beacon.BlobStorage.WarmCache()
+
+	log.Debugln("Starting Slashing DB")
+	if err := beacon.startSlasherDB(cliCtx); err != nil {
+		return nil, errors.Wrap(err, "could not start slashing DB")
+	}
+
+	log.Debugln("Registering P2P Service")
+	if err := beacon.registerP2P(cliCtx); err != nil {
+		return nil, errors.Wrap(err, "could not register P2P service")
+	}
+
+	bfs, err := backfill.NewUpdater(ctx, beacon.db)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create backfill updater")
+	}
+
+	log.Debugln("Starting State Gen")
+	if err := beacon.startStateGen(ctx, bfs, beacon.forkChoicer); err != nil {
+		if errors.Is(err, stategen.ErrNoGenesisBlock) {
+			log.Errorf("No genesis block/state is found. Prysm only provides a mainnet genesis "+
+				"state bundled in the application. You must provide the --%s or --%s flag to load "+
+				"a genesis block/state for this network.", "genesis-state", "genesis-beacon-api-url")
+		}
+		return nil, errors.Wrap(err, "could not start state generation")
+	}
+
+	return bfs, nil
+}
+
+func registerServices(cliCtx *cli.Context, beacon *BeaconNode, synchronizer *startup.ClockSynchronizer, bf *backfill.Service, bfs *backfill.Store) error {
+	if err := beacon.services.RegisterService(bf); err != nil {
+		return errors.Wrap(err, "could not register backfill service")
+	}
+
+	log.Debugln("Registering POW Chain Service")
+	if err := beacon.registerPOWChainService(); err != nil {
+		return errors.Wrap(err, "could not register POW chain service")
+	}
+
+	log.Debugln("Registering Attestation Pool Service")
+	if err := beacon.registerAttestationPool(); err != nil {
+		return errors.Wrap(err, "could not register attestation pool service")
+	}
+
+	log.Debugln("Registering Deterministic Genesis Service")
+	if err := beacon.registerDeterministicGenesisService(); err != nil {
+		return errors.Wrap(err, "could not register deterministic genesis service")
+	}
+
+	log.Debugln("Registering Blockchain Service")
+	if err := beacon.registerBlockchainService(beacon.forkChoicer, synchronizer, beacon.initialSyncComplete); err != nil {
+		return errors.Wrap(err, "could not register blockchain service")
+	}
+
+	log.Debugln("Registering Initial Sync Service")
+	if err := beacon.registerInitialSyncService(beacon.initialSyncComplete); err != nil {
+		return errors.Wrap(err, "could not register initial sync service")
+	}
+
+	log.Debugln("Registering Sync Service")
+	if err := beacon.registerSyncService(beacon.initialSyncComplete, bfs); err != nil {
+		return errors.Wrap(err, "could not register sync service")
+	}
+
+	log.Debugln("Registering Slasher Service")
+	if err := beacon.registerSlasherService(); err != nil {
+		return errors.Wrap(err, "could not register slasher service")
+	}
+
+	log.Debugln("Registering builder service")
+	if err := beacon.registerBuilderService(cliCtx); err != nil {
+		return errors.Wrap(err, "could not register builder service")
+	}
+
+	log.Debugln("Registering RPC Service")
+	router := newRouter(cliCtx)
+	if err := beacon.registerRPCService(router); err != nil {
+		return errors.Wrap(err, "could not register RPC service")
+	}
+
+	log.Debugln("Registering GRPC Gateway Service")
+	if err := beacon.registerGRPCGateway(router); err != nil {
+		return errors.Wrap(err, "could not register GRPC gateway service")
+	}
+
+	log.Debugln("Registering Validator Monitoring Service")
+	if err := beacon.registerValidatorMonitorService(beacon.initialSyncComplete); err != nil {
+		return errors.Wrap(err, "could not register validator monitoring service")
+	}
+
+	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		log.Debugln("Registering Prometheus Service")
+		if err := beacon.registerPrometheusService(cliCtx); err != nil {
+			return errors.Wrap(err, "could not register prometheus service")
+		}
+	}
+
+	return nil
+}
+
 func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
 	return func() error {
 		select {
