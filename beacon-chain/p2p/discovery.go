@@ -164,6 +164,7 @@ func (s *Service) createListener(
 		IP:   bindIP,
 		Port: int(s.cfg.UDPPort),
 	}
+
 	// Listen to all network interfaces
 	// for both ip protocols.
 	networkVersion := "udp"
@@ -180,28 +181,6 @@ func (s *Service) createListener(
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create local node")
-	}
-	if s.cfg.HostAddress != "" {
-		hostIP := net.ParseIP(s.cfg.HostAddress)
-		if hostIP.To4() == nil && hostIP.To16() == nil {
-			log.Errorf("Invalid host address given: %s", hostIP.String())
-		} else {
-			localNode.SetFallbackIP(hostIP)
-			localNode.SetStaticIP(hostIP)
-		}
-	}
-	if s.cfg.HostDNS != "" {
-		host := s.cfg.HostDNS
-		ips, err := net.LookupIP(host)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not resolve host address")
-		}
-		if len(ips) > 0 {
-			// Use first IP returned from the
-			// resolver.
-			firstIP := ips[0]
-			localNode.SetFallbackIP(firstIP)
-		}
 	}
 
 	bootnodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddrs))
@@ -223,6 +202,7 @@ func (s *Service) createListener(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not listen to discV5")
 	}
+
 	return listener, nil
 }
 
@@ -250,8 +230,35 @@ func (s *Service) createLocalNode(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
 	}
+
 	localNode = initializeAttSubnets(localNode)
-	return initializeSyncCommSubnets(localNode), nil
+	localNode = initializeSyncCommSubnets(localNode)
+
+	if s.cfg != nil && s.cfg.HostAddress != "" {
+		hostIP := net.ParseIP(s.cfg.HostAddress)
+		if hostIP.To4() == nil && hostIP.To16() == nil {
+			return nil, errors.Errorf("invalid host address: %s", s.cfg.HostAddress)
+		} else {
+			localNode.SetFallbackIP(hostIP)
+			localNode.SetStaticIP(hostIP)
+		}
+	}
+
+	if s.cfg != nil && s.cfg.HostDNS != "" {
+		host := s.cfg.HostDNS
+		ips, err := net.LookupIP(host)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not resolve host address: %s", host)
+		}
+		if len(ips) > 0 {
+			// Use first IP returned from the
+			// resolver.
+			firstIP := ips[0]
+			localNode.SetFallbackIP(firstIP)
+		}
+	}
+
+	return localNode, nil
 }
 
 func (s *Service) startDiscoveryV5(
