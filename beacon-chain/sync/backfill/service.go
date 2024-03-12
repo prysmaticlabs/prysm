@@ -307,7 +307,7 @@ func (s *Service) Start() {
 		if ctx.Err() != nil {
 			return
 		}
-		if allComplete := s.updateComplete(); allComplete {
+		if s.updateComplete() {
 			return
 		}
 		s.importBatches(ctx)
@@ -334,11 +334,11 @@ func (s *Service) downscore(b batch) {
 	s.p2p.Peers().Scorers().BadResponsesScorer().Increment(b.blockPid)
 }
 
-func (s *Service) Stop() error {
+func (*Service) Stop() error {
 	return nil
 }
 
-func (s *Service) Status() error {
+func (*Service) Status() error {
 	return nil
 }
 
