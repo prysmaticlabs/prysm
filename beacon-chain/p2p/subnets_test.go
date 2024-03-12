@@ -143,21 +143,14 @@ func Test_AttSubnets(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	tests := []struct {
 		name        string
-		record      func(t *testing.T) *enr.Record
+		record      func(localNode *enode.LocalNode) *enr.Record
 		want        []uint64
 		wantErr     bool
 		errContains string
 	}{
 		{
 			name: "valid record",
-			record: func(t *testing.T) *enr.Record {
-				db, err := enode.OpenDB("")
-				assert.NoError(t, err)
-				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
-				assert.NoError(t, err)
-				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
-				assert.NoError(t, err)
-				localNode := enode.NewLocalNode(db, convertedKey)
+			record: func(localNode *enode.LocalNode) *enr.Record {
 				localNode = initializeAttSubnets(localNode)
 				return localNode.Node().Record()
 			},
@@ -166,14 +159,7 @@ func Test_AttSubnets(t *testing.T) {
 		},
 		{
 			name: "too small subnet",
-			record: func(t *testing.T) *enr.Record {
-				db, err := enode.OpenDB("")
-				assert.NoError(t, err)
-				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
-				assert.NoError(t, err)
-				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
-				assert.NoError(t, err)
-				localNode := enode.NewLocalNode(db, convertedKey)
+			record: func(localNode *enode.LocalNode) *enr.Record {
 				entry := enr.WithEntry(attSubnetEnrKey, []byte{})
 				localNode.Set(entry)
 				return localNode.Node().Record()
@@ -184,14 +170,7 @@ func Test_AttSubnets(t *testing.T) {
 		},
 		{
 			name: "half sized subnet",
-			record: func(t *testing.T) *enr.Record {
-				db, err := enode.OpenDB("")
-				assert.NoError(t, err)
-				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
-				assert.NoError(t, err)
-				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
-				assert.NoError(t, err)
-				localNode := enode.NewLocalNode(db, convertedKey)
+			record: func(localNode *enode.LocalNode) *enr.Record {
 				entry := enr.WithEntry(attSubnetEnrKey, make([]byte, 4))
 				localNode.Set(entry)
 				return localNode.Node().Record()
@@ -202,14 +181,7 @@ func Test_AttSubnets(t *testing.T) {
 		},
 		{
 			name: "too large subnet",
-			record: func(t *testing.T) *enr.Record {
-				db, err := enode.OpenDB("")
-				assert.NoError(t, err)
-				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
-				assert.NoError(t, err)
-				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
-				assert.NoError(t, err)
-				localNode := enode.NewLocalNode(db, convertedKey)
+			record: func(localNode *enode.LocalNode) *enr.Record {
 				entry := enr.WithEntry(attSubnetEnrKey, make([]byte, byteCount(int(attestationSubnetCount))+1))
 				localNode.Set(entry)
 				return localNode.Node().Record()
@@ -220,14 +192,7 @@ func Test_AttSubnets(t *testing.T) {
 		},
 		{
 			name: "very large subnet",
-			record: func(t *testing.T) *enr.Record {
-				db, err := enode.OpenDB("")
-				assert.NoError(t, err)
-				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
-				assert.NoError(t, err)
-				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
-				assert.NoError(t, err)
-				localNode := enode.NewLocalNode(db, convertedKey)
+			record: func(localNode *enode.LocalNode) *enr.Record {
 				entry := enr.WithEntry(attSubnetEnrKey, make([]byte, byteCount(int(attestationSubnetCount))+100))
 				localNode.Set(entry)
 				return localNode.Node().Record()
@@ -238,14 +203,7 @@ func Test_AttSubnets(t *testing.T) {
 		},
 		{
 			name: "single subnet",
-			record: func(t *testing.T) *enr.Record {
-				db, err := enode.OpenDB("")
-				assert.NoError(t, err)
-				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
-				assert.NoError(t, err)
-				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
-				assert.NoError(t, err)
-				localNode := enode.NewLocalNode(db, convertedKey)
+			record: func(localNode *enode.LocalNode) *enr.Record {
 				bitV := bitfield.NewBitvector64()
 				bitV.SetBitAt(0, true)
 				entry := enr.WithEntry(attSubnetEnrKey, bitV.Bytes())
@@ -257,17 +215,10 @@ func Test_AttSubnets(t *testing.T) {
 		},
 		{
 			name: "multiple subnets",
-			record: func(t *testing.T) *enr.Record {
-				db, err := enode.OpenDB("")
-				assert.NoError(t, err)
-				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
-				assert.NoError(t, err)
-				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
-				assert.NoError(t, err)
-				localNode := enode.NewLocalNode(db, convertedKey)
+			record: func(localNode *enode.LocalNode) *enr.Record {
 				bitV := bitfield.NewBitvector64()
 				for i := uint64(0); i < bitV.Len(); i++ {
-					// skip 2 subnets
+					// Keep only odd subnets.
 					if (i+1)%2 == 0 {
 						continue
 					}
@@ -285,14 +236,7 @@ func Test_AttSubnets(t *testing.T) {
 		},
 		{
 			name: "all subnets",
-			record: func(t *testing.T) *enr.Record {
-				db, err := enode.OpenDB("")
-				assert.NoError(t, err)
-				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
-				assert.NoError(t, err)
-				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
-				assert.NoError(t, err)
-				localNode := enode.NewLocalNode(db, convertedKey)
+			record: func(localNode *enode.LocalNode) *enr.Record {
 				bitV := bitfield.NewBitvector64()
 				for i := uint64(0); i < bitV.Len(); i++ {
 					bitV.SetBitAt(i, true)
@@ -309,14 +253,28 @@ func Test_AttSubnets(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := attSubnets(tt.record(t))
+			db, err := enode.OpenDB("")
+			assert.NoError(t, err)
+
+			priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
+			assert.NoError(t, err)
+
+			convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
+			assert.NoError(t, err)
+
+			localNode := enode.NewLocalNode(db, convertedKey)
+			record := tt.record(localNode)
+
+			got, err := attSubnets(record)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("syncSubnets() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if tt.wantErr {
 				assert.ErrorContains(t, tt.errContains, err)
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("syncSubnets() got = %v, want %v", got, tt.want)
 			}
