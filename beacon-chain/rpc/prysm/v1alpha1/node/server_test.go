@@ -3,12 +3,14 @@ package node
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
@@ -22,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -169,4 +172,54 @@ func TestNodeServer_GetETH1ConnectionStatus(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, ep, res.CurrentAddress)
 	assert.Equal(t, errStr, res.CurrentConnectionError)
+}
+
+func TestNodeServer_GetHealth(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        *mockSync.Sync
+		customStatus uint64
+		wantedErr    string
+	}{
+		{
+			name:  "happy path",
+			input: &mockSync.Sync{IsSyncing: false, IsSynced: true},
+		},
+		{
+			name:      "syncing",
+			input:     &mockSync.Sync{IsSyncing: false},
+			wantedErr: "service unavailable",
+		},
+		{
+			name:         "custom sync status",
+			input:        &mockSync.Sync{IsSyncing: true},
+			customStatus: 206,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := grpc.NewServer()
+			ns := &Server{
+				SyncChecker: tt.input,
+			}
+			ethpb.RegisterNodeServer(server, ns)
+			reflection.Register(server)
+			ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+			_, err := ns.GetHealth(ctx, &ethpb.HealthRequest{SyncingStatus: tt.customStatus})
+			if tt.wantedErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			if tt.customStatus != 0 {
+				// Assuming the call was successful, now extract the headers
+				headers, _ := metadata.FromIncomingContext(ctx)
+				// Check for the specific header
+				values, ok := headers["x-http-code"]
+				require.Equal(t, true, ok && len(values) > 0)
+				require.Equal(t, fmt.Sprintf("%d", tt.customStatus), values[0])
+
+			}
+			require.ErrorContains(t, tt.wantedErr, err)
+		})
+	}
 }

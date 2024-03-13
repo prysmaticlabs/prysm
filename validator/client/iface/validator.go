@@ -2,9 +2,10 @@ package iface
 
 import (
 	"context"
-	"errors"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/api/client/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -13,9 +14,6 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 )
-
-// ErrConnectionIssue represents a connection problem.
-var ErrConnectionIssue = errors.New("could not connect")
 
 // ValidatorRole defines the validator role.
 type ValidatorRole int8
@@ -57,16 +55,16 @@ type Validator interface {
 	UpdateDomainDataCaches(ctx context.Context, slot primitives.Slot)
 	WaitForKeymanagerInitialization(ctx context.Context) error
 	Keymanager() (keymanager.IKeymanager, error)
-	ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, currentKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
 	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
+	StartEventStream(ctx context.Context, topics []string, eventsChan chan<- *event.Event)
+	ProcessEvent(event *event.Event)
 	ProposerSettings() *proposer.Settings
 	SetProposerSettings(context.Context, *proposer.Settings) error
-	StartEventStream(ctx context.Context) error
 	EventStreamIsRunning() bool
-	NodeIsHealthy(ctx context.Context) bool
+	HealthTracker() *beacon.NodeHealthTracker
 }
 
 // SigningFunc interface defines a type for the a function that signs a message
