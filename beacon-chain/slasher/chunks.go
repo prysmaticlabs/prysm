@@ -33,7 +33,7 @@ type Chunker interface {
 		validatorIndex primitives.ValidatorIndex,
 		startEpoch,
 		newTargetEpoch primitives.Epoch,
-	) (keepGoing bool, err error)
+	) (updated bool, keepGoing bool, err error)
 	StartEpoch(sourceEpoch, currentEpoch primitives.Epoch) (epoch primitives.Epoch, exists bool)
 	NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch
 }
@@ -386,7 +386,7 @@ func (m *MinSpanChunksSlice) Update(
 	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch primitives.Epoch,
-) (keepGoing bool, err error) {
+) (updated bool, keepGoing bool, err error) {
 	// The lowest epoch we need to update.
 	minEpoch := primitives.Epoch(0)
 	if currentEpoch > (m.params.historyLength - 1) {
@@ -436,7 +436,7 @@ func (m *MaxSpanChunksSlice) Update(
 	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch primitives.Epoch,
-) (keepGoing bool, err error) {
+) (updated bool, keepGoing bool, err error) {
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at startEpoch up to
 	// and including the current epoch. As long as the epoch, e, is in the same chunk index and e <= currentEpoch,
@@ -472,17 +472,17 @@ func (m *MaxSpanChunksSlice) Update(
 		} else {
 			// We can stop because spans are guaranteed to be maxima and
 			// if we did not meet the condition, there is nothing to update.
-			log.Infof("break Update")
 			return
 		}
 		epochInChunk++
 	}
-	if !hasBeenupdatd {
-		log.Infof("exit Update")
+	if hasBeenupdatd {
+		log.Info("exit Update")
 	}
 	// If the epoch to update now lies beyond the current chunk, then
 	// continue to the next chunk to update it.
 	keepGoing = epochInChunk <= currentEpoch
+	updated = hasBeenupdatd
 	return
 }
 

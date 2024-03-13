@@ -536,10 +536,7 @@ func (s *Service) applyAttestationForValidator(
 			}
 		}
 
-		//if chunkKind == slashertypes.MaxSpan {
-		//	log.Infof("chunkUpdate: %d, %d, %d, %d, %d", chunkIndex, currentEpoch, validatorIndex, startEpoch, targetEpoch)
-		//}
-		keepGoing, err := chunk.Update(
+		updated, keepGoing, err := chunk.Update(
 			chunkIndex,
 			currentEpoch,
 			validatorIndex,
@@ -560,11 +557,17 @@ func (s *Service) applyAttestationForValidator(
 		// We update the chunksByChunkIdx map with the chunk we just updated.
 		chunksByChunkIdx[chunkIndex] = chunk
 		if !keepGoing {
+			if updated {
+				log.Infof("Not keeping going when update occured!)")
+			}
 			break
 		}
 
 		// Move to first epoch of next chunk if needed.
 		startEpoch = chunk.NextChunkStartEpoch(startEpoch)
+		if updated {
+			log.Infof("startEpoch: %d", startEpoch)
+		}
 	}
 
 	return nil, nil
