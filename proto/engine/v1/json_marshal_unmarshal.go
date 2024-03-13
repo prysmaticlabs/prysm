@@ -16,8 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
-var errExecutionUnmarshal = errors.New("unable to unmarshal execution engine data")
-
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
 // client with proper JSON Marshal and Unmarshal methods to hex.
 type PayloadIDBytes [8]byte
