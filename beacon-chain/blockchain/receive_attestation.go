@@ -95,7 +95,9 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 				return
 			case slotInterval := <-ticker.C():
 				if slotInterval.Interval > 0 {
-					s.UpdateHead(s.ctx, slotInterval.Slot+1)
+					if s.validating() {
+						s.UpdateHead(s.ctx, slotInterval.Slot+1)
+					}
 				} else {
 					s.cfg.ForkChoiceStore.Lock()
 					if err := s.cfg.ForkChoiceStore.NewSlot(s.ctx, slotInterval.Slot); err != nil {
