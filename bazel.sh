@@ -7,6 +7,5 @@
 env -i \
  PATH=/usr/bin:/bin \
  HOME="$HOME" \
- TEST_UNDECLARED_OUTPUTS_DIR=/tmp/bazel/outputs \
  GOOGLE_APPLICATION_CREDENTIALS="$GOOGLE_APPLICATION_CREDENTIALS" \
  bazel "$@"
