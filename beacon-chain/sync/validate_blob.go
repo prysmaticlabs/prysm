@@ -177,7 +177,7 @@ func saveInvalidBlobToTemp(b blocks.ROBlob) {
 	if !features.Get().SaveInvalidBlob {
 		return
 	}
-	filename := fmt.Sprintf("blob_sidecar_%d.ssz", b.Slot())
+	filename := fmt.Sprintf("blob_sidecar_%#x_%d_%d.ssz", b.BlockRoot(), b.Slot(), b.Index)
 	fp := path.Join(os.TempDir(), filename)
 	log.Warnf("Writing invalid blob sidecar to disk at %s", fp)
 	enc, err := b.MarshalSSZ()
