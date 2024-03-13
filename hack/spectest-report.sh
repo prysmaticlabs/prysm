@@ -1,38 +1,49 @@
 #!/bin/bash
 
-set -x
+set -xe
 
-# Prysm spectest directory to start from
-start_directory="/prysmaticLabs/prysm/testing/spectest"
-# Can be found with os.Getenv("TEST_UNDECLARED_OUTPUTS_DIR")
-bazel_output_dir="<path to bazel>/testlogs/testing/spectest"
+# Run spectests
+bazel test //testing/spectest/... --flaky_test_attempts=3
 
-# URL of the Ethereum Spec Tests GitHub repo
-github_repo_url="git@github.com:ethereum/consensus-spec-tests.git"
-# Temporary directory to clone the GitHub repository
-temp_dir=$(mktemp -d)
+# Constants
+PROJECT_ROOT=$(pwd)
+PRYSM_DIR="${PROJECT_ROOT%/hack}/testing/spectest"
+BAZEL_DIR=$(bazel info bazel-testlogs)/spectest
+SPEC_REPO="git@github.com:ethereum/consensus-spec-tests.git"
+SPEC_DIR="tmp/consensus-spec"
 
-# Clone the GitHub repository
-git clone "$github_repo_url" "$temp_dir"
+# Ensure the SPEC_DIR exists and is a git repository
+if [ -d "$SPEC_DIR/.git" ]; then
+    echo "Repository already exists. Pulling latest changes."
+    (cd "$SPEC_DIR" && git pull) || exit 1
+else
+    echo "Cloning the GitHub repository."
+    git clone "$SPEC_REPO" "$SPEC_DIR" || exit 1
+fi
 
-tests=$(find "$bazel_output_dir" -name 'outputs.zip' -follow)
-for i in $tests; do unzip -p "$i";
-echo;
-done > $start_directory/tests.txt
+# Extracting tests from outputs.zip and storing in tests.txt
+find "$BAZEL_DIR" -name 'outputs.zip' -exec unzip -p {} \; > "$PRYSM_DIR/tests.txt"
 
-cd "$temp_dir" && find tests -maxdepth 3 -mindepth 3 -type d > "$start_directory/spec.txt"
+# Generating spec.txt
+(cd "$SPEC_DIR" && find tests -maxdepth 3 -mindepth 3 -type d > "$PRYSM_DIR/spec.txt") || exit 1
 
-# shellcheck disable=SC2013
-for i in $(cat "$start_directory/spec.txt"); do if grep "$i" "$start_directory/tests.txt" > /dev/null; then echo "found $i"; else echo "missing $i";
-fi; done > "$start_directory/report.txt"
+# Comparing spec.txt with tests.txt and generating report.txt
+while IFS= read -r line; do
+    if grep -q "$line" "$PRYSM_DIR/tests.txt"; then
+        echo "found $line"
+    else
+        echo "missing $line"
+    fi
+done < "$PRYSM_DIR/spec.txt" > "$PRYSM_DIR/report.txt"
 
+# Formatting report.txt
 {
     echo "Prysm Spectest Report"
     echo ""
-    grep '^missing' $start_directory/report.txt
+    grep '^missing' "$PRYSM_DIR/report.txt"
     echo ""
-    grep '^found' $start_directory/report.txt
-} > $start_directory/temp_report.txt && mv $start_directory/temp_report.txt $start_directory/report.txt
+    grep '^found' "$PRYSM_DIR/report.txt"
+} > "$PRYSM_DIR/report_temp.txt" && mv "$PRYSM_DIR/report_temp.txt" "$PRYSM_DIR/report.txt"
 
 # Clean up
-rm -rf "$temp_dir" $start_directory/tests.txt $start_directory/spec.txt
+rm -f "$PRYSM_DIR/tests.txt" "$PRYSM_DIR/spec.txt"
