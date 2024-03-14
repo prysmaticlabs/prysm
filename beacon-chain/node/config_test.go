@@ -11,6 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	storageFlags "github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/storage/flags"
+	backfill "github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/sync/backfill/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -227,4 +230,39 @@ func TestConfigureInterop(t *testing.T) {
 			assert.DeepEqual(t, tt.configName, params.BeaconConfig().ConfigName)
 		})
 	}
+}
+
+func TestConfigureArchivalNode(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	hook := logTest.NewGlobal()
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.ArchivalNodeFlag.Name, false, "")
+	set.Int(flags.SlotsPerArchivedPoint.Name, 2048, "")
+	set.Bool(features.SaveFullExecutionPayloads.Name, false, "")
+	set.Bool(backfill.EnableExperimentalBackfill.Name, false, "")
+	set.Uint64(storageFlags.BlobRetentionEpochFlag.Name, 4096, "")
+
+	require.NoError(t, set.Set(flags.ArchivalNodeFlag.Name, "true"))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	require.NoError(t, configureArchivalNode(cliCtx))
+	assert.LogsContain(t, hook, "Enabling Archival mode on the beacon node")
+	assert.LogsContain(t, hook, "Saving full execution payloads")
+	assert.LogsContain(t, hook, "Enabling backfill on nodes")
+
+	hook.Reset()
+
+	require.NoError(t, set.Set(flags.SlotsPerArchivedPoint.Name, "256"))
+	require.NoError(t, set.Set(features.SaveFullExecutionPayloads.Name, "true"))
+	require.NoError(t, set.Set(backfill.EnableExperimentalBackfill.Name, "true"))
+	require.NoError(t, set.Set(storageFlags.BlobRetentionEpochFlag.Name, "2048"))
+
+	cliCtx = cli.NewContext(&app, set, nil)
+	require.NoError(t, configureArchivalNode(cliCtx))
+	assert.LogsContain(t, hook, "Enabling Archival mode on the beacon node")
+	assert.LogsContain(t, hook, "Changing slots per archived point from 256 to 32")
+	assert.LogsContain(t, hook, "Changing blob retention epochs from 2048 to 4294967295")
+
 }
