@@ -123,11 +123,12 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 
 	fields := blobFields(blob)
 	sinceSlotStartTime := receivedTime.Sub(startTime)
+	validationTime := s.cfg.clock.Now().Sub(receivedTime)
 	fields["sinceSlotStartTime"] = sinceSlotStartTime
-	fields["validationTime"] = s.cfg.clock.Now().Sub(receivedTime)
+	fields["validationTime"] = validationTime
 	log.WithFields(fields).Debug("Received blob sidecar gossip")
 
-	blobSidecarVerificationGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
+	blobSidecarVerificationGossipSummary.Observe(float64(validationTime.Milliseconds()))
 	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
 
 	vBlobData, err := vf.VerifiedROBlob()
