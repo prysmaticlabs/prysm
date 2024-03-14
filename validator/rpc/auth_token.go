@@ -45,6 +45,9 @@ func CreateAuthToken(authPath, validatorWebAddr string) error {
 // browser. The web interface authenticates by looking for this token in the query parameters
 // of the URL. This token is then used as the bearer token for jwt auth.
 func (s *Server) initializeAuthToken() error {
+	if s.authTokenPath == "" {
+		return errors.New("auth token path is empty")
+	}
 	exists, err := file.Exists(s.authTokenPath, file.Regular)
 	if err != nil {
 		return errors.Wrapf(err, "could not check if file exists: %s", s.authTokenPath)

@@ -174,7 +174,7 @@ func (s *Server) Start() {
 			),
 			grpcprometheus.UnaryServerInterceptor,
 			grpcopentracing.UnaryServerInterceptor(),
-			s.JWTInterceptor(),
+			s.AuthTokenInterceptor(),
 		)),
 	}
 	grpcprometheus.EnableHandlingTimeHistogram()
@@ -218,7 +218,7 @@ func (s *Server) InitializeRoutes() error {
 		return errors.New("no router found on server")
 	}
 	// Adding Auth Interceptor for the routes below
-	s.router.Use(s.JwtHttpInterceptor)
+	s.router.Use(s.AuthTokenHandler)
 	// Register all services, HandleFunc calls, etc.
 	// ...
 	s.router.HandleFunc("/eth/v1/keystores", s.ListKeystores).Methods(http.MethodGet)
