@@ -53,9 +53,8 @@ func (s *Server) JwtHttpInterceptor(next http.Handler) http.Handler {
 			}
 
 			token := tokenParts[1]
-			_, err := jwt.Parse(token, s.validateJWT)
-			if err != nil {
-				http.Error(w, fmt.Errorf("forbidden: could not parse JWT token: %v", err).Error(), http.StatusForbidden)
+			if token != s.authToken {
+				http.Error(w, "forbidden: token value is invalid", http.StatusForbidden)
 				return
 			}
 		}

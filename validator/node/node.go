@@ -639,6 +639,15 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 	walletDir := c.cliCtx.String(flags.WalletDirFlag.Name)
 	grpcHeaders := c.cliCtx.String(flags.GrpcHeadersFlag.Name)
 	clientCert := c.cliCtx.String(flags.CertFlag.Name)
+
+	authTokenPath := c.cliCtx.String(flags.AuthTokenPathFlag.Name)
+	if authTokenPath == "" {
+		authTokenPath = flags.AuthTokenPathFlag.Value
+		if walletDir != "" {
+			authTokenPath = filepath.Join(walletDir, api.AuthTokenFileName)
+		}
+	}
+
 	server := rpc.NewServer(c.cliCtx.Context, &rpc.Config{
 		ValDB:                    c.db,
 		Host:                     rpcHost,
@@ -648,6 +657,7 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 		SyncChecker:              vs,
 		GenesisFetcher:           vs,
 		NodeGatewayEndpoint:      nodeGatewayEndpoint,
+		AuthTokenPath:            authTokenPath,
 		WalletDir:                walletDir,
 		Wallet:                   c.wallet,
 		ValidatorGatewayHost:     validatorGatewayHost,

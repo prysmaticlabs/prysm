@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"path/filepath"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -47,6 +46,7 @@ type Config struct {
 	CertFlag                 string
 	KeyFlag                  string
 	ValDB                    db.Database
+	AuthTokenPath            string
 	WalletDir                string
 	ValidatorService         *client.ValidatorService
 	SyncChecker              client.SyncChecker
@@ -85,6 +85,8 @@ type Server struct {
 	validatorService          *client.ValidatorService
 	syncChecker               client.SyncChecker
 	genesisFetcher            client.GenesisFetcher
+	authTokenPath             string
+	authToken                 string
 	walletDir                 string
 	wallet                    *wallet.Wallet
 	walletInitializedFeed     *event.Feed
@@ -131,6 +133,19 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorGatewayHost:     cfg.ValidatorGatewayHost,
 		validatorGatewayPort:     cfg.ValidatorGatewayPort,
 		router:                   cfg.Router,
+	}
+
+	if server.authTokenPath == "" && server.walletDir != "" {
+		server.authTokenPath = server.walletDir
+	}
+
+	if server.authTokenPath != "" {
+		if err := server.initializeAuthToken(); err != nil {
+			log.WithError(err).Error("Could not initialize web auth token")
+		}
+		validatorWebAddr := fmt.Sprintf("%s:%d", server.validatorGatewayHost, server.validatorGatewayPort)
+		logValidatorWebAuth(validatorWebAddr, server.authTokenPath, server.authTokenPath)
+		go server.refreshAuthTokenFromFileChanges(server.ctx, server.authTokenPath)
 	}
 	// immediately register routes to override any catchalls
 	if err := server.InitializeRoutes(); err != nil {
@@ -194,17 +209,6 @@ func (s *Server) Start() {
 	}()
 
 	log.WithField("address", address).Info("gRPC server listening on address")
-	if s.walletDir != "" {
-		token, err := s.initializeAuthToken(s.walletDir)
-		if err != nil {
-			log.WithError(err).Error("Could not initialize web auth token")
-			return
-		}
-		validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
-		authTokenPath := filepath.Join(s.walletDir, AuthTokenFileName)
-		logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
-		go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
-	}
 }
 
 // InitializeRoutes initializes pure HTTP REST endpoints for the validator client.

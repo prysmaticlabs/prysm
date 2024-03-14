@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/urfave/cli/v2"
@@ -133,6 +134,14 @@ var (
 		Usage: "Port used to listening and respond metrics for Prometheus.",
 		Value: 8081,
 	}
+
+	// AuthTokenPathFlag defines the path to the auth token used to secure the validator api.
+	AuthTokenPathFlag = &cli.StringFlag{
+		Name:  "token",
+		Usage: "Path to auth token file used for validator apis",
+		Value: filepath.Join(filepath.Join(DefaultValidatorDir(), WalletDefaultDirName), api.AuthTokenFileName),
+	}
+
 	// WalletDirFlag defines the path to a wallet directory for Prysm accounts.
 	WalletDirFlag = &cli.StringFlag{
 		Name:  "wallet-dir",
