@@ -133,8 +133,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, errors.Wrap(err, "could not set beacon configuration options")
 	}
 
-	configureFastSSZHashingAlgorithm()
-
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
 
