@@ -389,8 +389,9 @@ func (m *MinSpanChunksSlice) Update(
 ) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error) {
 	// The lowest epoch we need to update.
 	minEpoch := primitives.Epoch(0)
-	if currentEpoch > (m.params.historyLength - 1) {
-		minEpoch = currentEpoch - (m.params.historyLength - 1)
+	historyLength := m.params.historyLength - 1
+	if currentEpoch > (historyLength) {
+		minEpoch = currentEpoch - historyLength
 	}
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at startEpoch down to minEpoch.
@@ -410,15 +411,6 @@ func (m *MinSpanChunksSlice) Update(
 				err = errors.Wrapf(err, "could not set chunk data at epoch %d", epochInChunk)
 				return
 			}
-			log.WithFields(logrus.Fields{
-				"chunkTarget":    chunkTarget,
-				"chunkIndex":     chunkIndex,
-				"currentEpoch":   currentEpoch,
-				"startEpoch":     startEpoch,
-				"validatorIndex": validatorIndex,
-				"epochInChunk":   epochInChunk,
-				"newTargetEpoch": newTargetEpoch,
-			}).Info("[MIN] called setChunkDataAtEpoch")
 		} else {
 			// We can stop because spans are guaranteed to be minimums and
 			// if we did not meet the minimum condition, there is nothing to update.
@@ -481,7 +473,7 @@ func (m *MaxSpanChunksSlice) Update(
 			}
 			log.WithFields(logrus.Fields{
 				"ChunkDataAtEpoch": chunkTarget,
-			}).Info("called ChunkDataAtEpoch")
+			}).Info("called ChunkDataAtEpoxch")
 		} else {
 			// We can stop because spans are guaranteed to be maxima and
 			// if we did not meet the condition, there is nothing to update.

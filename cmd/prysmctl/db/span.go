@@ -138,13 +138,13 @@ func spanAction(_ *cli.Context) error {
 			fmt.Printf("Chunk with epochs for validator %d: %d\n", i, chunk.Chunk()[vci:vci+params.ChunkSize()])
 		}
 	} else {
-		// we need to find what's the first validator index in the chunk
-
-		// all validators and epochs
+		// find first val and epoch in chunk
 		firstValidator := params.ValidatorIndexesInChunk(validatorChunkIdx)[0]
-		firstEpoch := params.FirstEpoch(params.ChunkIndex(epoch))
+		firstEpoch := epoch - (epoch.Mod(params.ChunkSize()))
 		fmt.Printf("First validator in chunk: %d\n", firstValidator)
 		fmt.Printf("First epoch in chunk: %d\n", firstEpoch)
+
+		// display all validators and epochs in chunk
 		if f.IsDisplayAllEpochsInChunk {
 			// init table
 			tw := table.NewWriter()
@@ -156,7 +156,6 @@ func spanAction(_ *cli.Context) error {
 			}
 			tw.AppendHeader(header)
 
-			//TODO: careful this won't work with last epochs as chunk size is not always 16
 			b := chunk.Chunk()
 			c := uint64(0)
 			for z := uint64(0); z < uint64(len(b)); z += params.ChunkSize() {
@@ -165,7 +164,7 @@ func spanAction(_ *cli.Context) error {
 					end = uint64(len(b))
 				}
 				subChunk := b[z:end]
-				fmt.Printf("Chunk %d: %v\n", z, subChunk)
+
 				row := make(table.Row, params.ChunkSize()+1)
 				title := firstValidator + primitives.ValidatorIndex(c)
 				row[0] = title
