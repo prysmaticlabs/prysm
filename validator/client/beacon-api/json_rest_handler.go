@@ -16,23 +16,43 @@ import (
 type JsonRestHandler interface {
 	Get(ctx context.Context, endpoint string, resp interface{}) error
 	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) error
+	HttpClient() *http.Client
+	Host() string
 }
 
 type BeaconApiJsonRestHandler struct {
-	HttpClient http.Client
-	Host       string
+	client http.Client
+	host   string
+}
+
+// NewBeaconApiJsonRestHandler returns a JsonRestHandler
+func NewBeaconApiJsonRestHandler(client http.Client, host string) JsonRestHandler {
+	return &BeaconApiJsonRestHandler{
+		client: client,
+		host:   host,
+	}
+}
+
+// GetHttpClient returns the underlying HTTP client of the handler
+func (c BeaconApiJsonRestHandler) HttpClient() *http.Client {
+	return &c.client
+}
+
+// GetHost returns the underlying HTTP host
+func (c BeaconApiJsonRestHandler) Host() string {
+	return c.host
 }
 
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
 func (c BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) error {
-	url := c.Host + endpoint
+	url := c.host + endpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create request for endpoint %s", url)
 	}
 
-	httpResp, err := c.HttpClient.Do(req)
+	httpResp, err := c.client.Do(req)
 	if err != nil {
 		return errors.Wrapf(err, "failed to perform request for endpoint %s", url)
 	}
@@ -58,7 +78,7 @@ func (c BeaconApiJsonRestHandler) Post(
 		return errors.New("data is nil")
 	}
 
-	url := c.Host + apiEndpoint
+	url := c.host + apiEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, data)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create request for endpoint %s", url)
@@ -69,7 +89,7 @@ func (c BeaconApiJsonRestHandler) Post(
 	}
 	req.Header.Set("Content-Type", api.JsonMediaType)
 
-	httpResp, err := c.HttpClient.Do(req)
+	httpResp, err := c.client.Do(req)
 	if err != nil {
 		return errors.Wrapf(err, "failed to perform request for endpoint %s", url)
 	}
