@@ -9,7 +9,7 @@ bazel test //testing/spectest/... --flaky_test_attempts=3
 PROJECT_ROOT=$(pwd)
 PRYSM_DIR="${PROJECT_ROOT%/hack}/testing/spectest"
 EXCLUSION_LIST="$PRYSM_DIR/exclusions.txt"
-BAZEL_DIR=$(bazel info bazel-testlogs)/spectest
+BAZEL_DIR=$(bazel info bazel-testlogs)/testing/spectest
 SPEC_REPO="git@github.com:ethereum/consensus-spec-tests.git"
 SPEC_DIR="tmp/consensus-spec"
 
