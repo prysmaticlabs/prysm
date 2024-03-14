@@ -183,19 +183,19 @@ func (s *Service) createListener(
 		return nil, errors.Wrap(err, "could not create local node")
 	}
 
-	bootnodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddrs))
+	bootNodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddrs))
 	for _, addr := range s.cfg.Discv5BootStrapAddrs {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not bootstrap addr")
 		}
 
-		bootnodes = append(bootnodes, bootNode)
+		bootNodes = append(bootNodes, bootNode)
 	}
 
 	dv5Cfg := discover.Config{
 		PrivateKey: privKey,
-		Bootnodes:  bootnodes,
+		Bootnodes:  bootNodes,
 	}
 
 	listener, err := discover.ListenV5(conn, localNode, dv5Cfg)
