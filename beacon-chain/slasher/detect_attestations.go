@@ -298,7 +298,7 @@ func (s *Service) updatedChunkByChunkIndex(
 
 		// Add new needed chunk indexes to the map.
 		for i := firstEpochToUpdate; i <= currentEpoch; i++ {
-			chunkIndex := s.params.chunkIndex(i)
+			chunkIndex := s.params.ChunkIndex(i)
 			neededChunkIndexesMap[chunkIndex] = true
 		}
 	}
@@ -331,7 +331,7 @@ func (s *Service) updatedChunkByChunkIndex(
 
 		for epochToUpdate <= currentEpoch {
 			// Get the chunk index for the ecpoh to write.
-			chunkIndex := s.params.chunkIndex(epochToUpdate)
+			chunkIndex := s.params.ChunkIndex(epochToUpdate)
 
 			// Get the chunk corresponding to the chunk index from the `chunkByChunkIndex` map.
 			currentChunk, ok := chunkByChunkIndex[chunkIndex]
@@ -340,7 +340,7 @@ func (s *Service) updatedChunkByChunkIndex(
 			}
 
 			// Update the current chunk with the neutral element for the validator index for the epoch to write.
-			for s.params.chunkIndex(epochToUpdate) == chunkIndex && epochToUpdate <= currentEpoch {
+			for s.params.ChunkIndex(epochToUpdate) == chunkIndex && epochToUpdate <= currentEpoch {
 				if err := setChunkRawDistance(
 					s.params,
 					currentChunk.Chunk(),
@@ -484,7 +484,7 @@ func (s *Service) applyAttestationForValidator(
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
-	chunkIndex := s.params.chunkIndex(sourceEpoch)
+	chunkIndex := s.params.ChunkIndex(sourceEpoch)
 
 	chunk, ok := chunksByChunkIdx[chunkIndex]
 	if !ok {
@@ -523,20 +523,21 @@ func (s *Service) applyAttestationForValidator(
 	// for a validator min or max span, we attempt to update the current chunk
 	// for the source epoch of the attestation. If the update function tells
 	// us we need to proceed to the next chunk, we continue by determining
-	// the start epoch of the next chunk. We exit once no longer need to
+	// the start epoch of the next chunk. We exit once we no longer need to
 	// keep updating chunks.
 	for {
-		chunkIndex = s.params.chunkIndex(startEpoch)
+		chunkIndex = s.params.ChunkIndex(startEpoch)
 
 		chunk, ok := chunksByChunkIdx[chunkIndex]
 		if !ok {
 			chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
 			if err != nil {
+				log.Info("WARNING - could not get chunk from database")
 				return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
 			}
 		}
 
-		updated, keepGoing, err := chunk.Update(
+		keepGoingFromEpoch, keepGoing, err := chunk.Update(
 			chunkIndex,
 			currentEpoch,
 			validatorIndex,
@@ -557,17 +558,12 @@ func (s *Service) applyAttestationForValidator(
 		// We update the chunksByChunkIdx map with the chunk we just updated.
 		chunksByChunkIdx[chunkIndex] = chunk
 		if !keepGoing {
-			if updated {
-				log.Infof("Not keeping going when update occured!)")
-			}
 			break
 		}
 
-		// Move to first epoch of next chunk if needed.
-		startEpoch = chunk.NextChunkStartEpoch(startEpoch)
-		if updated {
-			log.Infof("startEpoch: %d", startEpoch)
-		}
+		// Move to next chunk to update
+		// that is next chunk chun for maxspax or previous chunk for minspan
+		startEpoch = keepGoingFromEpoch
 	}
 
 	return nil, nil

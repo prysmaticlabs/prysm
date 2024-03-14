@@ -242,8 +242,8 @@ func TestParams_chunkIndex(t *testing.T) {
 				chunkSize:     tt.fields.chunkSize,
 				historyLength: tt.fields.historyLength,
 			}
-			if got := c.chunkIndex(tt.epoch); got != tt.want {
-				t.Errorf("chunkIndex() = %v, want %v", got, tt.want)
+			if got := c.ChunkIndex(tt.epoch); got != tt.want {
+				t.Errorf("ChunkIndex() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -499,8 +499,8 @@ func TestParameters_firstEpoch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.params.firstEpoch(tt.chunkIndex); got != tt.want {
-				t.Errorf("firstEpoch() = %v, want %v", got, tt.want)
+			if got := tt.params.FirstEpoch(tt.chunkIndex); got != tt.want {
+				t.Errorf("FirstEpoch() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -142,13 +142,17 @@ func spanAction(_ *cli.Context) error {
 
 		// all validators and epochs
 		firstValidator := params.ValidatorIndexesInChunk(validatorChunkIdx)[0]
+		firstEpoch := params.FirstEpoch(params.ChunkIndex(epoch))
 		fmt.Printf("First validator in chunk: %d\n", firstValidator)
+		fmt.Printf("First epoch in chunk: %d\n", firstEpoch)
 		if f.IsDisplayAllEpochsInChunk {
-
+			// init table
 			tw := table.NewWriter()
+
+			// headers
 			header := table.Row{"Validator / Epoch"}
 			for y := uint64(0); y < params.ChunkSize(); y++ {
-				header = append(header, epoch+primitives.Epoch(y))
+				header = append(header, firstEpoch+primitives.Epoch(y))
 			}
 			tw.AppendHeader(header)
 

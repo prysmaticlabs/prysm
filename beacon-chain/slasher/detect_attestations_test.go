@@ -1246,6 +1246,63 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	require.NotNil(t, slashing)
 }
 
+func Test_applyAttestationForValidator_MaxSpanChunk_OnMultipleChunks(t *testing.T) {
+	ctx := context.Background()
+	slasherDB := dbtest.SetupSlasherDB(t)
+	srv, err := New(context.Background(),
+		&ServiceConfig{
+			Database:      slasherDB,
+			StateNotifier: &mock.MockStateNotifier{},
+			ClockWaiter:   startup.NewClockSynchronizer(),
+		})
+	require.NoError(t, err)
+
+	// We initialize an empty chunks slice.
+	currentEpoch := primitives.Epoch(3)
+	validatorChunkIndex := uint64(0)
+	validatorIdx := primitives.ValidatorIndex(0)
+	chunksByChunkIdx := map[uint64]Chunker{}
+
+	// We apply attestation with (source 0, target 3) for our validator.
+	source := primitives.Epoch(0)
+	target := primitives.Epoch(3)
+	att := createAttestationWrapperEmptySig(t, source, target, nil, nil)
+	slashing, err := srv.applyAttestationForValidator(
+		ctx,
+		chunksByChunkIdx,
+		att,
+		slashertypes.MaxSpan,
+		validatorChunkIndex,
+		validatorIdx,
+		currentEpoch,
+	)
+	require.NoError(t, err)
+	require.Equal(t, true, slashing == nil)
+	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
+	err = slasherDB.SaveAttestationRecordsForValidators(
+		ctx,
+		[]*slashertypes.IndexedAttestationWrapper{att},
+	)
+	require.NoError(t, err)
+
+	// Next, we apply an attestation with (source 1, target 2) and
+	// expect a slashable offense to be returned.
+	source = primitives.Epoch(1)
+	target = primitives.Epoch(2)
+	slashableAtt := createAttestationWrapperEmptySig(t, source, target, nil, nil)
+	slashing, err = srv.applyAttestationForValidator(
+		ctx,
+		chunksByChunkIdx,
+		slashableAtt,
+		slashertypes.MaxSpan,
+		validatorChunkIndex,
+		validatorIdx,
+		currentEpoch,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, slashing)
+}
+
 func Test_loadChunks_MinSpans(t *testing.T) {
 	testLoadChunks(t, slashertypes.MinSpan)
 }

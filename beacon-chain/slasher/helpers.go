@@ -52,7 +52,7 @@ func (s *Service) groupByChunkIndex(
 	attestationsByChunkIndex := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
 
 	for _, attestation := range attestations {
-		chunkIndex := s.params.chunkIndex(attestation.IndexedAttestation.Data.Source.Epoch)
+		chunkIndex := s.params.ChunkIndex(attestation.IndexedAttestation.Data.Source.Epoch)
 		attestationsByChunkIndex[chunkIndex] = append(attestationsByChunkIndex[chunkIndex], attestation)
 	}
 
@@ -203,7 +203,7 @@ func GetChunkFromDatabase(
 	sourceEpoch := filters.SourceEpoch
 	chunkKind := filters.ChunkKind
 	validatorChunkIndex := s.params.ValidatorChunkIndex(validatorIndex)
-	chunkIndex := s.params.chunkIndex(sourceEpoch)
+	chunkIndex := s.params.ChunkIndex(sourceEpoch)
 	chunk, err := s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)

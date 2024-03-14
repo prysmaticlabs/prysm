@@ -52,7 +52,7 @@ func NewParams(chunkSize, validatorChunkSize uint64, historyLength primitives.Ep
 	}
 }
 
-// Validator min and max spans are split into chunks of length C = chunkSize.
+// ChunkIndex Validator min and max spans are split into chunks of length C = chunkSize.
 // That is, if we are keeping N epochs worth of attesting history, finding what
 // chunk a certain epoch, e, falls into can be computed as (e % N) / C. For example,
 // if we are keeping 6 epochs worth of data, and we have chunks of size 2, then epoch
@@ -61,7 +61,7 @@ func NewParams(chunkSize, validatorChunkSize uint64, historyLength primitives.Ep
 //	span    = [-, -, -, -, -, -]
 //	chunked = [[-, -], [-, -], [-, -]]
 //	                            |-> epoch 4, chunk idx 2
-func (p *Parameters) chunkIndex(epoch primitives.Epoch) uint64 {
+func (p *Parameters) ChunkIndex(epoch primitives.Epoch) uint64 {
 	return uint64(epoch.Mod(uint64(p.historyLength)).Div(p.chunkSize))
 }
 
@@ -72,7 +72,7 @@ func (p *Parameters) ValidatorChunkIndex(validatorIndex primitives.ValidatorInde
 	return uint64(validatorIndex.Div(p.validatorChunkSize))
 }
 
-// Returns the epoch at the 0th index of a chunk at the specified chunk index.
+// FirstEpoch Returns the epoch at the 0th index of a chunk at the specified chunk index.
 // For example, if we have chunks of length 3 and we ask to give us the
 // first epoch of chunk1, then:
 //
@@ -81,7 +81,7 @@ func (p *Parameters) ValidatorChunkIndex(validatorIndex primitives.ValidatorInde
 //	[[-, -, -], [-, -, -], [-, -, -], ...]
 //	             |
 //	             -> first epoch of chunk 1 equals 3
-func (p *Parameters) firstEpoch(chunkIndex uint64) primitives.Epoch {
+func (p *Parameters) FirstEpoch(chunkIndex uint64) primitives.Epoch {
 	return primitives.Epoch(chunkIndex * p.chunkSize)
 }
 
@@ -95,7 +95,7 @@ func (p *Parameters) firstEpoch(chunkIndex uint64) primitives.Epoch {
 //	                   |
 //	                   -> last epoch of chunk 1 equals 5
 func (p *Parameters) lastEpoch(chunkIndex uint64) primitives.Epoch {
-	return p.firstEpoch(chunkIndex).Add(p.chunkSize - 1)
+	return p.FirstEpoch(chunkIndex).Add(p.chunkSize - 1)
 }
 
 // Given a validator index, and epoch, we compute the exact index
@@ -145,7 +145,7 @@ func (p *Parameters) validatorOffset(validatorIndex primitives.ValidatorIndex) u
 // if we are looking for epoch 6 and validator 6, then
 //
 //	ValidatorChunkIndex = 6 / 3 = 2
-//	chunkIndex = (6 % historyLength) / 3 = (6 % 12) / 3 = 2
+//	ChunkIndex = (6 % historyLength) / 3 = (6 % 12) / 3 = 2
 //
 // Then we compute how many chunks there are per max span, known as the "width"
 //
@@ -153,7 +153,7 @@ func (p *Parameters) validatorOffset(validatorIndex primitives.ValidatorIndex) u
 //
 // So every span has 4 chunks. Then, we have a disk key calculated by
 //
-//	ValidatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
+//	ValidatorChunkIndex * width + ChunkIndex = 2*4 + 2 = 10
 func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) []byte {
 	width := p.historyLength.Div(p.chunkSize)
 	return ssz.MarshalUint64(make([]byte, 0), uint64(width.Mul(validatorChunkIndex).Add(chunkIndex)))
