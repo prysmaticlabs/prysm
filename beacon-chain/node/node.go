@@ -130,7 +130,7 @@ type BeaconNode struct {
 // every required service to the node.
 func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*BeaconNode, error) {
 	if err := configureBeacon(cliCtx); err != nil {
-		return nil, errors.Wrap(err, "could not configure beacon")
+		return nil, errors.Wrap(err, "could not set beacon configuration options")
 	}
 
 	configureFastSSZHashingAlgorithm()
