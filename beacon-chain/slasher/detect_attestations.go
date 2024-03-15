@@ -526,7 +526,7 @@ func (s *Service) applyAttestationForValidator(
 	// for a validator min or max span, we attempt to update the current chunk
 	// for the source epoch of the attestation. If the update function tells
 	// us we need to proceed to the next chunk, we continue by determining
-	// the start epoch of the next chunk. We exit once no longer need to
+	// the start epoch of the next chunk. We exit once we no longer need to
 	// keep updating chunks.
 	for {
 		chunkIndex = s.params.chunkIndex(startEpoch)
@@ -539,7 +539,7 @@ func (s *Service) applyAttestationForValidator(
 			}
 		}
 
-		keepGoing, err := chunk.Update(
+		keepGoingFromEpoch, keepGoing, err := chunk.Update(
 			chunkIndex,
 			currentEpoch,
 			validatorIndex,
@@ -563,8 +563,10 @@ func (s *Service) applyAttestationForValidator(
 			break
 		}
 
-		// Move to first epoch of next chunk if needed.
-		startEpoch = chunk.NextChunkStartEpoch(startEpoch)
+		// Move to next epoch from next chunk
+		// keepGoingFromEpoch is the first epoch of the next chunk for maxspan
+		// or the last epoch of the previous chunk for minspan
+		startEpoch = keepGoingFromEpoch
 	}
 
 	return nil, nil

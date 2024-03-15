@@ -33,7 +33,7 @@ type Chunker interface {
 		validatorIndex primitives.ValidatorIndex,
 		startEpoch,
 		newTargetEpoch primitives.Epoch,
-	) (keepGoing bool, err error)
+	) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error)
 	StartEpoch(sourceEpoch, currentEpoch primitives.Epoch) (epoch primitives.Epoch, exists bool)
 	NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch
 }
@@ -386,11 +386,12 @@ func (m *MinSpanChunksSlice) Update(
 	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch primitives.Epoch,
-) (keepGoing bool, err error) {
+) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error) {
 	// The lowest epoch we need to update.
 	minEpoch := primitives.Epoch(0)
-	if currentEpoch > (m.params.historyLength - 1) {
-		minEpoch = currentEpoch - (m.params.historyLength - 1)
+	historyLength := m.params.historyLength - 1
+	if currentEpoch > historyLength {
+		minEpoch = currentEpoch - historyLength
 	}
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at startEpoch down to minEpoch.
@@ -422,6 +423,7 @@ func (m *MinSpanChunksSlice) Update(
 	// We should keep going and update the previous chunk if we are yet to reach
 	// the minimum epoch required for the update procedure.
 	keepGoing = epochInChunk >= minEpoch
+	keepGoingFromEpoch = epochInChunk
 	return
 }
 
@@ -429,14 +431,14 @@ func (m *MinSpanChunksSlice) Update(
 // up to the current epoch according to the definition of max spans. If we need to continue updating
 // a next chunk, this function returns a boolean letting the caller know it should keep going. To understand
 // more about how update exactly works, refer to the detailed documentation for the Update function for
-// MinSpanChunksSlice.
+// MaxSpanChunksSlice.
 func (m *MaxSpanChunksSlice) Update(
 	chunkIndex uint64,
 	currentEpoch primitives.Epoch,
 	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch primitives.Epoch,
-) (keepGoing bool, err error) {
+) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error) {
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at startEpoch up to
 	// and including the current epoch. As long as the epoch, e, is in the same chunk index and e <= currentEpoch,
@@ -465,6 +467,7 @@ func (m *MaxSpanChunksSlice) Update(
 	// If the epoch to update now lies beyond the current chunk, then
 	// continue to the next chunk to update it.
 	keepGoing = epochInChunk <= currentEpoch
+	keepGoingFromEpoch = epochInChunk
 	return
 }
 
@@ -574,7 +577,7 @@ func chunkDataAtEpoch(
 
 // Updates the value at a specific index in a chunk for a validator index + epoch
 // pair given a target epoch. Recall that for min spans, each element in a chunk
-// is the minimum distance between the a given epoch, e, and all attestation target epochs
+// is the minimum distance between a given epoch, e, and all attestation target epochs
 // a validator has created where att.source.epoch > e.
 func setChunkDataAtEpoch(
 	params *Parameters,
@@ -609,7 +612,7 @@ func setChunkRawDistance(
 
 // Computes a distance between two epochs. Given the result stored in
 // min/max spans is at maximum WEAK_SUBJECTIVITY_PERIOD, we are guaranteed the
-// distance can be represented as a uint16 safely.
+// distance can be represented as an uint16 safely.
 func epochDistance(epoch, baseEpoch primitives.Epoch) (uint16, error) {
 	if baseEpoch > epoch {
 		return 0, fmt.Errorf("base epoch %d cannot be less than epoch %d", baseEpoch, epoch)
