@@ -144,6 +144,7 @@ var appFlags = []cli.Flag{
 	bflags.EnableExperimentalBackfill,
 	bflags.BackfillBatchSize,
 	bflags.BackfillWorkerCount,
+	bflags.BackfillOldestSlot,
 }
 
 func init() {
