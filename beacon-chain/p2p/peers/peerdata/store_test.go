@@ -107,5 +107,4 @@ func TestStore_TrustedPeers(t *testing.T) {
 	assert.Equal(t, false, store.IsTrustedPeer(pid1))
 	assert.Equal(t, false, store.IsTrustedPeer(pid2))
 	assert.Equal(t, false, store.IsTrustedPeer(pid3))
-
 }

@@ -38,11 +38,11 @@ func newGossipScorer(store *peerdata.Store, config *GossipScorerConfig) *GossipS
 func (s *GossipScorer) Score(pid peer.ID) float64 {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.score(pid)
+	return s.scoreNoLock(pid)
 }
 
-// score is a lock-free version of Score.
-func (s *GossipScorer) score(pid peer.ID) float64 {
+// scoreNoLock is a lock-free version of Score.
+func (s *GossipScorer) scoreNoLock(pid peer.ID) float64 {
 	peerData, ok := s.store.PeerData(pid)
 	if !ok {
 		return 0
@@ -54,11 +54,11 @@ func (s *GossipScorer) score(pid peer.ID) float64 {
 func (s *GossipScorer) IsBadPeer(pid peer.ID) bool {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.isBadPeer(pid)
+	return s.isBadPeerNoLock(pid)
 }
 
-// isBadPeer is lock-free version of IsBadPeer.
-func (s *GossipScorer) isBadPeer(pid peer.ID) bool {
+// isBadPeerNoLock is lock-free version of IsBadPeer.
+func (s *GossipScorer) isBadPeerNoLock(pid peer.ID) bool {
 	peerData, ok := s.store.PeerData(pid)
 	if !ok {
 		return false
@@ -73,7 +73,7 @@ func (s *GossipScorer) BadPeers() []peer.ID {
 
 	badPeers := make([]peer.ID, 0)
 	for pid := range s.store.Peers() {
-		if s.isBadPeer(pid) {
+		if s.isBadPeerNoLock(pid) {
 			badPeers = append(badPeers, pid)
 		}
 	}
@@ -98,11 +98,11 @@ func (s *GossipScorer) SetGossipData(pid peer.ID, gScore float64,
 func (s *GossipScorer) GossipData(pid peer.ID) (float64, float64, map[string]*pbrpc.TopicScoreSnapshot, error) {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.gossipData(pid)
+	return s.gossipDataNoLock(pid)
 }
 
-// gossipData lock-free version of GossipData.
-func (s *GossipScorer) gossipData(pid peer.ID) (float64, float64, map[string]*pbrpc.TopicScoreSnapshot, error) {
+// gossipDataNoLock lock-free version of GossipData.
+func (s *GossipScorer) gossipDataNoLock(pid peer.ID) (float64, float64, map[string]*pbrpc.TopicScoreSnapshot, error) {
 	if peerData, ok := s.store.PeerData(pid); ok {
 		return peerData.GossipScore, peerData.BehaviourPenalty, peerData.TopicScores, nil
 	}

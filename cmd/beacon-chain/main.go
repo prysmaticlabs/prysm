@@ -11,6 +11,7 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
@@ -149,78 +150,89 @@ func init() {
 	appFlags = cmd.WrapFlags(append(appFlags, features.BeaconChainFlags...))
 }
 
+func before(ctx *cli.Context) error {
+	// Load flags from config file, if specified.
+	if err := cmd.LoadFlagsFromConfig(ctx, appFlags); err != nil {
+		return errors.Wrap(err, "failed to load flags from config file")
+	}
+
+	format := ctx.String(cmd.LogFormat.Name)
+
+	switch format {
+	case "text":
+		formatter := new(prefixed.TextFormatter)
+		formatter.TimestampFormat = "2006-01-02 15:04:05"
+		formatter.FullTimestamp = true
+
+		// If persistent log files are written - we disable the log messages coloring because
+		// the colors are ANSI codes and seen as gibberish in the log files.
+		formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
+		logrus.SetFormatter(formatter)
+	case "fluentd":
+		f := joonix.NewFormatter()
+
+		if err := joonix.DisableTimestampFormat(f); err != nil {
+			panic(err)
+		}
+
+		logrus.SetFormatter(f)
+	case "json":
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+	case "journald":
+		if err := journald.Enable(); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown log format %s", format)
+	}
+
+	logFileName := ctx.String(cmd.LogFileName.Name)
+	if logFileName != "" {
+		if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
+			log.WithError(err).Error("Failed to configuring logging to disk.")
+		}
+	}
+
+	if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.ExecutionEngineEndpoint); err != nil {
+		return errors.Wrap(err, "failed to expand single endpoint")
+	}
+
+	if ctx.IsSet(flags.SetGCPercent.Name) {
+		runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
+	}
+
+	if err := debug.Setup(ctx); err != nil {
+		return errors.Wrap(err, "failed to setup debug")
+	}
+
+	if err := fdlimits.SetMaxFdLimits(); err != nil {
+		return errors.Wrap(err, "failed to set max fd limits")
+	}
+
+	return cmd.ValidateNoArgs(ctx)
+}
+
 func main() {
 	// rctx = root context with cancellation.
 	// note other instances of ctx in this func are *cli.Context.
 	rctx, cancel := context.WithCancel(context.Background())
-	app := cli.App{}
-	app.Name = "beacon-chain"
-	app.Usage = "this is a beacon chain implementation for Ethereum"
-	app.Action = func(ctx *cli.Context) error {
-		if err := startNode(ctx, cancel); err != nil {
-			return cli.Exit(err.Error(), 1)
-		}
-		return nil
-	}
-	app.Version = version.Version()
-	app.Commands = []*cli.Command{
-		dbcommands.Commands,
-		jwtcommands.Commands,
-	}
-
-	app.Flags = appFlags
-
-	app.Before = func(ctx *cli.Context) error {
-		// Load flags from config file, if specified.
-		if err := cmd.LoadFlagsFromConfig(ctx, app.Flags); err != nil {
-			return err
-		}
-
-		format := ctx.String(cmd.LogFormat.Name)
-		switch format {
-		case "text":
-			formatter := new(prefixed.TextFormatter)
-			formatter.TimestampFormat = "2006-01-02 15:04:05"
-			formatter.FullTimestamp = true
-			// If persistent log files are written - we disable the log messages coloring because
-			// the colors are ANSI codes and seen as gibberish in the log files.
-			formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
-			logrus.SetFormatter(formatter)
-		case "fluentd":
-			f := joonix.NewFormatter()
-			if err := joonix.DisableTimestampFormat(f); err != nil {
-				panic(err)
-			}
-			logrus.SetFormatter(f)
-		case "json":
-			logrus.SetFormatter(&logrus.JSONFormatter{})
-		case "journald":
-			if err := journald.Enable(); err != nil {
+	app := cli.App{
+		Name:  "beacon-chain",
+		Usage: "this is a beacon chain implementation for Ethereum",
+		Action: func(ctx *cli.Context) error {
+			if err := startNode(ctx, cancel); err != nil {
+				log.Fatal(err.Error())
 				return err
 			}
-		default:
-			return fmt.Errorf("unknown log format %s", format)
-		}
-
-		logFileName := ctx.String(cmd.LogFileName.Name)
-		if logFileName != "" {
-			if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
-				log.WithError(err).Error("Failed to configuring logging to disk.")
-			}
-		}
-		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.ExecutionEngineEndpoint); err != nil {
-			return err
-		}
-		if ctx.IsSet(flags.SetGCPercent.Name) {
-			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
-		}
-		if err := debug.Setup(ctx); err != nil {
-			return err
-		}
-		if err := fdlimits.SetMaxFdLimits(); err != nil {
-			return err
-		}
-		return cmd.ValidateNoArgs(ctx)
+			return nil
+		},
+		Version: version.Version(),
+		Commands: []*cli.Command{
+			dbcommands.Commands,
+			jwtcommands.Commands,
+		},
+		Flags:  appFlags,
+		Before: before,
 	}
 
 	defer func() {
