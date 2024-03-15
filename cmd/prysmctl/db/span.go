@@ -154,7 +154,7 @@ func spanAction(cliCtx *cli.Context) error {
 	// display information about all validators in chunk
 	if !f.IsDisplayAllValidatorsInChunk {
 		if !f.IsDisplayAllEpochsInChunk {
-			addEpochsHeader(tw, 1, firstEpoch)
+			addEpochsHeader(tw, 1, epoch)
 
 			// rows
 			b := chunk.Chunk()
