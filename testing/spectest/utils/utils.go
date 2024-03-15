@@ -50,7 +50,10 @@ func TestFolders(t testing.TB, config, forkOrPhase, folderPath string) ([]os.Dir
 }
 
 func saveSpecTest(testFolder string) error {
-	baseDir := os.Getenv("TEST_UNDECLARED_OUTPUTS_DIR")
+	baseDir := os.Getenv("SPEC_TEST_REPORT_OUTPUT_DIR")
+	if baseDir == "" {
+		return nil // Do nothing if spec test report not requested.
+	}
 	fullPath := path.Join(baseDir, fmt.Sprintf("%x_tests.txt", testFolder))
 	fmt.Printf("Writing output.zip to %s\n", fullPath)
 	err := file.WriteFile(fullPath, []byte(testFolder))
