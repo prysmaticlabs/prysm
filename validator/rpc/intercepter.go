@@ -2,11 +2,9 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -81,11 +79,4 @@ func (s *Server) authorize(ctx context.Context) error {
 		return status.Errorf(codes.Unauthenticated, "Forbidden: token value is invalid")
 	}
 	return nil
-}
-
-func (s *Server) validateJWT(token *jwt.Token) (interface{}, error) {
-	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-		return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
-	}
-	return s.jwtSecret, nil
 }
