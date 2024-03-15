@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
-	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -249,41 +249,9 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		ctx, span := trace.StartSpan(ctx, "sync.rejectInvalidSyncAggregateSignature")
 		defer span.End()
-		// The aggregate signature is valid for the message `beacon_block_root` and aggregate pubkey
-		// derived from the participation info in `aggregation_bits` for the subcommittee specified by the `contribution.subcommittee_index`.
-		var activeRawPubkeys [][]byte
-		syncPubkeys, err := s.cfg.chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, primitives.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
-		if err != nil {
-			return pubsub.ValidationIgnore, err
-		}
-		bVector := m.Message.Contribution.AggregationBits
-		// In the event no bit is set for the
-		// sync contribution, we reject the message.
-		if bVector.Count() == 0 {
-			return pubsub.ValidationReject, errors.New("bitvector count is 0")
-		}
-		for i, pk := range syncPubkeys {
-			if bVector.BitAt(uint64(i)) {
-				activeRawPubkeys = append(activeRawPubkeys, pk)
-			}
-		}
-		d, err := s.cfg.chain.HeadSyncCommitteeDomain(ctx, m.Message.Contribution.Slot)
-		if err != nil {
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationIgnore, err
-		}
-		rawBytes := p2ptypes.SSZBytes(m.Message.Contribution.BlockRoot)
-		sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)
-		if err != nil {
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationIgnore, err
-		}
-		// Aggregate pubkeys separately again to allow
-		// for signature sets to be created for batch verification.
-		aggKey, err := bls.AggregatePublicKeys(activeRawPubkeys)
-		if err != nil {
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationIgnore, err
+		sigRoot, aggKey, msgErr := verification.SignedContributionAndProofValidationSetup(ctx, s.cfg.chain, m)
+		if msgErr != nil {
+			return msgErr.PubsubResult, msgErr.Err
 		}
 		set := &bls.SignatureBatch{
 			Messages:     [][32]byte{sigRoot},

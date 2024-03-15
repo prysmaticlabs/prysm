@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	beaconState "github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -222,6 +223,18 @@ func (s *Service) SubmitSignedContributionAndProof(
 
 	errs, ctx := errgroup.WithContext(ctx)
 
+	sigRoot, aggKey, msgErr := verification.SignedContributionAndProofValidationSetup(ctx, s.HeadFetcher, req)
+	if msgErr != nil {
+		return &RpcError{Err: msgErr.Err, Reason: BadRequest}
+	}
+	valid, err := bls.VerifySignature(req.Signature, sigRoot, aggKey)
+	if err != nil {
+		return &RpcError{Err: err, Reason: Internal}
+	}
+	if !valid {
+		return &RpcError{Err: errors.New("request signature invalid based on request message"), Reason: BadRequest}
+	}
+
 	// Broadcasting and saving contribution into the pool in parallel. As one fail should not affect another.
 	errs.Go(func() error {
 		return s.Broadcaster.Broadcast(ctx, req)
@@ -232,7 +245,7 @@ func (s *Service) SubmitSignedContributionAndProof(
 	}
 
 	// Wait for p2p broadcast to complete and return the first error (if any)
-	err := errs.Wait()
+	err = errs.Wait()
 	if err != nil {
 		return &RpcError{Err: err, Reason: Internal}
 	}

@@ -336,11 +336,13 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 }
 
 func TestSubmitContributionAndProofs(t *testing.T) {
+	headFetcher := &mockChain.ChainService{}
 	c := &core.Service{
+		HeadFetcher:       headFetcher,
 		OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 	}
 
-	s := &Server{CoreService: c}
+	s := &Server{CoreService: c, HeadFetcher: headFetcher}
 
 	t.Run("single", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
