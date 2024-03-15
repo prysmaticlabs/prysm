@@ -137,7 +137,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	params.BeaconConfig().InitializeForkSchedule()
 
 	registry := runtime.NewServiceRegistry()
-	synchronizer := startup.NewClockSynchronizer()
 	ctx := cliCtx.Context
 
 	beacon := &BeaconNode{
@@ -159,8 +158,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
 		serviceFlagOpts:         &serviceFlagOpts{},
-		forkChoicer:             doublylinkedtree.New(),
-		clockWaiter:             synchronizer,
 		initialSyncComplete:     make(chan struct{}),
 		syncChecker:             &initialsync.SyncChecker{},
 	}
@@ -170,6 +167,10 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 			return nil, err
 		}
 	}
+
+	synchronizer := startup.NewClockSynchronizer()
+	beacon.clockWaiter = synchronizer
+	beacon.forkChoicer = doublylinkedtree.New()
 
 	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {
