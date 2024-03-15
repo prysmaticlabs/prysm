@@ -186,7 +186,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		beacon.BlobStorage = blobs
 	}
 
-	bfs, err := startModules(cliCtx, beacon, depositAddress)
+	bfs, err := startBaseServices(cliCtx, beacon, depositAddress)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not start modules")
 	}
@@ -283,7 +283,7 @@ func configureBeacon(cliCtx *cli.Context) error {
 	return nil
 }
 
-func startModules(cliCtx *cli.Context, beacon *BeaconNode, depositAddress string) (*backfill.Store, error) {
+func startBaseServices(cliCtx *cli.Context, beacon *BeaconNode, depositAddress string) (*backfill.Store, error) {
 	ctx := cliCtx.Context
 	log.Debugln("Starting DB")
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
