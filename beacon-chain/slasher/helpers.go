@@ -2,6 +2,9 @@ package slasher
 
 import (
 	"bytes"
+	"context"
+	"fmt"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/slasherkv"
 	"strconv"
 
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
@@ -158,4 +161,60 @@ func isDoubleProposal(incomingSigningRoot, existingSigningRoot [32]byte) bool {
 		return false
 	}
 	return incomingSigningRoot != existingSigningRoot
+}
+
+type GetChunkFromDatabaseFilters struct {
+	ChunkKind                     slashertypes.ChunkKind
+	ValidatorIndex                primitives.ValidatorIndex
+	SourceEpoch                   primitives.Epoch
+	IsDisplayAllValidatorsInChunk bool
+	IsDisplayAllEpochsInChunk     bool
+}
+
+// GetChunkFromDatabase Utility function aiming at retrieving a chunk from the
+// database.
+func GetChunkFromDatabase(
+	ctx context.Context,
+	dbPath string,
+	filters GetChunkFromDatabaseFilters,
+	params *Parameters,
+) (chunkIndex, validatorChunkIndex uint64, chunk Chunker, err error) {
+	// init store
+	d, err := slasherkv.NewKVStore(ctx, dbPath)
+	if err != nil {
+		return chunkIndex, validatorChunkIndex, chunk, fmt.Errorf("could not open database at path %s: %w", dbPath, err)
+	}
+	defer closeDB(d)
+
+	// init service
+	s := Service{
+		params: params,
+		serviceCfg: &ServiceConfig{
+			Database: d,
+		},
+	}
+
+	// variables
+	validatorIndex := filters.ValidatorIndex
+	sourceEpoch := filters.SourceEpoch
+	chunkKind := filters.ChunkKind
+	validatorChunkIndex = s.params.validatorChunkIndex(validatorIndex)
+	chunkIndex = s.params.chunkIndex(sourceEpoch)
+
+	// fetch chunk from DB
+	chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
+	if err != nil {
+		return chunkIndex, validatorChunkIndex, chunk, fmt.Errorf("could not get chunk at index %d: %w", chunkIndex, err)
+	}
+
+	return chunkIndex, validatorChunkIndex, chunk, nil
+}
+
+func closeDB(d *slasherkv.Store) {
+	func(d *slasherkv.Store) {
+		err := d.Close()
+		if err != nil {
+			log.WithError(err).Error("could not close database")
+		}
+	}(d)
 }

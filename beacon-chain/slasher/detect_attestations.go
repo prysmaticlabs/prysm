@@ -131,7 +131,7 @@ func (s *Service) checkSurroundVotes(
 		}
 
 		// Update the latest updated epoch for all validators involved to the current chunk.
-		indexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
+		indexes := s.params.ValidatorIndexesInChunk(validatorChunkIndex)
 		for _, index := range indexes {
 			s.latestEpochUpdatedForValidator[index] = currentEpoch
 		}
@@ -276,7 +276,7 @@ func (s *Service) updatedChunkByChunkIndex(
 
 	neededChunkIndexesMap := map[uint64]bool{}
 
-	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
+	validatorIndexes := s.params.ValidatorIndexesInChunk(validatorChunkIndex)
 	for _, validatorIndex := range validatorIndexes {
 		// Retrieve the first epoch to write for the validator index.
 		isAnEpochToUpdate, firstEpochToUpdate, err := s.firstEpochToUpdate(validatorIndex, currentEpoch)
