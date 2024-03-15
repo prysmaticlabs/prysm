@@ -68,6 +68,12 @@ func (s *Server) initializeAuthToken() error {
 		}
 		s.jwtSecret = secret
 		s.authToken = token
+		// TODO: can be removed in the future after fully migrated to the new format
+		if len(secret) > 0 {
+			if err := saveAuthToken(s.authTokenPath, token); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 	jwtKey, err := createRandomJWTSecret()
@@ -177,6 +183,7 @@ func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
 		// If there is only one line, interpret it as the token
 		token = strings.TrimSpace(lines[0])
 	case 2:
+		// TODO: Deprecate after a few releases
 		// For legacy files
 		// If there are two lines, the first is the jwt key and the second is the token
 		jwtKeyHex := strings.TrimSpace(lines[0])
@@ -185,10 +192,9 @@ func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
 			return
 		}
 		token = strings.TrimSpace(lines[1])
-		log.Warn("something something regenerate file...")
+		log.Warn("Auth token is a legacy file, and will be updated to the new format with the opaque token on the first line.")
 	default:
-		// Handle other cases appropriately, possibly setting an error
-		err = io.EOF // Using EOF as an example; adjust as necessary for your use case
+		return nil, "", errors.New("Auth token file format has multiple lines, please update the auth token to a single line file")
 	}
 	return
 }

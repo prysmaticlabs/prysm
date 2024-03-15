@@ -89,21 +89,21 @@ func TestServer_AuthTokenHandler(t *testing.T) {
 		testHandler.ServeHTTP(rr, req)
 		require.Equal(t, http.StatusOK, rr.Code)
 	})
-	t.Run("web endpoint needs jwt token", func(t *testing.T) {
+	t.Run("web endpoint needs auth token", func(t *testing.T) {
 		rr := httptest.NewRecorder()
 		req, err := http.NewRequest(http.MethodGet, "/api/v2/validator/beacon/status", nil)
 		require.NoError(t, err)
 		testHandler.ServeHTTP(rr, req)
 		require.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
-	t.Run("initialize does not need jwt", func(t *testing.T) {
+	t.Run("initialize does not need auth", func(t *testing.T) {
 		rr := httptest.NewRecorder()
 		req, err := http.NewRequest(http.MethodGet, api.WebUrlPrefix+"initialize", nil)
 		require.NoError(t, err)
 		testHandler.ServeHTTP(rr, req)
 		require.Equal(t, http.StatusOK, rr.Code)
 	})
-	t.Run("health does not need jwt", func(t *testing.T) {
+	t.Run("health does not need auth", func(t *testing.T) {
 		rr := httptest.NewRecorder()
 		req, err := http.NewRequest(http.MethodGet, api.WebUrlPrefix+"health/logs", nil)
 		require.NoError(t, err)

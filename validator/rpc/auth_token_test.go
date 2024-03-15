@@ -1,15 +1,20 @@
 package rpc
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -58,7 +63,7 @@ func TestServer_AuthenticateUsingExistingToken(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
+func TestServer_RefreshAuthTokenOnFileChange(t *testing.T) {
 	// Initializing for the first time, there is no auth token file in
 	// the wallet directory, so we generate a jwt token and secret from scratch.
 	walletDir := setupWalletDir(t)
@@ -85,6 +90,62 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	time.Sleep(time.Millisecond * 500)
 	newToken := srv.authToken
 	require.Equal(t, true, !(currentToken == newToken))
+	err = os.Remove(srv.authTokenPath)
+	require.NoError(t, err)
+}
+
+// TODO: remove this test when legacy files are removed
+func TestServer_LegacyTokensStillWork(t *testing.T) {
+	// Initializing for the first time, there is no auth token file in
+	// the wallet directory, so we generate a jwt token and secret from scratch.
+	walletDir := setupWalletDir(t)
+	authTokenPath := filepath.Join(walletDir, api.AuthTokenFileName)
+
+	bytesBuf := new(bytes.Buffer)
+	_, err := bytesBuf.WriteString("b5bbbaf533b625a93741978857f13d7adeca58445a1fb00ecf3373420b92776c")
+	require.NoError(t, err)
+	_, err = bytesBuf.WriteString("\n")
+	require.NoError(t, err)
+	_, err = bytesBuf.WriteString("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.MxwOozSH-TLbW_XKepjyYDHm2IT8Ki0tD3AHuajfNMg")
+	require.NoError(t, err)
+	_, err = bytesBuf.WriteString("\n")
+	require.NoError(t, err)
+	err = file.MkdirAll(walletDir)
+	require.NoError(t, err)
+
+	err = file.WriteFile(authTokenPath, bytesBuf.Bytes())
+	require.NoError(t, err)
+
+	srv := &Server{
+		authTokenPath: authTokenPath,
+	}
+
+	err = srv.initializeAuthToken()
+	require.NoError(t, err)
+
+	require.Equal(t, hexutil.Encode(srv.jwtSecret), "0xb5bbbaf533b625a93741978857f13d7adeca58445a1fb00ecf3373420b92776c")
+	require.Equal(t, srv.authToken, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.MxwOozSH-TLbW_XKepjyYDHm2IT8Ki0tD3AHuajfNMg")
+
+	f, err := os.Open(filepath.Clean(srv.authTokenPath))
+	require.NoError(t, err)
+
+	scanner := bufio.NewScanner(f)
+	var lines []string
+
+	// Scan the file and collect lines, excluding empty lines
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.TrimSpace(line) != "" {
+			lines = append(lines, line)
+		}
+	}
+	require.Equal(t, len(lines), 1)
+	// Check for scanning errors
+	err = scanner.Err()
+	require.NoError(t, err)
+	err = f.Close()
+	require.NoError(t, err)
+
 	err = os.Remove(srv.authTokenPath)
 	require.NoError(t, err)
 }
