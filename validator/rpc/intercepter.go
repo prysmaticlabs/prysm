@@ -51,7 +51,7 @@ func (s *Server) AuthTokenHandler(next http.Handler) http.Handler {
 			}
 
 			token := tokenParts[1]
-			if token != s.authToken {
+			if token != s.authToken || s.authToken == "" {
 				http.Error(w, "Forbidden: token value is invalid", http.StatusForbidden)
 				return
 			}
@@ -75,7 +75,7 @@ func (s *Server) authorize(ctx context.Context) error {
 		return status.Error(codes.Unauthenticated, "Invalid auth header, needs Bearer {token}")
 	}
 	token := strings.Split(authHeader[0], "Bearer ")[1]
-	if token != s.authToken {
+	if token != s.authToken || s.authToken == "" {
 		return status.Errorf(codes.Unauthenticated, "Forbidden: token value is invalid")
 	}
 	return nil

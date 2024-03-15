@@ -124,6 +124,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorService:         cfg.ValidatorService,
 		syncChecker:              cfg.SyncChecker,
 		genesisFetcher:           cfg.GenesisFetcher,
+		authTokenPath:            cfg.AuthTokenPath,
 		walletDir:                cfg.WalletDir,
 		walletInitializedFeed:    cfg.WalletInitializedFeed,
 		walletInitialized:        cfg.Wallet != nil,
@@ -141,11 +142,12 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 	}
 
 	if server.authTokenPath != "" {
+		log.Infof("at server start %s", server.authTokenPath)
 		if err := server.initializeAuthToken(); err != nil {
 			log.WithError(err).Error("Could not initialize web auth token")
 		}
 		validatorWebAddr := fmt.Sprintf("%s:%d", server.validatorGatewayHost, server.validatorGatewayPort)
-		logValidatorWebAuth(validatorWebAddr, server.authTokenPath, server.authTokenPath)
+		logValidatorWebAuth(validatorWebAddr, server.authToken, server.authTokenPath)
 		go server.refreshAuthTokenFromFileChanges(server.ctx, server.authTokenPath)
 	}
 	// immediately register routes to override any catchalls

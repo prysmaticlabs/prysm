@@ -107,7 +107,12 @@ func (s *Server) refreshAuthTokenFromFileChanges(ctx context.Context, authTokenP
 	}
 	for {
 		select {
-		case <-watcher.Events:
+		case event := <-watcher.Events:
+			if event.Op.String() == "REMOVE" {
+				log.Error("Auth Token was removed! Restart the validator client to regenerate a token")
+				s.authToken = ""
+				continue
+			}
 			// If a file was modified, we attempt to read that file
 			// and parse it into our accounts store.
 			if err := s.initializeAuthToken(); err != nil {
