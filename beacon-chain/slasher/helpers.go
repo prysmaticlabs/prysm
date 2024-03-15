@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/slasherkv"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/slasherkv"
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
