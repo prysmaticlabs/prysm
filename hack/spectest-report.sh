@@ -26,7 +26,7 @@ fi
 find "$BAZEL_DIR" -type f -name '*_tests.txt' -exec cat {} + > "$PRYSM_DIR/tests.txt"
 
 # Generating spec.txt
-(cd "$SPEC_DIR" && find tests -maxdepth 3 -mindepth 3 -type d > "$PRYSM_DIR/spec.txt") || exit 1
+(cd "$SPEC_DIR" && find tests -maxdepth 4 -mindepth 4 -type d > "$PRYSM_DIR/spec.txt") || exit 1
 
 # Comparing spec.txt with tests.txt and generating report.txt
 while IFS= read -r line; do
