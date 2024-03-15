@@ -68,14 +68,14 @@ func TestServer_AuthTokenHandler(t *testing.T) {
 	}))
 	t.Run("no auth token was sent", func(t *testing.T) {
 		rr := httptest.NewRecorder()
-		req, err := http.NewRequest(http.MethodGet, "/eth/v1/keystores", nil)
+		req, err := http.NewRequest(http.MethodGet, "/eth/v1/keystores", http.NoBody)
 		require.NoError(t, err)
 		testHandler.ServeHTTP(rr, req)
 		require.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
 	t.Run("wrong auth token was sent", func(t *testing.T) {
 		rr := httptest.NewRecorder()
-		req, err := http.NewRequest(http.MethodGet, "/eth/v1/keystores", nil)
+		req, err := http.NewRequest(http.MethodGet, "/eth/v1/keystores", http.NoBody)
 		require.NoError(t, err)
 		req.Header.Set("Authorization", "Bearer YOUR_JWT_TOKEN") // Replace with a valid JWT token
 		testHandler.ServeHTTP(rr, req)
@@ -83,7 +83,7 @@ func TestServer_AuthTokenHandler(t *testing.T) {
 	})
 	t.Run("good auth token was sent", func(t *testing.T) {
 		rr := httptest.NewRecorder()
-		req, err := http.NewRequest(http.MethodGet, "/eth/v1/keystores", nil)
+		req, err := http.NewRequest(http.MethodGet, "/eth/v1/keystores", http.NoBody)
 		require.NoError(t, err)
 		req.Header.Set("Authorization", "Bearer "+token) // Replace with a valid JWT token
 		testHandler.ServeHTTP(rr, req)
@@ -91,21 +91,21 @@ func TestServer_AuthTokenHandler(t *testing.T) {
 	})
 	t.Run("web endpoint needs auth token", func(t *testing.T) {
 		rr := httptest.NewRecorder()
-		req, err := http.NewRequest(http.MethodGet, "/api/v2/validator/beacon/status", nil)
+		req, err := http.NewRequest(http.MethodGet, "/api/v2/validator/beacon/status", http.NoBody)
 		require.NoError(t, err)
 		testHandler.ServeHTTP(rr, req)
 		require.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
 	t.Run("initialize does not need auth", func(t *testing.T) {
 		rr := httptest.NewRecorder()
-		req, err := http.NewRequest(http.MethodGet, api.WebUrlPrefix+"initialize", nil)
+		req, err := http.NewRequest(http.MethodGet, api.WebUrlPrefix+"initialize", http.NoBody)
 		require.NoError(t, err)
 		testHandler.ServeHTTP(rr, req)
 		require.Equal(t, http.StatusOK, rr.Code)
 	})
 	t.Run("health does not need auth", func(t *testing.T) {
 		rr := httptest.NewRecorder()
-		req, err := http.NewRequest(http.MethodGet, api.WebUrlPrefix+"health/logs", nil)
+		req, err := http.NewRequest(http.MethodGet, api.WebUrlPrefix+"health/logs", http.NoBody)
 		require.NoError(t, err)
 		testHandler.ServeHTTP(rr, req)
 		require.Equal(t, http.StatusOK, rr.Code)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -136,7 +137,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 	}
 
 	if server.authTokenPath == "" && server.walletDir != "" {
-		server.authTokenPath = server.walletDir
+		server.authTokenPath = filepath.Join(server.walletDir, api.AuthTokenFileName)
 	}
 
 	if server.authTokenPath != "" {
@@ -157,7 +158,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 // Start the gRPC server.
 func (s *Server) Start() {
 	// Setup the gRPC server options and TLS configuration.
-	address := fmt.Sprintf("%s:%s", s.host, s.port)
+	address := net.JoinHostPort(s.host, s.port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)

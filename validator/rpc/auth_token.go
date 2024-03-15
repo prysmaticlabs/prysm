@@ -70,6 +70,7 @@ func (s *Server) initializeAuthToken() error {
 		s.authToken = token
 		// TODO: can be removed in the future after fully migrated to the new format
 		if len(secret) > 0 {
+			log.Info(s.authTokenPath)
 			if err := saveAuthToken(s.authTokenPath, token); err != nil {
 				return err
 			}
@@ -86,10 +87,7 @@ func (s *Server) initializeAuthToken() error {
 		return err
 	}
 	s.authToken = token
-	if err := saveAuthToken(s.authTokenPath, token); err != nil {
-		return err
-	}
-	return nil
+	return saveAuthToken(s.authTokenPath, token)
 }
 
 func (s *Server) refreshAuthTokenFromFileChanges(ctx context.Context, authTokenPath string) {

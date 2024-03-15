@@ -89,7 +89,7 @@ func TestServer_RefreshAuthTokenOnFileChange(t *testing.T) {
 	// The service should have picked up the file change and set the jwt secret to the new one.
 	time.Sleep(time.Millisecond * 500)
 	newToken := srv.authToken
-	require.Equal(t, true, !(currentToken == newToken))
+	require.Equal(t, true, currentToken != newToken)
 	err = os.Remove(srv.authTokenPath)
 	require.NoError(t, err)
 }
