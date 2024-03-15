@@ -34,6 +34,11 @@ type Listener interface {
 	LocalNode() *enode.LocalNode
 }
 
+const (
+	udp4 = iota
+	udp6
+)
+
 // RefreshENR uses an epoch to refresh the enr entry for our node
 // with the tracked committee ids for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee ids.
@@ -62,8 +67,14 @@ func (s *Service) RefreshENR() {
 	// Compare current epoch with our fork epochs
 	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
 	switch {
-	// Altair Behaviour
-	case currEpoch >= altairForkEpoch:
+	case currEpoch < altairForkEpoch:
+		// Phase 0 behaviour.
+		if bytes.Equal(bitV, currentBitV) {
+			// return early if bitfield hasn't changed
+			return
+		}
+		s.updateSubnetRecordWithMetadata(bitV)
+	default:
 		// Retrieve sync subnets from application level
 		// cache.
 		bitS := bitfield.Bitvector4{byte(0x00)}
@@ -82,13 +93,6 @@ func (s *Service) RefreshENR() {
 			return
 		}
 		s.updateSubnetRecordWithMetadataV2(bitV, bitS)
-	default:
-		// Phase 0 behaviour.
-		if bytes.Equal(bitV, currentBitV) {
-			// return early if bitfield hasn't changed
-			return
-		}
-		s.updateSubnetRecordWithMetadata(bitV)
 	}
 	// ping all peers to inform them of new metadata
 	s.pingPeers()
@@ -140,9 +144,9 @@ func (s *Service) createListener(
 	// by default we will listen to all interfaces.
 	var bindIP net.IP
 	switch udpVersionFromIP(ipAddr) {
-	case "udp4":
+	case udp4:
 		bindIP = net.IPv4zero
-	case "udp6":
+	case udp6:
 		bindIP = net.IPv6zero
 	default:
 		return nil, errors.New("invalid ip provided")
@@ -160,6 +164,7 @@ func (s *Service) createListener(
 		IP:   bindIP,
 		Port: int(s.cfg.UDPPort),
 	}
+
 	// Listen to all network interfaces
 	// for both ip protocols.
 	networkVersion := "udp"
@@ -177,44 +182,27 @@ func (s *Service) createListener(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create local node")
 	}
-	if s.cfg.HostAddress != "" {
-		hostIP := net.ParseIP(s.cfg.HostAddress)
-		if hostIP.To4() == nil && hostIP.To16() == nil {
-			log.Errorf("Invalid host address given: %s", hostIP.String())
-		} else {
-			localNode.SetFallbackIP(hostIP)
-			localNode.SetStaticIP(hostIP)
-		}
-	}
-	if s.cfg.HostDNS != "" {
-		host := s.cfg.HostDNS
-		ips, err := net.LookupIP(host)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not resolve host address")
-		}
-		if len(ips) > 0 {
-			// Use first IP returned from the
-			// resolver.
-			firstIP := ips[0]
-			localNode.SetFallbackIP(firstIP)
-		}
-	}
-	dv5Cfg := discover.Config{
-		PrivateKey: privKey,
-	}
-	dv5Cfg.Bootnodes = []*enode.Node{}
-	for _, addr := range s.cfg.Discv5BootStrapAddr {
+
+	bootNodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddrs))
+	for _, addr := range s.cfg.Discv5BootStrapAddrs {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not bootstrap addr")
 		}
-		dv5Cfg.Bootnodes = append(dv5Cfg.Bootnodes, bootNode)
+
+		bootNodes = append(bootNodes, bootNode)
+	}
+
+	dv5Cfg := discover.Config{
+		PrivateKey: privKey,
+		Bootnodes:  bootNodes,
 	}
 
 	listener, err := discover.ListenV5(conn, localNode, dv5Cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not listen to discV5")
 	}
+
 	return listener, nil
 }
 
@@ -242,8 +230,35 @@ func (s *Service) createLocalNode(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
 	}
+
 	localNode = initializeAttSubnets(localNode)
-	return initializeSyncCommSubnets(localNode), nil
+	localNode = initializeSyncCommSubnets(localNode)
+
+	if s.cfg != nil && s.cfg.HostAddress != "" {
+		hostIP := net.ParseIP(s.cfg.HostAddress)
+		if hostIP.To4() == nil && hostIP.To16() == nil {
+			return nil, errors.Errorf("invalid host address: %s", s.cfg.HostAddress)
+		} else {
+			localNode.SetFallbackIP(hostIP)
+			localNode.SetStaticIP(hostIP)
+		}
+	}
+
+	if s.cfg != nil && s.cfg.HostDNS != "" {
+		host := s.cfg.HostDNS
+		ips, err := net.LookupIP(host)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not resolve host address: %s", host)
+		}
+		if len(ips) > 0 {
+			// Use first IP returned from the
+			// resolver.
+			firstIP := ips[0]
+			localNode.SetFallbackIP(firstIP)
+		}
+	}
+
+	return localNode, nil
 }
 
 func (s *Service) startDiscoveryV5(
@@ -363,7 +378,7 @@ func PeersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 	return allAddrs, nil
 }
 
-func parseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
+func ParseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
 	discv5Nodes, _ = parseGenericAddrs(addrs)
 	if len(discv5Nodes) == 0 {
 		log.Warn("No bootstrap addresses supplied")
@@ -483,9 +498,9 @@ func multiAddrFromString(address string) (ma.Multiaddr, error) {
 	return ma.NewMultiaddr(address)
 }
 
-func udpVersionFromIP(ipAddr net.IP) string {
+func udpVersionFromIP(ipAddr net.IP) int {
 	if ipAddr.To4() != nil {
-		return "udp4"
+		return udp4
 	}
-	return "udp6"
+	return udp6
 }

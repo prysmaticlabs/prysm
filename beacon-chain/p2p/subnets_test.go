@@ -57,10 +57,9 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		port = 3000 + i
 		cfg := &Config{
-			BootstrapNodeAddr:   []string{bootNode.String()},
-			Discv5BootStrapAddr: []string{bootNode.String()},
-			MaxPeers:            30,
-			UDPPort:             uint(port),
+			Discv5BootStrapAddrs: []string{bootNode.String()},
+			MaxPeers:             30,
+			UDPPort:              uint(port),
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
@@ -88,11 +87,10 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	port = 4001
 	gs := startup.NewClockSynchronizer()
 	cfg := &Config{
-		BootstrapNodeAddr:   []string{bootNode.String()},
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		MaxPeers:            30,
-		UDPPort:             uint(port),
-		ClockWaiter:         gs,
+		Discv5BootStrapAddrs: []string{bootNode.String()},
+		MaxPeers:             30,
+		UDPPort:              uint(port),
+		ClockWaiter:          gs,
 	}
 	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
