@@ -31,29 +31,31 @@ func MultiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
 }
 
 // buildOptions for the libp2p host.
-func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Option {
+func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Option, error) {
 	cfg := s.cfg
 	listen, err := MultiAddressBuilder(ip.String(), cfg.TCPPort)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to p2p listen")
+		return nil, errors.Wrapf(err, "cannot produce multiaddr format from %s:%d", ip.String(), cfg.TCPPort)
 	}
 	if cfg.LocalIP != "" {
 		if net.ParseIP(cfg.LocalIP) == nil {
-			log.Fatalf("Invalid local ip provided: %s", cfg.LocalIP)
+			return nil, errors.Wrapf(err, "invalid local ip provided: %s:%d", cfg.LocalIP, cfg.TCPPort)
 		}
+
 		listen, err = MultiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
 		if err != nil {
-			log.WithError(err).Fatal("Failed to p2p listen")
+			return nil, errors.Wrapf(err, "cannot produce multiaddr format from %s:%d", cfg.LocalIP, cfg.TCPPort)
 		}
 	}
 	ifaceKey, err := ecdsaprysm.ConvertToInterfacePrivkey(priKey)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to retrieve private key")
+		return nil, errors.Wrap(err, "cannot convert private key to interface private key. (Private key not displayed in logs for security reasons)")
 	}
 	id, err := peer.IDFromPublicKey(ifaceKey.GetPublic())
 	if err != nil {
-		log.WithError(err).Fatal("Failed to retrieve peer id")
+		return nil, errors.Wrapf(err, "cannot get ID from public key: %s", ifaceKey.GetPublic().Type().String())
 	}
+
 	log.Infof("Running node with peer id of %s ", id.String())
 
 	options := []libp2p.Option{
@@ -64,9 +66,9 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.Transport(tcp.NewTCPTransport),
 		libp2p.DefaultMuxers,
 		libp2p.Muxer("/mplex/6.7.0", mplex.DefaultTransport),
+		libp2p.Security(noise.ID, noise.New),
+		libp2p.Ping(false), // Disable Ping Service.
 	}
-
-	options = append(options, libp2p.Security(noise.ID, noise.New))
 
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) // Allow to use UPnP
@@ -99,12 +101,11 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 			return addrs
 		}))
 	}
-	// Disable Ping Service.
-	options = append(options, libp2p.Ping(false))
+
 	if features.Get().DisableResourceManager {
 		options = append(options, libp2p.ResourceManager(&network.NullResourceManager{}))
 	}
-	return options
+	return options, nil
 }
 
 func multiAddressBuilderWithID(ipAddr, protocol string, port uint, id peer.ID) (ma.Multiaddr, error) {

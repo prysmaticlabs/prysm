@@ -116,10 +116,10 @@ func (s *Service) ScoreNoLock(pid peer.ID) float64 {
 	if _, ok := s.store.PeerData(pid); !ok {
 		return 0
 	}
-	score += s.scorers.badResponsesScorer.score(pid) * s.scorerWeight(s.scorers.badResponsesScorer)
-	score += s.scorers.blockProviderScorer.score(pid) * s.scorerWeight(s.scorers.blockProviderScorer)
-	score += s.scorers.peerStatusScorer.score(pid) * s.scorerWeight(s.scorers.peerStatusScorer)
-	score += s.scorers.gossipScorer.score(pid) * s.scorerWeight(s.scorers.gossipScorer)
+	score += s.scorers.badResponsesScorer.scoreNoLock(pid) * s.scorerWeight(s.scorers.badResponsesScorer)
+	score += s.scorers.blockProviderScorer.scoreNoLock(pid) * s.scorerWeight(s.scorers.blockProviderScorer)
+	score += s.scorers.peerStatusScorer.scoreNoLock(pid) * s.scorerWeight(s.scorers.peerStatusScorer)
+	score += s.scorers.gossipScorer.scoreNoLock(pid) * s.scorerWeight(s.scorers.gossipScorer)
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 }
 
@@ -132,14 +132,14 @@ func (s *Service) IsBadPeer(pid peer.ID) bool {
 
 // IsBadPeerNoLock is a lock-free version of IsBadPeer.
 func (s *Service) IsBadPeerNoLock(pid peer.ID) bool {
-	if s.scorers.badResponsesScorer.isBadPeer(pid) {
+	if s.scorers.badResponsesScorer.isBadPeerNoLock(pid) {
 		return true
 	}
-	if s.scorers.peerStatusScorer.isBadPeer(pid) {
+	if s.scorers.peerStatusScorer.isBadPeerNoLock(pid) {
 		return true
 	}
 	if features.Get().EnablePeerScorer {
-		if s.scorers.gossipScorer.isBadPeer(pid) {
+		if s.scorers.gossipScorer.isBadPeerNoLock(pid) {
 			return true
 		}
 	}
