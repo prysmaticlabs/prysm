@@ -148,7 +148,7 @@ func (p *Parameters) validatorOffset(validatorIndex primitives.ValidatorIndex) u
 // if we are looking for epoch 6 and validator 6, then
 //
 //	validatorChunkIndex = 6 / 3 = 2
-//	ChunkIndex = (6 % historyLength) / 3 = (6 % 12) / 3 = 2
+//	chunkIndex = (6 % historyLength) / 3 = (6 % 12) / 3 = 2
 //
 // Then we compute how many chunks there are per max span, known as the "width"
 //
@@ -156,7 +156,7 @@ func (p *Parameters) validatorOffset(validatorIndex primitives.ValidatorIndex) u
 //
 // So every span has 4 chunks. Then, we have a disk key calculated by
 //
-//	validatorChunkIndex * width + ChunkIndex = 2*4 + 2 = 10
+//	validatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
 func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) []byte {
 	width := p.historyLength.Div(p.chunkSize)
 	return ssz.MarshalUint64(make([]byte, 0), uint64(width.Mul(validatorChunkIndex).Add(chunkIndex)))
