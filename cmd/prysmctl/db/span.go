@@ -1,7 +1,6 @@
 package db
 
 import (
-	"context"
 	"fmt"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/pkg/errors"
@@ -14,24 +13,28 @@ import (
 
 const DefaultChunkKind = types.MinSpan
 
-var f = struct {
-	Path                          string
-	ValidatorIndex                uint64
-	Epoch                         uint64
-	ChunkKind                     string
-	ChunkSize                     uint64
-	ValidatorChunkSize            uint64
-	HistoryLength                 uint64
-	IsDisplayAllValidatorsInChunk bool
-	IsDisplayAllEpochsInChunk     bool
-}{}
+var (
+	f = struct {
+		Path                          string
+		ValidatorIndex                uint64
+		Epoch                         uint64
+		ChunkKind                     string
+		ChunkSize                     uint64
+		ValidatorChunkSize            uint64
+		HistoryLength                 uint64
+		IsDisplayAllValidatorsInChunk bool
+		IsDisplayAllEpochsInChunk     bool
+	}{}
+
+	slasherDefaultParams = slasher.DefaultParams()
+)
 
 var spanCmd = &cli.Command{
 	Name:  "span",
 	Usage: "visualise values in db span bucket",
 	Action: func(c *cli.Context) error {
 		if err := spanAction(c); err != nil {
-			log.WithError(err).Fatal("Could not query db")
+			log.WithError(err).Fatal("error in span command")
 		}
 		return nil
 	},
@@ -40,60 +43,63 @@ var spanCmd = &cli.Command{
 			Name:        "path",
 			Usage:       "path to directory containing beaconchain.db",
 			Destination: &f.Path,
+			Required:    true,
 		},
 		&cli.Uint64Flag{
 			Name:        "validator_index",
 			Usage:       "filter by validator index",
 			Destination: &f.ValidatorIndex,
+			Required:    true,
 		},
 		&cli.Uint64Flag{
 			Name:        "epoch",
 			Usage:       "filter by epoch",
 			Destination: &f.Epoch,
+			Required:    true,
 		},
 		&cli.StringFlag{
 			Name:        "chunk_kind",
-			Usage:       "chunk kind to query [max|min] default: min",
+			Usage:       "chunk kind to query [max|min] (default: min)",
 			Destination: &f.ChunkKind,
 			Value:       DefaultChunkKind.String(),
 		},
-		// C - defines how many elements are in a chunk for a validator min or max span slice.
 		&cli.Uint64Flag{
 			Name:        "chunk_size",
-			Usage:       "chunk size to query (optional)",
+			Usage:       fmt.Sprintf("chunk size to query (default: %d)", slasherDefaultParams.ChunkSize()),
 			Destination: &f.ChunkSize,
 		},
-		// K - defines how many validators' chunks we store in a single flat byte slice on disk.
 		&cli.Uint64Flag{
 			Name:        "validator_chunk_size",
-			Usage:       "validator chunk size to query (optional)",
+			Usage:       fmt.Sprintf("validator chunk size to query (default: %d)", slasherDefaultParams.ValidatorChunkSize()),
 			Destination: &f.ValidatorChunkSize,
 		},
-		// H - defines how many epochs we keep of min or max spans.
 		&cli.Uint64Flag{
 			Name:        "history_length",
-			Usage:       "history length to query (optional)",
+			Usage:       fmt.Sprintf("history length to query (default: %d)", slasherDefaultParams.HistoryLength()),
 			Destination: &f.HistoryLength,
 		},
 		&cli.BoolFlag{
 			Name:        "display_all_validators_in_chunk",
-			Usage:       "display all validators in chunk",
+			Usage:       "display all validators in chunk (default: false)",
 			Destination: &f.IsDisplayAllValidatorsInChunk,
 		},
 		&cli.BoolFlag{
 			Name:        "display_all_epochs_in_chunk",
-			Usage:       "display all epochs in chunk",
+			Usage:       "display all epochs in chunk (default: false)",
 			Destination: &f.IsDisplayAllEpochsInChunk,
 		},
 	},
 }
 
-func spanAction(_ *cli.Context) error {
+func spanAction(cliCtx *cli.Context) error {
 	var (
 		chunk slasher.Chunker
 
 		err error
 	)
+
+	// context
+	ctx := cliCtx.Context
 
 	// variables
 	chunkKind := getChunkKind()
@@ -102,15 +108,20 @@ func spanAction(_ *cli.Context) error {
 	epoch := primitives.Epoch(f.Epoch)
 
 	// display configuration
-	fmt.Printf("Slasher Params %v\n", params)
-	fmt.Printf("DB %v\n", f.Path)
-	fmt.Printf("Chunk Kind %v\n", chunkKind)
-	fmt.Printf("Validator %d\n", i)
-	fmt.Printf("Epoch %d\n", epoch)
+	fmt.Printf("############################# CONFIGURATION ################################\n")
+	fmt.Printf("# Slasher Params\n")
+	fmt.Printf("# Chunk Size: %d\n", params.ChunkSize())
+	fmt.Printf("# Validator Chunk Size: %d\n", params.ValidatorChunkSize())
+	fmt.Printf("# History Length: %d\n", params.HistoryLength())
+	fmt.Printf("# DB %s\n", f.Path)
+	fmt.Printf("# Chunk Kind: %s\n", chunkKind)
+	fmt.Printf("# Validator %d\n", i)
+	fmt.Printf("# Epoch %d\n", epoch)
+	fmt.Printf("############################################################################\n")
 
 	// fetch chunk in database
 	if chunk, err = slasher.GetChunkFromDatabase(
-		context.Background(),
+		ctx,
 		f.Path,
 		slasher.GetChunkFromDatabaseFilters{
 			ChunkKind:                     chunkKind,
@@ -121,10 +132,19 @@ func spanAction(_ *cli.Context) error {
 		},
 		params,
 	); err != nil {
-		return err
+		return errors.Wrapf(err, "could not get chunk from database")
 	}
 
+	// fetch information related to chunk
 	validatorChunkIdx := params.ValidatorChunkIndex(i)
+	fmt.Printf("\n################################ CHUNK #####################################\n")
+	firstValidator := params.ValidatorIndexesInChunk(validatorChunkIdx)[0]
+	firstEpoch := epoch - (epoch.Mod(params.ChunkSize()))
+	fmt.Printf("# First validator in chunk: %d\n", firstValidator)
+	fmt.Printf("# First epoch in chunk: %d\n", firstEpoch)
+	fmt.Printf("############################################################################\n\n")
+
+	// display information about all validators in chunk
 	if !f.IsDisplayAllValidatorsInChunk {
 		if !f.IsDisplayAllEpochsInChunk {
 			chunkData, err := slasher.ChunkDataAtEpoch(params, chunk.Chunk(), i, epoch)
@@ -133,16 +153,33 @@ func spanAction(_ *cli.Context) error {
 			}
 			fmt.Printf("Chunk at epoch %d for validator %d: %v\n", epoch, i, chunkData)
 		} else {
-			vci := params.ValidatorChunkIndex(i)
-			// TODO: should check index avoiding panics
-			fmt.Printf("Chunk with epochs for validator %d: %d\n", i, chunk.Chunk()[vci:vci+params.ChunkSize()])
+			// init table
+			tw := table.NewWriter()
+
+			// headers
+			header := table.Row{"Validator / Epoch"}
+			for y := uint64(0); y < params.ChunkSize(); y++ {
+				header = append(header, firstEpoch+primitives.Epoch(y))
+			}
+			tw.AppendHeader(header)
+
+			// rows
+			b := chunk.Chunk()
+			validatorFirstEpochIdx := uint64(i.Mod(params.ValidatorChunkSize())) * params.ChunkSize()
+			subChunk := b[validatorFirstEpochIdx : validatorFirstEpochIdx+params.ChunkSize()]
+			row := make(table.Row, params.ChunkSize()+1)
+			title := i
+			row[0] = title
+			for y, span := range subChunk {
+				row[y+1] = span
+			}
+			tw.AppendRow(row)
+
+			// display
+			tw.AppendSeparator()
+			fmt.Println(tw.Render())
 		}
 	} else {
-		// find first val and epoch in chunk
-		firstValidator := params.ValidatorIndexesInChunk(validatorChunkIdx)[0]
-		firstEpoch := epoch - (epoch.Mod(params.ChunkSize()))
-		fmt.Printf("First validator in chunk: %d\n", firstValidator)
-		fmt.Printf("First epoch in chunk: %d\n", firstEpoch)
 
 		// display all validators and epochs in chunk
 		if f.IsDisplayAllEpochsInChunk {
@@ -156,6 +193,7 @@ func spanAction(_ *cli.Context) error {
 			}
 			tw.AppendHeader(header)
 
+			// rows
 			b := chunk.Chunk()
 			c := uint64(0)
 			for z := uint64(0); z < uint64(len(b)); z += params.ChunkSize() {
@@ -168,17 +206,50 @@ func spanAction(_ *cli.Context) error {
 				row := make(table.Row, params.ChunkSize()+1)
 				title := firstValidator + primitives.ValidatorIndex(c)
 				row[0] = title
-				for y, minspan := range subChunk {
-					row[y+1] = minspan
+				for y, span := range subChunk {
+					row[y+1] = span
 				}
 				tw.AppendRow(row)
+
 				c++
 			}
+
+			// display
 			tw.AppendSeparator()
 			fmt.Println(tw.Render())
 		} else {
-			// all validators but just one epoch
-			// TODO
+			indexEpochInChunk := epoch - firstEpoch
+
+			// init table
+			tw := table.NewWriter()
+
+			// headers
+			header := table.Row{"Validator / Epoch"}
+			header = append(header, epoch)
+			tw.AppendHeader(header)
+
+			// rows
+			b := chunk.Chunk()
+			c := uint64(0)
+			for z := uint64(0); z < uint64(len(b)); z += params.ChunkSize() {
+				end := z + params.ChunkSize()
+				if end > uint64(len(b)) {
+					end = uint64(len(b))
+				}
+				subChunk := b[z:end]
+
+				row := make(table.Row, 2)
+				title := firstValidator + primitives.ValidatorIndex(c)
+				row[0] = title
+				row[1] = subChunk[indexEpochInChunk]
+				tw.AppendRow(row)
+
+				c++
+			}
+			tw.AppendSeparator()
+
+			// display
+			fmt.Println(tw.Render())
 		}
 	}
 
@@ -198,21 +269,20 @@ func getSlasherParams() *slasher.Parameters {
 		chunkSize, validatorChunkSize uint64
 		historyLength                 primitives.Epoch
 	)
-	params := slasher.DefaultParams()
-	if f.ChunkSize != 0 && f.ChunkSize != params.ChunkSize() {
+	if f.ChunkSize != 0 && f.ChunkSize != slasherDefaultParams.ChunkSize() {
 		chunkSize = f.ChunkSize
 	} else {
-		chunkSize = params.ChunkSize()
+		chunkSize = slasherDefaultParams.ChunkSize()
 	}
-	if f.ValidatorChunkSize != 0 && f.ValidatorChunkSize != params.ValidatorChunkSize() {
+	if f.ValidatorChunkSize != 0 && f.ValidatorChunkSize != slasherDefaultParams.ValidatorChunkSize() {
 		validatorChunkSize = f.ValidatorChunkSize
 	} else {
-		validatorChunkSize = params.ValidatorChunkSize()
+		validatorChunkSize = slasherDefaultParams.ValidatorChunkSize()
 	}
-	if f.HistoryLength != 0 && f.HistoryLength != uint64(params.HistoryLength()) {
+	if f.HistoryLength != 0 && f.HistoryLength != uint64(slasherDefaultParams.HistoryLength()) {
 		historyLength = primitives.Epoch(f.HistoryLength)
 	} else {
-		historyLength = params.HistoryLength()
+		historyLength = slasherDefaultParams.HistoryLength()
 	}
 	return slasher.NewParams(chunkSize, validatorChunkSize, historyLength)
 }
