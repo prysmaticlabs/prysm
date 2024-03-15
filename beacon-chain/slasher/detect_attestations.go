@@ -562,7 +562,9 @@ func (s *Service) applyAttestationForValidator(
 		}
 
 		// Move to next chunk to update
-		// that is next chunk chun for maxspax or previous chunk for minspan
+		// that is next chunk for maxspan or previous chunk for minspan
+		// keepGoingFromEpoch is the first epoch of the next chunk for maxspan
+		// or the last epoch of the previous chunk for minspan
 		startEpoch = keepGoingFromEpoch
 	}
 
