@@ -343,35 +343,7 @@ func (s *Service) ForkChoicer() f.ForkChoicer {
 
 // IsOptimistic returns true if the current head is optimistic.
 func (s *Service) IsOptimistic(_ context.Context) (bool, error) {
-	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
-		return false, nil
-	}
-	s.headLock.RLock()
-	if s.head == nil {
-		s.headLock.RUnlock()
-		return false, ErrNilHead
-	}
-	headRoot := s.head.root
-	headSlot := s.head.slot
-	headOptimistic := s.head.optimistic
-	s.headLock.RUnlock()
-	// we trust the head package for recent head slots, otherwise fallback to forkchoice
-	if headSlot+2 >= s.CurrentSlot() {
-		return headOptimistic, nil
-	}
-
-	s.cfg.ForkChoiceStore.RLock()
-	defer s.cfg.ForkChoiceStore.RUnlock()
-	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(headRoot)
-	if err == nil {
-		return optimistic, nil
-	}
-	if !errors.Is(err, doublylinkedtree.ErrNilNode) {
-		return true, err
-	}
-	// If fockchoice does not have the headroot, then the node is considered
-	// optimistic
-	return true, nil
+	return false, nil
 }
 
 // IsFinalized returns true if the input root is finalized.

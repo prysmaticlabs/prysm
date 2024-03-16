@@ -224,25 +224,14 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	localPayload, overrideBuilder, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
+	builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
 	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
+		builderGetPayloadMissCount.Inc()
+		log.WithError(err).Error("Could not get builder payload")
 	}
 
-	// There's no reason to try to get a builder bid if local override is true.
-	var builderPayload interfaces.ExecutionData
-	var builderKzgCommitments [][]byte
-	overrideBuilder = overrideBuilder || skipMevBoost // Skip using mev-boost if requested by the caller.
-	if !overrideBuilder {
-		builderPayload, builderKzgCommitments, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
-		if err != nil {
-			builderGetPayloadMissCount.Inc()
-			log.WithError(err).Error("Could not get builder payload")
-		}
-	}
-
-	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload, builderKzgCommitments, builderBoostFactor); err != nil {
-		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
+	if err := setBuilderExecution(sBlk, builderPayload, builderKzgCommitments); err != nil {
+		return errors.Wrap(err, "could not set builder execution")
 	}
 
 	wg.Wait() // Wait until block is built via consensus and execution fields.
