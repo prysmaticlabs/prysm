@@ -35,7 +35,6 @@ type Chunker interface {
 		newTargetEpoch primitives.Epoch,
 	) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error)
 	StartEpoch(sourceEpoch, currentEpoch primitives.Epoch) (epoch primitives.Epoch, exists bool)
-	NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch
 }
 
 // MinSpanChunksSlice represents a slice containing a chunk for K different validator's min spans.
@@ -514,48 +513,6 @@ func (*MaxSpanChunksSlice) StartEpoch(
 	epoch = sourceEpoch.Add(1)
 	exists = true
 	return
-}
-
-// NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For min
-// span chunks, this will be the last epoch of chunk index = (current chunk - 1). For example:
-//
-//	                     chunk0     chunk1     chunk2
-//	                       |          |          |
-//	max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
-//
-// If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3 then the next start
-// epoch is the last epoch of chunk 0, which is epoch 2. This is computed as:
-//
-//	last_epoch(chunkIndex(startEpoch)-1)
-//	last_epoch(chunkIndex(3) - 1)
-//	last_epoch(1 - 1)
-//	last_epoch(0)
-//	2
-func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch {
-	prevChunkIdx := m.params.chunkIndex(startEpoch)
-	if prevChunkIdx > 0 {
-		prevChunkIdx--
-	}
-	return m.params.lastEpoch(prevChunkIdx)
-}
-
-// NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For max
-// span chunks, this will be the start epoch of chunk index = (current chunk + 1). For example:
-//
-//	                     chunk0     chunk1     chunk2
-//	                       |          |          |
-//	max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
-//
-// If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
-// epoch is the start epoch of chunk 2, which is epoch 6. This is computed as:
-//
-//	first_epoch(chunkIndex(startEpoch)+1)
-//	first_epoch(chunkIndex(3)+1)
-//	first_epoch(1 + 1)
-//	first_epoch(2)
-//	6
-func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch {
-	return m.params.firstEpoch(m.params.chunkIndex(startEpoch) + 1)
 }
 
 // Given a validator index and epoch, retrieves the target epoch at its specific

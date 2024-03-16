@@ -481,20 +481,18 @@ func (s *Service) applyAttestationForValidator(
 	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
 	defer span.End()
 
-	var err error
+	var (
+		chunk Chunker
 
+		err error
+	)
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
-	chunkIndex := s.params.chunkIndex(sourceEpoch)
 
-	chunk, ok := chunksByChunkIdx[chunkIndex]
-	if !ok {
-		chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
-		}
+	if chunk, _, err = s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, sourceEpoch); err != nil {
+		return nil, err
 	}
 
 	// Check slashable, if so, return the slashing.
@@ -528,15 +526,10 @@ func (s *Service) applyAttestationForValidator(
 	// us we need to proceed to the next chunk, we continue by determining
 	// the start epoch of the next chunk. We exit once we no longer need to
 	// keep updating chunks.
+	var chunkIndex uint64
 	for {
-		chunkIndex = s.params.chunkIndex(startEpoch)
-
-		chunk, ok := chunksByChunkIdx[chunkIndex]
-		if !ok {
-			chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
-			}
+		if chunk, chunkIndex, err = s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, startEpoch); err != nil {
+			return nil, errors.Wrapf(err, "could not get chunk at chunk index %d while updating the chunk", chunkIndex)
 		}
 
 		keepGoingFromEpoch, keepGoing, err := chunk.Update(
@@ -546,7 +539,6 @@ func (s *Service) applyAttestationForValidator(
 			startEpoch,
 			targetEpoch,
 		)
-
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
@@ -559,17 +551,35 @@ func (s *Service) applyAttestationForValidator(
 
 		// We update the chunksByChunkIdx map with the chunk we just updated.
 		chunksByChunkIdx[chunkIndex] = chunk
+
+		// Move to next epoch from next chunk if needed.
 		if !keepGoing {
 			break
 		}
 
-		// Move to next epoch from next chunk
-		// keepGoingFromEpoch is the first epoch of the next chunk for maxspan
-		// or the last epoch of the previous chunk for minspan
 		startEpoch = keepGoingFromEpoch
 	}
 
 	return nil, nil
+}
+
+func (s *Service) getChunk(
+	ctx context.Context,
+	chunksByChunkIdx map[uint64]Chunker,
+	chunkKind slashertypes.ChunkKind,
+	validatorChunkIndex uint64,
+	startEpoch primitives.Epoch,
+) (chunk Chunker, chunkIndex uint64, err error) {
+	chunkIndex = s.params.chunkIndex(startEpoch)
+
+	var ok bool
+	chunk, ok = chunksByChunkIdx[chunkIndex]
+	if !ok {
+		if chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex); err != nil {
+			return chunk, chunkIndex, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
+		}
+	}
+	return chunk, chunkIndex, nil
 }
 
 // Retrieve a chunk from database.
