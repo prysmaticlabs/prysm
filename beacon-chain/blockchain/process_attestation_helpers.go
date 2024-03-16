@@ -44,6 +44,18 @@ func (s *Service) getRecentPreState(ctx context.Context, c *ethpb.Checkpoint) st
 	if err != nil {
 		return nil
 	}
+	// Try if we have already set the checkpoint cache
+	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
+	lock := async.NewMultilock(string(c.Root) + epochKey)
+	lock.Lock()
+	defer lock.Unlock()
+	cachedState, err := s.checkpointStateCache.StateByCheckpoint(c)
+	if err != nil {
+		return nil
+	}
+	if cachedState != nil && !cachedState.IsNil() {
+		return cachedState
+	}
 	st, err := s.HeadState(ctx)
 	if err != nil {
 		return nil
