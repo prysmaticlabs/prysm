@@ -532,7 +532,7 @@ func (s *Service) applyAttestationForValidator(
 			return nil, errors.Wrap(err, "could not get chunk before updating its values")
 		}
 
-		keepGoingFromEpoch, keepGoing, err := chunk.Update(
+		keepGoingFromEpoch, keepGoing, isChunkUpdated, err := chunk.Update(
 			chunkIndex,
 			currentEpoch,
 			validatorIndex,
@@ -549,8 +549,10 @@ func (s *Service) applyAttestationForValidator(
 			)
 		}
 
-		// We update the chunksByChunkIdx map with the chunk we just updated.
-		chunksByChunkIdx[chunkIndex] = chunk
+		// We update the chunksByChunkIdx map with the chunk if it's been updated.
+		if isChunkUpdated {
+			chunksByChunkIdx[chunkIndex] = chunk
+		}
 
 		// Move to next epoch from next chunk if needed.
 		if !keepGoing {

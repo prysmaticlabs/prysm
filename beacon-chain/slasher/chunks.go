@@ -33,7 +33,7 @@ type Chunker interface {
 		validatorIndex primitives.ValidatorIndex,
 		startEpoch,
 		newTargetEpoch primitives.Epoch,
-	) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error)
+	) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, isChunkUpdated bool, err error)
 	StartEpoch(sourceEpoch, currentEpoch primitives.Epoch) (epoch primitives.Epoch, exists bool)
 }
 
@@ -385,7 +385,7 @@ func (m *MinSpanChunksSlice) Update(
 	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch primitives.Epoch,
-) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error) {
+) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, isChunkUpdated bool, err error) {
 	// The lowest epoch we need to update.
 	minEpoch := primitives.Epoch(0)
 	historyLength := m.params.historyLength - 1
@@ -406,6 +406,7 @@ func (m *MinSpanChunksSlice) Update(
 		// If the newly incoming value is < the existing value, we update
 		// the data in the min span to meet with its definition.
 		if newTargetEpoch < chunkTarget {
+			isChunkUpdated = true
 			if err = setChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk, newTargetEpoch); err != nil {
 				err = errors.Wrapf(err, "could not set chunk data at epoch %d", epochInChunk)
 				return
@@ -437,7 +438,7 @@ func (m *MaxSpanChunksSlice) Update(
 	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch primitives.Epoch,
-) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error) {
+) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, isChunkUpdated bool, err error) {
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at startEpoch up to
 	// and including the current epoch. As long as the epoch, e, is in the same chunk index and e <= currentEpoch,
@@ -452,6 +453,7 @@ func (m *MaxSpanChunksSlice) Update(
 		// If the newly incoming value is > the existing value, we update
 		// the data in the max span to meet with its definition.
 		if newTargetEpoch > chunkTarget {
+			isChunkUpdated = true
 			if err = setChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk, newTargetEpoch); err != nil {
 				err = errors.Wrapf(err, "could not set chunk data at epoch %d", epochInChunk)
 				return

@@ -1177,10 +1177,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			validatorIndex:      42,
 			currentEpoch:        14,
 
-			expectedMinChunkByChunkIndex: map[uint64][]uint16{
-				// |  val 42  |     val 43      |
-				2: {2, 2, 2, 2, 77, 77, 77, 9999},
-			},
+			expectedMinChunkByChunkIndex: map[uint64][]uint16{},
 		},
 		{
 			// Only the first chunk is updated.
@@ -1208,8 +1205,6 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			currentEpoch:        14,
 
 			expectedMinChunkByChunkIndex: map[uint64][]uint16{
-				// |   val 42    |     val 43    |
-				1: {11, 12, 13, 3, 66, 66, 66, 66},
 				// |       val 42               |     val 43      |
 				2: {2, 2, neutralMin, neutralMin, 77, 77, 77, 9999},
 			},
@@ -1294,7 +1289,6 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			require.NoError(t, err)
 			require.Equal(t, len(tt.expectedMinChunkByChunkIndex), len(chunkerByChunkerIndex))
 			for chunkIndex, expectedMinChunk := range tt.expectedMinChunkByChunkIndex {
-				fmt.Println("chunkIndex", chunkIndex)
 				actualMinChunk, ok := chunkerByChunkerIndex[chunkIndex]
 				require.Equal(t, true, ok)
 				require.Equal(t, len(expectedMinChunk), len(actualMinChunk.Chunk()))
