@@ -286,6 +286,11 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 			return pubsub.ValidationIgnore
 		}
 		b, err := v(ctx, pid, msg)
+		// We do not penalize peers if we are hitting pubsub timeouts
+		// trying to process those messages.
+		if b == pubsub.ValidationReject && ctx.Err() != nil {
+			b = pubsub.ValidationIgnore
+		}
 		if b == pubsub.ValidationReject {
 			fields := logrus.Fields{
 				"topic":        topic,
@@ -316,7 +321,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 	}
 }
 
-// subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
+// subscribe to a static subnet with the given topic and index. A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte, subnetCount uint64) {
 	genRoot := s.cfg.clock.GenesisValidatorsRoot()

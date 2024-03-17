@@ -6,7 +6,9 @@ package node
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -21,8 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/io/logs"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -43,6 +47,35 @@ type Server struct {
 	POWChainInfoFetcher  execution.ChainInfoFetcher
 	BeaconMonitoringHost string
 	BeaconMonitoringPort int
+}
+
+// GetHealth checks the health of the node
+func (ns *Server) GetHealth(ctx context.Context, request *ethpb.HealthRequest) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "node.GetHealth")
+	defer span.End()
+
+	// Set a timeout for the health check operation
+	timeoutDuration := 10 * time.Second
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel() // Important to avoid a context leak
+
+	if ns.SyncChecker.Synced() {
+		return &empty.Empty{}, nil
+	}
+	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
+		if request.SyncingStatus != 0 {
+			// override the 200 success with the provided request status
+			if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.FormatUint(request.SyncingStatus, 10))); err != nil {
+				return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
+			}
+			return &empty.Empty{}, nil
+		}
+		if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.FormatUint(http.StatusPartialContent, 10))); err != nil {
+			return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
+		}
+		return &empty.Empty{}, nil
+	}
+	return &empty.Empty{}, status.Errorf(codes.Unavailable, "service unavailable")
 }
 
 // GetSyncStatus checks the current network sync status of the node.

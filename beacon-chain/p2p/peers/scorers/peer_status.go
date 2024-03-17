@@ -41,12 +41,12 @@ func newPeerStatusScorer(store *peerdata.Store, config *PeerStatusScorerConfig) 
 func (s *PeerStatusScorer) Score(pid peer.ID) float64 {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.score(pid)
+	return s.scoreNoLock(pid)
 }
 
-// score is a lock-free version of Score.
-func (s *PeerStatusScorer) score(pid peer.ID) float64 {
-	if s.isBadPeer(pid) {
+// scoreNoLock is a lock-free version of Score.
+func (s *PeerStatusScorer) scoreNoLock(pid peer.ID) float64 {
+	if s.isBadPeerNoLock(pid) {
 		return BadPeerScore
 	}
 	score := float64(0)
@@ -70,11 +70,11 @@ func (s *PeerStatusScorer) score(pid peer.ID) float64 {
 func (s *PeerStatusScorer) IsBadPeer(pid peer.ID) bool {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.isBadPeer(pid)
+	return s.isBadPeerNoLock(pid)
 }
 
-// isBadPeer is lock-free version of IsBadPeer.
-func (s *PeerStatusScorer) isBadPeer(pid peer.ID) bool {
+// isBadPeerNoLock is lock-free version of IsBadPeer.
+func (s *PeerStatusScorer) isBadPeerNoLock(pid peer.ID) bool {
 	peerData, ok := s.store.PeerData(pid)
 	if !ok {
 		return false
@@ -100,7 +100,7 @@ func (s *PeerStatusScorer) BadPeers() []peer.ID {
 
 	badPeers := make([]peer.ID, 0)
 	for pid := range s.store.Peers() {
-		if s.isBadPeer(pid) {
+		if s.isBadPeerNoLock(pid) {
 			badPeers = append(badPeers, pid)
 		}
 	}
@@ -129,11 +129,11 @@ func (s *PeerStatusScorer) SetPeerStatus(pid peer.ID, chainState *pb.Status, val
 func (s *PeerStatusScorer) PeerStatus(pid peer.ID) (*pb.Status, error) {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.peerStatus(pid)
+	return s.peerStatusNoLock(pid)
 }
 
-// peerStatus lock-free version of PeerStatus.
-func (s *PeerStatusScorer) peerStatus(pid peer.ID) (*pb.Status, error) {
+// peerStatusNoLock lock-free version of PeerStatus.
+func (s *PeerStatusScorer) peerStatusNoLock(pid peer.ID) (*pb.Status, error) {
 	if peerData, ok := s.store.PeerData(pid); ok {
 		if peerData.ChainState == nil {
 			return nil, peerdata.ErrNoPeerStatus
