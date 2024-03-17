@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	blobVerifiationProposerSignatureCache = promauto.NewCounterVec(
+	blobVerificationProposerSignatureCache = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "blob_verification_proposer_signature_cache",
 			Help: "BlobSidecar proposer signature cache result.",
