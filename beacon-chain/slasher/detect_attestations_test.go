@@ -1145,7 +1145,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 		historyLength      primitives.Epoch
 
 		// used to init context
-		initialMinChunkByChunkIndex map[uint64][]uint16
+		initialChunkByChunkIndex map[uint64][]uint16
 
 		// function parameters
 		attestation         *slashertypes.IndexedAttestationWrapper
@@ -1155,16 +1155,88 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 		currentEpoch        primitives.Epoch
 
 		// expected result
-		expectedMinChunkByChunkIndex map[uint64][]uint16
+		expectedChunkByChunkIndex map[uint64][]uint16
 	}{
 		{
-			name: "unchanged chunk",
+			name: "unchanged max chunks",
 
 			chunkSize:          4,
 			validatorChunkSize: 2,
 			historyLength:      12,
 
-			initialMinChunkByChunkIndex: map[uint64][]uint16{
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				0: {0, 0, 0, 0, 55, 55, 55, 55},
+				1: {0, 0, 0, 0, 66, 66, 66, 66},
+				2: {0, 0, 0, 0, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 7, 8, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MaxSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        9,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{},
+		},
+		{
+			name: "only one max chunk updated",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				0: {0, 0, 0, 0, 55, 55, 55, 55},
+				1: {0, 0, 0, 2, 66, 66, 66, 66},
+				2: {0, 0, 0, 0, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 5, 7, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MaxSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        8,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				1: {0, 0, 1, 2, 66, 66, 66, 66},
+			},
+		},
+		{
+			name: "2 max chunks are being updated",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				0: {0, 0, 2, 0, 55, 55, 55, 55},
+				1: {0, 0, 0, 0, 66, 66, 66, 66},
+				2: {0, 0, 0, 0, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 6, 11, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MaxSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        12,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				1: {0, 0, 0, 4, 66, 66, 66, 66},
+				2: {3, 2, 1, 0, 77, 77, 77, 9999},
+			},
+		},
+		{
+			name: "unchanged min chunks",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
 				// |  val 42  |     val 43    |
 				0: {3, 3, 3, 2, 55, 55, 55, 55},
 				1: {5, 4, 3, 2, 66, 66, 66, 66},
@@ -1177,19 +1249,19 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			validatorIndex:      42,
 			currentEpoch:        14,
 
-			expectedMinChunkByChunkIndex: map[uint64][]uint16{},
+			expectedChunkByChunkIndex: map[uint64][]uint16{},
 		},
 		{
 			// Only the first chunk is updated.
 			// The second chunk, the first value is 3 which makes a potential a new target equals to the current epoch (10)
 			// Therefore, the update stops there.
-			name: "only last chunk updated",
+			name: "only one min chunk updated",
 
 			chunkSize:          4,
 			validatorChunkSize: 2,
 			historyLength:      12,
 
-			initialMinChunkByChunkIndex: map[uint64][]uint16{
+			initialChunkByChunkIndex: map[uint64][]uint16{
 				// |  val 42   |     val 43    |
 				0: {7, 8, 9, 10, 55, 55, 55, 55},
 				// |   val 42    |     val 43    |
@@ -1204,19 +1276,19 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			validatorIndex:      42,
 			currentEpoch:        14,
 
-			expectedMinChunkByChunkIndex: map[uint64][]uint16{
+			expectedChunkByChunkIndex: map[uint64][]uint16{
 				// |       val 42               |     val 43      |
 				2: {2, 2, neutralMin, neutralMin, 77, 77, 77, 9999},
 			},
 		},
 		{
-			name: "all chunks are being updated",
+			name: "3 min chunks are being updated",
 
 			chunkSize:          4,
 			validatorChunkSize: 2,
 			historyLength:      12,
 
-			initialMinChunkByChunkIndex: map[uint64][]uint16{
+			initialChunkByChunkIndex: map[uint64][]uint16{
 				// |      val 42       |     val 43    |
 				0: {3, 3, 3, neutralMin, 55, 55, 55, 55},
 				// |               val 42                         |     val 43    |
@@ -1230,7 +1302,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			validatorIndex:      42,
 			currentEpoch:        14,
 
-			expectedMinChunkByChunkIndex: map[uint64][]uint16{
+			expectedChunkByChunkIndex: map[uint64][]uint16{
 				// |  val 42  |     val 43    |
 				0: {3, 3, 3, 7, 55, 55, 55, 55},
 				1: {6, 5, 4, 3, 66, 66, 66, 66},
@@ -1259,17 +1331,21 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			}
 
 			// Save min initial chunks if they exist.
-			if tt.initialMinChunkByChunkIndex != nil {
-				minChunkerByChunkerIndex := map[uint64]Chunker{}
-				for chunkIndex, minChunk := range tt.initialMinChunkByChunkIndex {
-					minChunkerByChunkerIndex[chunkIndex] = &MinSpanChunksSlice{data: minChunk}
+			if tt.initialChunkByChunkIndex != nil {
+				chunkerByChunkerIndex := map[uint64]Chunker{}
+				for chunkIndex, chunk := range tt.initialChunkByChunkIndex {
+					if tt.chunkKind == slashertypes.MinSpan {
+						chunkerByChunkerIndex[chunkIndex] = &MinSpanChunksSlice{data: chunk}
+					} else {
+						chunkerByChunkerIndex[chunkIndex] = &MaxSpanChunksSlice{data: chunk}
+					}
 				}
 
-				minChunkerByChunkerIndexByValidatorChunkerIndex := map[uint64]map[uint64]Chunker{
-					tt.validatorChunkIndex: minChunkerByChunkerIndex,
+				chunkerByChunkerIndexByValidatorChunkerIndex := map[uint64]map[uint64]Chunker{
+					tt.validatorChunkIndex: chunkerByChunkerIndex,
 				}
 
-				err := service.saveChunksToDisk(ctx, slashertypes.MinSpan, minChunkerByChunkerIndexByValidatorChunkerIndex)
+				err := service.saveChunksToDisk(ctx, tt.chunkKind, chunkerByChunkerIndexByValidatorChunkerIndex)
 				require.NoError(t, err)
 			}
 
@@ -1287,8 +1363,8 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 
 			// Compare the actual and expected chunks.
 			require.NoError(t, err)
-			require.Equal(t, len(tt.expectedMinChunkByChunkIndex), len(chunkerByChunkerIndex))
-			for chunkIndex, expectedMinChunk := range tt.expectedMinChunkByChunkIndex {
+			require.Equal(t, len(tt.expectedChunkByChunkIndex), len(chunkerByChunkerIndex))
+			for chunkIndex, expectedMinChunk := range tt.expectedChunkByChunkIndex {
 				actualMinChunk, ok := chunkerByChunkerIndex[chunkIndex]
 				require.Equal(t, true, ok)
 				require.Equal(t, len(expectedMinChunk), len(actualMinChunk.Chunk()))
