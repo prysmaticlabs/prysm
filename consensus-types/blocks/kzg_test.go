@@ -75,14 +75,9 @@ func Test_MerkleProofKZGCommitment(t *testing.T) {
 	proof, err := MerkleProofKZGCommitment(body, index)
 	require.NoError(t, err)
 
+	// Test the logic of topProof in MerkleProofKZGCommitment.
 	commitmentsRoot, err := getBlobKzgCommitmentsRoot(kzgs)
 	require.NoError(t, err)
-	membersRoots, _ := topLevelRoots(body)
-	// Add the commitments root into the body members roots.
-	// For this test only. We don't need to do this when
-	// generating the proof.
-	membersRoots[kzgPosition] = commitmentsRoot[:]
-
 	bodyMembersRoots, err := topLevelRoots(body)
 	require.NoError(t, err, "Failed to get top level roots")
 	bodySparse, err := trie.GenerateTrieFromItems(
