@@ -101,8 +101,7 @@ func Test_MerkleProofKZGCommitment(t *testing.T) {
 
 	chunk := makeChunk(kzgs[index])
 	gohashtree.HashChunks(chunk, chunk)
-	kzgOffset := 54 * fieldparams.MaxBlobCommitmentsPerBlock
-	require.Equal(t, true, trie.VerifyMerkleProof(root[:], chunk[0][:], uint64(index+kzgOffset), proof))
+	require.Equal(t, true, trie.VerifyMerkleProof(root[:], chunk[0][:], uint64(index+KZGOffset), proof))
 }
 
 // This test explains the calculation of the KZG commitment root's Merkle index
