@@ -492,7 +492,7 @@ func (s *Service) applyAttestationForValidator(
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
 
 	if chunk, _, err = s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, sourceEpoch); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get chunk")
 	}
 
 	// Check slashable, if so, return the slashing.
@@ -523,13 +523,13 @@ func (s *Service) applyAttestationForValidator(
 	// Given a single attestation could span across multiple chunks
 	// for a validator min or max span, we attempt to update the current chunk
 	// for the source epoch of the attestation. If the update function tells
-	// us we need to proceed to the next chunk, we continue by determining
+	// us we need to proceed to the next chunk, we continue by updating
 	// the start epoch of the next chunk. We exit once we no longer need to
 	// keep updating chunks.
 	var chunkIndex uint64
 	for {
 		if chunk, chunkIndex, err = s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, startEpoch); err != nil {
-			return nil, errors.Wrapf(err, "could not get chunk at chunk index %d while updating the chunk", chunkIndex)
+			return nil, errors.Wrap(err, "could not get chunk before updating its values")
 		}
 
 		keepGoingFromEpoch, keepGoing, err := chunk.Update(
@@ -556,7 +556,6 @@ func (s *Service) applyAttestationForValidator(
 		if !keepGoing {
 			break
 		}
-
 		startEpoch = keepGoingFromEpoch
 	}
 

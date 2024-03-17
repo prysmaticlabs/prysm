@@ -130,8 +130,9 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	chunkIndex := uint64(0)
 	startEpoch := target
 	currentEpoch := target
-	_, err = chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
+	_, keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
+	require.Equal(t, false, keepGoing)
 
 	// Next up, we create a surrounding vote, but it should NOT be slashable
 	// because we DO NOT have an existing attestation record in our database at the min target epoch.
@@ -208,8 +209,9 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	chunkIndex := uint64(0)
 	startEpoch := source
 	currentEpoch := target
-	_, err = chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
+	_, keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
+	require.Equal(t, false, keepGoing)
 
 	// Next up, we create a surrounded vote, but it should NOT be slashable
 	// because we DO NOT have an existing attestation record in our database at the max target epoch.
@@ -284,11 +286,14 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	validatorIndex := primitives.ValidatorIndex(0)
 	startEpoch := target
 	currentEpoch := target
-	keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIndex, startEpoch, target)
+	keepGoingFromEpoch, keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIndex, startEpoch, target)
 	require.NoError(t, err)
 
 	// We should keep going! We still have to update the data for chunk index 0.
 	require.Equal(t, true, keepGoing)
+	// The chunk size is 2, so the expected keepGoingFromEpoch is 3 - 2 = 1
+	expectedKeepGoingFromEpoch := startEpoch - primitives.Epoch(params.chunkSize)
+	require.Equal(t, expectedKeepGoingFromEpoch, keepGoingFromEpoch)
 	want := []uint16{1, 0, math.MaxUint16, math.MaxUint16, math.MaxUint16, math.MaxUint16}
 	require.DeepEqual(t, want, chunk.Chunk())
 
@@ -298,7 +303,7 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	validatorIndex = primitives.ValidatorIndex(0)
 	startEpoch = primitives.Epoch(1)
 	currentEpoch = target
-	keepGoing, err = chunk.Update(chunkIndex, currentEpoch, validatorIndex, startEpoch, target)
+	_, keepGoing, err = chunk.Update(chunkIndex, currentEpoch, validatorIndex, startEpoch, target)
 	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want = []uint16{3, 2, math.MaxUint16, math.MaxUint16, math.MaxUint16, math.MaxUint16}
@@ -317,11 +322,15 @@ func TestMaxSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	validatorIdx := primitives.ValidatorIndex(0)
 	startEpoch := primitives.Epoch(0)
 	currentEpoch := target
-	keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
+	keepGoingFromEpoch, keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
 
 	// We should keep going! We still have to update the data for chunk index 1.
 	require.Equal(t, true, keepGoing)
+	// The chunk size is 2, so the expected keepGoingFromEpoch is 3 + 2 = 5
+	expectedKeepGoingFromEpoch := startEpoch + primitives.Epoch(params.chunkSize)
+	require.Equal(t, expectedKeepGoingFromEpoch, keepGoingFromEpoch)
+
 	want := []uint16{3, 2, 0, 0, 0, 0}
 	require.DeepEqual(t, want, chunk.Chunk())
 
@@ -331,7 +340,7 @@ func TestMaxSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	validatorIdx = primitives.ValidatorIndex(0)
 	startEpoch = primitives.Epoch(2)
 	currentEpoch = target
-	keepGoing, err = chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
+	_, keepGoing, err = chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want = []uint16{1, 0, 0, 0, 0, 0}
@@ -373,7 +382,7 @@ func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	validatorIdx := primitives.ValidatorIndex(0)
 	startEpoch := target
 	currentEpoch := target
-	keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
+	_, keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want := []uint16{1, 0, math.MaxUint16, math.MaxUint16, math.MaxUint16, math.MaxUint16}
@@ -392,7 +401,7 @@ func TestMaxSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	validatorIdx := primitives.ValidatorIndex(0)
 	startEpoch := primitives.Epoch(0)
 	currentEpoch := target
-	keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
+	_, keepGoing, err := chunk.Update(chunkIndex, currentEpoch, validatorIdx, startEpoch, target)
 	require.NoError(t, err)
 	require.Equal(t, false, keepGoing)
 	want := []uint16{3, 2, 1, 0, 0, 0, 0, 0}
@@ -513,89 +522,6 @@ func TestMaxSpanChunksSlice_StartEpoch(t *testing.T) {
 			gotEpoch, gotExists := m.StartEpoch(tt.args.sourceEpoch, tt.args.currentEpoch)
 			assert.Equal(t, false, tt.shouldNotExist && gotExists)
 			assert.Equal(t, false, !tt.shouldNotExist && gotEpoch != tt.wantEpoch)
-		})
-	}
-}
-
-func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
-	tests := []struct {
-		name       string
-		params     *Parameters
-		startEpoch primitives.Epoch
-		want       primitives.Epoch
-	}{
-		{
-			name: "Start epoch 0",
-			params: &Parameters{
-				chunkSize:     3,
-				historyLength: 4096,
-			},
-			startEpoch: 0,
-			want:       2,
-		},
-		{
-			name: "Start epoch of chunk 1 returns last epoch of chunk 0",
-			params: &Parameters{
-				chunkSize:     3,
-				historyLength: 4096,
-			},
-			startEpoch: 3,
-			want:       2,
-		},
-		{
-			name: "Start epoch inside of chunk 2 returns last epoch of chunk 1",
-			params: &Parameters{
-				chunkSize:     3,
-				historyLength: 4096,
-			},
-			startEpoch: 8,
-			want:       5,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := &MinSpanChunksSlice{
-				params: tt.params,
-			}
-			got := m.NextChunkStartEpoch(tt.startEpoch)
-			assert.Equal(t, true, got == tt.want)
-		})
-	}
-}
-
-func TestMaxSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
-	tests := []struct {
-		name       string
-		params     *Parameters
-		startEpoch primitives.Epoch
-		want       primitives.Epoch
-	}{
-		{
-			name: "Start epoch 0",
-			params: &Parameters{
-				chunkSize:     3,
-				historyLength: 4,
-			},
-			startEpoch: 0,
-			want:       3,
-		},
-		{
-			name: "Start epoch of chunk 1 returns start epoch of chunk 2",
-			params: &Parameters{
-				chunkSize:     3,
-				historyLength: 4,
-			},
-			startEpoch: 3,
-			want:       6,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := &MaxSpanChunksSlice{
-				params: tt.params,
-			}
-			got := m.NextChunkStartEpoch(tt.startEpoch)
-			assert.Equal(t, true, got == tt.want)
 		})
 	}
 }
