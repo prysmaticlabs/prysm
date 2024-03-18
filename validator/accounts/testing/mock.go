@@ -9,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v5/api/client/event"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -91,6 +92,7 @@ func (_ *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerC
 
 type Validator struct {
 	Km               keymanager.IKeymanager
+	graffiti         string
 	proposerSettings *proposer.Settings
 }
 
@@ -212,6 +214,23 @@ func (m *Validator) ProposerSettings() *proposer.Settings {
 // SetProposerSettings for mocking
 func (m *Validator) SetProposerSettings(_ context.Context, settings *proposer.Settings) error {
 	m.proposerSettings = settings
+	return nil
+}
+
+// GetGraffiti for mocking
+func (m *Validator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	return []byte(m.graffiti), nil
+}
+
+// SetGraffiti for mocking
+func (m *Validator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	m.graffiti = string(graffiti)
+	return nil
+}
+
+// DeleteGraffiti for mocking
+func (m *Validator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
+	m.graffiti = ""
 	return nil
 }
 
