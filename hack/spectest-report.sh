@@ -30,9 +30,15 @@ find "$BAZEL_DIR" -type f -name '*_tests.txt' -exec cat {} + > "$PRYSM_DIR/tests
 
 # Comparing spec.txt with tests.txt and generating report.txt
 while IFS= read -r line; do
-    if grep -Fxq "$line" "$EXCLUSION_LIST"; then
-        echo "Skipping excluded item: $line"
-        continue
+   if grep -Fxq "$line" "$EXCLUSION_LIST"; then
+      # If it's excluded and we have a test for it flag as an error
+      if grep -q "$line" "$PRYSM_DIR/tests.txt"; then
+          echo "Error: Excluded item found in tests.txt: $line"
+          exit 1 # Exit with an error status
+      else
+          echo "Skipping excluded item: $line"
+      fi
+          continue
     fi
     if grep -q "$line" "$PRYSM_DIR/tests.txt"; then
         echo "found $line"
@@ -51,6 +57,12 @@ done < "$PRYSM_DIR/spec.txt" > "$PRYSM_DIR/report.txt"
     echo "Tests Found"
     grep '^found' "$PRYSM_DIR/report.txt"
 } > "$PRYSM_DIR/report_temp.txt" && mv "$PRYSM_DIR/report_temp.txt" "$PRYSM_DIR/report.txt"
+
+# Check for the word "missing" in the report and exit with an error if present
+if grep -q '^missing' "$PRYSM_DIR/report.txt"; then
+    echo "Error: 'missing' tests found in report: $PRYSM_DIR/report.txt"
+    exit 1
+fi
 
 # Clean up
 rm -f "$PRYSM_DIR/tests.txt" "$PRYSM_DIR/spec.txt"

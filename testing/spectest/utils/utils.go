@@ -55,7 +55,6 @@ func saveSpecTest(testFolder string) error {
 		return nil // Do nothing if spec test report not requested.
 	}
 	fullPath := path.Join(baseDir, fmt.Sprintf("%x_tests.txt", testFolder))
-	fmt.Printf("Writing output.zip to %s\n", fullPath)
 	err := file.WriteFile(fullPath, []byte(testFolder))
 	if err != nil {
 		return err
