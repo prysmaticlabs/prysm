@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -137,7 +138,10 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 	// acceptable threshold, we exit early and do not broadcast it.
 	currSlot := slots.CurrentSlot(uint64(s.genesisTime.Unix()))
 	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < currSlot {
-		log.Warnf("Attestation is too old to broadcast, discarding it. Current Slot: %d , Attestation Slot: %d", currSlot, att.Data.Slot)
+		log.WithFields(logrus.Fields{
+			"attestationSlot": att.Data.Slot,
+			"currentSlot":     currSlot,
+		}).Warning("Attestation is too old to broadcast, discarding it")
 		return
 	}
 
