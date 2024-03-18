@@ -73,9 +73,9 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		return false, errors.New("no subnet exists for provided topic")
 	}
 
-	currNum := len(s.pubsub.ListPeers(topic))
 	wg := new(sync.WaitGroup)
 	for {
+		currNum := len(s.pubsub.ListPeers(topic))
 		if currNum >= threshold {
 			break
 		}
@@ -99,7 +99,6 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		}
 		// Wait for all dials to be completed.
 		wg.Wait()
-		currNum = len(s.pubsub.ListPeers(topic))
 	}
 	return true, nil
 }
