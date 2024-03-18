@@ -178,7 +178,7 @@ func TestBlobsByRangeValidation(t *testing.T) {
 		and clients MUST support serving requests of blobs on this range.
 	*/
 	defaultCurrent := denebSlot + 100 + minReqSlots
-	defaultMinStart, err := BlobsByRangeMinStartSlot(defaultCurrent)
+	defaultMinStart, err := BlobRPCMinValidSlot(defaultCurrent)
 	require.NoError(t, err)
 	cases := []struct {
 		name    string
@@ -282,6 +282,70 @@ func TestBlobsByRangeValidation(t *testing.T) {
 			require.Equal(t, c.start, rp.start)
 			require.Equal(t, c.end, rp.end)
 			require.Equal(t, c.batch, rp.size)
+		})
+	}
+}
+
+func TestBlobRPCMinValidSlot(t *testing.T) {
+	denebSlot, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+	require.NoError(t, err)
+	cases := []struct {
+		name     string
+		current  func(t *testing.T) types.Slot
+		expected types.Slot
+		err      error
+	}{
+		{
+			name: "before deneb",
+			current: func(t *testing.T) types.Slot {
+				st, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch - 1)
+				// note: we no longer need to deal with deneb fork epoch being far future
+				require.NoError(t, err)
+				return st
+			},
+			expected: denebSlot,
+		},
+		{
+			name: "equal to deneb",
+			current: func(t *testing.T) types.Slot {
+				st, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+				// note: we no longer need to deal with deneb fork epoch being far future
+				require.NoError(t, err)
+				return st
+			},
+			expected: denebSlot,
+		},
+		{
+			name: "after deneb, before expiry starts",
+			current: func(t *testing.T) types.Slot {
+				st, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch + params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
+				// note: we no longer need to deal with deneb fork epoch being far future
+				require.NoError(t, err)
+				return st
+			},
+			expected: denebSlot,
+		},
+		{
+			name: "expiry starts one epoch after deneb + MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS",
+			current: func(t *testing.T) types.Slot {
+				st, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch + params.BeaconConfig().MinEpochsForBlobsSidecarsRequest + 1)
+				// note: we no longer need to deal with deneb fork epoch being far future
+				require.NoError(t, err)
+				return st
+			},
+			expected: denebSlot + params.BeaconConfig().SlotsPerEpoch,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			current := c.current(t)
+			got, err := BlobRPCMinValidSlot(current)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, c.expected, got)
 		})
 	}
 }
