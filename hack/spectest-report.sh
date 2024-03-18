@@ -13,8 +13,15 @@ SPEC_DIR="/tmp/consensus-spec"
 # Create directory if it doesn't already exist
 mkdir -p "$BAZEL_DIR"
 
+# Add any passed flags to BAZEL_FLAGS
+BAZEL_FLAGS=""
+for flag in "$@"
+do
+    BAZEL_FLAGS="$BAZEL_FLAGS $flag"
+done
+
 # Run spectests
-bazel test //testing/spectest/... --test_env=SPEC_TEST_REPORT_OUTPUT_DIR="$BAZEL_DIR"
+bazel test //testing/spectest/... --test_env=SPEC_TEST_REPORT_OUTPUT_DIR="$BAZEL_DIR" $BAZEL_FLAGS
 
 # Ensure the SPEC_DIR exists and is a git repository
 if [ -d "$SPEC_DIR/.git" ]; then
