@@ -54,6 +54,13 @@ service Node {
         };
     }
 
+    // Retrieve the current health of the node.
+    rpc GetHealth(HealthRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/node/health"
+        };
+    }
+
     // Retrieve the list of services implemented and enabled by this node.
     //
     // Any service not present in this list may return UNIMPLEMENTED or
@@ -92,6 +99,10 @@ service Node {
             get: "/eth/v1alpha1/node/eth1/connections"
         };
     }
+}
+
+message HealthRequest {
+    uint64 syncing_status = 1;
 }
 
 // Information about the current network sync status of the node.

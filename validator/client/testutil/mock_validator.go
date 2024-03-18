@@ -5,8 +5,11 @@ import (
 	"context"
 	"time"
 
+	api "github.com/prysmaticlabs/prysm/v5/api/client"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/api/client/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
@@ -52,9 +55,10 @@ type FakeValidator struct {
 	IndexToPubkeyMap                  map[uint64][fieldparams.BLSPubkeyLength]byte
 	PubkeyToIndexMap                  map[[fieldparams.BLSPubkeyLength]byte]uint64
 	PubkeysToStatusesMap              map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus
-	proposerSettings                  *validatorserviceconfig.ProposerSettings
+	proposerSettings                  *proposer.Settings
 	ProposerSettingWait               time.Duration
 	Km                                keymanager.IKeymanager
+	Tracker                           *beacon.NodeHealthTracker
 }
 
 // Done for mocking.
@@ -75,7 +79,7 @@ func (fv *FakeValidator) LogSubmittedSyncCommitteeMessages() {}
 func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 	fv.WaitForChainStartCalled++
 	if fv.RetryTillSuccess >= fv.WaitForChainStartCalled {
-		return iface.ErrConnectionIssue
+		return api.ErrConnectionIssue
 	}
 	return nil
 }
@@ -87,7 +91,7 @@ func (fv *FakeValidator) WaitForActivation(_ context.Context, accountChan chan [
 		return nil
 	}
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
-		return iface.ErrConnectionIssue
+		return api.ErrConnectionIssue
 	}
 	return nil
 }
@@ -96,7 +100,7 @@ func (fv *FakeValidator) WaitForActivation(_ context.Context, accountChan chan [
 func (fv *FakeValidator) WaitForSync(_ context.Context) error {
 	fv.WaitForSyncCalled++
 	if fv.RetryTillSuccess >= fv.WaitForSyncCalled {
-		return iface.ErrConnectionIssue
+		return api.ErrConnectionIssue
 	}
 	return nil
 }
@@ -111,7 +115,7 @@ func (fv *FakeValidator) SlasherReady(_ context.Context) error {
 func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (primitives.Slot, error) {
 	fv.CanonicalHeadSlotCalled++
 	if fv.RetryTillSuccess > fv.CanonicalHeadSlotCalled {
-		return 0, iface.ErrConnectionIssue
+		return 0, api.ErrConnectionIssue
 	}
 	return 0, nil
 }
@@ -217,14 +221,6 @@ func (*FakeValidator) CheckDoppelGanger(_ context.Context) error {
 	return nil
 }
 
-// ReceiveSlots for mocking
-func (fv *FakeValidator) ReceiveSlots(_ context.Context, connectionErrorChannel chan<- error) {
-	fv.ReceiveBlocksCalled++
-	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
-		connectionErrorChannel <- iface.ErrConnectionIssue
-	}
-}
-
 // HandleKeyReload for mocking
 func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (anyActive bool, err error) {
 	fv.HandleKeyReloadCalled = true
@@ -276,24 +272,25 @@ func (*FakeValidator) SignValidatorRegistrationRequest(_ context.Context, _ ifac
 }
 
 // ProposerSettings for mocking
-func (fv *FakeValidator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+func (fv *FakeValidator) ProposerSettings() *proposer.Settings {
 	return fv.proposerSettings
 }
 
 // SetProposerSettings for mocking
-func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *proposer.Settings) error {
 	fv.proposerSettings = settings
 	return nil
 }
 
-func (fv *FakeValidator) StartEventStream(_ context.Context) error {
-	return nil
+func (*FakeValidator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
 }
 
-func (fv *FakeValidator) EventStreamIsRunning() bool {
+func (*FakeValidator) ProcessEvent(_ *event.Event) {}
+
+func (*FakeValidator) EventStreamIsRunning() bool {
 	return true
 }
 
-func (fv *FakeValidator) NodeIsHealthy(context.Context) bool {
-	return true
+func (fv *FakeValidator) HealthTracker() *beacon.NodeHealthTracker {
+	return fv.Tracker
 }

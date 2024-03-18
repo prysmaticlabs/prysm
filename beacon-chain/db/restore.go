@@ -22,7 +22,14 @@ func Restore(cliCtx *cli.Context) error {
 	targetDir := cliCtx.String(cmd.RestoreTargetDirFlag.Name)
 
 	restoreDir := path.Join(targetDir, kv.BeaconNodeDbDirName)
-	if file.Exists(path.Join(restoreDir, kv.DatabaseFileName)) {
+	restoreFile := path.Join(restoreDir, kv.DatabaseFileName)
+
+	dbExists, err := file.Exists(restoreFile, file.Regular)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if database exists in %s", restoreFile)
+	}
+
+	if dbExists {
 		resp, err := prompt.ValidatePrompt(
 			os.Stdin, dbExistsYesNoPrompt, prompt.ValidateYesOrNo,
 		)

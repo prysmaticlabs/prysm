@@ -7,7 +7,9 @@ import (
 	"sync"
 	"time"
 
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/api/client/event"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
@@ -89,7 +91,7 @@ func (_ *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerC
 
 type Validator struct {
 	Km               keymanager.IKeymanager
-	proposerSettings *validatorserviceconfig.ProposerSettings
+	proposerSettings *proposer.Settings
 }
 
 func (_ *Validator) LogSubmittedSyncCommitteeMessages() {}
@@ -203,24 +205,28 @@ func (_ *Validator) SignValidatorRegistrationRequest(_ context.Context, _ iface2
 }
 
 // ProposerSettings for mocking
-func (m *Validator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+func (m *Validator) ProposerSettings() *proposer.Settings {
 	return m.proposerSettings
 }
 
 // SetProposerSettings for mocking
-func (m *Validator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+func (m *Validator) SetProposerSettings(_ context.Context, settings *proposer.Settings) error {
 	m.proposerSettings = settings
 	return nil
 }
 
-func (_ *Validator) StartEventStream(_ context.Context) error {
+func (*Validator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
 	panic("implement me")
 }
 
-func (_ *Validator) EventStreamIsRunning() bool {
+func (*Validator) ProcessEvent(event *event.Event) {
 	panic("implement me")
 }
 
-func (_ *Validator) NodeIsHealthy(ctx context.Context) bool {
+func (*Validator) EventStreamIsRunning() bool {
+	panic("implement me")
+}
+
+func (*Validator) HealthTracker() *beacon.NodeHealthTracker {
 	panic("implement me")
 }

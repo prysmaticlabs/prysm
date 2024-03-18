@@ -56,12 +56,12 @@ func newBadResponsesScorer(store *peerdata.Store, config *BadResponsesScorerConf
 func (s *BadResponsesScorer) Score(pid peer.ID) float64 {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.score(pid)
+	return s.scoreNoLock(pid)
 }
 
-// score is a lock-free version of Score.
-func (s *BadResponsesScorer) score(pid peer.ID) float64 {
-	if s.isBadPeer(pid) {
+// scoreNoLock is a lock-free version of Score.
+func (s *BadResponsesScorer) scoreNoLock(pid peer.ID) float64 {
+	if s.isBadPeerNoLock(pid) {
 		return BadPeerScore
 	}
 	score := float64(0)
@@ -87,11 +87,11 @@ func (s *BadResponsesScorer) Params() *BadResponsesScorerConfig {
 func (s *BadResponsesScorer) Count(pid peer.ID) (int, error) {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.count(pid)
+	return s.countNoLock(pid)
 }
 
-// count is a lock-free version of Count.
-func (s *BadResponsesScorer) count(pid peer.ID) (int, error) {
+// countNoLock is a lock-free version of Count.
+func (s *BadResponsesScorer) countNoLock(pid peer.ID) (int, error) {
 	if peerData, ok := s.store.PeerData(pid); ok {
 		return peerData.BadResponses, nil
 	}
@@ -119,11 +119,11 @@ func (s *BadResponsesScorer) Increment(pid peer.ID) {
 func (s *BadResponsesScorer) IsBadPeer(pid peer.ID) bool {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.isBadPeer(pid)
+	return s.isBadPeerNoLock(pid)
 }
 
-// isBadPeer is lock-free version of IsBadPeer.
-func (s *BadResponsesScorer) isBadPeer(pid peer.ID) bool {
+// isBadPeerNoLock is lock-free version of IsBadPeer.
+func (s *BadResponsesScorer) isBadPeerNoLock(pid peer.ID) bool {
 	if peerData, ok := s.store.PeerData(pid); ok {
 		return peerData.BadResponses >= s.config.Threshold
 	}
@@ -137,7 +137,7 @@ func (s *BadResponsesScorer) BadPeers() []peer.ID {
 
 	badPeers := make([]peer.ID, 0)
 	for pid := range s.store.Peers() {
-		if s.isBadPeer(pid) {
+		if s.isBadPeerNoLock(pid) {
 			badPeers = append(badPeers, pid)
 		}
 	}
