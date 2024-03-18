@@ -11,9 +11,7 @@ SPEC_REPO="git@github.com:ethereum/consensus-spec-tests.git"
 SPEC_DIR="/tmp/consensus-spec"
 
 # Create directory if it doesn't already exist
-if [ ! -d "$BAZEL_DIR" ]; then
-    mkdir "$BAZEL_DIR"
-fi
+mkdir -p "$BAZEL_DIR"
 
 # Run spectests
 bazel test //testing/spectest/... --test_env=SPEC_TEST_REPORT_OUTPUT_DIR="$BAZEL_DIR"
