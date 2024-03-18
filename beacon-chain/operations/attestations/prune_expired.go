@@ -74,7 +74,7 @@ func (s *Service) expired(providedSlot primitives.Slot) bool {
 	if currEpoch < params.BeaconConfig().DenebForkEpoch {
 		return s.expiredPreDeneb(providedSlot)
 	}
-	return providedEpoch > currEpoch || providedEpoch+1 < currEpoch
+	return providedEpoch+1 < currEpoch
 }
 
 // Handles expiration of attestations before deneb.
