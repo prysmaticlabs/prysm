@@ -79,8 +79,7 @@ func (s *Service) expired(providedSlot primitives.Slot) bool {
 		// In the event the current epoch is 0, we set the previous epoch to 0.
 		prevEpoch = 0
 	}
-	isExpired := providedEpoch != currEpoch && providedEpoch != prevEpoch
-	return isExpired
+	return providedEpoch != currEpoch && providedEpoch != prevEpoch
 }
 
 // Handles expiration of attestations before deneb.
