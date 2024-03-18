@@ -194,7 +194,7 @@ func (s *Service) Start() {
 		}
 		panic(err)
 	}
-	log.Infof("Synced up to slot %d", s.cfg.Chain.HeadSlot())
+	log.WithField("slot", s.cfg.Chain.HeadSlot()).Info("Synced up to")
 	s.markSynced()
 }
 
@@ -315,6 +315,9 @@ func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
 	if err != nil {
 		log.WithField("root", fmt.Sprintf("%#x", r)).Error("Block for checkpoint sync origin root not found in db")
 		return err
+	}
+	if !params.WithinDAPeriod(slots.ToEpoch(blk.Block().Slot()), slots.ToEpoch(s.clock.CurrentSlot())) {
+		return nil
 	}
 	rob, err := blocks.NewROBlockWithRoot(blk, r)
 	if err != nil {

@@ -1,4 +1,4 @@
-package history
+package helpers
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
-func Test_uint64FromString(t *testing.T) {
+func Test_fromString(t *testing.T) {
 	tests := []struct {
 		name    string
 		str     string
@@ -223,7 +223,7 @@ func Test_rootToHexString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := rootToHexString(tt.root)
+			got, err := RootToHexString(tt.root)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("rootToHexString() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -270,7 +270,7 @@ func Test_pubKeyToHexString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := pubKeyToHexString(tt.pubKey)
+			got, err := PubKeyToHexString(tt.pubKey)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("pubKeyToHexString() error = %v, wantErr %v", err, tt.wantErr)
 				return

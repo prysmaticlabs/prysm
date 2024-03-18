@@ -27,7 +27,7 @@ func TestVerifySignature(t *testing.T) {
 	_, blobs, _, pk := testSignedBlockBlobKeys(t, valRoot[:], 0, 1)
 	b := blobs[0]
 
-	sc := newSigCache(valRoot[:], 1)
+	sc := newSigCache(valRoot[:], 1, nil)
 	cb := func(idx primitives.ValidatorIndex) (*eth.Validator, error) {
 		return &eth.Validator{PublicKey: pk.Marshal()}, nil
 	}
@@ -42,7 +42,7 @@ func TestSignatureCacheMissThenHit(t *testing.T) {
 	_, blobs, _, pk := testSignedBlockBlobKeys(t, valRoot[:], 0, 1)
 	b := blobs[0]
 
-	sc := newSigCache(valRoot[:], 1)
+	sc := newSigCache(valRoot[:], 1, nil)
 	cb := func(idx primitives.ValidatorIndex) (*eth.Validator, error) {
 		return &eth.Validator{PublicKey: pk.Marshal()}, nil
 	}

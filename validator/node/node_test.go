@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -178,13 +179,15 @@ func TestGetLegacyDatabaseLocation(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			validatorClient := &ValidatorClient{wallet: tt.wallet}
-			actualDataDir, actualDataFile := validatorClient.getLegacyDatabaseLocation(
+			actualDataDir, actualDataFile, err := validatorClient.getLegacyDatabaseLocation(
 				tt.isInteropNumValidatorsSet,
 				tt.isWeb3SignerURLFlagSet,
 				tt.dataDir,
 				tt.dataFile,
 				tt.walletDir,
 			)
+
+			require.NoError(t, err, "Failed to get legacy database location")
 
 			assert.Equal(t, tt.expectedDataDir, actualDataDir, "data dir should be equal")
 			assert.Equal(t, tt.expectedDataFile, actualDataFile, "data file should be equal")
@@ -196,10 +199,14 @@ func TestGetLegacyDatabaseLocation(t *testing.T) {
 
 // TestClearDB tests clearing the database
 func TestClearDB(t *testing.T) {
-	hook := logtest.NewGlobal()
-	tmp := filepath.Join(t.TempDir(), "datadirtest")
-	require.NoError(t, clearDB(context.Background(), tmp, true))
-	require.LogsContain(t, hook, "Removing database")
+	for _, isMinimalDatabase := range []bool{false, true} {
+		t.Run(fmt.Sprintf("isMinimalDatabase=%v", isMinimalDatabase), func(t *testing.T) {
+			hook := logtest.NewGlobal()
+			tmp := filepath.Join(t.TempDir(), "datadirtest")
+			require.NoError(t, clearDB(context.Background(), tmp, true, isMinimalDatabase))
+			require.LogsContain(t, hook, "Removing database")
+		})
+	}
 }
 
 // TestWeb3SignerConfig tests the web3 signer config returns the correct values.

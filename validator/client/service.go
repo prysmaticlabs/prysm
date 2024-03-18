@@ -194,14 +194,12 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	restHandler := &beaconApi.BeaconApiJsonRestHandler{
-		HttpClient: http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
-		Host:       v.conn.GetBeaconApiUrl(),
-	}
+	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
+		http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
+		v.conn.GetBeaconApiUrl(),
+	)
 
-	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
-	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler)}
-	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler, opts...)
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
 
 	valStruct := &validator{
 		validatorClient:                validatorClient,

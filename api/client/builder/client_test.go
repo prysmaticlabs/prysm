@@ -321,6 +321,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
 				require.Equal(t, "bellatrix", r.Header.Get("Eth-Consensus-Version"))
+				require.Equal(t, "application/json", r.Header.Get("Content-Type"))
+				require.Equal(t, "application/json", r.Header.Get("Accept"))
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayload)),
@@ -347,6 +349,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
 				require.Equal(t, "capella", r.Header.Get("Eth-Consensus-Version"))
+				require.Equal(t, "application/json", r.Header.Get("Content-Type"))
+				require.Equal(t, "application/json", r.Header.Get("Accept"))
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayloadCapella)),
@@ -376,6 +380,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
 				require.Equal(t, "deneb", r.Header.Get("Eth-Consensus-Version"))
+				require.Equal(t, "application/json", r.Header.Get("Content-Type"))
+				require.Equal(t, "application/json", r.Header.Get("Accept"))
 				var req structs.SignedBlindedBeaconBlockDeneb
 				err := json.NewDecoder(r.Body).Decode(&req)
 				require.NoError(t, err)

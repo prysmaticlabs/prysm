@@ -125,8 +125,9 @@ func TestWriteFile_OK(t *testing.T) {
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
 	require.NoError(t, file.WriteFile(someFileName, []byte("hi")))
-	exists := file.Exists(someFileName)
-	assert.Equal(t, true, exists)
+	exists, err := file.Exists(someFileName, file.Regular)
+	require.NoError(t, err, "could not check if file exists")
+	assert.Equal(t, true, exists, "file does not exist")
 }
 
 func TestCopyFile(t *testing.T) {
@@ -176,8 +177,14 @@ func TestCopyDir(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir1, "subfolder2"), 0777))
 	for _, fd := range fds {
 		require.NoError(t, file.WriteFile(filepath.Join(tmpDir1, fd.path), fd.content))
-		assert.Equal(t, true, file.Exists(filepath.Join(tmpDir1, fd.path)))
-		assert.Equal(t, false, file.Exists(filepath.Join(tmpDir2, fd.path)))
+
+		exists, err := file.Exists(filepath.Join(tmpDir1, fd.path), file.Regular)
+		require.NoError(t, err, "could not check if file exists")
+		assert.Equal(t, true, exists, "file does not exist")
+
+		exists, err = file.Exists(filepath.Join(tmpDir2, fd.path), file.Regular)
+		require.NoError(t, err, "could not check if file exists")
+		assert.Equal(t, false, exists, "file does exist")
 	}
 
 	// Make sure that files are copied into non-existent directory only. If directory exists function exits.
@@ -186,7 +193,9 @@ func TestCopyDir(t *testing.T) {
 
 	// Now, all files should have been copied.
 	for _, fd := range fds {
-		assert.Equal(t, true, file.Exists(filepath.Join(tmpDir2, fd.path)))
+		exists, err := file.Exists(filepath.Join(tmpDir2, fd.path), file.Regular)
+		require.NoError(t, err, "could not check if file exists")
+		assert.Equal(t, true, exists)
 		assert.Equal(t, true, deepCompare(t, filepath.Join(tmpDir1, fd.path), filepath.Join(tmpDir2, fd.path)))
 	}
 	assert.Equal(t, true, file.DirsEqual(tmpDir1, tmpDir2))
@@ -236,6 +245,66 @@ func TestHashDir(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "hashdir:oSp9wRacwTIrnbgJWcwTvihHfv4B2zRbLYa0GZ7DDk0=", hash)
 	})
+}
+
+func TestExists(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "testfile")
+	nonExistentTmpFile := filepath.Join(tmpDir, "nonexistent")
+	_, err := os.Create(tmpFile)
+	require.NoError(t, err, "could not create test file")
+
+	tests := []struct {
+		name     string
+		itemPath string
+		itemType file.ObjType
+		want     bool
+	}{
+		{
+			name:     "file exists",
+			itemPath: tmpFile,
+			itemType: file.Regular,
+			want:     true,
+		},
+		{
+			name:     "dir exists",
+			itemPath: tmpDir,
+			itemType: file.Directory,
+			want:     true,
+		},
+		{
+			name:     "non-existent file",
+			itemPath: nonExistentTmpFile,
+			itemType: file.Regular,
+			want:     false,
+		},
+		{
+			name:     "non-existent dir",
+			itemPath: nonExistentTmpFile,
+			itemType: file.Directory,
+			want:     false,
+		},
+		{
+			name:     "file is dir",
+			itemPath: tmpDir,
+			itemType: file.Regular,
+			want:     false,
+		},
+		{
+			name:     "dir is file",
+			itemPath: tmpFile,
+			itemType: file.Directory,
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			exists, err := file.Exists(tt.itemPath, tt.itemType)
+			require.NoError(t, err, "could not check if file exists")
+			assert.Equal(t, tt.want, exists)
+		})
+	}
 }
 
 func TestHashFile(t *testing.T) {
@@ -290,40 +359,43 @@ func TestDirFiles(t *testing.T) {
 
 func TestRecursiveFileFind(t *testing.T) {
 	tmpDir, _ := tmpDirWithContentsForRecursiveFind(t)
+	/*
+		 tmpDir
+		 ├── file3
+		 ├── subfolder1
+		 │   └── subfolder11
+		 │       └── file1
+		 └── subfolder2
+			 └── file2
+	*/
 	tests := []struct {
 		name  string
 		root  string
-		path  string
 		found bool
 	}{
 		{
 			name:  "file1",
 			root:  tmpDir,
-			path:  "subfolder1/subfolder11/file1",
 			found: true,
 		},
 		{
 			name:  "file2",
 			root:  tmpDir,
-			path:  "subfolder2/file2",
 			found: true,
 		},
 		{
 			name:  "file1",
 			root:  tmpDir + "/subfolder1",
-			path:  "subfolder11/file1",
 			found: true,
 		},
 		{
 			name:  "file3",
 			root:  tmpDir,
-			path:  "file3",
 			found: true,
 		},
 		{
 			name:  "file4",
 			root:  tmpDir,
-			path:  "",
 			found: false,
 		},
 	}
@@ -331,6 +403,61 @@ func TestRecursiveFileFind(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			found, _, err := file.RecursiveFileFind(tt.name, tt.root)
+			require.NoError(t, err)
+
+			assert.DeepEqual(t, tt.found, found)
+		})
+	}
+}
+
+func TestRecursiveDirFind(t *testing.T) {
+	tmpDir, _ := tmpDirWithContentsForRecursiveFind(t)
+
+	/*
+		 tmpDir
+		 ├── file3
+		 ├── subfolder1
+		 │   └── subfolder11
+		 │       └── file1
+		 └── subfolder2
+			 └── file2
+	*/
+
+	tests := []struct {
+		name  string
+		root  string
+		found bool
+	}{
+		{
+			name:  "subfolder11",
+			root:  tmpDir,
+			found: true,
+		},
+		{
+			name:  "subfolder2",
+			root:  tmpDir,
+			found: true,
+		},
+		{
+			name:  "subfolder11",
+			root:  tmpDir + "/subfolder1",
+			found: true,
+		},
+		{
+			name:  "file3",
+			root:  tmpDir,
+			found: false,
+		},
+		{
+			name:  "file4",
+			root:  tmpDir,
+			found: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			found, _, err := file.RecursiveDirFind(tt.name, tt.root)
 			require.NoError(t, err)
 
 			assert.DeepEqual(t, tt.found, found)

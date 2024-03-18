@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
@@ -131,9 +132,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 		keystores[i] = k
 	}
 	if req.SlashingProtection != "" {
-		if err := slashingprotection.ImportStandardProtectionJSON(
-			ctx, s.valDB, bytes.NewBufferString(req.SlashingProtection),
-		); err != nil {
+		if s.valDB == nil || s.valDB.ImportStandardProtectionJSON(ctx, bytes.NewBufferString(req.SlashingProtection)) != nil {
 			statuses := make([]*keymanager.KeyStatus, len(req.Keystores))
 			for i := 0; i < len(req.Keystores); i++ {
 				statuses[i] = &keymanager.KeyStatus{
@@ -481,7 +480,7 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if isUrlUsed {
-		log.Warnf("Setting web3signer base url for IMPORTED keys is not supported. Prysm only uses the url from --validators-external-signer-url flag for web3signerKeymanagerKind.")
+		log.Warnf("Setting the remote signer base url within the request is not supported. The remote signer url can only be set from the --%s flag.", flags.Web3SignerURLFlag.Name)
 	}
 
 	httputil.WriteJson(w, &RemoteKeysResponse{Data: adder.AddPublicKeys(remoteKeys)})

@@ -42,6 +42,14 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Writes SSZ states to disk after attempted state transitio.",
 	}
+	saveInvalidBlockTempFlag = &cli.BoolFlag{
+		Name:  "save-invalid-block-temp",
+		Usage: "Writes invalid blocks to temp directory.",
+	}
+	saveInvalidBlobTempFlag = &cli.BoolFlag{
+		Name:  "save-invalid-blob-temp",
+		Usage: "Writes invalid blobs to temp directory.",
+	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients.",
@@ -94,6 +102,10 @@ var (
 	enableSlashingProtectionPruning = &cli.BoolFlag{
 		Name:  "enable-slashing-protection-history-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protection database.",
+	}
+	EnableMinimalSlashingProtection = &cli.BoolFlag{
+		Name:  "enable-minimal-slashing-protection",
+		Usage: "(Experimental): Enables the minimal slashing protection. See EIP-3076 for more details.",
 	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
@@ -177,6 +189,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
 	enableSlashingProtectionPruning,
+	EnableMinimalSlashingProtection,
 	enableDoppelGangerProtection,
 	EnableBeaconRESTApi,
 }...)
@@ -191,6 +204,8 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	devModeFlag,
 	enableExperimentalState,
 	writeSSZStateTransitionsFlag,
+	saveInvalidBlockTempFlag,
+	saveInvalidBlobTempFlag,
 	disableGRPCConnectionLogging,
 	HoleskyTestnet,
 	PraterTestnet,

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -45,6 +46,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	"github.com/prysmaticlabs/prysm/v5/validator/db"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 	g "github.com/prysmaticlabs/prysm/v5/validator/graffiti"
@@ -63,7 +66,7 @@ type ValidatorClient struct {
 	cliCtx            *cli.Context
 	ctx               context.Context
 	cancel            context.CancelFunc
-	db                *kv.Store
+	db                iface.ValidatorDB
 	services          *runtime.ServiceRegistry // Lifecycle and service store.
 	lock              sync.RWMutex
 	wallet            *wallet.Wallet
@@ -211,9 +214,14 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 	dataDir string,
 	dataFile string,
 	walletDir string,
-) (string, string) {
-	if isInteropNumValidatorsSet || dataDir != cmd.DefaultDataDir() || file.Exists(dataFile) || c.wallet == nil {
-		return dataDir, dataFile
+) (string, string, error) {
+	exists, err := file.Exists(dataFile, file.Regular)
+	if err != nil {
+		return "", "", errors.Wrapf(err, "could not check if file exists: %s", dataFile)
+	}
+
+	if isInteropNumValidatorsSet || dataDir != cmd.DefaultDataDir() || exists || c.wallet == nil {
+		return dataDir, dataFile, nil
 	}
 
 	// We look in the previous, legacy directories.
@@ -225,7 +233,12 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 
 	legacyDataFile := filepath.Join(legacyDataDir, kv.ProtectionDbFileName)
 
-	if file.Exists(legacyDataFile) {
+	legacyDataFileExists, err := file.Exists(legacyDataFile, file.Regular)
+	if err != nil {
+		return "", "", errors.Wrapf(err, "could not check if file exists: %s", legacyDataFile)
+	}
+
+	if legacyDataFileExists {
 		log.Infof(`Database not found in the --datadir directory (%s)
 		but found in the --wallet-dir directory (%s),
 		which was the legacy default.
@@ -239,13 +252,10 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 		dataFile = legacyDataFile
 	}
 
-	return dataDir, dataFile
+	return dataDir, dataFile, nil
 }
 
 func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Router) error {
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
 	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
 
@@ -269,39 +279,8 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 		}
 	}
 
-	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
-	dataDir, dataFile = c.getLegacyDatabaseLocation(
-		isInteropNumValidatorsSet,
-		isWeb3SignerURLFlagSet,
-		dataDir,
-		dataFile,
-		walletDir,
-	)
-
-	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
-	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-	if clearFlag || forceClearFlag {
-		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
-			return err
-		}
-	} else {
-		if !file.Exists(dataFile) {
-			log.Warnf("Slashing protection file %s is missing.\n"+
-				"If you changed your --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
-				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
-		}
-	}
-	log.WithField("databasePath", dataDir).Info("Checking DB")
-
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys: nil,
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not initialize db")
-	}
-	c.db = valDB
-	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
-		return errors.Wrap(err, "could not run database migration")
+	if err := c.initializeDB(cliCtx); err != nil {
+		return errors.Wrapf(err, "could not initialize database")
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
@@ -324,12 +303,6 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 }
 
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Router) error {
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
-	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
-
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		// Custom Check For Web3Signer
 		c.wallet = wallet.NewWalletForWeb3Signer()
@@ -349,33 +322,8 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Rout
 		c.wallet = w
 	}
 
-	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
-	dataDir, _ = c.getLegacyDatabaseLocation(
-		isInteropNumValidatorsSet,
-		isWeb3SignerURLFlagSet,
-		dataDir,
-		dataFile,
-		walletDir,
-	)
-
-	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
-	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-
-	if clearFlag || forceClearFlag {
-		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
-			return err
-		}
-	}
-	log.WithField("databasePath", dataDir).Info("Checking DB")
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys: nil,
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not initialize db")
-	}
-	c.db = valDB
-	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
-		return errors.Wrap(err, "could not run database migration")
+	if err := c.initializeDB(cliCtx); err != nil {
+		return errors.Wrapf(err, "could not initialize database")
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
@@ -399,6 +347,119 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Rout
 	log.WithField("address", webAddress).Info(
 		"Starting Prysm web UI on address, open in browser to access",
 	)
+	return nil
+}
+
+func (c *ValidatorClient) initializeDB(cliCtx *cli.Context) error {
+	fileSystemDataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	kvDataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	kvDataFile := filepath.Join(kvDataDir, kv.ProtectionDbFileName)
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
+	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
+	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
+	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
+
+	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
+	kvDataDir, _, err := c.getLegacyDatabaseLocation(
+		isInteropNumValidatorsSet,
+		isWeb3SignerURLFlagSet,
+		kvDataDir,
+		kvDataFile,
+		walletDir,
+	)
+
+	if err != nil {
+		return errors.Wrap(err, "could not get legacy database location")
+	}
+
+	// Check if minimal slashing protection is requested.
+	isMinimalSlashingProtectionRequested := cliCtx.Bool(features.EnableMinimalSlashingProtection.Name)
+
+	if clearFlag || forceClearFlag {
+		var err error
+
+		if isMinimalSlashingProtectionRequested {
+			err = clearDB(cliCtx.Context, fileSystemDataDir, forceClearFlag, true)
+		} else {
+			err = clearDB(cliCtx.Context, kvDataDir, forceClearFlag, false)
+			// Reset the BoltDB datadir to the requested location, so the new one is not located any more in the legacy location.
+			kvDataDir = cliCtx.String(cmd.DataDirFlag.Name)
+		}
+
+		if err != nil {
+			return errors.Wrap(err, "could not clear database")
+		}
+	}
+
+	// Check if a minimal database exists.
+	minimalDatabasePath := path.Join(fileSystemDataDir, filesystem.DatabaseDirName)
+	minimalDatabaseExists, err := file.Exists(minimalDatabasePath, file.Directory)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if minimal slashing protection database exists")
+	}
+
+	// Check if a complete database exists.
+	completeDatabasePath := path.Join(kvDataDir, kv.ProtectionDbFileName)
+	completeDatabaseExists, err := file.Exists(completeDatabasePath, file.Regular)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if complete slashing protection database exists")
+	}
+
+	// If both a complete and minimal database exist, return on error.
+	if completeDatabaseExists && minimalDatabaseExists {
+		log.Fatalf(
+			"Both complete (%s) and minimal slashing (%s) protection databases exist. Please delete one of them.",
+			path.Join(kvDataDir, kv.ProtectionDbFileName),
+			path.Join(fileSystemDataDir, filesystem.DatabaseDirName),
+		)
+		return nil
+	}
+
+	// If a minimal database exists AND complete slashing protection is requested, convert the minimal
+	// database to a complete one and use the complete database.
+	if !isMinimalSlashingProtectionRequested && minimalDatabaseExists {
+		log.Warning("Complete slashing protection database requested, while minimal slashing protection database currently used. Converting.")
+
+		if err := db.ConvertDatabase(cliCtx.Context, fileSystemDataDir, kvDataDir, true); err != nil {
+			return errors.Wrapf(err, "could not convert minimal slashing protection database to complete slashing protection database")
+		}
+	}
+
+	// If a complete database exists AND minimal slashing protection is requested, use complete database.
+	useMinimalSlashingProtection := isMinimalSlashingProtectionRequested
+	if isMinimalSlashingProtectionRequested && completeDatabaseExists {
+		log.Warningf(`Minimal slashing protection database requested, while complete slashing protection database currently used.
+		Will continue to use complete slashing protection database.
+		Please convert your database by using 'validator db convert-complete-to-minimal --source-data-dir %s --target-data-dir %s'`,
+			kvDataDir, fileSystemDataDir,
+		)
+
+		useMinimalSlashingProtection = false
+	}
+
+	// Create / get the database.
+	var valDB iface.ValidatorDB
+	if useMinimalSlashingProtection {
+		log.WithField("databasePath", fileSystemDataDir).Info("Checking DB")
+		valDB, err = filesystem.NewStore(fileSystemDataDir, nil)
+	} else {
+		log.WithField("databasePath", kvDataDir).Info("Checking DB")
+		valDB, err = kv.NewKVStore(cliCtx.Context, kvDataDir, nil)
+	}
+
+	if err != nil {
+		return errors.Wrap(err, "could not create validator database")
+	}
+
+	// Assign the database to the validator client.
+	c.db = valDB
+
+	// Migrate the database
+	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
+		return errors.Wrap(err, "could not run database migration")
+	}
+
 	return nil
 }
 
@@ -683,7 +744,12 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	if file.Exists(defaultWalletPasswordFilePath) {
+	exists, err := file.Exists(defaultWalletPasswordFilePath, file.Regular)
+	if err != nil {
+		return errors.Wrap(err, "could not check if default wallet password file exists")
+	}
+
+	if exists {
 		// Ensure file has proper permissions.
 		hasPerms, err := file.HasReadWritePermissions(defaultWalletPasswordFilePath)
 		if err != nil {
@@ -704,8 +770,12 @@ func setWalletPasswordFilePath(cliCtx *cli.Context) error {
 	return nil
 }
 
-func clearDB(ctx context.Context, dataDir string, force bool) error {
-	var err error
+func clearDB(ctx context.Context, dataDir string, force bool, isDatabaseMinimal bool) error {
+	var (
+		valDB iface.ValidatorDB
+		err   error
+	)
+
 	clearDBConfirmed := force
 
 	if !force {
@@ -719,10 +789,16 @@ func clearDB(ctx context.Context, dataDir string, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
-		if err != nil {
-			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+		if isDatabaseMinimal {
+			valDB, err = filesystem.NewStore(dataDir, nil)
+		} else {
+			valDB, err = kv.NewKVStore(ctx, dataDir, nil)
 		}
+
+		if err != nil {
+			return errors.Wrap(err, "could not create validator database")
+		}
+
 		if err := valDB.Close(); err != nil {
 			return errors.Wrapf(err, "could not close DB in dir %s", dataDir)
 		}

@@ -226,7 +226,13 @@ func importPrivateKeyAsAccount(ctx context.Context, wallet *wallet.Wallet, impor
 	if err != nil {
 		return errors.Wrapf(err, "could not expand file path for %s", privKeyFile)
 	}
-	if !file.Exists(fullPath) {
+
+	exists, err := file.Exists(fullPath, file.Regular)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if file exists: %s", fullPath)
+	}
+
+	if !exists {
 		return fmt.Errorf("file %s does not exist", fullPath)
 	}
 	privKeyHex, err := os.ReadFile(fullPath) // #nosec G304

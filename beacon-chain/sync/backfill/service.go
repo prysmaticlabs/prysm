@@ -118,6 +118,24 @@ func WithVerifierWaiter(viw InitializerWaiter) ServiceOption {
 	}
 }
 
+// WithMinimumSlot allows the user to specify a different backfill minimum slot than the spec default of current - MIN_EPOCHS_FOR_BLOCK_REQUESTS.
+// If this value is greater than current - MIN_EPOCHS_FOR_BLOCK_REQUESTS, it will be ignored with a warning log.
+func WithMinimumSlot(s primitives.Slot) ServiceOption {
+	ms := func(current primitives.Slot) primitives.Slot {
+		specMin := minimumBackfillSlot(current)
+		if s < specMin {
+			return s
+		}
+		log.WithField("userSlot", s).WithField("specMinSlot", specMin).
+			Warn("Ignoring user-specified slot > MIN_EPOCHS_FOR_BLOCK_REQUESTS.")
+		return specMin
+	}
+	return func(s *Service) error {
+		s.ms = ms
+		return nil
+	}
+}
+
 // NewService initializes the backfill Service. Like all implementations of the Service interface,
 // the service won't begin its runloop until Start() is called.
 func NewService(ctx context.Context, su *Store, bStore *filesystem.BlobStorage, cw startup.ClockWaiter, p p2p.P2P, pa PeerAssigner, opts ...ServiceOption) (*Service, error) {
@@ -289,7 +307,7 @@ func (s *Service) Start() {
 		if ctx.Err() != nil {
 			return
 		}
-		if allComplete := s.updateComplete(); allComplete {
+		if s.updateComplete() {
 			return
 		}
 		s.importBatches(ctx)
@@ -316,11 +334,11 @@ func (s *Service) downscore(b batch) {
 	s.p2p.Peers().Scorers().BadResponsesScorer().Increment(b.blockPid)
 }
 
-func (s *Service) Stop() error {
+func (*Service) Stop() error {
 	return nil
 }
 
-func (s *Service) Status() error {
+func (*Service) Status() error {
 	return nil
 }
 

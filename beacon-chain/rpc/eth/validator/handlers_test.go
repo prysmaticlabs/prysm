@@ -838,10 +838,14 @@ func TestGetAttestationData(t *testing.T) {
 		justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root for justified block")
 		slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
+		beaconState, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetSlot(slot))
 		justifiedCheckpoint := &ethpbalpha.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
 		}
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpoint))
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
 			Optimistic:                 false,
@@ -849,6 +853,7 @@ func TestGetAttestationData(t *testing.T) {
 			Root:                       blockRoot[:],
 			CurrentJustifiedCheckPoint: justifiedCheckpoint,
 			TargetRoot:                 blockRoot,
+			State:                      beaconState,
 		}
 
 		s := &Server{
@@ -1076,10 +1081,14 @@ func TestGetAttestationData(t *testing.T) {
 		justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root for justified block")
 
+		beaconState, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetSlot(slot))
 		justifiedCheckpt := &ethpbalpha.Checkpoint{
 			Epoch: 0,
 			Root:  justifiedRoot[:],
 		}
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpt))
 		require.NoError(t, err)
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
@@ -1087,6 +1096,7 @@ func TestGetAttestationData(t *testing.T) {
 			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
 			CurrentJustifiedCheckPoint: justifiedCheckpt,
 			TargetRoot:                 blockRoot,
+			State:                      beaconState,
 		}
 
 		s := &Server{
@@ -1163,17 +1173,24 @@ func TestGetAttestationData(t *testing.T) {
 		require.NoError(t, err, "Could not hash beacon block")
 		justifiedBlockRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not hash justified block")
+
+		slot := primitives.Slot(10000)
+		beaconState, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetSlot(slot))
 		justifiedCheckpt := &ethpbalpha.Checkpoint{
 			Epoch: slots.ToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
 		}
-		slot := primitives.Slot(10000)
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpt))
+
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
 			Root:                       blockRoot[:],
 			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
 			CurrentJustifiedCheckPoint: justifiedCheckpt,
 			TargetRoot:                 blockRoot,
+			State:                      beaconState,
 		}
 
 		s := &Server{
