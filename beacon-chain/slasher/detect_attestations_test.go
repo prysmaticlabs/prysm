@@ -1161,10 +1161,10 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			historyLength:      12,
 
 			initialChunkByChunkIndex: map[uint64][]uint16{
-				// |  val 42  |     val 43    |
-				0: {0, 0, 0, 0, 55, 55, 55, 55},
-				1: {0, 0, 0, 0, 66, 66, 66, 66},
-				2: {0, 0, 0, 0, 77, 77, 77, 9999},
+				// |  				val 42  					  |     val 43    |
+				0: {neutralMax, neutralMax, neutralMax, neutralMax, 55, 55, 55, 55},
+				1: {neutralMax, neutralMax, neutralMax, neutralMax, 66, 66, 66, 66},
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, 77, 77, 77, 9999},
 			},
 
 			attestation:         createAttestationWrapperEmptySig(t, 7, 8, []uint64{42, 43}, nil),
@@ -1174,8 +1174,8 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			currentEpoch:        9,
 
 			expectedChunkByChunkIndex: map[uint64][]uint16{
-				// |  val 42  |     val 43    |
-				2: {0, 0, 0, 0, 77, 77, 77, 9999},
+				// |  				val 42  					  |     val 43    |
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, 77, 77, 77, 9999},
 			},
 		},
 		{
@@ -1186,10 +1186,12 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			historyLength:      12,
 
 			initialChunkByChunkIndex: map[uint64][]uint16{
-				// |  val 42  |     val 43    |
-				0: {0, 0, 0, 0, 55, 55, 55, 55},
-				1: {0, 0, 0, 2, 66, 66, 66, 66},
-				2: {0, 0, 0, 0, 77, 77, 77, 9999},
+				// |  				val 42  					  |     val 43    |
+				0: {neutralMax, neutralMax, neutralMax, neutralMax, 55, 55, 55, 55},
+				// |  				val 42  	         |     val 43    |
+				1: {neutralMax, neutralMax, neutralMax, 2, 66, 66, 66, 66},
+				// |  				val 42  					  |     val 43      |
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, 77, 77, 77, 9999},
 			},
 
 			attestation:         createAttestationWrapperEmptySig(t, 5, 7, []uint64{42, 43}, nil),
@@ -1199,8 +1201,8 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			currentEpoch:        8,
 
 			expectedChunkByChunkIndex: map[uint64][]uint16{
-				// |  val 42  |     val 43    |
-				1: {0, 0, 1, 2, 66, 66, 66, 66},
+				// |            val 42          |     val 43    |
+				1: {neutralMax, neutralMax, 1, 2, 66, 66, 66, 66},
 			},
 		},
 		{
@@ -1211,10 +1213,11 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			historyLength:      12,
 
 			initialChunkByChunkIndex: map[uint64][]uint16{
-				// |  val 42  |     val 43    |
-				0: {0, 0, 2, 0, 55, 55, 55, 55},
-				1: {0, 0, 0, 0, 66, 66, 66, 66},
-				2: {0, 0, 0, 0, 77, 77, 77, 9999},
+				// |  			val 42  				 |     val 43    |
+				0: {neutralMax, neutralMax, 2, neutralMax, 55, 55, 55, 55},
+				// |  					val 42  		   	 	  |     val 43    |
+				1: {neutralMax, neutralMax, neutralMax, neutralMax, 66, 66, 66, 66},
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, 77, 77, 77, 9999},
 			},
 
 			attestation:         createAttestationWrapperEmptySig(t, 6, 11, []uint64{42, 43}, nil),
@@ -1224,9 +1227,10 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			currentEpoch:        12,
 
 			expectedChunkByChunkIndex: map[uint64][]uint16{
-				// |  val 42  |     val 43    |
-				1: {0, 0, 0, 4, 66, 66, 66, 66},
-				2: {3, 2, 1, 0, 77, 77, 77, 9999},
+				// |  				val 42				 |     val 43    |
+				1: {neutralMax, neutralMax, neutralMax, 4, 66, 66, 66, 66},
+				// |  	   val 42	   |      val 43     |
+				2: {3, 2, 1, neutralMax, 77, 77, 77, 9999},
 			},
 		},
 		{
@@ -1310,6 +1314,35 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			expectedChunkByChunkIndex: map[uint64][]uint16{
 				// |  val 42  |     val 43    |
 				0: {3, 3, 3, 7, 55, 55, 55, 55},
+				1: {6, 5, 4, 3, 66, 66, 66, 66},
+				// |               val 42                |      val 43     |
+				2: {2, neutralMin, neutralMin, neutralMin, 77, 77, 77, 9999},
+			},
+		},
+		{
+			name: "several min chunks are being updated - when it's the first time the validator data is updated",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |      val 42       |     val 43    |
+				0: {neutralMin, neutralMin, neutralMin, neutralMin, 55, 55, 55, 55},
+				// |               val 42                         |     val 43    |
+				1: {neutralMin, neutralMin, neutralMin, neutralMin, 66, 66, 66, 66},
+				2: {neutralMin, neutralMin, neutralMin, neutralMin, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 9, 10, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MinSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        14,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				0: {neutralMin, neutralMin, neutralMin, 7, 55, 55, 55, 55},
 				1: {6, 5, 4, 3, 66, 66, 66, 66},
 				// |               val 42                |      val 43     |
 				2: {2, neutralMin, neutralMin, neutralMin, 77, 77, 77, 9999},
