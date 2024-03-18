@@ -577,6 +577,9 @@ func (s *Service) applyAttestationForValidator(
 	return nil, nil
 }
 
+// getChunk retrieves a chunk from the chunksByChunkIdx first. If it does not exist,
+// we attempt to retrieve it from the database. If it does not exist in the database,
+// an error is returned to the caller.
 func (s *Service) getChunk(
 	ctx context.Context,
 	chunksByChunkIdx map[uint64]Chunker,
