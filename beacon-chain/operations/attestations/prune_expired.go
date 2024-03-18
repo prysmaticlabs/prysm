@@ -3,9 +3,8 @@ package attestations
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // pruneAttsPool prunes attestations pool on every slot interval.
@@ -66,9 +65,14 @@ func (s *Service) pruneExpiredAtts() {
 
 // Return true if the input slot has been expired.
 // Expired is defined as one epoch behind than current time.
-func (s *Service) expired(slot primitives.Slot) bool {
-	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
-	expirationTime := s.genesisTime + uint64(expirationSlot.Mul(params.BeaconConfig().SecondsPerSlot))
-	currentTime := uint64(prysmTime.Now().Unix())
-	return currentTime >= expirationTime
+func (s *Service) expired(providedSlot primitives.Slot) bool {
+	providedEpoch := slots.ToEpoch(providedSlot)
+	currSlot := slots.CurrentSlot(s.genesisTime)
+	currEpoch := slots.ToEpoch(currSlot)
+	prevEpoch, err := currEpoch.SafeSub(1)
+	if err != nil {
+		// In the event the current epoch is 0, we set the previous epoch to 0.
+		prevEpoch = 0
+	}
+	return currEpoch != providedEpoch && prevEpoch != providedEpoch
 }
