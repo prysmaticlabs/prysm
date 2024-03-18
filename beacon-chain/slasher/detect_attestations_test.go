@@ -1173,7 +1173,10 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			validatorIndex:      42,
 			currentEpoch:        9,
 
-			expectedChunkByChunkIndex: map[uint64][]uint16{},
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				2: {0, 0, 0, 0, 77, 77, 77, 9999},
+			},
 		},
 		{
 			name: "one single max chunk is being updated",
@@ -1196,6 +1199,7 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			currentEpoch:        8,
 
 			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
 				1: {0, 0, 1, 2, 66, 66, 66, 66},
 			},
 		},
@@ -1245,12 +1249,15 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			validatorIndex:      42,
 			currentEpoch:        14,
 
-			expectedChunkByChunkIndex: map[uint64][]uint16{},
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				2: {2, 2, 2, 2, 77, 77, 77, 9999},
+			},
 		},
 		{
 			// Only the first chunk is updated.
 			// The second chunk, the first value is 3 which makes a potential a new target equals to the current epoch (10)
-			// Therefore, the update stops there.
+			// Therefore, the update stops there but still stores the chunk in the map for read ops.
 			name: "one single min chunk is being updated",
 
 			chunkSize:          4,
@@ -1273,6 +1280,8 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			currentEpoch:        14,
 
 			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |   val 42    |     val 43    |
+				1: {11, 12, 13, 3, 66, 66, 66, 66},
 				// |       val 42               |     val 43      |
 				2: {2, 2, neutralMin, neutralMin, 77, 77, 77, 9999},
 			},
@@ -1360,11 +1369,11 @@ func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 			// Compare the actual and expected chunks.
 			require.NoError(t, err)
 			require.Equal(t, len(tt.expectedChunkByChunkIndex), len(chunkerByChunkerIndex))
-			for chunkIndex, expectedMinChunk := range tt.expectedChunkByChunkIndex {
-				actualMinChunk, ok := chunkerByChunkerIndex[chunkIndex]
+			for chunkIndex, expectedChunk := range tt.expectedChunkByChunkIndex {
+				chunk, ok := chunkerByChunkerIndex[chunkIndex]
 				require.Equal(t, true, ok)
-				require.Equal(t, len(expectedMinChunk), len(actualMinChunk.Chunk()))
-				require.DeepSSZEqual(t, expectedMinChunk, actualMinChunk.Chunk())
+				require.Equal(t, len(expectedChunk), len(chunk.Chunk()))
+				require.DeepSSZEqual(t, expectedChunk, chunk.Chunk())
 			}
 		})
 	}
