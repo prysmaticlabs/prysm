@@ -1,3 +1,30 @@
+# LightClient
+tests/mainnet/altair/light_client/single_merkle_proof
+tests/mainnet/bellatrix/light_client/single_merkle_proof
+tests/mainnet/capella/light_client/single_merkle_proof
+tests/mainnet/deneb/light_client/single_merkle_proof
+tests/minimal/altair/light_client/single_merkle_proof
+tests/minimal/altair/light_client/sync
+tests/minimal/altair/light_client/update_ranking
+tests/minimal/bellatrix/light_client/single_merkle_proof
+tests/minimal/bellatrix/light_client/sync
+tests/minimal/bellatrix/light_client/update_ranking
+tests/minimal/capella/light_client/single_merkle_proof
+tests/minimal/capella/light_client/sync
+tests/minimal/capella/light_client/update_ranking
+tests/minimal/deneb/light_client/single_merkle_proof
+tests/minimal/deneb/light_client/sync
+tests/minimal/deneb/light_client/update_ranking
+
+# SSZ Generic
+tests/general/phase0/ssz_generic/basic_vector
+tests/general/phase0/ssz_generic/bitlist
+tests/general/phase0/ssz_generic/bitvector
+tests/general/phase0/ssz_generic/boolean
+tests/general/phase0/ssz_generic/containers
+tests/general/phase0/ssz_generic/uints
+
+# EIP6110
 tests/mainnet/eip6110/epoch_processing/effective_balance_updates
 tests/mainnet/eip6110/epoch_processing/eth1_data_reset
 tests/mainnet/eip6110/epoch_processing/historical_summaries_update
@@ -171,6 +198,8 @@ tests/minimal/eip6110/ssz_static/VoluntaryExit
 tests/minimal/eip6110/ssz_static/Withdrawal
 tests/minimal/eip6110/sync/optimistic
 tests/minimal/eip6110/transition/core
+
+# Whisk
 tests/mainnet/whisk/ssz_static/AggregateAndProof
 tests/mainnet/whisk/ssz_static/Attestation
 tests/mainnet/whisk/ssz_static/AttestationData
