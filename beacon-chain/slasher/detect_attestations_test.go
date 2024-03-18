@@ -835,8 +835,6 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 }
 
 func Test_updatedChunkByChunkIndex(t *testing.T) {
-	neutralMin, neutralMax := uint16(65535), uint16(0)
-
 	testCases := []struct {
 		name                               string
 		chunkSize                          uint64
@@ -1132,9 +1130,7 @@ func Test_updatedChunkByChunkIndex(t *testing.T) {
 	}
 }
 
-func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *testing.T) {
-	neutralMin := uint16(65535)
-
+func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
 	testCases := []struct {
 		// test case
 		name string
@@ -1158,7 +1154,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 		expectedChunkByChunkIndex map[uint64][]uint16
 	}{
 		{
-			name: "unchanged max chunks",
+			name: "no max chunks are being updated",
 
 			chunkSize:          4,
 			validatorChunkSize: 2,
@@ -1180,7 +1176,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			expectedChunkByChunkIndex: map[uint64][]uint16{},
 		},
 		{
-			name: "only one max chunk updated",
+			name: "one single max chunk is being updated",
 
 			chunkSize:          4,
 			validatorChunkSize: 2,
@@ -1204,7 +1200,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			},
 		},
 		{
-			name: "2 max chunks are being updated",
+			name: "several max chunks are being updated",
 
 			chunkSize:          4,
 			validatorChunkSize: 2,
@@ -1230,7 +1226,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			},
 		},
 		{
-			name: "unchanged min chunks",
+			name: "no min chunks are being updated",
 
 			chunkSize:          4,
 			validatorChunkSize: 2,
@@ -1255,7 +1251,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			// Only the first chunk is updated.
 			// The second chunk, the first value is 3 which makes a potential a new target equals to the current epoch (10)
 			// Therefore, the update stops there.
-			name: "only one min chunk updated",
+			name: "one single min chunk is being updated",
 
 			chunkSize:          4,
 			validatorChunkSize: 2,
@@ -1282,7 +1278,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			},
 		},
 		{
-			name: "3 min chunks are being updated",
+			name: "several min chunks are being updated",
 
 			chunkSize:          4,
 			validatorChunkSize: 2,
@@ -1320,7 +1316,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 			// Initialize the slasher database.
 			slasherDB := dbtest.SetupSlasherDB(t)
 
-			// Intialize the slasher service.
+			// Initialize the slasher service.
 			service := &Service{
 				params: &Parameters{
 					chunkSize:          tt.chunkSize,
@@ -1330,7 +1326,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 				serviceCfg: &ServiceConfig{Database: slasherDB},
 			}
 
-			// Save min initial chunks if they exist.
+			// Save initial chunks if they exist.
 			if tt.initialChunkByChunkIndex != nil {
 				chunkerByChunkerIndex := map[uint64]Chunker{}
 				for chunkIndex, chunk := range tt.initialChunkByChunkIndex {
@@ -1374,7 +1370,7 @@ func Test_applyAttestationForValidator_WithPotentialChunkUpdate_MinSpanChunk(t *
 	}
 }
 
-func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
+func Test_applyAttestationForValidator_MinSpanChunk_withSlashableOffense(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
 	srv, err := New(context.Background(),
@@ -1431,7 +1427,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	require.NotNil(t, slashing)
 }
 
-func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
+func Test_applyAttestationForValidator_MaxSpanChunk_withSlashableOffense(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
 	srv, err := New(context.Background(),

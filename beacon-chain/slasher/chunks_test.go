@@ -14,8 +14,11 @@ import (
 )
 
 var (
-	_ = Chunker(&MinSpanChunksSlice{})
-	_ = Chunker(&MaxSpanChunksSlice{})
+	defaultMinChunk = Chunker(&MinSpanChunksSlice{})
+	defaultMaxChunk = Chunker(&MaxSpanChunksSlice{})
+
+	neutralMin = defaultMinChunk.NeutralElement()
+	neutralMax = defaultMaxChunk.NeutralElement()
 )
 
 func TestMinSpanChunksSlice_Chunk(t *testing.T) {
