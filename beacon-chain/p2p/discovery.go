@@ -115,10 +115,11 @@ func (s *Service) listenForNewNodes() {
 			time.Sleep(pollingPeriod)
 			continue
 		}
-		exists := iterator.Next()
-		if !exists {
+
+		if !iterator.Next() {
 			break
 		}
+
 		node := iterator.Node()
 		peerInfo, _, err := convertToAddrInfo(node)
 		if err != nil {

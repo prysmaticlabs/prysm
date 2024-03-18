@@ -17,7 +17,6 @@ go_library(
         "handshake.go",
         "info.go",
         "interfaces.go",
-        "iterator.go",
         "log.go",
         "message_id.go",
         "monitoring.go",
