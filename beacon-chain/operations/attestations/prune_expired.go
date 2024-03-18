@@ -3,7 +3,9 @@ package attestations
 import (
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -69,10 +71,22 @@ func (s *Service) expired(providedSlot primitives.Slot) bool {
 	providedEpoch := slots.ToEpoch(providedSlot)
 	currSlot := slots.CurrentSlot(s.genesisTime)
 	currEpoch := slots.ToEpoch(currSlot)
+	if currEpoch < params.BeaconConfig().DenebForkEpoch {
+		return s.expiredPreDeneb(providedSlot)
+	}
 	prevEpoch, err := currEpoch.SafeSub(1)
 	if err != nil {
 		// In the event the current epoch is 0, we set the previous epoch to 0.
 		prevEpoch = 0
 	}
-	return currEpoch != providedEpoch && prevEpoch != providedEpoch
+	isExpired := providedEpoch != currEpoch && providedEpoch != prevEpoch
+	return isExpired
+}
+
+// Handles expiration of attestations before deneb.
+func (s *Service) expiredPreDeneb(slot primitives.Slot) bool {
+	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
+	expirationTime := s.genesisTime + uint64(expirationSlot.Mul(params.BeaconConfig().SecondsPerSlot))
+	currentTime := uint64(prysmTime.Now().Unix())
+	return currentTime >= expirationTime
 }
