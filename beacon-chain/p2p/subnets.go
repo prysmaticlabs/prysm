@@ -212,8 +212,10 @@ func initializePersistentSubnets(id enode.ID, epoch primitives.Epoch) error {
 //
 //	return [compute_subscribed_subnet(node_id, epoch, index) for index in range(SUBNETS_PER_NODE)]
 func computeSubscribedSubnets(nodeID enode.ID, epoch primitives.Epoch) ([]uint64, error) {
-	subs := []uint64{}
-	for i := uint64(0); i < params.BeaconConfig().SubnetsPerNode; i++ {
+	subnetsPerNode := params.BeaconConfig().SubnetsPerNode
+	subs := make([]uint64, 0, subnetsPerNode)
+
+	for i := uint64(0); i < subnetsPerNode; i++ {
 		sub, err := computeSubscribedSubnet(nodeID, epoch, i)
 		if err != nil {
 			return nil, err
