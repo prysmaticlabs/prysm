@@ -3,49 +3,46 @@ package p2p
 import (
 	"context"
 	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
-	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	// This test needs to be entirely rewritten and should be done in a follow up PR from #7885.
-	t.Skip("This test is now failing after PR 7885 due to false positive")
-	gFlags := new(flags.GlobalFlags)
-	gFlags.MinimumPeersPerSubnet = 4
-	flags.Init(gFlags)
-	// Reset config.
-	defer flags.Init(new(flags.GlobalFlags))
-	port := 2000
-	ipAddr, pkey := createAddrAndPrivKey(t)
-	genesisTime := time.Now()
-	genesisValidatorsRoot := make([]byte, 32)
-	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
-		genesisTime:           genesisTime,
-		genesisValidatorsRoot: genesisValidatorsRoot,
-	}
-	bootListener, err := s.createListener(ipAddr, pkey)
-	require.NoError(t, err)
-	defer bootListener.Close()
+	// Topology of this test:
+	//
+	//
+	// Node 1 (subscribed to subnet 1)  --\
+	//									  |
+	// Node 2 (subscribed to subnet 2)  -----> BootNode (not subscribed to any subnet) <------- Node 0 (not subscribed to any subnet)
+	//									  |
+	// Node 3 (subscribed to subnet 3)  --/
+	//
+	// The purpose of this test is to ensure that the "Node 0" (connected only to the boot node) is able to
+	// find and connect to a node already subscribed to a specific subnet.
+	// In our case: The node i is subscribed to subnet i, with i = 1, 2, 3
 
-	bootNode := bootListener.Self()
+	// Define the genesis validators root, to ensure everybody is on the same network.
+	const genesisValidatorRootStr = "0xdeadbeefcafecafedeadbeefcafecafedeadbeefcafecafedeadbeefcafecafe"
+	genesisValidatorsRoot, err := hex.DecodeString(genesisValidatorRootStr[2:])
+	require.NoError(t, err)
+
+	// Create a context.
+	ctx := context.Background()
+
 	// Use shorter period for testing.
 	currentPeriod := pollingPeriod
 	pollingPeriod = 1 * time.Second
@@ -53,90 +50,123 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		pollingPeriod = currentPeriod
 	}()
 
-	var listeners []*discover.UDPv5
-	for i := 1; i <= 3; i++ {
-		port = 3000 + i
-		cfg := &Config{
-			Discv5BootStrapAddrs: []string{bootNode.String()},
-			MaxPeers:             30,
-			UDPPort:              uint(port),
-		}
-		ipAddr, pkey := createAddrAndPrivKey(t)
-		s = &Service{
-			cfg:                   cfg,
-			genesisTime:           genesisTime,
-			genesisValidatorsRoot: genesisValidatorsRoot,
-		}
-		listener, err := s.startDiscoveryV5(ipAddr, pkey)
-		assert.NoError(t, err, "Could not start discovery for node")
-		bitV := bitfield.NewBitvector64()
-		bitV.SetBitAt(uint64(i), true)
+	// Create flags.
+	params.SetupTestConfigCleanup(t)
+	gFlags := new(flags.GlobalFlags)
+	gFlags.MinimumPeersPerSubnet = 1
+	flags.Init(gFlags)
 
-		entry := enr.WithEntry(attSubnetEnrKey, &bitV)
-		listener.LocalNode().Set(entry)
-		listeners = append(listeners, listener)
-	}
-	defer func() {
-		// Close down all peers.
-		for _, listener := range listeners {
-			listener.Close()
-		}
-	}()
+	params.BeaconNetworkConfig().MinimumPeersInSubnetSearch = 1
 
-	// Make one service on port 4001.
-	port = 4001
-	gs := startup.NewClockSynchronizer()
-	cfg := &Config{
-		Discv5BootStrapAddrs: []string{bootNode.String()},
-		MaxPeers:             30,
-		UDPPort:              uint(port),
-		ClockWaiter:          gs,
+	// Reset config.
+	defer flags.Init(new(flags.GlobalFlags))
+
+	// First, generate a bootstrap node.
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	genesisTime := time.Now()
+
+	bootNodeService := &Service{
+		cfg:                   &Config{TCPPort: 2000, UDPPort: 3000},
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	s, err = NewService(context.Background(), cfg)
+
+	bootNodeForkDigest, err := bootNodeService.currentForkDigest()
 	require.NoError(t, err)
 
-	exitRoutine := make(chan bool)
-	go func() {
-		s.Start()
-		<-exitRoutine
-	}()
-	time.Sleep(50 * time.Millisecond)
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	var vr [32]byte
-	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
+	bootListener, err := bootNodeService.createListener(ipAddr, pkey)
+	require.NoError(t, err)
+	defer bootListener.Close()
 
-	// Wait for the nodes to have their local routing tables to be populated with the other nodes
+	bootNodeENR := bootListener.Self().String()
+
+	// Create 3 nodes, each subscribed to a different subnet.
+	// Each node is connected to the boostrap node.
+	services := make([]*Service, 0, 3)
+
+	for i := 1; i <= 3; i++ {
+		subnet := uint64(i)
+		service, err := NewService(ctx, &Config{
+			Discv5BootStrapAddrs: []string{bootNodeENR},
+			MaxPeers:             30,
+			TCPPort:              uint(2000 + i),
+			UDPPort:              uint(3000 + i),
+		})
+
+		require.NoError(t, err)
+
+		service.genesisTime = genesisTime
+		service.genesisValidatorsRoot = genesisValidatorsRoot
+
+		nodeForkDigest, err := service.currentForkDigest()
+		require.NoError(t, err)
+		require.Equal(t, true, nodeForkDigest == bootNodeForkDigest, "fork digest of the node doesn't match the boot node")
+
+		// Start the service.
+		service.Start()
+
+		// Set the ENR `attnets`, used by Prysm to filter peers by subnet.
+		bitV := bitfield.NewBitvector64()
+		bitV.SetBitAt(subnet, true)
+		entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+		service.dv5Listener.LocalNode().Set(entry)
+
+		// Join and subscribe to the subnet, needed by libp2p.
+		topic, err := service.pubsub.Join(fmt.Sprintf(AttestationSubnetTopicFormat, bootNodeForkDigest, subnet) + "/ssz_snappy")
+		require.NoError(t, err)
+
+		_, err = topic.Subscribe()
+		require.NoError(t, err)
+
+		// Memoize the service.
+		services = append(services, service)
+	}
+
+	// Stop the services.
+	defer func() {
+		for _, service := range services {
+			err := service.Stop()
+			require.NoError(t, err)
+		}
+	}()
+
+	cfg := &Config{
+		Discv5BootStrapAddrs: []string{bootNodeENR},
+		MaxPeers:             30,
+		TCPPort:              2010,
+		UDPPort:              3010,
+	}
+
+	service, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+
+	service.genesisTime = genesisTime
+	service.genesisValidatorsRoot = genesisValidatorsRoot
+
+	service.Start()
+	defer func() {
+		err := service.Stop()
+		require.NoError(t, err)
+	}()
+
+	// Wait for the nodes to have their local routing tables to be populated with the other nodes.
 	time.Sleep(6 * discoveryWaitTime)
 
-	// look up 3 different subnets
-	ctx := context.Background()
-	exists, err := s.FindPeersWithSubnet(ctx, "", 1, flags.Get().MinimumPeersPerSubnet)
-	require.NoError(t, err)
-	exists2, err := s.FindPeersWithSubnet(ctx, "", 2, flags.Get().MinimumPeersPerSubnet)
-	require.NoError(t, err)
-	exists3, err := s.FindPeersWithSubnet(ctx, "", 3, flags.Get().MinimumPeersPerSubnet)
-	require.NoError(t, err)
-	if !exists || !exists2 || !exists3 {
-		t.Fatal("Peer with subnet doesn't exist")
+	// Look up 3 different subnets.
+	exists := make([]bool, 0, 3)
+	for i := 1; i <= 3; i++ {
+		subnet := uint64(i)
+		topic := fmt.Sprintf(AttestationSubnetTopicFormat, bootNodeForkDigest, subnet)
+		exist, err := service.FindPeersWithSubnet(ctx, topic, subnet, 1)
+		require.NoError(t, err)
+
+		exists = append(exists, exist)
 	}
 
-	// Update ENR of a peer.
-	testService := &Service{
-		dv5Listener: listeners[0],
-		metaData: wrapper.WrappedMetadataV0(&pb.MetaDataV0{
-			Attnets: bitfield.NewBitvector64(),
-		}),
+	// Check if all peers are found.
+	for _, exist := range exists {
+		require.Equal(t, true, exist, "Peer with subnet doesn't exist")
 	}
-	cache.SubnetIDs.AddAttesterSubnetID(0, 10)
-	testService.RefreshENR()
-	time.Sleep(2 * time.Second)
-
-	exists, err = s.FindPeersWithSubnet(ctx, "", 2, flags.Get().MinimumPeersPerSubnet)
-	require.NoError(t, err)
-
-	assert.Equal(t, true, exists, "Peer with subnet doesn't exist")
-	assert.NoError(t, s.Stop())
-	exitRoutine <- true
 }
 
 func Test_AttSubnets(t *testing.T) {
