@@ -106,7 +106,10 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 	var eventType, data string // Variables to store event type and data
 
 	// Iterate over lines of the event stream
-	for scanner.Scan() {
+	for {
+		if ok := scanner.Scan(); !ok {
+			break
+		}
 		select {
 		case <-h.ctx.Done():
 			log.Info("Context canceled, stopping event stream")
