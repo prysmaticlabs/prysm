@@ -55,9 +55,9 @@ func (ns *Server) GetHealth(ctx context.Context, request *ethpb.HealthRequest) (
 	defer span.End()
 
 	// Set a timeout for the health check operation
-	//timeoutDuration := 10 * time.Second
-	//ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
-	//defer cancel() // Important to avoid a context leak
+	timeoutDuration := 10 * time.Second
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel() // Important to avoid a context leak
 
 	if ns.SyncChecker.Synced() {
 		return &empty.Empty{}, nil
