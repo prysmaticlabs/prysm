@@ -152,7 +152,6 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
 }
 
 func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) error {
