@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -103,10 +104,22 @@ func (bs *BlobStorage) WarmCache() {
 		return
 	}
 	go func() {
-		if err := bs.pruner.prune(0); err != nil {
+		start := time.Now()
+		if err := bs.pruner.warmCache(); err != nil {
 			log.WithError(err).Error("Error encountered while warming up blob pruner cache")
 		}
+		log.WithField("elapsed", time.Since(start)).Info("Blob filesystem cache warm-up complete.")
 	}()
+}
+
+// WaitForSummarizer blocks until the BlobStorageSummarizer is ready to use.
+// BlobStorageSummarizer is not ready immediately on node startup because it needs to sample the blob filesystem to
+// determine which blobs are available.
+func (bs *BlobStorage) WaitForSummarizer(ctx context.Context) (BlobStorageSummarizer, error) {
+	if bs.pruner == nil {
+		return nil, errors.New("pruner not initialized, no blob storage cache available")
+	}
+	return bs.pruner.waitForCache(ctx)
 }
 
 // Save saves blobs given a list of sidecars.

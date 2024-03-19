@@ -28,7 +28,7 @@ func TestTryPruneDir_CachedNotExpired(t *testing.T) {
 	root := fmt.Sprintf("%#x", sc.BlockRoot())
 	// This slot is right on the edge of what would need to be pruned, so by adding it to the cache and
 	// skipping any other test setup, we can be certain the hot cache path never touches the filesystem.
-	require.NoError(t, pr.slotMap.ensure(root, sc.Slot(), 0))
+	require.NoError(t, pr.cache.ensure(root, sc.Slot(), 0))
 	pruned, err := pr.tryPruneDir(root, pr.windowSize)
 	require.NoError(t, err)
 	require.Equal(t, 0, pruned)
@@ -45,7 +45,7 @@ func TestTryPruneDir_CachedExpired(t *testing.T) {
 		require.NoError(t, err)
 		root := fmt.Sprintf("%#x", sc.BlockRoot())
 		require.NoError(t, fs.Mkdir(root, directoryPermissions)) // make empty directory
-		require.NoError(t, pr.slotMap.ensure(root, sc.Slot(), 0))
+		require.NoError(t, pr.cache.ensure(root, sc.Slot(), 0))
 		pruned, err := pr.tryPruneDir(root, slot+1)
 		require.NoError(t, err)
 		require.Equal(t, 0, pruned)
@@ -63,7 +63,7 @@ func TestTryPruneDir_CachedExpired(t *testing.T) {
 
 		// check that the root->slot is cached
 		root := fmt.Sprintf("%#x", scs[0].BlockRoot())
-		cs, cok := bs.pruner.slotMap.slot(root)
+		cs, cok := bs.pruner.cache.slot(root)
 		require.Equal(t, true, cok)
 		require.Equal(t, slot, cs)
 
@@ -95,12 +95,12 @@ func TestTryPruneDir_SlotFromFile(t *testing.T) {
 
 		// check that the root->slot is cached
 		root := fmt.Sprintf("%#x", scs[0].BlockRoot())
-		cs, ok := bs.pruner.slotMap.slot(root)
+		cs, ok := bs.pruner.cache.slot(root)
 		require.Equal(t, true, ok)
 		require.Equal(t, slot, cs)
 		// evict it from the cache so that we trigger the file read path
-		bs.pruner.slotMap.evict(root)
-		_, ok = bs.pruner.slotMap.slot(root)
+		bs.pruner.cache.evict(root)
+		_, ok = bs.pruner.cache.slot(root)
 		require.Equal(t, false, ok)
 
 		// ensure that we see the saved files in the filesystem
@@ -129,8 +129,8 @@ func TestTryPruneDir_SlotFromFile(t *testing.T) {
 
 		// Evict slot mapping from the cache so that we trigger the file read path.
 		root := fmt.Sprintf("%#x", scs[0].BlockRoot())
-		bs.pruner.slotMap.evict(root)
-		_, ok := bs.pruner.slotMap.slot(root)
+		bs.pruner.cache.evict(root)
+		_, ok := bs.pruner.cache.slot(root)
 		require.Equal(t, false, ok)
 
 		// Ensure that we see the saved files in the filesystem.

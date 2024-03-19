@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"encoding/binary"
 	"io"
 	"path"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -32,7 +32,8 @@ type blobPruner struct {
 	sync.Mutex
 	prunedBefore atomic.Uint64
 	windowSize   primitives.Slot
-	slotMap      *slotForRoot
+	cache        *blobStorageCache
+	cacheWarmed  chan struct{}
 	fs           afero.Fs
 }
 
@@ -41,13 +42,14 @@ func newBlobPruner(fs afero.Fs, retain primitives.Epoch) (*blobPruner, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set retentionSlots")
 	}
-	return &blobPruner{fs: fs, windowSize: r, slotMap: newSlotForRoot()}, nil
+	cw := make(chan struct{})
+	return &blobPruner{fs: fs, windowSize: r, cache: newBlobStorageCache(), cacheWarmed: cw}, nil
 }
 
 // notify updates the pruner's view of root->blob mappings. This allows the pruner to build a cache
 // of root->slot mappings and decide when to evict old blobs based on the age of present blobs.
 func (p *blobPruner) notify(root [32]byte, latest primitives.Slot, idx uint64) error {
-	if err := p.slotMap.ensure(rootString(root), latest, idx); err != nil {
+	if err := p.cache.ensure(rootString(root), latest, idx); err != nil {
 		return err
 	}
 	pruned := uint64(windowMin(latest, p.windowSize))
@@ -69,6 +71,23 @@ func windowMin(latest primitives.Slot, offset primitives.Slot) primitives.Slot {
 		return 0
 	}
 	return latest - offset
+}
+
+func (p *blobPruner) warmCache() error {
+	if err := p.prune(0); err != nil {
+		return err
+	}
+	close(p.cacheWarmed)
+	return nil
+}
+
+func (p *blobPruner) waitForCache(ctx context.Context) (*blobStorageCache, error) {
+	select {
+	case <-p.cacheWarmed:
+		return p.cache, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 // Prune prunes blobs in the base directory based on the retention epoch.
@@ -122,7 +141,7 @@ func shouldRetain(slot, pruneBefore primitives.Slot) bool {
 
 func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, error) {
 	root := rootFromDir(dir)
-	slot, slotCached := p.slotMap.slot(root)
+	slot, slotCached := p.cache.slot(root)
 	// Return early if the slot is cached and doesn't need pruning.
 	if slotCached && shouldRetain(slot, pruneBefore) {
 		return 0, nil
@@ -151,7 +170,7 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 			if err != nil {
 				return 0, errors.Wrapf(err, "index could not be determined for blob file %s", scFiles[i])
 			}
-			if err := p.slotMap.ensure(root, slot, idx); err != nil {
+			if err := p.cache.ensure(root, slot, idx); err != nil {
 				return 0, errors.Wrapf(err, "could not update prune cache for blob file %s", scFiles[i])
 			}
 		}
@@ -179,7 +198,7 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 		return removed, errors.Wrapf(err, "unable to remove blob directory %s", dir)
 	}
 
-	p.slotMap.evict(rootFromDir(dir))
+	p.cache.evict(rootFromDir(dir))
 	return len(scFiles), nil
 }
 
@@ -268,72 +287,4 @@ func filterSsz(s string) bool {
 
 func filterPart(s string) bool {
 	return filepath.Ext(s) == dotPartExt
-}
-
-func newSlotForRoot() *slotForRoot {
-	return &slotForRoot{
-		cache: make(map[string]*slotCacheEntry, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest*fieldparams.SlotsPerEpoch),
-	}
-}
-
-type slotCacheEntry struct {
-	slot primitives.Slot
-	mask [fieldparams.MaxBlobsPerBlock]bool
-}
-
-type slotForRoot struct {
-	sync.RWMutex
-	nBlobs float64
-	cache  map[string]*slotCacheEntry
-}
-
-func (s *slotForRoot) updateMetrics(delta float64) {
-	s.nBlobs += delta
-	blobDiskCount.Set(s.nBlobs)
-	blobDiskSize.Set(s.nBlobs * bytesPerSidecar)
-}
-
-func (s *slotForRoot) ensure(key string, slot primitives.Slot, idx uint64) error {
-	if idx >= fieldparams.MaxBlobsPerBlock {
-		return errIndexOutOfBounds
-	}
-	s.Lock()
-	defer s.Unlock()
-	v, ok := s.cache[key]
-	if !ok {
-		v = &slotCacheEntry{}
-	}
-	v.slot = slot
-	if !v.mask[idx] {
-		s.updateMetrics(1)
-	}
-	v.mask[idx] = true
-	s.cache[key] = v
-	return nil
-}
-
-func (s *slotForRoot) slot(key string) (primitives.Slot, bool) {
-	s.RLock()
-	defer s.RUnlock()
-	v, ok := s.cache[key]
-	if !ok {
-		return 0, false
-	}
-	return v.slot, ok
-}
-
-func (s *slotForRoot) evict(key string) {
-	s.Lock()
-	defer s.Unlock()
-	v, ok := s.cache[key]
-	var deleted float64
-	if ok {
-		for i := range v.mask {
-			if v.mask[i] {
-				deleted += 1
-			}
-		}
-		s.updateMetrics(-deleted)
-	}
-	delete(s.cache, key)
 }
