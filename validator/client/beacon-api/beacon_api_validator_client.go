@@ -194,7 +194,7 @@ func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *emp
 
 func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *event.Event) {
 	client := &http.Client{} // event stream should not be subject to the same settings as other api calls, so we won't use c.jsonRestHandler.HttpClient()
-	eventStream, err := event.NewEventStream(ctx, client, c.jsonRestHandler.Host(), topics) 
+	eventStream, err := event.NewEventStream(ctx, client, c.jsonRestHandler.Host(), topics)
 	if err != nil {
 		eventsChannel <- &event.Event{
 			EventType: event.EventError,
