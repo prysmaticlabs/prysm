@@ -508,7 +508,7 @@ func sendKeepalive(w http.ResponseWriter, flusher http.Flusher) error {
 func write(w http.ResponseWriter, flusher http.Flusher, format string, a ...any) error {
 	_, err := fmt.Fprintf(w, format, a...)
 	if err != nil {
-		return errors.Wrap(err, "Could not write to response writer")
+		return errors.Wrap(err, "could not write to response writer")
 	}
 	flusher.Flush()
 	return nil
