@@ -150,43 +150,11 @@ func spanAction(cliCtx *cli.Context) error {
 	// init table
 	tw := table.NewWriter()
 
-	// display information about all validators in chunk
-	if !f.IsDisplayAllValidatorsInChunk {
-		if !f.IsDisplayAllEpochsInChunk {
-			addEpochsHeader(tw, 1, epoch)
-
-			// rows
-			b := chunk.Chunk()
-			validatorFirstEpochIdx := uint64(i.Mod(params.ValidatorChunkSize())) * params.ChunkSize()
-			subChunk := b[validatorFirstEpochIdx : validatorFirstEpochIdx+params.ChunkSize()]
-			row := make(table.Row, 2)
-			title := i
-			row[0] = title
-			indexEpochInChunk := epoch - firstEpoch
-			row[1] = subChunk[indexEpochInChunk]
-			tw.AppendRow(row)
-
-			displayTable(tw)
-		} else {
-			addEpochsHeader(tw, params.ChunkSize(), firstEpoch)
-
-			// rows
-			b := chunk.Chunk()
-			validatorFirstEpochIdx := uint64(i.Mod(params.ValidatorChunkSize())) * params.ChunkSize()
-			subChunk := b[validatorFirstEpochIdx : validatorFirstEpochIdx+params.ChunkSize()]
-			row := make(table.Row, params.ChunkSize()+1)
-			title := i
-			row[0] = title
-			for y, span := range subChunk {
-				row[y+1] = span
-			}
-			tw.AppendRow(row)
-
-			displayTable(tw)
-		}
-	} else {
-		// display all validators and epochs in chunk
+	if f.IsDisplayAllValidatorsInChunk {
 		if f.IsDisplayAllEpochsInChunk {
+			// display all validators and epochs in chunk
+
+			// headers
 			addEpochsHeader(tw, params.ChunkSize(), firstEpoch)
 
 			// rows
@@ -209,11 +177,11 @@ func spanAction(cliCtx *cli.Context) error {
 
 				c++
 			}
-
-			displayTable(tw)
 		} else {
+			// display all validators but only the requested epoch in chunk
 			indexEpochInChunk := epoch - firstEpoch
 
+			// headers
 			addEpochsHeader(tw, 1, firstEpoch)
 
 			// rows
@@ -234,10 +202,46 @@ func spanAction(cliCtx *cli.Context) error {
 
 				c++
 			}
+		}
+	} else {
+		if f.IsDisplayAllEpochsInChunk {
+			// display only the requested validator with all epochs in chunk
 
-			displayTable(tw)
+			// headers
+			addEpochsHeader(tw, params.ChunkSize(), firstEpoch)
+
+			// rows
+			b := chunk.Chunk()
+			validatorFirstEpochIdx := uint64(i.Mod(params.ValidatorChunkSize())) * params.ChunkSize()
+			subChunk := b[validatorFirstEpochIdx : validatorFirstEpochIdx+params.ChunkSize()]
+			row := make(table.Row, params.ChunkSize()+1)
+			title := i
+			row[0] = title
+			for y, span := range subChunk {
+				row[y+1] = span
+			}
+			tw.AppendRow(row)
+		} else {
+			// display only the requested validator and epoch in chunk
+
+			// headers
+			addEpochsHeader(tw, 1, epoch)
+
+			// rows
+			b := chunk.Chunk()
+			validatorFirstEpochIdx := uint64(i.Mod(params.ValidatorChunkSize())) * params.ChunkSize()
+			subChunk := b[validatorFirstEpochIdx : validatorFirstEpochIdx+params.ChunkSize()]
+			row := make(table.Row, 2)
+			title := i
+			row[0] = title
+			indexEpochInChunk := epoch - firstEpoch
+			row[1] = subChunk[indexEpochInChunk]
+			tw.AppendRow(row)
 		}
 	}
+
+	// display table
+	displayTable(tw)
 
 	return nil
 }
