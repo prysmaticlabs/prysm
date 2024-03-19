@@ -64,55 +64,42 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	topic += s.Encoding().ProtocolSuffix()
 	iterator := s.dv5Listener.RandomNodes()
 	defer iterator.Close()
-	var filter func(node *enode.Node) bool
 	switch {
 	case strings.Contains(topic, GossipAttestationMessage):
-		filter = s.filterPeerForAttSubnet(index)
+		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(index))
 	case strings.Contains(topic, GossipSyncCommitteeMessage):
-		filter = s.filterPeerForSyncSubnet(index)
+		iterator = filterNodes(ctx, iterator, s.filterPeerForSyncSubnet(index))
 	default:
 		return false, errors.New("no subnet exists for provided topic")
 	}
 
 	wg := new(sync.WaitGroup)
-
 	for {
 		currNum := len(s.pubsub.ListPeers(topic))
 		if currNum >= threshold {
 			break
 		}
-
 		if err := ctx.Err(); err != nil {
 			return false, errors.Errorf("unable to find requisite number of peers for topic %s - "+
 				"only %d out of %d peers were able to be found", topic, currNum, threshold)
 		}
-
-		if !iterator.Next() {
-			continue
-		}
-
-		node := iterator.Node()
-		if !filter(node) {
-			continue
-		}
-
-		info, _, err := convertToAddrInfo(node)
-		if err != nil {
-			continue
-		}
-
-		wg.Add(1)
-		go func() {
-			if err := s.connectWithPeer(ctx, *info); err != nil {
-				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+		nodes := enode.ReadNodes(iterator, int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch))
+		for _, node := range nodes {
+			info, _, err := convertToAddrInfo(node)
+			if err != nil {
+				continue
 			}
-			wg.Done()
-		}()
+			wg.Add(1)
+			go func() {
+				if err := s.connectWithPeer(ctx, *info); err != nil {
+					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+				}
+				wg.Done()
+			}()
+		}
+		// Wait for all dials to be completed.
+		wg.Wait()
 	}
-
-	// Wait for all dials to be completed.
-	wg.Wait()
-
 	return true, nil
 }
 
