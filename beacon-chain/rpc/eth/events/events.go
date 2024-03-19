@@ -148,7 +148,6 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case <-ctx.Done():
-			httputil.HandleError(w, "context closed", http.StatusServiceUnavailable)
 			return
 		}
 	}
