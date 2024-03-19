@@ -113,15 +113,14 @@ func spanAction(cliCtx *cli.Context) error {
 	epoch := primitives.Epoch(f.Epoch)
 
 	// display configuration
-	fmt.Printf("############################# CONFIGURATION ################################\n")
-	fmt.Printf("# Slasher Params\n")
+	fmt.Printf("############################# SLASHER PARAMS ###############################\n")
 	fmt.Printf("# Chunk Size: %d\n", params.ChunkSize())
 	fmt.Printf("# Validator Chunk Size: %d\n", params.ValidatorChunkSize())
 	fmt.Printf("# History Length: %d\n", params.HistoryLength())
-	fmt.Printf("# DB %s\n", f.Path)
+	fmt.Printf("# DB: %s\n", f.Path)
 	fmt.Printf("# Chunk Kind: %s\n", chunkKind)
-	fmt.Printf("# Validator %d\n", i)
-	fmt.Printf("# Epoch %d\n", epoch)
+	fmt.Printf("# Validator: %d\n", i)
+	fmt.Printf("# Epoch: %d\n", epoch)
 	fmt.Printf("############################################################################\n")
 
 	// fetch chunk in database
