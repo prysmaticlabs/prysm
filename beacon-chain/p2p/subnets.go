@@ -46,9 +46,13 @@ const syncLockerVal = 100
 const blobSubnetLockerVal = 110
 
 // FindPeersWithSubnet performs a network search for peers
-// subscribed to a particular subnet. Then we try to connect
-// with those peers. This method will block until the required amount of
-// peers are found, the method only exits in the event of context timeouts.
+// subscribed to a particular subnet. Then it tries to connect
+// with those peers. This method will block until either:
+// - the required amount of peers are found, or
+// - the context is terminated.
+// On some edge cases, this method may hang indefinitely while peers
+// are actually found. In such a case, the user should cancel the context
+// and re-run the method again.
 func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	index uint64, threshold int) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")

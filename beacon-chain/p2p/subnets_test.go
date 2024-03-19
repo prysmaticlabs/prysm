@@ -21,13 +21,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
-func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
+func TestStartDiscV5_FindPeersWithSubnet(t *testing.T) {
 	// Topology of this test:
 	//
 	//
 	// Node 1 (subscribed to subnet 1)  --\
 	//									  |
-	// Node 2 (subscribed to subnet 2)  -----> BootNode (not subscribed to any subnet) <------- Node 0 (not subscribed to any subnet)
+	// Node 2 (subscribed to subnet 2)  --+--> BootNode (not subscribed to any subnet) <------- Node 0 (not subscribed to any subnet)
 	//									  |
 	// Node 3 (subscribed to subnet 3)  --/
 	//
@@ -149,18 +149,31 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	// Wait for the nodes to have their local routing tables to be populated with the other nodes.
-	time.Sleep(6 * discoveryWaitTime)
-
 	// Look up 3 different subnets.
 	exists := make([]bool, 0, 3)
 	for i := 1; i <= 3; i++ {
 		subnet := uint64(i)
 		topic := fmt.Sprintf(AttestationSubnetTopicFormat, bootNodeForkDigest, subnet)
-		exist, err := service.FindPeersWithSubnet(ctx, topic, subnet, 1)
-		require.NoError(t, err)
 
+		exist := false
+
+		// This for loop is used to ensure we don't get stuck in `FindPeersWithSubnet`.
+		// Read the documentation of `FindPeersWithSubnet` for more details.
+		for j := 0; j < 3; j++ {
+			ctxWithTimeOut, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+
+			exist, err = service.FindPeersWithSubnet(ctxWithTimeOut, topic, subnet, 1)
+			require.NoError(t, err)
+
+			if exist {
+				break
+			}
+		}
+
+		require.NoError(t, err)
 		exists = append(exists, exist)
+
 	}
 
 	// Check if all peers are found.
