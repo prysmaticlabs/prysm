@@ -163,7 +163,6 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		attData, ok := event.Data.(*operation.AggregatedAttReceivedData)
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
-
 		}
 		att := structs.AttFromConsensus(attData.Attestation.Aggregate)
 		return send(w, flusher, AttestationTopic, att)
@@ -174,7 +173,6 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		attData, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
-
 		}
 		att := structs.AttFromConsensus(attData.Attestation)
 		return send(w, flusher, AttestationTopic, att)
