@@ -25,7 +25,7 @@ const (
 	// gossip parameters
 	gossipSubMcacheLen    = 6   // number of windows to retain full messages in cache for `IWANT` responses
 	gossipSubMcacheGossip = 3   // number of windows to gossip about
-	gossipSubSeenTTL      = 550 // number of heartbeat intervals to retain message IDs
+	gossipSubSeenTTL      = 768 // number of seconds to retain message IDs ( 2 epochs)
 
 	// fanout ttl
 	gossipSubFanoutTTL = 60000000000 // TTL for fanout maps for topics we are not subscribed to but have published to, in nano seconds
@@ -165,7 +165,8 @@ func pubsubGossipParam() pubsub.GossipSubParams {
 // to configure our message id time-cache rather than instantiating
 // it with a router instance.
 func setPubSubParameters() {
-	pubsub.TimeCacheDuration = 550 * gossipSubHeartbeatInterval
+	seenTtl := 2 * time.Second * time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	pubsub.TimeCacheDuration = seenTtl
 }
 
 // convert from libp2p's internal schema to a compatible prysm protobuf format.
