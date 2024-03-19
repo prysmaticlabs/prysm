@@ -30,7 +30,7 @@ var (
 )
 
 var spanCmd = &cli.Command{
-	Name:  "span",
+	Name:  "slasher-span-display",
 	Usage: "visualise values in db span bucket",
 	Action: func(c *cli.Context) error {
 		if err := spanAction(c); err != nil {
