@@ -42,10 +42,6 @@ import (
 
 var discoveryWaitTime = 1 * time.Second
 
-func init() {
-	rand.Seed(time.Now().Unix())
-}
-
 func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	ip, err := prysmNetwork.ExternalIPv4()
 	require.NoError(t, err, "Could not get ip")
@@ -103,8 +99,8 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	for i := 1; i <= 5; i++ {
 		port = 3000 + i
 		cfg := &Config{
-			Discv5BootStrapAddr: []string{bootNode.String()},
-			UDPPort:             uint(port),
+			Discv5BootStrapAddrs: []string{bootNode.String()},
+			UDPPort:              uint(port),
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
@@ -131,6 +127,106 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	if len(nodes) < 4 {
 		t.Errorf("The node's local table doesn't have the expected number of nodes. "+
 			"Expected more than or equal to %d but got %d", 4, len(nodes))
+	}
+}
+
+func TestCreateLocalNode(t *testing.T) {
+	testCases := []struct {
+		name          string
+		cfg           *Config
+		expectedError bool
+	}{
+		{
+			name:          "valid config",
+			cfg:           nil,
+			expectedError: false,
+		},
+		{
+			name:          "invalid host address",
+			cfg:           &Config{HostAddress: "invalid"},
+			expectedError: true,
+		},
+		{
+			name:          "valid host address",
+			cfg:           &Config{HostAddress: "192.168.0.1"},
+			expectedError: false,
+		},
+		{
+			name:          "invalid host DNS",
+			cfg:           &Config{HostDNS: "invalid"},
+			expectedError: true,
+		},
+		{
+			name:          "valid host DNS",
+			cfg:           &Config{HostDNS: "www.google.com"},
+			expectedError: false,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Define ports.
+			const (
+				udpPort = 2000
+				tcpPort = 3000
+			)
+
+			// Create a private key.
+			address, privKey := createAddrAndPrivKey(t)
+
+			// Create a service.
+			service := &Service{
+				genesisTime:           time.Now(),
+				genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+				cfg:                   tt.cfg,
+			}
+
+			localNode, err := service.createLocalNode(privKey, address, udpPort, tcpPort)
+			if tt.expectedError {
+				require.NotNil(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+
+			expectedAddress := address
+			if tt.cfg != nil && tt.cfg.HostAddress != "" {
+				expectedAddress = net.ParseIP(tt.cfg.HostAddress)
+			}
+
+			// Check IP.
+			// IP is not checked int case of DNS, since it can be resolved to different IPs.
+			if tt.cfg == nil || tt.cfg.HostDNS == "" {
+				ip := new(net.IP)
+				require.NoError(t, localNode.Node().Record().Load(enr.WithEntry("ip", ip)))
+				require.Equal(t, true, ip.Equal(expectedAddress))
+				require.Equal(t, true, localNode.Node().IP().Equal(expectedAddress))
+			}
+
+			// Check UDP.
+			udp := new(uint16)
+			require.NoError(t, localNode.Node().Record().Load(enr.WithEntry("udp", udp)))
+			require.Equal(t, udpPort, localNode.Node().UDP())
+
+			// Check TCP.
+			tcp := new(uint16)
+			require.NoError(t, localNode.Node().Record().Load(enr.WithEntry("tcp", tcp)))
+			require.Equal(t, tcpPort, localNode.Node().TCP())
+
+			// Check fork is set.
+			fork := new([]byte)
+			require.NoError(t, localNode.Node().Record().Load(enr.WithEntry(eth2ENRKey, fork)))
+			require.NotEmpty(t, *fork)
+
+			// Check att subnets.
+			attSubnets := new([]byte)
+			require.NoError(t, localNode.Node().Record().Load(enr.WithEntry(attSubnetEnrKey, attSubnets)))
+			require.DeepSSZEqual(t, []byte{0, 0, 0, 0, 0, 0, 0, 0}, *attSubnets)
+
+			// Check sync committees subnets.
+			syncSubnets := new([]byte)
+			require.NoError(t, localNode.Node().Record().Load(enr.WithEntry(syncCommsSubnetEnrKey, syncSubnets)))
+			require.DeepSSZEqual(t, []byte{0}, *syncSubnets)
+		})
 	}
 }
 
@@ -310,12 +406,12 @@ func TestMultipleDiscoveryAddresses(t *testing.T) {
 }
 
 func TestCorrectUDPVersion(t *testing.T) {
-	assert.Equal(t, "udp4", udpVersionFromIP(net.IPv4zero), "incorrect network version")
-	assert.Equal(t, "udp6", udpVersionFromIP(net.IPv6zero), "incorrect network version")
-	assert.Equal(t, "udp4", udpVersionFromIP(net.IP{200, 20, 12, 255}), "incorrect network version")
-	assert.Equal(t, "udp6", udpVersionFromIP(net.IP{22, 23, 24, 251, 17, 18, 0, 0, 0, 0, 12, 14, 212, 213, 16, 22}), "incorrect network version")
+	assert.Equal(t, udp4, udpVersionFromIP(net.IPv4zero), "incorrect network version")
+	assert.Equal(t, udp6, udpVersionFromIP(net.IPv6zero), "incorrect network version")
+	assert.Equal(t, udp4, udpVersionFromIP(net.IP{200, 20, 12, 255}), "incorrect network version")
+	assert.Equal(t, udp6, udpVersionFromIP(net.IP{22, 23, 24, 251, 17, 18, 0, 0, 0, 0, 12, 14, 212, 213, 16, 22}), "incorrect network version")
 	// v4 in v6
-	assert.Equal(t, "udp4", udpVersionFromIP(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 212, 213, 16, 22}), "incorrect network version")
+	assert.Equal(t, udp4, udpVersionFromIP(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 212, 213, 16, 22}), "incorrect network version")
 }
 
 // addPeer is a helper to add a peer with a given connection state)

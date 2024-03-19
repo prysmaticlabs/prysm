@@ -8,6 +8,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/tools/pcli",
     visibility = ["//visibility:private"],
     deps = [
+        "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",

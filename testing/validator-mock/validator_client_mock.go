@@ -13,6 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/api/client/event"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	gomock "go.uber.org/mock/gomock"
@@ -297,32 +299,57 @@ func (mr *MockValidatorClientMockRecorder) ProposeExit(arg0, arg1 any) *gomock.C
 }
 
 // StartEventStream mocks base method.
-func (m *MockValidatorClient) StartEventStream(arg0 context.Context) error {
+func (m *MockValidatorClient) StartEventStream(arg0 context.Context, arg1 []string, arg2 chan<- *event.Event){
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartEventStream", arg0)
+	_ = m.ctrl.Call(m, "StartEventStream", arg0,arg1,arg2)
+}
+
+// StartEventStream indicates an expected call of StartEventStream.
+func (mr *MockValidatorClientMockRecorder) StartEventStream(arg0,arg1,arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartEventStream", reflect.TypeOf((*MockValidatorClient)(nil).StartEventStream), arg0, arg1, arg2)
+}
+
+// ProcessEvent mocks base method.
+func (m *MockValidatorClient) ProcessEvent(arg0 *event.Event) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProcessEvent", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// StartEventStream indicates an expected call of StartEventStream.
-func (mr *MockValidatorClientMockRecorder) StartEventStream(arg0 any) *gomock.Call {
+// ProcessEvent indicates an expected call of ProcessEvent.
+func (mr *MockValidatorClientMockRecorder) ProcessEvent(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartEventStream", reflect.TypeOf((*MockValidatorClient)(nil).StartEventStream), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessEvent", reflect.TypeOf((*MockValidatorClient)(nil).ProcessEvent), arg0)
 }
 
-// StreamSlots mocks base method.
-func (m *MockValidatorClient) StreamSlots(arg0 context.Context, arg1 *eth.StreamSlotsRequest) (eth.BeaconNodeValidator_StreamSlotsClient, error) {
+// NodeIsHealthy mocks base method.
+func (m *MockValidatorClient) NodeIsHealthy(arg0 context.Context) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamSlots", arg0, arg1)
-	ret0, _ := ret[0].(eth.BeaconNodeValidator_StreamSlotsClient)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "NodeIsHealthy",arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
 }
 
-// StreamSlots indicates an expected call of StreamSlots.
-func (mr *MockValidatorClientMockRecorder) StreamSlots(arg0, arg1 any) *gomock.Call {
+// NodeIsHealthy indicates an expected call of NodeIsHealthy.
+func (mr *MockValidatorClientMockRecorder) NodeIsHealthy(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamSlots", reflect.TypeOf((*MockValidatorClient)(nil).StreamSlots), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeIsHealthy", reflect.TypeOf((*MockValidatorClient)(nil).NodeIsHealthy), arg0)
+}
+
+// NodeHealthTracker mocks base method.
+func (m *MockValidatorClient) NodeHealthTracker() *beacon.NodeHealthTracker {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NodeHealthTracker")
+	ret0, _ := ret[0].(*beacon.NodeHealthTracker)
+	return ret0
+}
+
+// NodeHealthTracker indicates an expected call of NodeHealthTracker.
+func (mr *MockValidatorClientMockRecorder) NodeHealthTracker() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeHealthTracker", reflect.TypeOf((*MockValidatorClient)(nil).NodeHealthTracker))
 }
 
 // SubmitAggregateSelectionProof mocks base method.

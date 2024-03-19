@@ -6,9 +6,7 @@ import (
 	"path"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -129,29 +127,6 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 }
 
 // pollUntil polls a condition function until it returns true or a timeout is reached.
-func pollUntil(t *testing.T, fs afero.Fs, expected int) error {
-	var remainingFolders []os.FileInfo
-	var err error
-	// Define the condition function for polling
-	conditionFunc := func() bool {
-		remainingFolders, err = afero.ReadDir(fs, ".")
-		require.NoError(t, err)
-		return len(remainingFolders) == expected
-	}
-
-	startTime := time.Now()
-	for {
-		if conditionFunc() {
-			break // Condition met, exit the loop
-		}
-		if time.Since(startTime) > 30*time.Second {
-			return errors.New("timeout")
-		}
-		time.Sleep(1 * time.Second) // Adjust the sleep interval as needed
-	}
-	require.Equal(t, expected, len(remainingFolders))
-	return nil
-}
 
 func TestBlobIndicesBounds(t *testing.T) {
 	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
