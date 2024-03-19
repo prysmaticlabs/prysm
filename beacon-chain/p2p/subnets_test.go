@@ -150,7 +150,17 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	}()
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes.
-	time.Sleep(6 * discoveryWaitTime)
+	totalNodeCount := 4
+	for {
+		// Wait for bootnode to be populated with all the nodes
+		// initialized in the test.
+		if len(bootListener.AllNodes()) < totalNodeCount {
+			// To prevent the loop from spinning endlessly.
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		break
+	}
 
 	// Look up 3 different subnets.
 	exists := make([]bool, 0, 3)
