@@ -559,17 +559,20 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	// The gossip handler for blobs writes the index of each verified blob referencing the given
 	// root to the channel returned by blobNotifiers.forRoot.
 	nc := s.blobNotifiers.forRoot(root)
+
+	// Log for DA checks that cross over into the next slot; helpful for debugging.
 	nextSlot := slots.BeginsAt(signed.Block().Slot()+1, s.genesisTime)
-	// Avoid underflow if Now is somehow after the next slot start.
-	nextSlotDur := time.Duration(0)
+	// Avoid logging if DA check is called after next slot start.
 	if nextSlot.After(time.Now()) {
-		nextSlotDur = time.Until(nextSlot)
-	} else {
-		log.WithFields(daCheckLogFields(root, signed, expected, len(missing))).
-			Error("DA check started after slot end")
+		// Defer the Stop method of the timer used by after func for cleanup.
+		defer time.AfterFunc(time.Until(nextSlot), func() {
+			if len(missing) == 0 {
+				return
+			}
+			log.WithFields(daCheckLogFields(root, signed, expected, len(missing))).
+				Error("Still waiting for DA check at slot end.")
+		}).Stop()
 	}
-	slotEnd := time.NewTimer(nextSlotDur)
-	defer slotEnd.Stop()
 	for {
 		select {
 		case idx := <-nc:
@@ -582,10 +585,6 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			// Once all sidecars have been observed, clean up the notification channel.
 			s.blobNotifiers.delete(root)
 			return nil
-		case <-slotEnd.C:
-			log.WithFields(daCheckLogFields(root, signed, expected, len(missing))).
-				Error("Still waiting for DA check at slot end.")
-			continue
 		case <-ctx.Done():
 			return errors.Wrap(ctx.Err(), "context deadline waiting for blob sidecars")
 		}

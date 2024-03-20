@@ -93,6 +93,7 @@ type config struct {
 	stateGen                      *stategen.State
 	slasherAttestationsFeed       *event.Feed
 	slasherBlockHeadersFeed       *event.Feed
+	clock                         *startup.Clock
 	stateNotifier                 statefeed.Notifier
 	blobStorage                   *filesystem.BlobStorage
 }
