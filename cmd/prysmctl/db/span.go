@@ -97,8 +97,9 @@ var spanCmd = &cli.Command{
 
 func spanAction(cliCtx *cli.Context) error {
 	var (
-		chunk             slasher.Chunker
-		validatorChunkIdx uint64
+		chunk                      slasher.Chunker
+		validatorChunkIdx          uint64
+		lastEpochForValidatorIndex primitives.Epoch
 
 		err error
 	)
@@ -124,7 +125,7 @@ func spanAction(cliCtx *cli.Context) error {
 	fmt.Printf("############################################################################\n")
 
 	// fetch chunk in database
-	if _, validatorChunkIdx, chunk, err = slasher.GetChunkFromDatabase(
+	if lastEpochForValidatorIndex, _, validatorChunkIdx, chunk, err = slasher.GetChunkFromDatabase(
 		ctx,
 		f.Path,
 		slasher.GetChunkFromDatabaseFilters{
@@ -144,7 +145,8 @@ func spanAction(cliCtx *cli.Context) error {
 	firstValidator := params.ValidatorIndexesInChunk(validatorChunkIdx)[0]
 	firstEpoch := epoch - (epoch.Mod(params.ChunkSize()))
 	fmt.Printf("# First validator in chunk: %d\n", firstValidator)
-	fmt.Printf("# First epoch in chunk: %d\n", firstEpoch)
+	fmt.Printf("# First epoch in chunk: %d\n\n", firstEpoch)
+	fmt.Printf("# Last epoch found in database for validator(%d): %d\n", i, lastEpochForValidatorIndex)
 	fmt.Printf("############################################################################\n\n")
 
 	// init table
