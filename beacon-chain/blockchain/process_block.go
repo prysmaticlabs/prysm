@@ -564,14 +564,14 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	nextSlot := slots.BeginsAt(signed.Block().Slot()+1, s.genesisTime)
 	// Avoid logging if DA check is called after next slot start.
 	if nextSlot.After(time.Now()) {
-		// Defer the Stop method of the timer used by after func for cleanup.
-		defer time.AfterFunc(time.Until(nextSlot), func() {
+		nst := time.AfterFunc(time.Until(nextSlot), func() {
 			if len(missing) == 0 {
 				return
 			}
 			log.WithFields(daCheckLogFields(root, signed, expected, len(missing))).
 				Error("Still waiting for DA check at slot end.")
-		}).Stop()
+		})
+		defer nst.Stop()
 	}
 	for {
 		select {
