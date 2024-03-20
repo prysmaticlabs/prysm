@@ -4,11 +4,17 @@ go_library(
     name = "go_default_library",
     srcs = [
         "custom_types.go",
+        "readonly_validator.go",
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/consensus-types/validator",
     visibility = ["//visibility:public"],
-    deps = ["//consensus-types/primitives:go_default_library"],
+    deps = [
+        "//config/fieldparams:go_default_library",
+        "//consensus-types/primitives:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+    ],
 )
 
 go_test(

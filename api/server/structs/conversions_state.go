@@ -35,7 +35,7 @@ func BeaconStateFromConsensus(st beaconState.BeaconState) (*BeaconState, error) 
 	for i, e := range srcVotes {
 		votes[i] = Eth1DataFromConsensus(e)
 	}
-	srcVals := st.Validators()
+	srcVals := st.ValidatorsReadOnly()
 	vals := make([]*Validator, len(srcVals))
 	for i, v := range srcVals {
 		vals[i] = ValidatorFromConsensus(v)
@@ -121,7 +121,7 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	for i, e := range srcVotes {
 		votes[i] = Eth1DataFromConsensus(e)
 	}
-	srcVals := st.Validators()
+	srcVals := st.ValidatorsReadOnly()
 	vals := make([]*Validator, len(srcVals))
 	for i, v := range srcVals {
 		vals[i] = ValidatorFromConsensus(v)
@@ -226,7 +226,7 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 	for i, e := range srcVotes {
 		votes[i] = Eth1DataFromConsensus(e)
 	}
-	srcVals := st.Validators()
+	srcVals := st.ValidatorsReadOnly()
 	vals := make([]*Validator, len(srcVals))
 	for i, v := range srcVals {
 		vals[i] = ValidatorFromConsensus(v)
@@ -344,7 +344,7 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	for i, e := range srcVotes {
 		votes[i] = Eth1DataFromConsensus(e)
 	}
-	srcVals := st.Validators()
+	srcVals := st.ValidatorsReadOnly()
 	vals := make([]*Validator, len(srcVals))
 	for i, v := range srcVals {
 		vals[i] = ValidatorFromConsensus(v)
@@ -481,7 +481,7 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	for i, e := range srcVotes {
 		votes[i] = Eth1DataFromConsensus(e)
 	}
-	srcVals := st.Validators()
+	srcVals := st.ValidatorsReadOnly()
 	vals := make([]*Validator, len(srcVals))
 	for i, v := range srcVals {
 		vals[i] = ValidatorFromConsensus(v)

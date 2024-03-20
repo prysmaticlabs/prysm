@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -71,7 +72,7 @@ func (bs *Server) ListValidatorBalances(
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", startSlot, err))
 	}
 
-	vals := requestedState.Validators()
+	vals := requestedState.ValidatorsReadOnly()
 	balances := requestedState.Balances()
 	balancesCount := len(balances)
 	for _, pubKey := range req.PublicKeys {
@@ -116,8 +117,9 @@ func (bs *Server) ListValidatorBalances(
 		if !filtered[index] {
 			val := vals[index]
 			st := validatorStatus(val, requestedEpoch)
+			pubkey := vals[index].PublicKey()
 			res = append(res, &ethpb.ValidatorBalances_Balance{
-				PublicKey: vals[index].PublicKey,
+				PublicKey: pubkey[:],
 				Index:     index,
 				Balance:   balances[index],
 				Status:    st.String(),
@@ -425,7 +427,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
-	vs := requestedState.Validators()
+	vs := requestedState.ValidatorsReadOnly()
 	activatedIndices := validators.ActivatedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
 	exitedIndices, err := validators.ExitedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs, activeValidatorCount)
 	if err != nil {
@@ -577,23 +579,23 @@ func (bs *Server) GetValidatorQueue(
 	awaitingExit := make([]primitives.ValidatorIndex, 0)
 	exitEpochs := make([]primitives.Epoch, 0)
 	activationQ := make([]primitives.ValidatorIndex, 0)
-	vals := headState.Validators()
+	vals := headState.ValidatorsReadOnly()
 	for idx, validator := range vals {
-		eligibleActivated := validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch
-		canBeActive := validator.ActivationEpoch >= helpers.ActivationExitEpoch(headState.FinalizedCheckpointEpoch())
+		eligibleActivated := validator.ActivationEligibilityEpoch() != params.BeaconConfig().FarFutureEpoch
+		canBeActive := validator.ActivationEpoch() >= helpers.ActivationExitEpoch(headState.FinalizedCheckpointEpoch())
 		if eligibleActivated && canBeActive {
 			activationQ = append(activationQ, primitives.ValidatorIndex(idx))
 		}
-		if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			exitEpochs = append(exitEpochs, validator.ExitEpoch)
+		if validator.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, validator.ExitEpoch())
 			awaitingExit = append(awaitingExit, primitives.ValidatorIndex(idx))
 		}
 	}
 	sort.Slice(activationQ, func(i, j int) bool {
-		return vals[i].ActivationEligibilityEpoch < vals[j].ActivationEligibilityEpoch
+		return vals[i].ActivationEligibilityEpoch() < vals[j].ActivationEligibilityEpoch()
 	})
 	sort.Slice(awaitingExit, func(i, j int) bool {
-		return vals[i].WithdrawableEpoch < vals[j].WithdrawableEpoch
+		return vals[i].WithdrawableEpoch() < vals[j].WithdrawableEpoch()
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
@@ -610,7 +612,7 @@ func (bs *Server) GetValidatorQueue(
 	}
 	exitQueueChurn := uint64(0)
 	for _, val := range vals {
-		if val.ExitEpoch == exitQueueEpoch {
+		if val.ExitEpoch() == exitQueueEpoch {
 			exitQueueChurn++
 		}
 	}
@@ -627,7 +629,7 @@ func (bs *Server) GetValidatorQueue(
 	for _, valIdx := range awaitingExit {
 		val := vals[valIdx]
 		// Ensure the validator has not yet exited before adding its index to the exit queue.
-		if val.WithdrawableEpoch < minEpoch && !validatorHasExited(val, coreTime.CurrentEpoch(headState)) {
+		if val.WithdrawableEpoch() < minEpoch && !validatorHasExited(val, coreTime.CurrentEpoch(headState)) {
 			exitQueueIndices = append(exitQueueIndices, valIdx)
 		}
 	}
@@ -636,10 +638,12 @@ func (bs *Server) GetValidatorQueue(
 	activationQueueKeys := make([][]byte, len(activationQ))
 	exitQueueKeys := make([][]byte, len(exitQueueIndices))
 	for i, idx := range activationQ {
-		activationQueueKeys[i] = vals[idx].PublicKey
+		pubkey := vals[idx].PublicKey()
+		activationQueueKeys[i] = pubkey[:]
 	}
 	for i, idx := range exitQueueIndices {
-		exitQueueKeys[i] = vals[idx].PublicKey
+		pubkey := vals[idx].PublicKey()
+		exitQueueKeys[i] = pubkey[:]
 	}
 
 	churnLimit := helpers.ValidatorActivationChurnLimit(activeValidatorCount)
@@ -774,19 +778,19 @@ func (bs *Server) GetIndividualVotes(
 }
 
 // Determines whether a validator has already exited.
-func validatorHasExited(validator *ethpb.Validator, currentEpoch primitives.Epoch) bool {
+func validatorHasExited(v validator.ReadOnlyValidator, currentEpoch primitives.Epoch) bool {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
-	if currentEpoch < validator.ActivationEligibilityEpoch {
+	if currentEpoch < v.ActivationEligibilityEpoch() {
 		return false
 	}
-	if currentEpoch < validator.ActivationEpoch {
+	if currentEpoch < v.ActivationEpoch() {
 		return false
 	}
-	if validator.ExitEpoch == farFutureEpoch {
+	if v.ExitEpoch() == farFutureEpoch {
 		return false
 	}
-	if currentEpoch < validator.ExitEpoch {
-		if validator.Slashed {
+	if currentEpoch < v.ExitEpoch() {
+		if v.Slashed() {
 			return false
 		}
 		return false
@@ -794,22 +798,22 @@ func validatorHasExited(validator *ethpb.Validator, currentEpoch primitives.Epoc
 	return true
 }
 
-func validatorStatus(validator *ethpb.Validator, epoch primitives.Epoch) ethpb.ValidatorStatus {
+func validatorStatus(v validator.ReadOnlyValidator, epoch primitives.Epoch) ethpb.ValidatorStatus {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
-	if validator == nil {
+	if v == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
-	if epoch < validator.ActivationEligibilityEpoch {
+	if epoch < v.ActivationEligibilityEpoch() {
 		return ethpb.ValidatorStatus_DEPOSITED
 	}
-	if epoch < validator.ActivationEpoch {
+	if epoch < v.ActivationEpoch() {
 		return ethpb.ValidatorStatus_PENDING
 	}
-	if validator.ExitEpoch == farFutureEpoch {
+	if v.ExitEpoch() == farFutureEpoch {
 		return ethpb.ValidatorStatus_ACTIVE
 	}
-	if epoch < validator.ExitEpoch {
-		if validator.Slashed {
+	if epoch < v.ExitEpoch() {
+		if v.Slashed() {
 			return ethpb.ValidatorStatus_SLASHING
 		}
 		return ethpb.ValidatorStatus_EXITING

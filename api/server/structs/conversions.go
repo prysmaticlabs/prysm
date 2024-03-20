@@ -21,16 +21,17 @@ import (
 
 var errNilValue = errors.New("nil value")
 
-func ValidatorFromConsensus(v *eth.Validator) *Validator {
+func ValidatorFromConsensus(v validator.ReadOnlyValidator) *Validator {
+	pubkey := v.PublicKey()
 	return &Validator{
-		Pubkey:                     hexutil.Encode(v.PublicKey),
-		WithdrawalCredentials:      hexutil.Encode(v.WithdrawalCredentials),
-		EffectiveBalance:           fmt.Sprintf("%d", v.EffectiveBalance),
-		Slashed:                    v.Slashed,
-		ActivationEligibilityEpoch: fmt.Sprintf("%d", v.ActivationEligibilityEpoch),
-		ActivationEpoch:            fmt.Sprintf("%d", v.ActivationEpoch),
-		ExitEpoch:                  fmt.Sprintf("%d", v.ExitEpoch),
-		WithdrawableEpoch:          fmt.Sprintf("%d", v.WithdrawableEpoch),
+		Pubkey:                     hexutil.Encode(pubkey[:]),
+		WithdrawalCredentials:      hexutil.Encode(v.WithdrawalCredentials()),
+		EffectiveBalance:           fmt.Sprintf("%d", v.EffectiveBalance()),
+		Slashed:                    v.Slashed(),
+		ActivationEligibilityEpoch: fmt.Sprintf("%d", v.ActivationEligibilityEpoch()),
+		ActivationEpoch:            fmt.Sprintf("%d", v.ActivationEpoch()),
+		ExitEpoch:                  fmt.Sprintf("%d", v.ExitEpoch()),
+		WithdrawableEpoch:          fmt.Sprintf("%d", v.WithdrawableEpoch()),
 	}
 }
 

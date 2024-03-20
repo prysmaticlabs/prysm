@@ -316,7 +316,7 @@ func (s *PremineGenesisConfig) populate(g state.BeaconState) error {
 }
 
 func (s *PremineGenesisConfig) setGenesisValidatorsRoot(g state.BeaconState) error {
-	vroot, err := stateutil.ValidatorRegistryRoot(g.Validators())
+	vroot, err := stateutil.ValidatorRegistryRoot(g.ValidatorsReadOnly())
 	if err != nil {
 		return err
 	}

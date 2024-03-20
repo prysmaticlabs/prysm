@@ -11,6 +11,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
@@ -102,29 +103,17 @@ type WriteOnlyBeaconState interface {
 	SetNextWithdrawalValidatorIndex(i primitives.ValidatorIndex) error
 }
 
-// ReadOnlyValidator defines a struct which only has read access to validator methods.
-type ReadOnlyValidator interface {
-	EffectiveBalance() uint64
-	ActivationEligibilityEpoch() primitives.Epoch
-	ActivationEpoch() primitives.Epoch
-	WithdrawableEpoch() primitives.Epoch
-	ExitEpoch() primitives.Epoch
-	PublicKey() [fieldparams.BLSPubkeyLength]byte
-	WithdrawalCredentials() []byte
-	Slashed() bool
-	IsNil() bool
-}
-
 // ReadOnlyValidators defines a struct which only has read access to validators methods.
 type ReadOnlyValidators interface {
 	Validators() []*ethpb.Validator
+	ValidatorsReadOnly() []validator.ReadOnlyValidator
 	ValidatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Validator, error)
-	ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (ReadOnlyValidator, error)
+	ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (validator.ReadOnlyValidator, error)
 	ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool)
 	PublicKeys() ([][fieldparams.BLSPubkeyLength]byte, error)
 	PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte
 	NumValidators() int
-	ReadFromEveryValidator(f func(idx int, val ReadOnlyValidator) error) error
+	ReadFromEveryValidator(f func(idx int, val validator.ReadOnlyValidator) error) error
 }
 
 // ReadOnlyBalances defines a struct which only has read access to balances methods.

@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
@@ -69,7 +70,7 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 
 	total := uint64(0)
 	epoch := slots.ToEpoch(s.Slot())
-	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	if err := s.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			total += val.EffectiveBalance()
 		}

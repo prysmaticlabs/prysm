@@ -16,7 +16,6 @@ go_library(
         "//api/client/event:go_default_library",
         "//api/server/structs:go_default_library",
         "//beacon-chain/rpc/eth/helpers:go_default_library",
-        "//beacon-chain/state/state-native:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//consensus-types/validator:go_default_library",
         "//proto/eth/v1:go_default_library",

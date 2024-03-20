@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
-	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
@@ -56,7 +55,7 @@ func (g grpcPrysmBeaconChainClient) GetValidatorCount(ctx context.Context, _ str
 func validatorCountByStatus(validators []*ethpb.Validator, statuses []validator.Status, epoch primitives.Epoch) ([]iface.ValidatorCount, error) {
 	countByStatus := make(map[validator.Status]uint64)
 	for _, val := range validators {
-		readOnlyVal, err := statenative.NewValidator(val)
+		readOnlyVal, err := validator.NewValidator(val)
 		if err != nil {
 			return nil, fmt.Errorf("could not convert validator: %v", err)
 		}

@@ -8,9 +8,9 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,11 +28,11 @@ const (
 // ValidatorRegistryRoot computes the HashTreeRoot Merkleization of
 // a list of validator structs according to the Ethereum
 // Simple Serialize specification.
-func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
+func ValidatorRegistryRoot(vals []validator.ReadOnlyValidator) ([32]byte, error) {
 	return validatorRegistryRoot(vals)
 }
 
-func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
+func validatorRegistryRoot(validators []validator.ReadOnlyValidator) ([32]byte, error) {
 	roots, err := OptimizedValidatorRoots(validators)
 	if err != nil {
 		return [32]byte{}, err
@@ -54,7 +54,7 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	return res, nil
 }
 
-func hashValidatorHelper(validators []*ethpb.Validator, roots [][32]byte, j int, groupSize int, wg *sync.WaitGroup) {
+func hashValidatorHelper(validators []validator.ReadOnlyValidator, roots [][32]byte, j int, groupSize int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for i := 0; i < groupSize; i++ {
 		fRoots, err := ValidatorFieldRoots(validators[j*groupSize+i])
@@ -70,7 +70,7 @@ func hashValidatorHelper(validators []*ethpb.Validator, roots [][32]byte, j int,
 
 // OptimizedValidatorRoots uses an optimized routine with gohashtree in order to
 // derive a list of validator roots from a list of validator objects.
-func OptimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
+func OptimizedValidatorRoots(validators []validator.ReadOnlyValidator) ([][32]byte, error) {
 	// Exit early if no validators are provided.
 	if len(validators) == 0 {
 		return [][32]byte{}, nil

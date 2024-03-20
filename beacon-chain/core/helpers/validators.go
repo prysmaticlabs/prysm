@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -45,14 +46,14 @@ func IsActiveValidator(validator *ethpb.Validator, epoch primitives.Epoch) bool 
 }
 
 // IsActiveValidatorUsingTrie checks if a read only validator is active.
-func IsActiveValidatorUsingTrie(validator state.ReadOnlyValidator, epoch primitives.Epoch) bool {
-	return checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
+func IsActiveValidatorUsingTrie(v validator.ReadOnlyValidator, epoch primitives.Epoch) bool {
+	return checkValidatorActiveStatus(v.ActivationEpoch(), v.ExitEpoch(), epoch)
 }
 
 // IsActiveNonSlashedValidatorUsingTrie checks if a read only validator is active and not slashed
-func IsActiveNonSlashedValidatorUsingTrie(validator state.ReadOnlyValidator, epoch primitives.Epoch) bool {
-	active := checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
-	return active && !validator.Slashed()
+func IsActiveNonSlashedValidatorUsingTrie(v validator.ReadOnlyValidator, epoch primitives.Epoch) bool {
+	active := checkValidatorActiveStatus(v.ActivationEpoch(), v.ExitEpoch(), epoch)
+	return active && !v.Slashed()
 }
 
 func checkValidatorActiveStatus(activationEpoch, exitEpoch, epoch primitives.Epoch) bool {
@@ -74,7 +75,7 @@ func IsSlashableValidator(activationEpoch, withdrawableEpoch primitives.Epoch, s
 }
 
 // IsSlashableValidatorUsingTrie checks if a read only validator is slashable.
-func IsSlashableValidatorUsingTrie(val state.ReadOnlyValidator, epoch primitives.Epoch) bool {
+func IsSlashableValidatorUsingTrie(val validator.ReadOnlyValidator, epoch primitives.Epoch) bool {
 	return checkValidatorSlashable(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), epoch)
 }
 
@@ -132,7 +133,7 @@ func ActiveValidatorIndices(ctx context.Context, s state.ReadOnlyBeaconState, ep
 	}()
 
 	var indices []primitives.ValidatorIndex
-	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	if err := s.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			indices = append(indices, primitives.ValidatorIndex(idx))
 		}
@@ -185,7 +186,7 @@ func ActiveValidatorCount(ctx context.Context, s state.ReadOnlyBeaconState, epoc
 	}()
 
 	count := uint64(0)
-	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	if err := s.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			count++
 		}
@@ -409,8 +410,8 @@ func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
 
 // IsEligibleForActivationQueueUsingTrie checks if the read-only validator is eligible to
 // be placed into the activation queue.
-func IsEligibleForActivationQueueUsingTrie(validator state.ReadOnlyValidator) bool {
-	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
+func IsEligibleForActivationQueueUsingTrie(v validator.ReadOnlyValidator) bool {
+	return isEligibileForActivationQueue(v.ActivationEligibilityEpoch(), v.EffectiveBalance())
 }
 
 // isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue*
@@ -439,12 +440,12 @@ func IsEligibleForActivation(state state.ReadOnlyCheckpoint, validator *ethpb.Va
 }
 
 // IsEligibleForActivationUsingTrie checks if the validator is eligible for activation.
-func IsEligibleForActivationUsingTrie(state state.ReadOnlyCheckpoint, validator state.ReadOnlyValidator) bool {
+func IsEligibleForActivationUsingTrie(state state.ReadOnlyCheckpoint, v validator.ReadOnlyValidator) bool {
 	cpt := state.FinalizedCheckpoint()
 	if cpt == nil {
 		return false
 	}
-	return isEligibleForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
+	return isEligibleForActivation(v.ActivationEligibilityEpoch(), v.ActivationEpoch(), cpt.Epoch)
 }
 
 // isEligibleForActivation carries out the logic for IsEligibleForActivation*

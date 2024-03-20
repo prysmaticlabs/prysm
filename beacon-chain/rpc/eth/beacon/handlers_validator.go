@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
-	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
@@ -366,21 +365,12 @@ func decodeIds(w http.ResponseWriter, st state.BeaconState, rawIds []string, ign
 }
 
 // valsFromIds returns read-only validators based on the supplied validator indices.
-func valsFromIds(w http.ResponseWriter, st state.BeaconState, ids []primitives.ValidatorIndex) ([]state.ReadOnlyValidator, bool) {
-	var vals []state.ReadOnlyValidator
+func valsFromIds(w http.ResponseWriter, st state.BeaconState, ids []primitives.ValidatorIndex) ([]validator.ReadOnlyValidator, bool) {
+	var vals []validator.ReadOnlyValidator
 	if len(ids) == 0 {
-		allVals := st.Validators()
-		vals = make([]state.ReadOnlyValidator, len(allVals))
-		for i, val := range allVals {
-			readOnlyVal, err := statenative.NewValidator(val)
-			if err != nil {
-				httputil.HandleError(w, "Could not convert validator: "+err.Error(), http.StatusInternalServerError)
-				return nil, false
-			}
-			vals[i] = readOnlyVal
-		}
+		vals = st.ValidatorsReadOnly()
 	} else {
-		vals = make([]state.ReadOnlyValidator, 0, len(ids))
+		vals = make([]validator.ReadOnlyValidator, 0, len(ids))
 		for _, id := range ids {
 			val, err := st.ValidatorAtIndex(id)
 			if err != nil {
@@ -388,7 +378,7 @@ func valsFromIds(w http.ResponseWriter, st state.BeaconState, ids []primitives.V
 				return nil, false
 			}
 
-			readOnlyVal, err := statenative.NewValidator(val)
+			readOnlyVal, err := validator.NewValidator(val)
 			if err != nil {
 				httputil.HandleError(w, "Could not convert validator: "+err.Error(), http.StatusInternalServerError)
 				return nil, false
@@ -401,7 +391,7 @@ func valsFromIds(w http.ResponseWriter, st state.BeaconState, ids []primitives.V
 }
 
 func valContainerFromReadOnlyVal(
-	val state.ReadOnlyValidator,
+	val validator.ReadOnlyValidator,
 	id primitives.ValidatorIndex,
 	bal uint64,
 	valStatus validator.Status,

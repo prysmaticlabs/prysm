@@ -1,8 +1,7 @@
-package state_native
+package validator
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -13,16 +12,29 @@ var (
 	ErrNilWrappedValidator = errors.New("nil validator cannot be wrapped as readonly")
 )
 
+// ReadOnlyValidator defines a struct which only has read access to validator methods.
+type ReadOnlyValidator interface {
+	EffectiveBalance() uint64
+	ActivationEligibilityEpoch() primitives.Epoch
+	ActivationEpoch() primitives.Epoch
+	WithdrawableEpoch() primitives.Epoch
+	ExitEpoch() primitives.Epoch
+	PublicKey() [fieldparams.BLSPubkeyLength]byte
+	WithdrawalCredentials() []byte
+	Slashed() bool
+	IsNil() bool
+}
+
 // readOnlyValidator returns a wrapper that only allows fields from a validator
 // to be read, and prevents any modification of internal validator fields.
 type readOnlyValidator struct {
 	validator *ethpb.Validator
 }
 
-var _ = state.ReadOnlyValidator(readOnlyValidator{})
+var _ = ReadOnlyValidator(readOnlyValidator{})
 
 // NewValidator initializes the read only wrapper for validator.
-func NewValidator(v *ethpb.Validator) (state.ReadOnlyValidator, error) {
+func NewValidator(v *ethpb.Validator) (ReadOnlyValidator, error) {
 	if v == nil {
 		return nil, ErrNilWrappedValidator
 	}

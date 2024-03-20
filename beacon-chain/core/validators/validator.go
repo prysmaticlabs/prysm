@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -25,7 +25,7 @@ var ErrValidatorAlreadyExited = errors.New("validator already exited")
 // epoch and the number of them
 func MaxExitEpochAndChurn(s state.BeaconState) (maxExitEpoch primitives.Epoch, churn uint64) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
-	err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	err := s.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		e := val.ExitEpoch()
 		if e != farFutureEpoch {
 			if e > maxExitEpoch {
@@ -184,11 +184,11 @@ func SlashValidator(
 }
 
 // ActivatedValidatorIndices determines the indices activated during the given epoch.
-func ActivatedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validator) []primitives.ValidatorIndex {
+func ActivatedValidatorIndices(epoch primitives.Epoch, validators []validator.ReadOnlyValidator) []primitives.ValidatorIndex {
 	activations := make([]primitives.ValidatorIndex, 0)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
-		if val.ActivationEpoch <= epoch && epoch < val.ExitEpoch {
+		if val.ActivationEpoch() <= epoch && epoch < val.ExitEpoch() {
 			activations = append(activations, primitives.ValidatorIndex(i))
 		}
 	}
@@ -196,12 +196,12 @@ func ActivatedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Valid
 }
 
 // SlashedValidatorIndices determines the indices slashed during the given epoch.
-func SlashedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validator) []primitives.ValidatorIndex {
+func SlashedValidatorIndices(epoch primitives.Epoch, validators []validator.ReadOnlyValidator) []primitives.ValidatorIndex {
 	slashed := make([]primitives.ValidatorIndex, 0)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
-		maxWithdrawableEpoch := primitives.MaxEpoch(val.WithdrawableEpoch, epoch+params.BeaconConfig().EpochsPerSlashingsVector)
-		if val.WithdrawableEpoch == maxWithdrawableEpoch && val.Slashed {
+		maxWithdrawableEpoch := primitives.MaxEpoch(val.WithdrawableEpoch(), epoch+params.BeaconConfig().EpochsPerSlashingsVector)
+		if val.WithdrawableEpoch() == maxWithdrawableEpoch && val.Slashed() {
 			slashed = append(slashed, primitives.ValidatorIndex(i))
 		}
 	}
@@ -209,13 +209,13 @@ func SlashedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validat
 }
 
 // ExitedValidatorIndices determines the indices exited during the current epoch.
-func ExitedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validator, activeValidatorCount uint64) ([]primitives.ValidatorIndex, error) {
+func ExitedValidatorIndices(epoch primitives.Epoch, validators []validator.ReadOnlyValidator, activeValidatorCount uint64) ([]primitives.ValidatorIndex, error) {
 	exited := make([]primitives.ValidatorIndex, 0)
 	exitEpochs := make([]primitives.Epoch, 0)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
-		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			exitEpochs = append(exitEpochs, val.ExitEpoch)
+		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch())
 		}
 	}
 	exitQueueEpoch := primitives.Epoch(0)
@@ -228,7 +228,7 @@ func ExitedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validato
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := uint64(0)
 	for _, val := range validators {
-		if val.ExitEpoch == exitQueueEpoch {
+		if val.ExitEpoch() == exitQueueEpoch {
 			exitQueueChurn++
 		}
 	}
@@ -238,8 +238,8 @@ func ExitedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validato
 	}
 	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	for i, val := range validators {
-		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch &&
-			val.EffectiveBalance > params.BeaconConfig().EjectionBalance {
+		if val.ExitEpoch() == epoch && val.WithdrawableEpoch() == withdrawableEpoch &&
+			val.EffectiveBalance() > params.BeaconConfig().EjectionBalance {
 			exited = append(exited, primitives.ValidatorIndex(i))
 		}
 	}
@@ -247,13 +247,13 @@ func ExitedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validato
 }
 
 // EjectedValidatorIndices determines the indices ejected during the given epoch.
-func EjectedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validator, activeValidatorCount uint64) ([]primitives.ValidatorIndex, error) {
+func EjectedValidatorIndices(epoch primitives.Epoch, validators []validator.ReadOnlyValidator, activeValidatorCount uint64) ([]primitives.ValidatorIndex, error) {
 	ejected := make([]primitives.ValidatorIndex, 0)
 	exitEpochs := make([]primitives.Epoch, 0)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
-		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			exitEpochs = append(exitEpochs, val.ExitEpoch)
+		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch())
 		}
 	}
 	exitQueueEpoch := primitives.Epoch(0)
@@ -266,7 +266,7 @@ func EjectedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validat
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := uint64(0)
 	for _, val := range validators {
-		if val.ExitEpoch == exitQueueEpoch {
+		if val.ExitEpoch() == exitQueueEpoch {
 			exitQueueChurn++
 		}
 	}
@@ -276,8 +276,8 @@ func EjectedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validat
 	}
 	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	for i, val := range validators {
-		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch &&
-			val.EffectiveBalance <= params.BeaconConfig().EjectionBalance {
+		if val.ExitEpoch() == epoch && val.WithdrawableEpoch() == withdrawableEpoch &&
+			val.EffectiveBalance() <= params.BeaconConfig().EjectionBalance {
 			ejected = append(ejected, primitives.ValidatorIndex(i))
 		}
 	}
