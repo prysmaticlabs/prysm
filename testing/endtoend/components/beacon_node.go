@@ -313,7 +313,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	}
 
 	if config.UseFixedPeerIDs {
-		peerId, err := helpers.FindFollowingTextInFile(stdOutFile, "Running node with peer id of ")
+		peerId, err := helpers.FindFollowingTextInFile(stdOutFile, "Running node with peerId=")
 		if err != nil {
 			return fmt.Errorf("could not find peer id: %w", err)
 		}
