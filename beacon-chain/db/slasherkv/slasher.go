@@ -166,7 +166,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 					validatorEpochKey := append(encEpoch, encIdx...)
 					attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
 
-					// An attestation record key is compromised of a signing root (32 bytes).
+					// An attestation record key consists of a signing root (32 bytes).
 					if len(attRecordsKey) < attestationRecordKeySize {
 						// If there is no signing root for this combination,
 						// then there is no double vote. We can continue to the next validator.
