@@ -46,9 +46,13 @@ const syncLockerVal = 100
 const blobSubnetLockerVal = 110
 
 // FindPeersWithSubnet performs a network search for peers
-// subscribed to a particular subnet. Then we try to connect
-// with those peers. This method will block until the required amount of
-// peers are found, the method only exits in the event of context timeouts.
+// subscribed to a particular subnet. Then it tries to connect
+// with those peers. This method will block until either:
+// - the required amount of peers are found, or
+// - the context is terminated.
+// On some edge cases, this method may hang indefinitely while peers
+// are actually found. In such a case, the user should cancel the context
+// and re-run the method again.
 func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	index uint64, threshold int) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
@@ -73,9 +77,9 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		return false, errors.New("no subnet exists for provided topic")
 	}
 
-	currNum := len(s.pubsub.ListPeers(topic))
 	wg := new(sync.WaitGroup)
 	for {
+		currNum := len(s.pubsub.ListPeers(topic))
 		if currNum >= threshold {
 			break
 		}
@@ -99,7 +103,6 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		}
 		// Wait for all dials to be completed.
 		wg.Wait()
-		currNum = len(s.pubsub.ListPeers(topic))
 	}
 	return true, nil
 }
@@ -110,18 +113,13 @@ func (s *Service) filterPeerForAttSubnet(index uint64) func(node *enode.Node) bo
 		if !s.filterPeer(node) {
 			return false
 		}
+
 		subnets, err := attSubnets(node.Record())
 		if err != nil {
 			return false
 		}
-		indExists := false
-		for _, comIdx := range subnets {
-			if comIdx == index {
-				indExists = true
-				break
-			}
-		}
-		return indExists
+
+		return subnets[index]
 	}
 }
 
@@ -205,8 +203,10 @@ func initializePersistentSubnets(id enode.ID, epoch primitives.Epoch) error {
 //
 //	return [compute_subscribed_subnet(node_id, epoch, index) for index in range(SUBNETS_PER_NODE)]
 func computeSubscribedSubnets(nodeID enode.ID, epoch primitives.Epoch) ([]uint64, error) {
-	subs := []uint64{}
-	for i := uint64(0); i < params.BeaconConfig().SubnetsPerNode; i++ {
+	subnetsPerNode := params.BeaconConfig().SubnetsPerNode
+	subs := make([]uint64, 0, subnetsPerNode)
+
+	for i := uint64(0); i < subnetsPerNode; i++ {
 		sub, err := computeSubscribedSubnet(nodeID, epoch, i)
 		if err != nil {
 			return nil, err
@@ -281,19 +281,20 @@ func initializeSyncCommSubnets(node *enode.LocalNode) *enode.LocalNode {
 
 // Reads the attestation subnets entry from a node's ENR and determines
 // the committee indices of the attestation subnets the node is subscribed to.
-func attSubnets(record *enr.Record) ([]uint64, error) {
+func attSubnets(record *enr.Record) (map[uint64]bool, error) {
 	bitV, err := attBitvector(record)
 	if err != nil {
 		return nil, err
 	}
+	committeeIdxs := make(map[uint64]bool)
 	// lint:ignore uintcast -- subnet count can be safely cast to int.
 	if len(bitV) != byteCount(int(attestationSubnetCount)) {
-		return []uint64{}, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
+		return committeeIdxs, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
 	}
-	var committeeIdxs []uint64
+
 	for i := uint64(0); i < attestationSubnetCount; i++ {
 		if bitV.BitAt(i) {
-			committeeIdxs = append(committeeIdxs, i)
+			committeeIdxs[i] = true
 		}
 	}
 	return committeeIdxs, nil

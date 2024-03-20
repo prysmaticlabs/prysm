@@ -277,58 +277,69 @@ func (s *Service) startDiscoveryV5(
 // filterPeer validates each node that we retrieve from our dht. We
 // try to ascertain that the peer can be a valid protocol peer.
 // Validity Conditions:
-//  1. The local node is still actively looking for peers to
-//     connect to.
-//  2. Peer has a valid IP and TCP port set in their enr.
-//  3. Peer hasn't been marked as 'bad'
-//  4. Peer is not currently active or connected.
-//  5. Peer is ready to receive incoming connections.
-//  6. Peer's fork digest in their ENR matches that of
+//  1. Peer has a valid IP and TCP port set in their enr.
+//  2. Peer hasn't been marked as 'bad'.
+//  3. Peer is not currently active or connected.
+//  4. Peer is ready to receive incoming connections.
+//  5. Peer's fork digest in their ENR matches that of
 //     our localnodes.
 func (s *Service) filterPeer(node *enode.Node) bool {
 	// Ignore nil node entries passed in.
 	if node == nil {
 		return false
 	}
-	// ignore nodes with no ip address stored.
+
+	// Ignore nodes with no IP address stored.
 	if node.IP() == nil {
 		return false
 	}
-	// do not dial nodes with their tcp ports not set
+
+	// Ignore nodes with their TCP ports not set.
 	if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
 		if !enr.IsNotFound(err) {
 			log.WithError(err).Debug("Could not retrieve tcp port")
 		}
 		return false
 	}
+
 	peerData, multiAddr, err := convertToAddrInfo(node)
 	if err != nil {
 		log.WithError(err).Debug("Could not convert to peer data")
 		return false
 	}
+
+	// Ignore bad nodes.
 	if s.peers.IsBad(peerData.ID) {
 		return false
 	}
+
+	// Ignore nodes that are already active.
 	if s.peers.IsActive(peerData.ID) {
 		return false
 	}
+
+	// Ignore nodes that are already connected.
 	if s.host.Network().Connectedness(peerData.ID) == network.Connected {
 		return false
 	}
+
+	// Ignore nodes that are not ready to receive incoming connections.
 	if !s.peers.IsReadyToDial(peerData.ID) {
 		return false
 	}
+
+	// Ignore nodes that don't match our fork digest.
 	nodeENR := node.Record()
-	// Decide whether or not to connect to peer that does not
-	// match the proper fork ENR data with our local node.
 	if s.genesisValidatorsRoot != nil {
 		if err := s.compareForkENR(nodeENR); err != nil {
 			log.WithError(err).Trace("Fork ENR mismatches between peer and local node")
 			return false
 		}
 	}
+
 	// Add peer to peer handler.
 	s.peers.Add(nodeENR, peerData.ID, multiAddr, network.DirUnknown)
+
 	return true
 }
 
