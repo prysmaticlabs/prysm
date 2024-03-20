@@ -60,7 +60,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Op
 		return nil, errors.Wrapf(err, "cannot get ID from public key: %s", ifaceKey.GetPublic().Type().String())
 	}
 
-	log.Infof("Running node with peer id of %s ", id)
+	log.WithField("peerId", id).Info("Running node with")
 
 	options := []libp2p.Option{
 		privKeyOption(priKey),
