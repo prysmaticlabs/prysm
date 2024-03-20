@@ -53,6 +53,8 @@ type Config struct {
 	GenesisFetcher           client.GenesisFetcher
 	WalletInitializedFeed    *event.Feed
 	NodeGatewayEndpoint      string
+	BeaconApiEndpoint        string
+	BeaconApiTimeout         time.Duration
 	Router                   *mux.Router
 	Wallet                   *wallet.Wallet
 }
@@ -130,6 +132,8 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorMonitoringPort:  cfg.ValidatorMonitoringPort,
 		validatorGatewayHost:     cfg.ValidatorGatewayHost,
 		validatorGatewayPort:     cfg.ValidatorGatewayPort,
+		beaconApiTimeout:         cfg.BeaconApiTimeout,
+		beaconApiEndpoint:        cfg.BeaconApiEndpoint,
 		router:                   cfg.Router,
 	}
 	// immediately register routes to override any catchalls
