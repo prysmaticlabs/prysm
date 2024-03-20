@@ -70,12 +70,12 @@ func (s *Store) LastEpochWrittenForValidators(
 	return attestedEpochs, err
 }
 
-// SaveLastEpochsWrittenForValidators updates the latest epoch a slice
-// of validator indices has attested to.
-func (s *Store) SaveLastEpochsWrittenForValidators(
+// SaveLastEpochWrittenForValidators saves the latest epoch
+// that each validator has attested to in the provided map.
+func (s *Store) SaveLastEpochWrittenForValidators(
 	ctx context.Context, epochByValIndex map[primitives.ValidatorIndex]primitives.Epoch,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochsWrittenForValidators")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochWrittenForValidators")
 	defer span.End()
 
 	const batchSize = 10000
