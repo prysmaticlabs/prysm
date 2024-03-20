@@ -124,31 +124,34 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to build p2p options")
 	}
+
 	// Sets mplex timeouts
 	configureMplex()
 	h, err := libp2p.New(opts...)
 	if err != nil {
-		log.WithError(err).Error("Failed to create p2p host")
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to create p2p host")
 	}
 
 	s.host = h
+
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
 	// object.
 	psOpts := s.pubsubOptions()
+
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
+
 	// Reinitialize them in the event we are running a custom config.
 	attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount
 	syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
-		log.WithError(err).Error("Failed to start pubsub")
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to create p2p pubsub")
 	}
+
 	s.pubsub = gs
 
 	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
