@@ -568,7 +568,7 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			if len(missing) == 0 {
 				return
 			}
-			log.WithFields(daCheckLogFields(root, signed, expected, len(missing))).
+			log.WithFields(daCheckLogFields(root, signed.Block().Slot(), expected, len(missing))).
 				Error("Still waiting for DA check at slot end.")
 		})
 		defer nst.Stop()
@@ -591,9 +591,9 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	}
 }
 
-func daCheckLogFields(root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock, expected, missing int) logrus.Fields {
+func daCheckLogFields(root [32]byte, slot primitives.Slot, expected, missing int) logrus.Fields {
 	return logrus.Fields{
-		"slot":          signed.Block().Slot(),
+		"slot":          slot,
 		"root":          root,
 		"blobsExpected": expected,
 		"blobsWaiting":  missing,
