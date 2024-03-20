@@ -78,26 +78,28 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 
 	for i, r := range finalized {
 		var container *ethpb.FinalizedBlockRootContainer
-		if i == len(finalized)-1 {
-			// We don't know the finalized child of the new finalized checkpoint.
-			// It will be filled out in the next function call.
-			container = &ethpb.FinalizedBlockRootContainer{}
-			if len(finalized) > 1 {
-				container.ParentRoot = finalized[i-1]
-			}
-		} else if i == 0 {
+		switch i {
+		case 0:
 			container = &ethpb.FinalizedBlockRootContainer{
 				ParentRoot: previousFinalizedCheckpoint.Root,
 			}
 			if len(finalized) > 1 {
 				container.ChildRoot = finalized[i+1]
 			}
-		} else {
+		case len(finalized) - 1:
+			// We don't know the finalized child of the new finalized checkpoint.
+			// It will be filled out in the next function call.
+			container = &ethpb.FinalizedBlockRootContainer{}
+			if len(finalized) > 1 {
+				container.ParentRoot = finalized[i-1]
+			}
+		default:
 			container = &ethpb.FinalizedBlockRootContainer{
 				ParentRoot: finalized[i-1],
 				ChildRoot:  finalized[i+1],
 			}
 		}
+
 		enc, err := encode(ctx, container)
 		if err != nil {
 			tracing.AnnotateError(span, err)
