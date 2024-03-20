@@ -21,30 +21,32 @@ import (
 )
 
 // MultiAddressBuilder takes in an ip address string and port to produce a go multiaddr format.
-func MultiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
-	parsedIP := net.ParseIP(ipAddr)
-	if parsedIP.To4() == nil && parsedIP.To16() == nil {
-		return nil, errors.Errorf("invalid ip address provided: %s", ipAddr)
+func MultiAddressBuilder(ip net.IP, port uint) (ma.Multiaddr, error) {
+	ipType, err := extractIpType(ip)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to determine IP type")
 	}
-	if parsedIP.To4() != nil {
-		return ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
-	}
-	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%d", ipAddr, port))
+
+	// Example: /ip4/1.2.3.4./tcp/5678
+	multiaddrStr := fmt.Sprintf("/%s/%s/tcp/%d", ipType, ip, port)
+
+	return ma.NewMultiaddr(multiaddrStr)
 }
 
 // buildOptions for the libp2p host.
 func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Option, error) {
 	cfg := s.cfg
-	listen, err := MultiAddressBuilder(ip.String(), cfg.TCPPort)
+	listen, err := MultiAddressBuilder(ip, cfg.TCPPort)
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot produce multiaddr format from %s:%d", ip.String(), cfg.TCPPort)
+		return nil, errors.Wrapf(err, "cannot produce multiaddr format from %s:%d", ip, cfg.TCPPort)
 	}
 	if cfg.LocalIP != "" {
-		if net.ParseIP(cfg.LocalIP) == nil {
+		localIP := net.ParseIP(cfg.LocalIP)
+		if localIP == nil {
 			return nil, errors.Wrapf(err, "invalid local ip provided: %s:%d", cfg.LocalIP, cfg.TCPPort)
 		}
 
-		listen, err = MultiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
+		listen, err = MultiAddressBuilder(localIP, cfg.TCPPort)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot produce multiaddr format from %s:%d", cfg.LocalIP, cfg.TCPPort)
 		}
@@ -58,7 +60,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Op
 		return nil, errors.Wrapf(err, "cannot get ID from public key: %s", ifaceKey.GetPublic().Type().String())
 	}
 
-	log.Infof("Running node with peer id of %s ", id.String())
+	log.Infof("Running node with peer id of %s ", id)
 
 	options := []libp2p.Option{
 		privKeyOption(priKey),
@@ -83,7 +85,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Op
 	}
 	if cfg.HostAddress != "" {
 		options = append(options, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
-			external, err := MultiAddressBuilder(cfg.HostAddress, cfg.TCPPort)
+			external, err := MultiAddressBuilder(net.ParseIP(cfg.HostAddress), cfg.TCPPort)
 			if err != nil {
 				log.WithError(err).Error("Unable to create external multiaddress")
 			} else {
@@ -110,18 +112,32 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Op
 	return options, nil
 }
 
-func multiAddressBuilderWithID(ipAddr, protocol string, port uint, id peer.ID) (ma.Multiaddr, error) {
-	parsedIP := net.ParseIP(ipAddr)
-	if parsedIP.To4() == nil && parsedIP.To16() == nil {
-		return nil, errors.Errorf("invalid ip address provided: %s", ipAddr)
+func extractIpType(ip net.IP) (string, error) {
+	if ip.To4() != nil {
+		return "ip4", nil
 	}
-	if id.String() == "" {
-		return nil, errors.New("empty peer id given")
+
+	if ip.To16() != nil {
+		return "ip6", nil
 	}
-	if parsedIP.To4() != nil {
-		return ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/%s/%d/p2p/%s", ipAddr, protocol, port, id.String()))
+
+	return "", errors.Errorf("provided IP address is neither IPv4 nor IPv6: %s", ip)
+}
+
+func multiAddressBuilderWithID(ip net.IP, protocol string, port uint, id peer.ID) (ma.Multiaddr, error) {
+	if id == "" {
+		return nil, errors.Errorf("empty peer id given: %s", id)
 	}
-	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/%s/%d/p2p/%s", ipAddr, protocol, port, id.String()))
+
+	ipType, err := extractIpType(ip)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to determine IP type")
+	}
+
+	// Example: /ip4/1.2.3.4/tcp/5678/p2p/16Uiu2HAkum7hhuMpWqFj3yNLcmQBGmThmqw2ohaCRThXQuKU9ohs
+	multiaddrStr := fmt.Sprintf("/%s/%s/%s/%d/p2p/%s", ipType, ip, protocol, port, id)
+
+	return ma.NewMultiaddr(multiaddrStr)
 }
 
 // Adds a private key to the libp2p option if the option was provided.

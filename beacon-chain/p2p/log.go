@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"net"
 	"strconv"
 	"strings"
 
@@ -29,7 +30,7 @@ func logIPAddr(id peer.ID, addrs ...ma.Multiaddr) {
 
 func logExternalIPAddr(id peer.ID, addr string, port uint) {
 	if addr != "" {
-		multiAddr, err := MultiAddressBuilder(addr, port)
+		multiAddr, err := MultiAddressBuilder(net.ParseIP(addr), port)
 		if err != nil {
 			log.WithError(err).Error("Could not create multiaddress")
 			return
