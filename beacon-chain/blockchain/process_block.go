@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
@@ -558,6 +559,17 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	// The gossip handler for blobs writes the index of each verified blob referencing the given
 	// root to the channel returned by blobNotifiers.forRoot.
 	nc := s.blobNotifiers.forRoot(root)
+	nextSlot := slots.BeginsAt(signed.Block().Slot()+1, s.genesisTime)
+	// Avoid underflow if Now is somehow after the next slot start.
+	nextSlotDur := time.Duration(0)
+	if nextSlot.After(time.Now()) {
+		nextSlotDur = time.Until(nextSlot)
+	} else {
+		log.WithFields(daCheckLogFields(root, signed, expected, len(missing))).
+			Error("DA check started after slot end")
+	}
+	slotEnd := time.NewTimer(nextSlotDur)
+	defer slotEnd.Stop()
 	for {
 		select {
 		case idx := <-nc:
@@ -570,9 +582,22 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			// Once all sidecars have been observed, clean up the notification channel.
 			s.blobNotifiers.delete(root)
 			return nil
+		case <-slotEnd.C:
+			log.WithFields(daCheckLogFields(root, signed, expected, len(missing))).
+				Error("Still waiting for DA check at slot end.")
+			continue
 		case <-ctx.Done():
 			return errors.Wrap(ctx.Err(), "context deadline waiting for blob sidecars")
 		}
+	}
+}
+
+func daCheckLogFields(root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock, expected, missing int) logrus.Fields {
+	return logrus.Fields{
+		"slot":          signed.Block().Slot(),
+		"root":          root,
+		"blobsExpected": expected,
+		"blobsWaiting":  missing,
 	}
 }
 
