@@ -182,7 +182,6 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "no pubkeys provided", http.StatusBadRequest)
 		return
 	}
-	log.Infof("Pubkeys! %v", pubkeys)
 	req := &ethpb.ListValidatorsRequest{
 		PublicKeys: pubkeys,
 		PageSize:   int32(ps),
