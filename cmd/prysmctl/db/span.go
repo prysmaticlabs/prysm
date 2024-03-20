@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher"
@@ -152,6 +151,7 @@ func spanAction(cliCtx *cli.Context) error {
 	// init table
 	tw := table.NewWriter()
 
+	minLowerBound := lastEpochForValidatorIndex.Sub(uint64(params.HistoryLength()))
 	if f.IsDisplayAllValidatorsInChunk {
 		if f.IsDisplayAllEpochsInChunk {
 			// display all validators and epochs in chunk
@@ -173,7 +173,7 @@ func spanAction(cliCtx *cli.Context) error {
 				title := firstValidator + primitives.ValidatorIndex(c)
 				row[0] = title
 				for y, span := range subChunk {
-					row[y+1] = span
+					row[y+1] = getSpanOrNonApplicable(firstEpoch, y, minLowerBound, lastEpochForValidatorIndex, span)
 				}
 				tw.AppendRow(row)
 
@@ -220,7 +220,7 @@ func spanAction(cliCtx *cli.Context) error {
 			title := i
 			row[0] = title
 			for y, span := range subChunk {
-				row[y+1] = span
+				row[y+1] = getSpanOrNonApplicable(firstEpoch, y, minLowerBound, lastEpochForValidatorIndex, span)
 			}
 			tw.AppendRow(row)
 		} else {
@@ -246,6 +246,16 @@ func spanAction(cliCtx *cli.Context) error {
 	displayTable(tw)
 
 	return nil
+}
+
+// getSpanOrNonApplicable checks if there's some epoch that are not correct in chunk due to the round robin
+// nature of 2D chunking when an epoch gets overwritten by an epoch eg. (params.historyLength + next_epoch) > params.historyLength
+// if we are out of the range, we display a n/a value otherwise the span value
+func getSpanOrNonApplicable(firstEpoch primitives.Epoch, y int, minLowerBound primitives.Epoch, lastEpochForValidatorIndex primitives.Epoch, span uint16) string {
+	if firstEpoch.Add(uint64(y)) < minLowerBound || firstEpoch.Add(uint64(y)) > lastEpochForValidatorIndex {
+		return "-"
+	}
+	return fmt.Sprintf("%d", span)
 }
 
 func displayTable(tw table.Writer) {
