@@ -383,3 +383,16 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 		})
 	}
 }
+
+func TestSetFeeRecipientIfBurnAddress(t *testing.T) {
+	val := &cache.TrackedValidator{Index: 1}
+	cfg := params.BeaconConfig().Copy()
+	cfg.DefaultFeeRecipient = common.Address([20]byte{'a'})
+	params.OverrideBeaconConfig(cfg)
+	require.NotEqual(t, common.Address(val.FeeRecipient), params.BeaconConfig().DefaultFeeRecipient)
+	setFeeRecipientIfBurnAddress(val)
+	require.NotEqual(t, common.Address(val.FeeRecipient), params.BeaconConfig().DefaultFeeRecipient)
+	val.Index = 0
+	setFeeRecipientIfBurnAddress(val)
+	require.Equal(t, common.Address(val.FeeRecipient), params.BeaconConfig().DefaultFeeRecipient)
+}
