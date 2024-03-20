@@ -9,6 +9,7 @@ config_setting(
 go_library(
     name = "go_default_library",
     srcs = [
+        "block.go",
         "debug.go",
         "maxprocs_metric.go",
     ] + select({

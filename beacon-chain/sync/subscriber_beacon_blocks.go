@@ -2,16 +2,11 @@ package sync
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"path"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/runtime/debug"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -42,7 +37,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 				// TODO(13721): Remove this once we can deprecate the flag.
 				interop.WriteBlockToDisk(signed, true /*failed*/)
 
-				saveInvalidBlockToTemp(signed)
+				debug.SaveBlockToTemp(signed)
 				s.setBadBlock(ctx, root)
 			}
 		}
@@ -53,22 +48,4 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return err
 	}
 	return err
-}
-
-// WriteInvalidBlockToDisk as a block ssz. Writes to temp directory.
-func saveInvalidBlockToTemp(block interfaces.ReadOnlySignedBeaconBlock) {
-	if !features.Get().SaveInvalidBlock {
-		return
-	}
-	filename := fmt.Sprintf("beacon_block_%d.ssz", block.Block().Slot())
-	fp := path.Join(os.TempDir(), filename)
-	log.Warnf("Writing invalid block to disk at %s", fp)
-	enc, err := block.MarshalSSZ()
-	if err != nil {
-		log.WithError(err).Error("Failed to ssz encode block")
-		return
-	}
-	if err := file.WriteFile(fp, enc); err != nil {
-		log.WithError(err).Error("Failed to write to disk")
-	}
 }

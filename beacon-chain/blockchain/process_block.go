@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v5/runtime/debug"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
@@ -586,6 +587,7 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			s.blobNotifiers.delete(root)
 			return nil
 		case <-ctx.Done():
+			debug.SaveBlockToTemp(signed)
 			return errors.Wrap(ctx.Err(), "context deadline waiting for blob sidecars")
 		}
 	}
