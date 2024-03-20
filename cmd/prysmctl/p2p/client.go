@@ -53,7 +53,7 @@ func newClient(beaconEndpoints []string, clientPort uint) (*client, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set up p2p metadata")
 	}
-	listen, err := p2p.MultiAddressBuilder(ipAdd.String(), clientPort)
+	listen, err := p2p.MultiAddressBuilder(ipAdd, clientPort)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set up listening multiaddr")
 	}
