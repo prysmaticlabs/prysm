@@ -64,7 +64,7 @@ func (p *blobPruner) notify(root [32]byte, latest primitives.Slot, idx uint64) e
 	return nil
 }
 
-func windowMin(latest primitives.Slot, offset primitives.Slot) primitives.Slot {
+func windowMin(latest, offset primitives.Slot) primitives.Slot {
 	// Safely compute the first slot in the epoch for the latest slot
 	latest = latest - latest%params.BeaconConfig().SlotsPerEpoch
 	if latest < offset {

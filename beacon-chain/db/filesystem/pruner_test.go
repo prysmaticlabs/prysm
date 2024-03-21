@@ -119,7 +119,7 @@ func TestTryPruneDir_SlotFromFile(t *testing.T) {
 		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
 		require.NoError(t, err)
 		// Set slot equal to the window size, so it should be retained.
-		var slot primitives.Slot = bs.pruner.windowSize
+		slot := bs.pruner.windowSize
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, 2)
 		scs, err := verification.BlobSidecarSliceNoop(sidecars)
 		require.NoError(t, err)
@@ -243,10 +243,8 @@ func TestListDir(t *testing.T) {
 	}
 	blobWithSszAndTmp := dirFiles{name: "0x1234567890", isDir: true,
 		children: []dirFiles{{name: "5.ssz"}, {name: "0.part"}}}
-	fsLayout.children = append(fsLayout.children, notABlob)
-	fsLayout.children = append(fsLayout.children, childlessBlob)
-	fsLayout.children = append(fsLayout.children, blobWithSsz)
-	fsLayout.children = append(fsLayout.children, blobWithSszAndTmp)
+	fsLayout.children = append(fsLayout.children,
+		notABlob, childlessBlob, blobWithSsz, blobWithSszAndTmp)
 
 	topChildren := make([]string, len(fsLayout.children))
 	for i := range fsLayout.children {
@@ -282,10 +280,7 @@ func TestListDir(t *testing.T) {
 			dirPath:  ".",
 			expected: []string{notABlob.name},
 			filter: func(s string) bool {
-				if s == notABlob.name {
-					return true
-				}
-				return false
+				return s == notABlob.name
 			},
 		},
 		{
