@@ -594,7 +594,7 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 func daCheckLogFields(root [32]byte, slot primitives.Slot, expected, missing int) logrus.Fields {
 	return logrus.Fields{
 		"slot":          slot,
-		"root":          root,
+		"root":          fmt.Sprintf("%#x", root),
 		"blobsExpected": expected,
 		"blobsWaiting":  missing,
 	}
