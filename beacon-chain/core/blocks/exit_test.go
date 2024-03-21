@@ -12,6 +12,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -284,7 +285,7 @@ func TestVerifyExitAndSignature(t *testing.T) {
 			params.BeaconConfig().ShardCommitteePeriod = 0
 			validator, signedExit, st, err := tt.setup()
 			require.NoError(t, err)
-			rvalidator, err := state_native.NewValidator(validator)
+			rvalidator, err := validator2.NewValidator(validator)
 			require.NoError(t, err)
 			err = blocks.VerifyExitAndSignature(
 				rvalidator,

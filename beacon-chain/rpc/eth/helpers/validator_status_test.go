@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"testing"
 
-	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
@@ -141,7 +140,7 @@ func Test_ValidatorStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(tt.args.validator))
+			readOnlyVal, err := validator.NewValidator(migration.V1ValidatorToV1Alpha1(tt.args.validator))
 			require.NoError(t, err)
 			got, err := ValidatorStatus(readOnlyVal, tt.args.epoch)
 			require.NoError(t, err)
@@ -279,7 +278,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(tt.args.validator))
+			readOnlyVal, err := validator.NewValidator(migration.V1ValidatorToV1Alpha1(tt.args.validator))
 			require.NoError(t, err)
 			got, err := ValidatorSubStatus(readOnlyVal, tt.args.epoch)
 			require.NoError(t, err)

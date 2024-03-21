@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -29,15 +30,18 @@ func TestValidatorConstants(t *testing.T) {
 	assert.Equal(t, validatorFieldRoots, numOfValFields)
 	assert.Equal(t, uint64(validatorFieldRoots), mathutil.PowerOf2(validatorTreeDepth))
 
-	_, err := ValidatorRegistryRoot([]*ethpb.Validator{v})
+	roval, err := validator.NewValidator(v)
+	require.NoError(t, err)
+	_, err = ValidatorRegistryRoot([]validator.ReadOnlyValidator{roval})
 	assert.NoError(t, err)
 }
 
 func TestHashValidatorHelper(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	v := &ethpb.Validator{}
-	valList := make([]*ethpb.Validator, 10*validatorFieldRoots)
+	v, err := validator.NewValidator(&ethpb.Validator{})
+	require.NoError(t, err)
+	valList := make([]validator.ReadOnlyValidator, 10*validatorFieldRoots)
 	for i := range valList {
 		valList[i] = v
 	}

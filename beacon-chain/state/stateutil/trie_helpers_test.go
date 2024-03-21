@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -62,9 +63,9 @@ func BenchmarkReturnTrieLayer_VectorizedAlgorithm(b *testing.B) {
 
 func TestReturnTrieLayerVariable_OK(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	root, err := stateutil.ValidatorRegistryRoot(newState.Validators())
+	root, err := stateutil.ValidatorRegistryRoot(newState.ValidatorsReadOnly())
 	require.NoError(t, err)
-	validators := newState.Validators()
+	validators := newState.ValidatorsReadOnly()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
 		rt, err := stateutil.ValidatorRootWithHasher(val)
@@ -87,9 +88,9 @@ func TestReturnTrieLayerVariable_OK(t *testing.T) {
 
 func BenchmarkReturnTrieLayerVariable_NormalAlgorithm(b *testing.B) {
 	newState, _ := util.DeterministicGenesisState(b, 16000)
-	root, err := stateutil.ValidatorRegistryRoot(newState.Validators())
+	root, err := stateutil.ValidatorRegistryRoot(newState.ValidatorsReadOnly())
 	require.NoError(b, err)
-	validators := newState.Validators()
+	validators := newState.ValidatorsReadOnly()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
 		rt, err := stateutil.ValidatorRootWithHasher(val)
@@ -109,9 +110,9 @@ func BenchmarkReturnTrieLayerVariable_NormalAlgorithm(b *testing.B) {
 func BenchmarkReturnTrieLayerVariable_VectorizedAlgorithm(b *testing.B) {
 
 	newState, _ := util.DeterministicGenesisState(b, 16000)
-	root, err := stateutil.ValidatorRegistryRoot(newState.Validators())
+	root, err := stateutil.ValidatorRegistryRoot(newState.ValidatorsReadOnly())
 	require.NoError(b, err)
-	validators := newState.Validators()
+	validators := newState.ValidatorsReadOnly()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
 		rt, err := stateutil.ValidatorRootWithHasher(val)
@@ -149,7 +150,7 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 
 func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	validators := newState.Validators()
+	validators := newState.ValidatorsReadOnly()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
 		rt, err := stateutil.ValidatorRootWithHasher(val)
@@ -173,10 +174,15 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	require.NoError(t, newState.UpdateValidatorAtIndex(primitives.ValidatorIndex(changedIdx[0]), changedVals[0]))
 	require.NoError(t, newState.UpdateValidatorAtIndex(primitives.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
-	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
+	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.ValidatorsReadOnly())
 	require.NoError(t, err)
 	roots = make([][32]byte, 0, len(changedVals))
-	for _, val := range changedVals {
+	rovals := make([]validator.ReadOnlyValidator, len(changedVals))
+	for i, v := range changedVals {
+		rovals[i], err = validator.NewValidator(v)
+		require.NoError(t, err)
+	}
+	for _, val := range rovals {
 		rt, err := stateutil.ValidatorRootWithHasher(val)
 		require.NoError(t, err)
 		roots = append(roots, rt)

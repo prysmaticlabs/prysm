@@ -114,7 +114,7 @@ func runRecomputeTrie(t *testing.T) {
 	require.NoError(t, newState.UpdateValidatorAtIndex(primitives.ValidatorIndex(changedIdx[0]), changedVals[0]))
 	require.NoError(t, newState.UpdateValidatorAtIndex(primitives.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
-	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
+	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.ValidatorsReadOnly())
 	require.NoError(t, err)
 	root, err := trie.RecomputeTrie(changedIdx, newState.Validators())
 	require.NoError(t, err)

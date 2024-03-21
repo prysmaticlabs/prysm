@@ -93,6 +93,7 @@ go_test(
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//consensus-types/validator:go_default_library",
         "//container/trie:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/bls/common:go_default_library",

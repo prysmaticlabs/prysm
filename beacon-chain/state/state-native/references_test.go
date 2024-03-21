@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -870,7 +870,7 @@ func TestValidatorReferences_RemainsConsistent_Phase0(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
 		return nil
 	}))
@@ -905,7 +905,7 @@ func TestValidatorReferences_RemainsConsistent_Altair(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
 		return nil
 	}))
@@ -940,7 +940,7 @@ func TestValidatorReferences_RemainsConsistent_Capella(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
 		return nil
 	}))
@@ -975,7 +975,7 @@ func TestValidatorReferences_RemainsConsistent_Deneb(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
 		return nil
 	}))
@@ -1010,7 +1010,7 @@ func TestValidatorReferences_RemainsConsistent_Bellatrix(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
 		return nil
 	}))

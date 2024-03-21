@@ -9,6 +9,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -219,7 +220,12 @@ func TestActivatedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := state_native.InitializeFromProtoPhase0(tt.state)
 		require.NoError(t, err)
-		activatedIndices := ActivatedValidatorIndices(time.CurrentEpoch(s), tt.state.Validators)
+		rovals := make([]validator2.ReadOnlyValidator, len(tt.state.Validators))
+		for i, v := range tt.state.Validators {
+			rovals[i], err = validator2.NewValidator(v)
+			require.NoError(t, err)
+		}
+		activatedIndices := ActivatedValidatorIndices(time.CurrentEpoch(s), rovals)
 		assert.DeepEqual(t, tt.wanted, activatedIndices)
 	}
 }
@@ -273,7 +279,12 @@ func TestSlashedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := state_native.InitializeFromProtoPhase0(tt.state)
 		require.NoError(t, err)
-		slashedIndices := SlashedValidatorIndices(time.CurrentEpoch(s), tt.state.Validators)
+		rovals := make([]validator2.ReadOnlyValidator, len(tt.state.Validators))
+		for i, v := range tt.state.Validators {
+			rovals[i], err = validator2.NewValidator(v)
+			require.NoError(t, err)
+		}
+		slashedIndices := SlashedValidatorIndices(time.CurrentEpoch(s), rovals)
 		assert.DeepEqual(t, tt.wanted, slashedIndices)
 	}
 }
@@ -335,7 +346,12 @@ func TestExitedValidatorIndices(t *testing.T) {
 		require.NoError(t, err)
 		activeCount, err := helpers.ActiveValidatorCount(context.Background(), s, time.PrevEpoch(s))
 		require.NoError(t, err)
-		exitedIndices, err := ExitedValidatorIndices(0, tt.state.Validators, activeCount)
+		rovals := make([]validator2.ReadOnlyValidator, len(tt.state.Validators))
+		for i, v := range tt.state.Validators {
+			rovals[i], err = validator2.NewValidator(v)
+			require.NoError(t, err)
+		}
+		exitedIndices, err := ExitedValidatorIndices(0, rovals, activeCount)
 		require.NoError(t, err)
 		assert.DeepEqual(t, tt.wanted, exitedIndices)
 	}
