@@ -613,6 +613,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*proposer.Sett
 		db,
 		loader.WithBuilderConfig(),
 		loader.WithGasLimit(),
+		loader.WithBuilderBoostFactor(),
 	)
 	if err != nil {
 		return nil, err

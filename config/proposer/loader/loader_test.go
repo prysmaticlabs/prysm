@@ -28,10 +28,11 @@ import (
 func TestProposerSettingsLoader(t *testing.T) {
 	hook := logtest.NewGlobal()
 	type proposerSettingsFlag struct {
-		dir        string
-		url        string
-		defaultfee string
-		defaultgas string
+		dir                string
+		url                string
+		defaultfee         string
+		defaultgas         string
+		builderBoostFactor *uint64
 	}
 
 	type args struct {
@@ -926,6 +927,9 @@ func TestProposerSettingsLoader(t *testing.T) {
 					set.String(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas, "")
 					require.NoError(t, set.Set(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas))
 				}
+				if tt.args.proposerSettingsFlagValues.builderBoostFactor != nil {
+					set.Uint64(flags.BuilderBoostFactorFlag.Name, *tt.args.proposerSettingsFlagValues.builderBoostFactor, "")
+				}
 				if tt.validatorRegistrationEnabled {
 					set.Bool(flags.EnableBuilderFlag.Name, true, "")
 				}
@@ -940,6 +944,7 @@ func TestProposerSettingsLoader(t *testing.T) {
 					validatorDB,
 					WithBuilderConfig(),
 					WithGasLimit(),
+					WithBuilderBoostFactor(),
 				)
 				if tt.wantInitErr != "" {
 					require.ErrorContains(t, tt.wantInitErr, err)

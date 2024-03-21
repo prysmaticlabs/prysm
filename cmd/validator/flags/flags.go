@@ -366,6 +366,14 @@ var (
 		Value: fmt.Sprint(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
 
+	// BuilderBoostFactorFlag sets a multiplier for builder block construction as a Uint64.
+	BuilderBoostFactorFlag = &cli.Uint64Flag{
+		Name: "builder-boost-factor",
+		Usage: "A multiplier for builder block construction as a Uint64 with a default of 100. This is used to prioritize local block construction over relay/builder block construction" +
+			"Boost factor is a multiplier against the builder value. Use builder block if: builderValueGwei*builderBoostFactor(default is 100) > local_block_value * (local-block-value-boost + 100)",
+		Value: 100,
+	}
+
 	// ValidatorsRegistrationBatchSizeFlag sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.
 	ValidatorsRegistrationBatchSizeFlag = &cli.IntFlag{
 		Name:  "validators-registration-batch-size",

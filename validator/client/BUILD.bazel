@@ -5,13 +5,11 @@ go_library(
     srcs = [
         "aggregate.go",
         "attest.go",
-        "attest_protect.go",
         "key_reload.go",
         "log.go",
         "metrics.go",
         "multiple_endpoints_grpc_resolver.go",
         "propose.go",
-        "propose_protect.go",
         "registration.go",
         "runner.go",
         "service.go",
@@ -179,7 +177,7 @@ go_test(
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
         "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
-        "@org_uber_go_mock//gomock:go_default_library",
         "@org_golang_google_protobuf//types/known/wrapperspb:go_default_library",
+        "@org_uber_go_mock//gomock:go_default_library",
     ],
 )

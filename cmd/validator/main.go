@@ -83,6 +83,7 @@ var appFlags = []cli.Flag{
 	flags.ProposerSettingsFlag,
 	flags.EnableBuilderFlag,
 	flags.BuilderGasLimitFlag,
+	flags.BuilderBoostFactorFlag,
 	flags.ValidatorsRegistrationBatchSizeFlag,
 	////////////////////
 	cmd.DisableMonitoringFlag,
