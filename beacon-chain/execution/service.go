@@ -415,14 +415,11 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*types.Hea
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*types.HeaderInfo, 0, requestRange)
-	if requestRange == 0 {
-		return headers, nil
-	}
 	for i := startBlock; i <= endBlock; i++ {
 		header := &types.HeaderInfo{}
 		elems = append(elems, gethRPC.BatchElem{
 			Method: "eth_getBlockByNumber",
-			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(0).SetUint64(i)), false},
+			Args:   []interface{}{hexutil.EncodeBig(new(big.Int).SetUint64(i)), false},
 			Result: header,
 			Error:  error(nil),
 		})
@@ -583,6 +580,9 @@ func (s *Service) run(done <-chan struct{}) {
 	s.runError = nil
 
 	s.initPOWService()
+	// Do not keep storing the finalized state as it is
+	// no longer of use.
+	s.removeStartupState()
 
 	chainstartTicker := time.NewTicker(logPeriod)
 	defer chainstartTicker.Stop()
@@ -636,7 +636,7 @@ func (s *Service) logTillChainStart(ctx context.Context) {
 	}
 
 	fields := logrus.Fields{
-		"Additional validators needed": valNeeded,
+		"additionalValidatorsNeeded": valNeeded,
 	}
 	if secondsLeft > 0 {
 		fields["Generating genesis state in"] = time.Duration(secondsLeft) * time.Second
@@ -672,9 +672,7 @@ func (s *Service) cacheBlockHeaders(start, end uint64) error {
 			// the allotted limit.
 			endReq -= 1
 		}
-		if endReq > end {
-			endReq = end
-		}
+		endReq = min(endReq, end)
 		// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
 		_, err := s.batchRequestHeaders(startReq, endReq)
 		if err != nil {
@@ -909,4 +907,8 @@ func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error
 	}
 	s.depositTrie = newDepositTrie
 	return nil
+}
+
+func (s *Service) removeStartupState() {
+	s.cfg.finalizedStateAtStartup = nil
 }

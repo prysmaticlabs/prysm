@@ -41,8 +41,10 @@ func TestGet(t *testing.T) {
 	defer server.Close()
 
 	jsonRestHandler := BeaconApiJsonRestHandler{
-		HttpClient: http.Client{Timeout: time.Second * 5},
-		Host:       func() string { return server.URL },
+		client: http.Client{Timeout: time.Second * 5},
+		host: func() string {
+			return server.URL
+		},
 	}
 	resp := &structs.GetGenesisResponse{}
 	require.NoError(t, jsonRestHandler.Get(ctx, endpoint+"?arg1=abc&arg2=def", resp))
@@ -87,8 +89,10 @@ func TestPost(t *testing.T) {
 	defer server.Close()
 
 	jsonRestHandler := BeaconApiJsonRestHandler{
-		HttpClient: http.Client{Timeout: time.Second * 5},
-		Host:       func() string { return server.URL },
+		client: http.Client{Timeout: time.Second * 5},
+		host: func() string {
+			return server.URL
+		},
 	}
 	resp := &structs.GetGenesisResponse{}
 	require.NoError(t, jsonRestHandler.Post(ctx, endpoint, headers, bytes.NewBuffer(dataBytes), resp))
@@ -217,20 +221,4 @@ func Test_decodeResp(t *testing.T) {
 		err = decodeResp(r, nil)
 		assert.ErrorContains(t, "failed to decode response body into error json", err)
 	})
-}
-
-func Test_Host(t *testing.T) {
-	servers := []string{"127.0.0.1:0", "127.0.0.2:0"}
-	jsonRestHandler := BeaconApiJsonRestHandler{
-		HttpClient: http.Client{Timeout: time.Second * 5},
-		Host:       func() string { return "" },
-	}
-	jsonRestHandler.SetHost(servers[0])
-
-	host := jsonRestHandler.GetHost()
-	require.Equal(t, servers[0], host)
-
-	jsonRestHandler.SetHost(servers[1])
-	host = jsonRestHandler.GetHost()
-	require.Equal(t, servers[1], host)
 }

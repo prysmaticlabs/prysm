@@ -53,21 +53,25 @@ type SignatureData struct {
 
 func (d SignatureData) logFields() log.Fields {
 	return log.Fields{
-		"root":        fmt.Sprintf("%#x", d.Root),
-		"parent_root": fmt.Sprintf("%#x", d.Parent),
-		"signature":   fmt.Sprintf("%#x", d.Signature),
-		"proposer":    d.Proposer,
-		"slot":        d.Slot,
+		"root":       fmt.Sprintf("%#x", d.Root),
+		"parentRoot": fmt.Sprintf("%#x", d.Parent),
+		"signature":  fmt.Sprintf("%#x", d.Signature),
+		"proposer":   d.Proposer,
+		"slot":       d.Slot,
 	}
 }
 
-func newSigCache(vr []byte, size int) *sigCache {
-	return &sigCache{Cache: lruwrpr.New(size), valRoot: vr}
+func newSigCache(vr []byte, size int, gf forkLookup) *sigCache {
+	if gf == nil {
+		gf = forks.Fork
+	}
+	return &sigCache{Cache: lruwrpr.New(size), valRoot: vr, getFork: gf}
 }
 
 type sigCache struct {
 	*lru.Cache
 	valRoot []byte
+	getFork forkLookup
 }
 
 // VerifySignature verifies the given signature data against the key obtained via ValidatorAtIndexer.
@@ -81,7 +85,7 @@ func (c *sigCache) VerifySignature(sig SignatureData, v ValidatorAtIndexer) (err
 		}
 	}()
 	e := slots.ToEpoch(sig.Slot)
-	fork, err := forks.Fork(e)
+	fork, err := c.getFork(e)
 	if err != nil {
 		return err
 	}

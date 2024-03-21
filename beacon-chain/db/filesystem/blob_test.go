@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"os"
 	"path"
+	"sync"
 	"testing"
-	"time"
 
-	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -101,32 +100,33 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		_, err = b.Get(blob.BlockRoot(), blob.Index)
 		require.ErrorIs(t, err, os.ErrNotExist)
 	})
+
+	t.Run("race conditions", func(t *testing.T) {
+		// There was a bug where saving the same blob in multiple go routines would cause a partial blob
+		// to be empty. This test ensures that several routines can safely save the same blob at the
+		// same time. This isn't ideal behavior from the caller, but should be handled safely anyway.
+		// See https://github.com/prysmaticlabs/prysm/pull/13648
+		b, err := NewBlobStorage(WithBasePath(t.TempDir()))
+		require.NoError(t, err)
+		blob := testSidecars[0]
+
+		var wg sync.WaitGroup
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				require.NoError(t, b.Save(blob))
+			}()
+		}
+
+		wg.Wait()
+		res, err := b.Get(blob.BlockRoot(), blob.Index)
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, blob, res)
+	})
 }
 
 // pollUntil polls a condition function until it returns true or a timeout is reached.
-func pollUntil(t *testing.T, fs afero.Fs, expected int) error {
-	var remainingFolders []os.FileInfo
-	var err error
-	// Define the condition function for polling
-	conditionFunc := func() bool {
-		remainingFolders, err = afero.ReadDir(fs, ".")
-		require.NoError(t, err)
-		return len(remainingFolders) == expected
-	}
-
-	startTime := time.Now()
-	for {
-		if conditionFunc() {
-			break // Condition met, exit the loop
-		}
-		if time.Since(startTime) > 30*time.Second {
-			return errors.New("timeout")
-		}
-		time.Sleep(1 * time.Second) // Adjust the sleep interval as needed
-	}
-	require.Equal(t, expected, len(remainingFolders))
-	return nil
-}
 
 func TestBlobIndicesBounds(t *testing.T) {
 	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
@@ -243,6 +243,8 @@ func BenchmarkPruning(b *testing.B) {
 }
 
 func TestNewBlobStorage(t *testing.T) {
-	_, err := NewBlobStorage(path.Join(t.TempDir(), "good"))
+	_, err := NewBlobStorage()
+	require.ErrorIs(t, err, errNoBasePath)
+	_, err = NewBlobStorage(WithBasePath(path.Join(t.TempDir(), "good")))
 	require.NoError(t, err)
 }

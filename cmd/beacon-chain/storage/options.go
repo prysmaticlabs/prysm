@@ -35,11 +35,10 @@ func BeaconNodeOptions(c *cli.Context) ([]node.Option, error) {
 	if err != nil {
 		return nil, err
 	}
-	bs, err := filesystem.NewBlobStorage(blobStoragePath(c), filesystem.WithBlobRetentionEpochs(e))
-	if err != nil {
-		return nil, err
-	}
-	return []node.Option{node.WithBlobStorage(bs), node.WithBlobRetentionEpochs(e)}, nil
+	opts := []node.Option{node.WithBlobStorageOptions(
+		filesystem.WithBlobRetentionEpochs(e), filesystem.WithBasePath(blobStoragePath(c)),
+	)}
+	return opts, nil
 }
 
 func blobStoragePath(c *cli.Context) string {

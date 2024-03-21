@@ -13,29 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
-
-func blobMinReqEpoch(finalized, current primitives.Epoch) primitives.Epoch {
-	// max(finalized_epoch, current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH)
-	denebFork := params.BeaconConfig().DenebForkEpoch
-	var reqWindow primitives.Epoch
-	if current > params.BeaconConfig().MinEpochsForBlobsSidecarsRequest {
-		reqWindow = current - params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
-	}
-	if finalized >= reqWindow && finalized > denebFork {
-		return finalized
-	}
-	if reqWindow >= finalized && reqWindow > denebFork {
-		return reqWindow
-	}
-	return denebFork
-}
 
 // blobSidecarByRootRPCHandler handles the /eth2/beacon_chain/req/blob_sidecars_by_root/1/ RPC request.
 // spec: https://github.com/ethereum/consensus-specs/blob/a7e45db9ac2b60a33e144444969ad3ac0aae3d4c/specs/deneb/p2p-interface.md#blobsidecarsbyroot-v1
@@ -65,7 +47,13 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	if len(blobIdents) > batchSize {
 		ticker = time.NewTicker(time.Second)
 	}
-	minReqEpoch := blobMinReqEpoch(s.cfg.chain.FinalizedCheckpt().Epoch, slots.ToEpoch(s.cfg.clock.CurrentSlot()))
+
+	// Compute the oldest slot we'll allow a peer to request, based on the current slot.
+	cs := s.cfg.clock.CurrentSlot()
+	minReqSlot, err := BlobRPCMinValidSlot(cs)
+	if err != nil {
+		return errors.Wrapf(err, "unexpected error computing min valid blob request slot, current_slot=%d", cs)
+	}
 
 	for i := range blobIdents {
 		if err := ctx.Err(); err != nil {
@@ -95,12 +83,15 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 
 		// If any root in the request content references a block earlier than minimum_request_epoch,
 		// peers MAY respond with error code 3: ResourceUnavailable or not include the blob in the response.
-		if slots.ToEpoch(sc.Slot()) < minReqEpoch {
+		// note: we are deviating from the spec to allow requests for blobs that are before minimum_request_epoch,
+		// up to the beginning of the retention period.
+		if sc.Slot() < minReqSlot {
 			s.writeErrorResponseToStream(responseCodeResourceUnavailable, types.ErrBlobLTMinRequest.Error(), stream)
 			log.WithError(types.ErrBlobLTMinRequest).
 				Debugf("requested blob for block %#x before minimum_request_epoch", blobIdents[i].BlockRoot)
 			return types.ErrBlobLTMinRequest
 		}
+
 		SetStreamWriteDeadline(stream, defaultWriteDuration)
 		if chunkErr := WriteBlobSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")

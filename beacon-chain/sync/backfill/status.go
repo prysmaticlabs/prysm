@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/proto/dbval"
 )
 
-var errBatchDisconnected = errors.New("Highest block root in backfill batch doesn't match next parent_root")
+var errBatchDisconnected = errors.New("highest block root in backfill batch doesn't match next parent_root")
 
 // NewUpdater correctly initializes a StatusUpdater value with the required database value.
 func NewUpdater(ctx context.Context, store BeaconDB) (*Store, error) {

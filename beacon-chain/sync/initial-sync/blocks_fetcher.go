@@ -126,8 +126,9 @@ type fetchRequestResponse struct {
 
 // newBlocksFetcher creates ready to use fetcher.
 func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetcher {
-	blocksPerPeriod := flags.Get().BlockBatchLimit
-	allowedBlocksBurst := flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit
+	blockBatchLimit := maxBatchLimit()
+	blocksPerPeriod := blockBatchLimit
+	allowedBlocksBurst := flags.Get().BlockBatchLimitBurstFactor * blockBatchLimit
 	// Allow fetcher to go almost to the full burst capacity (less a single batch).
 	rateLimiter := leakybucket.NewCollector(
 		float64(blocksPerPeriod), int64(allowedBlocksBurst-blocksPerPeriod),
@@ -157,6 +158,27 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		mode:            cfg.mode,
 		quit:            make(chan struct{}),
 	}
+}
+
+// This specifies the block batch limit the initial sync fetcher will use. In the event the user has provided
+// and excessive number, this is automatically lowered.
+func maxBatchLimit() int {
+	currLimit := flags.Get().BlockBatchLimit
+	maxLimit := params.BeaconConfig().MaxRequestBlocks
+	if params.DenebEnabled() {
+		maxLimit = params.BeaconConfig().MaxRequestBlocksDeneb
+	}
+	castedMaxLimit, err := math.Int(maxLimit)
+	if err != nil {
+		// Should be impossible to hit this case.
+		log.WithError(err).Error("Unable to calculate the max batch limit")
+		return currLimit
+	}
+	if currLimit > castedMaxLimit {
+		log.Warnf("Specified batch size exceeds the block limit of the network, lowering from %d to %d", currLimit, maxLimit)
+		currLimit = castedMaxLimit
+	}
+	return currLimit
 }
 
 // start boots up the fetcher, which starts listening for incoming fetch requests.
@@ -414,8 +436,8 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithROBlobs, blobs []blocks.ROBlo
 		if err != nil {
 			if errors.Is(err, consensus_types.ErrUnsupportedField) {
 				log.
-					WithField("block_slot", block.Slot()).
-					WithField("retention_start", blobWindowStart).
+					WithField("blockSlot", block.Slot()).
+					WithField("retentionStart", blobWindowStart).
 					Warn("block with slot within blob retention period has version which does not support commitments")
 				continue
 			}
@@ -456,7 +478,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 	if slots.ToEpoch(f.clock.CurrentSlot()) < params.BeaconConfig().DenebForkEpoch {
 		return bwb, nil
 	}
-	blobWindowStart, err := prysmsync.BlobsByRangeMinStartSlot(f.clock.CurrentSlot())
+	blobWindowStart, err := prysmsync.BlobRPCMinValidSlot(f.clock.CurrentSlot())
 	if err != nil {
 		return nil, err
 	}

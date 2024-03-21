@@ -51,7 +51,12 @@ func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
 // of the URL. This token is then used as the bearer token for jwt auth.
 func (s *Server) initializeAuthToken(walletDir string) (string, error) {
 	authTokenFile := filepath.Join(walletDir, AuthTokenFileName)
-	if file.Exists(authTokenFile) {
+	exists, err := file.Exists(authTokenFile, file.Regular)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not check if file exists: %s", authTokenFile)
+	}
+
+	if exists {
 		// #nosec G304
 		f, err := os.Open(authTokenFile)
 		if err != nil {

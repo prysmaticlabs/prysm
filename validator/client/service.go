@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v5/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
@@ -76,7 +76,7 @@ type ValidatorService struct {
 	grpcHeaders            []string
 	graffiti               []byte
 	Web3SignerConfig       *remoteweb3signer.SetupConfig
-	proposerSettings       *validatorserviceconfig.ProposerSettings
+	proposerSettings       *proposer.Settings
 	validatorsRegBatchSize int
 }
 
@@ -101,7 +101,7 @@ type Config struct {
 	GraffitiFlag               string
 	Endpoint                   string
 	Web3SignerConfig           *remoteweb3signer.SetupConfig
-	ProposerSettings           *validatorserviceconfig.ProposerSettings
+	ProposerSettings           *proposer.Settings
 	BeaconApiEndpoint          string
 	BeaconApiTimeout           time.Duration
 	ValidatorsRegBatchSize     int
@@ -197,17 +197,14 @@ func (v *ValidatorService) Start() {
 
 	u := strings.Replace(v.conn.GetBeaconApiUrl(), " ", "", -1)
 	urls := strings.Split(u, ",")
-	restHandler := &beaconApi.BeaconApiJsonRestHandler{
-		HttpClient: http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
-		Host: func() string {
+	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
+		http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
+		func() string {
 			return urls[0]
 		},
-	}
+	)
 
-	evHandler := beaconApi.NewEventHandler(http.DefaultClient, urls[0])
-	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler)}
-	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler, opts...)
-
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
 	if len(urls) > 1 && features.Get().EnableBeaconRESTApi {
 		runNodeSwitcherRoutine(v.ctx, v.validator, urls)
 	}
@@ -280,7 +277,7 @@ func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
 }
 
 // ProposerSettings returns a deep copy of the underlying proposer settings in the validator
-func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+func (v *ValidatorService) ProposerSettings() *proposer.Settings {
 	settings := v.validator.ProposerSettings()
 	if settings != nil {
 		return settings.Clone()
@@ -289,7 +286,7 @@ func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSe
 }
 
 // SetProposerSettings sets the proposer settings on the validator service as well as the underlying validator
-func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *proposer.Settings) error {
 	// validator service proposer settings is only used for pass through from node -> validator service -> validator.
 	// in memory use of proposer settings happens on validator.
 	v.proposerSettings = settings
@@ -370,13 +367,35 @@ func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, err
 	return nc.GetGenesis(ctx, &emptypb.Empty{})
 }
 
+func (v *ValidatorService) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	if v.validator == nil {
+		return nil, errors.New("validator is unavailable")
+	}
+	return v.validator.GetGraffiti(ctx, pubKey)
+}
+
+func (v *ValidatorService) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	if v.validator == nil {
+		return errors.New("validator is unavailable")
+	}
+	return v.validator.SetGraffiti(ctx, pubKey, graffiti)
+}
+
+func (v *ValidatorService) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
+	if v.validator == nil {
+		return errors.New("validator is unavailable")
+	}
+	return v.validator.DeleteGraffiti(ctx, pubKey)
+}
+
 func runNodeSwitcherRoutine(ctx context.Context, v iface.Validator, endpoints []string) {
 	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	go func() {
 		for {
 			select {
 			case <-healthCheckTicker.C:
-				if !v.NodeIsHealthy(ctx) {
+				healthTracker := v.HealthTracker()
+				if !healthTracker.IsHealthy() {
 					for i, url := range endpoints {
 						if url == v.RetrieveHost() {
 							next := (i + 1) % len(endpoints)

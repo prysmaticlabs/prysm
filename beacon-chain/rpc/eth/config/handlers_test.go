@@ -156,9 +156,6 @@ func TestGetSpec(t *testing.T) {
 	var dam [4]byte
 	copy(dam[:], []byte{'1', '0', '0', '0'})
 	config.DomainApplicationMask = dam
-	var dbs [4]byte
-	copy(dam[:], []byte{'2', '0', '0', '0'})
-	config.DomainBlobSidecar = dbs
 
 	params.OverrideBeaconConfig(config)
 
@@ -173,7 +170,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 130, len(data))
+	assert.Equal(t, 129, len(data))
 	for k, v := range data {
 		switch k {
 		case "CONFIG_NAME":

@@ -199,6 +199,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 // Start a blockchain service's main event loop.
 func (s *Service) Start() {
 	saved := s.cfg.FinalizedStateAtStartUp
+	defer s.removeStartupState()
 
 	if saved != nil && !saved.IsNil() {
 		if err := s.StartFromSavedState(saved); err != nil {
@@ -289,10 +290,18 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(s.ctx, &forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
-		Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
-		return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
+	if params.BeaconConfig().ConfigName != params.PraterName {
+		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(s.ctx, &forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
+			Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
+			return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
+		}
+	} else {
+		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(s.ctx, &forkchoicetypes.Checkpoint{Epoch: finalized.Epoch,
+			Root: bytesutil.ToBytes32(finalized.Root)}); err != nil {
+			return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
+		}
 	}
+
 	if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: finalized.Epoch,
 		Root: bytesutil.ToBytes32(finalized.Root)}); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's finalized checkpoint")
@@ -418,7 +427,7 @@ func (s *Service) startFromExecutionChain() error {
 						log.Error("event data is not type *statefeed.ChainStartedData")
 						return
 					}
-					log.WithField("starttime", data.StartTime).Debug("Received chain start event")
+					log.WithField("startTime", data.StartTime).Debug("Received chain start event")
 					s.onExecutionChainStart(s.ctx, data.StartTime)
 					return
 				}
@@ -548,6 +557,10 @@ func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
 	}
 
 	return s.cfg.BeaconDB.HasBlock(ctx, root)
+}
+
+func (s *Service) removeStartupState() {
+	s.cfg.FinalizedStateAtStartUp = nil
 }
 
 func spawnCountdownIfPreGenesis(ctx context.Context, genesisTime time.Time, db db.HeadAccessDatabase) {

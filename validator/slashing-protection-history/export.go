@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/progress"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
+	"github.com/prysmaticlabs/prysm/v5/validator/helpers"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 )
 
@@ -31,7 +32,7 @@ func ExportStandardProtectionJSON(
 			"genesis validators root is empty, perhaps you are not connected to your beacon node",
 		)
 	}
-	genesisRootHex, err := rootToHexString(genesisValidatorsRoot)
+	genesisRootHex, err := helpers.RootToHexString(genesisValidatorsRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert genesis validators root to hex string")
 	}
@@ -63,7 +64,7 @@ func ExportStandardProtectionJSON(
 		if _, ok := filteredKeysMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
 			continue
 		}
-		pubKeyHex, err := pubKeyToHexString(pubKey[:])
+		pubKeyHex, err := helpers.PubKeyToHexString(pubKey[:])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert public key to hex string")
 		}
@@ -89,7 +90,7 @@ func ExportStandardProtectionJSON(
 		if _, ok := filteredKeysMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
 			continue
 		}
-		pubKeyHex, err := pubKeyToHexString(pubKey[:])
+		pubKeyHex, err := helpers.PubKeyToHexString(pubKey[:])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert public key to hex string")
 		}
@@ -97,15 +98,12 @@ func ExportStandardProtectionJSON(
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not retrieve signed attestations for public key %s", pubKeyHex)
 		}
-		if _, ok := dataByPubKey[pubKey]; ok {
-			dataByPubKey[pubKey].SignedAttestations = signedAttestations
-		} else {
-			dataByPubKey[pubKey] = &format.ProtectionData{
-				Pubkey:             pubKeyHex,
-				SignedBlocks:       nil,
-				SignedAttestations: signedAttestations,
-			}
+		if _, ok := dataByPubKey[pubKey]; !ok {
+			// This should never happen
+			return nil, errors.Wrapf(err, "could not retrieve proposer public key from array")
 		}
+		dataByPubKey[pubKey].SignedAttestations = signedAttestations
+
 		if err := bar.Add(1); err != nil {
 			return nil, err
 		}
@@ -157,7 +155,7 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 		}
 		var root string
 		if len(att.SigningRoot) != 0 {
-			root, err = rootToHexString(att.SigningRoot)
+			root, err = helpers.RootToHexString(att.SigningRoot)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert signing root to hex string")
 			}
@@ -173,8 +171,8 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 
 func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*format.SignedBlock, error) {
 	// If a key does not have a lowest or highest signed proposal history
-	// in our database, we return nil. This way, a user will be able to export their
-	// slashing protection history even if one of their keys does not have a history
+	// in our database, we return an empty list. This way, a user will be able to export
+	// their slashing protection history even if one of their keys does not have a history
 	// of signed blocks.
 	proposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, pubKey)
 	if err != nil {
@@ -185,7 +183,7 @@ func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [
 		if ctx.Err() != nil {
 			return nil, errors.Wrap(err, "context canceled")
 		}
-		signingRootHex, err := rootToHexString(proposal.SigningRoot)
+		signingRootHex, err := helpers.RootToHexString(proposal.SigningRoot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert signing root to hex string")
 		}

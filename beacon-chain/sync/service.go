@@ -53,7 +53,7 @@ const rangeLimit uint64 = 1024
 const seenBlockSize = 1000
 const seenBlobSize = seenBlockSize * 4 // Each block can have max 4 blobs. Worst case 164kB for cache.
 const seenUnaggregatedAttSize = 20000
-const seenAggregatedAttSize = 1024
+const seenAggregatedAttSize = 16384
 const seenSyncMsgSize = 1000         // Maximum of 512 sync committee members, 1000 is a safe amount.
 const seenSyncContributionSize = 512 // Maximum of SYNC_COMMITTEE_SIZE as specified by the spec.
 const seenExitSize = 100
@@ -295,11 +295,11 @@ func (s *Service) waitForChainStart() {
 	}
 	s.cfg.clock = clock
 	startTime := clock.GenesisTime()
-	log.WithField("starttime", startTime).Debug("Received state initialized event")
+	log.WithField("startTime", startTime).Debug("Received state initialized event")
 
 	ctxMap, err := ContextByteVersionsForValRoot(clock.GenesisValidatorsRoot())
 	if err != nil {
-		log.WithError(err).WithField("genesis_validator_root", clock.GenesisValidatorsRoot()).
+		log.WithError(err).WithField("genesisValidatorRoot", clock.GenesisValidatorsRoot()).
 			Error("sync service failed to initialize context version map")
 		return
 	}
@@ -311,7 +311,7 @@ func (s *Service) waitForChainStart() {
 	if startTime.After(prysmTime.Now()) {
 		time.Sleep(prysmTime.Until(startTime))
 	}
-	log.WithField("starttime", startTime).Debug("Chain started in sync service")
+	log.WithField("startTime", startTime).Debug("Chain started in sync service")
 	s.markForChainStart()
 }
 

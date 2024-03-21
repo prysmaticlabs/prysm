@@ -21,8 +21,13 @@ func (s *Server) Initialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	authTokenPath := filepath.Join(s.walletDir, AuthTokenFileName)
+	exists, err := file.Exists(authTokenPath, file.Regular)
+	if err != nil {
+		httputil.HandleError(w, errors.Wrap(err, "Could not check if auth token exists").Error(), http.StatusInternalServerError)
+		return
+	}
 	httputil.WriteJson(w, &InitializeAuthResponse{
-		HasSignedUp: file.Exists(authTokenPath),
+		HasSignedUp: exists,
 		HasWallet:   walletExists,
 	})
 }
