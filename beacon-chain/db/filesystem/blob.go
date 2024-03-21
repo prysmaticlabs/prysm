@@ -112,12 +112,17 @@ func (bs *BlobStorage) WarmCache() {
 	}()
 }
 
+// ErrBlobStorageSummarizerUnavailable is a sentinel error returned when there is no pruner/cache available.
+// This should be used by code that optionally uses the summarizer to optimize rpc requests. Being able to
+// fallback when there is no summarizer allows client code to avoid test complexity where the summarizer doesn't matter.
+var ErrBlobStorageSummarizerUnavailable = errors.New("BlobStorage not initialized with a pruner or cache")
+
 // WaitForSummarizer blocks until the BlobStorageSummarizer is ready to use.
 // BlobStorageSummarizer is not ready immediately on node startup because it needs to sample the blob filesystem to
 // determine which blobs are available.
 func (bs *BlobStorage) WaitForSummarizer(ctx context.Context) (BlobStorageSummarizer, error) {
 	if bs.pruner == nil {
-		return nil, errors.New("pruner not initialized, no blob storage cache available")
+		return nil, ErrBlobStorageSummarizerUnavailable
 	}
 	return bs.pruner.waitForCache(ctx)
 }
