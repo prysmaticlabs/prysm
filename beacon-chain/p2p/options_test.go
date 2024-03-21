@@ -89,21 +89,24 @@ func TestIPV6Support(t *testing.T) {
 	lNode := enode.NewLocalNode(db, key)
 	mockIPV6 := net.IP{0xff, 0x02, 0xAA, 0, 0x1F, 0, 0x2E, 0, 0, 0x36, 0x45, 0, 0, 0, 0, 0x02}
 	lNode.Set(enr.IP(mockIPV6))
-	ma, err := convertToSingleMultiAddr(lNode.Node())
+	mas, err := convertToMultiAddrs(lNode.Node())
 	if err != nil {
 		t.Fatal(err)
 	}
-	ipv6Exists := false
-	for _, p := range ma.Protocols() {
-		if p.Name == "ip4" {
-			t.Error("Got ip4 address instead of ip6")
+
+	for _, ma := range mas {
+		ipv6Exists := false
+		for _, p := range ma.Protocols() {
+			if p.Name == "ip4" {
+				t.Error("Got ip4 address instead of ip6")
+			}
+			if p.Name == "ip6" {
+				ipv6Exists = true
+			}
 		}
-		if p.Name == "ip6" {
-			ipv6Exists = true
+		if !ipv6Exists {
+			t.Error("Multiaddress did not have ipv6 protocol")
 		}
-	}
-	if !ipv6Exists {
-		t.Error("Multiaddress did not have ipv6 protocol")
 	}
 }
 
@@ -111,8 +114,9 @@ func TestDefaultMultiplexers(t *testing.T) {
 	var cfg libp2p.Config
 	_ = cfg
 	p2pCfg := &Config{
-		TCPPort:       2000,
 		UDPPort:       2000,
+		TCPPort:       3000,
+		QUICPort:      3000,
 		StateNotifier: &mock.MockStateNotifier{},
 	}
 	svc := &Service{cfg: p2pCfg}

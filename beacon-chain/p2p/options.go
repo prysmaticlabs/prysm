@@ -11,12 +11,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
+	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	libp2ptcp "github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	gomplex "github.com/libp2p/go-mplex"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
+
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
@@ -29,22 +31,32 @@ const (
 )
 
 // MultiAddressBuilder takes in an ip address string and port to produce a go multiaddr format.
-func MultiAddressBuilder(ip net.IP, port uint) (ma.Multiaddr, error) {
+func MultiAddressBuilder(ip net.IP, tcpPort, quicPort uint) ([]ma.Multiaddr, error) {
 	ipType, err := extractIpType(ip)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to determine IP type")
 	}
 
-	// Example: /ip4/1.2.3.4./tcp/5678
-	multiaddrStr := fmt.Sprintf("/%s/%s/tcp/%d", ipType, ip, port)
+	// Example: /ip4/1.2.3.4/udp/5678/quic-v1
+	multiAddrQUIC, err := ma.NewMultiaddr(fmt.Sprintf("/%s/%s/udp/%d/quic-v1", ipType, ip, quicPort))
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot produce QUIC multiaddr format from %s:%d", ip, tcpPort)
+	}
 
-	return ma.NewMultiaddr(multiaddrStr)
+	// Example: /ip4/1.2.3.4./tcp/5678
+	multiaddrStr := fmt.Sprintf("/%s/%s/tcp/%d", ipType, ip, tcpPort)
+	multiAddrTCP, err := ma.NewMultiaddr(multiaddrStr)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot produce TCP multiaddr format from %s:%d", ip, tcpPort)
+	}
+
+	return []ma.Multiaddr{multiAddrTCP, multiAddrQUIC}, nil
 }
 
 // buildOptions for the libp2p host.
 func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Option, error) {
 	cfg := s.cfg
-	listen, err := MultiAddressBuilder(ip, cfg.TCPPort)
+	multiaddrs, err := MultiAddressBuilder(ip, cfg.TCPPort, cfg.QUICPort)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot produce multiaddr format from %s:%d", ip, cfg.TCPPort)
 	}
@@ -54,7 +66,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Op
 			return nil, errors.Wrapf(err, "invalid local ip provided: %s:%d", cfg.LocalIP, cfg.TCPPort)
 		}
 
-		listen, err = MultiAddressBuilder(localIP, cfg.TCPPort)
+		multiaddrs, err = MultiAddressBuilder(localIP, cfg.TCPPort, cfg.QUICPort)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot produce multiaddr format from %s:%d", cfg.LocalIP, cfg.TCPPort)
 		}
@@ -72,9 +84,10 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Op
 
 	options := []libp2p.Option{
 		privKeyOption(priKey),
-		libp2p.ListenAddrs(listen),
+		libp2p.ListenAddrs(multiaddrs...),
 		libp2p.UserAgent(version.BuildData()),
 		libp2p.ConnectionGater(s),
+		libp2p.Transport(libp2pquic.NewTransport),
 		libp2p.Transport(libp2ptcp.NewTCPTransport),
 		libp2p.DefaultMuxers,
 		libp2p.Muxer("/mplex/6.7.0", mplex.DefaultTransport),
@@ -85,23 +98,26 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Op
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) // Allow to use UPnP
 	}
+
 	if cfg.RelayNodeAddr != "" {
 		options = append(options, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
 	} else {
 		// Disable relay if it has not been set.
 		options = append(options, libp2p.DisableRelay())
 	}
+
 	if cfg.HostAddress != "" {
 		options = append(options, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
-			external, err := MultiAddressBuilder(net.ParseIP(cfg.HostAddress), cfg.TCPPort)
+			externalMultiaddrs, err := MultiAddressBuilder(net.ParseIP(cfg.HostAddress), cfg.TCPPort, cfg.QUICPort)
 			if err != nil {
 				log.WithError(err).Error("Unable to create external multiaddress")
 			} else {
-				addrs = append(addrs, external)
+				addrs = append(addrs, externalMultiaddrs...)
 			}
 			return addrs
 		}))
 	}
+
 	if cfg.HostDNS != "" {
 		options = append(options, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
 			external, err := ma.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d", cfg.HostDNS, cfg.TCPPort))
@@ -117,6 +133,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Op
 	if features.Get().DisableResourceManager {
 		options = append(options, libp2p.ResourceManager(&network.NullResourceManager{}))
 	}
+
 	return options, nil
 }
 
