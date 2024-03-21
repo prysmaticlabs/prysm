@@ -26,6 +26,7 @@ var Commands = &cli.Command{
 				flags.WalletDirFlag,
 				flags.GRPCGatewayHost,
 				flags.GRPCGatewayPort,
+				flags.AuthTokenPathFlag,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {

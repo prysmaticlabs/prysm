@@ -137,7 +137,7 @@ var (
 
 	// AuthTokenPathFlag defines the path to the auth token used to secure the validator api.
 	AuthTokenPathFlag = &cli.StringFlag{
-		Name:  "token",
+		Name:  "token-file",
 		Usage: "Path to auth token file used for validator apis",
 		Value: filepath.Join(filepath.Join(DefaultValidatorDir(), WalletDefaultDirName), api.AuthTokenFileName),
 	}

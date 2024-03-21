@@ -641,8 +641,10 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 	clientCert := c.cliCtx.String(flags.CertFlag.Name)
 
 	authTokenPath := c.cliCtx.String(flags.AuthTokenPathFlag.Name)
+	// if no auth token path flag was passed try to set a default value
 	if authTokenPath == "" {
 		authTokenPath = flags.AuthTokenPathFlag.Value
+		// if a wallet dir is passed without an auth token then override the default with the wallet dir
 		if walletDir != "" {
 			authTokenPath = filepath.Join(walletDir, api.AuthTokenFileName)
 		}

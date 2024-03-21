@@ -141,7 +141,7 @@ func logValidatorWebAuth(validatorWebAddr, token, tokenPath string) {
 			"the Prysm web interface",
 	)
 	log.Info(webAuthURL)
-	log.Infof("Validator CLient Auth Token for RPC and REST authentication set at:%s", tokenPath)
+	log.Infof("Validator Client Auth Token for RPC and REST authentication set at:%s", tokenPath)
 }
 
 func saveAuthToken(tokenPath string, token string) error {

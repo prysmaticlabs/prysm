@@ -146,7 +146,6 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 	}
 
 	if server.authTokenPath != "" {
-		log.Infof("at server start %s", server.authTokenPath)
 		if err := server.initializeAuthToken(); err != nil {
 			log.WithError(err).Error("Could not initialize web auth token")
 		}
