@@ -150,6 +150,36 @@ func TestServer_LegacyTokensStillWork(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TODO: remove this test when legacy files are removed
+func TestServer_LegacyTokensBadSecret(t *testing.T) {
+	// Initializing for the first time, there is no auth token file in
+	// the wallet directory, so we generate a jwt token and secret from scratch.
+	walletDir := setupWalletDir(t)
+	authTokenPath := filepath.Join(walletDir, api.AuthTokenFileName)
+
+	bytesBuf := new(bytes.Buffer)
+	_, err := bytesBuf.WriteString("----------------")
+	require.NoError(t, err)
+	_, err = bytesBuf.WriteString("\n")
+	require.NoError(t, err)
+	_, err = bytesBuf.WriteString("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.MxwOozSH-TLbW_XKepjyYDHm2IT8Ki0tD3AHuajfNMg")
+	require.NoError(t, err)
+	_, err = bytesBuf.WriteString("\n")
+	require.NoError(t, err)
+	err = file.MkdirAll(walletDir)
+	require.NoError(t, err)
+
+	err = file.WriteFile(authTokenPath, bytesBuf.Bytes())
+	require.NoError(t, err)
+
+	srv := &Server{
+		authTokenPath: authTokenPath,
+	}
+
+	err = srv.initializeAuthToken()
+	require.ErrorContains(t, "could not decode JWT secret", err)
+}
+
 func Test_initializeAuthToken(t *testing.T) {
 	// Initializing for the first time, there is no auth token file in
 	// the wallet directory, so we generate a jwt token and secret from scratch.

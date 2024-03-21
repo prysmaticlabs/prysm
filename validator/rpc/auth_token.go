@@ -192,7 +192,7 @@ func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
 		jwtKeyHex := strings.TrimSpace(lines[0])
 		secret, err = hex.DecodeString(jwtKeyHex)
 		if err != nil {
-			return
+			return nil, "", errors.Wrapf(err, "could not decode JWT secret")
 		}
 		token = strings.TrimSpace(lines[1])
 		log.Warn("Auth token is a legacy file, and will be updated to the new format with the opaque token on the first line.")
