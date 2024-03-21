@@ -94,6 +94,7 @@ go_library(
         "@com_github_libp2p_go_libp2p_mplex//:go_default_library",
         "@com_github_libp2p_go_libp2p_pubsub//:go_default_library",
         "@com_github_libp2p_go_libp2p_pubsub//pb:go_default_library",
+        "@com_github_libp2p_go_mplex//:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
         "@com_github_multiformats_go_multiaddr//net:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

@@ -123,10 +123,12 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 
 	fields := blobFields(blob)
 	sinceSlotStartTime := receivedTime.Sub(startTime)
+	validationTime := s.cfg.clock.Now().Sub(receivedTime)
 	fields["sinceSlotStartTime"] = sinceSlotStartTime
-	fields["validationTime"] = s.cfg.clock.Now().Sub(receivedTime)
+	fields["validationTime"] = validationTime
 	log.WithFields(fields).Debug("Received blob sidecar gossip")
 
+	blobSidecarVerificationGossipSummary.Observe(float64(validationTime.Milliseconds()))
 	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
 
 	vBlobData, err := vf.VerifiedROBlob()
@@ -176,7 +178,7 @@ func saveInvalidBlobToTemp(b blocks.ROBlob) {
 	if !features.Get().SaveInvalidBlob {
 		return
 	}
-	filename := fmt.Sprintf("blob_sidecar_%d.ssz", b.Slot())
+	filename := fmt.Sprintf("blob_sidecar_%#x_%d_%d.ssz", b.BlockRoot(), b.Slot(), b.Index)
 	fp := path.Join(os.TempDir(), filename)
 	log.Warnf("Writing invalid blob sidecar to disk at %s", fp)
 	enc, err := b.MarshalSSZ()

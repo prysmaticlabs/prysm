@@ -9,6 +9,7 @@ go_library(
         "fake.go",
         "initializer.go",
         "interface.go",
+        "metrics.go",
         "mock.go",
         "result.go",
     ],
@@ -35,6 +36,8 @@ go_library(
         "//time/slots:go_default_library",
         "@com_github_hashicorp_golang_lru//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
     ],
 )

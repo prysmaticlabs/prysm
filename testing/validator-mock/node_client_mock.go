@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	gomock "go.uber.org/mock/gomock"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -22,6 +23,7 @@ import (
 type MockNodeClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockNodeClientMockRecorder
+	healthTracker *beacon.NodeHealthTracker
 }
 
 // MockNodeClientMockRecorder is the mock recorder for MockNodeClient.
@@ -33,6 +35,7 @@ type MockNodeClientMockRecorder struct {
 func NewMockNodeClient(ctrl *gomock.Controller) *MockNodeClient {
 	mock := &MockNodeClient{ctrl: ctrl}
 	mock.recorder = &MockNodeClientMockRecorder{mock}
+	mock.healthTracker = beacon.NewNodeHealthTracker(mock)
 	return mock
 }
 
@@ -113,4 +116,8 @@ func (m *MockNodeClient) ListPeers(arg0 context.Context, arg1 *emptypb.Empty) (*
 func (mr *MockNodeClientMockRecorder) ListPeers(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPeers", reflect.TypeOf((*MockNodeClient)(nil).ListPeers), arg0, arg1)
+}
+
+func (m *MockNodeClient) HealthTracker() *beacon.NodeHealthTracker {
+	return m.healthTracker
 }

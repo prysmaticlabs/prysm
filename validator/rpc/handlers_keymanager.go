@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -838,4 +839,87 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 	// Otherwise, either no proposerOption is found for the pubkey or proposerOption.BuilderConfig is not enabled at all,
 	// we respond "not found".
 	httputil.HandleError(w, fmt.Sprintf("No gas limit found for pubkey %q", rawPubkey), http.StatusNotFound)
+}
+
+func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.GetGraffiti")
+	defer span.End()
+
+	if s.validatorService == nil {
+		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
+		return
+	}
+
+	graffiti, err := s.validatorService.GetGraffiti(ctx, bytesutil.ToBytes48(pubkey))
+	if err != nil {
+		if strings.Contains(err.Error(), "unavailable") {
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		httputil.HandleError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	httputil.WriteJson(w, &GetGraffitiResponse{
+		Data: &GraffitiData{
+			Pubkey:   rawPubkey,
+			Graffiti: string(graffiti),
+		},
+	})
+}
+
+func (s *Server) SetGraffiti(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.SetGraffiti")
+	defer span.End()
+
+	if s.validatorService == nil {
+		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Graffiti string `json:"graffiti"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case err == io.EOF:
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.validatorService.SetGraffiti(ctx, bytesutil.ToBytes48(pubkey), []byte(req.Graffiti)); err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *Server) DeleteGraffiti(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.DeleteGraffiti")
+	defer span.End()
+
+	if s.validatorService == nil {
+		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
+		return
+	}
+
+	if err := s.validatorService.DeleteGraffiti(ctx, bytesutil.ToBytes48(pubkey)); err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusNotFound)
+		return
+	}
 }

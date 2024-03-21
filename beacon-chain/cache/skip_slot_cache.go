@@ -109,10 +109,6 @@ func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (state.BeaconState,
 // MarkInProgress a request so that any other similar requests will block on
 // Get until MarkNotInProgress is called.
 func (c *SkipSlotCache) MarkInProgress(r [32]byte) error {
-	if c.disabled {
-		return nil
-	}
-
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -126,10 +122,6 @@ func (c *SkipSlotCache) MarkInProgress(r [32]byte) error {
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
 func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) {
-	if c.disabled {
-		return
-	}
-
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
