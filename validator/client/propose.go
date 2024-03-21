@@ -227,7 +227,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	}
 }
 
-func findBuilderBoost(pubKey [fieldparams.BLSPubkeyLength]byte, proposerSettings *validatorserviceconfig.ProposerSettings) *wrapperspb.UInt64Value {
+func findBuilderBoost(pubKey [fieldparams.BLSPubkeyLength]byte, proposerSettings *proposer.Settings) *wrapperspb.UInt64Value {
 	if proposerSettings != nil {
 		if proposerSettings.ProposeConfig != nil {
 			option, ok := proposerSettings.ProposeConfig[pubKey]

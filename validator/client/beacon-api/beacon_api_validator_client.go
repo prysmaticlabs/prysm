@@ -77,7 +77,7 @@ func (c *beaconApiValidatorClient) GetAttestationData(ctx context.Context, in *e
 
 func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	return wrapInMetrics[*ethpb.GenericBeaconBlock]("GetBeaconBlock", func() (*ethpb.GenericBeaconBlock, error) {
-		return c.getBeaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti)
+		return c.getBeaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti, in.BuilderBoostFactor)
 	})
 }
 

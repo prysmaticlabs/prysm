@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
@@ -31,6 +32,7 @@ import (
 	testing2 "github.com/prysmaticlabs/prysm/v5/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -1266,7 +1268,7 @@ func Test_findBuilderBoost(t *testing.T) {
 	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
 
 	type args struct {
-		proposerSettings *validatorserviceconfig.ProposerSettings
+		proposerSettings *proposer.Settings
 	}
 	tests := []struct {
 		name string
@@ -1283,11 +1285,11 @@ func Test_findBuilderBoost(t *testing.T) {
 		{
 			name: "Proposer settings without builder settings",
 			args: args{
-				proposerSettings: &validatorserviceconfig.ProposerSettings{
-					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
-						config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
-						config[pubKey] = &validatorserviceconfig.ProposerOption{
-							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				proposerSettings: &proposer.Settings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
+						config[pubKey] = &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
 								FeeRecipient: common.HexToAddress("a"),
 							},
 						}
@@ -1300,14 +1302,14 @@ func Test_findBuilderBoost(t *testing.T) {
 		{
 			name: "Proposer settings with builder settings but without builder boost factor",
 			args: args{
-				proposerSettings: &validatorserviceconfig.ProposerSettings{
-					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
-						config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
-						config[pubKey] = &validatorserviceconfig.ProposerOption{
-							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				proposerSettings: &proposer.Settings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
+						config[pubKey] = &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
 								FeeRecipient: common.HexToAddress("a"),
 							},
-							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							BuilderConfig: &proposer.BuilderConfig{
 								Enabled: true,
 							},
 						}
@@ -1320,15 +1322,15 @@ func Test_findBuilderBoost(t *testing.T) {
 		{
 			name: "Proposer settings with builder settings and specific propose config",
 			args: args{
-				proposerSettings: &validatorserviceconfig.ProposerSettings{
-					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
-						config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+				proposerSettings: &proposer.Settings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
 						bb := uint64(123)
-						config[pubKey] = &validatorserviceconfig.ProposerOption{
-							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						config[pubKey] = &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
 								FeeRecipient: common.HexToAddress("a"),
 							},
-							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							BuilderConfig: &proposer.BuilderConfig{
 								Enabled:            true,
 								BuilderBoostFactor: &bb,
 							},
@@ -1344,15 +1346,15 @@ func Test_findBuilderBoost(t *testing.T) {
 		{
 			name: "Proposer settings with builder settings and specific propose config but wrong pubkey",
 			args: args{
-				proposerSettings: &validatorserviceconfig.ProposerSettings{
-					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
-						config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+				proposerSettings: &proposer.Settings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
 						bb := uint64(123)
-						config[[fieldparams.BLSPubkeyLength]byte{'z'}] = &validatorserviceconfig.ProposerOption{
-							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						config[[fieldparams.BLSPubkeyLength]byte{'z'}] = &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
 								FeeRecipient: common.HexToAddress("a"),
 							},
-							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							BuilderConfig: &proposer.BuilderConfig{
 								Enabled:            true,
 								BuilderBoostFactor: &bb,
 							},
@@ -1366,14 +1368,14 @@ func Test_findBuilderBoost(t *testing.T) {
 		{
 			name: "Proposer settings with builder settings and default config",
 			args: args{
-				proposerSettings: &validatorserviceconfig.ProposerSettings{
-					DefaultConfig: func() *validatorserviceconfig.ProposerOption {
+				proposerSettings: &proposer.Settings{
+					DefaultConfig: func() *proposer.Option {
 						bb := uint64(123)
-						return &validatorserviceconfig.ProposerOption{
-							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						return &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
 								FeeRecipient: common.HexToAddress("a"),
 							},
-							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							BuilderConfig: &proposer.BuilderConfig{
 								Enabled:            true,
 								BuilderBoostFactor: &bb,
 							},
@@ -1388,14 +1390,14 @@ func Test_findBuilderBoost(t *testing.T) {
 		{
 			name: "Proposer settings with nil boost settings",
 			args: args{
-				proposerSettings: &validatorserviceconfig.ProposerSettings{
-					DefaultConfig: func() *validatorserviceconfig.ProposerOption {
+				proposerSettings: &proposer.Settings{
+					DefaultConfig: func() *proposer.Option {
 						var bb *uint64
-						return &validatorserviceconfig.ProposerOption{
-							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						return &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
 								FeeRecipient: common.HexToAddress("a"),
 							},
-							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							BuilderConfig: &proposer.BuilderConfig{
 								Enabled:            true,
 								BuilderBoostFactor: bb,
 							},
