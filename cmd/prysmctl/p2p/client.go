@@ -43,7 +43,7 @@ type client struct {
 	nodeClient   pb.NodeClient
 }
 
-func newClient(beaconEndpoints []string, clientPort uint) (*client, error) {
+func newClient(beaconEndpoints []string, tcpPort, quicPort uint) (*client, error) {
 	ipAdd := ipAddr()
 	priv, err := privKey()
 	if err != nil {
@@ -53,13 +53,13 @@ func newClient(beaconEndpoints []string, clientPort uint) (*client, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set up p2p metadata")
 	}
-	listen, err := p2p.MultiAddressBuilder(ipAdd, clientPort)
+	multiaddrs, err := p2p.MultiAddressBuilder(ipAdd, tcpPort, quicPort)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set up listening multiaddr")
 	}
 	options := []libp2p.Option{
 		privKeyOption(priv),
-		libp2p.ListenAddrs(listen),
+		libp2p.ListenAddrs(multiaddrs...),
 		libp2p.UserAgent(version.BuildData()),
 		libp2p.Transport(tcp.NewTCPTransport),
 	}

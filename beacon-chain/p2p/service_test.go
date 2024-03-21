@@ -102,8 +102,9 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 
 	cs := startup.NewClockSynchronizer()
 	cfg := &Config{
-		TCPPort:     2000,
 		UDPPort:     2000,
+		TCPPort:     3000,
+		QUICPort:    3000,
 		ClockWaiter: cs,
 	}
 	s, err := NewService(context.Background(), cfg)
@@ -147,8 +148,9 @@ func TestService_Start_NoDiscoverFlag(t *testing.T) {
 
 	cs := startup.NewClockSynchronizer()
 	cfg := &Config{
-		TCPPort:       2000,
 		UDPPort:       2000,
+		TCPPort:       3000,
+		QUICPort:      3000,
 		StateNotifier: &mock.MockStateNotifier{},
 		NoDiscovery:   true, // <-- no s.dv5Listener is created
 		ClockWaiter:   cs,

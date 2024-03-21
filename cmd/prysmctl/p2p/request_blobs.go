@@ -22,11 +22,12 @@ import (
 )
 
 var requestBlobsFlags = struct {
-	Peers        string
-	ClientPort   uint
-	APIEndpoints string
-	StartSlot    uint64
-	Count        uint64
+	Peers          string
+	ClientPortTCP  uint
+	ClientPortQUIC uint
+	APIEndpoints   string
+	StartSlot      uint64
+	Count          uint64
 }{}
 
 var requestBlobsCmd = &cli.Command{
@@ -47,9 +48,16 @@ var requestBlobsCmd = &cli.Command{
 			Value:       "",
 		},
 		&cli.UintFlag{
-			Name:        "client-port",
-			Usage:       "port to use for the client as a libp2p host",
-			Destination: &requestBlobsFlags.ClientPort,
+			Name:        "client-port-tcp",
+			Aliases:     []string{"client-port"},
+			Usage:       "TCP port to use for the client as a libp2p host",
+			Destination: &requestBlobsFlags.ClientPortTCP,
+			Value:       13001,
+		},
+		&cli.UintFlag{
+			Name:        "client-port-quic",
+			Usage:       "QUIC port to use for the client as a libp2p host",
+			Destination: &requestBlobsFlags.ClientPortQUIC,
 			Value:       13001,
 		},
 		&cli.StringFlag{
@@ -90,7 +98,7 @@ func cliActionRequestBlobs(cliCtx *cli.Context) error {
 		allAPIEndpoints = strings.Split(requestBlobsFlags.APIEndpoints, ",")
 	}
 	var err error
-	c, err := newClient(allAPIEndpoints, requestBlobsFlags.ClientPort)
+	c, err := newClient(allAPIEndpoints, requestBlobsFlags.ClientPortTCP, requestBlobsFlags.ClientPortQUIC)
 	if err != nil {
 		return err
 	}
