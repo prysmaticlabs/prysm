@@ -142,11 +142,11 @@ func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
 	return c.beaconNodeValidatorClient.AggregatedSigAndAggregationBits(ctx, in)
 }
 
-func (grpcValidatorClient) GetAggregatedSelections(context.Context, []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
+func (*grpcValidatorClient) GetAggregatedSelections(context.Context, []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
 	return nil, iface.ErrNotSupported
 }
 
-func (grpcValidatorClient) GetAggregatedSyncSelections(context.Context, []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
+func (*grpcValidatorClient) GetAggregatedSyncSelections(context.Context, []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
 	return nil, iface.ErrNotSupported
 }
 
@@ -246,10 +246,12 @@ func (c *grpcValidatorClient) EventStreamIsRunning() bool {
 	return c.isEventStreamRunning
 }
 
-func (c *grpcValidatorClient) RetrieveHost() string {
-	panic("function not supported for gRPC client")
+func (*grpcValidatorClient) RetrieveHost() string {
+	log.Warn(iface.ErrNotSupported)
+	return ""
 }
 
 func (c *grpcValidatorClient) UpdateHost(_ string) {
-	panic("function not supported for gRPC client")
+	log.Warn(iface.ErrNotSupported)
+	return
 }

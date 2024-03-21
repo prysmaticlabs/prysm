@@ -284,19 +284,19 @@ func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *propos
 }
 
 // GetGraffiti for mocking
-func (f *FakeValidator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
-	return []byte(f.graffiti), nil
+func (fv *FakeValidator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	return []byte(fv.graffiti), nil
 }
 
 // SetGraffiti for mocking
-func (f *FakeValidator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
-	f.graffiti = string(graffiti)
+func (fv *FakeValidator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	fv.graffiti = string(graffiti)
 	return nil
 }
 
 // DeleteGraffiti for mocking
-func (f *FakeValidator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
-	f.graffiti = ""
+func (fv *FakeValidator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
+	fv.graffiti = ""
 	return nil
 }
 
@@ -314,8 +314,8 @@ func (fv *FakeValidator) HealthTracker() *beacon.NodeHealthTracker {
 	return fv.Tracker
 }
 
-func (fv *FakeValidator) RetrieveHost() string {
+func (*FakeValidator) RetrieveHost() string {
 	return "127.0.0.1:0"
 }
 
-func (fv *FakeValidator) UpdateHost(host string) {}
+func (*FakeValidator) UpdateHost(host string) {}

@@ -195,7 +195,7 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	u := strings.Replace(v.conn.GetBeaconApiUrl(), " ", "", -1)
+	u := strings.ReplaceAll(v.conn.GetBeaconApiUrl(), " ", "")
 	urls := strings.Split(u, ",")
 	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
 		http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
