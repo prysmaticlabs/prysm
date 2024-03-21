@@ -23,13 +23,14 @@ import (
 )
 
 var requestBlocksFlags = struct {
-	Network      string
-	Peers        string
-	ClientPort   uint
-	APIEndpoints string
-	StartSlot    uint64
-	Count        uint64
-	Step         uint64
+	Network        string
+	Peers          string
+	ClientPortTCP  uint
+	ClientPortQUIC uint
+	APIEndpoints   string
+	StartSlot      uint64
+	Count          uint64
+	Step           uint64
 }{}
 
 var requestBlocksCmd = &cli.Command{
@@ -56,9 +57,16 @@ var requestBlocksCmd = &cli.Command{
 			Value:       "",
 		},
 		&cli.UintFlag{
-			Name:        "client-port",
-			Usage:       "port to use for the client as a libp2p host",
-			Destination: &requestBlocksFlags.ClientPort,
+			Name:        "client-port-tcp",
+			Aliases:     []string{"client-port"},
+			Usage:       "TCP port to use for the client as a libp2p host",
+			Destination: &requestBlocksFlags.ClientPortTCP,
+			Value:       13001,
+		},
+		&cli.UintFlag{
+			Name:        "client-port-quic",
+			Usage:       "QUIC port to use for the client as a libp2p host",
+			Destination: &requestBlocksFlags.ClientPortQUIC,
 			Value:       13001,
 		},
 		&cli.StringFlag{
@@ -120,7 +128,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		allAPIEndpoints = strings.Split(requestBlocksFlags.APIEndpoints, ",")
 	}
 	var err error
-	c, err := newClient(allAPIEndpoints, requestBlocksFlags.ClientPort)
+	c, err := newClient(allAPIEndpoints, requestBlocksFlags.ClientPortTCP, requestBlocksFlags.ClientPortQUIC)
 	if err != nil {
 		return err
 	}

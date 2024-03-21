@@ -247,9 +247,10 @@ func (s *Service) Start() {
 
 	p2pHostAddress := s.cfg.HostAddress
 	p2pTCPPort := s.cfg.TCPPort
+	p2pQUICPort := s.cfg.QUICPort
 
 	if p2pHostAddress != "" {
-		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort)
+		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort, p2pQUICPort)
 		verifyConnectivity(p2pHostAddress, p2pTCPPort, "tcp")
 	}
 
