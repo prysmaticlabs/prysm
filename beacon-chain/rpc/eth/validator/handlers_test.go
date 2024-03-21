@@ -15,33 +15,33 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
-	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/builder/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/synccommittee"
+	p2pmock "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -838,10 +838,14 @@ func TestGetAttestationData(t *testing.T) {
 		justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root for justified block")
 		slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
+		beaconState, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetSlot(slot))
 		justifiedCheckpoint := &ethpbalpha.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
 		}
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpoint))
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
 			Optimistic:                 false,
@@ -849,6 +853,7 @@ func TestGetAttestationData(t *testing.T) {
 			Root:                       blockRoot[:],
 			CurrentJustifiedCheckPoint: justifiedCheckpoint,
 			TargetRoot:                 blockRoot,
+			State:                      beaconState,
 		}
 
 		s := &Server{
@@ -1076,10 +1081,14 @@ func TestGetAttestationData(t *testing.T) {
 		justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root for justified block")
 
+		beaconState, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetSlot(slot))
 		justifiedCheckpt := &ethpbalpha.Checkpoint{
 			Epoch: 0,
 			Root:  justifiedRoot[:],
 		}
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpt))
 		require.NoError(t, err)
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
@@ -1087,6 +1096,7 @@ func TestGetAttestationData(t *testing.T) {
 			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
 			CurrentJustifiedCheckPoint: justifiedCheckpt,
 			TargetRoot:                 blockRoot,
+			State:                      beaconState,
 		}
 
 		s := &Server{
@@ -1163,17 +1173,24 @@ func TestGetAttestationData(t *testing.T) {
 		require.NoError(t, err, "Could not hash beacon block")
 		justifiedBlockRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not hash justified block")
+
+		slot := primitives.Slot(10000)
+		beaconState, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetSlot(slot))
 		justifiedCheckpt := &ethpbalpha.Checkpoint{
 			Epoch: slots.ToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
 		}
-		slot := primitives.Slot(10000)
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpt))
+
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
 			Root:                       blockRoot[:],
 			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
 			CurrentJustifiedCheckPoint: justifiedCheckpt,
 			TargetRoot:                 blockRoot,
+			State:                      beaconState,
 		}
 
 		s := &Server{

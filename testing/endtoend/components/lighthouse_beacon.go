@@ -13,11 +13,11 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/v5/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v5/testing/endtoend/types"
 )
 
 var _ e2etypes.ComponentRunner = (*LighthouseBeaconNode)(nil)
@@ -290,9 +290,9 @@ func (node *LighthouseBeaconNode) saveGenesis(ctx context.Context, testNetDir st
 	if err != nil {
 		return err
 	}
-	log.WithField("fork_version", g.Fork().CurrentVersion).
-		WithField("latest_block_header.root", fmt.Sprintf("%#x", lbhr)).
-		WithField("state_root", fmt.Sprintf("%#x", root)).
+	log.WithField("forkVersion", g.Fork().CurrentVersion).
+		WithField("latestBlockHeaderRoot", fmt.Sprintf("%#x", lbhr)).
+		WithField("stateRoot", fmt.Sprintf("%#x", root)).
 		Infof("BeaconState info")
 
 	genesisBytes, err := g.MarshalSSZ()

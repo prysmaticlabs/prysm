@@ -4,12 +4,14 @@ import (
 	"context"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // Forkchoicer represents the forkchoice methods that the verifiers need.
@@ -40,7 +42,7 @@ type sharedResources struct {
 
 // Initializer is used to create different Verifiers.
 // Verifiers require access to stateful data structures, like caches,
-// and it is Initializer's job to provides access to those.
+// and it is Initializer's job to provide access to those.
 type Initializer struct {
 	shared *sharedResources
 }
@@ -59,13 +61,25 @@ func (ini *Initializer) NewBlobVerifier(b blocks.ROBlob, reqs []Requirement) *RO
 // via the WaitForInitializer method.
 type InitializerWaiter struct {
 	sync.RWMutex
-	ready bool
-	cw    startup.ClockWaiter
-	ini   *Initializer
+	ready   bool
+	cw      startup.ClockWaiter
+	ini     *Initializer
+	getFork forkLookup
+}
+
+type forkLookup func(targetEpoch primitives.Epoch) (*ethpb.Fork, error)
+
+type InitializerOption func(waiter *InitializerWaiter)
+
+// WithForkLookup allows tests to modify how Fork consensus type lookup works. Needed for spectests with weird Forks.
+func WithForkLookup(fl forkLookup) InitializerOption {
+	return func(iw *InitializerWaiter) {
+		iw.getFork = fl
+	}
 }
 
 // NewInitializerWaiter creates an InitializerWaiter which can be used to obtain an Initializer once async dependencies are ready.
-func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sr StateByRooter) *InitializerWaiter {
+func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sr StateByRooter, opts ...InitializerOption) *InitializerWaiter {
 	pc := newPropCache()
 	// signature cache is initialized in WaitForInitializer, since we need the genesis validators root, which can be obtained from startup.Clock.
 	shared := &sharedResources{
@@ -73,7 +87,14 @@ func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sr StateByRoot
 		pc: pc,
 		sr: sr,
 	}
-	return &InitializerWaiter{cw: cw, ini: &Initializer{shared: shared}}
+	iw := &InitializerWaiter{cw: cw, ini: &Initializer{shared: shared}}
+	for _, o := range opts {
+		o(iw)
+	}
+	if iw.getFork == nil {
+		iw.getFork = forks.Fork
+	}
+	return iw
 }
 
 // WaitForInitializer ensures that asynchronous initialization of the shared resources the initializer
@@ -84,7 +105,7 @@ func (w *InitializerWaiter) WaitForInitializer(ctx context.Context) (*Initialize
 	}
 	// We wait until this point to initialize the signature cache because here we have access to the genesis validator root.
 	vr := w.ini.shared.clock.GenesisValidatorsRoot()
-	sc := newSigCache(vr[:], DefaultSignatureCacheSize)
+	sc := newSigCache(vr[:], DefaultSignatureCacheSize, w.getFork)
 	w.ini.shared.sc = sc
 	return w.ini, nil
 }

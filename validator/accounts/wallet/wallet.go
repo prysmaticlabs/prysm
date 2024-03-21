@@ -9,16 +9,16 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/io/prompt"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
-	accountsprompt "github.com/prysmaticlabs/prysm/v4/validator/accounts/userprompt"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/io/prompt"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
+	accountsprompt "github.com/prysmaticlabs/prysm/v5/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -247,7 +247,7 @@ func OpenOrCreateNewWallet(cliCtx *cli.Context) (*Wallet, error) {
 	if err := w.SaveWallet(); err != nil {
 		return nil, errors.Wrap(err, "could not save wallet to disk")
 	}
-	log.WithField("wallet-path", walletDir).Info(
+	log.WithField("walletPath", walletDir).Info(
 		"Successfully created new wallet",
 	)
 	return w, nil
@@ -378,7 +378,10 @@ func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, d
 		}
 	}
 	fullPath := filepath.Join(accountPath, fileName)
-	existedPreviously := file.Exists(fullPath)
+	existedPreviously, err := file.Exists(fullPath, file.Regular)
+	if err != nil {
+		return false, errors.Wrapf(err, "could not check if file exists: %s", fullPath)
+	}
 	if err := file.WriteFile(fullPath, data); err != nil {
 		return false, errors.Wrapf(err, "could not write %s", filePath)
 	}
@@ -439,7 +442,12 @@ func (w *Wallet) FileNameAtPath(_ context.Context, filePath, fileName string) (s
 // for reading if it exists at the wallet path.
 func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser, error) {
 	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
-	if !file.Exists(configFilePath) {
+	exists, err := file.Exists(configFilePath, file.Regular)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if file exists: %s", configFilePath)
+	}
+
+	if !exists {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
 	w.configFilePath = configFilePath

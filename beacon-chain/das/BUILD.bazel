@@ -8,7 +8,7 @@ go_library(
         "iface.go",
         "mock.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/das",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/das",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/db/filesystem:go_default_library",
@@ -40,7 +40,6 @@ go_test(
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
-        "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "//time/slots:go_default_library",

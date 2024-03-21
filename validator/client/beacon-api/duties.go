@@ -9,10 +9,10 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 type dutiesProvider interface {
@@ -63,7 +63,6 @@ func (c beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.Dutie
 	}
 
 	return &ethpb.DutiesResponse{
-		Duties:             currentEpochDuties,
 		CurrentEpochDuties: currentEpochDuties,
 		NextEpochDuties:    nextEpochDuties,
 	}, nil
@@ -95,6 +94,14 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 	committees, err := c.dutiesProvider.GetCommittees(ctx, epoch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get committees for epoch `%d`", epoch)
+	}
+	slotCommittees := make(map[string]uint64)
+	for _, c := range committees {
+		n, ok := slotCommittees[c.Slot]
+		if !ok {
+			n = 0
+		}
+		slotCommittees[c.Slot] = n + 1
 	}
 
 	// Mapping from a validator index to its attesting committee's index and slot
@@ -196,14 +203,15 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		}
 
 		duties[index] = &ethpb.DutiesResponse_Duty{
-			Committee:       committeeValidatorIndices,
-			CommitteeIndex:  committeeIndex,
-			AttesterSlot:    attesterSlot,
-			ProposerSlots:   proposerDutySlots[validatorIndex],
-			PublicKey:       pubkey,
-			Status:          validatorStatus.Status,
-			ValidatorIndex:  validatorIndex,
-			IsSyncCommittee: syncDutiesMapping[validatorIndex],
+			Committee:        committeeValidatorIndices,
+			CommitteeIndex:   committeeIndex,
+			AttesterSlot:     attesterSlot,
+			ProposerSlots:    proposerDutySlots[validatorIndex],
+			PublicKey:        pubkey,
+			Status:           validatorStatus.Status,
+			ValidatorIndex:   validatorIndex,
+			IsSyncCommittee:  syncDutiesMapping[validatorIndex],
+			CommitteesAtSlot: slotCommittees[strconv.FormatUint(uint64(attesterSlot), 10)],
 		}
 	}
 

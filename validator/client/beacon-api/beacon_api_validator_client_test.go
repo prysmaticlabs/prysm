@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"go.uber.org/mock/gomock"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 )
 
 // Make sure that GetAttestationData() returns the same thing as the internal getAttestationData()
@@ -52,12 +52,6 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 
 	assert.DeepEqual(t, expectedErr, err)
 	assert.DeepEqual(t, expectedResp, resp)
-}
-
-func TestBeaconApiValidatorClient_GetAttestationDataNilInput(t *testing.T) {
-	validatorClient := beaconApiValidatorClient{}
-	_, err := validatorClient.GetAttestationData(context.Background(), nil)
-	assert.ErrorContains(t, "GetAttestationData received nil argument `in`", err)
 }
 
 func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {

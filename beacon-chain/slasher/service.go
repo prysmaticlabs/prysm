@@ -9,18 +9,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	beaconChainSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	beaconChainSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 const (
@@ -58,7 +58,7 @@ type Service struct {
 	attsSlotTicker                 *slots.SlotTicker
 	blocksSlotTicker               *slots.SlotTicker
 	pruningSlotTicker              *slots.SlotTicker
-	latestEpochWrittenForValidator map[primitives.ValidatorIndex]primitives.Epoch
+	latestEpochUpdatedForValidator map[primitives.ValidatorIndex]primitives.Epoch
 	wg                             sync.WaitGroup
 }
 
@@ -74,7 +74,7 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 		blksQueue:                      newBlocksQueue(),
 		ctx:                            ctx,
 		cancel:                         cancel,
-		latestEpochWrittenForValidator: make(map[primitives.ValidatorIndex]primitives.Epoch),
+		latestEpochUpdatedForValidator: make(map[primitives.ValidatorIndex]primitives.Epoch),
 	}, nil
 }
 
@@ -111,7 +111,7 @@ func (s *Service) run() {
 		return
 	}
 	for _, item := range epochsByValidator {
-		s.latestEpochWrittenForValidator[item.ValidatorIndex] = item.Epoch
+		s.latestEpochUpdatedForValidator[item.ValidatorIndex] = item.Epoch
 	}
 	log.WithField("elapsed", time.Since(start)).Info(
 		"Finished retrieving last epoch written per validator",
@@ -162,7 +162,7 @@ func (s *Service) Stop() error {
 	defer innerCancel()
 	log.Info("Flushing last epoch written for each validator to disk, please wait")
 	if err := s.serviceCfg.Database.SaveLastEpochsWrittenForValidators(
-		ctx, s.latestEpochWrittenForValidator,
+		ctx, s.latestEpochUpdatedForValidator,
 	); err != nil {
 		log.Error(err)
 	}

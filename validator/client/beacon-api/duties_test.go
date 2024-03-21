@@ -9,18 +9,18 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	validatormock "github.com/prysmaticlabs/prysm/v5/testing/validator-mock"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	"go.uber.org/mock/gomock"
 )
 
 const getAttesterDutiesTestEndpoint = "/eth/v1/validator/duties/attester"
@@ -880,69 +880,75 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 						validatorIndices[0],
 						validatorIndices[1],
 					},
-					CommitteeIndex: committeeIndices[0],
-					AttesterSlot:   committeeSlots[0],
-					PublicKey:      pubkeys[0],
-					Status:         statuses[0],
-					ValidatorIndex: validatorIndices[0],
+					CommitteeIndex:   committeeIndices[0],
+					AttesterSlot:     committeeSlots[0],
+					PublicKey:        pubkeys[0],
+					Status:           statuses[0],
+					ValidatorIndex:   validatorIndices[0],
+					CommitteesAtSlot: 1,
 				},
 				{
 					Committee: []primitives.ValidatorIndex{
 						validatorIndices[0],
 						validatorIndices[1],
 					},
-					CommitteeIndex: committeeIndices[0],
-					AttesterSlot:   committeeSlots[0],
-					PublicKey:      pubkeys[1],
-					Status:         statuses[1],
-					ValidatorIndex: validatorIndices[1],
+					CommitteeIndex:   committeeIndices[0],
+					AttesterSlot:     committeeSlots[0],
+					PublicKey:        pubkeys[1],
+					Status:           statuses[1],
+					ValidatorIndex:   validatorIndices[1],
+					CommitteesAtSlot: 1,
 				},
 				{
 					Committee: []primitives.ValidatorIndex{
 						validatorIndices[2],
 						validatorIndices[3],
 					},
-					CommitteeIndex: committeeIndices[1],
-					AttesterSlot:   committeeSlots[1],
-					PublicKey:      pubkeys[2],
-					Status:         statuses[2],
-					ValidatorIndex: validatorIndices[2],
+					CommitteeIndex:   committeeIndices[1],
+					AttesterSlot:     committeeSlots[1],
+					PublicKey:        pubkeys[2],
+					Status:           statuses[2],
+					ValidatorIndex:   validatorIndices[2],
+					CommitteesAtSlot: 1,
 				},
 				{
 					Committee: []primitives.ValidatorIndex{
 						validatorIndices[2],
 						validatorIndices[3],
 					},
-					CommitteeIndex: committeeIndices[1],
-					AttesterSlot:   committeeSlots[1],
-					PublicKey:      pubkeys[3],
-					Status:         statuses[3],
-					ValidatorIndex: validatorIndices[3],
+					CommitteeIndex:   committeeIndices[1],
+					AttesterSlot:     committeeSlots[1],
+					PublicKey:        pubkeys[3],
+					Status:           statuses[3],
+					ValidatorIndex:   validatorIndices[3],
+					CommitteesAtSlot: 1,
 				},
 				{
 					Committee: []primitives.ValidatorIndex{
 						validatorIndices[4],
 						validatorIndices[5],
 					},
-					CommitteeIndex: committeeIndices[2],
-					AttesterSlot:   committeeSlots[2],
-					PublicKey:      pubkeys[4],
-					Status:         statuses[4],
-					ValidatorIndex: validatorIndices[4],
-					ProposerSlots:  expectedProposerSlots1,
+					CommitteeIndex:   committeeIndices[2],
+					AttesterSlot:     committeeSlots[2],
+					PublicKey:        pubkeys[4],
+					Status:           statuses[4],
+					ValidatorIndex:   validatorIndices[4],
+					ProposerSlots:    expectedProposerSlots1,
+					CommitteesAtSlot: 1,
 				},
 				{
 					Committee: []primitives.ValidatorIndex{
 						validatorIndices[4],
 						validatorIndices[5],
 					},
-					CommitteeIndex:  committeeIndices[2],
-					AttesterSlot:    committeeSlots[2],
-					PublicKey:       pubkeys[5],
-					Status:          statuses[5],
-					ValidatorIndex:  validatorIndices[5],
-					ProposerSlots:   expectedProposerSlots2,
-					IsSyncCommittee: testCase.fetchSyncDuties,
+					CommitteeIndex:   committeeIndices[2],
+					AttesterSlot:     committeeSlots[2],
+					PublicKey:        pubkeys[5],
+					Status:           statuses[5],
+					ValidatorIndex:   validatorIndices[5],
+					ProposerSlots:    expectedProposerSlots2,
+					IsSyncCommittee:  testCase.fetchSyncDuties,
+					CommitteesAtSlot: 1,
 				},
 				{
 					PublicKey:       pubkeys[6],
@@ -1270,7 +1276,6 @@ func TestGetDuties_Valid(t *testing.T) {
 			require.NoError(t, err)
 
 			expectedDuties := &ethpb.DutiesResponse{
-				Duties:             expectedCurrentEpochDuties,
 				CurrentEpochDuties: expectedCurrentEpochDuties,
 				NextEpochDuties:    expectedNextEpochDuties,
 			}

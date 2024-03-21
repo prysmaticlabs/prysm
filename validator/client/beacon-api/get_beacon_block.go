@@ -10,11 +10,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -43,7 +43,7 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 	// Try v3 endpoint first. If it's not supported, then we fall back to older endpoints.
 	// We try the blinded block endpoint first. If it fails, we assume that we got a full block and try the full block endpoint.
 	queryUrl := buildURL(fmt.Sprintf("/eth/v3/validator/blocks/%d", slot), buildGetBeaconBlockUrlValues(randaoReveal, graffiti, builderBoostFactor))
-	produceBlockV3ResponseJson := validator.ProduceBlockV3Response{}
+	produceBlockV3ResponseJson := structs.ProduceBlockV3Response{}
 	err := c.jsonRestHandler.Get(ctx, queryUrl, &produceBlockV3ResponseJson)
 	errJson := &httputil.DefaultJsonError{}
 	if err != nil {

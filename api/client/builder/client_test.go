@@ -13,15 +13,15 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -321,6 +321,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
 				require.Equal(t, "bellatrix", r.Header.Get("Eth-Consensus-Version"))
+				require.Equal(t, "application/json", r.Header.Get("Content-Type"))
+				require.Equal(t, "application/json", r.Header.Get("Accept"))
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayload)),
@@ -347,6 +349,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
 				require.Equal(t, "capella", r.Header.Get("Eth-Consensus-Version"))
+				require.Equal(t, "application/json", r.Header.Get("Content-Type"))
+				require.Equal(t, "application/json", r.Header.Get("Accept"))
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayloadCapella)),
@@ -376,6 +380,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
 				require.Equal(t, "deneb", r.Header.Get("Eth-Consensus-Version"))
+				require.Equal(t, "application/json", r.Header.Get("Content-Type"))
+				require.Equal(t, "application/json", r.Header.Get("Accept"))
 				var req structs.SignedBlindedBeaconBlockDeneb
 				err := json.NewDecoder(r.Body).Decode(&req)
 				require.NoError(t, err)

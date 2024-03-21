@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -129,7 +129,7 @@ func (s *Service) processAttestations(
 	validAttestationsCount := len(validAttestations)
 	validInFutureAttestationsCount := len(validInFutureAttestations)
 
-	// Log useful infrormation
+	// Log useful information.
 	log.WithFields(logrus.Fields{
 		"currentSlot":     currentSlot,
 		"currentEpoch":    currentEpoch,
@@ -137,7 +137,9 @@ func (s *Service) processAttestations(
 		"numDeferredAtts": validInFutureAttestationsCount,
 		"numDroppedAtts":  numDropped,
 		"attsQueueSize":   queuedAttestationsCount,
-	}).Info("Processing queued attestations for slashing detection")
+	}).Info("Start processing queued attestations")
+
+	start := time.Now()
 
 	// Check for attestatinos slashings (double, sourrounding, surrounded votes).
 	slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAttestations)
@@ -152,6 +154,13 @@ func (s *Service) processAttestations(
 	if err != nil {
 		log.WithError(err).Error(couldNotProcessAttesterSlashings)
 		return nil
+	}
+
+	end := time.Since(start)
+	log.WithField("elapsed", end).Info("Done processing queued attestations")
+
+	if len(slashings) > 0 {
+		log.WithField("numSlashings", len(slashings)).Warn("Slashable attestation offenses found")
 	}
 
 	return processedAttesterSlashings

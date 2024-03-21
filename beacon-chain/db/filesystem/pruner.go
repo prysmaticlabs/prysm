@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	log "github.com/sirupsen/logrus"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
 
@@ -87,7 +87,7 @@ func (p *blobPruner) prune(pruneBefore primitives.Slot) error {
 		}()
 	} else {
 		defer func() {
-			log.WithFields(log.Fields{
+			log.WithFields(logrus.Fields{
 				"upToEpoch":    slots.ToEpoch(pruneBefore),
 				"duration":     time.Since(start).String(),
 				"filesRemoved": totalPruned,

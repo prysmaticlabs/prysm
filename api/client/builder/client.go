@@ -14,15 +14,15 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -57,8 +57,8 @@ func (*requestLogger) observe(r *http.Request) (e error) {
 	b := bytes.NewBuffer(nil)
 	if r.Body == nil {
 		log.WithFields(log.Fields{
-			"body-base64": "(nil value)",
-			"url":         r.URL.String(),
+			"bodyBase64": "(nil value)",
+			"url":        r.URL.String(),
 		}).Info("builder http request")
 		return nil
 	}
@@ -74,8 +74,8 @@ func (*requestLogger) observe(r *http.Request) (e error) {
 	}
 	r.Body = io.NopCloser(b)
 	log.WithFields(log.Fields{
-		"body-base64": string(body),
-		"url":         r.URL.String(),
+		"bodyBase64": string(body),
+		"url":        r.URL.String(),
 	}).Info("builder http request")
 
 	return nil
@@ -304,6 +304,8 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		}
 		versionOpt := func(r *http.Request) {
 			r.Header.Add("Eth-Consensus-Version", version.String(version.Bellatrix))
+			r.Header.Set("Content-Type", "application/json")
+			r.Header.Set("Accept", "application/json")
 		}
 		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
 
@@ -341,6 +343,8 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		}
 		versionOpt := func(r *http.Request) {
 			r.Header.Add("Eth-Consensus-Version", version.String(version.Capella))
+			r.Header.Set("Content-Type", "application/json")
+			r.Header.Set("Accept", "application/json")
 		}
 		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
 
@@ -379,6 +383,8 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 
 		versionOpt := func(r *http.Request) {
 			r.Header.Add("Eth-Consensus-Version", version.String(version.Deneb))
+			r.Header.Set("Content-Type", "application/json")
+			r.Header.Set("Accept", "application/json")
 		}
 		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
 		if err != nil {

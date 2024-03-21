@@ -5,13 +5,13 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/api/server"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/api/server"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 )
 
 // local keymanager api
@@ -97,6 +97,16 @@ type GetFeeRecipientByPubkeyResponse struct {
 
 type SetFeeRecipientByPubkeyRequest struct {
 	Ethaddress string `json:"ethaddress"`
+}
+
+// Graffiti keymanager api
+type GetGraffitiResponse struct {
+	Data *GraffitiData `json:"data"`
+}
+
+type GraffitiData struct {
+	Pubkey   string `json:"pubkey"`
+	Graffiti string `json:"graffiti"`
 }
 
 type BeaconStatusResponse struct {

@@ -5,10 +5,11 @@ go_library(
     srcs = [
         "blob.go",
         "ephemeral.go",
+        "log.go",
         "metrics.go",
         "pruner.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/verification:go_default_library",
@@ -43,7 +44,6 @@ go_test(
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_fastssz//:go_default_library",
         "@com_github_spf13_afero//:go_default_library",
     ],

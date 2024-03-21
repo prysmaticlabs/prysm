@@ -3,7 +3,7 @@ package filesystem
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/spf13/afero"
 )
 
@@ -37,7 +37,7 @@ type BlobMocker struct {
 
 // CreateFakeIndices creates empty blob sidecar files at the expected path for the given
 // root and indices to influence the result of Indices().
-func (bm *BlobMocker) CreateFakeIndices(root [32]byte, indices []uint64) error {
+func (bm *BlobMocker) CreateFakeIndices(root [32]byte, indices ...uint64) error {
 	for i := range indices {
 		n := blobNamer{root: root, index: indices[i]}
 		if err := bm.fs.MkdirAll(n.dir(), directoryPermissions); err != nil {

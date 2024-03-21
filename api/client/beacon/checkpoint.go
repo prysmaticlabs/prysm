@@ -7,17 +7,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	base "github.com/prysmaticlabs/prysm/v4/api/client"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	log "github.com/sirupsen/logrus"
+	base "github.com/prysmaticlabs/prysm/v5/api/client"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz/detect"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/mod/semver"
 )
 
@@ -74,7 +74,12 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	if err != nil {
 		return nil, errors.Wrap(err, "error detecting chain config for finalized state")
 	}
-	log.Printf("detected supported config in remote finalized state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
+
+	log.WithFields(logrus.Fields{
+		"name": vu.Config.ConfigName,
+		"fork": version.String(vu.Fork),
+	}).Info("Detected supported config in remote finalized state")
+
 	s, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
 		return nil, errors.Wrap(err, "error unmarshaling finalized state to correct version")
@@ -108,10 +113,10 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	}
 
 	log.
-		WithField("block_slot", b.Block().Slot()).
-		WithField("state_slot", s.Slot()).
-		WithField("state_root", hexutil.Encode(sr[:])).
-		WithField("block_root", hexutil.Encode(br[:])).
+		WithField("blockSlot", b.Block().Slot()).
+		WithField("stateSlot", s.Slot()).
+		WithField("stateRoot", hexutil.Encode(sr[:])).
+		WithField("blockRoot", hexutil.Encode(br[:])).
 		Info("Downloaded checkpoint sync state and block.")
 	return &OriginData{
 		st: s,
