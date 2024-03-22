@@ -6,19 +6,17 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"path"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/runtime"
-	"github.com/rs/cors"
+	"github.com/prysmaticlabs/prysm/v5/api/server"
+	"github.com/prysmaticlabs/prysm/v5/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var _ runtime.Service = (*Gateway)(nil)
@@ -35,7 +33,6 @@ type PbHandlerRegistration func(context.Context, *gwruntime.ServeMux, *grpc.Clie
 
 // MuxHandler is a function that implements the mux handler functionality.
 type MuxHandler func(
-	apiMiddlewareHandler *apimiddleware.ApiProxyMiddleware,
 	h http.HandlerFunc,
 	w http.ResponseWriter,
 	req *http.Request,
@@ -43,16 +40,15 @@ type MuxHandler func(
 
 // Config parameters for setting up the gateway service.
 type config struct {
-	maxCallRecvMsgSize           uint64
-	remoteCert                   string
-	gatewayAddr                  string
-	remoteAddr                   string
-	allowedOrigins               []string
-	apiMiddlewareEndpointFactory apimiddleware.EndpointFactory
-	muxHandler                   MuxHandler
-	pbHandlers                   []*PbMux
-	router                       *mux.Router
-	timeout                      time.Duration
+	maxCallRecvMsgSize uint64
+	remoteCert         string
+	gatewayAddr        string
+	remoteAddr         string
+	allowedOrigins     []string
+	muxHandler         MuxHandler
+	pbHandlers         []*PbMux
+	router             *mux.Router
+	timeout            time.Duration
 }
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.
@@ -61,7 +57,6 @@ type Gateway struct {
 	conn         *grpc.ClientConn
 	server       *http.Server
 	cancel       context.CancelFunc
-	proxy        *apimiddleware.ApiProxyMiddleware
 	ctx          context.Context
 	startFailure error
 }
@@ -109,15 +104,11 @@ func (g *Gateway) Start() {
 		}
 	}
 
-	corsMux := g.corsMiddleware(g.cfg.router)
-
-	if g.cfg.apiMiddlewareEndpointFactory != nil && !g.cfg.apiMiddlewareEndpointFactory.IsNil() {
-		g.registerApiMiddleware()
-	}
+	corsMux := server.CorsHandler(g.cfg.allowedOrigins).Middleware(g.cfg.router)
 
 	if g.cfg.muxHandler != nil {
 		g.cfg.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			g.cfg.muxHandler(g.proxy, corsMux.ServeHTTP, w, r)
+			g.cfg.muxHandler(corsMux.ServeHTTP, w, r)
 		})
 	}
 
@@ -167,35 +158,6 @@ func (g *Gateway) Stop() error {
 	return nil
 }
 
-func (g *Gateway) corsMiddleware(h http.Handler) http.Handler {
-	c := cors.New(cors.Options{
-		AllowedOrigins:   g.cfg.allowedOrigins,
-		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodOptions},
-		AllowCredentials: true,
-		MaxAge:           600,
-		AllowedHeaders:   []string{"*"},
-	})
-	return c.Handler(h)
-}
-
-const swaggerDir = "proto/prysm/v1alpha1/"
-
-// SwaggerServer returns swagger specification files located under "/swagger/"
-func SwaggerServer() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, ".swagger.json") {
-			log.Debugf("Not found: %s", r.URL.Path)
-			http.NotFound(w, r)
-			return
-		}
-
-		log.Debugf("Serving %s\n", r.URL.Path)
-		p := strings.TrimPrefix(r.URL.Path, "/swagger/")
-		p = path.Join(swaggerDir, p)
-		http.ServeFile(w, r, p)
-	}
-}
-
 // dial the gRPC server.
 func (g *Gateway) dial(ctx context.Context, network, addr string) (*grpc.ClientConn, error) {
 	switch network {
@@ -211,19 +173,21 @@ func (g *Gateway) dial(ctx context.Context, network, addr string) (*grpc.ClientC
 // dialTCP creates a client connection via TCP.
 // "addr" must be a valid TCP address with a port number.
 func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, error) {
-	security := grpc.WithInsecure()
+	var security grpc.DialOption
 	if len(g.cfg.remoteCert) > 0 {
 		creds, err := credentials.NewClientTLSFromFile(g.cfg.remoteCert, "")
 		if err != nil {
 			return nil, err
 		}
 		security = grpc.WithTransportCredentials(creds)
+	} else {
+		// Use insecure credentials when there's no remote cert provided.
+		security = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 	opts := []grpc.DialOption{
 		security,
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.cfg.maxCallRecvMsgSize))),
 	}
-
 	return grpc.DialContext(ctx, addr, opts...)
 }
 
@@ -240,19 +204,9 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 		return d(addr, 0)
 	}
 	opts := []grpc.DialOption{
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(f),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.cfg.maxCallRecvMsgSize))),
 	}
 	return grpc.DialContext(ctx, addr, opts...)
-}
-
-func (g *Gateway) registerApiMiddleware() {
-	g.proxy = &apimiddleware.ApiProxyMiddleware{
-		GatewayAddress:  g.cfg.gatewayAddr,
-		EndpointCreator: g.cfg.apiMiddlewareEndpointFactory,
-		Timeout:         g.cfg.timeout,
-	}
-	log.Info("Starting API middleware")
-	g.proxy.Run(g.cfg.router)
 }

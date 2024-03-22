@@ -7,23 +7,49 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"gopkg.in/yaml.v2"
 )
 
 // Variables defined in the placeholderFields will not be tested in `TestLoadConfigFile`.
 // These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
-var placeholderFields = []string{"UPDATE_TIMEOUT", "ATTESTATION_SUBNET_EXTRA_BITS", "RESP_TIMEOUT", "MAX_REQUEST_BLOCKS", "EPOCHS_PER_SUBNET_SUBSCRIPTION",
-	"EIP6110_FORK_EPOCH", "MESSAGE_DOMAIN_INVALID_SNAPPY", "MIN_EPOCHS_FOR_BLOCK_REQUESTS", "MAXIMUM_GOSSIP_CLOCK_DISPARITY", "MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS",
-	"MESSAGE_DOMAIN_VALID_SNAPPY", "GOSSIP_MAX_SIZE", "SUBNETS_PER_NODE", "ATTESTATION_SUBNET_COUNT", "MAX_REQUEST_BLOCKS_DENEB", "MAX_REQUEST_BLOB_SIDECARS", "EIP7002_FORK_EPOCH", "EIP7002_FORK_VERSION",
-	"MAX_CHUNK_SIZE", "ATTESTATION_PROPAGATION_SLOT_RANGE", "ATTESTATION_SUBNET_PREFIX_BITS", "EIP6110_FORK_VERSION", "TTFB_TIMEOUT", "WHISK_FORK_VERSION", "WHISK_FORK_EPOCH", "WHISK_FORK_EPOCH", "BLOB_SIDECAR_SUBNET_COUNT", "MAX_BLOBS_PER_BLOCK"}
+// IMPORTANT: Use one field per line and sort these alphabetically to reduce conflicts.
+var placeholderFields = []string{
+	"EIP6110_FORK_EPOCH",
+	"EIP6110_FORK_VERSION",
+	"EIP7002_FORK_EPOCH",
+	"EIP7002_FORK_VERSION",
+	"EIP7594_FORK_EPOCH",
+	"EIP7594_FORK_VERSION",
+	"MAX_BLOBS_PER_BLOCK",
+	"REORG_HEAD_WEIGHT_THRESHOLD",
+	"UPDATE_TIMEOUT",
+	"WHISK_EPOCHS_PER_SHUFFLING_PHASE",
+	"WHISK_FORK_EPOCH",
+	"WHISK_FORK_VERSION",
+	"WHISK_PROPOSER_SELECTION_GAP",
+}
+
+func TestPlaceholderFieldsDistinctSorted(t *testing.T) {
+	m := make(map[string]struct{})
+	for i := 0; i < len(placeholderFields)-1; i++ {
+		if _, ok := m[placeholderFields[i]]; ok {
+			t.Fatalf("duplicate placeholder field %s", placeholderFields[i])
+		}
+		m[placeholderFields[i]] = struct{}{}
+	}
+	if !sort.StringsAreSorted(placeholderFields) {
+		t.Fatal("placeholderFields must be sorted")
+	}
+}
 
 func assertEqualConfigs(t *testing.T, name string, fields []string, expected, actual *params.BeaconChainConfig) {
 	//  Misc params.
@@ -38,9 +64,6 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.HysteresisQuotient, actual.HysteresisQuotient, "%s: HysteresisQuotient", name)
 	assert.Equal(t, expected.HysteresisDownwardMultiplier, actual.HysteresisDownwardMultiplier, "%s: HysteresisDownwardMultiplier", name)
 	assert.Equal(t, expected.HysteresisUpwardMultiplier, actual.HysteresisUpwardMultiplier, "%s: HysteresisUpwardMultiplier", name)
-
-	// Fork Choice params.
-	assert.Equal(t, expected.DeprecatedSafeSlotsToUpdateJustified, actual.DeprecatedSafeSlotsToUpdateJustified, "%s: SafeSlotsToUpdateJustified", name)
 
 	// Validator params.
 	assert.Equal(t, expected.Eth1FollowDistance, actual.Eth1FollowDistance, "%s: Eth1FollowDistance", name)
@@ -129,8 +152,9 @@ func TestModifiedE2E(t *testing.T) {
 	c := params.E2ETestConfig().Copy()
 	c.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 	c.TerminalTotalDifficulty = "0"
-	c.AltairForkEpoch = 0
-	c.BellatrixForkEpoch = 0
+	c.AltairForkEpoch = 112
+	c.BellatrixForkEpoch = 123
+	c.CapellaForkEpoch = 235
 	c.DenebForkEpoch = 358
 	y := params.ConfigToYaml(c)
 	cfg, err := params.UnmarshalConfig(y, nil)

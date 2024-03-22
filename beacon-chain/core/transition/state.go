@@ -4,14 +4,15 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	b "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // GenesisBeaconState gets called when MinGenesisActiveValidatorCount count of
@@ -221,6 +222,18 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 // EmptyGenesisState returns an empty beacon state object.
 func EmptyGenesisState() (state.BeaconState, error) {
+	blockRoots := make([][]byte, fieldparams.BlockRootsLength)
+	for i := range blockRoots {
+		blockRoots[i] = make([]byte, fieldparams.RootLength)
+	}
+	stateRoots := make([][]byte, fieldparams.StateRootsLength)
+	for i := range stateRoots {
+		stateRoots[i] = make([]byte, fieldparams.RootLength)
+	}
+	mixes := make([][]byte, fieldparams.RandaoMixesLength)
+	for i := range mixes {
+		mixes[i] = make([]byte, fieldparams.RootLength)
+	}
 	st := &ethpb.BeaconState{
 		// Misc fields.
 		Slot: 0,
@@ -229,6 +242,9 @@ func EmptyGenesisState() (state.BeaconState, error) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
+		BlockRoots:  blockRoots,
+		StateRoots:  stateRoots,
+		RandaoMixes: mixes,
 		// Validator registry fields.
 		Validators: []*ethpb.Validator{},
 		Balances:   []uint64{},

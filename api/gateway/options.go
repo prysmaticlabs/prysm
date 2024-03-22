@@ -5,7 +5,6 @@ import (
 
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 )
 
 type Option func(g *Gateway) error
@@ -66,14 +65,6 @@ func WithRemoteCert(cert string) Option {
 func WithMaxCallRecvMsgSize(size uint64) Option {
 	return func(g *Gateway) error {
 		g.cfg.maxCallRecvMsgSize = size
-		return nil
-	}
-}
-
-// WithApiMiddleware allows adding an API middleware proxy to the gateway.
-func WithApiMiddleware(endpointFactory apimiddleware.EndpointFactory) Option {
-	return func(g *Gateway) error {
-		g.cfg.apiMiddlewareEndpointFactory = endpointFactory
 		return nil
 	}
 }

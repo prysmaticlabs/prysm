@@ -23,7 +23,7 @@ go_library(
         "-D__BLST_CGO__",
         "-Ibindings",
         "-Isrc",
-        "-O",
+        "-O2",
     ] + select({
         "@io_bazel_rules_go//go/platform:amd64": [
             "-mno-avx",
@@ -86,7 +86,7 @@ cc_library(
         "build/assembly.S",
     ],
     copts = [
-            "-O",
+            "-O2",
     ] + select({
         "@io_bazel_rules_go//go/platform:amd64": [
             "-mno-avx",

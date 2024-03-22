@@ -6,11 +6,12 @@ go_library(
         "beacon_block.go",
         "utils.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces",
+    importpath = "github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces",
     visibility = ["//visibility:public"],
     deps = [
         "//config/fieldparams:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//math:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",

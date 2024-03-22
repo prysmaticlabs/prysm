@@ -6,17 +6,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/grpc"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/grpc"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -39,8 +40,8 @@ func ValidateSyncGRPC(
 		return status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	syncDetailsContainer := &shared.SyncDetailsContainer{
-		Data: &shared.SyncDetails{
+	syncDetailsContainer := &structs.SyncDetailsContainer{
+		Data: &structs.SyncDetails{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
@@ -95,7 +96,13 @@ func IsOptimistic(
 		}
 		return optimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(jcp.Root))
 	default:
-		if len(stateId) == 32 {
+		if len(stateIdString) >= 2 && stateIdString[:2] == "0x" {
+			id, err := hexutil.Decode(stateIdString)
+			if err != nil {
+				return false, err
+			}
+			return isStateRootOptimistic(ctx, id, optimisticModeFetcher, stateFetcher, chainInfo, database)
+		} else if len(stateId) == 32 {
 			return isStateRootOptimistic(ctx, stateId, optimisticModeFetcher, stateFetcher, chainInfo, database)
 		} else {
 			optimistic, err := optimisticModeFetcher.IsOptimistic(ctx)

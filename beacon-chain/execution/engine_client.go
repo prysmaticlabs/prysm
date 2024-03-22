@@ -14,21 +14,20 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/types"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -39,7 +38,6 @@ var (
 		ForkchoiceUpdatedMethodV2,
 		GetPayloadMethod,
 		GetPayloadMethodV2,
-		ExchangeTransitionConfigurationMethod,
 		GetPayloadBodiesByHashV1,
 		GetPayloadBodiesByRangeV1,
 	}
@@ -50,20 +48,22 @@ const (
 	NewPayloadMethod = "engine_newPayloadV1"
 	// NewPayloadMethodV2 v2 request string for JSON-RPC.
 	NewPayloadMethodV2 = "engine_newPayloadV2"
+	NewPayloadMethodV3 = "engine_newPayloadV3"
 	// ForkchoiceUpdatedMethod v1 request string for JSON-RPC.
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// ForkchoiceUpdatedMethodV2 v2 request string for JSON-RPC.
 	ForkchoiceUpdatedMethodV2 = "engine_forkchoiceUpdatedV2"
+	// ForkchoiceUpdatedMethodV3 v3 request string for JSON-RPC.
+	ForkchoiceUpdatedMethodV3 = "engine_forkchoiceUpdatedV3"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
 	// GetPayloadMethodV2 v2 request string for JSON-RPC.
 	GetPayloadMethodV2 = "engine_getPayloadV2"
-	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
-	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
-	// ExecutionBlockByHashMethod request string for JSON-RPC.
-	ExecutionBlockByHashMethod = "eth_getBlockByHash"
-	// ExecutionBlockByNumberMethod request string for JSON-RPC.
-	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
+	GetPayloadMethodV3 = "engine_getPayloadV3"
+	// BlockByHashMethod request string for JSON-RPC.
+	BlockByHashMethod = "eth_getBlockByHash"
+	// BlockByNumberMethod request string for JSON-RPC.
+	BlockByNumberMethod = "eth_getBlockByNumber"
 	// GetPayloadBodiesByHashV1 v1 request string for JSON-RPC.
 	GetPayloadBodiesByHashV1 = "engine_getPayloadBodiesByHashV1"
 	// GetPayloadBodiesByRangeV1 v1 request string for JSON-RPC.
@@ -77,14 +77,15 @@ const (
 // ForkchoiceUpdatedResponse is the response kind received by the
 // engine_forkchoiceUpdatedV1 endpoint.
 type ForkchoiceUpdatedResponse struct {
-	Status    *pb.PayloadStatus  `json:"payloadStatus"`
-	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
+	Status          *pb.PayloadStatus  `json:"payloadStatus"`
+	PayloadId       *pb.PayloadIDBytes `json:"payloadId"`
+	ValidationError string             `json:"validationError"`
 }
 
 // ExecutionPayloadReconstructor defines a service that can reconstruct a full beacon
 // block with an execution payload from a signed beacon block and a connection
 // to an execution client's engine API.
-type ExecutionPayloadReconstructor interface {
+type PayloadReconstructor interface {
 	ReconstructFullBlock(
 		ctx context.Context, blindedBlock interfaces.ReadOnlySignedBeaconBlock,
 	) (interfaces.SignedBeaconBlock, error)
@@ -96,22 +97,19 @@ type ExecutionPayloadReconstructor interface {
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
-	NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error)
+	NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes []common.Hash, parentBlockRoot *common.Hash) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
-	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, error)
-	ExchangeTransitionConfiguration(
-		ctx context.Context, cfg *pb.TransitionConfiguration,
-	) error
+	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error)
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error)
 	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
 }
 
-var EmptyBlockHash = errors.New("Block hash is empty 0x0000...")
+var ErrEmptyBlockHash = errors.New("Block hash is empty 0x0000...")
 
 // NewPayload calls the engine_newPayloadVX method via JSON-RPC.
-func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error) {
+func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes []common.Hash, parentBlockRoot *common.Hash) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
 	start := time.Now()
@@ -143,10 +141,21 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
+	case *pb.ExecutionPayloadDeneb:
+		payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadDeneb)
+		if !ok {
+			return nil, errors.New("execution data must be a Deneb execution payload")
+		}
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV3, payloadPb, versionedHashes, parentBlockRoot)
+		if err != nil {
+			return nil, handleRPCError(err)
+		}
 	default:
 		return nil, errors.New("unknown execution data type")
 	}
-
+	if result.ValidationError != "" {
+		log.WithError(errors.New(result.ValidationError)).Error("Got a validation error in newPayload")
+	}
 	switch result.Status {
 	case pb.PayloadStatus_INVALID_BLOCK_HASH:
 		return nil, ErrInvalidBlockHashPayloadStatus
@@ -199,12 +208,24 @@ func (s *Service) ForkchoiceUpdated(
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
+	case version.Deneb:
+		a, err := attrs.PbV3()
+		if err != nil {
+			return nil, nil, err
+		}
+		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV3, state, a)
+		if err != nil {
+			return nil, nil, handleRPCError(err)
+		}
 	default:
 		return nil, nil, fmt.Errorf("unknown payload attribute version: %v", attrs.Version())
 	}
 
 	if result.Status == nil {
 		return nil, nil, ErrNilResponse
+	}
+	if result.ValidationError != "" {
+		log.WithError(errors.New(result.ValidationError)).Error("Got a validation error in forkChoiceUpdated")
 	}
 	resp := result.Status
 	switch resp.Status {
@@ -220,7 +241,8 @@ func (s *Service) ForkchoiceUpdated(
 }
 
 // GetPayload calls the engine_getPayloadVX method via JSON-RPC.
-func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, error) {
+// It returns the execution data as well as the blobs bundle.
+func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
@@ -232,68 +254,42 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 
+	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
+		result := &pb.ExecutionPayloadDenebWithValueAndBlobsBundle{}
+		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV3, pb.PayloadIDBytes(payloadId))
+		if err != nil {
+			return nil, nil, false, handleRPCError(err)
+		}
+		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, blocks.PayloadValueToWei(result.Value))
+		if err != nil {
+			return nil, nil, false, err
+		}
+		return ed, result.BlobsBundle, result.ShouldOverrideBuilder, nil
+	}
+
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
 		result := &pb.ExecutionPayloadCapellaWithValue{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV2, pb.PayloadIDBytes(payloadId))
 		if err != nil {
-			return nil, handleRPCError(err)
+			return nil, nil, false, handleRPCError(err)
 		}
-
-		v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(result.Value))
-		return blocks.WrappedExecutionPayloadCapella(result.Payload, math.WeiToGwei(v))
+		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, blocks.PayloadValueToWei(result.Value))
+		if err != nil {
+			return nil, nil, false, err
+		}
+		return ed, nil, false, nil
 	}
 
 	result := &pb.ExecutionPayload{}
 	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	if err != nil {
-		return nil, handleRPCError(err)
+		return nil, nil, false, handleRPCError(err)
 	}
-	return blocks.WrappedExecutionPayload(result)
-}
-
-// ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
-func (s *Service) ExchangeTransitionConfiguration(
-	ctx context.Context, cfg *pb.TransitionConfiguration,
-) error {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExchangeTransitionConfiguration")
-	defer span.End()
-
-	// We set terminal block number to 0 as the parameter is not set on the consensus layer.
-	zeroBigNum := big.NewInt(0)
-	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
-	d := time.Now().Add(defaultEngineTimeout)
-	ctx, cancel := context.WithDeadline(ctx, d)
-	defer cancel()
-	result := &pb.TransitionConfiguration{}
-	if err := s.rpcClient.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
-		return handleRPCError(err)
-	}
-
-	// We surface an error to the user if local configuration settings mismatch
-	// according to the response from the execution node.
-	cfgTerminalHash := params.BeaconConfig().TerminalBlockHash[:]
-	if !bytes.Equal(cfgTerminalHash, result.TerminalBlockHash) {
-		return errors.Wrapf(
-			ErrConfigMismatch,
-			"got %#x from execution node, wanted %#x",
-			result.TerminalBlockHash,
-			cfgTerminalHash,
-		)
-	}
-	ttdCfg := params.BeaconConfig().TerminalTotalDifficulty
-	ttdResult, err := hexutil.DecodeBig(result.TerminalTotalDifficulty)
+	ed, err := blocks.WrappedExecutionPayload(result)
 	if err != nil {
-		return errors.Wrap(err, "could not decode received terminal total difficulty")
+		return nil, nil, false, err
 	}
-	if ttdResult.String() != ttdCfg {
-		return errors.Wrapf(
-			ErrConfigMismatch,
-			"got %s from execution node, wanted %s",
-			ttdResult.String(),
-			ttdCfg,
-		)
-	}
-	return nil
+	return ed, nil, false, nil
 }
 
 func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
@@ -415,7 +411,7 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock,
 	err := s.rpcClient.CallContext(
 		ctx,
 		result,
-		ExecutionBlockByNumberMethod,
+		BlockByNumberMethod,
 		"latest",
 		false, /* no full transaction objects */
 	)
@@ -428,7 +424,7 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, wi
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
 	result := &pb.ExecutionBlock{}
-	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
+	err := s.rpcClient.CallContext(ctx, result, BlockByHashMethod, hash, withTxs)
 	return result, handleRPCError(err)
 }
 
@@ -447,7 +443,7 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 		blk := &pb.ExecutionBlock{}
 		newH := h
 		elems = append(elems, gethRPC.BatchElem{
-			Method: ExecutionBlockByHashMethod,
+			Method: BlockByHashMethod,
 			Args:   []interface{}{newH, withTxs},
 			Result: blk,
 			Error:  error(nil),
@@ -469,7 +465,7 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 // HeaderByHash returns the relevant header details for the provided block hash.
 func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*types.HeaderInfo, error) {
 	var hdr *types.HeaderInfo
-	err := s.rpcClient.CallContext(ctx, &hdr, ExecutionBlockByHashMethod, hash, false /* no transactions */)
+	err := s.rpcClient.CallContext(ctx, &hdr, BlockByHashMethod, hash, false /* no transactions */)
 	if err == nil && hdr == nil {
 		err = ethereum.NotFound
 	}
@@ -479,7 +475,7 @@ func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*types.He
 // HeaderByNumber returns the relevant header details for the provided block number.
 func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.HeaderInfo, error) {
 	var hdr *types.HeaderInfo
-	err := s.rpcClient.CallContext(ctx, &hdr, ExecutionBlockByNumberMethod, toBlockNumArg(number), false /* no transactions */)
+	err := s.rpcClient.CallContext(ctx, &hdr, BlockByNumberMethod, toBlockNumArg(number), false /* no transactions */)
 	if err == nil && hdr == nil {
 		err = ethereum.NotFound
 	}
@@ -492,8 +488,17 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 	defer span.End()
 
 	result := make([]*pb.ExecutionPayloadBodyV1, 0)
+	// Exit early if there are no execution hashes.
+	if len(executionBlockHashes) == 0 {
+		return result, nil
+	}
 	err := s.rpcClient.CallContext(ctx, &result, GetPayloadBodiesByHashV1, executionBlockHashes)
-
+	if err != nil {
+		return nil, handleRPCError(err)
+	}
+	if len(result) != len(executionBlockHashes) {
+		return nil, fmt.Errorf("mismatch of payloads retrieved from the execution client: %d vs %d", len(result), len(executionBlockHashes))
+	}
 	for i, item := range result {
 		if item == nil {
 			result[i] = &pb.ExecutionPayloadBodyV1{
@@ -502,7 +507,7 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 			}
 		}
 	}
-	return result, handleRPCError(err)
+	return result, nil
 }
 
 // GetPayloadBodiesByRange returns the relevant payload bodies for the provided range.
@@ -546,7 +551,10 @@ func (s *Service) ReconstructFullBlock(
 	// If the payload header has a block hash of 0x0, it means we are pre-merge and should
 	// simply return the block with an empty execution payload.
 	if bytes.Equal(header.BlockHash(), params.BeaconConfig().ZeroHash[:]) {
-		payload := buildEmptyExecutionPayload()
+		payload, err := buildEmptyExecutionPayload(blindedBlock.Version())
+		if err != nil {
+			return nil, err
+		}
 		return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 	}
 
@@ -571,9 +579,9 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 	if len(blindedBlocks) == 0 {
 		return []interfaces.SignedBeaconBlock{}, nil
 	}
-	executionHashes := []common.Hash{}
-	validExecPayloads := []int{}
-	zeroExecPayloads := []int{}
+	var executionHashes []common.Hash
+	var validExecPayloads []int
+	var zeroExecPayloads []int
 	for i, b := range blindedBlocks {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
@@ -605,7 +613,11 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 	// For blocks that are pre-merge we simply reconstruct them via an empty
 	// execution payload.
 	for _, realIdx := range zeroExecPayloads {
-		payload := buildEmptyExecutionPayload()
+		bblock := blindedBlocks[realIdx]
+		payload, err := buildEmptyExecutionPayload(bblock.Version())
+		if err != nil {
+			return nil, err
+		}
 		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload)
 		if err != nil {
 			return nil, err
@@ -617,86 +629,51 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 }
 
 func (s *Service) retrievePayloadFromExecutionHash(ctx context.Context, executionBlockHash common.Hash, header interfaces.ExecutionData, version int) (interfaces.ExecutionData, error) {
-	if features.Get().EnableOptionalEngineMethods {
-		pBodies, err := s.GetPayloadBodiesByHash(ctx, []common.Hash{executionBlockHash})
-		if err != nil {
-			return nil, fmt.Errorf("could not get payload body by hash %#x: %v", executionBlockHash, err)
-		}
-		if len(pBodies) != 1 {
-			return nil, errors.Errorf("could not retrieve the correct number of payload bodies: wanted 1 but got %d", len(pBodies))
-		}
-		bdy := pBodies[0]
-		return fullPayloadFromPayloadBody(header, bdy, version)
-	}
-
-	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
+	pBodies, err := s.GetPayloadBodiesByHash(ctx, []common.Hash{executionBlockHash})
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
+		return nil, fmt.Errorf("could not get payload body by hash %#x: %v", executionBlockHash, err)
 	}
-	if executionBlock == nil {
-		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)
+	if len(pBodies) != 1 {
+		return nil, errors.Errorf("could not retrieve the correct number of payload bodies: wanted 1 but got %d", len(pBodies))
 	}
-	if bytes.Equal(executionBlock.Hash.Bytes(), []byte{}) {
-		return nil, EmptyBlockHash
-	}
-
-	executionBlock.Version = version
-	return fullPayloadFromExecutionBlock(header, executionBlock)
+	bdy := pBodies[0]
+	return fullPayloadFromPayloadBody(header, bdy, version)
 }
 
+// This method assumes that the provided execution hashes are all valid and part of the
+// canonical chain.
 func (s *Service) retrievePayloadsFromExecutionHashes(
 	ctx context.Context,
 	executionHashes []common.Hash,
 	validExecPayloads []int,
 	blindedBlocks []interfaces.ReadOnlySignedBeaconBlock) ([]interfaces.SignedBeaconBlock, error) {
 	fullBlocks := make([]interfaces.SignedBeaconBlock, len(blindedBlocks))
-	var execBlocks []*pb.ExecutionBlock
 	var payloadBodies []*pb.ExecutionPayloadBodyV1
 	var err error
-	if features.Get().EnableOptionalEngineMethods {
-		payloadBodies, err = s.GetPayloadBodiesByHash(ctx, executionHashes)
-		if err != nil {
-			return nil, fmt.Errorf("could not fetch payload bodies by hash %#x: %v", executionHashes, err)
-		}
-	} else {
-		execBlocks, err = s.ExecutionBlocksByHashes(ctx, executionHashes, true /* with txs*/)
-		if err != nil {
-			return nil, fmt.Errorf("could not fetch execution blocks with txs by hash %#x: %v", executionHashes, err)
-		}
+
+	payloadBodies, err = s.GetPayloadBodiesByHash(ctx, executionHashes)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch payload bodies by hash %#x: %v", executionHashes, err)
 	}
 
 	// For each valid payload, we reconstruct the full block from it with the
 	// blinded block.
 	for sliceIdx, realIdx := range validExecPayloads {
 		var payload interfaces.ExecutionData
-		if features.Get().EnableOptionalEngineMethods {
-			b := payloadBodies[sliceIdx]
-			if b == nil {
-				return nil, fmt.Errorf("received nil payload body for request by hash %#x", executionHashes[sliceIdx])
-			}
-			header, err := blindedBlocks[realIdx].Block().Body().Execution()
-			if err != nil {
-				return nil, err
-			}
-			payload, err = fullPayloadFromPayloadBody(header, b, blindedBlocks[realIdx].Version())
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			b := execBlocks[sliceIdx]
-			if b == nil {
-				return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
-			}
-			header, err := blindedBlocks[realIdx].Block().Body().Execution()
-			if err != nil {
-				return nil, err
-			}
-			payload, err = fullPayloadFromExecutionBlock(header, b)
-			if err != nil {
-				return nil, err
-			}
+		bblock := blindedBlocks[realIdx]
+		b := payloadBodies[sliceIdx]
+		if b == nil {
+			return nil, fmt.Errorf("received nil payload body for request by hash %#x", executionHashes[sliceIdx])
 		}
-		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload.Proto())
+		header, err := bblock.Block().Body().Execution()
+		if err != nil {
+			return nil, err
+		}
+		payload, err = fullPayloadFromPayloadBody(header, b, bblock.Version())
+		if err != nil {
+			return nil, err
+		}
+		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(bblock, payload.Proto())
 		if err != nil {
 			return nil, err
 		}
@@ -706,7 +683,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 }
 
 func fullPayloadFromExecutionBlock(
-	header interfaces.ExecutionData, block *pb.ExecutionBlock,
+	blockVersion int, header interfaces.ExecutionData, block *pb.ExecutionBlock,
 ) (interfaces.ExecutionData, error) {
 	if header.IsNil() || block == nil {
 		return nil, errors.New("execution block and header cannot be nil")
@@ -729,7 +706,8 @@ func fullPayloadFromExecutionBlock(
 		txs[i] = txBin
 	}
 
-	if block.Version == version.Bellatrix {
+	switch blockVersion {
+	case version.Bellatrix:
 		return blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
 			ParentHash:    header.ParentHash(),
 			FeeRecipient:  header.FeeRecipient(),
@@ -746,24 +724,56 @@ func fullPayloadFromExecutionBlock(
 			BlockHash:     blockHash[:],
 			Transactions:  txs,
 		})
+	case version.Capella:
+		return blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
+			ParentHash:    header.ParentHash(),
+			FeeRecipient:  header.FeeRecipient(),
+			StateRoot:     header.StateRoot(),
+			ReceiptsRoot:  header.ReceiptsRoot(),
+			LogsBloom:     header.LogsBloom(),
+			PrevRandao:    header.PrevRandao(),
+			BlockNumber:   header.BlockNumber(),
+			GasLimit:      header.GasLimit(),
+			GasUsed:       header.GasUsed(),
+			Timestamp:     header.Timestamp(),
+			ExtraData:     header.ExtraData(),
+			BaseFeePerGas: header.BaseFeePerGas(),
+			BlockHash:     blockHash[:],
+			Transactions:  txs,
+			Withdrawals:   block.Withdrawals,
+		}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
+	case version.Deneb:
+		ebg, err := header.ExcessBlobGas()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from execution payload header")
+		}
+		bgu, err := header.BlobGasUsed()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from execution payload header")
+		}
+		return blocks.WrappedExecutionPayloadDeneb(
+			&pb.ExecutionPayloadDeneb{
+				ParentHash:    header.ParentHash(),
+				FeeRecipient:  header.FeeRecipient(),
+				StateRoot:     header.StateRoot(),
+				ReceiptsRoot:  header.ReceiptsRoot(),
+				LogsBloom:     header.LogsBloom(),
+				PrevRandao:    header.PrevRandao(),
+				BlockNumber:   header.BlockNumber(),
+				GasLimit:      header.GasLimit(),
+				GasUsed:       header.GasUsed(),
+				Timestamp:     header.Timestamp(),
+				ExtraData:     header.ExtraData(),
+				BaseFeePerGas: header.BaseFeePerGas(),
+				BlockHash:     blockHash[:],
+				Transactions:  txs,
+				Withdrawals:   block.Withdrawals,
+				BlobGasUsed:   bgu,
+				ExcessBlobGas: ebg,
+			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
+	default:
+		return nil, fmt.Errorf("unknown execution block version %d", block.Version)
 	}
-	return blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
-		ParentHash:    header.ParentHash(),
-		FeeRecipient:  header.FeeRecipient(),
-		StateRoot:     header.StateRoot(),
-		ReceiptsRoot:  header.ReceiptsRoot(),
-		LogsBloom:     header.LogsBloom(),
-		PrevRandao:    header.PrevRandao(),
-		BlockNumber:   header.BlockNumber(),
-		GasLimit:      header.GasLimit(),
-		GasUsed:       header.GasUsed(),
-		Timestamp:     header.Timestamp(),
-		ExtraData:     header.ExtraData(),
-		BaseFeePerGas: header.BaseFeePerGas(),
-		BlockHash:     blockHash[:],
-		Transactions:  txs,
-		Withdrawals:   block.Withdrawals,
-	}, 0) // We can't get the block value and don't care about the block value for this instance
 }
 
 func fullPayloadFromPayloadBody(
@@ -773,7 +783,8 @@ func fullPayloadFromPayloadBody(
 		return nil, errors.New("execution block and header cannot be nil")
 	}
 
-	if bVersion == version.Bellatrix {
+	switch bVersion {
+	case version.Bellatrix:
 		return blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
 			ParentHash:    header.ParentHash(),
 			FeeRecipient:  header.FeeRecipient(),
@@ -790,24 +801,56 @@ func fullPayloadFromPayloadBody(
 			BlockHash:     header.BlockHash(),
 			Transactions:  body.Transactions,
 		})
+	case version.Capella:
+		return blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
+			ParentHash:    header.ParentHash(),
+			FeeRecipient:  header.FeeRecipient(),
+			StateRoot:     header.StateRoot(),
+			ReceiptsRoot:  header.ReceiptsRoot(),
+			LogsBloom:     header.LogsBloom(),
+			PrevRandao:    header.PrevRandao(),
+			BlockNumber:   header.BlockNumber(),
+			GasLimit:      header.GasLimit(),
+			GasUsed:       header.GasUsed(),
+			Timestamp:     header.Timestamp(),
+			ExtraData:     header.ExtraData(),
+			BaseFeePerGas: header.BaseFeePerGas(),
+			BlockHash:     header.BlockHash(),
+			Transactions:  body.Transactions,
+			Withdrawals:   body.Withdrawals,
+		}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
+	case version.Deneb:
+		ebg, err := header.ExcessBlobGas()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from execution payload header")
+		}
+		bgu, err := header.BlobGasUsed()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from execution payload header")
+		}
+		return blocks.WrappedExecutionPayloadDeneb(
+			&pb.ExecutionPayloadDeneb{
+				ParentHash:    header.ParentHash(),
+				FeeRecipient:  header.FeeRecipient(),
+				StateRoot:     header.StateRoot(),
+				ReceiptsRoot:  header.ReceiptsRoot(),
+				LogsBloom:     header.LogsBloom(),
+				PrevRandao:    header.PrevRandao(),
+				BlockNumber:   header.BlockNumber(),
+				GasLimit:      header.GasLimit(),
+				GasUsed:       header.GasUsed(),
+				Timestamp:     header.Timestamp(),
+				ExtraData:     header.ExtraData(),
+				BaseFeePerGas: header.BaseFeePerGas(),
+				BlockHash:     header.BlockHash(),
+				Transactions:  body.Transactions,
+				Withdrawals:   body.Withdrawals,
+				ExcessBlobGas: ebg,
+				BlobGasUsed:   bgu,
+			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
+	default:
+		return nil, fmt.Errorf("unknown execution block version for payload %d", bVersion)
 	}
-	return blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
-		ParentHash:    header.ParentHash(),
-		FeeRecipient:  header.FeeRecipient(),
-		StateRoot:     header.StateRoot(),
-		ReceiptsRoot:  header.ReceiptsRoot(),
-		LogsBloom:     header.LogsBloom(),
-		PrevRandao:    header.PrevRandao(),
-		BlockNumber:   header.BlockNumber(),
-		GasLimit:      header.GasLimit(),
-		GasUsed:       header.GasUsed(),
-		Timestamp:     header.Timestamp(),
-		ExtraData:     header.ExtraData(),
-		BaseFeePerGas: header.BaseFeePerGas(),
-		BlockHash:     header.BlockHash(),
-		Transactions:  body.Transactions,
-		Withdrawals:   body.Withdrawals,
-	}, 0) // We can't get the block value and don't care about the block value for this instance
 }
 
 // Handles errors received from the RPC server according to the specification.
@@ -895,18 +938,51 @@ func tDStringToUint256(td string) (*uint256.Int, error) {
 	return i, nil
 }
 
-func buildEmptyExecutionPayload() *pb.ExecutionPayload {
-	return &pb.ExecutionPayload{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		ExtraData:     make([]byte, 0),
+func buildEmptyExecutionPayload(v int) (proto.Message, error) {
+	switch v {
+	case version.Bellatrix:
+		return &pb.ExecutionPayload{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+		}, nil
+	case version.Capella:
+		return &pb.ExecutionPayloadCapella{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			Withdrawals:   make([]*pb.Withdrawal, 0),
+		}, nil
+	case version.Deneb:
+		return &pb.ExecutionPayloadDeneb{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			Withdrawals:   make([]*pb.Withdrawal, 0),
+		}, nil
+	default:
+		return nil, errors.Wrapf(ErrUnsupportedVersion, "version=%s", version.String(v))
 	}
 }
 

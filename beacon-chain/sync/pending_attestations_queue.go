@@ -6,15 +6,15 @@ import (
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/v4/async"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/async"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -75,14 +75,12 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			delete(s.blkRootToPendingAtts, bRoot)
 			s.pendingAttsLock.Unlock()
 		} else {
-			// Pending attestation's missing block has not arrived yet.
-			log.WithFields(logrus.Fields{
-				"currentSlot": s.cfg.clock.CurrentSlot(),
-				"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
-				"attCount":    len(attestations),
-				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
-			}).Debug("Requesting block for pending attestation")
-			pendingRoots = append(pendingRoots, bRoot)
+			s.pendingQueueLock.RLock()
+			seen := s.seenPendingBlocks[bRoot]
+			s.pendingQueueLock.RUnlock()
+			if !seen {
+				pendingRoots = append(pendingRoots, bRoot)
+			}
 		}
 	}
 	return s.sendBatchRootRequest(ctx, pendingRoots, randGen)
@@ -196,7 +194,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 // check specifies the pending attestation could not fall one epoch behind
 // of the current slot.
 func (s *Service) validatePendingAtts(ctx context.Context, slot primitives.Slot) {
-	ctx, span := trace.StartSpan(ctx, "validatePendingAtts")
+	_, span := trace.StartSpan(ctx, "validatePendingAtts")
 	defer span.End()
 
 	s.pendingAttsLock.Lock()

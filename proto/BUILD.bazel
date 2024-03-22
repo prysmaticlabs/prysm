@@ -1,8 +1,10 @@
-load("@prysm//tools/go:def.bzl", "go_library")
 load(
     "@bazel_skylib//rules:common_settings.bzl",
     "string_flag",
 )
+
+# gazelle:resolve proto proto google/api/annotations.proto @googleapis//google/api:annotations_proto
+# gazelle:resolve proto go google/api/annotations.proto @googleapis//google/api:annotations_go_proto
 
 # Example flag: --//proto:network=minimal
 string_flag(

@@ -2,7 +2,7 @@ package kv
 
 import (
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // SaveBlockAttestation saves an block attestation in cache.
@@ -32,17 +32,6 @@ func (c *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 	}
 
 	c.blockAtt[r] = append(atts, ethpb.CopyAttestation(att))
-
-	return nil
-}
-
-// SaveBlockAttestations saves a list of block attestations in cache.
-func (c *AttCaches) SaveBlockAttestations(atts []*ethpb.Attestation) error {
-	for _, att := range atts {
-		if err := c.SaveBlockAttestation(att); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }

@@ -5,21 +5,21 @@ import (
 	"testing"
 	"time"
 
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
-	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/synccommittee"
+	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -65,10 +65,12 @@ func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
 func TestSubmitSyncMessage_OK(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, 10)
 	server := &Server{
-		SyncCommitteePool: synccommittee.NewStore(),
-		P2P:               &mockp2p.MockBroadcaster{},
-		HeadFetcher: &mock.ChainService{
-			State: st,
+		CoreService: &core.Service{
+			SyncCommitteePool: synccommittee.NewStore(),
+			P2P:               &mockp2p.MockBroadcaster{},
+			HeadFetcher: &mock.ChainService{
+				State: st,
+			},
 		},
 	}
 	msg := &ethpb.SyncCommitteeMessage{
@@ -77,7 +79,7 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 	}
 	_, err := server.SubmitSyncMessage(context.Background(), msg)
 	require.NoError(t, err)
-	savedMsgs, err := server.SyncCommitteePool.SyncCommitteeMessages(1)
+	savedMsgs, err := server.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
 	require.NoError(t, err)
 	require.DeepEqual(t, []*ethpb.SyncCommitteeMessage{msg}, savedMsgs)
 }
@@ -111,6 +113,7 @@ func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 		CoreService: &core.Service{
 			SyncCommitteePool: syncCommitteePool,
 			HeadFetcher:       headFetcher,
+			P2P:               &mockp2p.MockBroadcaster{},
 		},
 		SyncCommitteePool: syncCommitteePool,
 		HeadFetcher:       headFetcher,

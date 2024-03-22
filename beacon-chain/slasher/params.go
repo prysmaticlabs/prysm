@@ -2,7 +2,7 @@ package slasher
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // Parameters for slashing detection.
@@ -10,16 +10,10 @@ import (
 // To properly access the element at epoch `e` for a validator index `i`, we leverage helper
 // functions from these parameter values as nice abstractions. the following parameters are
 // required for the helper functions defined in this file.
-//
-// (C) chunkSize defines how many elements are in a chunk for a validator
-// min or max span slice.
-// (K) validatorChunkSize defines how many validators' chunks we store in a single
-// flat byte slice on disk.
-// (H) historyLength defines how many epochs we keep of min or max spans.
 type Parameters struct {
-	chunkSize          uint64
-	validatorChunkSize uint64
-	historyLength      primitives.Epoch
+	chunkSize          uint64           // C - defines how many elements are in a chunk for a validator min or max span slice.
+	validatorChunkSize uint64           // K - defines how many validators' chunks we store in a single flat byte slice on disk.
+	historyLength      primitives.Epoch // H - defines how many epochs we keep of min or max spans.
 }
 
 // DefaultParams defines default values for slasher's important parameters, defined
@@ -98,8 +92,8 @@ func (p *Parameters) lastEpoch(chunkIndex uint64) primitives.Epoch {
 // with (validatorIndex % K)*C + (epoch % C), which gives us:
 //
 //	(2 % 3)*3 + (1 % 3) =
-//	(2*3) + (1)         =
-//	7
+//	      2*3 +    1    =
+//	          7
 //
 //	   val0     val1     val2
 //	    |        |        |
@@ -147,12 +141,14 @@ func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) []byte 
 
 // Given a validator chunk index, we determine all of the validator
 // indices that will belong in that chunk.
-func (p *Parameters) validatorIndicesInChunk(validatorChunkIdx uint64) []primitives.ValidatorIndex {
+func (p *Parameters) validatorIndexesInChunk(validatorChunkIndex uint64) []primitives.ValidatorIndex {
 	validatorIndices := make([]primitives.ValidatorIndex, 0)
-	low := validatorChunkIdx * p.validatorChunkSize
-	high := (validatorChunkIdx + 1) * p.validatorChunkSize
+	low := validatorChunkIndex * p.validatorChunkSize
+	high := (validatorChunkIndex + 1) * p.validatorChunkSize
+
 	for i := low; i < high; i++ {
 		validatorIndices = append(validatorIndices, primitives.ValidatorIndex(i))
 	}
+
 	return validatorIndices
 }

@@ -3,9 +3,9 @@ package pagination_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/api/pagination"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/api/pagination"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestStartAndEndPage(t *testing.T) {
@@ -84,4 +84,20 @@ func TestStartAndEndPage_ExceedsMaxPage(t *testing.T) {
 	wanted := "page start 0 >= list 0"
 	_, _, _, err := pagination.StartAndEndPage("", 0, 0)
 	assert.ErrorContains(t, wanted, err)
+}
+
+func TestStartAndEndPage_InvalidPageValues(t *testing.T) {
+	_, _, _, err := pagination.StartAndEndPage("10", -1, 10)
+	assert.ErrorContains(t, "invalid page and total sizes provided", err)
+
+	_, _, _, err = pagination.StartAndEndPage("12", 10, -10)
+	assert.ErrorContains(t, "invalid page and total sizes provided", err)
+
+	_, _, _, err = pagination.StartAndEndPage("12", -50, -60)
+	assert.ErrorContains(t, "invalid page and total sizes provided", err)
+}
+
+func TestStartAndEndPage_InvalidTokenValue(t *testing.T) {
+	_, _, _, err := pagination.StartAndEndPage("-12", 50, 60)
+	assert.ErrorContains(t, "invalid token value provided", err)
 }

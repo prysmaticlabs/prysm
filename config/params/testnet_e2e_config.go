@@ -1,12 +1,10 @@
 package params
 
-import "math"
-
 const (
 	AltairE2EForkEpoch    = 6
 	BellatrixE2EForkEpoch = 8
 	CapellaE2EForkEpoch   = 10
-	DenebE2EForkEpoch     = math.MaxUint64
+	DenebE2EForkEpoch     = 12
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -95,6 +93,9 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 254}
 	e2eConfig.CapellaForkVersion = []byte{3, 0, 0, 254}
 	e2eConfig.DenebForkVersion = []byte{4, 0, 0, 254}
+
+	// Deneb changes.
+	e2eConfig.MinPerEpochChurnLimit = 2
 
 	e2eConfig.InitializeForkSchedule()
 	return e2eConfig

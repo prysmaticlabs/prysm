@@ -6,14 +6,14 @@ import (
 	"strconv"
 	"testing"
 
-	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -185,7 +185,7 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 
 	// Randao mixes
 	require.DeepEqual(t, a.RandaoMixes(), b.RandaoMixes(), "Test precondition failed, fields are not equal")
-	require.NoError(t, a.UpdateRandaoMixesAtIndex(1, []byte("foo")))
+	require.NoError(t, a.UpdateRandaoMixesAtIndex(1, bytesutil.ToBytes32([]byte("foo"))))
 	if reflect.DeepEqual(a.RandaoMixes(), b.RandaoMixes()) {
 		t.Error("Expect a.RandaoMixes() to be different from b.RandaoMixes()")
 	}

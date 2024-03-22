@@ -4,11 +4,11 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestSortedObj_SortBlocksRoots(t *testing.T) {
@@ -131,4 +131,9 @@ func TestBlockBatchNext(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestZeroSizeNoOp(t *testing.T) {
+	_, more := newBlockBatch(12345, 12345, 0)
+	require.Equal(t, false, more)
 }

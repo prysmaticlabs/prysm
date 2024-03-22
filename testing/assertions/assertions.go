@@ -6,10 +6,11 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/d4l3k/messagediff"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/equality"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz/equality"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -21,6 +22,12 @@ type AssertionTestingTB interface {
 }
 
 type assertionLoggerFn func(string, ...interface{})
+
+func SprintfAssertionLoggerFn(s *string) assertionLoggerFn {
+	return func(ef string, eargs ...interface{}) {
+		*s = fmt.Sprintf(ef, eargs...)
+	}
+}
 
 // Equal compares values using comparison operator.
 func Equal(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
@@ -45,9 +52,42 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 	if !isDeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are not equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
-		diff, _ := messagediff.PrettyDiff(expected, actual)
+		var diff string
+		if _, isProto := expected.(proto.Message); isProto {
+			diff = ProtobufPrettyDiff(expected, actual)
+		} else {
+			diff, _ = messagediff.PrettyDiff(expected, actual)
+		}
 		loggerFn("%s:%d %s, want: %#v, got: %#v, diff: %s", filepath.Base(file), line, errMsg, expected, actual, diff)
 	}
+}
+
+var protobufPrivateFields = map[string]bool{
+	"sizeCache": true,
+	"state":     true,
+}
+
+func ProtobufPrettyDiff(a, b interface{}) string {
+	d, _ := messagediff.DeepDiff(a, b)
+	var dstr []string
+	appendNotProto := func(path, str string) {
+		parts := strings.Split(path, ".")
+		if len(parts) > 1 && protobufPrivateFields[parts[1]] {
+			return
+		}
+		dstr = append(dstr, str)
+	}
+	for path, added := range d.Added {
+		appendNotProto(path.String(), fmt.Sprintf("added: %s = %#v\n", path.String(), added))
+	}
+	for path, removed := range d.Removed {
+		appendNotProto(path.String(), fmt.Sprintf("removed: %s = %#v\n", path.String(), removed))
+	}
+	for path, modified := range d.Modified {
+		appendNotProto(path.String(), fmt.Sprintf("modified: %s = %#v\n", path.String(), modified))
+	}
+	sort.Strings(dstr)
+	return strings.Join(dstr, "")
 }
 
 // DeepNotEqual compares values using DeepEqual.
@@ -97,7 +137,8 @@ func StringContains(loggerFn assertionLoggerFn, expected, actual string, flag bo
 
 // NoError asserts that error is nil.
 func NoError(loggerFn assertionLoggerFn, err error, msg ...interface{}) {
-	if err != nil {
+	// reflect.ValueOf is needed for nil instances of custom types implementing Error
+	if err != nil && !reflect.ValueOf(err).IsNil() {
 		errMsg := parseMsg("Unexpected error", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s: %v", filepath.Base(file), line, errMsg, err)
@@ -128,19 +169,28 @@ func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...in
 
 // NotNil asserts that passed value is not nil.
 func NotNil(loggerFn assertionLoggerFn, obj interface{}, msg ...interface{}) {
-	if isNil(obj) {
+	if deepNil(obj) {
 		errMsg := parseMsg("Unexpected nil value", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s", filepath.Base(file), line, errMsg)
 	}
 }
 
-// isNil checks that underlying value of obj is nil.
-func isNil(obj interface{}) bool {
-	if obj == nil {
+// IsNil asserts that observed value is nil.
+func IsNil(loggerFn assertionLoggerFn, got interface{}, msg ...interface{}) {
+	if !deepNil(got) {
+		errMsg := parseMsg("Value is unexpectedly not nil", msg...)
+		_, file, line, _ := runtime.Caller(2)
+		loggerFn("%s:%d %s", filepath.Base(file), line, errMsg)
+	}
+}
+
+// deepNil checks that underlying value of obj is nil.
+func deepNil(got interface{}) bool {
+	if got == nil {
 		return true
 	}
-	value := reflect.ValueOf(obj)
+	value := reflect.ValueOf(got)
 	switch value.Kind() {
 	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
 		return value.IsNil()

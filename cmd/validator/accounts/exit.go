@@ -6,21 +6,21 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
-	"github.com/prysmaticlabs/prysm/v4/validator/node"
+	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v5/validator/node"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 )
 
-func AccountsExit(c *cli.Context, r io.Reader) error {
+func Exit(c *cli.Context, r io.Reader) error {
 	var w *wallet.Wallet
 	var km keymanager.IKeymanager
 	var err error

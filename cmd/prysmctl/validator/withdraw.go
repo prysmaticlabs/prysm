@@ -13,10 +13,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
@@ -40,8 +40,8 @@ func setWithdrawalAddresses(c *cli.Context) error {
 	return callWithdrawalEndpoints(ctx, beaconNodeHost, setWithdrawalAddressJsons)
 }
 
-func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedBLSToExecutionChangeJson, error) {
-	setWithdrawalAddressJsons := make([]*apimiddleware.SignedBLSToExecutionChangeJson, 0)
+func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*structs.SignedBLSToExecutionChange, error) {
+	setWithdrawalAddressJsons := make([]*structs.SignedBLSToExecutionChange, 0)
 	foundFilePaths, err := findWithdrawalFiles(c.String(PathFlag.Name))
 	if err != nil {
 		return setWithdrawalAddressJsons, errors.Wrap(err, "failed to find withdrawal files")
@@ -51,7 +51,7 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedB
 		if err != nil {
 			return setWithdrawalAddressJsons, errors.Wrap(err, "failed to open file")
 		}
-		var to []*apimiddleware.SignedBLSToExecutionChangeJson
+		var to []*structs.SignedBLSToExecutionChange
 		if err := json.Unmarshal(b, &to); err != nil {
 			log.Warnf("provided file: %s, is not a list of signed withdrawal messages. Error:%s", foundFilePath, err.Error())
 			continue
@@ -67,8 +67,8 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedB
 			if len(obj.Signature) == fieldparams.BLSSignatureLength*2 {
 				to[i].Signature = fmt.Sprintf("0x%s", obj.Signature)
 			}
-			setWithdrawalAddressJsons = append(setWithdrawalAddressJsons, &apimiddleware.SignedBLSToExecutionChangeJson{
-				Message: &apimiddleware.BLSToExecutionChangeJson{
+			setWithdrawalAddressJsons = append(setWithdrawalAddressJsons, &structs.SignedBLSToExecutionChange{
+				Message: &structs.BLSToExecutionChange{
 					ValidatorIndex:     to[i].Message.ValidatorIndex,
 					FromBLSPubkey:      to[i].Message.FromBLSPubkey,
 					ToExecutionAddress: to[i].Message.ToExecutionAddress,
@@ -83,7 +83,7 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedB
 	return setWithdrawalAddressJsons, nil
 }
 
-func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+func callWithdrawalEndpoints(ctx context.Context, host string, request []*structs.SignedBLSToExecutionChange) error {
 	client, err := beacon.NewClient(host)
 	if err != nil {
 		return err
@@ -96,16 +96,20 @@ func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimid
 	if err != nil {
 		return err
 	}
-	forkEpoch, ok := spec.Data["CAPELLA_FORK_EPOCH"]
+	data, ok := spec.Data.(map[string]interface{})
 	if !ok {
-		return errors.New("Configs used on beacon node do not contain CAPELLA_FORK_EPOCH")
+		return errors.New("config has incorrect structure")
+	}
+	forkEpoch, ok := data["CAPELLA_FORK_EPOCH"].(string)
+	if !ok {
+		return errors.New("configs used on beacon node do not contain CAPELLA_FORK_EPOCH")
 	}
 	capellaForkEpoch, err := strconv.Atoi(forkEpoch)
 	if err != nil {
 		return errors.New("could not convert CAPELLA_FORK_EPOCH to a number")
 	}
 	if fork.Epoch < primitives.Epoch(capellaForkEpoch) {
-		return errors.New("setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork.")
+		return errors.New("setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork")
 	}
 	err = client.SubmitChangeBLStoExecution(ctx, request)
 	if err != nil && strings.Contains(err.Error(), "POST error") {
@@ -119,7 +123,7 @@ func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimid
 	return checkIfWithdrawsAreInPool(ctx, client, request)
 }
 
-func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, request []*structs.SignedBLSToExecutionChange) error {
 	log.Info("Verifying requested withdrawal messages known to node...")
 	poolResponse, err := client.GetBLStoExecutionChanges(ctx)
 	if err != nil {
@@ -140,8 +144,8 @@ func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, reque
 	if len(requestMap) != 0 {
 		for key, address := range requestMap {
 			log.WithFields(log.Fields{
-				"validator_index":    key,
-				"execution_address:": address,
+				"validatorIndex":    key,
+				"executionAddress:": address,
 			}).Warn("Set withdrawal address message not found in the node's operations pool.")
 		}
 		log.Warn("Please check before resubmitting. Set withdrawal address messages that were not found in the pool may have been already included into a block.")

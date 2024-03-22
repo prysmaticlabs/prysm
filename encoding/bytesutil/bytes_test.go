@@ -6,8 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
 
 func TestTruncate(t *testing.T) {
@@ -160,6 +161,14 @@ func TestSafeCopy2d32Bytes(t *testing.T) {
 	output := bytesutil.SafeCopy2d32Bytes(input)
 	assert.Equal(t, false, &input == &output, "No copy was made")
 	assert.DeepEqual(t, input, output)
+}
+
+func TestSafeCopy2dHexUtilBytes(t *testing.T) {
+	input := make([]hexutil.Bytes, 2)
+	input[0] = hexutil.Bytes{'a'}
+	input[1] = hexutil.Bytes{'b'}
+	output := bytesutil.SafeCopy2dHexUtilBytes(input)
+	assert.DeepEqual(t, output, [][]byte{{'a'}, {'b'}})
 }
 
 func TestToBytes48Array(t *testing.T) {

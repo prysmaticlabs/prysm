@@ -9,30 +9,31 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/prysmaticlabs/prysm/v4/async/abool"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
-	testingDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v5/async/abool"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/kv"
+	testingDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -308,15 +309,19 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	r := &Service{
 		ctx: ctx,
 		cfg: &config{
-			p2p:      p1,
-			chain:    chain,
-			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
-			beaconDB: db,
+			p2p:           p1,
+			chain:         chain,
+			clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			beaconDB:      db,
+			stateNotifier: chain.StateNotifier(),
 		},
 		rateLimiter:  newRateLimiter(p1),
 		clockWaiter:  cw,
 		chainStarted: abool.New(),
 	}
+	clock := startup.NewClockSynchronizer()
+	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
+	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, r.cfg.stateGen)
 	p1.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 
@@ -326,12 +331,17 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	r2 := &Service{
 		ctx: ctx,
 		cfg: &config{
-			chain: chain2,
-			clock: startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
-			p2p:   p2,
+			chain:         chain2,
+			clock:         startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
+			p2p:           p2,
+			stateNotifier: chain.StateNotifier(),
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
+	clock = startup.NewClockSynchronizer()
+	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
+	r2.verifierWaiter = verification.NewInitializerWaiter(clock, chain2.ForkChoiceStore, r2.cfg.stateGen)
+
 	p2.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 
@@ -536,9 +546,10 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	}
 	r := &Service{
 		cfg: &config{
-			p2p:   p1,
-			chain: chain,
-			clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			p2p:           p1,
+			chain:         chain,
+			clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			stateNotifier: chain.StateNotifier(),
 		},
 		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
@@ -559,10 +570,11 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	}
 	r2 := &Service{
 		cfg: &config{
-			p2p:      p1,
-			chain:    chain2,
-			clock:    startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
-			beaconDB: db,
+			p2p:           p1,
+			chain:         chain2,
+			clock:         startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
+			beaconDB:      db,
+			stateNotifier: chain.StateNotifier(),
 		},
 		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
@@ -722,9 +734,10 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		}
 		r := &Service{
 			cfg: &config{
-				p2p:   p1,
-				chain: chain,
-				clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+				p2p:           p1,
+				chain:         chain,
+				clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+				stateNotifier: chain.StateNotifier(),
 			},
 			ctx:         context.Background(),
 			rateLimiter: newRateLimiter(p1),
@@ -746,10 +759,11 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		}
 		r2 := &Service{
 			cfg: &config{
-				p2p:      p2,
-				chain:    chain2,
-				clock:    startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
-				beaconDB: db,
+				p2p:           p2,
+				chain:         chain2,
+				clock:         startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
+				beaconDB:      db,
+				stateNotifier: chain.StateNotifier(),
 			},
 
 			ctx:         context.Background(),
@@ -821,8 +835,9 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 
 	r := &Service{
 		cfg: &config{
-			p2p:   p1,
-			chain: chain,
+			p2p:           p1,
+			chain:         chain,
+			stateNotifier: chain.StateNotifier(),
 		},
 
 		ctx:          ctx,
@@ -830,6 +845,9 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		clockWaiter:  cw,
 		chainStarted: abool.New(),
 	}
+	clock := startup.NewClockSynchronizer()
+	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
+	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, r.cfg.stateGen)
 
 	go r.Start()
 
@@ -906,8 +924,9 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	}
 	r := &Service{
 		cfg: &config{
-			chain: chain,
-			clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			chain:         chain,
+			clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			stateNotifier: chain.StateNotifier(),
 		},
 		ctx: context.Background(),
 	}
@@ -983,9 +1002,10 @@ func TestShouldResync(t *testing.T) {
 		}
 		r := &Service{
 			cfg: &config{
-				chain:       chain,
-				clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
-				initialSync: &mockSync.Sync{IsSyncing: tt.args.syncing},
+				chain:         chain,
+				clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+				initialSync:   &mockSync.Sync{IsSyncing: tt.args.syncing},
+				stateNotifier: chain.StateNotifier(),
 			},
 			ctx: context.Background(),
 		}

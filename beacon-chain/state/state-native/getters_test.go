@@ -3,9 +3,9 @@ package state_native
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	testtmpl "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/testing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	testtmpl "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/testing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 func TestBeaconState_SlotDataRace_Phase0(t *testing.T) {
@@ -29,6 +29,12 @@ func TestBeaconState_SlotDataRace_Bellatrix(t *testing.T) {
 func TestBeaconState_SlotDataRace_Capella(t *testing.T) {
 	testtmpl.VerifyBeaconStateSlotDataRace(t, func() (state.BeaconState, error) {
 		return InitializeFromProtoCapella(&ethpb.BeaconStateCapella{Slot: 1})
+	})
+}
+
+func TestBeaconState_SlotDataRace_Deneb(t *testing.T) {
+	testtmpl.VerifyBeaconStateSlotDataRace(t, func() (state.BeaconState, error) {
+		return InitializeFromProtoDeneb(&ethpb.BeaconStateDeneb{Slot: 1})
 	})
 }
 

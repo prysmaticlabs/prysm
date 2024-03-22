@@ -9,18 +9,20 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
@@ -166,18 +168,18 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		assert.Equal(t, 128, len(blocks))
 
 		// Cap max returned roots.
-		cfg := params.BeaconNetworkConfig().Copy()
+		cfg := params.BeaconConfig().Copy()
 		maxRequestBlocks := cfg.MaxRequestBlocks
 		defer func() {
 			cfg.MaxRequestBlocks = maxRequestBlocks
-			params.OverrideBeaconNetworkConfig(cfg)
+			params.OverrideBeaconConfig(cfg)
 		}()
 		blocks, err = SendBeaconBlocksByRangeRequest(ctx, startup.NewClock(time.Now(), [32]byte{}), p1, p2.PeerID(), req, func(block interfaces.ReadOnlySignedBeaconBlock) error {
 			// Since ssz checks the boundaries, and doesn't normally allow to send requests bigger than
 			// the max request size, we are updating max request size dynamically. Even when updated dynamically,
 			// no more than max request size of blocks is expected on return.
 			cfg.MaxRequestBlocks = 3
-			params.OverrideBeaconNetworkConfig(cfg)
+			params.OverrideBeaconConfig(cfg)
 			return nil
 		})
 		assert.ErrorContains(t, ErrInvalidFetchedData.Error(), err)
@@ -232,6 +234,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 					break
 				}
 				wsb, err := blocks.NewSignedBeaconBlock(knownBlocks[i])
+				require.NoError(t, err)
 				err = WriteBlockChunk(stream, startup.NewClock(time.Now(), [32]byte{}), p2.Encoding(), wsb)
 				if err != nil && err.Error() != network.ErrReset.Error() {
 					require.NoError(t, err)
@@ -417,18 +420,18 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		assert.Equal(t, 4, len(blocks))
 
 		// Cap max returned roots.
-		cfg := params.BeaconNetworkConfig().Copy()
+		cfg := params.BeaconConfig().Copy()
 		maxRequestBlocks := cfg.MaxRequestBlocks
 		defer func() {
 			cfg.MaxRequestBlocks = maxRequestBlocks
-			params.OverrideBeaconNetworkConfig(cfg)
+			params.OverrideBeaconConfig(cfg)
 		}()
 		blocks, err = SendBeaconBlocksByRootRequest(ctx, clock, p1, p2.PeerID(), req, func(block interfaces.ReadOnlySignedBeaconBlock) error {
 			// Since ssz checks the boundaries, and doesn't normally allow to send requests bigger than
 			// the max request size, we are updating max request size dynamically. Even when updated dynamically,
 			// no more than max request size of blocks is expected on return.
 			cfg.MaxRequestBlocks = 3
-			params.OverrideBeaconNetworkConfig(cfg)
+			params.OverrideBeaconConfig(cfg)
 			return nil
 		})
 		assert.NoError(t, err)
@@ -474,4 +477,213 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 3, len(blocks))
 	})
+}
+
+func TestBlobValidatorFromRootReq(t *testing.T) {
+	rootA := bytesutil.PadTo([]byte("valid"), 32)
+	rootB := bytesutil.PadTo([]byte("invalid"), 32)
+	header := &ethpb.SignedBeaconBlockHeader{}
+	blobSidecarA0 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootA), header, 0, []byte{}, make([][]byte, 0))
+	blobSidecarA1 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootA), header, 1, []byte{}, make([][]byte, 0))
+	blobSidecarB0 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootB), header, 0, []byte{}, make([][]byte, 0))
+	cases := []struct {
+		name     string
+		ids      []*ethpb.BlobIdentifier
+		response []blocks.ROBlob
+		err      error
+	}{
+		{
+			name:     "expected",
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: rootA, Index: 0}},
+			response: []blocks.ROBlob{blobSidecarA0},
+		},
+		{
+			name:     "wrong root",
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: rootA, Index: 0}},
+			response: []blocks.ROBlob{blobSidecarB0},
+			err:      errUnrequested,
+		},
+		{
+			name:     "wrong index",
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: rootA, Index: 0}},
+			response: []blocks.ROBlob{blobSidecarA1},
+			err:      errUnrequested,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := p2pTypes.BlobSidecarsByRootReq(c.ids)
+			vf := blobValidatorFromRootReq(&r)
+			for _, sc := range c.response {
+				err := vf(sc)
+				if c.err != nil {
+					require.ErrorIs(t, err, c.err)
+					return
+				}
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestBlobValidatorFromRangeReq(t *testing.T) {
+	cases := []struct {
+		name         string
+		req          *ethpb.BlobSidecarsByRangeRequest
+		responseSlot primitives.Slot
+		err          error
+	}{
+		{
+			name: "valid - count multi",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     10,
+			},
+			responseSlot: 14,
+		},
+		{
+			name: "valid - count 1",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     1,
+			},
+			responseSlot: 10,
+		},
+		{
+			name: "invalid - before",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     1,
+			},
+			responseSlot: 9,
+			err:          errBlobResponseOutOfBounds,
+		},
+		{
+			name: "invalid - after, count 1",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     1,
+			},
+			responseSlot: 11,
+			err:          errBlobResponseOutOfBounds,
+		},
+		{
+			name: "invalid - after, multi",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     10,
+			},
+			responseSlot: 23,
+			err:          errBlobResponseOutOfBounds,
+		},
+		{
+			name: "invalid - after, at boundary, multi",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     10,
+			},
+			responseSlot: 20,
+			err:          errBlobResponseOutOfBounds,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			vf := blobValidatorFromRangeReq(c.req)
+			header := &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{Slot: c.responseSlot},
+			}
+			sc := util.GenerateTestDenebBlobSidecar(t, [32]byte{}, header, 0, []byte{}, make([][]byte, 0))
+			err := vf(sc)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestSeqBlobValid(t *testing.T) {
+	one, oneBlobs := generateTestBlockWithSidecars(t, [32]byte{}, 0, 3)
+	r1, err := one.Block.HashTreeRoot()
+	require.NoError(t, err)
+	two, twoBlobs := generateTestBlockWithSidecars(t, r1, 1, 3)
+	r2, err := two.Block.HashTreeRoot()
+	require.NoError(t, err)
+	_, oops := generateTestBlockWithSidecars(t, r2, 0, 4)
+	oops[1].SignedBlockHeader.Header.ParentRoot = bytesutil.PadTo([]byte("derp"), 32)
+	wrongRoot, err := blocks.NewROBlobWithRoot(oops[2].BlobSidecar, bytesutil.ToBytes32([]byte("parentderp")))
+	require.NoError(t, err)
+	oob := oops[3]
+	oob.Index = fieldparams.MaxBlobsPerBlock
+
+	cases := []struct {
+		name  string
+		seq   []blocks.ROBlob
+		err   error
+		errAt int
+	}{
+		{
+			name: "all valid",
+			seq:  append(append([]blocks.ROBlob{}, oneBlobs...), twoBlobs...),
+		},
+		{
+			name: "idx out of bounds",
+			seq:  []blocks.ROBlob{oob},
+			err:  errBlobIndexOutOfBounds,
+		},
+		{
+			name: "first index is not zero",
+			seq:  []blocks.ROBlob{oneBlobs[1]},
+			err:  errChunkResponseIndexNotAsc,
+		},
+		{
+			name: "index out of order, same block",
+			seq:  []blocks.ROBlob{oneBlobs[1], oneBlobs[0]},
+			err:  errChunkResponseIndexNotAsc,
+		},
+		{
+			name:  "second block starts at idx 1",
+			seq:   []blocks.ROBlob{oneBlobs[0], twoBlobs[1]},
+			err:   errChunkResponseIndexNotAsc,
+			errAt: 1,
+		},
+		{
+			name:  "slots not ascending",
+			seq:   append(append([]blocks.ROBlob{}, twoBlobs...), oops...),
+			err:   errChunkResponseSlotNotAsc,
+			errAt: len(twoBlobs),
+		},
+		{
+			name:  "same slot, different root",
+			seq:   []blocks.ROBlob{oops[0], wrongRoot},
+			err:   errChunkResponseBlockMismatch,
+			errAt: 1,
+		},
+		{
+			name:  "same slot, different parent root",
+			seq:   []blocks.ROBlob{oops[0], oops[1]},
+			err:   errChunkResponseBlockMismatch,
+			errAt: 1,
+		},
+		{
+			name:  "next slot, different parent root",
+			seq:   []blocks.ROBlob{oops[0], twoBlobs[0]},
+			err:   errChunkResponseParentMismatch,
+			errAt: 1,
+		},
+	}
+	for _, c := range cases {
+		sbv := newSequentialBlobValidator()
+		t.Run(c.name, func(t *testing.T) {
+			for i := range c.seq {
+				err := sbv(c.seq[i])
+				if c.err != nil && i == c.errAt {
+					require.ErrorIs(t, err, c.err)
+					return
+				}
+				require.NoError(t, err)
+			}
+		})
+	}
 }

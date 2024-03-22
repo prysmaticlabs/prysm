@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestBeaconState_RotateAttestations(t *testing.T) {
@@ -73,4 +73,28 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 	}
 	assert.Equal(t, true, s.rebuildTrie[types.Validators])
 	assert.Equal(t, len(s.dirtyIndices[types.Validators]), 0)
+}
+
+func BenchmarkAppendPreviousEpochAttestations(b *testing.B) {
+	st, err := InitializeFromProtoPhase0(&ethpb.BeaconState{})
+	require.NoError(b, err)
+
+	max := params.BeaconConfig().PreviousEpochAttestationsLength()
+	if max < 2 {
+		b.Fatalf("previous epoch attestations length is less than 2: %d", max)
+	}
+
+	for i := uint64(0); i < max-2; i++ {
+		err := st.AppendPreviousEpochAttestations(&ethpb.PendingAttestation{Data: &ethpb.AttestationData{Slot: primitives.Slot(i)}})
+		require.NoError(b, err)
+	}
+
+	b.ResetTimer()
+
+	ref := st.Copy()
+	for i := 0; i < b.N; i++ {
+		err := ref.AppendPreviousEpochAttestations(&ethpb.PendingAttestation{Data: &ethpb.AttestationData{Slot: primitives.Slot(i)}})
+		require.NoError(b, err)
+		ref = st.Copy()
+	}
 }

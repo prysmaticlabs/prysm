@@ -6,8 +6,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/math"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestIntegerSquareRoot(t *testing.T) {
@@ -554,7 +554,7 @@ func TestAddInt(t *testing.T) {
 func TestWeiToGwei(t *testing.T) {
 	tests := []struct {
 		v    *big.Int
-		want uint64
+		want math.Gwei
 	}{
 		{big.NewInt(1e9 - 1), 0},
 		{big.NewInt(1e9), 1},
@@ -572,6 +572,6 @@ func TestWeiToGwei_CopyOk(t *testing.T) {
 	v := big.NewInt(1e9)
 	got := math.WeiToGwei(v)
 
-	require.Equal(t, uint64(1), got)
+	require.Equal(t, math.Gwei(1), got)
 	require.Equal(t, big.NewInt(1e9).Uint64(), v.Uint64())
 }

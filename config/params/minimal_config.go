@@ -3,7 +3,7 @@ package params
 import (
 	"math"
 
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 )
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
@@ -13,7 +13,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxCommitteesPerSlot = 4
 	minimalConfig.TargetCommitteeSize = 4
 	minimalConfig.MaxValidatorsPerCommittee = 2048
-	minimalConfig.MinPerEpochChurnLimit = 4
+	minimalConfig.MinPerEpochChurnLimit = 2           // Changed in EIP7514
+	minimalConfig.MaxPerEpochActivationChurnLimit = 4 // New in EIP7514
 	minimalConfig.ChurnLimitQuotient = 32
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
@@ -94,6 +95,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8
+	minimalConfig.MinEpochsForBlockRequests = 272
 
 	// Ethereum PoW parameters.
 	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.

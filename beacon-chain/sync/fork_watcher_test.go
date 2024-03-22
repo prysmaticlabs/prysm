@@ -5,16 +5,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/async/abool"
-	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/async/abool"
+	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
 
 func TestService_CheckForNextEpochFork(t *testing.T) {
@@ -141,6 +141,50 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 				for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
 					rpcMap[string(p)] = true
 				}
+			},
+		},
+		{
+			name: "deneb fork in the next epoch",
+			svcCreator: func(t *testing.T) *Service {
+				peer2peer := p2ptest.NewTestP2P(t)
+				gt := time.Now().Add(-4 * oneEpoch())
+				vr := [32]byte{'A'}
+				chainService := &mockChain.ChainService{
+					Genesis:        gt,
+					ValidatorsRoot: vr,
+				}
+				bCfg := params.BeaconConfig().Copy()
+				bCfg.DenebForkEpoch = 5
+				params.OverrideBeaconConfig(bCfg)
+				params.BeaconConfig().InitializeForkSchedule()
+				ctx, cancel := context.WithCancel(context.Background())
+				r := &Service{
+					ctx:    ctx,
+					cancel: cancel,
+					cfg: &config{
+						p2p:         peer2peer,
+						chain:       chainService,
+						clock:       startup.NewClock(gt, vr),
+						initialSync: &mockSync.Sync{IsSyncing: false},
+					},
+					chainStarted: abool.New(),
+					subHandler:   newSubTopicHandler(),
+				}
+				return r
+			},
+			currEpoch: 4,
+			wantErr:   false,
+			postSvcCheck: func(t *testing.T, s *Service) {
+				genRoot := s.cfg.clock.GenesisValidatorsRoot()
+				digest, err := forks.ForkDigestFromEpoch(5, genRoot[:])
+				assert.NoError(t, err)
+				assert.Equal(t, true, s.subHandler.digestExists(digest))
+				rpcMap := make(map[string]bool)
+				for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
+					rpcMap[string(p)] = true
+				}
+				assert.Equal(t, true, rpcMap[p2p.RPCBlobSidecarsByRangeTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()], "topic doesn't exist")
+				assert.Equal(t, true, rpcMap[p2p.RPCBlobSidecarsByRootTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()], "topic doesn't exist")
 			},
 		},
 	}

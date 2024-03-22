@@ -28,7 +28,8 @@ const (
 	GossipContributionAndProofMessage = "sync_committee_contribution_and_proof"
 	// GossipBlsToExecutionChangeMessage is the name for the bls to execution change message type.
 	GossipBlsToExecutionChangeMessage = "bls_to_execution_change"
-
+	// GossipBlobSidecarMessage is the name for the blob sidecar message type.
+	GossipBlobSidecarMessage = "blob_sidecar"
 	// Topic Formats
 	//
 	// AttestationSubnetTopicFormat is the topic format for the attestation subnet.
@@ -49,4 +50,6 @@ const (
 	SyncContributionAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipContributionAndProofMessage
 	// BlsToExecutionChangeSubnetTopicFormat is the topic format for the bls to execution change subnet.
 	BlsToExecutionChangeSubnetTopicFormat = GossipProtocolAndDigest + GossipBlsToExecutionChangeMessage
+	// BlobSubnetTopicFormat is the topic format for the blob subnet.
+	BlobSubnetTopicFormat = GossipProtocolAndDigest + GossipBlobSidecarMessage + "_%d"
 )

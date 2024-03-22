@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	testtmpl "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/testing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	testtmpl "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/testing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Phase0(t *testing.T) {
@@ -44,9 +44,12 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Capella(t *testing
 	})
 }
 
-func TestValidatorIndexOutOfRangeError(t *testing.T) {
-	err := statenative.NewValidatorIndexOutOfRangeError(1)
-	require.Equal(t, err.Error(), "index 1 out of range")
+func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Deneb(t *testing.T) {
+	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
+		return statenative.InitializeFromProtoUnsafeDeneb(&ethpb.BeaconStateDeneb{
+			Validators: nil,
+		})
+	})
 }
 
 func TestValidatorIndexes(t *testing.T) {

@@ -12,34 +12,38 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedDisableVecHTR = &cli.BoolFlag{
-		Name:   "disable-vectorized-htr",
+	deprecatedEnableOptionalEngineMethods = &cli.BoolFlag{
+		Name:   "enable-optional-engine-methods",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableReorgLateBlocks = &cli.BoolFlag{
-		Name:   "enable-reorg-late-blocks",
+	deprecatedDisableBuildBlockParallel = &cli.BoolFlag{
+		Name:   "disable-build-block-parallel",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedDisableGossipBatchAggregation = &cli.BoolFlag{
-		Name:   "disable-gossip-batch-aggregation",
+	deprecatedDisableReorgLateBlocks = &cli.BoolFlag{
+		Name:   "disable-reorg-late-blocks",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedBuildBlockParallel = &cli.BoolFlag{
-		Name:   "build-block-parallel",
+	deprecatedDisableOptionalEngineMethods = &cli.BoolFlag{
+		Name:   "disable-optional-engine-methods",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-
-	deprecatedEnableRegistrationCache = &cli.BoolFlag{
-		Name:   "enable-registration-cache",
+	deprecatedDisableAggregateParallel = &cli.BoolFlag{
+		Name:   "disable-aggregate-parallel",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedAggregateParallel = &cli.BoolFlag{
-		Name:   "aggregate-parallel",
+	deprecatedEnableEIP4881 = &cli.BoolFlag{
+		Name:   "enable-eip-4881",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedVerboseSigVerification = &cli.BoolFlag{
+		Name:   "enable-verbose-sig-verification",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -48,14 +52,15 @@ var (
 // Deprecated flags for both the beacon node and validator client.
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
-	deprecatedDisableVecHTR,
-	deprecatedEnableReorgLateBlocks,
-	deprecatedDisableGossipBatchAggregation,
-	deprecatedBuildBlockParallel,
-	deprecatedEnableRegistrationCache,
-	deprecatedAggregateParallel,
+	deprecatedEnableOptionalEngineMethods,
+	deprecatedDisableBuildBlockParallel,
+	deprecatedDisableReorgLateBlocks,
+	deprecatedDisableOptionalEngineMethods,
+	deprecatedDisableAggregateParallel,
+	deprecatedEnableEIP4881,
+	deprecatedVerboseSigVerification,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
 // and therefore cannot be added to deprecatedFlags
-var deprecatedBeaconFlags = []cli.Flag{}
+var deprecatedBeaconFlags []cli.Flag

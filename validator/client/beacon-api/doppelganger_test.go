@@ -7,14 +7,13 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	"go.uber.org/mock/gomock"
 )
 
 func TestCheckDoppelGanger_Nominal(t *testing.T) {
@@ -47,17 +46,17 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		name                        string
 		doppelGangerInput           *ethpb.DoppelGangerRequest
 		doppelGangerExpectedOutput  *ethpb.DoppelGangerResponse
-		getSyncingOutput            *apimiddleware.SyncingResponseJson
-		getForkOutput               *apimiddleware.StateForkResponseJson
-		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
+		getSyncingOutput            *structs.SyncStatusResponse
+		getForkOutput               *structs.GetStateForkResponse
+		getHeadersOutput            *structs.GetBlockHeadersResponse
 		getStateValidatorsInterface *struct {
 			input  []string
-			output *apimiddleware.StateValidatorsResponseJson
+			output *structs.GetValidatorsResponse
 		}
 		getLivelinessInterfaces []struct {
 			inputUrl           string
 			inputStringIndexes []string
-			output             *apimiddleware.LivenessResponseJson
+			output             *structs.GetLivenessResponse
 		}
 	}{
 		{
@@ -107,13 +106,13 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false},
 				},
 			},
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &structs.SyncStatusResponse{
+				Data: &structs.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &apimiddleware.StateForkResponseJson{
-				Data: &apimiddleware.ForkJson{
+			getForkOutput: &structs.GetStateForkResponse{
+				Data: &structs.Fork{
 					PreviousVersion: "0x00000000",
 					CurrentVersion:  "0x00000000",
 					Epoch:           "42",
@@ -142,23 +141,23 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false},
 				},
 			},
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &structs.SyncStatusResponse{
+				Data: &structs.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &apimiddleware.StateForkResponseJson{
-				Data: &apimiddleware.ForkJson{
+			getForkOutput: &structs.GetStateForkResponse{
+				Data: &structs.Fork{
 					PreviousVersion: "0x01000000",
 					CurrentVersion:  "0x02000000",
 					Epoch:           "2",
 				},
 			},
-			getHeadersOutput: &apimiddleware.BlockHeadersResponseJson{
-				Data: []*apimiddleware.BlockHeaderContainerJson{
+			getHeadersOutput: &structs.GetBlockHeadersResponse{
+				Data: []*structs.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-							Message: &apimiddleware.BeaconBlockHeaderJson{
+						Header: &structs.SignedBeaconBlockHeader{
+							Message: &structs.BeaconBlockHeader{
 								Slot: "99",
 							},
 						},
@@ -188,23 +187,23 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false}, // not recent - not duplicate
 				},
 			},
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &structs.SyncStatusResponse{
+				Data: &structs.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &apimiddleware.StateForkResponseJson{
-				Data: &apimiddleware.ForkJson{
+			getForkOutput: &structs.GetStateForkResponse{
+				Data: &structs.Fork{
 					PreviousVersion: "0x01000000",
 					CurrentVersion:  "0x02000000",
 					Epoch:           "2",
 				},
 			},
-			getHeadersOutput: &apimiddleware.BlockHeadersResponseJson{
-				Data: []*apimiddleware.BlockHeaderContainerJson{
+			getHeadersOutput: &structs.GetBlockHeadersResponse{
+				Data: []*structs.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-							Message: &apimiddleware.BeaconBlockHeaderJson{
+						Header: &structs.SignedBeaconBlockHeader{
+							Message: &structs.BeaconBlockHeader{
 								Slot: "3201",
 							},
 						},
@@ -213,7 +212,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			},
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *structs.GetValidatorsResponse
 			}{
 				input: []string{
 					// no stringPubKey1 since recent
@@ -223,21 +222,21 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					stringPubKey5, // non existing validator
 					stringPubKey6, // not recent - not duplicate
 				},
-				output: &apimiddleware.StateValidatorsResponseJson{
-					Data: []*apimiddleware.ValidatorContainerJson{
+				output: &structs.GetValidatorsResponse{
+					Data: []*structs.ValidatorContainer{
 						// No "11111" since corresponding validator is recent
-						{Index: "22222", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey2}}, // not recent - duplicate on previous epoch
-						{Index: "33333", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey3}}, // not recent - duplicate on current epoch
-						{Index: "44444", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey4}}, // not recent - duplicate on both previous and current epoch
+						{Index: "22222", Validator: &structs.Validator{Pubkey: stringPubKey2}}, // not recent - duplicate on previous epoch
+						{Index: "33333", Validator: &structs.Validator{Pubkey: stringPubKey3}}, // not recent - duplicate on current epoch
+						{Index: "44444", Validator: &structs.Validator{Pubkey: stringPubKey4}}, // not recent - duplicate on both previous and current epoch
 						// No "55555" sicee corresponding validator does not exist
-						{Index: "66666", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey6}}, // not recent - not duplicate
+						{Index: "66666", Validator: &structs.Validator{Pubkey: stringPubKey6}}, // not recent - not duplicate
 					},
 				},
 			},
 			getLivelinessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *structs.GetLivenessResponse
 			}{
 				{
 					inputUrl: "/eth/v1/validator/liveness/99", // previous epoch
@@ -249,11 +248,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						// No "55555" since corresponding validator it does not exist
 						"66666", // not recent - not duplicate
 					},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: true},  // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: false}, // not recent - duplicate on current epoch
@@ -273,11 +269,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						// No "55555" since corresponding validator it does not exist
 						"66666", // not recent - not duplicate
 					},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: false}, // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: true},  // not recent - duplicate on current epoch
@@ -296,19 +289,18 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
-				syncingResponseJson := apimiddleware.SyncingResponseJson{}
+				syncingResponseJson := structs.SyncStatusResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					syncingEnpoint,
 					&syncingResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -317,14 +309,13 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			}
 
 			if testCase.getForkOutput != nil {
-				stateForkResponseJson := apimiddleware.StateForkResponseJson{}
+				stateForkResponseJson := structs.GetStateForkResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					forkEndpoint,
 					&stateForkResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -333,14 +324,13 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			}
 
 			if testCase.getHeadersOutput != nil {
-				blockHeadersResponseJson := apimiddleware.BlockHeadersResponseJson{}
+				blockHeadersResponseJson := structs.GetBlockHeadersResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					headersEndpoint,
 					&blockHeadersResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -350,12 +340,12 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 
 			if testCase.getLivelinessInterfaces != nil {
 				for _, iface := range testCase.getLivelinessInterfaces {
-					livenessResponseJson := apimiddleware.LivenessResponseJson{}
+					livenessResponseJson := structs.GetLivenessResponse{}
 
 					marshalledIndexes, err := json.Marshal(iface.inputStringIndexes)
 					require.NoError(t, err)
 
-					jsonRestHandler.EXPECT().PostRestJson(
+					jsonRestHandler.EXPECT().Post(
 						ctx,
 						iface.inputUrl,
 						nil,
@@ -366,12 +356,11 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						*iface.output,
 					).Return(
 						nil,
-						nil,
 					).Times(1)
 				}
 			}
 
-			stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
 				stateValidatorsProvider.EXPECT().GetStateValidators(
@@ -413,23 +402,23 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 	}
 
-	standardGetSyncingOutput := &apimiddleware.SyncingResponseJson{
-		Data: &shared.SyncDetails{
+	standardGetSyncingOutput := &structs.SyncStatusResponse{
+		Data: &structs.SyncStatusResponseData{
 			IsSyncing: false,
 		},
 	}
 
-	standardGetForkOutput := &apimiddleware.StateForkResponseJson{
-		Data: &apimiddleware.ForkJson{
+	standardGetForkOutput := &structs.GetStateForkResponse{
+		Data: &structs.Fork{
 			CurrentVersion: "0x02000000",
 		},
 	}
 
-	standardGetHeadersOutput := &apimiddleware.BlockHeadersResponseJson{
-		Data: []*apimiddleware.BlockHeaderContainerJson{
+	standardGetHeadersOutput := &structs.GetBlockHeadersResponse{
+		Data: []*structs.SignedBeaconBlockHeaderContainer{
 			{
-				Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-					Message: &apimiddleware.BeaconBlockHeaderJson{
+				Header: &structs.SignedBeaconBlockHeader{
+					Message: &structs.BeaconBlockHeader{
 						Slot: "1000",
 					},
 				},
@@ -439,16 +428,16 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 	standardGetStateValidatorsInterface := &struct {
 		input  []string
-		output *apimiddleware.StateValidatorsResponseJson
+		output *structs.GetValidatorsResponse
 		err    error
 	}{
 		input: []string{stringPubKey},
-		output: &apimiddleware.StateValidatorsResponseJson{
-			Data: []*apimiddleware.ValidatorContainerJson{
+		output: &structs.GetValidatorsResponse{
+			Data: []*structs.ValidatorContainer{
 				{
 					Index: "42",
-					Validator: &apimiddleware.ValidatorJson{
-						PublicKey: stringPubKey,
+					Validator: &structs.Validator{
+						Pubkey: stringPubKey,
 					},
 				},
 			},
@@ -459,21 +448,21 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		name                        string
 		expectedErrorMessage        string
 		inputValidatorRequests      []*ethpb.DoppelGangerRequest_ValidatorRequest
-		getSyncingOutput            *apimiddleware.SyncingResponseJson
+		getSyncingOutput            *structs.SyncStatusResponse
 		getSyncingError             error
-		getForkOutput               *apimiddleware.StateForkResponseJson
+		getForkOutput               *structs.GetStateForkResponse
 		getForkError                error
-		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
+		getHeadersOutput            *structs.GetBlockHeadersResponse
 		getHeadersError             error
 		getStateValidatorsInterface *struct {
 			input  []string
-			output *apimiddleware.StateValidatorsResponseJson
+			output *structs.GetValidatorsResponse
 			err    error
 		}
 		getLivenessInterfaces []struct {
 			inputUrl           string
 			inputStringIndexes []string
-			output             *apimiddleware.LivenessResponseJson
+			output             *structs.GetLivenessResponse
 			err                error
 		}
 	}{
@@ -493,8 +482,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                   "beacon node not synced",
 			expectedErrorMessage:   "beacon node not synced",
 			inputValidatorRequests: standardInputValidatorRequests,
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &structs.SyncStatusResponse{
+				Data: &structs.SyncStatusResponseData{
 					IsSyncing: true,
 				},
 			},
@@ -504,7 +493,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "failed to get fork",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
-			getForkOutput:          &apimiddleware.StateForkResponseJson{},
+			getForkOutput:          &structs.GetStateForkResponse{},
 			getForkError:           errors.New("custom error"),
 		},
 		{
@@ -512,7 +501,9 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "failed to decode fork version",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
-			getForkOutput:          &apimiddleware.StateForkResponseJson{Data: &apimiddleware.ForkJson{CurrentVersion: "not a version"}},
+			getForkOutput: &structs.GetStateForkResponse{
+				Data: &structs.Fork{CurrentVersion: "not a version"},
+			},
 		},
 		{
 			name:                   "get headers on error",
@@ -520,7 +511,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
-			getHeadersOutput:       &apimiddleware.BlockHeadersResponseJson{},
+			getHeadersOutput:       &structs.GetBlockHeadersResponse{},
 			getHeadersError:        errors.New("custom error"),
 		},
 		{
@@ -529,11 +520,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
-			getHeadersOutput: &apimiddleware.BlockHeadersResponseJson{
-				Data: []*apimiddleware.BlockHeaderContainerJson{
+			getHeadersOutput: &structs.GetBlockHeadersResponse{
+				Data: []*structs.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-							Message: &apimiddleware.BeaconBlockHeaderJson{
+						Header: &structs.SignedBeaconBlockHeader{
+							Message: &structs.BeaconBlockHeader{
 								Slot: "not a slot",
 							},
 						},
@@ -550,7 +541,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *structs.GetValidatorsResponse
 				err    error
 			}{
 				input: []string{stringPubKey},
@@ -566,11 +557,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *structs.GetValidatorsResponse
 				err    error
 			}{
 				input:  []string{stringPubKey},
-				output: &apimiddleware.StateValidatorsResponseJson{Data: []*apimiddleware.ValidatorContainerJson{nil}},
+				output: &structs.GetValidatorsResponse{Data: []*structs.ValidatorContainer{nil}},
 			},
 		},
 		{
@@ -582,11 +573,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *structs.GetValidatorsResponse
 				err    error
 			}{
 				input:  []string{stringPubKey},
-				output: &apimiddleware.StateValidatorsResponseJson{Data: []*apimiddleware.ValidatorContainerJson{{Validator: nil}}},
+				output: &structs.GetValidatorsResponse{Data: []*structs.ValidatorContainer{{Validator: nil}}},
 			},
 		},
 		{
@@ -600,13 +591,13 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *structs.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output:             &apimiddleware.LivenessResponseJson{},
+					output:             &structs.GetLivenessResponse{},
 					err:                errors.New("custom error"),
 				},
 			},
@@ -622,17 +613,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *structs.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{nil},
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{nil},
 					},
 				},
 			},
@@ -648,23 +636,20 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *structs.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{},
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{},
 					},
 				},
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
-					output:             &apimiddleware.LivenessResponseJson{},
+					output:             &structs.GetLivenessResponse{},
 					err:                errors.New("custom error"),
 				},
 			},
@@ -680,27 +665,21 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *structs.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{},
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{},
 					},
 				},
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{},
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{},
 					},
 				},
 			},
@@ -716,17 +695,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *structs.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{
 							{
 								Index: "42",
 							},
@@ -736,11 +712,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{},
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{},
 					},
 				},
 			},
@@ -752,19 +725,18 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
-				syncingResponseJson := apimiddleware.SyncingResponseJson{}
+				syncingResponseJson := structs.SyncStatusResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					syncingEnpoint,
 					&syncingResponseJson,
 				).Return(
-					nil,
 					testCase.getSyncingError,
 				).SetArg(
 					2,
@@ -773,14 +745,13 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			}
 
 			if testCase.getForkOutput != nil {
-				stateForkResponseJson := apimiddleware.StateForkResponseJson{}
+				stateForkResponseJson := structs.GetStateForkResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					forkEndpoint,
 					&stateForkResponseJson,
 				).Return(
-					nil,
 					testCase.getForkError,
 				).SetArg(
 					2,
@@ -789,14 +760,13 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			}
 
 			if testCase.getHeadersOutput != nil {
-				blockHeadersResponseJson := apimiddleware.BlockHeadersResponseJson{}
+				blockHeadersResponseJson := structs.GetBlockHeadersResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					headersEndpoint,
 					&blockHeadersResponseJson,
 				).Return(
-					nil,
 					testCase.getHeadersError,
 				).SetArg(
 					2,
@@ -804,7 +774,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 				).Times(1)
 			}
 
-			stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
 				stateValidatorsProvider.EXPECT().GetStateValidators(
@@ -820,12 +790,12 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 			if testCase.getLivenessInterfaces != nil {
 				for _, iface := range testCase.getLivenessInterfaces {
-					livenessResponseJson := apimiddleware.LivenessResponseJson{}
+					livenessResponseJson := structs.GetLivenessResponse{}
 
 					marshalledIndexes, err := json.Marshal(iface.inputStringIndexes)
 					require.NoError(t, err)
 
-					jsonRestHandler.EXPECT().PostRestJson(
+					jsonRestHandler.EXPECT().Post(
 						ctx,
 						iface.inputUrl,
 						nil,
@@ -835,7 +805,6 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 						4,
 						*iface.output,
 					).Return(
-						nil,
 						iface.err,
 					).Times(1)
 				}

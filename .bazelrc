@@ -6,6 +6,12 @@ import %workspace%/build/bazelrc/debug.bazelrc
 import %workspace%/build/bazelrc/hermetic-cc.bazelrc
 import %workspace%/build/bazelrc/performance.bazelrc
 
+# hermetic_cc_toolchain v3.0.1 required changes.
+common --enable_platform_specific_config
+build:linux --sandbox_add_mount_pair=/tmp
+build:macos --sandbox_add_mount_pair=/var/tmp
+build:windows --sandbox_add_mount_pair=C:\Temp
+
 # E2E run with debug gotag
 test:e2e --define gotags=debug
 
@@ -15,7 +21,7 @@ coverage --define=coverage_enabled=1
 # Stamp binaries with git information
 build --workspace_status_command=./hack/workspace_status.sh
 
-build --define blst_disabled=false --define blst_modern=true
+build --define blst_disabled=false
 run --define blst_disabled=false
 
 build:blst_disabled --define blst_disabled=true
@@ -27,6 +33,7 @@ build:minimal --@io_bazel_rules_go//go/config:tags=minimal
 # Release flags
 build:release --compilation_mode=opt
 build:release --stamp
+build:release --define pgo_enabled=1
 
 # Build binary with cgo symbolizer for debugging / profiling.
 build:cgo_symbolizer --copt=-g

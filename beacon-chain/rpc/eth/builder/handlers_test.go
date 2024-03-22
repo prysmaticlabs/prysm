@@ -10,18 +10,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestExpectedWithdrawals_BadRequest(t *testing.T) {
@@ -96,7 +97,7 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 
 			s.ExpectedWithdrawals(writer, request)
 			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &http2.DefaultErrorJson{}
+			e := &httputil.DefaultJsonError{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 			assert.Equal(t, http.StatusBadRequest, e.Code)
 			assert.StringContains(t, testCase.errorMessage, e.Message)
@@ -177,26 +178,26 @@ func TestExpectedWithdrawals(t *testing.T) {
 
 		s.ExpectedWithdrawals(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &ExpectedWithdrawalsResponse{}
+		resp := &structs.ExpectedWithdrawalsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 		assert.Equal(t, false, resp.Finalized)
 		assert.Equal(t, 3, len(resp.Data))
-		expectedWithdrawal1 := &ExpectedWithdrawal{
+		expectedWithdrawal1 := &structs.ExpectedWithdrawal{
 			Index:          strconv.FormatUint(0, 10),
 			ValidatorIndex: strconv.FormatUint(5, 10),
 			Address:        hexutil.Encode(validators[5].WithdrawalCredentials[12:]),
 			// Decreased due to epoch processing when state advanced forward
 			Amount: strconv.FormatUint(31998257885, 10),
 		}
-		expectedWithdrawal2 := &ExpectedWithdrawal{
+		expectedWithdrawal2 := &structs.ExpectedWithdrawal{
 			Index:          strconv.FormatUint(1, 10),
 			ValidatorIndex: strconv.FormatUint(14, 10),
 			Address:        hexutil.Encode(validators[14].WithdrawalCredentials[12:]),
 			// MaxEffectiveBalance + MinDepositAmount + decrease after epoch processing
 			Amount: strconv.FormatUint(32998257885, 10),
 		}
-		expectedWithdrawal3 := &ExpectedWithdrawal{
+		expectedWithdrawal3 := &structs.ExpectedWithdrawal{
 			Index:          strconv.FormatUint(2, 10),
 			ValidatorIndex: strconv.FormatUint(15, 10),
 			Address:        hexutil.Encode(validators[15].WithdrawalCredentials[12:]),

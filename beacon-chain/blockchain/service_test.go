@@ -8,33 +8,34 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -99,7 +100,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithForkChoiceStore(fc),
 		WithAttestationService(attService),
 		WithStateGen(stateGen),
-		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+		WithPayloadIDCache(cache.NewPayloadIDCache()),
 		WithClockSynchronizer(startup.NewClockSynchronizer()),
 	}
 
@@ -445,11 +446,10 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	s := &Service{
 		cfg: &config{ForkChoiceStore: doublylinkedtree.New(), BeaconDB: beaconDB},
 	}
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
+	blk := util.NewBeaconBlock()
 	r, err := blk.Block.HashTreeRoot()
 	require.NoError(b, err)
-	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
-	beaconState, err := state_native.InitializeFromProtoPhase0(bs)
+	beaconState, err := util.NewBeaconState()
 	require.NoError(b, err)
 	require.NoError(b, s.cfg.ForkChoiceStore.InsertNode(ctx, beaconState, r))
 
@@ -513,4 +513,49 @@ var _ startup.ClockSetter = &MockClockSetter{}
 func (s *MockClockSetter) SetClock(g *startup.Clock) error {
 	s.G = g
 	return s.Err
+}
+
+func TestNotifyIndex(t *testing.T) {
+	// Initialize a blobNotifierMap
+	bn := &blobNotifierMap{
+		seenIndex: make(map[[32]byte][fieldparams.MaxBlobsPerBlock]bool),
+		notifiers: make(map[[32]byte]chan uint64),
+	}
+
+	// Sample root and index
+	var root [32]byte
+	copy(root[:], "exampleRoot")
+
+	// Test notifying a new index
+	bn.notifyIndex(root, 1)
+	if !bn.seenIndex[root][1] {
+		t.Errorf("Index was not marked as seen")
+	}
+
+	// Test that a new channel is created
+	if _, ok := bn.notifiers[root]; !ok {
+		t.Errorf("Notifier channel was not created")
+	}
+
+	// Test notifying an already seen index
+	bn.notifyIndex(root, 1)
+	if len(bn.notifiers[root]) > 1 {
+		t.Errorf("Notifier channel should not receive multiple messages for the same index")
+	}
+
+	// Test notifying a new index again
+	bn.notifyIndex(root, 2)
+	if !bn.seenIndex[root][2] {
+		t.Errorf("Index was not marked as seen")
+	}
+
+	// Test that the notifier channel receives the index
+	select {
+	case idx := <-bn.notifiers[root]:
+		if idx != 1 {
+			t.Errorf("Received index on channel is incorrect")
+		}
+	default:
+		t.Errorf("Notifier channel did not receive the index")
+	}
 }

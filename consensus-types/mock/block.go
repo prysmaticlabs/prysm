@@ -2,11 +2,12 @@ package mock
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
-	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -34,7 +35,7 @@ func (m SignedBeaconBlock) IsNil() bool {
 	return m.BeaconBlock == nil || m.Block().IsNil()
 }
 
-func (SignedBeaconBlock) Copy() (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 
@@ -63,6 +64,14 @@ func (SignedBeaconBlock) PbCapellaBlock() (*eth.SignedBeaconBlockCapella, error)
 }
 
 func (SignedBeaconBlock) PbBlindedCapellaBlock() (*eth.SignedBlindedBeaconBlockCapella, error) {
+	panic("implement me")
+}
+
+func (SignedBeaconBlock) PbDenebBlock() (*eth.SignedBeaconBlockDeneb, error) {
+	panic("implement me")
+}
+
+func (SignedBeaconBlock) PbBlindedDenebBlock() (*eth.SignedBlindedBeaconBlockDeneb, error) {
 	panic("implement me")
 }
 
@@ -95,6 +104,14 @@ func (SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, erro
 }
 
 func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
+	panic("implement me")
+}
+
+func (SignedBeaconBlock) ValueInWei() math.Wei {
+	panic("implement me")
+}
+
+func (SignedBeaconBlock) ValueInGwei() uint64 {
 	panic("implement me")
 }
 
@@ -185,10 +202,6 @@ func (BeaconBlock) SetParentRoot(_ []byte) {
 	panic("implement me")
 }
 
-func (BeaconBlock) SetBlinded(_ bool) {
-	panic("implement me")
-}
-
 func (BeaconBlock) Copy() (interfaces.ReadOnlyBeaconBlock, error) {
 	panic("implement me")
 }
@@ -212,10 +225,6 @@ func (BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 }
 
 func (BeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
-	panic("implement me")
-}
-
-func (BeaconBlockBody) Attestations() []*eth.Attestation {
 	panic("implement me")
 }
 
@@ -296,6 +305,19 @@ func (b *BeaconBlockBody) SetExecution(interfaces.ExecutionData) error {
 }
 
 func (b *BeaconBlockBody) SetBLSToExecutionChanges([]*eth.SignedBLSToExecutionChange) error {
+	panic("implement me")
+}
+
+// BlobKzgCommitments returns the blob kzg commitments in the block.
+func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) Attestations() []*eth.Attestation {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) Version() int {
 	panic("implement me")
 }
 

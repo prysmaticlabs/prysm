@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/params"
-	clparams "github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	clparams "github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // defaultMinerAddress is used to send deposits and test transactions in the e2e test.
@@ -92,6 +92,21 @@ func GethShanghaiTime(genesisTime uint64, cfg *clparams.BeaconChainConfig) *uint
 	return shanghaiTime
 }
 
+// GethCancunTime calculates the absolute time of the shanghai (aka capella) fork block
+// by adding the relative time of the capella the fork epoch to the given genesis timestamp.
+func GethCancunTime(genesisTime uint64, cfg *clparams.BeaconChainConfig) *uint64 {
+	var cancunTime *uint64
+	if cfg.DenebForkEpoch != math.MaxUint64 {
+		startSlot, err := slots.EpochStart(cfg.DenebForkEpoch)
+		if err == nil {
+			startTime := slots.StartTime(genesisTime, startSlot)
+			newTime := uint64(startTime.Unix())
+			cancunTime = &newTime
+		}
+	}
+	return cancunTime
+}
+
 // GethTestnetGenesis creates a genesis.json for eth1 clients with a set of defaults suitable for ephemeral testnets,
 // like in an e2e test. The parameters are minimal but the full value is returned unmarshaled so that it can be
 // customized as desired.
@@ -102,6 +117,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 	}
 
 	shanghaiTime := GethShanghaiTime(genesisTime, cfg)
+	cancunTime := GethCancunTime(genesisTime, cfg)
 	cc := &params.ChainConfig{
 		ChainID:                       big.NewInt(defaultTestChainId),
 		HomesteadBlock:                bigz,
@@ -126,6 +142,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 			Epoch:  20000,
 		},
 		ShanghaiTime: shanghaiTime,
+		CancunTime:   cancunTime,
 	}
 	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
 	ma := minerAllocation()

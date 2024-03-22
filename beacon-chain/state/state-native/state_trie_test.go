@@ -5,14 +5,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestInitializeFromProto_Phase0(t *testing.T) {
@@ -166,6 +167,42 @@ func TestInitializeFromProto_Capella(t *testing.T) {
 	}
 }
 
+func TestInitializeFromProto_Deneb(t *testing.T) {
+	type test struct {
+		name  string
+		state *ethpb.BeaconStateDeneb
+		error string
+	}
+	initTests := []test{
+		{
+			name:  "nil state",
+			state: nil,
+			error: "received nil state",
+		},
+		{
+			name: "nil validators",
+			state: &ethpb.BeaconStateDeneb{
+				Slot:       4,
+				Validators: nil,
+			},
+		},
+		{
+			name:  "empty state",
+			state: &ethpb.BeaconStateDeneb{},
+		},
+	}
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := statenative.InitializeFromProtoDeneb(tt.state)
+			if tt.error != "" {
+				require.ErrorContains(t, tt.error, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestInitializeFromProtoUnsafe_Phase0(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
 	pbState, err := statenative.ProtobufBeaconStatePhase0(testState.ToProtoUnsafe())
@@ -288,6 +325,37 @@ func TestInitializeFromProtoUnsafe_Capella(t *testing.T) {
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := statenative.InitializeFromProtoUnsafeCapella(tt.state)
+			if tt.error != "" {
+				assert.ErrorContains(t, tt.error, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestInitializeFromProtoUnsafe_Deneb(t *testing.T) {
+	type test struct {
+		name  string
+		state *ethpb.BeaconStateDeneb
+		error string
+	}
+	initTests := []test{
+		{
+			name: "nil validators",
+			state: &ethpb.BeaconStateDeneb{
+				Slot:       4,
+				Validators: nil,
+			},
+		},
+		{
+			name:  "empty state",
+			state: &ethpb.BeaconStateDeneb{},
+		},
+	}
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := statenative.InitializeFromProtoUnsafeDeneb(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {
@@ -665,4 +733,42 @@ func TestBeaconState_ValidatorMutation_Bellatrix(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, rt, rt2)
+}
+
+func TestBeaconState_InitializeInactivityScoresCorrectly_Deneb(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnableExperimentalState: true,
+	})
+	defer resetCfg()
+	st, _ := util.DeterministicGenesisStateDeneb(t, 200)
+	_, err := st.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	ic, err := st.InactivityScores()
+	require.NoError(t, err)
+	ic[10] = 10000
+	ic[100] = 1000
+
+	err = st.SetInactivityScores(ic)
+	require.NoError(t, err)
+
+	_, err = st.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
+	ic[150] = 2390239
+	err = st.SetInactivityScores(ic)
+	require.NoError(t, err)
+	rt, err := st.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
+	copiedSt, ok := st.ToProtoUnsafe().(*ethpb.BeaconStateDeneb)
+	if !ok {
+		t.Error("not ok")
+	}
+	newSt, err := statenative.InitializeFromProtoUnsafeDeneb(copiedSt)
+	require.NoError(t, err)
+
+	newRt, err := newSt.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
+	require.DeepSSZEqual(t, rt, newRt)
 }

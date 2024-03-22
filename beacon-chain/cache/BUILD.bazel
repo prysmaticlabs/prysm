@@ -13,6 +13,7 @@ go_library(
         "common.go",
         "doc.go",
         "error.go",
+        "interfaces.go",
         "payload_id.go",
         "proposer_indices.go",
         "proposer_indices_disabled.go",  # keep
@@ -24,14 +25,16 @@ go_library(
         "sync_committee_disabled.go",  # keep
         "sync_committee_head_state.go",
         "sync_subnet_ids.go",
+        "tracked_validators.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/cache",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/cache",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
         "//tools:__subpackages__",
     ],
     deps = [
+        "//beacon-chain/forkchoice/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//cache/lru:go_default_library",
         "//config/fieldparams:go_default_library",
@@ -44,6 +47,7 @@ go_library(
         "//math:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_hashicorp_golang_lru//:go_default_library",
         "@com_github_patrickmn_go_cache//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -76,6 +80,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/forkchoice/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
         "//config/fieldparams:go_default_library",
@@ -88,6 +93,7 @@ go_test(
         "//testing/util:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
+        "@com_github_stretchr_testify//require:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )

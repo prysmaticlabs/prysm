@@ -2,25 +2,26 @@ package interop
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	b "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 var errUnsupportedVersion = errors.New("schema version not supported by PremineGenesisConfig")
@@ -29,7 +30,7 @@ type PremineGenesisConfig struct {
 	GenesisTime     uint64
 	NVals           uint64
 	PregenesisCreds uint64
-	Version         int          // as in "github.com/prysmaticlabs/prysm/v4/runtime/version"
+	Version         int          // as in "github.com/prysmaticlabs/prysm/v5/runtime/version"
 	GB              *types.Block // geth genesis block
 	depositEntries  *depositEntries
 }
@@ -67,7 +68,7 @@ func NewPreminedGenesis(ctx context.Context, t, nvals, pCreds uint64, version in
 
 func (s *PremineGenesisConfig) prepare(ctx context.Context) (state.BeaconState, error) {
 	switch s.Version {
-	case version.Phase0, version.Altair, version.Bellatrix, version.Capella:
+	case version.Phase0, version.Altair, version.Bellatrix, version.Capella, version.Deneb:
 	default:
 		return nil, errors.Wrapf(errUnsupportedVersion, "version=%s", version.String(s.Version))
 	}
@@ -89,24 +90,70 @@ func (s *PremineGenesisConfig) prepare(ctx context.Context) (state.BeaconState, 
 func (s *PremineGenesisConfig) empty() (state.BeaconState, error) {
 	var e state.BeaconState
 	var err error
+
+	bRoots := make([][]byte, fieldparams.BlockRootsLength)
+	for i := range bRoots {
+		bRoots[i] = bytesutil.PadTo([]byte{}, 32)
+	}
+	sRoots := make([][]byte, fieldparams.StateRootsLength)
+	for i := range sRoots {
+		sRoots[i] = bytesutil.PadTo([]byte{}, 32)
+	}
+	mixes := make([][]byte, fieldparams.RandaoMixesLength)
+	for i := range mixes {
+		mixes[i] = bytesutil.PadTo([]byte{}, 32)
+	}
+
 	switch s.Version {
 	case version.Phase0:
-		e, err = state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
+		e, err = state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+			BlockRoots:  bRoots,
+			StateRoots:  sRoots,
+			RandaoMixes: mixes,
+			Balances:    []uint64{},
+			Validators:  []*ethpb.Validator{},
+		})
 		if err != nil {
 			return nil, err
 		}
 	case version.Altair:
-		e, err = state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{})
+		e, err = state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+			BlockRoots:       bRoots,
+			StateRoots:       sRoots,
+			RandaoMixes:      mixes,
+			Balances:         []uint64{},
+			InactivityScores: []uint64{},
+			Validators:       []*ethpb.Validator{},
+		})
 		if err != nil {
 			return nil, err
 		}
 	case version.Bellatrix:
-		e, err = state_native.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{})
+		e, err = state_native.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{
+			BlockRoots:       bRoots,
+			StateRoots:       sRoots,
+			RandaoMixes:      mixes,
+			Balances:         []uint64{},
+			InactivityScores: []uint64{},
+			Validators:       []*ethpb.Validator{},
+		})
 		if err != nil {
 			return nil, err
 		}
 	case version.Capella:
-		e, err = state_native.InitializeFromProtoCapella(&ethpb.BeaconStateCapella{})
+		e, err = state_native.InitializeFromProtoCapella(&ethpb.BeaconStateCapella{
+			BlockRoots:       bRoots,
+			StateRoots:       sRoots,
+			RandaoMixes:      mixes,
+			Balances:         []uint64{},
+			InactivityScores: []uint64{},
+			Validators:       []*ethpb.Validator{},
+		})
+		if err != nil {
+			return nil, err
+		}
+	case version.Deneb:
+		e, err = state_native.InitializeFromProtoDeneb(&ethpb.BeaconStateDeneb{})
 		if err != nil {
 			return nil, err
 		}
@@ -114,12 +161,6 @@ func (s *PremineGenesisConfig) empty() (state.BeaconState, error) {
 		return nil, errUnsupportedVersion
 	}
 	if err = e.SetSlot(0); err != nil {
-		return nil, err
-	}
-	if err = e.SetValidators([]*ethpb.Validator{}); err != nil {
-		return nil, err
-	}
-	if err = e.SetBalances([]uint64{}); err != nil {
 		return nil, err
 	}
 	if err = e.SetJustificationBits([]byte{0}); err != nil {
@@ -256,6 +297,12 @@ func (s *PremineGenesisConfig) populate(g state.BeaconState) error {
 	if err := s.setInactivityScores(g); err != nil {
 		return err
 	}
+	if err := s.setCurrentEpochParticipation(g); err != nil {
+		return err
+	}
+	if err := s.setPrevEpochParticipation(g); err != nil {
+		return err
+	}
 	if err := s.setSyncCommittees(g); err != nil {
 		return err
 	}
@@ -287,6 +334,8 @@ func (s *PremineGenesisConfig) setFork(g state.BeaconState) error {
 		pv, cv = params.BeaconConfig().AltairForkVersion, params.BeaconConfig().BellatrixForkVersion
 	case version.Capella:
 		pv, cv = params.BeaconConfig().BellatrixForkVersion, params.BeaconConfig().CapellaForkVersion
+	case version.Deneb:
+		pv, cv = params.BeaconConfig().CapellaForkVersion, params.BeaconConfig().DenebForkVersion
 	default:
 		return errUnsupportedVersion
 	}
@@ -314,6 +363,42 @@ func (s *PremineGenesisConfig) setInactivityScores(g state.BeaconState) error {
 		}
 	}
 	return g.SetInactivityScores(scores)
+}
+
+func (s *PremineGenesisConfig) setCurrentEpochParticipation(g state.BeaconState) error {
+	if s.Version < version.Altair {
+		return nil
+	}
+
+	p, err := g.CurrentEpochParticipation()
+	if err != nil {
+		return err
+	}
+	missing := len(g.Validators()) - len(p)
+	if missing > 0 {
+		for i := 0; i < missing; i++ {
+			p = append(p, 0)
+		}
+	}
+	return g.SetCurrentParticipationBits(p)
+}
+
+func (s *PremineGenesisConfig) setPrevEpochParticipation(g state.BeaconState) error {
+	if s.Version < version.Altair {
+		return nil
+	}
+
+	p, err := g.PreviousEpochParticipation()
+	if err != nil {
+		return err
+	}
+	missing := len(g.Validators()) - len(p)
+	if missing > 0 {
+		for i := 0; i < missing; i++ {
+			p = append(p, 0)
+		}
+	}
+	return g.SetPreviousParticipationBits(p)
 }
 
 func (s *PremineGenesisConfig) setSyncCommittees(g state.BeaconState) error {
@@ -378,6 +463,7 @@ func (s *PremineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 				ReceiptsRoot:  make([]byte, 32),
 				LogsBloom:     make([]byte, 256),
 				PrevRandao:    make([]byte, 32),
+				ExtraData:     make([]byte, 0),
 				BaseFeePerGas: make([]byte, 32),
 				BlockHash:     make([]byte, 32),
 				Transactions:  make([][]byte, 0),
@@ -402,12 +488,41 @@ func (s *PremineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 				ReceiptsRoot:  make([]byte, 32),
 				LogsBloom:     make([]byte, 256),
 				PrevRandao:    make([]byte, 32),
+				ExtraData:     make([]byte, 0),
 				BaseFeePerGas: make([]byte, 32),
 				BlockHash:     make([]byte, 32),
 				Transactions:  make([][]byte, 0),
 				Withdrawals:   make([]*enginev1.Withdrawal, 0),
 			},
 			BlsToExecutionChanges: make([]*ethpb.SignedBLSToExecutionChange, 0),
+		}
+	case version.Deneb:
+		body = &ethpb.BeaconBlockBodyDeneb{
+			RandaoReveal: make([]byte, 96),
+			Eth1Data: &ethpb.Eth1Data{
+				DepositRoot: make([]byte, 32),
+				BlockHash:   make([]byte, 32),
+			},
+			Graffiti: make([]byte, 32),
+			SyncAggregate: &ethpb.SyncAggregate{
+				SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),
+				SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+			},
+			ExecutionPayload: &enginev1.ExecutionPayloadDeneb{
+				ParentHash:    make([]byte, 32),
+				FeeRecipient:  make([]byte, 20),
+				StateRoot:     make([]byte, 32),
+				ReceiptsRoot:  make([]byte, 32),
+				LogsBloom:     make([]byte, 256),
+				PrevRandao:    make([]byte, 32),
+				ExtraData:     make([]byte, 0),
+				BaseFeePerGas: make([]byte, 32),
+				BlockHash:     make([]byte, 32),
+				Transactions:  make([][]byte, 0),
+				Withdrawals:   make([]*enginev1.Withdrawal, 0),
+			},
+			BlsToExecutionChanges: make([]*ethpb.SignedBLSToExecutionChange, 0),
+			BlobKzgCommitments:    make([][]byte, 0),
 		}
 	default:
 		return errUnsupportedVersion
@@ -426,6 +541,10 @@ func (s *PremineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 }
 
 func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
+	if s.Version < version.Bellatrix {
+		return nil
+	}
+
 	gb := s.GB
 
 	var ed interfaces.ExecutionData
@@ -477,7 +596,7 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*enginev1.Withdrawal, 0),
 		}
-		wep, err := blocks.WrappedExecutionPayloadCapella(payload, 0)
+		wep, err := blocks.WrappedExecutionPayloadCapella(payload, big.NewInt(0))
 		if err != nil {
 			return err
 		}
@@ -485,12 +604,44 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		ed, err = blocks.WrappedExecutionPayloadHeaderCapella(eph, 0)
+		ed, err = blocks.WrappedExecutionPayloadHeaderCapella(eph, big.NewInt(0))
+		if err != nil {
+			return err
+		}
+	case version.Deneb:
+		payload := &enginev1.ExecutionPayloadDeneb{
+			ParentHash:    gb.ParentHash().Bytes(),
+			FeeRecipient:  gb.Coinbase().Bytes(),
+			StateRoot:     gb.Root().Bytes(),
+			ReceiptsRoot:  gb.ReceiptHash().Bytes(),
+			LogsBloom:     gb.Bloom().Bytes(),
+			PrevRandao:    params.BeaconConfig().ZeroHash[:],
+			BlockNumber:   gb.NumberU64(),
+			GasLimit:      gb.GasLimit(),
+			GasUsed:       gb.GasUsed(),
+			Timestamp:     gb.Time(),
+			ExtraData:     gb.Extra()[:32],
+			BaseFeePerGas: bytesutil.PadTo(bytesutil.ReverseByteOrder(gb.BaseFee().Bytes()), fieldparams.RootLength),
+			BlockHash:     gb.Hash().Bytes(),
+			Transactions:  make([][]byte, 0),
+			Withdrawals:   make([]*enginev1.Withdrawal, 0),
+			ExcessBlobGas: *gb.ExcessBlobGas(),
+			BlobGasUsed:   *gb.BlobGasUsed(),
+		}
+		wep, err := blocks.WrappedExecutionPayloadDeneb(payload, big.NewInt(0))
+		if err != nil {
+			return err
+		}
+		eph, err := blocks.PayloadToHeaderDeneb(wep)
+		if err != nil {
+			return err
+		}
+		ed, err = blocks.WrappedExecutionPayloadHeaderDeneb(eph, big.NewInt(0))
 		if err != nil {
 			return err
 		}
 	default:
-		return nil
+		return errUnsupportedVersion
 	}
 	return g.SetLatestExecutionPayloadHeader(ed)
 }

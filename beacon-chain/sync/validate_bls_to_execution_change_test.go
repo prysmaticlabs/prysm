@@ -10,23 +10,24 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
-	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	testingdb "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
-	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	testingdb "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
+	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestService_ValidateBlsToExecutionChange(t *testing.T) {
@@ -59,10 +60,12 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				WithInitialSync(&mockSync.Sync{IsSyncing: true}),
 				WithChainService(chainService),
 				WithOperationNotifier(chainService.OperationNotifier()),
+				WithStateNotifier(chainService.StateNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedBLSToExecutionChange, topic string) (*Service, string) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
+				s.cfg.clock = startup.NewClock(time.Now(), [32]byte{'A'})
 				s.initCaches()
 				return s, topic
 			},
@@ -86,10 +89,12 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
 				WithOperationNotifier(chainService.OperationNotifier()),
+				WithStateNotifier(chainService.StateNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedBLSToExecutionChange, topic string) (*Service, string) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
+				s.cfg.clock = startup.NewClock(time.Now(), [32]byte{'A'})
 				s.initCaches()
 				return s, topic
 			},
@@ -114,10 +119,12 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				WithChainService(chainService),
 				WithOperationNotifier(chainService.OperationNotifier()),
 				WithBlsToExecPool(blstoexec.NewPool()),
+				WithStateNotifier(chainService.StateNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedBLSToExecutionChange, topic string) (*Service, string) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
+				s.cfg.clock = startup.NewClock(time.Now(), [32]byte{'A'})
 				s.initCaches()
 				s.cfg.blsToExecPool.InsertBLSToExecChange(&ethpb.SignedBLSToExecutionChange{
 					Message: &ethpb.BLSToExecutionChange{
@@ -151,15 +158,18 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				WithChainService(chainService),
 				WithOperationNotifier(chainService.OperationNotifier()),
 				WithBlsToExecPool(blstoexec.NewPool()),
+				WithStateNotifier(chainService.StateNotifier()),
 			},
 			clock: startup.NewClock(time.Now().Add(-time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot*10)), [32]byte{'A'}),
 			setupSvc: func(s *Service, msg *ethpb.SignedBLSToExecutionChange, topic string) (*Service, string) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
+				s.cfg.clock = startup.NewClock(time.Now(), [32]byte{'A'})
 				s.initCaches()
 				st, keys := util.DeterministicGenesisStateBellatrix(t, 128)
 				s.cfg.chain = &mockChain.ChainService{
-					State: st,
+					State:   st,
+					Genesis: time.Now(),
 				}
 
 				msg.Message.ValidatorIndex = 50
@@ -169,7 +179,7 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				epoch := slots.ToEpoch(st.Slot())
 				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 				assert.NoError(t, err)
-				htr, err := signing.SigningData(msg.Message.HashTreeRoot, domain)
+				htr, err := signing.Data(msg.Message.HashTreeRoot, domain)
 				assert.NoError(t, err)
 				msg.Signature = keys[51].Sign(htr[:]).Marshal()
 				return s, topic
@@ -195,15 +205,18 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				WithChainService(chainService),
 				WithOperationNotifier(chainService.OperationNotifier()),
 				WithBlsToExecPool(blstoexec.NewPool()),
+				WithStateNotifier(chainService.StateNotifier()),
 			},
 			clock: startup.NewClock(time.Now().Add(-time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Duration(10)), [32]byte{'A'}),
 			setupSvc: func(s *Service, msg *ethpb.SignedBLSToExecutionChange, topic string) (*Service, string) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
+				s.cfg.clock = startup.NewClock(time.Now(), [32]byte{'A'})
 				s.initCaches()
 				st, _ := util.DeterministicGenesisStateCapella(t, 128)
 				s.cfg.chain = &mockChain.ChainService{
-					State: st,
+					State:   st,
+					Genesis: time.Now(),
 				}
 
 				msg.Message.ValidatorIndex = 130
@@ -230,15 +243,18 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				WithChainService(chainService),
 				WithOperationNotifier(chainService.OperationNotifier()),
 				WithBlsToExecPool(blstoexec.NewPool()),
+				WithStateNotifier(chainService.StateNotifier()),
 			},
 			clock: startup.NewClock(time.Now().Add(-time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Duration(10)), [32]byte{'A'}),
 			setupSvc: func(s *Service, msg *ethpb.SignedBLSToExecutionChange, topic string) (*Service, string) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
+				s.cfg.clock = startup.NewClock(time.Now(), [32]byte{'A'})
 				s.initCaches()
 				st, keys := util.DeterministicGenesisStateCapella(t, 128)
 				s.cfg.chain = &mockChain.ChainService{
-					State: st,
+					State:   st,
+					Genesis: time.Now(),
 				}
 
 				msg.Message.ValidatorIndex = 50
@@ -268,11 +284,13 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				WithChainService(chainService),
 				WithOperationNotifier(chainService.OperationNotifier()),
 				WithBlsToExecPool(blstoexec.NewPool()),
+				WithStateNotifier(chainService.StateNotifier()),
 			},
 			clock: startup.NewClock(time.Now().Add(-time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Duration(10)), [32]byte{'A'}),
 			setupSvc: func(s *Service, msg *ethpb.SignedBLSToExecutionChange, topic string) (*Service, string) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
+				s.cfg.clock = startup.NewClock(time.Now(), [32]byte{'A'})
 				s.initCaches()
 				st, keys := util.DeterministicGenesisStateCapella(t, 128)
 				assert.NoError(t, st.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
@@ -283,7 +301,8 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 					return true, val, nil
 				}))
 				s.cfg.chain = &mockChain.ChainService{
-					State: st,
+					State:   st,
+					Genesis: time.Now(),
 				}
 
 				msg.Message.ValidatorIndex = 50
@@ -313,15 +332,18 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				WithChainService(chainService),
 				WithOperationNotifier(chainService.OperationNotifier()),
 				WithBlsToExecPool(blstoexec.NewPool()),
+				WithStateNotifier(chainService.StateNotifier()),
 			},
 			clock: startup.NewClock(time.Now().Add(-time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Duration(10)), [32]byte{'A'}),
 			setupSvc: func(s *Service, msg *ethpb.SignedBLSToExecutionChange, topic string) (*Service, string) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
+				s.cfg.clock = startup.NewClock(time.Now(), [32]byte{'A'})
 				s.initCaches()
 				st, keys := util.DeterministicGenesisStateCapella(t, 128)
 				s.cfg.chain = &mockChain.ChainService{
-					State: st,
+					State:   st,
+					Genesis: time.Now(),
 				}
 
 				msg.Message.ValidatorIndex = 50
@@ -354,15 +376,18 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				WithChainService(chainService),
 				WithOperationNotifier(chainService.OperationNotifier()),
 				WithBlsToExecPool(blstoexec.NewPool()),
+				WithStateNotifier(chainService.StateNotifier()),
 			},
 			clock: startup.NewClock(time.Now().Add(-time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Duration(10)), [32]byte{'A'}),
 			setupSvc: func(s *Service, msg *ethpb.SignedBLSToExecutionChange, topic string) (*Service, string) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
+				s.cfg.clock = startup.NewClock(time.Now(), [32]byte{'A'})
 				s.initCaches()
 				st, keys := util.DeterministicGenesisStateCapella(t, 128)
 				s.cfg.chain = &mockChain.ChainService{
-					State: st,
+					State:   st,
+					Genesis: time.Now(),
 				}
 
 				msg.Message.ValidatorIndex = 50
@@ -372,7 +397,7 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				epoch := slots.ToEpoch(st.Slot())
 				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 				assert.NoError(t, err)
-				htr, err := signing.SigningData(msg.Message.HashTreeRoot, domain)
+				htr, err := signing.Data(msg.Message.HashTreeRoot, domain)
 				assert.NoError(t, err)
 				msg.Signature = keys[51].Sign(htr[:]).Marshal()
 				return s, topic
@@ -406,6 +431,8 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				tt.clock = startup.NewClock(time.Now(), [32]byte{})
 			}
 			require.NoError(t, cw.SetClock(tt.clock))
+			svc.verifierWaiter = verification.NewInitializerWaiter(cw, chainService.ForkChoiceStore, svc.cfg.stateGen)
+
 			marshalledObj, err := tt.args.msg.MarshalSSZ()
 			assert.NoError(t, err)
 			marshalledObj = snappy.Encode(nil, marshalledObj)

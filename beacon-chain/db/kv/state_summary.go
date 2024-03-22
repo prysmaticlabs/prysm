@@ -3,8 +3,8 @@ package kv
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -64,7 +64,7 @@ func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.St
 
 // HasStateSummary returns true if a state summary exists in DB.
 func (s *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
+	_, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
 	defer span.End()
 
 	if s.stateSummaryCache.has(blockRoot) {

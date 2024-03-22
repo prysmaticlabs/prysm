@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/prysm/v4/network/authorization"
+	"github.com/prysmaticlabs/prysm/v5/network/authorization"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,8 +22,9 @@ type Endpoint struct {
 
 // AuthorizationData holds all information necessary to authorize with HTTP.
 type AuthorizationData struct {
-	Method authorization.AuthorizationMethod
+	Method authorization.Method
 	Value  string
+	JwtId  string
 }
 
 // Equals compares two endpoints for equality.
@@ -37,11 +38,11 @@ func (e Endpoint) HttpClient() *http.Client {
 	if e.Auth.Method != authorization.Bearer {
 		return http.DefaultClient
 	}
-	return NewHttpClientWithSecret(e.Auth.Value)
+	return NewHttpClientWithSecret(e.Auth.Value, e.Auth.JwtId)
 }
 
 // Equals compares two authorization data objects for equality.
-func (d AuthorizationData) Equals(other AuthorizationData) bool {
+func (d *AuthorizationData) Equals(other AuthorizationData) bool {
 	return d.Method == other.Method && d.Value == other.Value
 }
 
@@ -100,7 +101,7 @@ func HttpEndpoint(eth1Provider string) Endpoint {
 }
 
 // Method returns the authorizationmethod.AuthorizationMethod corresponding with the parameter value.
-func Method(auth string) authorization.AuthorizationMethod {
+func Method(auth string) authorization.Method {
 	if strings.HasPrefix(strings.ToLower(auth), "basic") {
 		return authorization.Basic
 	}
@@ -112,10 +113,11 @@ func Method(auth string) authorization.AuthorizationMethod {
 
 // NewHttpClientWithSecret returns a http client that utilizes
 // jwt authentication.
-func NewHttpClientWithSecret(secret string) *http.Client {
+func NewHttpClientWithSecret(secret, id string) *http.Client {
 	authTransport := &jwtTransport{
 		underlyingTransport: http.DefaultTransport,
 		jwtSecret:           []byte(secret),
+		jwtId:               id,
 	}
 	return &http.Client{
 		Timeout:   DefaultRPCHTTPTimeout,
@@ -123,7 +125,7 @@ func NewHttpClientWithSecret(secret string) *http.Client {
 	}
 }
 
-func NewExecutionRPCClient(ctx context.Context, endpoint Endpoint) (*gethRPC.Client, error) {
+func NewExecutionRPCClient(ctx context.Context, endpoint Endpoint, headers http.Header) (*gethRPC.Client, error) {
 	// Need to handle ipc and http
 	var client *gethRPC.Client
 	u, err := url.Parse(endpoint.Url)
@@ -132,7 +134,7 @@ func NewExecutionRPCClient(ctx context.Context, endpoint Endpoint) (*gethRPC.Cli
 	}
 	switch u.Scheme {
 	case "http", "https":
-		client, err = gethRPC.DialOptions(ctx, endpoint.Url, gethRPC.WithHTTPClient(endpoint.HttpClient()))
+		client, err = gethRPC.DialOptions(ctx, endpoint.Url, gethRPC.WithHTTPClient(endpoint.HttpClient()), gethRPC.WithHeaders(headers))
 		if err != nil {
 			return nil, err
 		}

@@ -3,11 +3,11 @@ package state_native
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // RotateAttestations sets the previous epoch attestations to the current epoch attestations and
@@ -54,7 +54,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 	}
 
 	atts := b.currentEpochAttestations
-	max := uint64(params.BeaconConfig().CurrentEpochAttestationsLength())
+	max := params.BeaconConfig().CurrentEpochAttestationsLength()
 	if uint64(len(atts)) >= max {
 		return fmt.Errorf("current pending attestation exceeds max length %d", max)
 	}
@@ -84,14 +84,14 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestat
 	}
 
 	atts := b.previousEpochAttestations
-	max := uint64(params.BeaconConfig().PreviousEpochAttestationsLength())
+	max := params.BeaconConfig().PreviousEpochAttestationsLength()
 	if uint64(len(atts)) >= max {
 		return fmt.Errorf("previous pending attestation exceeds max length %d", max)
 	}
 
 	if b.sharedFieldReferences[types.PreviousEpochAttestations].Refs() > 1 {
-		atts = make([]*ethpb.PendingAttestation, len(b.previousEpochAttestations))
-		copy(atts, b.previousEpochAttestations)
+		atts = make([]*ethpb.PendingAttestation, 0, len(b.previousEpochAttestations)+1)
+		atts = append(atts, b.previousEpochAttestations...)
 		b.sharedFieldReferences[types.PreviousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[types.PreviousEpochAttestations] = stateutil.NewRef(1)
 	}

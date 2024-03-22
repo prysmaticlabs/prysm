@@ -7,12 +7,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/test-helpers"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	"go.uber.org/mock/gomock"
 )
 
 func TestProposeAttestation(t *testing.T) {
@@ -114,7 +114,7 @@ func TestProposeAttestation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			var marshalledAttestations []byte
 			if checkNilAttestation(test.attestation) == nil {
@@ -125,14 +125,13 @@ func TestProposeAttestation(t *testing.T) {
 
 			ctx := context.Background()
 
-			jsonRestHandler.EXPECT().PostRestJson(
+			jsonRestHandler.EXPECT().Post(
 				ctx,
 				"/eth/v1/beacon/pool/attestations",
 				nil,
 				bytes.NewBuffer(marshalledAttestations),
 				nil,
 			).Return(
-				nil,
 				test.endpointError,
 			).Times(test.endpointCall)
 

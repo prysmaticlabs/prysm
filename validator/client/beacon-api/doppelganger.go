@@ -9,10 +9,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 type DoppelGangerInfo struct {
@@ -147,7 +147,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 			return nil, errors.New("validator is nil")
 		}
 
-		stringPubKeyToIndex[v.Validator.PublicKey] = index
+		stringPubKeyToIndex[v.Validator.Pubkey] = index
 		indexes[i] = index
 	}
 

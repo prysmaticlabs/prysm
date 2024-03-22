@@ -7,12 +7,12 @@ import (
 	"math"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	v1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	v1alpha1 "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
@@ -85,6 +85,8 @@ func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.ReadOnlyBeaconBlock 
 		wb, err = blocks.NewSignedBeaconBlock(bb.BellatrixBlock)
 	case *v1alpha1.BeaconBlockContainer_CapellaBlock:
 		wb, err = blocks.NewSignedBeaconBlock(bb.CapellaBlock)
+	case *v1alpha1.BeaconBlockContainer_BlindedCapellaBlock:
+		wb, err = blocks.NewSignedBeaconBlock(bb.BlindedCapellaBlock)
 	}
 	if err != nil {
 		panic("no block")

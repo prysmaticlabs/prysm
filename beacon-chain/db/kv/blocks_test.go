@@ -7,16 +7,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -90,23 +90,40 @@ var blockTests = []struct {
 			return blocks.NewSignedBeaconBlock(b)
 		},
 	},
-}
-
-func TestStore_SaveBackfillBlockRoot(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-
-	_, err := db.BackfillBlockRoot(ctx)
-	require.ErrorIs(t, err, ErrNotFoundBackfillBlockRoot)
-
-	var expected [32]byte
-	copy(expected[:], []byte{0x23})
-	err = db.SaveBackfillBlockRoot(ctx, expected)
-	require.NoError(t, err)
-	actual, err := db.BackfillBlockRoot(ctx)
-	require.NoError(t, err)
-	require.Equal(t, expected, actual)
-
+	{
+		name: "deneb",
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+			b := util.NewBeaconBlockDeneb()
+			b.Block.Slot = slot
+			if root != nil {
+				b.Block.ParentRoot = root
+				b.Block.Body.BlobKzgCommitments = [][]byte{
+					bytesutil.PadTo([]byte{0x01}, 48),
+					bytesutil.PadTo([]byte{0x02}, 48),
+					bytesutil.PadTo([]byte{0x03}, 48),
+					bytesutil.PadTo([]byte{0x04}, 48),
+				}
+			}
+			return blocks.NewSignedBeaconBlock(b)
+		},
+	},
+	{
+		name: "deneb blind",
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+			b := util.NewBlindedBeaconBlockDeneb()
+			b.Message.Slot = slot
+			if root != nil {
+				b.Message.ParentRoot = root
+				b.Message.Body.BlobKzgCommitments = [][]byte{
+					bytesutil.PadTo([]byte{0x05}, 48),
+					bytesutil.PadTo([]byte{0x06}, 48),
+					bytesutil.PadTo([]byte{0x07}, 48),
+					bytesutil.PadTo([]byte{0x08}, 48),
+				}
+			}
+			return blocks.NewSignedBeaconBlock(b)
+		},
+	},
 }
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
@@ -272,7 +289,7 @@ func TestStore_DeleteBlock(t *testing.T) {
 	require.Equal(t, b, nil)
 	require.Equal(t, false, db.HasStateSummary(ctx, root2))
 
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteFinalized)
 }
 
 func TestStore_DeleteJustifiedBlock(t *testing.T) {
@@ -292,7 +309,7 @@ func TestStore_DeleteJustifiedBlock(t *testing.T) {
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteFinalized)
 }
 
 func TestStore_DeleteFinalizedBlock(t *testing.T) {
@@ -312,7 +329,7 @@ func TestStore_DeleteFinalizedBlock(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteFinalized)
 }
 func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)
@@ -356,6 +373,10 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if _, err := blk.PbCapellaBlock(); err == nil {
+				wanted, err = blk.ToBlinded()
+				require.NoError(t, err)
+			}
+			if _, err := blk.PbDenebBlock(); err == nil {
 				wanted, err = blk.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -582,6 +603,10 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 				wanted, err = wanted.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := block1.PbDenebBlock(); err == nil {
+				wanted, err = wanted.ToBlinded()
+				require.NoError(t, err)
+			}
 			wantedPb, err := wanted.Proto()
 			require.NoError(t, err)
 			bPb, err := b.Proto()
@@ -604,6 +629,10 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 				wanted2, err = block2.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := block2.PbDenebBlock(); err == nil {
+				wanted2, err = block2.ToBlinded()
+				require.NoError(t, err)
+			}
 			wanted2Pb, err := wanted2.Proto()
 			require.NoError(t, err)
 			bPb, err = b.Proto()
@@ -623,6 +652,10 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if _, err := block3.PbCapellaBlock(); err == nil {
+				wanted, err = wanted.ToBlinded()
+				require.NoError(t, err)
+			}
+			if _, err := block3.PbDenebBlock(); err == nil {
 				wanted, err = wanted.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -666,6 +699,10 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 				wanted, err = block1.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := block1.PbDenebBlock(); err == nil {
+				wanted, err = block1.ToBlinded()
+				require.NoError(t, err)
+			}
 			wantedPb, err := wanted.Proto()
 			require.NoError(t, err)
 			bPb, err := b.Proto()
@@ -687,6 +724,10 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 				wanted, err = genesisBlock.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := genesisBlock.PbDenebBlock(); err == nil {
+				wanted, err = genesisBlock.ToBlinded()
+				require.NoError(t, err)
+			}
 			wantedPb, err = wanted.Proto()
 			require.NoError(t, err)
 			bPb, err = b.Proto()
@@ -705,6 +746,10 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if _, err := genesisBlock.PbCapellaBlock(); err == nil {
+				wanted, err = genesisBlock.ToBlinded()
+				require.NoError(t, err)
+			}
+			if _, err := genesisBlock.PbDenebBlock(); err == nil {
 				wanted, err = genesisBlock.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -808,6 +853,10 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 				wanted, err = b1.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := b1.PbDenebBlock(); err == nil {
+				wanted, err = b1.ToBlinded()
+				require.NoError(t, err)
+			}
 			retrieved0Pb, err := retrievedBlocks[0].Proto()
 			require.NoError(t, err)
 			wantedPb, err := wanted.Proto()
@@ -828,6 +877,10 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 				wanted, err = b2.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := b2.PbDenebBlock(); err == nil {
+				wanted, err = b2.ToBlinded()
+				require.NoError(t, err)
+			}
 			retrieved0Pb, err = retrievedBlocks[0].Proto()
 			require.NoError(t, err)
 			wantedPb, err = wanted.Proto()
@@ -839,6 +892,10 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if _, err := b3.PbCapellaBlock(); err == nil {
+				wanted, err = b3.ToBlinded()
+				require.NoError(t, err)
+			}
+			if _, err := b3.PbDenebBlock(); err == nil {
 				wanted, err = b3.ToBlinded()
 				require.NoError(t, err)
 			}

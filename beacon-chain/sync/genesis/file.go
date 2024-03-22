@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 )
 
 // Initializer describes a type that is able to obtain the checkpoint sync data (BeaconState and SignedBeaconBlock)
@@ -42,6 +43,9 @@ func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error 
 	if err != nil {
 		return errors.Wrapf(err, "error reading state file %s for checkpoint sync init", fi.statePath)
 	}
+	log.WithField(
+		"hash", fmt.Sprintf("%#x", hash.FastSum256(serState)),
+	).Info("Loading genesis state from disk.")
 	return d.LoadGenesis(ctx, serState)
 }
 

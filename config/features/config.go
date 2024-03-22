@@ -23,10 +23,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -37,10 +38,10 @@ const disabledFeatureFlag = "Disabled feature flag"
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Feature related flags.
-	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
+	EnableExperimentalState             bool // EnableExperimentalState turns on the latest and greatest (but potentially unstable) changes to the beacon state.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	DisableReorgLateBlocks              bool // DisableReorgLateBlocks disables reorgs of late blocks.
+	EnableLightClient                   bool // EnableLightClient enables light client APIs.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
@@ -56,7 +57,8 @@ type Flags struct {
 	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
 
 	EnableSlasher                   bool // Enable slasher in the beacon node runtime.
-	EnableSlashingProtectionPruning bool // EnableSlashingProtectionPruning for the validator client.
+	EnableSlashingProtectionPruning bool // Enable slashing protection pruning for the validator client.
+	EnableMinimalSlashingProtection bool // Enable minimal slashing protection database for the validator client.
 
 	SaveFullExecutionPayloads bool // Save full beacon blocks with execution payloads in the database.
 	EnableStartOptimistic     bool // EnableStartOptimistic treats every block as optimistic at startup.
@@ -65,12 +67,14 @@ type Flags struct {
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
-	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
+	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
+	// BlobSaveFsync requires blob saving to block on fsync to ensure blobs are durably persisted before passing DA.
+	BlobSaveFsync bool
 
-	BuildBlockParallel bool // BuildBlockParallel builds beacon block for proposer in parallel.
-	AggregateParallel  bool // AggregateParallel aggregates attestations in parallel.
+	SaveInvalidBlock bool // SaveInvalidBlock saves invalid block to temp.
+	SaveInvalidBlob  bool // SaveInvalidBlob saves invalid blob to temp.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -120,24 +124,31 @@ func InitWithReset(c *Flags) func() {
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context) error {
 	if ctx.Bool(PraterTestnet.Name) {
-		log.Warn("Running on the Prater Testnet")
+		log.Info("Running on the Prater Testnet")
 		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
 			return err
 		}
 		applyPraterFeatureFlags(ctx)
 		params.UsePraterNetworkConfig()
 	} else if ctx.Bool(SepoliaTestnet.Name) {
-		log.Warn("Running on the Sepolia Beacon Chain Testnet")
+		log.Info("Running on the Sepolia Beacon Chain Testnet")
 		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
 			return err
 		}
 		applySepoliaFeatureFlags(ctx)
 		params.UseSepoliaNetworkConfig()
+	} else if ctx.Bool(HoleskyTestnet.Name) {
+		log.Info("Running on the Holesky Beacon Chain Testnet")
+		if err := params.SetActive(params.HoleskyConfig().Copy()); err != nil {
+			return err
+		}
+		applyHoleskyFeatureFlags(ctx)
+		params.UseHoleskyNetworkConfig()
 	} else {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
 		} else {
-			log.Warn("Running on Ethereum Mainnet")
+			log.Info("Running on Ethereum Mainnet")
 		}
 		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
 			return err
@@ -154,6 +165,10 @@ func applyPraterFeatureFlags(ctx *cli.Context) {
 func applySepoliaFeatureFlags(ctx *cli.Context) {
 }
 
+// Insert feature flags within the function to be enabled for Holesky testnet.
+func applyHoleskyFeatureFlags(ctx *cli.Context) {
+}
+
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) error {
@@ -166,9 +181,24 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		return err
 	}
 
+	if ctx.Bool(enableExperimentalState.Name) {
+		logEnabled(enableExperimentalState)
+		cfg.EnableExperimentalState = true
+	}
+
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		logEnabled(writeSSZStateTransitionsFlag)
 		cfg.WriteSSZStateTransitions = true
+	}
+
+	if ctx.Bool(saveInvalidBlockTempFlag.Name) {
+		logEnabled(saveInvalidBlockTempFlag)
+		cfg.SaveInvalidBlock = true
+	}
+
+	if ctx.Bool(saveInvalidBlobTempFlag.Name) {
+		logEnabled(saveInvalidBlobTempFlag)
+		cfg.SaveInvalidBlob = true
 	}
 
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
@@ -176,10 +206,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 
-	if ctx.Bool(disableReorgLateBlocks.Name) {
-		logEnabled(disableReorgLateBlocks)
-		cfg.DisableReorgLateBlocks = true
-	}
 	cfg.EnablePeerScorer = true
 	if ctx.Bool(disablePeerScorer.Name) {
 		logDisabled(disablePeerScorer)
@@ -213,32 +239,33 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableFullSSZDataLogging)
 		cfg.EnableFullSSZDataLogging = true
 	}
-	if ctx.IsSet(enableVerboseSigVerification.Name) {
-		logEnabled(enableVerboseSigVerification)
-		cfg.EnableVerboseSigVerification = true
-	}
-	if ctx.IsSet(enableOptionalEngineMethods.Name) {
-		logEnabled(enableOptionalEngineMethods)
-		cfg.EnableOptionalEngineMethods = true
+	cfg.EnableVerboseSigVerification = true
+	if ctx.IsSet(disableVerboseSigVerification.Name) {
+		logEnabled(disableVerboseSigVerification)
+		cfg.EnableVerboseSigVerification = false
 	}
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)
 		cfg.PrepareAllPayloads = true
 	}
-	cfg.BuildBlockParallel = true
-	if ctx.IsSet(disableBuildBlockParallel.Name) {
-		logEnabled(disableBuildBlockParallel)
-		cfg.BuildBlockParallel = false
-	}
-	cfg.AggregateParallel = true
-	if ctx.IsSet(disableAggregateParallel.Name) {
-		logEnabled(disableAggregateParallel)
-		cfg.AggregateParallel = false
-	}
 	if ctx.IsSet(disableResourceManager.Name) {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
 	}
+	cfg.EnableEIP4881 = true
+	if ctx.IsSet(DisableEIP4881.Name) {
+		logEnabled(DisableEIP4881)
+		cfg.EnableEIP4881 = false
+	}
+	if ctx.IsSet(EnableLightClient.Name) {
+		logEnabled(EnableLightClient)
+		cfg.EnableLightClient = true
+	}
+	if ctx.IsSet(BlobSaveFsync.Name) {
+		logEnabled(BlobSaveFsync)
+		cfg.BlobSaveFsync = true
+	}
+
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil
@@ -252,12 +279,6 @@ func ConfigureValidator(ctx *cli.Context) error {
 	if err := configureTestnet(ctx); err != nil {
 		return err
 	}
-	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.Fatal(
-			"Remote slashing protection has currently been disabled in Prysm due to safety concerns. " +
-				"We appreciate your understanding in our desire to keep Prysm validators safe.",
-		)
-	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		logEnabled(writeWalletPasswordOnWebOnboarding)
 		cfg.WriteWalletPasswordOnWebOnboarding = true
@@ -269,6 +290,10 @@ func ConfigureValidator(ctx *cli.Context) error {
 	if ctx.Bool(enableSlashingProtectionPruning.Name) {
 		logEnabled(enableSlashingProtectionPruning)
 		cfg.EnableSlashingProtectionPruning = true
+	}
+	if ctx.Bool(EnableMinimalSlashingProtection.Name) {
+		logEnabled(EnableMinimalSlashingProtection)
+		cfg.EnableMinimalSlashingProtection = true
 	}
 	if ctx.Bool(enableDoppelGangerProtection.Name) {
 		logEnabled(enableDoppelGangerProtection)

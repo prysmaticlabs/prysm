@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -12,21 +11,23 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -37,9 +38,8 @@ import (
 var eth1DataNotification bool
 
 const (
-	// CouldNotDecodeBlock means that a signed beacon block couldn't be created from the block present in the request.
-	CouldNotDecodeBlock = "Could not decode block"
-	eth1dataTimeout     = 2 * time.Second
+	eth1dataTimeout           = 2 * time.Second
+	defaultBuilderBoostFactor = uint64(100)
 )
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
@@ -62,15 +62,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-
-	// process attestations and update head in forkchoice
-	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
-	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
-	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
-	if parentRoot != headRoot {
-		blockchain.LateBlockAttemptedReorgCount.Inc()
-	}
-
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
 		if err := vs.optimisticStatus(ctx); err != nil {
@@ -78,19 +69,14 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 	}
 
+	head, parentRoot, err := vs.getParentState(ctx, req.Slot)
+	if err != nil {
+		return nil, err
+	}
 	sBlk, err := getEmptyBlock(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
 	}
-	head, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-	}
-
 	// Set slot, graffiti, randao reveal, and parent root.
 	sBlk.SetSlot(req.Slot)
 	sBlk.SetGraffiti(req.Graffiti)
@@ -104,57 +90,13 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetProposerIndex(idx)
 
-	if features.Get().BuildBlockParallel {
-		if err := vs.BuildBlockParallel(ctx, sBlk, head); err != nil {
-			return nil, errors.Wrap(err, "could not build block in parallel")
-		}
-	} else {
-		// Set eth1 data.
-		eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
-		if err != nil {
-			eth1Data = &ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]}
-			log.WithError(err).Error("Could not get eth1data")
-		}
-		sBlk.SetEth1Data(eth1Data)
+	builderBoostFactor := defaultBuilderBoostFactor
+	if req.BuilderBoostFactor != nil {
+		builderBoostFactor = req.BuilderBoostFactor.Value
+	}
 
-		// Set deposit and attestation.
-		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
-		if err != nil {
-			sBlk.SetDeposits([]*ethpb.Deposit{})
-			sBlk.SetAttestations([]*ethpb.Attestation{})
-			log.WithError(err).Error("Could not pack deposits and attestations")
-		} else {
-			sBlk.SetDeposits(deposits)
-			sBlk.SetAttestations(atts)
-		}
-
-		// Set slashings.
-		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
-		sBlk.SetProposerSlashings(validProposerSlashings)
-		sBlk.SetAttesterSlashings(validAttSlashings)
-
-		// Set exits.
-		sBlk.SetVoluntaryExits(vs.getExits(head, req.Slot))
-
-		// Set sync aggregate. New in Altair.
-		vs.setSyncAggregate(ctx, sBlk)
-
-		// Get local and builder (if enabled) payloads. Set execution data. New in Bellatrix.
-		localPayload, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
-		}
-		builderPayload, err := vs.getBuilderPayload(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
-		if err != nil {
-			builderGetPayloadMissCount.Inc()
-			log.WithError(err).Error("Could not get builder payload")
-		}
-		if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
-		}
-
-		// Set bls to execution change. New in Capella.
-		vs.setBlsToExecData(sBlk, head)
+	if err = vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost, builderBoostFactor); err != nil {
+		return nil, errors.Wrap(err, "could not build block in parallel")
 	}
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
@@ -169,29 +111,79 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
 
-	pb, err := sBlk.Block().Proto()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
-	}
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
-		if sBlk.IsBlinded() {
-			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedCapella{BlindedCapella: pb.(*ethpb.BlindedBeaconBlockCapella)}}, nil
-		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
-	}
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
-		if sBlk.IsBlinded() {
-			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb.(*ethpb.BlindedBeaconBlockBellatrix)}}, nil
-		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}}, nil
-	}
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: pb.(*ethpb.BeaconBlockAltair)}}, nil
-	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}}, nil
+	// Blob cache is updated after BuildBlockParallel
+	return vs.constructGenericBeaconBlock(sBlk, bundleCache.get(req.Slot))
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState) error {
+func (vs *Server) handleSuccesfulReorgAttempt(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (state.BeaconState, error) {
+	// Try to get the state from the NSC
+	head := transition.NextSlotState(parentRoot[:], slot)
+	if head != nil {
+		return head, nil
+	}
+	// cache miss
+	head, err := vs.StateGen.StateByRoot(ctx, parentRoot)
+	if err != nil {
+		return nil, status.Error(codes.Unavailable, "could not obtain head state")
+	}
+	return head, nil
+}
+
+func logFailedReorgAttempt(slot primitives.Slot, oldHeadRoot, headRoot [32]byte) {
+	blockchain.LateBlockAttemptedReorgCount.Inc()
+	log.WithFields(logrus.Fields{
+		"slot":        slot,
+		"oldHeadRoot": fmt.Sprintf("%#x", oldHeadRoot),
+		"headRoot":    fmt.Sprintf("%#x", headRoot),
+	}).Warn("late block attempted reorg failed")
+}
+
+func (vs *Server) getHeadNoReorg(ctx context.Context, slot primitives.Slot, parentRoot [32]byte) (state.BeaconState, error) {
+	// Try to get the state from the NSC
+	head := transition.NextSlotState(parentRoot[:], slot)
+	if head != nil {
+		return head, nil
+	}
+	head, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	return head, nil
+}
+
+func (vs *Server) getParentStateFromReorgData(ctx context.Context, slot primitives.Slot, oldHeadRoot, parentRoot, headRoot [32]byte) (head state.BeaconState, err error) {
+	if parentRoot != headRoot {
+		head, err = vs.handleSuccesfulReorgAttempt(ctx, slot, parentRoot, headRoot)
+	} else {
+		if oldHeadRoot != headRoot {
+			logFailedReorgAttempt(slot, oldHeadRoot, headRoot)
+		}
+		head, err = vs.getHeadNoReorg(ctx, slot, parentRoot)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if head.Slot() >= slot {
+		return head, nil
+	}
+	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", slot, err)
+	}
+	return head, nil
+}
+
+func (vs *Server) getParentState(ctx context.Context, slot primitives.Slot) (state.BeaconState, [32]byte, error) {
+	// process attestations and update head in forkchoice
+	oldHeadRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
+	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
+	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
+	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
+	head, err := vs.getParentStateFromReorgData(ctx, slot, oldHeadRoot, parentRoot, headRoot)
+	return head, parentRoot, err
+}
+
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor uint64) error {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -232,18 +224,24 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	localPayload, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
+	localPayload, overrideBuilder, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 	}
 
-	builderPayload, err := vs.getBuilderPayload(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
-	if err != nil {
-		builderGetPayloadMissCount.Inc()
-		log.WithError(err).Error("Could not get builder payload")
+	// There's no reason to try to get a builder bid if local override is true.
+	var builderPayload interfaces.ExecutionData
+	var builderKzgCommitments [][]byte
+	overrideBuilder = overrideBuilder || skipMevBoost // Skip using mev-boost if requested by the caller.
+	if !overrideBuilder {
+		builderPayload, builderKzgCommitments, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
+		if err != nil {
+			builderGetPayloadMissCount.Inc()
+			log.WithError(err).Error("Could not get builder payload")
+		}
 	}
 
-	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
+	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload, builderKzgCommitments, builderBoostFactor); err != nil {
 		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
@@ -252,59 +250,171 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 	return nil
 }
 
-// ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
-// to get it processed by the beacon node as the canonical head.
+// ProposeBeaconBlock handles the proposal of beacon blocks.
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
 	defer span.End()
-	blk, err := blocks.NewSignedBeaconBlock(req.Block)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", CouldNotDecodeBlock, err)
+
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "empty request")
 	}
-	return vs.proposeGenericBeaconBlock(ctx, blk)
+
+	block, err := blocks.NewSignedBeaconBlock(req.Block)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", "decode block failed", err)
+	}
+
+	var sidecars []*ethpb.BlobSidecar
+	if block.IsBlinded() {
+		block, sidecars, err = vs.handleBlindedBlock(ctx, block)
+	} else {
+		sidecars, err = vs.handleUnblindedBlock(block, req)
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%s: %v", "handle block failed", err)
+	}
+
+	root, err := block.Block().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not hash tree root: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, 1)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := vs.broadcastReceiveBlock(ctx, block, root); err != nil {
+			errChan <- errors.Wrap(err, "broadcast/receive block failed")
+			return
+		}
+		errChan <- nil
+	}()
+
+	if err := vs.broadcastAndReceiveBlobs(ctx, sidecars, root); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast/receive blobs: %v", err)
+	}
+
+	wg.Wait()
+	if err := <-errChan; err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast/receive block: %v", err)
+	}
+
+	return &ethpb.ProposeResponse{BlockRoot: root[:]}, nil
+}
+
+// handleBlindedBlock processes blinded beacon blocks.
+func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, []*ethpb.BlobSidecar, error) {
+	if block.Version() < version.Bellatrix {
+		return nil, nil, errors.New("pre-Bellatrix blinded block")
+	}
+	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
+		return nil, nil, errors.New("unconfigured block builder")
+	}
+
+	copiedBlock, err := block.Copy()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	payload, bundle, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, block)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "submit blinded block failed")
+	}
+
+	if err := copiedBlock.Unblind(payload); err != nil {
+		return nil, nil, errors.Wrap(err, "unblind failed")
+	}
+
+	sidecars, err := unblindBlobsSidecars(copiedBlock, bundle)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "unblind sidecars failed")
+	}
+
+	return copiedBlock, sidecars, nil
+}
+
+// handleUnblindedBlock processes unblinded beacon blocks.
+func (vs *Server) handleUnblindedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.BlobSidecar, error) {
+	dbBlockContents := req.GetDeneb()
+	if dbBlockContents == nil {
+		return nil, nil
+	}
+	return buildBlobSidecars(block, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
+}
+
+// broadcastReceiveBlock broadcasts a block and handles its reception.
+func (vs *Server) broadcastReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, root [32]byte) error {
+	protoBlock, err := block.Proto()
+	if err != nil {
+		return errors.Wrap(err, "protobuf conversion failed")
+	}
+	if err := vs.P2P.Broadcast(ctx, protoBlock); err != nil {
+		return errors.Wrap(err, "broadcast failed")
+	}
+	vs.BlockNotifier.BlockFeed().Send(&feed.Event{
+		Type: blockfeed.ReceivedBlock,
+		Data: &blockfeed.ReceivedBlockData{SignedBlock: block},
+	})
+	return vs.BlockReceiver.ReceiveBlock(ctx, block, root, nil)
+}
+
+// broadcastAndReceiveBlobs handles the broadcasting and reception of blob sidecars.
+func (vs *Server) broadcastAndReceiveBlobs(ctx context.Context, sidecars []*ethpb.BlobSidecar, root [32]byte) error {
+	for i, sc := range sidecars {
+		if err := vs.P2P.BroadcastBlob(ctx, uint64(i), sc); err != nil {
+			return errors.Wrap(err, "broadcast blob failed")
+		}
+
+		readOnlySc, err := blocks.NewROBlobWithRoot(sc, root)
+		if err != nil {
+			return errors.Wrap(err, "ROBlob creation failed")
+		}
+		verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
+		if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
+			return errors.Wrap(err, "receive blob failed")
+		}
+		vs.OperationNotifier.OperationFeed().Send(&feed.Event{
+			Type: operation.BlobSidecarReceived,
+			Data: &operation.BlobSidecarReceivedData{Blob: &verifiedBlob},
+		})
+	}
+	return nil
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
 func (vs *Server) PrepareBeaconProposer(
-	ctx context.Context, request *ethpb.PrepareBeaconProposerRequest,
+	_ context.Context, request *ethpb.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
-	defer span.End()
-	var feeRecipients []common.Address
 	var validatorIndices []primitives.ValidatorIndex
 
-	newRecipients := make([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
 	for _, r := range request.Recipients {
-		f, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
-		switch {
-		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-			newRecipients = append(newRecipients, r)
-		case err != nil:
-			return nil, status.Errorf(codes.Internal, "Could not get fee recipient by validator index: %v", err)
-		default:
-			if common.BytesToAddress(r.FeeRecipient) != f {
-				newRecipients = append(newRecipients, r)
-			}
-		}
-	}
-	if len(newRecipients) == 0 {
-		return &emptypb.Empty{}, nil
-	}
-
-	for _, recipientContainer := range newRecipients {
-		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
+		recipient := hexutil.Encode(r.FeeRecipient)
 		if !common.IsHexAddress(recipient) {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
 		}
-		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
-		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
+		// Use default address if the burn address is return
+		feeRecipient := primitives.ExecutionAddress(r.FeeRecipient)
+		if feeRecipient == primitives.ExecutionAddress([20]byte{}) {
+			feeRecipient = primitives.ExecutionAddress(params.BeaconConfig().DefaultFeeRecipient)
+			if feeRecipient == primitives.ExecutionAddress([20]byte{}) {
+				log.WithField("validatorIndex", r.ValidatorIndex).Warn("fee recipient is the burn address")
+			}
+		}
+		val := cache.TrackedValidator{
+			Active:       true, // TODO: either check or add the field in the request
+			Index:        r.ValidatorIndex,
+			FeeRecipient: feeRecipient,
+		}
+		vs.TrackedValidatorsCache.Set(val)
+		validatorIndices = append(validatorIndices, r.ValidatorIndex)
 	}
-	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
+	if len(validatorIndices) != 0 {
+		log.WithFields(logrus.Fields{
+			"validatorCount": len(validatorIndices),
+		}).Info("Updated fee recipient addresses for validator indices")
 	}
-	log.WithFields(logrus.Fields{
-		"validatorIndices": validatorIndices,
-	}).Info("Updated fee recipient addresses for validator indices")
 	return &emptypb.Empty{}, nil
 }
 
@@ -340,52 +450,6 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 	}
 	return &ethpb.FeeRecipientByPubKeyResponse{
 		FeeRecipient: address.Bytes(),
-	}, nil
-}
-
-func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
-	defer span.End()
-
-	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create unblinder")
-	}
-	blk, err = unblinder.unblindBuilderBlock(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not unblind builder block")
-	}
-
-	// Broadcast the new block to the network.
-	blkPb, err := blk.Proto()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get protobuf block")
-	}
-	if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
-		return nil, fmt.Errorf("could not broadcast block: %v", err)
-	}
-	root, err := blk.Block().HashTreeRoot()
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash block: %v", err)
-	}
-
-	log.WithFields(logrus.Fields{
-		"blockRoot": hex.EncodeToString(root[:]),
-	}).Debug("Broadcasting block")
-
-	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
-		return nil, fmt.Errorf("could not process beacon block: %v", err)
-	}
-
-	log.WithField("slot", blk.Block().Slot()).Debugf(
-		"Block proposal received via RPC")
-	vs.BlockNotifier.BlockFeed().Send(&feed.Event{
-		Type: blockfeed.ReceivedBlock,
-		Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
-	})
-
-	return &ethpb.ProposeResponse{
-		BlockRoot: root[:],
 	}, nil
 }
 

@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestFastAggregateVerify(t *testing.T) {
@@ -20,9 +20,9 @@ func TestFastAggregateVerify(t *testing.T) {
 }
 
 func testFastAggregateVerify(t *testing.T) {
-	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/fast_aggregate_verify/small")
+	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/fast_aggregate_verify/bls")
 	if len(testFolders) == 0 {
-		t.Fatalf("No test folders found for %s/%s/%s", "general", "phase0", "bls/fast_aggregate_verify/small")
+		t.Fatalf("No test folders found for %s/%s/%s", "general", "phase0", "bls/fast_aggregate_verify/bls")
 	}
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

@@ -4,18 +4,18 @@ import (
 	"context"
 	"testing"
 
-	coreBlock "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition/stateutils"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	coreBlock "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition/stateutils"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
@@ -370,5 +370,5 @@ func TestGenerateVoluntaryExits(t *testing.T) {
 	require.NoError(t, err)
 	val, err := beaconState.ValidatorAtIndexReadOnly(0)
 	require.NoError(t, err)
-	require.NoError(t, coreBlock.VerifyExitAndSignature(val, 0, beaconState.Fork(), exit, beaconState.GenesisValidatorsRoot()))
+	require.NoError(t, coreBlock.VerifyExitAndSignature(val, beaconState, exit))
 }

@@ -4,15 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -30,7 +30,13 @@ func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	require.NoError(t, service.MigrateToCold(ctx, br))
 
 	wanted := &finalizedInfo{state: beaconState, root: br, slot: 1}
-	assert.DeepEqual(t, wanted, service.finalizedInfo, "Incorrect finalized info")
+	assert.DeepEqual(t, wanted.root, service.finalizedInfo.root)
+	assert.Equal(t, wanted.slot, service.finalizedInfo.slot)
+	expectedHTR, err := wanted.state.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err := service.finalizedInfo.state.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, actualHTR)
 }
 
 func TestMigrateToCold_HappyPath(t *testing.T) {
@@ -181,7 +187,7 @@ func TestMigrateToCold_ParallelCalls(t *testing.T) {
 	require.NoError(t, err)
 	wB7, err := consensusblocks.NewSignedBeaconBlock(b7)
 	require.NoError(t, err)
-	beaconState, err = executeStateTransitionStateGen(ctx, beaconState, wB7)
+	_, err = executeStateTransitionStateGen(ctx, beaconState, wB7)
 	assert.NoError(t, err)
 	r7, err := b7.Block.HashTreeRoot()
 	require.NoError(t, err)

@@ -1,22 +1,27 @@
 package forkchoice
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"path"
+	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func init() {
@@ -77,6 +82,9 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 				case version.Capella:
 					beaconState = unmarshalCapellaState(t, preBeaconStateSSZ)
 					beaconBlock = unmarshalCapellaBlock(t, blockSSZ)
+				case version.Deneb:
+					beaconState = unmarshalDenebState(t, preBeaconStateSSZ)
+					beaconBlock = unmarshalDenebBlock(t, blockSSZ)
 				default:
 					t.Fatalf("unknown fork version: %v", fork)
 				}
@@ -87,12 +95,12 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 					if step.Tick != nil {
 						builder.Tick(t, int64(*step.Tick))
 					}
+					var beaconBlock interfaces.ReadOnlySignedBeaconBlock
 					if step.Block != nil {
 						blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Block, ".ssz_snappy"))
 						require.NoError(t, err)
 						blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 						require.NoError(t, err)
-						var beaconBlock interfaces.ReadOnlySignedBeaconBlock
 						switch fork {
 						case version.Phase0:
 							beaconBlock = unmarshalSignedPhase0Block(t, blockSSZ)
@@ -102,9 +110,14 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 							beaconBlock = unmarshalSignedBellatrixBlock(t, blockSSZ)
 						case version.Capella:
 							beaconBlock = unmarshalSignedCapellaBlock(t, blockSSZ)
+						case version.Deneb:
+							beaconBlock = unmarshalSignedDenebBlock(t, blockSSZ)
 						default:
 							t.Fatalf("unknown fork version: %v", fork)
 						}
+					}
+					runBlobStep(t, step, beaconBlock, fork, folder, testsFolderPath, builder)
+					if beaconBlock != nil {
 						if step.Valid != nil && !*step.Valid {
 							builder.InvalidBlock(t, beaconBlock)
 						} else {
@@ -242,4 +255,146 @@ func unmarshalSignedCapellaBlock(t *testing.T, raw []byte) interfaces.ReadOnlySi
 	blk, err := blocks.NewSignedBeaconBlock(base)
 	require.NoError(t, err)
 	return blk
+}
+
+func unmarshalDenebState(t *testing.T, raw []byte) state.BeaconState {
+	base := &ethpb.BeaconStateDeneb{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	st, err := state_native.InitializeFromProtoDeneb(base)
+	require.NoError(t, err)
+	return st
+}
+
+func unmarshalDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.BeaconBlockDeneb{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockDeneb{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	require.NoError(t, err)
+	return blk
+}
+
+func unmarshalSignedDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.SignedBeaconBlockDeneb{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	blk, err := blocks.NewSignedBeaconBlock(base)
+	require.NoError(t, err)
+	return blk
+}
+
+func runBlobStep(t *testing.T,
+	step Step,
+	beaconBlock interfaces.ReadOnlySignedBeaconBlock,
+	fork int,
+	folder os.DirEntry,
+	testsFolderPath string,
+	builder *Builder,
+) {
+	blobs := step.Blobs
+	proofs := step.Proofs
+	if blobs != nil && *blobs != "null" {
+		require.NotNil(t, beaconBlock)
+		require.Equal(t, true, fork >= version.Deneb)
+
+		block := beaconBlock.Block()
+		root, err := block.HashTreeRoot()
+		require.NoError(t, err)
+		kzgs, err := block.Body().BlobKzgCommitments()
+		require.NoError(t, err)
+
+		blobsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*blobs, ".ssz_snappy"))
+		require.NoError(t, err)
+		blobsSSZ, err := snappy.Decode(nil /* dst */, blobsFile)
+		require.NoError(t, err)
+		sh, err := beaconBlock.Header()
+		require.NoError(t, err)
+		requireVerifyExpected := errAssertionForStep(step, verification.ErrBlobInvalid)
+		for index := 0; index*fieldparams.BlobLength < len(blobsSSZ); index++ {
+			var proof []byte
+			if index < len(proofs) {
+				proofPTR := proofs[index]
+				require.NotNil(t, proofPTR)
+				proof, err = hexutil.Decode(*proofPTR)
+				require.NoError(t, err)
+			}
+
+			blob := [fieldparams.BlobLength]byte{}
+			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
+			if len(proof) == 0 {
+				proof = make([]byte, 48)
+			}
+
+			inclusionProof, err := blocks.MerkleProofKZGCommitment(block.Body(), index)
+			require.NoError(t, err)
+			pb := &ethpb.BlobSidecar{
+				Index:                    uint64(index),
+				Blob:                     blob[:],
+				KzgCommitment:            kzgs[index],
+				KzgProof:                 proof,
+				SignedBlockHeader:        sh,
+				CommitmentInclusionProof: inclusionProof,
+			}
+			ro, err := blocks.NewROBlobWithRoot(pb, root)
+			require.NoError(t, err)
+			ini, err := builder.vwait.WaitForInitializer(context.Background())
+			require.NoError(t, err)
+			bv := ini.NewBlobVerifier(ro, verification.SpectestSidecarRequirements)
+			ctx := context.Background()
+			if err := bv.BlobIndexInBounds(); err != nil {
+				t.Logf("BlobIndexInBounds error: %s", err.Error())
+			}
+			if err := bv.NotFromFutureSlot(); err != nil {
+				t.Logf("NotFromFutureSlot error: %s", err.Error())
+			}
+			if err := bv.SlotAboveFinalized(); err != nil {
+				t.Logf("SlotAboveFinalized error: %s", err.Error())
+			}
+			if err := bv.SidecarInclusionProven(); err != nil {
+				t.Logf("SidecarInclusionProven error: %s", err.Error())
+			}
+			if err := bv.SidecarKzgProofVerified(); err != nil {
+				t.Logf("SidecarKzgProofVerified error: %s", err.Error())
+			}
+			if err := bv.ValidProposerSignature(ctx); err != nil {
+				t.Logf("ValidProposerSignature error: %s", err.Error())
+			}
+			if err := bv.SidecarParentSlotLower(); err != nil {
+				t.Logf("SidecarParentSlotLower error: %s", err.Error())
+			}
+			if err := bv.SidecarDescendsFromFinalized(); err != nil {
+				t.Logf("SidecarDescendsFromFinalized error: %s", err.Error())
+			}
+			if err := bv.SidecarProposerExpected(ctx); err != nil {
+				t.Logf("SidecarProposerExpected error: %s", err.Error())
+			}
+
+			vsc, err := bv.VerifiedROBlob()
+			requireVerifyExpected(t, err)
+
+			if err == nil {
+				require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
+			}
+		}
+	}
+}
+
+func errAssertionForStep(step Step, expect error) func(t *testing.T, err error) {
+	if !*step.Valid {
+		return func(t *testing.T, err error) {
+			require.ErrorIs(t, err, expect)
+		}
+	}
+	return func(t *testing.T, err error) {
+		if err != nil {
+			require.ErrorIs(t, err, verification.ErrBlobInvalid)
+			me, ok := err.(verification.VerificationMultiError)
+			require.Equal(t, true, ok)
+			fails := me.Failures()
+			// we haven't performed any verification, so all the results should be this type
+			fmsg := make([]string, 0, len(fails))
+			for k, v := range fails {
+				fmsg = append(fmsg, fmt.Sprintf("%s - %s", v.Error(), k.String()))
+			}
+			t.Fatal(strings.Join(fmsg, ";"))
+		}
+	}
 }

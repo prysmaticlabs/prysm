@@ -2,13 +2,14 @@ package kv
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	dbIface "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	dbIface "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz/detect"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
@@ -45,6 +46,10 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 
 // LoadGenesis loads a genesis state from a ssz-serialized byte slice, if no genesis exists already.
 func (s *Store) LoadGenesis(ctx context.Context, sb []byte) error {
+	if len(sb) < (1 << 10) {
+		log.WithField("size", fmt.Sprintf("%d bytes", len(sb))).
+			Warn("Genesis state is smaller than one 1Kb. This could be an empty file, git lfs metadata file, or corrupt genesis state.")
+	}
 	vu, err := detect.FromState(sb)
 	if err != nil {
 		return err

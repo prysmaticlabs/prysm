@@ -8,16 +8,16 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestValidatorMap_DistinctCopy(t *testing.T) {
@@ -272,6 +272,62 @@ func TestBeaconState_NoDeadlock_Capella(t *testing.T) {
 	wg.Wait()
 }
 
+func TestBeaconState_NoDeadlock_Deneb(t *testing.T) {
+	count := uint64(100)
+	vals := make([]*ethpb.Validator, 0, count)
+	for i := uint64(1); i < count; i++ {
+		var someRoot [32]byte
+		var someKey [fieldparams.BLSPubkeyLength]byte
+		copy(someRoot[:], strconv.Itoa(int(i)))
+		copy(someKey[:], strconv.Itoa(int(i)))
+		vals = append(vals, &ethpb.Validator{
+			PublicKey:                  someKey[:],
+			WithdrawalCredentials:      someRoot[:],
+			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+			Slashed:                    false,
+			ActivationEligibilityEpoch: 1,
+			ActivationEpoch:            1,
+			ExitEpoch:                  1,
+			WithdrawableEpoch:          1,
+		})
+	}
+	st, err := InitializeFromProtoUnsafeDeneb(&ethpb.BeaconStateDeneb{
+		Validators: vals,
+	})
+	assert.NoError(t, err)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
+
+	wg := new(sync.WaitGroup)
+
+	wg.Add(1)
+	go func() {
+		// Continuously lock and unlock the state
+		// by acquiring the lock.
+		for i := 0; i < 1000; i++ {
+			for _, f := range s.stateFieldLeaves {
+				f.Lock()
+				if f.Empty() {
+					f.InsertFieldLayer(make([][]*[32]byte, 10))
+				}
+				f.Unlock()
+				f.FieldReference().AddRef()
+			}
+		}
+		wg.Done()
+	}()
+	// Constantly read from the offending portion
+	// of the code to ensure there is no possible
+	// recursive read locking.
+	for i := 0; i < 1000; i++ {
+		go func() {
+			_ = st.FieldReferencesCount()
+		}()
+	}
+	// Test will not terminate in the event of a deadlock.
+	wg.Wait()
+}
+
 func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 
 	newState := generateState(t)
@@ -358,6 +414,26 @@ func TestCopyAllTries(t *testing.T) {
 	newRt, err := nState.stateFieldLeaves[types.Balances].TrieRoot()
 	assert.NoError(t, err)
 	assert.NotEqual(t, rt, newRt)
+}
+
+func TestDuplicateDirtyIndices(t *testing.T) {
+	newState := &BeaconState{
+		rebuildTrie:  make(map[types.FieldIndex]bool),
+		dirtyIndices: make(map[types.FieldIndex][]uint64),
+	}
+	for i := uint64(0); i < indicesLimit-5; i++ {
+		newState.dirtyIndices[types.Balances] = append(newState.dirtyIndices[types.Balances], i)
+	}
+	// Append duplicates
+	newState.dirtyIndices[types.Balances] = append(newState.dirtyIndices[types.Balances], []uint64{0, 1, 2, 3, 4}...)
+
+	// We would remove the duplicates and stay under the threshold
+	newState.addDirtyIndices(types.Balances, []uint64{9997, 9998})
+	assert.Equal(t, false, newState.rebuildTrie[types.Balances])
+
+	// We would trigger above the threshold.
+	newState.addDirtyIndices(types.Balances, []uint64{10000, 10001, 10002, 10003})
+	assert.Equal(t, true, newState.rebuildTrie[types.Balances])
 }
 
 func generateState(t *testing.T) state.BeaconState {

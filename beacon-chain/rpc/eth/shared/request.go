@@ -3,63 +3,102 @@ package shared
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 )
 
-func UintFromQuery(w http.ResponseWriter, r *http.Request, name string) (bool, string, uint64) {
+func UintFromQuery(w http.ResponseWriter, r *http.Request, name string, required bool) (string, uint64, bool) {
+	trimmed := strings.ReplaceAll(r.URL.Query().Get(name), " ", "")
+	if trimmed == "" && !required {
+		return "", 0, true
+	}
+	v, valid := ValidateUint(w, name, trimmed)
+	if !valid {
+		return "", 0, false
+	}
+	return trimmed, v, true
+}
+
+func UintFromRoute(w http.ResponseWriter, r *http.Request, name string) (string, uint64, bool) {
+	raw := mux.Vars(r)[name]
+	v, valid := ValidateUint(w, name, raw)
+	if !valid {
+		return "", 0, false
+	}
+	return raw, v, true
+}
+
+func HexFromQuery(w http.ResponseWriter, r *http.Request, name string, length int, required bool) (string, []byte, bool) {
 	raw := r.URL.Query().Get(name)
-	if raw != "" {
-		v, valid := ValidateUint(w, name, raw)
-		if !valid {
-			return false, "", 0
-		}
-		return true, raw, v
+	if raw == "" && !required {
+		return "", nil, true
 	}
-	return true, "", 0
+	v, valid := ValidateHex(w, name, raw, length)
+	if !valid {
+		return "", nil, false
+	}
+	return raw, v, true
 }
 
-func ValidateHex(w http.ResponseWriter, name string, s string) bool {
+func HexFromRoute(w http.ResponseWriter, r *http.Request, name string, length int) (string, []byte, bool) {
+	raw := mux.Vars(r)[name]
+	v, valid := ValidateHex(w, name, raw, length)
+	if !valid {
+		return "", nil, false
+	}
+	return raw, v, true
+}
+
+func ValidateHex(w http.ResponseWriter, name, s string, length int) ([]byte, bool) {
 	if s == "" {
-		errJson := &http2.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is required",
 			Code:    http.StatusBadRequest,
 		}
-		http2.WriteError(w, errJson)
-		return false
+		httputil.WriteError(w, errJson)
+		return nil, false
 	}
-	if !bytesutil.IsHex([]byte(s)) {
-		errJson := &http2.DefaultErrorJson{
-			Message: name + " is invalid",
+	hexBytes, err := hexutil.Decode(s)
+	if err != nil {
+		errJson := &httputil.DefaultJsonError{
+			Message: name + " is invalid: " + err.Error(),
 			Code:    http.StatusBadRequest,
 		}
-		http2.WriteError(w, errJson)
-		return false
+		httputil.WriteError(w, errJson)
+		return nil, false
 	}
-	return true
+	if len(hexBytes) != length {
+		httputil.HandleError(w, fmt.Sprintf("Invalid %s: %s is not length %d", name, s, length), http.StatusBadRequest)
+		return nil, false
+	}
+	return hexBytes, true
 }
 
-func ValidateUint(w http.ResponseWriter, name string, s string) (uint64, bool) {
+func ValidateUint(w http.ResponseWriter, name, s string) (uint64, bool) {
 	if s == "" {
-		errJson := &http2.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is required",
 			Code:    http.StatusBadRequest,
 		}
-		http2.WriteError(w, errJson)
+		httputil.WriteError(w, errJson)
 		return 0, false
 	}
 	v, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
-		errJson := &http2.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is invalid: " + err.Error(),
 			Code:    http.StatusBadRequest,
 		}
-		http2.WriteError(w, errJson)
+		httputil.WriteError(w, errJson)
 		return 0, false
 	}
 	return v, true
@@ -81,15 +120,15 @@ func IsSyncing(
 	headSlot := headFetcher.HeadSlot()
 	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
-		errJson := &http2.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: "Could not check optimistic status: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
-		http2.WriteError(w, errJson)
+		httputil.WriteError(w, errJson)
 		return true
 	}
-	syncDetails := &SyncDetailsContainer{
-		Data: &SyncDetails{
+	syncDetails := &structs.SyncDetailsContainer{
+		Data: &structs.SyncDetails{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
@@ -102,10 +141,10 @@ func IsSyncing(
 	if err == nil {
 		msg += " Details: " + string(details)
 	}
-	errJson := &http2.DefaultErrorJson{
+	errJson := &httputil.DefaultJsonError{
 		Message: msg,
 		Code:    http.StatusServiceUnavailable}
-	http2.WriteError(w, errJson)
+	httputil.WriteError(w, errJson)
 	return true
 }
 
@@ -117,20 +156,20 @@ func IsOptimistic(
 ) (bool, error) {
 	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
-		errJson := &http2.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: "Could not check optimistic status: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
-		http2.WriteError(w, errJson)
+		httputil.WriteError(w, errJson)
 		return true, err
 	}
 	if !isOptimistic {
 		return false, nil
 	}
-	errJson := &http2.DefaultErrorJson{
+	errJson := &httputil.DefaultJsonError{
 		Code:    http.StatusServiceUnavailable,
 		Message: "Beacon node is currently optimistic and not serving validators",
 	}
-	http2.WriteError(w, errJson)
+	httputil.WriteError(w, errJson)
 	return true, nil
 }

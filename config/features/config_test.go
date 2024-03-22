@@ -4,8 +4,8 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -17,10 +17,6 @@ func TestInitFeatureConfig(t *testing.T) {
 	Init(cfg)
 	c := Get()
 	assert.Equal(t, true, c.EnableSlasher)
-
-	// Reset back to false for the follow up tests.
-	cfg = &Flags{RemoteSlasherProtection: false}
-	Init(cfg)
 }
 
 func TestInitWithReset(t *testing.T) {

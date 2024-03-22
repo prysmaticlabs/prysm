@@ -1,11 +1,11 @@
 package time
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // CurrentEpoch returns the current epoch number calculated from
@@ -79,6 +79,15 @@ func CanUpgradeToCapella(slot primitives.Slot) bool {
 	epochStart := slots.IsEpochStart(slot)
 	capellaEpoch := slots.ToEpoch(slot) == params.BeaconConfig().CapellaForkEpoch
 	return epochStart && capellaEpoch
+}
+
+// CanUpgradeToDeneb returns true if the input `slot` can upgrade to Deneb.
+// Spec code:
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == DENEB_FORK_EPOCH
+func CanUpgradeToDeneb(slot primitives.Slot) bool {
+	epochStart := slots.IsEpochStart(slot)
+	DenebEpoch := slots.ToEpoch(slot) == params.BeaconConfig().DenebForkEpoch
+	return epochStart && DenebEpoch
 }
 
 // CanProcessEpoch checks the eligibility to process epoch.

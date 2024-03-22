@@ -5,20 +5,19 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 const executionToBLSPadding = 12
@@ -29,11 +28,11 @@ const executionToBLSPadding = 12
 // signature set.
 func ProcessBLSToExecutionChanges(
 	st state.BeaconState,
-	signed interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
-	if signed.Version() < version.Capella {
+	b interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+	if b.Version() < version.Capella {
 		return st, nil
 	}
-	changes, err := signed.Block().Body().BLSToExecutionChanges()
+	changes, err := b.Body().BLSToExecutionChanges()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get BLSToExecutionChanges")
 	}
@@ -236,7 +235,7 @@ func BLSChangesSignatureBatch(
 			return nil, errors.Wrap(err, "could not convert bytes to public key")
 		}
 		batch.PublicKeys[i] = publicKey
-		htr, err := signing.SigningData(change.Message.HashTreeRoot, domain)
+		htr, err := signing.Data(change.Message.HashTreeRoot, domain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute BLSToExecutionChange signing data")
 		}
@@ -251,7 +250,7 @@ func BLSChangesSignatureBatch(
 // is from a previous fork.
 func VerifyBLSChangeSignature(
 	st state.ReadOnlyBeaconState,
-	change *ethpbv2.SignedBLSToExecutionChange,
+	change *ethpb.SignedBLSToExecutionChange,
 ) error {
 	c := params.BeaconConfig()
 	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())

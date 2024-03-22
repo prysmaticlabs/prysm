@@ -6,22 +6,22 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/prysmaticlabs/prysm/v4/api/pagination"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/pagination"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -601,10 +601,6 @@ func (bs *Server) GetValidatorQueue(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
-	churnLimit, err := helpers.ValidatorChurnLimit(activeValidatorCount)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not compute churn limit: %v", err)
-	}
 
 	exitQueueEpoch := primitives.Epoch(0)
 	for _, i := range exitEpochs {
@@ -619,7 +615,8 @@ func (bs *Server) GetValidatorQueue(
 		}
 	}
 	// Prevent churn limit from causing index out of bound issues.
-	if churnLimit < exitQueueChurn {
+	exitChurnLimit := helpers.ValidatorExitChurnLimit(activeValidatorCount)
+	if exitChurnLimit < exitQueueChurn {
 		// If we are above the churn limit, we simply increase the churn by one.
 		exitQueueEpoch++
 	}
@@ -645,6 +642,10 @@ func (bs *Server) GetValidatorQueue(
 		exitQueueKeys[i] = vals[idx].PublicKey
 	}
 
+	churnLimit := helpers.ValidatorActivationChurnLimit(activeValidatorCount)
+	if headState.Version() >= version.Deneb {
+		churnLimit = helpers.ValidatorActivationChurnLimitDeneb(activeValidatorCount)
+	}
 	return &ethpb.ValidatorQueue{
 		ChurnLimit:                 churnLimit,
 		ActivationPublicKeys:       activationQueueKeys,

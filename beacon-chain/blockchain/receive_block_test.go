@@ -6,17 +6,18 @@ import (
 	"testing"
 	"time"
 
-	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	blockchainTesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -24,9 +25,10 @@ func TestService_ReceiveBlock(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := util.DeterministicGenesisState(t, 64)
+	copiedGen := genesis.Copy()
 	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot primitives.Slot) *ethpb.SignedBeaconBlock {
-		blk, err := util.GenerateFullBlock(genesis, keys, conf, slot)
-		assert.NoError(t, err)
+		blk, err := util.GenerateFullBlock(copiedGen.Copy(), keys, conf, slot)
+		require.NoError(t, err)
 		return blk
 	}
 	//params.SetupTestConfigCleanupWithLock(t)
@@ -109,6 +111,9 @@ func TestService_ReceiveBlock(t *testing.T) {
 				block: genFullBlock(t, util.DefaultBlockGenConfig(), 1 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
+				// Hacky sleep, should use a better way to be able to resolve the race
+				// between event being sent out and processed.
+				time.Sleep(100 * time.Millisecond)
 				if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
 					t.Errorf("Received %d state notifications, expected at least 1", recvd)
 				}
@@ -120,10 +125,16 @@ func TestService_ReceiveBlock(t *testing.T) {
 	for _, tt := range tests {
 		wg.Add(1)
 		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				wg.Done()
+			}()
+			genesis = genesis.Copy()
 			s, tr := minimalTestService(t,
 				WithFinalizedStateAtStartUp(genesis),
 				WithExitPool(voluntaryexits.NewPool()),
-				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}))
+				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
+				WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
+			)
 
 			beaconDB := tr.db
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
@@ -136,14 +147,13 @@ func TestService_ReceiveBlock(t *testing.T) {
 			require.NoError(t, err)
 			wsb, err := blocks.NewSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
-			err = s.ReceiveBlock(ctx, wsb, root)
+			err = s.ReceiveBlock(ctx, wsb, root, nil)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				tt.check(t, s)
 			}
-			wg.Done()
 		})
 	}
 	wg.Wait()
@@ -170,10 +180,11 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	go func() {
 		wsb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		require.NoError(t, s.ReceiveBlock(ctx, wsb, root))
+		require.NoError(t, s.ReceiveBlock(ctx, wsb, root, nil))
 		wg.Done()
 	}()
 	wg.Wait()
+	time.Sleep(100 * time.Millisecond)
 	if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
 		t.Errorf("Received %d state notifications, expected at least 1", recvd)
 	}
@@ -216,6 +227,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 				block: genFullBlock(t, util.DefaultBlockGenConfig(), 1 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
+				time.Sleep(100 * time.Millisecond)
 				if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
 					t.Errorf("Received %d state notifications, expected at least 1", recvd)
 				}
@@ -228,13 +240,11 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			s, _ := minimalTestService(t, WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}))
 			err := s.saveGenesisData(ctx, genesis)
 			require.NoError(t, err)
-			root, err := tt.args.block.Block.HashTreeRoot()
-			require.NoError(t, err)
 			wsb, err := blocks.NewSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
-			blks := []interfaces.ReadOnlySignedBeaconBlock{wsb}
-			roots := [][32]byte{root}
-			err = s.ReceiveBlockBatch(ctx, blks, roots)
+			rwsb, err := blocks.NewROBlock(wsb)
+			require.NoError(t, err)
+			err = s.ReceiveBlockBatch(ctx, []blocks.ROBlock{rwsb}, &das.MockAvailabilityStore{})
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -296,6 +306,29 @@ func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
 
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
 	assert.LogsDoNotContain(t, hook, "Entering mode to save hot states in DB")
+}
+
+func TestHandleCaches_EnablingLargeSize(t *testing.T) {
+	hook := logTest.NewGlobal()
+	s, _ := minimalTestService(t)
+	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
+	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+
+	require.NoError(t, s.handleCaches())
+	assert.LogsContain(t, hook, "Expanding committee cache size")
+}
+
+func TestHandleCaches_DisablingLargeSize(t *testing.T) {
+	hook := logTest.NewGlobal()
+	s, _ := minimalTestService(t)
+
+	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
+	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+	require.NoError(t, s.handleCaches())
+	s.genesisTime = time.Now()
+
+	require.NoError(t, s.handleCaches())
+	assert.LogsContain(t, hook, "Reducing committee cache size")
 }
 
 func TestHandleBlockBLSToExecutionChanges(t *testing.T) {

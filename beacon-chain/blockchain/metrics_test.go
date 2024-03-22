@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestReportEpochMetrics_BadHeadState(t *testing.T) {
@@ -16,7 +16,7 @@ func TestReportEpochMetrics_BadHeadState(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, h.SetValidators(nil))
 	err = reportEpochMetrics(context.Background(), s, h)
-	require.ErrorContains(t, "failed to initialize precompute: nil validators in state", err)
+	require.ErrorContains(t, "failed to initialize precompute: state has nil validator slice", err)
 }
 
 func TestReportEpochMetrics_BadAttestation(t *testing.T) {

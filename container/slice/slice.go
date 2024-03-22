@@ -1,9 +1,10 @@
 package slice
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // SubsetUint64 returns true if the first array is
@@ -93,7 +94,7 @@ func UnionUint64(s ...[]uint64) []uint64 {
 // values from the provided list of indices.
 func SetUint64(a []uint64) []uint64 {
 	// Remove duplicates indices.
-	intMap := map[uint64]bool{}
+	intMap := make(map[uint64]bool, len(a))
 	cleanedIndices := make([]uint64, 0, len(a))
 	for _, idx := range a {
 		if intMap[idx] {
@@ -390,4 +391,13 @@ func Reverse[E any](s []E) []E {
 		s[i], s[j] = s[j], s[i]
 	}
 	return s
+}
+
+// VerifyMaxLength takes a slice and a maximum length and validates the length.
+func VerifyMaxLength[T any](v []T, max int) error {
+	l := len(v)
+	if l > max {
+		return fmt.Errorf("length of %d exceeds max of %d", l, max)
+	}
+	return nil
 }

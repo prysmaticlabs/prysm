@@ -3,11 +3,11 @@ package web
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/runtime/tos"
-	"github.com/prysmaticlabs/prysm/v4/validator/rpc"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/runtime/tos"
+	"github.com/prysmaticlabs/prysm/v5/validator/rpc"
 	"github.com/urfave/cli/v2"
 )
 
@@ -15,7 +15,7 @@ import (
 var Commands = &cli.Command{
 	Name:     "web",
 	Category: "web",
-	Usage:    "defines commands for interacting with the Prysm web interface",
+	Usage:    "Defines commands for interacting with the Prysm web interface.",
 	Subcommands: []*cli.Command{
 		{
 			Name:        "generate-auth-token",

@@ -93,19 +93,44 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/v4/container/multi-value-slice/interfaces"
+	"github.com/pkg/errors"
 )
 
+// Amount of references beyond which a multivalue object is considered
+// fragmented.
+const fragmentationLimit = 50000
+
+// Id is an object identifier.
+type Id = uint64
+
+// Identifiable represents an object that can be uniquely identified by its Id.
+type Identifiable interface {
+	Id() Id
+}
+
 // MultiValueSlice defines an abstraction over all concrete implementations of the generic Slice.
-type MultiValueSlice[O interfaces.Identifiable] interface {
-	Len(obj O) uuid.UUID
+type MultiValueSlice[V comparable] interface {
+	Len(obj Identifiable) int
+	At(obj Identifiable, index uint64) (V, error)
+	Value(obj Identifiable) []V
+}
+
+// MultiValueSliceComposite describes a struct for which we have access to a multivalue
+// slice along with the desired state.
+type MultiValueSliceComposite[V comparable] struct {
+	Identifiable
+	MultiValueSlice[V]
+}
+
+// State returns the referenced state.
+func (m MultiValueSliceComposite[V]) State() Identifiable {
+	return m.Identifiable
 }
 
 // Value defines a single value along with one or more IDs that share this value.
 type Value[V any] struct {
 	val V
-	ids []uuid.UUID
+	ids []uint64
 }
 
 // MultiValueItem defines a collection of Value items.
@@ -119,24 +144,24 @@ type MultiValueItem[V any] struct {
 //   - O interfaces.Identifiable - the type of objects sharing the slice. The constraint is required
 //     because we need a way to compare objects against each other in order to know which objects
 //     values should be accessed.
-type Slice[V comparable, O interfaces.Identifiable] struct {
+type Slice[V comparable] struct {
 	sharedItems     []V
 	individualItems map[uint64]*MultiValueItem[V]
 	appendedItems   []*MultiValueItem[V]
-	cachedLengths   map[uuid.UUID]int
+	cachedLengths   map[uint64]int
 	lock            sync.RWMutex
 }
 
 // Init initializes the slice with sensible defaults. Input values are assigned to shared items.
-func (s *Slice[V, O]) Init(items []V) {
+func (s *Slice[V]) Init(items []V) {
 	s.sharedItems = items
 	s.individualItems = map[uint64]*MultiValueItem[V]{}
 	s.appendedItems = []*MultiValueItem[V]{}
-	s.cachedLengths = map[uuid.UUID]int{}
+	s.cachedLengths = map[uint64]int{}
 }
 
 // Len returns the number of items for the input object.
-func (s *Slice[V, O]) Len(obj O) int {
+func (s *Slice[V]) Len(obj Identifiable) int {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -148,7 +173,7 @@ func (s *Slice[V, O]) Len(obj O) int {
 }
 
 // Copy copies items between the source and destination.
-func (s *Slice[V, O]) Copy(src O, dst O) {
+func (s *Slice[V]) Copy(src, dst Identifiable) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -185,7 +210,7 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 }
 
 // Value returns all items for the input object.
-func (s *Slice[V, O]) Value(obj O) []V {
+func (s *Slice[V]) Value(obj Identifiable) []V {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -223,7 +248,7 @@ func (s *Slice[V, O]) Value(obj O) []V {
 // We first check if the index is within the length of shared items.
 // If it is, then we return an individual value at that index - if it exists - or a shared value otherwise.
 // If the index is beyond the length of shared values, it is an appended item and that's what gets returned.
-func (s *Slice[V, O]) At(obj O, index uint64) (V, error) {
+func (s *Slice[V]) At(obj Identifiable, index uint64) (V, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -261,7 +286,7 @@ func (s *Slice[V, O]) At(obj O, index uint64) (V, error) {
 }
 
 // UpdateAt updates the item at the required index for the input object to the passed in value.
-func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
+func (s *Slice[V]) UpdateAt(obj Identifiable, index uint64, val V) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -278,12 +303,12 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 }
 
 // Append adds a new item to the input object.
-func (s *Slice[V, O]) Append(obj O, val V) {
+func (s *Slice[V]) Append(obj Identifiable, val V) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	if len(s.appendedItems) == 0 {
-		s.appendedItems = append(s.appendedItems, &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}})
+		s.appendedItems = append(s.appendedItems, &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uint64{obj.Id()}}}})
 		s.cachedLengths[obj.Id()] = len(s.sharedItems) + 1
 		return
 	}
@@ -306,7 +331,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 				}
 			}
 			if newValue {
-				item.Values = append(item.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
+				item.Values = append(item.Values, &Value[V]{val: val, ids: []uint64{obj.Id()}})
 			}
 
 			l, ok := s.cachedLengths[obj.Id()]
@@ -320,14 +345,14 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 		}
 	}
 
-	s.appendedItems = append(s.appendedItems, &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}})
+	s.appendedItems = append(s.appendedItems, &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uint64{obj.Id()}}}})
 
 	s.cachedLengths[obj.Id()] = s.cachedLengths[obj.Id()] + 1
 }
 
 // Detach removes the input object from the multi-value slice.
 // What this means in practice is that we remove all individual and appended values for that object and clear the cached length.
-func (s *Slice[V, O]) Detach(obj O) {
+func (s *Slice[V]) Detach(obj Identifiable) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -373,7 +398,89 @@ func (s *Slice[V, O]) Detach(obj O) {
 	delete(s.cachedLengths, obj.Id())
 }
 
-func (s *Slice[V, O]) fillOriginalItems(obj O, items *[]V) {
+// MultiValueStatistics generates the multi-value stats object for the respective
+// multivalue slice.
+func (s *Slice[V]) MultiValueStatistics() MultiValueStatistics {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	stats := MultiValueStatistics{}
+	stats.TotalIndividualElements = len(s.individualItems)
+	totalIndRefs := 0
+
+	for _, v := range s.individualItems {
+		for _, ival := range v.Values {
+			totalIndRefs += len(ival.ids)
+		}
+	}
+
+	stats.TotalAppendedElements = len(s.appendedItems)
+	totalAppRefs := 0
+
+	for _, v := range s.appendedItems {
+		for _, ival := range v.Values {
+			totalAppRefs += len(ival.ids)
+		}
+	}
+	stats.TotalIndividualElemReferences = totalIndRefs
+	stats.TotalAppendedElemReferences = totalAppRefs
+
+	return stats
+}
+
+// IsFragmented checks if our mutlivalue object is fragmented (individual references held).
+// If the number of references is higher than our threshold we return true.
+func (s *Slice[V]) IsFragmented() bool {
+	stats := s.MultiValueStatistics()
+	return stats.TotalIndividualElemReferences+stats.TotalAppendedElemReferences >= fragmentationLimit
+}
+
+// Reset builds a new multivalue object with respect to the
+// provided object's id. The base slice will be based on this
+// particular id.
+func (s *Slice[V]) Reset(obj Identifiable) *Slice[V] {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	l, ok := s.cachedLengths[obj.Id()]
+	if !ok {
+		l = len(s.sharedItems)
+	}
+
+	items := make([]V, l)
+	copy(items, s.sharedItems)
+	for i, ind := range s.individualItems {
+		for _, v := range ind.Values {
+			_, found := containsId(v.ids, obj.Id())
+			if found {
+				items[i] = v.val
+				break
+			}
+		}
+	}
+
+	index := len(s.sharedItems)
+	for _, app := range s.appendedItems {
+		found := true
+		for _, v := range app.Values {
+			_, found = containsId(v.ids, obj.Id())
+			if found {
+				items[index] = v.val
+				index++
+				break
+			}
+		}
+		if !found {
+			break
+		}
+	}
+
+	reset := &Slice[V]{}
+	reset.Init(items)
+	return reset
+}
+
+func (s *Slice[V]) fillOriginalItems(obj Identifiable, items *[]V) {
 	for i, item := range s.sharedItems {
 		ind, ok := s.individualItems[uint64(i)]
 		if !ok {
@@ -394,7 +501,7 @@ func (s *Slice[V, O]) fillOriginalItems(obj O, items *[]V) {
 	}
 }
 
-func (s *Slice[V, O]) updateOriginalItem(obj O, index uint64, val V) {
+func (s *Slice[V]) updateOriginalItem(obj Identifiable, index uint64, val V) {
 	ind, ok := s.individualItems[index]
 	if ok {
 		for mvi, v := range ind.Values {
@@ -419,7 +526,7 @@ func (s *Slice[V, O]) updateOriginalItem(obj O, index uint64, val V) {
 	}
 
 	if !ok {
-		s.individualItems[index] = &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}}
+		s.individualItems[index] = &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uint64{obj.Id()}}}}
 	} else {
 		newValue := true
 		for _, v := range ind.Values {
@@ -430,12 +537,12 @@ func (s *Slice[V, O]) updateOriginalItem(obj O, index uint64, val V) {
 			}
 		}
 		if newValue {
-			ind.Values = append(ind.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
+			ind.Values = append(ind.Values, &Value[V]{val: val, ids: []uint64{obj.Id()}})
 		}
 	}
 }
 
-func (s *Slice[V, O]) updateAppendedItem(obj O, index uint64, val V) error {
+func (s *Slice[V]) updateAppendedItem(obj Identifiable, index uint64, val V) error {
 	item := s.appendedItems[index-uint64(len(s.sharedItems))]
 	found := false
 	for vi, v := range item.Values {
@@ -464,13 +571,13 @@ func (s *Slice[V, O]) updateAppendedItem(obj O, index uint64, val V) error {
 		}
 	}
 	if newValue {
-		item.Values = append(item.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
+		item.Values = append(item.Values, &Value[V]{val: val, ids: []uint64{obj.Id()}})
 	}
 
 	return nil
 }
 
-func containsId(ids []uuid.UUID, wanted uuid.UUID) (int, bool) {
+func containsId(ids []uint64, wanted uint64) (int, bool) {
 	for i, id := range ids {
 		if id == wanted {
 			return i, true
@@ -485,4 +592,43 @@ func deleteElemFromSlice[T any](s []T, i int) []T {
 	s[i] = s[len(s)-1] // Copy last element to index i.
 	s = s[:len(s)-1]   // Truncate slice.
 	return s
+}
+
+// EmptyMVSlice specifies a type which allows a normal slice to conform
+// to the multivalue slice interface.
+type EmptyMVSlice[V comparable] struct {
+	fullSlice []V
+}
+
+func (e EmptyMVSlice[V]) Len(_ Identifiable) int {
+	return len(e.fullSlice)
+}
+
+func (e EmptyMVSlice[V]) At(_ Identifiable, index uint64) (V, error) {
+	if index >= uint64(len(e.fullSlice)) {
+		var def V
+		return def, errors.Errorf("index %d out of bounds", index)
+	}
+	return e.fullSlice[index], nil
+}
+
+func (e EmptyMVSlice[V]) Value(_ Identifiable) []V {
+	return e.fullSlice
+}
+
+// BuildEmptyCompositeSlice builds a composite multivalue object with a native
+// slice.
+func BuildEmptyCompositeSlice[V comparable](values []V) MultiValueSliceComposite[V] {
+	return MultiValueSliceComposite[V]{
+		Identifiable:    nil,
+		MultiValueSlice: EmptyMVSlice[V]{fullSlice: values},
+	}
+}
+
+// MultiValueStatistics represents the internal properties of a multivalue slice.
+type MultiValueStatistics struct {
+	TotalIndividualElements       int
+	TotalAppendedElements         int
+	TotalIndividualElemReferences int
+	TotalAppendedElemReferences   int
 }

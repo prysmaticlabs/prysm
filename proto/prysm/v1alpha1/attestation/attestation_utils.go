@@ -10,11 +10,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -73,7 +73,8 @@ func AttestingIndices(bf bitfield.Bitfield, committee []primitives.ValidatorInde
 		return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", bf.Len(), len(committee))
 	}
 	indices := make([]uint64, 0, bf.Count())
-	for _, idx := range bf.BitIndices() {
+	p := bf.BitIndices()
+	for _, idx := range p {
 		if idx < len(committee) {
 			indices = append(indices, uint64(committee[idx]))
 		}
@@ -101,9 +102,10 @@ func AttestingIndices(bf bitfield.Bitfield, committee []primitives.ValidatorInde
 //	 signing_root = compute_signing_root(indexed_attestation.data, domain)
 //	 return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
 func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKeys []bls.PublicKey, domain []byte) error {
-	ctx, span := trace.StartSpan(ctx, "attestationutil.VerifyIndexedAttestationSig")
+	_, span := trace.StartSpan(ctx, "attestationutil.VerifyIndexedAttestationSig")
 	defer span.End()
 	indices := indexedAtt.AttestingIndices
+
 	messageHash, err := signing.ComputeSigningRoot(indexedAtt.Data, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of object")
@@ -141,7 +143,7 @@ func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedA
 //	  signing_root = compute_signing_root(indexed_attestation.data, domain)
 //	  return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
 func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "attestationutil.IsValidAttestationIndices")
+	_, span := trace.StartSpan(ctx, "attestationutil.IsValidAttestationIndices")
 	defer span.End()
 
 	if indexedAttestation == nil || indexedAttestation.Data == nil || indexedAttestation.Data.Target == nil || indexedAttestation.AttestingIndices == nil {
