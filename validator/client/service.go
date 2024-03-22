@@ -194,14 +194,12 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	restHandler := &beaconApi.BeaconApiJsonRestHandler{
-		HttpClient: http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
-		Host:       v.conn.GetBeaconApiUrl(),
-	}
+	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
+		http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
+		v.conn.GetBeaconApiUrl(),
+	)
 
-	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
-	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler)}
-	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler, opts...)
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
 
 	valStruct := &validator{
 		validatorClient:                validatorClient,
@@ -359,4 +357,25 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
 	nc := ethpb.NewNodeClient(v.conn.GetGrpcClientConn())
 	return nc.GetGenesis(ctx, &emptypb.Empty{})
+}
+
+func (v *ValidatorService) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	if v.validator == nil {
+		return nil, errors.New("validator is unavailable")
+	}
+	return v.validator.GetGraffiti(ctx, pubKey)
+}
+
+func (v *ValidatorService) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	if v.validator == nil {
+		return errors.New("validator is unavailable")
+	}
+	return v.validator.SetGraffiti(ctx, pubKey, graffiti)
+}
+
+func (v *ValidatorService) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
+	if v.validator == nil {
+		return errors.New("validator is unavailable")
+	}
+	return v.validator.DeleteGraffiti(ctx, pubKey)
 }

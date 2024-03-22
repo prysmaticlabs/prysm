@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -20,6 +21,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	eventClient "github.com/prysmaticlabs/prysm/v5/api/client/event"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
@@ -248,7 +253,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 
 	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	if err == io.EOF {
-		return iface.ErrConnectionIssue
+		return client.ErrConnectionIssue
 	}
 
 	if ctx.Err() == context.Canceled {
@@ -257,7 +262,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 
 	if err != nil {
 		return errors.Wrap(
-			iface.ErrConnectionIssue,
+			client.ErrConnectionIssue,
 			errors.Wrap(err, "could not receive ChainStart from stream").Error(),
 		)
 	}
@@ -310,7 +315,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 
 	s, err := v.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
-		return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
+		return errors.Wrap(client.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
 	if !s.Syncing {
 		return nil
@@ -322,7 +327,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		case <-time.After(slots.DivideSlotBy(2 /* twice per slot */)):
 			s, err := v.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
-				return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
+				return errors.Wrap(client.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
 			if !s.Syncing {
 				return nil
@@ -331,35 +336,6 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		case <-ctx.Done():
 			return errors.New("context has been canceled, exiting goroutine")
 		}
-	}
-}
-
-// ReceiveSlots starts a stream listener to obtain
-// slots from the beacon node when it imports a block. Upon receiving a slot, the service
-// broadcasts it to a feed for other usages to subscribe to.
-func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error) {
-	stream, err := v.validatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve slots stream, " + iface.ErrConnectionIssue.Error())
-		connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
-		return
-	}
-
-	for {
-		if ctx.Err() == context.Canceled {
-			log.WithError(ctx.Err()).Error("Context canceled - shutting down slots receiver")
-			return
-		}
-		res, err := stream.Recv()
-		if err != nil {
-			log.WithError(err).Error("Could not receive slots from beacon node: " + iface.ErrConnectionIssue.Error())
-			connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
-			return
-		}
-		if res == nil {
-			continue
-		}
-		v.setHighestSlot(res.Slot)
 	}
 }
 
@@ -429,7 +405,7 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (primitives.Slot, err
 	defer span.End()
 	head, err := v.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
-		return 0, errors.Wrap(iface.ErrConnectionIssue, err.Error())
+		return 0, errors.Wrap(client.ErrConnectionIssue, err.Error())
 	}
 	return head.HeadSlot, nil
 }
@@ -1092,16 +1068,43 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	return nil
 }
 
-func (v *validator) StartEventStream(ctx context.Context) error {
-	return v.validatorClient.StartEventStream(ctx)
+func (v *validator) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *eventClient.Event) {
+	log.WithField("topics", topics).Info("Starting event stream")
+	v.validatorClient.StartEventStream(ctx, topics, eventsChannel)
+}
+
+func (v *validator) ProcessEvent(event *eventClient.Event) {
+	if event == nil || event.Data == nil {
+		log.Warn("Received empty event")
+	}
+	switch event.EventType {
+	case eventClient.EventError:
+		log.Error(string(event.Data))
+	case eventClient.EventConnectionError:
+		log.WithError(errors.New(string(event.Data))).Error("Event stream interrupted")
+	case eventClient.EventHead:
+		log.Debug("Received head event")
+		head := &structs.HeadEvent{}
+		if err := json.Unmarshal(event.Data, head); err != nil {
+			log.WithError(err).Error("Failed to unmarshal head Event into JSON")
+		}
+		uintSlot, err := strconv.ParseUint(head.Slot, 10, 64)
+		if err != nil {
+			log.WithError(err).Error("Failed to parse slot")
+		}
+		v.setHighestSlot(primitives.Slot(uintSlot))
+	default:
+		// just keep going and log the error
+		log.WithField("type", event.EventType).WithField("data", string(event.Data)).Warn("Received an unknown event")
+	}
 }
 
 func (v *validator) EventStreamIsRunning() bool {
 	return v.validatorClient.EventStreamIsRunning()
 }
 
-func (v *validator) NodeIsHealthy(ctx context.Context) bool {
-	return v.nodeClient.IsHealthy(ctx)
+func (v *validator) HealthTracker() *beacon.NodeHealthTracker {
+	return v.nodeClient.HealthTracker()
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {

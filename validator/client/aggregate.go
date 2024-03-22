@@ -84,7 +84,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 		CommitteeIndex: duty.CommitteeIndex,
 		PublicKey:      pubKey[:],
 		SlotSignature:  slotSig,
-	})
+	}, duty.ValidatorIndex, uint64(len(duty.Committee)))
 	if err != nil {
 		// handle grpc not found
 		s, ok := status.FromError(err)

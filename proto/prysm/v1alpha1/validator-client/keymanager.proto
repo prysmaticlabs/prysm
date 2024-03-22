@@ -1,6 +1,7 @@
 syntax = "proto3";
 package ethereum.validator.accounts.v2;
 
+import "google/protobuf/wrappers.proto";
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/beacon_block.proto";
@@ -87,6 +88,7 @@ message SignResponse {
 message ProposerOptionPayload {
   string fee_recipient = 1;
   BuilderConfig builder = 2;
+  optional string graffiti = 3;
 }
 
 // BuilderConfig is a property of ProposerOptionPayload

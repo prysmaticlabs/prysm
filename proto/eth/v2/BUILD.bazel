@@ -99,7 +99,6 @@ ssz_proto_files(
     srcs = [
         "beacon_block.proto",
         "beacon_lightclient.proto",
-        "beacon_state.proto",
         "sync_committee.proto",
         "validator.proto",
         "withdrawals.proto",

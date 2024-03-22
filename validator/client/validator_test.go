@@ -943,33 +943,6 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 	}
 }
 
-func TestService_ReceiveSlots_SetHighest(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := validatormock.NewMockValidatorClient(ctrl)
-
-	v := validator{
-		validatorClient: client,
-		slotFeed:        new(event.Feed),
-	}
-	stream := mock2.NewMockBeaconNodeValidator_StreamSlotsClient(ctrl)
-	ctx, cancel := context.WithCancel(context.Background())
-	client.EXPECT().StreamSlots(
-		gomock.Any(),
-		&ethpb.StreamSlotsRequest{VerifiedOnly: true},
-	).Return(stream, nil)
-	stream.EXPECT().Context().Return(ctx).AnyTimes()
-	stream.EXPECT().Recv().Return(
-		&ethpb.StreamSlotsResponse{Slot: 123},
-		nil,
-	).Do(func() {
-		cancel()
-	})
-	connectionErrorChannel := make(chan error)
-	v.ReceiveSlots(ctx, connectionErrorChannel)
-	require.Equal(t, primitives.Slot(123), v.highestValidSlot)
-}
-
 type doppelGangerRequestMatcher struct {
 	req *ethpb.DoppelGangerRequest
 }
