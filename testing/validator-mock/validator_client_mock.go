@@ -13,6 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
+	event "github.com/prysmaticlabs/prysm/v5/api/client/event"
+	primitives "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	gomock "go.uber.org/mock/gomock"
@@ -111,7 +113,7 @@ func (m *MockValidatorClient) GetAggregatedSyncSelections(arg0 context.Context, 
 }
 
 // GetAggregatedSyncSelections indicates an expected call of GetAggregatedSyncSelections.
-func (mr *MockValidatorClientMockRecorder) GetAggregatedSyncSelections(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockValidatorClientMockRecorder) GetAggregatedSyncSelections(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAggregatedSyncSelections", reflect.TypeOf((*MockValidatorClient)(nil).GetAggregatedSyncSelections), arg0, arg1)
 }
@@ -297,47 +299,30 @@ func (mr *MockValidatorClientMockRecorder) ProposeExit(arg0, arg1 any) *gomock.C
 }
 
 // StartEventStream mocks base method.
-func (m *MockValidatorClient) StartEventStream(arg0 context.Context) error {
+func (m *MockValidatorClient) StartEventStream(arg0 context.Context, arg1 []string, arg2 chan<- *event.Event) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartEventStream", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "StartEventStream", arg0, arg1, arg2)
 }
 
 // StartEventStream indicates an expected call of StartEventStream.
-func (mr *MockValidatorClientMockRecorder) StartEventStream(arg0 any) *gomock.Call {
+func (mr *MockValidatorClientMockRecorder) StartEventStream(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartEventStream", reflect.TypeOf((*MockValidatorClient)(nil).StartEventStream), arg0)
-}
-
-// StreamSlots mocks base method.
-func (m *MockValidatorClient) StreamSlots(arg0 context.Context, arg1 *eth.StreamSlotsRequest) (eth.BeaconNodeValidator_StreamSlotsClient, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamSlots", arg0, arg1)
-	ret0, _ := ret[0].(eth.BeaconNodeValidator_StreamSlotsClient)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StreamSlots indicates an expected call of StreamSlots.
-func (mr *MockValidatorClientMockRecorder) StreamSlots(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamSlots", reflect.TypeOf((*MockValidatorClient)(nil).StreamSlots), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartEventStream", reflect.TypeOf((*MockValidatorClient)(nil).StartEventStream), arg0, arg1, arg2)
 }
 
 // SubmitAggregateSelectionProof mocks base method.
-func (m *MockValidatorClient) SubmitAggregateSelectionProof(arg0 context.Context, arg1 *eth.AggregateSelectionRequest) (*eth.AggregateSelectionResponse, error) {
+func (m *MockValidatorClient) SubmitAggregateSelectionProof(arg0 context.Context, arg1 *eth.AggregateSelectionRequest, arg2 primitives.ValidatorIndex, arg3 uint64) (*eth.AggregateSelectionResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SubmitAggregateSelectionProof", arg0, arg1)
+	ret := m.ctrl.Call(m, "SubmitAggregateSelectionProof", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*eth.AggregateSelectionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SubmitAggregateSelectionProof indicates an expected call of SubmitAggregateSelectionProof.
-func (mr *MockValidatorClientMockRecorder) SubmitAggregateSelectionProof(arg0, arg1 any) *gomock.Call {
+func (mr *MockValidatorClientMockRecorder) SubmitAggregateSelectionProof(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAggregateSelectionProof", reflect.TypeOf((*MockValidatorClient)(nil).SubmitAggregateSelectionProof), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAggregateSelectionProof", reflect.TypeOf((*MockValidatorClient)(nil).SubmitAggregateSelectionProof), arg0, arg1, arg2, arg3)
 }
 
 // SubmitSignedAggregateSelectionProof mocks base method.

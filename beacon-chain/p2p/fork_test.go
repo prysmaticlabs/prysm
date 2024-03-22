@@ -46,9 +46,9 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 
 	bootNode := bootListener.Self()
 	cfg := &Config{
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		UDPPort:             uint(port),
-		StateNotifier:       &mock.MockStateNotifier{},
+		Discv5BootStrapAddrs: []string{bootNode.String()},
+		UDPPort:              uint(port),
+		StateNotifier:        &mock.MockStateNotifier{},
 	}
 
 	var listeners []*discover.UDPv5
@@ -132,8 +132,8 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 
 	bootNode := bootListener.Self()
 	cfg := &Config{
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		UDPPort:             uint(port),
+		Discv5BootStrapAddrs: []string{bootNode.String()},
+		UDPPort:              uint(port),
 	}
 
 	var listeners []*discover.UDPv5

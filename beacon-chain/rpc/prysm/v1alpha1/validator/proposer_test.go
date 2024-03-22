@@ -2697,10 +2697,13 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 				BeaconDB:               db,
 				TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
 			}
+			require.Equal(t, false, proposerServer.TrackedValidatorsCache.Validating())
 			_, err := proposerServer.PrepareBeaconProposer(ctx, tt.args.request)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, tt.wantErr, err)
 				return
+			} else {
+				require.Equal(t, true, proposerServer.TrackedValidatorsCache.Validating())
 			}
 			require.NoError(t, err)
 			val, tracked := proposerServer.TrackedValidatorsCache.Validator(1)

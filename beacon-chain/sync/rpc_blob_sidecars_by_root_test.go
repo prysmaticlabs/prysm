@@ -19,7 +19,7 @@ import (
 )
 
 func (c *blobsTestCase) defaultOldestSlotByRoot(t *testing.T) types.Slot {
-	oldest, err := slots.EpochStart(blobMinReqEpoch(c.chain.FinalizedCheckPoint.Epoch, slots.ToEpoch(c.clock.CurrentSlot())))
+	oldest, err := BlobRPCMinValidSlot(c.clock.CurrentSlot())
 	require.NoError(t, err)
 	return oldest
 }
@@ -256,74 +256,6 @@ func TestBlobsByRootOK(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			c.runTestBlobSidecarsByRoot(t)
-		})
-	}
-}
-
-func TestBlobsByRootMinReqEpoch(t *testing.T) {
-	winMin := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
-	cases := []struct {
-		name      string
-		finalized types.Epoch
-		current   types.Epoch
-		deneb     types.Epoch
-		expected  types.Epoch
-	}{
-		{
-			name:      "testnet genesis",
-			deneb:     100,
-			current:   0,
-			finalized: 0,
-			expected:  100,
-		},
-		{
-			name:      "underflow averted",
-			deneb:     100,
-			current:   winMin - 1,
-			finalized: 0,
-			expected:  100,
-		},
-		{
-			name:      "underflow averted - finalized is higher",
-			deneb:     100,
-			current:   winMin - 1,
-			finalized: winMin - 2,
-			expected:  winMin - 2,
-		},
-		{
-			name:      "underflow averted - genesis at deneb",
-			deneb:     0,
-			current:   winMin - 1,
-			finalized: 0,
-			expected:  0,
-		},
-		{
-			name:      "max is finalized",
-			deneb:     100,
-			current:   99 + winMin,
-			finalized: 101,
-			expected:  101,
-		},
-		{
-			name:      "reqWindow > finalized, reqWindow < deneb",
-			deneb:     100,
-			current:   99 + winMin,
-			finalized: 98,
-			expected:  100,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			cfg := params.BeaconConfig()
-			repositionFutureEpochs(cfg)
-			cfg.DenebForkEpoch = c.deneb
-			undo, err := params.SetActiveWithUndo(cfg)
-			require.NoError(t, err)
-			defer func() {
-				require.NoError(t, undo())
-			}()
-			ep := blobMinReqEpoch(c.finalized, c.current)
-			require.Equal(t, c.expected, ep)
 		})
 	}
 }

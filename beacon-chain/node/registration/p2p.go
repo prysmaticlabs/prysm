@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/urfave/cli/v2"
@@ -31,9 +32,9 @@ func P2PPreregistration(cliCtx *cli.Context) (bootstrapNodeAddrs []string, dataD
 	if dataDir == "" {
 		dataDir = cmd.DefaultDataDir()
 		if dataDir == "" {
-			log.Fatal(
-				"Could not determine your system's HOME path, please specify a --datadir you wish " +
-					"to use for your chain data",
+			err = errors.Errorf(
+				"Could not determine your system's HOME path, please specify a --%s you wish to use for your chain data",
+				cmd.DataDirFlag.Name,
 			)
 		}
 	}

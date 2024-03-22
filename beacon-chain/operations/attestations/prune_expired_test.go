@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/async"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -126,4 +127,23 @@ func TestPruneExpired_Expired(t *testing.T) {
 	s.genesisTime = uint64(prysmTime.Now().Unix()) - uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	assert.Equal(t, true, s.expired(0), "Should be expired")
 	assert.Equal(t, false, s.expired(1), "Should not be expired")
+}
+
+func TestPruneExpired_ExpiredDeneb(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.DenebForkEpoch = 3
+	params.OverrideBeaconConfig(cfg)
+
+	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	require.NoError(t, err)
+
+	// Rewind back 4 epochs + 10 slots worth of time.
+	s.genesisTime = uint64(prysmTime.Now().Unix()) - (4*uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) + 10)
+	secondEpochStart := primitives.Slot(2 * uint64(params.BeaconConfig().SlotsPerEpoch))
+	thirdEpochStart := primitives.Slot(3 * uint64(params.BeaconConfig().SlotsPerEpoch))
+
+	assert.Equal(t, true, s.expired(secondEpochStart), "Should be expired")
+	assert.Equal(t, false, s.expired(thirdEpochStart), "Should not be expired")
+
 }
