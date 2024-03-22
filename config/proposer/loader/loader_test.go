@@ -119,7 +119,7 @@ func TestProposerSettingsLoader(t *testing.T) {
 			},
 		},
 		{
-			name: "builder boost factor set happy path",
+			name: "builder boost factor set from flag happy path",
 			args: args{
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:                "",
