@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"golang.org/x/sync/errgroup"
 )
 
 type dutiesProvider interface {
@@ -49,27 +49,23 @@ func (c beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.Dutie
 	// Sync committees are an Altair feature
 	fetchSyncDuties := in.Epoch >= params.BeaconConfig().AltairForkEpoch
 
-	var wg sync.WaitGroup
-	errChan := make(chan error, 1)
-	wg.Add(1)
+	var wg errgroup.Group
 
 	var currentEpochDuties []*ethpb.DutiesResponse_Duty
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() error {
 		currentEpochDuties, err = c.getDutiesForEpoch(ctx, in.Epoch, vals, fetchSyncDuties)
 		if err != nil {
-			errChan <- errors.Wrapf(err, "failed to get duties for current epoch `%d`", in.Epoch)
+			return errors.Wrapf(err, "failed to get duties for current epoch `%d`", in.Epoch)
 		}
-	}()
+		return nil
+	})
 
 	nextEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch+1, vals, fetchSyncDuties)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get duties for next epoch `%d`", in.Epoch+1)
 	}
 
-	wg.Wait()
-	if err = <-errChan; err != nil {
+	if err = wg.Wait(); err != nil {
 		return nil, err
 	}
 
@@ -90,87 +86,79 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		indices[i] = v.index
 	}
 
-	goroutineCount := 2
-	if fetchSyncDuties {
-		goroutineCount = 3
-	}
-	var wg sync.WaitGroup
-	errChan := make(chan error, goroutineCount)
-	wg.Add(goroutineCount)
+	var wg errgroup.Group
 
 	// Mapping from a validator index to its attesting committee's index and slot
 	attesterDutiesMapping := make(map[primitives.ValidatorIndex]committeeIndexSlotPair)
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() error {
 		attesterDuties, err := c.dutiesProvider.GetAttesterDuties(ctx, epoch, indices)
 		if err != nil {
-			errChan <- errors.Wrapf(err, "failed to get attester duties for epoch `%d`", epoch)
+			return errors.Wrapf(err, "failed to get attester duties for epoch `%d`", epoch)
 		}
 
 		for _, attesterDuty := range attesterDuties {
 			validatorIndex, err := strconv.ParseUint(attesterDuty.ValidatorIndex, 10, 64)
 			if err != nil {
-				errChan <- errors.Wrapf(err, "failed to parse attester validator index `%s`", attesterDuty.ValidatorIndex)
+				return errors.Wrapf(err, "failed to parse attester validator index `%s`", attesterDuty.ValidatorIndex)
 			}
 			slot, err := strconv.ParseUint(attesterDuty.Slot, 10, 64)
 			if err != nil {
-				errChan <- errors.Wrapf(err, "failed to parse attester slot `%s`", attesterDuty.Slot)
+				return errors.Wrapf(err, "failed to parse attester slot `%s`", attesterDuty.Slot)
 			}
 			committeeIndex, err := strconv.ParseUint(attesterDuty.CommitteeIndex, 10, 64)
 			if err != nil {
-				errChan <- errors.Wrapf(err, "failed to parse attester committee index `%s`", attesterDuty.CommitteeIndex)
+				return errors.Wrapf(err, "failed to parse attester committee index `%s`", attesterDuty.CommitteeIndex)
 			}
 			attesterDutiesMapping[primitives.ValidatorIndex(validatorIndex)] = committeeIndexSlotPair{
 				slot:           primitives.Slot(slot),
 				committeeIndex: primitives.CommitteeIndex(committeeIndex),
 			}
 		}
-	}()
+		return nil
+	})
 
 	// Set containing all validator indices that are part of a sync committee for this epoch
 	syncDutiesMapping := make(map[primitives.ValidatorIndex]bool)
 	if fetchSyncDuties {
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() error {
 			syncDuties, err := c.dutiesProvider.GetSyncDuties(ctx, epoch, indices)
 			if err != nil {
-				errChan <- errors.Wrapf(err, "failed to get sync duties for epoch `%d`", epoch)
+				return errors.Wrapf(err, "failed to get sync duties for epoch `%d`", epoch)
 			}
 
 			for _, syncDuty := range syncDuties {
 				validatorIndex, err := strconv.ParseUint(syncDuty.ValidatorIndex, 10, 64)
 				if err != nil {
-					errChan <- errors.Wrapf(err, "failed to parse sync validator index `%s`", syncDuty.ValidatorIndex)
+					return errors.Wrapf(err, "failed to parse sync validator index `%s`", syncDuty.ValidatorIndex)
 				}
 				syncDutiesMapping[primitives.ValidatorIndex(validatorIndex)] = true
 			}
-		}()
+			return nil
+		})
 	}
 
 	// Mapping from a validator index to its proposal slot
 	proposerDutySlots := make(map[primitives.ValidatorIndex][]primitives.Slot)
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() error {
 		proposerDuties, err := c.dutiesProvider.GetProposerDuties(ctx, epoch)
 		if err != nil {
-			errChan <- errors.Wrapf(err, "failed to get proposer duties for epoch `%d`", epoch)
+			return errors.Wrapf(err, "failed to get proposer duties for epoch `%d`", epoch)
 		}
 
 		for _, proposerDuty := range proposerDuties {
 			validatorIndex, err := strconv.ParseUint(proposerDuty.ValidatorIndex, 10, 64)
 			if err != nil {
-				errChan <- errors.Wrapf(err, "failed to parse proposer validator index `%s`", proposerDuty.ValidatorIndex)
+				return errors.Wrapf(err, "failed to parse proposer validator index `%s`", proposerDuty.ValidatorIndex)
 			}
 			slot, err := strconv.ParseUint(proposerDuty.Slot, 10, 64)
 			if err != nil {
-				errChan <- errors.Wrapf(err, "failed to parse proposer slot `%s`", proposerDuty.Slot)
+				return errors.Wrapf(err, "failed to parse proposer slot `%s`", proposerDuty.Slot)
 			}
-			proposerDutySlots[primitives.ValidatorIndex(validatorIndex)] = append(proposerDutySlots[primitives.ValidatorIndex(validatorIndex)], primitives.Slot(slot))
+			proposerDutySlots[primitives.ValidatorIndex(validatorIndex)] =
+				append(proposerDutySlots[primitives.ValidatorIndex(validatorIndex)], primitives.Slot(slot))
 		}
-	}()
+		return nil
+	})
 
 	// Mapping from the {committeeIndex, slot} to each of the committee's validator indices
 	committeeMapping := make(map[committeeIndexSlotPair][]primitives.ValidatorIndex)
@@ -211,8 +199,7 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		committeeMapping[key] = validatorIndices
 	}
 
-	wg.Wait()
-	if err := <-errChan; err != nil {
+	if err = wg.Wait(); err != nil {
 		return nil, err
 	}
 
