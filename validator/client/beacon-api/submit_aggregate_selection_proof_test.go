@@ -1,12 +1,9 @@
 package beacon_api
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -15,7 +12,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"go.uber.org/mock/gomock"
@@ -25,25 +21,14 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 	const (
 		pubkeyStr                    = "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
 		syncingEndpoint              = "/eth/v1/node/syncing"
-		attesterDutiesEndpoint       = "/eth/v1/validator/duties/attester"
-		validatorsEndpoint           = "/eth/v1/beacon/states/head/validators"
 		attestationDataEndpoint      = "/eth/v1/validator/attestation_data"
 		aggregateAttestationEndpoint = "/eth/v1/validator/aggregate_attestation"
-		validatorIndex               = "55293"
+		validatorIndex               = primitives.ValidatorIndex(55293)
 		slotSignature                = "0x8776a37d6802c4797d113169c5fcfda50e68a32058eb6356a6f00d06d7da64c841a00c7c38b9b94a204751eca53707bd03523ce4797827d9bacff116a6e776a20bbccff4b683bf5201b610797ed0502557a58a65c8395f8a1649b976c3112d15"
 		slot                         = primitives.Slot(123)
 		committeeIndex               = primitives.CommitteeIndex(1)
+		committeesAtSlot             = uint64(1)
 	)
-
-	attesterDuties := []*structs.AttesterDuty{
-		{
-			Pubkey:          pubkeyStr,
-			ValidatorIndex:  validatorIndex,
-			Slot:            "123",
-			CommitteeIndex:  "1",
-			CommitteeLength: "3",
-		},
-	}
 
 	attestationDataResponse := generateValidAttestation(uint64(slot), uint64(committeeIndex))
 	attestationDataProto, err := attestationDataResponse.Data.ToConsensus()
@@ -64,22 +49,15 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		name                       string
 		isOptimistic               bool
 		syncingErr                 error
-		validatorsErr              error
-		dutiesErr                  error
 		attestationDataErr         error
 		aggregateAttestationErr    error
-		duties                     []*structs.AttesterDuty
-		validatorsCalled           int
-		attesterDutiesCalled       int
 		attestationDataCalled      int
 		aggregateAttestationCalled int
 		expectedErrorMsg           string
+		committeesAtSlot           uint64
 	}{
 		{
 			name:                       "success",
-			duties:                     attesterDuties,
-			validatorsCalled:           1,
-			attesterDutiesCalled:       1,
 			attestationDataCalled:      1,
 			aggregateAttestationCalled: 1,
 		},
@@ -94,59 +72,22 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			expectedErrorMsg: "failed to get syncing status",
 		},
 		{
-			name:             "validator index error",
-			validatorsCalled: 1,
-			validatorsErr:    errors.New("bad request"),
-			expectedErrorMsg: "failed to get validator index",
-		},
-		{
-			name:                 "attester duties error",
-			duties:               attesterDuties,
-			validatorsCalled:     1,
-			attesterDutiesCalled: 1,
-			dutiesErr:            errors.New("bad request"),
-			expectedErrorMsg:     "failed to get attester duties",
-		},
-		{
 			name:                  "attestation data error",
-			duties:                attesterDuties,
-			validatorsCalled:      1,
-			attesterDutiesCalled:  1,
 			attestationDataCalled: 1,
 			attestationDataErr:    errors.New("bad request"),
 			expectedErrorMsg:      fmt.Sprintf("failed to get attestation data for slot=%d and committee_index=%d", slot, committeeIndex),
 		},
 		{
 			name:                       "aggregate attestation error",
-			duties:                     attesterDuties,
-			validatorsCalled:           1,
-			attesterDutiesCalled:       1,
 			attestationDataCalled:      1,
 			aggregateAttestationCalled: 1,
 			aggregateAttestationErr:    errors.New("bad request"),
 			expectedErrorMsg:           "bad request",
 		},
 		{
-			name: "validator is not an aggregator",
-			duties: []*structs.AttesterDuty{
-				{
-					Pubkey:          pubkeyStr,
-					ValidatorIndex:  validatorIndex,
-					Slot:            "123",
-					CommitteeIndex:  "1",
-					CommitteeLength: "64",
-				},
-			},
-			validatorsCalled:     1,
-			attesterDutiesCalled: 1,
-			expectedErrorMsg:     "validator is not an aggregator",
-		},
-		{
-			name:                 "no attester duties",
-			duties:               []*structs.AttesterDuty{},
-			validatorsCalled:     1,
-			attesterDutiesCalled: 1,
-			expectedErrorMsg:     fmt.Sprintf("no attester duty for the given slot %d", slot),
+			name:             "validator is not an aggregator",
+			committeesAtSlot: 64,
+			expectedErrorMsg: "validator is not an aggregator",
 		},
 	}
 
@@ -170,76 +111,6 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			).Return(
 				test.syncingErr,
 			).Times(1)
-
-			valsReq := &structs.GetValidatorsRequest{
-				Ids:      []string{stringPubKey},
-				Statuses: []string{},
-			}
-			valReqBytes, err := json.Marshal(valsReq)
-			require.NoError(t, err)
-
-			// Call validators endpoint to get validator index.
-			jsonRestHandler.EXPECT().Post(
-				ctx,
-				validatorsEndpoint,
-				nil,
-				bytes.NewBuffer(valReqBytes),
-				&structs.GetValidatorsResponse{},
-			).SetArg(
-				4,
-				structs.GetValidatorsResponse{
-					Data: []*structs.ValidatorContainer{
-						{
-							Index:  validatorIndex,
-							Status: "active_ongoing",
-							Validator: &structs.Validator{
-								Pubkey: pubkeyStr,
-							},
-						},
-					},
-				},
-			).Return(
-				test.validatorsErr,
-			).Times(test.validatorsCalled)
-
-			if test.validatorsErr != nil {
-				// Then try the GET call which will also return error.
-				queryParams := url.Values{}
-				for _, id := range valsReq.Ids {
-					queryParams.Add("id", id)
-				}
-				for _, st := range valsReq.Statuses {
-					queryParams.Add("status", st)
-				}
-
-				query := buildURL("/eth/v1/beacon/states/head/validators", queryParams)
-
-				jsonRestHandler.EXPECT().Get(
-					ctx,
-					query,
-					&structs.GetValidatorsResponse{},
-				).Return(
-					test.validatorsErr,
-				).Times(1)
-			}
-
-			// Call attester duties endpoint to get attester duties.
-			validatorIndicesBytes, err := json.Marshal([]string{validatorIndex})
-			require.NoError(t, err)
-			jsonRestHandler.EXPECT().Post(
-				ctx,
-				fmt.Sprintf("%s/%d", attesterDutiesEndpoint, slots.ToEpoch(slot)),
-				nil,
-				bytes.NewBuffer(validatorIndicesBytes),
-				&structs.GetAttesterDutiesResponse{},
-			).SetArg(
-				4,
-				structs.GetAttesterDutiesResponse{
-					Data: test.duties,
-				},
-			).Return(
-				test.dutiesErr,
-			).Times(test.attesterDutiesCalled)
 
 			// Call attestation data to get attestation data root to query aggregate attestation.
 			jsonRestHandler.EXPECT().Get(
@@ -290,12 +161,17 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 					jsonRestHandler: jsonRestHandler,
 				},
 			}
+
+			committees := committeesAtSlot
+			if test.committeesAtSlot != 0 {
+				committees = test.committeesAtSlot
+			}
 			actualResponse, err := validatorClient.submitAggregateSelectionProof(ctx, &ethpb.AggregateSelectionRequest{
 				Slot:           slot,
 				CommitteeIndex: committeeIndex,
 				PublicKey:      pubkey,
 				SlotSignature:  slotSignatureBytes,
-			})
+			}, validatorIndex, committees)
 			if test.expectedErrorMsg == "" {
 				require.NoError(t, err)
 				assert.DeepEqual(t, expectedResponse, actualResponse)

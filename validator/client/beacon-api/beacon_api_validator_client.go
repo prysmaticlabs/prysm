@@ -2,11 +2,14 @@ package beacon_api
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client/event"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
@@ -14,20 +17,14 @@ import (
 
 type ValidatorClientOpt func(*beaconApiValidatorClient)
 
-func WithEventHandler(h *EventHandler) ValidatorClientOpt {
-	return func(c *beaconApiValidatorClient) {
-		c.eventHandler = h
-	}
-}
-
 type beaconApiValidatorClient struct {
 	genesisProvider         GenesisProvider
 	dutiesProvider          dutiesProvider
 	stateValidatorsProvider StateValidatorsProvider
 	jsonRestHandler         JsonRestHandler
-	eventHandler            *EventHandler
 	beaconBlockConverter    BeaconBlockConverter
 	prysmBeaconChainCLient  iface.PrysmBeaconChainClient
+	isEventStreamRunning    bool
 }
 
 func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...ValidatorClientOpt) iface.ValidatorClient {
@@ -41,6 +38,7 @@ func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...Valida
 			nodeClient:      &beaconApiNodeClient{jsonRestHandler: jsonRestHandler},
 			jsonRestHandler: jsonRestHandler,
 		},
+		isEventStreamRunning: false,
 	}
 	for _, o := range opts {
 		o(c)
@@ -135,17 +133,13 @@ func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.Si
 	})
 }
 
-func (c *beaconApiValidatorClient) StreamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest) (ethpb.BeaconNodeValidator_StreamSlotsClient, error) {
-	return c.streamSlots(ctx, in, time.Second), nil
-}
-
 func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
 	return c.streamBlocks(ctx, in, time.Second), nil
 }
 
-func (c *beaconApiValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
+func (c *beaconApiValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest, index primitives.ValidatorIndex, committeeLength uint64) (*ethpb.AggregateSelectionResponse, error) {
 	return wrapInMetrics[*ethpb.AggregateSelectionResponse]("SubmitAggregateSelectionProof", func() (*ethpb.AggregateSelectionResponse, error) {
-		return c.submitAggregateSelectionProof(ctx, in)
+		return c.submitAggregateSelectionProof(ctx, in, index, committeeLength)
 	})
 }
 
@@ -198,17 +192,23 @@ func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *emp
 	return c.waitForChainStart(ctx)
 }
 
-func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context) error {
-	if c.eventHandler != nil {
-		if err := c.eventHandler.get(ctx, []string{"head"}); err != nil {
-			return errors.Wrapf(err, "could not invoke event handler")
+func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *event.Event) {
+	client := &http.Client{} // event stream should not be subject to the same settings as other api calls, so we won't use c.jsonRestHandler.HttpClient()
+	eventStream, err := event.NewEventStream(ctx, client, c.jsonRestHandler.Host(), topics)
+	if err != nil {
+		eventsChannel <- &event.Event{
+			EventType: event.EventError,
+			Data:      []byte(errors.Wrap(err, "failed to start event stream").Error()),
 		}
+		return
 	}
-	return nil
+	c.isEventStreamRunning = true
+	eventStream.Subscribe(eventsChannel)
+	c.isEventStreamRunning = false
 }
 
 func (c *beaconApiValidatorClient) EventStreamIsRunning() bool {
-	return c.eventHandler.running
+	return c.isEventStreamRunning
 }
 
 func (c *beaconApiValidatorClient) GetAggregatedSelections(ctx context.Context, selections []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {

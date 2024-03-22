@@ -2,8 +2,8 @@ package kv
 
 import "github.com/pkg/errors"
 
-// ErrDeleteJustifiedAndFinalized is raised when we attempt to delete a finalized block/state
-var ErrDeleteJustifiedAndFinalized = errors.New("cannot delete finalized block or state")
+// ErrDeleteFinalized is raised when we attempt to delete a finalized block/state
+var ErrDeleteFinalized = errors.New("cannot delete finalized block or state")
 
 // ErrNotFound can be used directly, or as a wrapped DBError, whenever a db method needs to
 // indicate that a value couldn't be found.
