@@ -21,7 +21,7 @@ import (
 type PayloadIDBytes [8]byte
 
 // MarshalJSON --
-func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
+func (b *PayloadIDBytes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hexutil.Bytes(b[:]))
 }
 
@@ -267,11 +267,11 @@ type ExecutionPayloadDenebJSON struct {
 	Timestamp     *hexutil.Uint64 `json:"timestamp"`
 	ExtraData     hexutil.Bytes   `json:"extraData"`
 	BaseFeePerGas string          `json:"baseFeePerGas"`
-	BlobGasUsed   *hexutil.Uint64 `json:"blobGasUsed"`
-	ExcessBlobGas *hexutil.Uint64 `json:"excessBlobGas"`
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 	Withdrawals   []*Withdrawal   `json:"withdrawals"`
+	BlobGasUsed   *hexutil.Uint64 `json:"blobGasUsed"`
+	ExcessBlobGas *hexutil.Uint64 `json:"excessBlobGas"`
 }
 
 // MarshalJSON --

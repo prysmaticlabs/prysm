@@ -122,8 +122,8 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 		GasUsed:       0,
 		Timestamp:     0,
 		ExtraData:     make([]byte, 0),
-		BlockHash:     blockHash[:],
 		BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
+		BlockHash:     blockHash[:],
 		Transactions:  encodedBinaryTxs,
 	}
 	wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
