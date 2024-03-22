@@ -989,12 +989,12 @@ func TestLowestSlotNeedsBlob(t *testing.T) {
 	retentionStart := primitives.Slot(5)
 	bwb, err := sortedBlockWithVerifiedBlobSlice(sbbs)
 	require.NoError(t, err)
-	lowest := lowestSlotNeedsBlob(retentionStart, bwb)
-	require.Equal(t, retentionStart, *lowest)
+	bounds := blobRequestBounds(retentionStart, bwb, nil)
+	require.Equal(t, retentionStart, bounds.low)
 	higher := primitives.Slot(len(blks) + 1)
-	lowest = lowestSlotNeedsBlob(higher, bwb)
-	var nilSlot *primitives.Slot
-	require.Equal(t, nilSlot, lowest)
+	bounds = blobRequestBounds(higher, bwb, nil)
+	var nilBounds *slotRange
+	require.Equal(t, nilBounds, bounds)
 
 	blks, _ = util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
 	sbbs = make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
@@ -1007,14 +1007,14 @@ func TestLowestSlotNeedsBlob(t *testing.T) {
 	next := bwb[6].Block.Block().Slot()
 	skip := bwb[5].Block.Block()
 	bwb[5].Block, _ = util.GenerateTestDenebBlockWithSidecar(t, skip.ParentRoot(), skip.Slot(), 0)
-	lowest = lowestSlotNeedsBlob(retentionStart, bwb)
-	require.Equal(t, next, *lowest)
+	bounds = blobRequestBounds(retentionStart, bwb, nil)
+	require.Equal(t, next, bounds.low)
 }
 
 func TestBlobRequest(t *testing.T) {
 	var nilReq *ethpb.BlobSidecarsByRangeRequest
 	// no blocks
-	req := blobRequest([]blocks.BlockWithROBlobs{}, 0)
+	req := blobRequest([]blocks.BlockWithROBlobs{}, 0, nil)
 	require.Equal(t, nilReq, req)
 	blks, _ := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
@@ -1026,22 +1026,22 @@ func TestBlobRequest(t *testing.T) {
 	maxBlkSlot := primitives.Slot(len(blks) - 1)
 
 	tooHigh := primitives.Slot(len(blks) + 1)
-	req = blobRequest(bwb, tooHigh)
+	req = blobRequest(bwb, tooHigh, nil)
 	require.Equal(t, nilReq, req)
 
-	req = blobRequest(bwb, maxBlkSlot)
+	req = blobRequest(bwb, maxBlkSlot, nil)
 	require.Equal(t, uint64(1), req.Count)
 	require.Equal(t, maxBlkSlot, req.StartSlot)
 
 	halfway := primitives.Slot(5)
-	req = blobRequest(bwb, halfway)
+	req = blobRequest(bwb, halfway, nil)
 	require.Equal(t, halfway, req.StartSlot)
 	// adding 1 to include the halfway slot itself
 	require.Equal(t, uint64(1+maxBlkSlot-halfway), req.Count)
 
 	before := bwb[0].Block.Block().Slot()
 	allAfter := bwb[1:]
-	req = blobRequest(allAfter, before)
+	req = blobRequest(allAfter, before, nil)
 	require.Equal(t, allAfter[0].Block.Block().Slot(), req.StartSlot)
 	require.Equal(t, len(allAfter), int(req.Count))
 }
