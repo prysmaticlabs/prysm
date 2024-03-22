@@ -1067,7 +1067,7 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 
 	firstBlockSlot := bwb[0].Block.Block().Slot()
 	// slice off blobs for the last block so we hit the out of bounds / blob exhaustion check.
-	_, err = verifyAndPopulateBlobs(bwb, blobs[0:len(blobs)-6], firstBlockSlot)
+	_, err = verifyAndPopulateBlobs(bwb, sortBlobs(blobs[0:len(blobs)-6]), firstBlockSlot)
 	require.ErrorIs(t, err, errMissingBlobsForBlockCommitments)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
@@ -1078,32 +1078,32 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 			blobs[i].SignedBlockHeader.Header.Slot = offByOne + 1
 		}
 	}
-	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
+	_, err = verifyAndPopulateBlobs(bwb, sortBlobs(blobs), firstBlockSlot)
 	require.ErrorIs(t, err, verify.ErrBlobBlockMisaligned)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx], err = blocks.NewROBlobWithRoot(blobs[lastBlobIdx].BlobSidecar, blobs[0].BlockRoot())
 	require.NoError(t, err)
-	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
+	_, err = verifyAndPopulateBlobs(bwb, sortBlobs(blobs), firstBlockSlot)
 	require.ErrorIs(t, err, verify.ErrBlobBlockMisaligned)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].Index = 100
-	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
+	_, err = verifyAndPopulateBlobs(bwb, sortBlobs(blobs), firstBlockSlot)
 	require.ErrorIs(t, err, verify.ErrIncorrectBlobIndex)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].SignedBlockHeader.Header.ProposerIndex = 100
 	blobs[lastBlobIdx], err = blocks.NewROBlob(blobs[lastBlobIdx].BlobSidecar)
 	require.NoError(t, err)
-	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
+	_, err = verifyAndPopulateBlobs(bwb, sortBlobs(blobs), firstBlockSlot)
 	require.ErrorIs(t, err, verify.ErrBlobBlockMisaligned)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].SignedBlockHeader.Header.ParentRoot = blobs[0].SignedBlockHeader.Header.ParentRoot
 	blobs[lastBlobIdx], err = blocks.NewROBlob(blobs[lastBlobIdx].BlobSidecar)
 	require.NoError(t, err)
-	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
+	_, err = verifyAndPopulateBlobs(bwb, sortBlobs(blobs), firstBlockSlot)
 	require.ErrorIs(t, err, verify.ErrBlobBlockMisaligned)
 
 	var emptyKzg [48]byte
@@ -1111,7 +1111,7 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	blobs[lastBlobIdx].KzgCommitment = emptyKzg[:]
 	blobs[lastBlobIdx], err = blocks.NewROBlob(blobs[lastBlobIdx].BlobSidecar)
 	require.NoError(t, err)
-	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
+	_, err = verifyAndPopulateBlobs(bwb, sortBlobs(blobs), firstBlockSlot)
 	require.ErrorIs(t, err, verify.ErrMismatchedBlobCommitments)
 
 	// happy path
@@ -1124,7 +1124,7 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	// The assertions using this map expect all commitments to be unique, so make sure that stays true.
 	require.Equal(t, len(blobs), len(expectedCommits))
 
-	bwb, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
+	bwb, err = verifyAndPopulateBlobs(bwb, sortBlobs(blobs), firstBlockSlot)
 	require.NoError(t, err)
 	for _, bw := range bwb {
 		commits, err := bw.Block.Block().Body().BlobKzgCommitments()

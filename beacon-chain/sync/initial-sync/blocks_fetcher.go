@@ -469,43 +469,51 @@ func sortBlobs(blobs []blocks.ROBlob) []blocks.ROBlob {
 var errBlobVerification = errors.New("peer unable to serve aligned BlobSidecarsByRange and BeaconBlockSidecarsByRange responses")
 var errMissingBlobsForBlockCommitments = errors.Wrap(errBlobVerification, "blobs unavailable for processing block with kzg commitments")
 
-func verifyAndPopulateBlobs(bwb []blocks2.BlockWithROBlobs, blobs []blocks.ROBlob, blobWindowStart primitives.Slot) ([]blocks2.BlockWithROBlobs, error) {
-	// Assumes bwb has already been sorted by sortedBlockWithVerifiedBlobSlice.
-	blobs = sortBlobs(blobs)
-	blobi := 0
-	// Loop over all blocks, and each time a commitment is observed, advance the index into the blob slice.
-	// The assumption is that the blob slice contains a value for every commitment in the blocks it is based on,
-	// correctly ordered by slot and blob index.
-	for i, bb := range bwb {
-		block := bb.Block.Block()
-		if block.Slot() < blobWindowStart {
+func verifyAndPopulateBlobs(bwb []blocks2.BlockWithROBlobs, blobs []blocks.ROBlob, blobWindowStart primitives.Slot, bss filesystem.BlobStorageSummarizer) ([]blocks2.BlockWithROBlobs, error) {
+	if len(blobs) == 0 {
+		return bwb, nil
+	}
+	blobsByRoot := make(map[[32]byte][]blocks.ROBlob)
+	for i := range blobs {
+		if blobs[i].Slot() < blobWindowStart {
 			continue
 		}
-		commits, err := block.Body().BlobKzgCommitments()
+		br := blobs[i].BlockRoot()
+		blobsByRoot[br] = append(blobsByRoot[br], blobs[i])
+	}
+	for i := range bwb {
+		bb := bwb[i]
+		if bb.Block.Block().Slot() < blobWindowStart {
+			continue
+		}
+		commits, err := bb.Block.Block().Body().BlobKzgCommitments()
 		if err != nil {
 			if errors.Is(err, consensus_types.ErrUnsupportedField) {
 				log.
-					WithField("blockSlot", block.Slot()).
+					WithField("blockSlot", bb.Block.Block().Slot()).
 					WithField("retentionStart", blobWindowStart).
 					Warn("block with slot within blob retention period has version which does not support commitments")
 				continue
 			}
 			return nil, err
 		}
-		bb.Blobs = make([]blocks.ROBlob, len(commits))
+		if len(commits) == 0 {
+			continue
+		}
+		// If we already have the blobs locally, we shouldn't have requested them and don't expect them in the response.
+		if bss.Summary(bb.Block.Root()).AllAvailable(len(commits)) {
+			continue
+		}
+		blkblb, ok := blobsByRoot[bb.Block.Root()]
+		if !ok || len(commits) != len(blkblb) {
+			return nil, missingCommitError(bb.Block.Root(), bb.Block.Block().Slot(), commits)
+		}
 		for ci := range commits {
-			// There are more expected commitments in this block, but we've run out of blobs from the response
-			// (out-of-bound error guard).
-			if blobi == len(blobs) {
-				return nil, missingCommitError(bb.Block.Root(), bb.Block.Block().Slot(), commits[ci:])
-			}
-			bl := blobs[blobi]
-			if err := verify.BlobAlignsWithBlock(bl, bb.Block); err != nil {
+			if err := verify.BlobAlignsWithBlock(blkblb[ci], bb.Block); err != nil {
 				return nil, err
 			}
-			bb.Blobs[ci] = bl
-			blobi += 1
 		}
+		bb.Blobs = blkblb
 		bwb[i] = bb
 	}
 	return bwb, nil
