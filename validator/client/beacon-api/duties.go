@@ -49,23 +49,24 @@ func (c beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.Dutie
 	// Sync committees are an Altair feature
 	fetchSyncDuties := in.Epoch >= params.BeaconConfig().AltairForkEpoch
 
-	var wg errgroup.Group
+	errCh := make(chan error, 1)
 
 	var currentEpochDuties []*ethpb.DutiesResponse_Duty
-	wg.Go(func() error {
+	go func() {
 		currentEpochDuties, err = c.getDutiesForEpoch(ctx, in.Epoch, vals, fetchSyncDuties)
 		if err != nil {
-			return errors.Wrapf(err, "failed to get duties for current epoch `%d`", in.Epoch)
+			errCh <- errors.Wrapf(err, "failed to get duties for current epoch `%d`", in.Epoch)
+			return
 		}
-		return nil
-	})
+		errCh <- nil
+	}()
 
 	nextEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch+1, vals, fetchSyncDuties)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get duties for next epoch `%d`", in.Epoch+1)
 	}
 
-	if err = wg.Wait(); err != nil {
+	if err = <-errCh; err != nil {
 		return nil, err
 	}
 
@@ -86,10 +87,21 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		indices[i] = v.index
 	}
 
-	var wg errgroup.Group
+	// Below variables MUST NOT be used in the main function before wg.Wait().
+	// This is because they are populated in goroutines and wg.Wait()
+	// will return only once all goroutines finish their execution.
 
 	// Mapping from a validator index to its attesting committee's index and slot
 	attesterDutiesMapping := make(map[primitives.ValidatorIndex]committeeIndexSlotPair)
+	// Set containing all validator indices that are part of a sync committee for this epoch
+	syncDutiesMapping := make(map[primitives.ValidatorIndex]bool)
+	// Mapping from a validator index to its proposal slot
+	proposerDutySlots := make(map[primitives.ValidatorIndex][]primitives.Slot)
+	// Mapping from the {committeeIndex, slot} to each of the committee's validator indices
+	committeeMapping := make(map[committeeIndexSlotPair][]primitives.ValidatorIndex)
+
+	var wg errgroup.Group
+
 	wg.Go(func() error {
 		attesterDuties, err := c.dutiesProvider.GetAttesterDuties(ctx, epoch, indices)
 		if err != nil {
@@ -117,8 +129,6 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		return nil
 	})
 
-	// Set containing all validator indices that are part of a sync committee for this epoch
-	syncDutiesMapping := make(map[primitives.ValidatorIndex]bool)
 	if fetchSyncDuties {
 		wg.Go(func() error {
 			syncDuties, err := c.dutiesProvider.GetSyncDuties(ctx, epoch, indices)
@@ -137,8 +147,6 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		})
 	}
 
-	// Mapping from a validator index to its proposal slot
-	proposerDutySlots := make(map[primitives.ValidatorIndex][]primitives.Slot)
 	wg.Go(func() error {
 		proposerDuties, err := c.dutiesProvider.GetProposerDuties(ctx, epoch)
 		if err != nil {
@@ -160,8 +168,6 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		return nil
 	})
 
-	// Mapping from the {committeeIndex, slot} to each of the committee's validator indices
-	committeeMapping := make(map[committeeIndexSlotPair][]primitives.ValidatorIndex)
 	committees, err := c.dutiesProvider.GetCommittees(ctx, epoch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get committees for epoch `%d`", epoch)
@@ -205,9 +211,11 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 
 	duties := make([]*ethpb.DutiesResponse_Duty, len(vals))
 	for i, v := range vals {
-		var attesterSlot primitives.Slot
-		var committeeIndex primitives.CommitteeIndex
-		var committeeValidatorIndices []primitives.ValidatorIndex
+		var (
+			attesterSlot              primitives.Slot
+			committeeIndex            primitives.CommitteeIndex
+			committeeValidatorIndices []primitives.ValidatorIndex
+		)
 
 		if committeeMappingKey, ok := attesterDutiesMapping[v.index]; ok {
 			committeeIndex = committeeMappingKey.committeeIndex
