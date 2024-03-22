@@ -26,8 +26,21 @@ func (s BlobStorageSummary) HasIndex(idx uint64) bool {
 	return s.mask[idx]
 }
 
+// AllAvailable returns true if we have all blobs for all indices from 0 to count-1.
+func (s BlobStorageSummary) AllAvailable(count int) bool {
+	if count >= fieldparams.MaxBlobsPerBlock {
+		return false
+	}
+	for i := 0; i < count; i++ {
+		if !s.mask[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // BlobStorageSummarizer can be used to receive a summary of metadata about blobs on disk for a given root.
-// The BlobStorageSummary be used to check which indices (if any) are available for a given block by root.
+// The BlobStorageSummary can be used to check which indices (if any) are available for a given block by root.
 type BlobStorageSummarizer interface {
 	Summary(root [32]byte) BlobStorageSummary
 }
