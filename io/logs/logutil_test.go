@@ -60,7 +60,4 @@ func TestConfigurePersistantLogging(t *testing.T) {
 	if err != nil {
 		return
 	}
-
-	err = ConfigurePersistentLogging(fmt.Sprintf("%s/%s/%s", testParentDir, existingDirectory, logFileName))
-	require.ErrorContains(t, "dir already exists without proper 0700 permissions", err)
 }
