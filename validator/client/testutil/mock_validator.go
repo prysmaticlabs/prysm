@@ -318,4 +318,4 @@ func (*FakeValidator) RetrieveHost() string {
 	return "127.0.0.1:0"
 }
 
-func (*FakeValidator) UpdateHost(host string) {}
+func (*FakeValidator) UpdateHost(_ string) {}
