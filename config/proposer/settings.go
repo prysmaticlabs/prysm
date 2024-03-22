@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // SettingFromConsensus converts struct to Settings while verifying the fields
@@ -91,14 +90,10 @@ func BuilderConfigFromConsensus(from *validatorpb.BuilderConfig) *BuilderConfig 
 	if from == nil {
 		return nil
 	}
-	var bbf *uint64
-	if from.BuilderBoostFactor != nil {
-		bbf = &from.BuilderBoostFactor.Value
-	}
 	c := &BuilderConfig{
 		Enabled:            from.Enabled,
 		GasLimit:           from.GasLimit,
-		BuilderBoostFactor: bbf,
+		BuilderBoostFactor: from.BuilderBoostFactor,
 	}
 	if from.Relays != nil {
 		relays := make([]string, len(from.Relays))
@@ -263,8 +258,7 @@ func (bc *BuilderConfig) ToConsensus() *validatorpb.BuilderConfig {
 		c.Relays = relays
 	}
 	c.GasLimit = bc.GasLimit
-	if bc.BuilderBoostFactor != nil {
-		c.BuilderBoostFactor = &wrapperspb.UInt64Value{Value: *bc.BuilderBoostFactor}
-	}
+	c.BuilderBoostFactor = bc.BuilderBoostFactor
+
 	return c
 }

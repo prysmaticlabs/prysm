@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type settingsType int
@@ -38,7 +37,7 @@ type settingsLoader struct {
 type flagOptions struct {
 	builderConfig      *proposer.BuilderConfig
 	gasLimit           *validator.Uint64
-	builderBoostFactor *wrapperspb.UInt64Value
+	builderBoostFactor *uint64
 }
 
 // SettingsLoaderOption sets additional options that affect the proposer settings
@@ -81,7 +80,7 @@ func WithBuilderBoostFactor() SettingsLoaderOption {
 	return func(cliCtx *cli.Context, psl *settingsLoader) error {
 		if cliCtx.IsSet(flags.BuilderBoostFactorFlag.Name) {
 			bbf := cliCtx.Uint64(flags.BuilderBoostFactorFlag.Name)
-			psl.options.builderBoostFactor = &wrapperspb.UInt64Value{Value: bbf}
+			psl.options.builderBoostFactor = &bbf
 		}
 		return nil
 	}
@@ -130,8 +129,11 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*proposer.Settings, error)
 	loadConfig := &validatorpb.ProposerSettingsPayload{}
 
 	// override settings based on other options
-	if psl.options.builderConfig != nil && psl.options.gasLimit != nil {
-		psl.options.builderConfig.GasLimit = *psl.options.gasLimit
+	if psl.options.builderConfig != nil {
+		if psl.options.gasLimit != nil {
+			psl.options.builderConfig.GasLimit = *psl.options.gasLimit
+		}
+		psl.options.builderConfig.BuilderBoostFactor = psl.options.builderBoostFactor
 	}
 
 	// check if database has settings already
@@ -218,24 +220,8 @@ func (psl *settingsLoader) processProposerSettings(loadedSettings, dbSettings *v
 	// loaded settings have higher priority than db settings
 	newSettings := &validatorpb.ProposerSettingsPayload{}
 
-	var builderConfig *validatorpb.BuilderConfig
-	var gasLimitOnly *validator.Uint64
-	var builderBoostFactor *wrapperspb.UInt64Value
-
-	if psl.options != nil {
-		if psl.options.builderConfig != nil {
-			builderConfig = psl.options.builderConfig.ToConsensus()
-		}
-		if psl.options.gasLimit != nil {
-			gasLimitOnly = psl.options.gasLimit
-		}
-		if psl.options.builderBoostFactor != nil {
-			builderBoostFactor = psl.options.builderBoostFactor
-		}
-	}
-
 	if dbSettings != nil && dbSettings.DefaultConfig != nil {
-		if builderConfig == nil {
+		if psl.options == nil || psl.options.builderConfig == nil {
 			dbSettings.DefaultConfig.Builder = nil
 		}
 		newSettings.DefaultConfig = dbSettings.DefaultConfig
@@ -246,12 +232,12 @@ func (psl *settingsLoader) processProposerSettings(loadedSettings, dbSettings *v
 
 	// process any builder overrides on defaults
 	if newSettings.DefaultConfig != nil {
-		newSettings.DefaultConfig.Builder = processBuilderConfig(newSettings.DefaultConfig.Builder, builderConfig, gasLimitOnly, builderBoostFactor)
+		newSettings.DefaultConfig.Builder = processBuilderConfig(newSettings.DefaultConfig.Builder, psl.options)
 	}
 
 	if dbSettings != nil && len(dbSettings.ProposerConfig) != 0 {
 		for _, option := range dbSettings.ProposerConfig {
-			if builderConfig == nil {
+			if psl.options == nil || psl.options.builderConfig == nil {
 				option.Builder = nil
 			}
 		}
@@ -264,7 +250,7 @@ func (psl *settingsLoader) processProposerSettings(loadedSettings, dbSettings *v
 	// process any overrides for proposer config
 	for _, option := range newSettings.ProposerConfig {
 		if option != nil {
-			option.Builder = processBuilderConfig(option.Builder, builderConfig, gasLimitOnly, builderBoostFactor)
+			option.Builder = processBuilderConfig(option.Builder, psl.options)
 		}
 	}
 
@@ -276,21 +262,38 @@ func (psl *settingsLoader) processProposerSettings(loadedSettings, dbSettings *v
 	return newSettings
 }
 
-func processBuilderConfig(current *validatorpb.BuilderConfig, override *validatorpb.BuilderConfig, gasLimitOnly *validator.Uint64, builderBoostFactor *wrapperspb.UInt64Value) *validatorpb.BuilderConfig {
-	if current != nil {
-		current.GasLimit = reviewGasLimit(current.GasLimit)
-		if override != nil {
-			current.Enabled = override.Enabled
-		}
-		if gasLimitOnly != nil {
-			current.GasLimit = *gasLimitOnly
-		}
-		if builderBoostFactor != nil {
-			current.BuilderBoostFactor = builderBoostFactor
-		}
+func processBuilderConfig(current *validatorpb.BuilderConfig, options *flagOptions) *validatorpb.BuilderConfig {
+	// If there are no options, return what was passed in
+	if options == nil {
 		return current
 	}
-	return override
+
+	// Initialize an override variable
+	var override *validatorpb.BuilderConfig
+	if options.builderConfig != nil {
+		// Convert the builder config to consensus form if it exists
+		override = options.builderConfig.ToConsensus()
+	}
+	// If there's nothing to process further, return the override or current based on what's available
+	if current == nil {
+		return override
+	}
+
+	if override != nil {
+		current.Enabled = override.Enabled
+	}
+
+	if options.gasLimit != nil {
+		current.GasLimit = *options.gasLimit
+	}
+
+	current.GasLimit = reviewGasLimit(current.GasLimit)
+
+	if options.builderBoostFactor != nil {
+		current.BuilderBoostFactor = options.builderBoostFactor
+	}
+
+	return current
 }
 
 func reviewGasLimit(gasLimit validator.Uint64) validator.Uint64 {
