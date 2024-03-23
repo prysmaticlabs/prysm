@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
-var balanceCache = cache.NewEffectiveBalanceCache()
+var balanceCache, _ = cache.NewEffectiveBalanceCache()
 
 // TotalBalance returns the total amount at stake in Gwei
 // of input validators.
