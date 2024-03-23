@@ -124,8 +124,10 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		var c *SyncCommitteeHeadStateCache[primitives.Slot, state.BeaconState]
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewSyncCommitteeHeadState()
+			c, err = NewSyncCommitteeHeadStateCache[primitives.Slot, state.BeaconState]()
+			require.NoError(t, err)
 			if tt.put != nil {
 				err := c.Put(tt.put.slot, tt.put.state)
 				if (err != nil) != tt.wantPutErr {

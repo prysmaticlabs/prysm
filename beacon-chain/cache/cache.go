@@ -2,6 +2,7 @@ package cache
 
 import (
 	"github.com/hashicorp/golang-lru/v2"
+	"reflect"
 )
 
 type Cache[K comparable, V any] interface {
@@ -35,4 +36,8 @@ func Remove[K comparable, V any](c Cache[K, V], key K) {
 
 func Purge[K comparable, V any](c Cache[K, V]) {
 	c.get().Purge()
+}
+
+func isNil[T any](v T) bool {
+	return reflect.ValueOf(&v).Elem().IsZero()
 }
