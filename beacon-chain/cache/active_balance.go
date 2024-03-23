@@ -84,7 +84,7 @@ func (c *BalanceCache[K, V]) AddTotalEffectiveBalance(st state.ReadOnlyBeaconSta
 }
 
 // Get returns the current epoch's effective balance for state `st` in cache.
-func (c *BalanceCache[K, V]) Get(st state.ReadOnlyBeaconState) (value V, err error) {
+func (c *BalanceCache[K, V]) Get(st state.ReadOnlyBeaconState) (balance V, err error) {
 	var (
 		zero V
 		key  K
