@@ -69,7 +69,7 @@ func (c *BalanceCache[K, V]) missCache() {
 
 // Clear the BalanceCache to its initial state
 func (c *BalanceCache[K, V]) Clear() {
-	c.get().Purge()
+	Purge[K, V](c)
 }
 
 // AddTotalEffectiveBalance adds a new total effective balance entry for current balance for state `st` into the cache.
