@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 
 	"github.com/pkg/errors"

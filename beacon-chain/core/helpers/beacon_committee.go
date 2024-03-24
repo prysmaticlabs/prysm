@@ -5,8 +5,9 @@ package helpers
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"sort"
+
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"

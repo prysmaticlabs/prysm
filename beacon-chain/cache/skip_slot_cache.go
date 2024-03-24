@@ -2,10 +2,11 @@ package cache
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"math"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/prometheus/client_golang/prometheus"

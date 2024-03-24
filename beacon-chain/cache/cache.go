@@ -1,8 +1,9 @@
 package cache
 
 import (
-	"github.com/hashicorp/golang-lru/v2"
 	"unsafe"
+
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 type Cache[K comparable, V any] interface {
