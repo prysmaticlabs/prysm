@@ -76,8 +76,7 @@ func (c *SyncCommitteeHeadStateCache[K, V]) Put(slot K, st V) error {
 		return ErrIncorrectType
 	}
 
-	Add[K, V](c, slot, st)
-	return nil
+	return Add[K, V](c, slot, st)
 }
 
 // Get `state` using `slot` as key. Return nil if nothing is found.
