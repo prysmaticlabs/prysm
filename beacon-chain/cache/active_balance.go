@@ -41,11 +41,11 @@ type BalanceCache[K string, V uint64] struct {
 func NewEffectiveBalanceCache[K string, V uint64]() (*BalanceCache[K, V], error) {
 	cache, err := lru.New[K, V](maxBalanceCacheSize)
 	if err != nil {
-		return nil, err
+		return nil, ErrCacheCannotBeNil
 	}
 
 	if balanceCacheMiss == nil || balanceCacheHit == nil {
-		return nil, errors.New("balance cache prometheus metrics are not initialized")
+		return nil, ErrCacheMetricsCannotBeNil
 	}
 
 	return &BalanceCache[K, V]{
