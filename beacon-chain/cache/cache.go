@@ -13,7 +13,7 @@ type Cache[K comparable, V any] interface {
 	missCache()
 }
 
-func Get[K comparable, V any](c Cache[K, V], key K) (V, error) {
+func get[K comparable, V any](c Cache[K, V], key K) (V, error) {
 	value, ok := c.get().Get(key)
 	if !ok {
 		c.missCache()
@@ -24,7 +24,7 @@ func Get[K comparable, V any](c Cache[K, V], key K) (V, error) {
 	return value, nil
 }
 
-func Add[K comparable, V any](c Cache[K, V], key K, value V) error {
+func add[K comparable, V any](c Cache[K, V], key K, value V) error {
 	if isNil(value) {
 		return ErrNilValueProvided
 	}
@@ -32,15 +32,15 @@ func Add[K comparable, V any](c Cache[K, V], key K, value V) error {
 	return nil
 }
 
-func Keys[K comparable, V any](c Cache[K, V]) []K {
+func keys[K comparable, V any](c Cache[K, V]) []K {
 	return c.get().Keys()
 }
 
-func Remove[K comparable, V any](c Cache[K, V], key K) {
+func remove[K comparable, V any](c Cache[K, V], key K) {
 	c.get().Remove(key)
 }
 
-func Purge[K comparable, V any](c Cache[K, V]) {
+func purge[K comparable, V any](c Cache[K, V]) {
 	c.get().Purge()
 }
 

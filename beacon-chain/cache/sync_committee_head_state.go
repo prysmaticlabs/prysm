@@ -76,7 +76,7 @@ func (c *SyncCommitteeHeadStateCache[K, V]) Put(slot K, st V) error {
 		return ErrIncorrectType
 	}
 
-	return Add[K, V](c, slot, st)
+	return add[K, V](c, slot, st)
 }
 
 // Get `state` using `slot` as key. Return nil if nothing is found.
@@ -85,7 +85,7 @@ func (c *SyncCommitteeHeadStateCache[K, V]) Get(slot K) (V, error) {
 		noState V
 	)
 
-	state, err := Get[K, V](c, slot)
+	state, err := get[K, V](c, slot)
 	if err != nil {
 		return noState, err
 	}
@@ -99,5 +99,5 @@ func (c *SyncCommitteeHeadStateCache[K, V]) Get(slot K) (V, error) {
 }
 
 func (c *SyncCommitteeHeadStateCache[K, V]) Clear() {
-	Purge[K, V](c)
+	purge[K, V](c)
 }

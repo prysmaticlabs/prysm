@@ -75,7 +75,7 @@ func (c *CheckpointStateCache[K, V]) StateByCheckpoint(cp *ethpb.Checkpoint) (st
 		return nil, err
 	}
 
-	item, err := Get[K, V](c, key)
+	item, err := get[K, V](c, key)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
@@ -100,15 +100,15 @@ func (c *CheckpointStateCache[K, V]) AddCheckpointState(cp *ethpb.Checkpoint, s 
 		return err
 	}
 
-	return Add[K, V](c, key, s)
+	return add[K, V](c, key, s)
 }
 
 func (c *CheckpointStateCache[K, V]) Keys() []K {
-	return Keys[K, V](c)
+	return keys[K, V](c)
 }
 
 func (c *CheckpointStateCache[K, V]) Clear() {
-	Purge[K, V](c)
+	purge[K, V](c)
 }
 
 func checkpointStateKey[K CheckpointHash](cp *ethpb.Checkpoint) (K, error) {
