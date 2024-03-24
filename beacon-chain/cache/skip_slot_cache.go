@@ -147,7 +147,7 @@ func (c *SkipSlotCache[K, V]) Get(ctx context.Context, r K) (V, error) {
 		return beaconState.Copy().(V), nil
 	}
 
-	return noState, errors.Wrapf(ErrCastingFailed, "%s -> %s", "state.ReadOnlyBeaconState", "state.BeaconState")
+	return noState, errors.Wrap(ErrCastingFailed, "item in cache is not of type state.BeaconState")
 }
 
 // MarkInProgress a request so that any other similar requests will block on
