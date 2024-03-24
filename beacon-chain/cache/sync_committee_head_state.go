@@ -2,7 +2,6 @@ package cache
 
 import (
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -39,11 +38,11 @@ type SyncCommitteeHeadStateCache[K primitives.Slot, V state.BeaconState] struct 
 func NewSyncCommitteeHeadStateCache[K primitives.Slot, V state.BeaconState]() (*SyncCommitteeHeadStateCache[K, V], error) {
 	cache, err := lru.New[K, V](maxSyncCommitteeHeadStateCacheSize)
 	if err != nil {
-		return nil, err
+		return nil, ErrCacheCannotBeNil
 	}
 
 	if maxSyncCommitteeHeadStateCacheMiss == nil || maxSyncCommitteeHeadStateCacheHit == nil {
-		return nil, errors.New("prometheus metrics are not initialized")
+		return nil, ErrCacheMetricsCannotBeNil
 	}
 
 	return &SyncCommitteeHeadStateCache[K, V]{
@@ -69,7 +68,7 @@ func (c *SyncCommitteeHeadStateCache[K, V]) missCache() {
 func (c *SyncCommitteeHeadStateCache[K, V]) Put(slot K, st V) error {
 	// Make sure that the provided state is non nil
 	// and is of the correct type.
-	if isNil[V](st) || st.IsNil() {
+	if isNil(st) || st.IsNil() {
 		return ErrNilValueProvided
 	}
 
@@ -98,4 +97,8 @@ func (c *SyncCommitteeHeadStateCache[K, V]) Get(slot K) (V, error) {
 	}
 
 	return state, nil
+}
+
+func (c *SyncCommitteeHeadStateCache[K, V]) Clear() {
+	Purge[K, V](c)
 }
