@@ -2,10 +2,12 @@ package cache
 
 import (
 	"github.com/hashicorp/golang-lru/v2"
-	"reflect"
+	"unsafe"
 )
 
 type Cache[K comparable, V any] interface {
+	Clear()
+
 	get() *lru.Cache[K, V]
 	hitCache()
 	missCache()
@@ -22,8 +24,12 @@ func Get[K comparable, V any](c Cache[K, V], key K) (V, error) {
 	return value, nil
 }
 
-func Add[K comparable, V any](c Cache[K, V], key K, value V) {
+func Add[K comparable, V any](c Cache[K, V], key K, value V) error {
+	if isNil(value) {
+		return ErrNilValueProvided
+	}
 	c.get().Add(key, value)
+	return nil
 }
 
 func Keys[K comparable, V any](c Cache[K, V]) []K {
@@ -39,5 +45,5 @@ func Purge[K comparable, V any](c Cache[K, V]) {
 }
 
 func isNil[T any](v T) bool {
-	return reflect.ValueOf(&v).Elem().IsZero()
+	return (*[2]uintptr)(unsafe.Pointer(&v))[1] == 0
 }
