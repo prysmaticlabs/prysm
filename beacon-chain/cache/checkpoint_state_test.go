@@ -15,7 +15,8 @@ import (
 )
 
 func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
-	cache := NewCheckpointStateCache()
+	cache, err := NewCheckpointStateCache[CheckpointHash, any]()
+	require.NoError(t, err)
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
 	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
@@ -58,7 +59,8 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 }
 
 func TestCheckpointStateCache_MaxSize(t *testing.T) {
-	c := NewCheckpointStateCache()
+	c, err := NewCheckpointStateCache[CheckpointHash, any]()
+	require.NoError(t, err)
 	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 0,
 	})
@@ -69,5 +71,5 @@ func TestCheckpointStateCache_MaxSize(t *testing.T) {
 		require.NoError(t, c.AddCheckpointState(&ethpb.Checkpoint{Epoch: primitives.Epoch(i), Root: make([]byte, 32)}, st))
 	}
 
-	assert.Equal(t, maxCheckpointStateSize, len(c.cache.Keys()))
+	assert.Equal(t, maxCheckpointStateSize, len(c.Keys()))
 }

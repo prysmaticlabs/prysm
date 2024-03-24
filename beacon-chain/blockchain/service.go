@@ -57,7 +57,7 @@ type Service struct {
 	headLock                      sync.RWMutex
 	originBlockRoot               [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
 	boundaryRoots                 [][32]byte
-	checkpointStateCache          *cache.CheckpointStateCache
+	checkpointStateCache          *cache.CheckpointStateCache[cache.CheckpointHash, any]
 	initSyncBlocks                map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
 	initSyncBlocksLock            sync.RWMutex
 	wsVerifier                    *WeakSubjectivityVerifier
@@ -166,6 +166,10 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, errors.Wrap(err, "could not initialize go-kzg context")
 		}
 	}
+	checkpointStateCache, err := cache.NewCheckpointStateCache[cache.CheckpointHash, any]()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize checkpoint state cache")
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	bn := &blobNotifierMap{
 		notifiers: make(map[[32]byte]chan uint64),
@@ -175,7 +179,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		ctx:                  ctx,
 		cancel:               cancel,
 		boundaryRoots:        [][32]byte{},
-		checkpointStateCache: cache.NewCheckpointStateCache(),
+		checkpointStateCache: checkpointStateCache,
 		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
 		blobNotifiers:        bn,
 		cfg:                  &config{},

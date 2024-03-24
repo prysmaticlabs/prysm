@@ -24,4 +24,6 @@ var (
 	// already in progress. The client should handle this error and wait for the in progress
 	// data to resolve via Get.
 	ErrAlreadyInProgress = errors.New("already in progress")
+
+	ErrCastingFailed = errors.New("casting failed")
 )
