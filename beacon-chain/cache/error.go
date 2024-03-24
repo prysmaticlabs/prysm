@@ -3,6 +3,11 @@ package cache
 import "github.com/pkg/errors"
 
 var (
+	// ErrCacheCannotBeNil for when a cache is nil.
+	ErrCacheCannotBeNil = errors.New("cache cannot be nil")
+	// ErrCacheMetricsCannotBeNil for when cache metrics are nil.
+	ErrCacheMetricsCannotBeNil = errors.New("cache metrics cannot be nil")
+
 	// ErrNilValueProvided for when we try to put a nil value in a cache.
 	ErrNilValueProvided = errors.New("nil value provided on Put()")
 	// ErrIncorrectType for when the state is of the incorrect type.
