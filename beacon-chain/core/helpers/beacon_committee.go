@@ -5,11 +5,11 @@ package helpers
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"sort"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	committeeCache       = cache.NewCommitteesCache()
+	committeeCache, _    = cache.NewCommitteesCache[string, cache.Committees]()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
 )
 
@@ -302,7 +302,7 @@ func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, 
 	if err != nil {
 		return err
 	}
-	if committeeCache.HasEntry(string(seed[:])) {
+	if committeeCache.HasEntry(seed) {
 		return nil
 	}
 	shuffledIndices, err := ShuffledIndices(state, e)

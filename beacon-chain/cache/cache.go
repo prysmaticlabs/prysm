@@ -36,14 +36,20 @@ func keys[K comparable, V any](c Cache[K, V]) []K {
 	return c.get().Keys()
 }
 
-func remove[K comparable, V any](c Cache[K, V], key K) {
-	c.get().Remove(key)
-}
-
 func purge[K comparable, V any](c Cache[K, V]) {
 	c.get().Purge()
 }
 
+func resize[K comparable, V any](c Cache[K, V], size int) {
+	c.get().Resize(size)
+}
+
+func exist[K comparable, V any](c Cache[K, V], key K) bool {
+	_, ok := c.get().Get(key)
+	return ok
+}
+
+// helpers
 func isNil[T any](v T) bool {
 	return (*[2]uintptr)(unsafe.Pointer(&v))[1] == 0
 }

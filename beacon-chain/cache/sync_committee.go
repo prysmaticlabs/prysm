@@ -109,7 +109,7 @@ func (s *SyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx primi
 func (s *SyncCommitteeCache) idxPositionInCommittee(
 	root [32]byte, valIdx primitives.ValidatorIndex,
 ) (*positionInCommittee, error) {
-	obj, exists, err := s.cache.GetByKey(key(root))
+	obj, exists, err := s.cache.GetByKey(committeeCachesKey(root))
 	if err != nil {
 		return nil, err
 	}
