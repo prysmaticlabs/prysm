@@ -260,10 +260,16 @@ func (bc *BuilderConfig) ToConsensus() *validatorpb.BuilderConfig {
 	if bc.Relays != nil {
 		relays = make([]string, len(bc.Relays))
 		copy(relays, bc.Relays)
-		c.Relays = relays
+	var relays []string
+	if bc.Relays != nil {
+		relays = make([]string, len(bc.Relays))
+		copy(relays, bc.Relays)
 	}
-	c.GasLimit = bc.GasLimit
-	c.BuilderBoostFactor = bc.BuilderBoostFactor
 
-	return c
+	return &validatorpb.BuilderConfig{
+		Enabled:            bc.Enabled,
+		GasLimit:           bc.GasLimit,
+		Relays:             relays,
+		BuilderBoostFactor: bc.BuilderBoostFactor,
+	}
 }
