@@ -15,8 +15,8 @@ var (
 	// ErrNotFound for cache fetches that return a nil value.
 	ErrNotFound = errors.New("not found in cache")
 	// ErrNonExistingSyncCommitteeKey when sync committee key (root) does not exist in cache.
-	ErrNonExistingSyncCommitteeKey   = errors.New("does not exist sync committee key")
-	errNotSyncCommitteeIndexPosition = errors.New("not syncCommitteeIndexPosition struct")
+	ErrNonExistingSyncCommitteeKey = errors.New("does not exist sync committee key")
+
 	// ErrNotFoundRegistration when validator registration does not exist in cache.
 	ErrNotFoundRegistration = errors.Wrap(ErrNotFound, "no validator registered")
 
@@ -25,5 +25,10 @@ var (
 	// data to resolve via Get.
 	ErrAlreadyInProgress = errors.New("already in progress")
 
-	ErrCastingFailed = errors.New("casting failed")
+	// ErrCast for when a cast fails when the cache didn't get the expected type.
+	ErrCast = errors.New("cast failed")
+	// errNotSyncCommitteeIndexPosition for when the cache didn't get the expected type of syncCommitteeIndexPosition.
+	errNotSyncCommitteeIndexPosition = errors.New("not of type SyncCommitteeIndexPosition")
+	// errNotBeaconState for when the cache didn't get the expected type of BeaconState.
+	errNotBeaconState = errors.New("not of type BeaconState")
 )

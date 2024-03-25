@@ -141,14 +141,15 @@ func (c *SkipSlotCache[K, V]) Get(ctx context.Context, r K) (V, error) {
 		}
 		return noState, err
 	}
-
 	span.AddAttributes(trace.BoolAttribute("hit", true))
-	switch beaconState := any(item).(type) {
-	case state.BeaconState:
-		return beaconState.Copy().(V), nil
+
+	beaconState, ok := any(item).(state.BeaconState)
+	if !ok {
+		return noState, errors.Wrapf(ErrCast, "%s", errNotBeaconState)
 	}
 
-	return noState, errors.Wrap(ErrCastingFailed, "item in cache is not of type state.BeaconState")
+	// Copy here is necessary to avoid cache mutation.
+	return beaconState.Copy().(V), nil
 }
 
 // MarkInProgress a request so that any other similar requests will block on

@@ -84,13 +84,13 @@ func (c *CheckpointStateCache[K, V]) StateByCheckpoint(cp *ethpb.Checkpoint) (st
 		return nil, err
 	}
 
-	switch beaconState := any(item).(type) {
-	case state.BeaconState:
-		// Copy here is unnecessary since the return will only be used to verify attestation signature.
-		return beaconState, nil
+	beaconState, ok := any(item).(state.BeaconState)
+	if !ok {
+		return nil, errors.Wrapf(ErrCast, "%s", errNotBeaconState)
 	}
 
-	return nil, errors.Wrapf(ErrCastingFailed, "%s -> %s", "state.ReadOnlyBeaconState", "state.BeaconState")
+	// Copy here is unnecessary since the return will only be used to verify attestation signature.
+	return beaconState, nil
 }
 
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least
