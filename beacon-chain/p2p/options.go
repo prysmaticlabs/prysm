@@ -20,6 +20,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
+type internetProtocol string
+
+const (
+	udp  = "udp"
+	tcp  = "tcp"
+	quic = "quic"
+)
+
 // MultiAddressBuilder takes in an ip address string and port to produce a go multiaddr format.
 func MultiAddressBuilder(ip net.IP, port uint) (ma.Multiaddr, error) {
 	ipType, err := extractIpType(ip)
@@ -124,7 +132,9 @@ func extractIpType(ip net.IP) (string, error) {
 	return "", errors.Errorf("provided IP address is neither IPv4 nor IPv6: %s", ip)
 }
 
-func multiAddressBuilderWithID(ip net.IP, protocol string, port uint, id peer.ID) (ma.Multiaddr, error) {
+func multiAddressBuilderWithID(ip net.IP, protocol internetProtocol, port uint, id peer.ID) (ma.Multiaddr, error) {
+	var multiaddrStr string
+
 	if id == "" {
 		return nil, errors.Errorf("empty peer id given: %s", id)
 	}
@@ -134,8 +144,17 @@ func multiAddressBuilderWithID(ip net.IP, protocol string, port uint, id peer.ID
 		return nil, errors.Wrap(err, "unable to determine IP type")
 	}
 
-	// Example: /ip4/1.2.3.4/tcp/5678/p2p/16Uiu2HAkum7hhuMpWqFj3yNLcmQBGmThmqw2ohaCRThXQuKU9ohs
-	multiaddrStr := fmt.Sprintf("/%s/%s/%s/%d/p2p/%s", ipType, ip, protocol, port, id)
+	switch protocol {
+	case udp, tcp:
+		// Example with UDP: /ip4/1.2.3.4/udp/5678/p2p/16Uiu2HAkum7hhuMpWqFj3yNLcmQBGmThmqw2ohaCRThXQuKU9ohs
+		// Example with TCP: /ip6/1.2.3.4/tcp/5678/p2p/16Uiu2HAkum7hhuMpWqFj3yNLcmQBGmThmqw2ohaCRThXQuKU9ohs
+		multiaddrStr = fmt.Sprintf("/%s/%s/%s/%d/p2p/%s", ipType, ip, protocol, port, id)
+	case quic:
+		// Example: /ip4/1.2.3.4/udp/5678/quic-v1/p2p/16Uiu2HAkum7hhuMpWqFj3yNLcmQBGmThmqw2ohaCRThXQuKU9ohs
+		multiaddrStr = fmt.Sprintf("/%s/%s/udp/%d/quic-v1/p2p/%s", ipType, ip, port, id)
+	default:
+		return nil, errors.Errorf("unsupported protocol: %s", protocol)
+	}
 
 	return ma.NewMultiaddr(multiaddrStr)
 }
