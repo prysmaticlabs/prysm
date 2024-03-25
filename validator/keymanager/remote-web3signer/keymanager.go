@@ -534,10 +534,10 @@ func DisplayRemotePublicKeys(validatingPubKeys [][48]byte) {
 func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, error) {
 	importedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(pubKeys))
 	// Initialize a new slice of [48]byte arrays with the same length as providedPublicKeys
-	tempPublicKeys := make([][48]byte, len(providedPublicKeys))
+	tempPublicKeys := make([][48]byte, len(km.providedPublicKeys))
 
 	// Copy each [48]byte array from the original slice to the new slice
-	for i, publicKey := range providedPublicKeys {
+	for i, publicKey := range km.providedPublicKeys {
 		tempPublicKeys[i] = publicKey
 	}
 	for i, pubkey := range pubKeys {
@@ -557,7 +557,7 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 			}
 			continue
 		}
-		for _, key := range km.providedPublicKeys {
+		for _, key := range tempPublicKeys {
 			if bytes.Equal(key[:], pubkeyBytes) {
 				found = true
 				break
@@ -570,7 +570,7 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 			}
 			continue
 		}
-		km.providedPublicKeys = append(km.providedPublicKeys, bytesutil.ToBytes48(pubkeyBytes))
+		tempPublicKeys = append(tempPublicKeys, bytesutil.ToBytes48(pubkeyBytes))
 		importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
 			Status:  keymanager.StatusImported,
 			Message: fmt.Sprintf("Successfully added pubkey: %v", pubkey),
@@ -578,7 +578,7 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", pubkey)
 	}
 
-	if err := km.saveProvidedPublicKeys(); err != nil {
+	if err := km.saveProvidedPublicKeys(tempPublicKeys); err != nil {
 		return nil, err
 	}
 
@@ -588,7 +588,7 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 }
 
 // DeletePublicKeys removes a list of public keys from the keymanager for web3signer use. Returns status with message.
-func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus {
+func (km *Keymanager) DeletePublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, error) {
 	deletedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(pubKeys))
 	if len(km.providedPublicKeys) == 0 {
 		for i := range deletedRemoteKeysStatuses {
@@ -597,7 +597,14 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 				Message: "No pubkeys are set in validator",
 			}
 		}
-		return deletedRemoteKeysStatuses
+		return deletedRemoteKeysStatuses, nil
+	}
+	// Initialize a new slice of [48]byte arrays with the same length as providedPublicKeys
+	tempPublicKeys := make([][48]byte, len(km.providedPublicKeys))
+
+	// Copy each [48]byte array from the original slice to the new slice
+	for i, publicKey := range km.providedPublicKeys {
+		tempPublicKeys[i] = publicKey
 	}
 	for i, pubkey := range pubKeys {
 		for in, key := range km.providedPublicKeys {
@@ -617,7 +624,7 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 				continue
 			}
 			if bytes.Equal(key[:], pubkeyBytes) {
-				km.providedPublicKeys = append(km.providedPublicKeys[:in], km.providedPublicKeys[in+1:]...)
+				tempPublicKeys = append(tempPublicKeys[:in], tempPublicKeys[in+1:]...)
 				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
 					Status:  keymanager.StatusDeleted,
 					Message: fmt.Sprintf("Successfully deleted pubkey: %v", pubkey),
@@ -633,10 +640,11 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 			}
 		}
 	}
-	if err := km.saveProvidedPublicKeys(); err != nil {
+
+	if err := km.saveProvidedPublicKeys(tempPublicKeys); err != nil {
 		return nil, err
 	}
 
 	km.accountsChangedFeed.Send(km.providedPublicKeys)
-	return deletedRemoteKeysStatuses
+	return deletedRemoteKeysStatuses, nil
 }
