@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
 	mplex "github.com/libp2p/go-libp2p-mplex"
@@ -11,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
+	gomplex "github.com/libp2p/go-mplex"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
@@ -134,4 +136,9 @@ func privKeyOption(privkey *ecdsa.PrivateKey) libp2p.Option {
 		log.Debug("ECDSA private key generated")
 		return cfg.Apply(libp2p.Identity(ifaceKey))
 	}
+}
+
+// Configures stream timeouts on mplex.
+func configureMplex() {
+	gomplex.ResetStreamTimeout = 5 * time.Second
 }
