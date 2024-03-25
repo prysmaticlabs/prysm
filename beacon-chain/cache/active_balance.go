@@ -75,7 +75,7 @@ func (c *BalanceCache[K, V]) Clear() { //nolint: unused, -- bug in golangci-lint
 
 // AddTotalEffectiveBalance adds a new total effective balance entry for current balance for state `st` into the cache.
 func (c *BalanceCache[K, V]) AddTotalEffectiveBalance(st state.ReadOnlyBeaconState, balance V) error {
-	key, err := c.balanceCacheKey(st)
+	key, err := balanceCacheKey[K](st)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (c *BalanceCache[K, V]) Get(st state.ReadOnlyBeaconState) (balance V, err e
 		zero V
 		key  K
 	)
-	if key, err = c.balanceCacheKey(st); err != nil {
+	if key, err = balanceCacheKey[K](st); err != nil {
 		return zero, err
 	}
 
@@ -98,7 +98,7 @@ func (c *BalanceCache[K, V]) Get(st state.ReadOnlyBeaconState) (balance V, err e
 
 // Given input state `st`, balance key is constructed as:
 // (block_root in `st` at epoch_start_slot - 1) + current_epoch + validator_count
-func (c *BalanceCache[K, V]) balanceCacheKey(st state.ReadOnlyBeaconState) (keyStr K, err error) {
+func balanceCacheKey[K string](st state.ReadOnlyBeaconState) (keyStr K, err error) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	currentEpoch := st.Slot().DivSlot(slotsPerEpoch)
 
