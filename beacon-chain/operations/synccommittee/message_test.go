@@ -34,76 +34,84 @@ func TestSyncCommitteeSignatureCache_RoundTrip(t *testing.T) {
 		require.NoError(t, store.SaveSyncCommitteeMessage(msg))
 	}
 
-	msgs, err := store.SyncCommitteeMessages(1)
+	msgs, unlock, err := store.SyncCommitteeMessages(1)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage(nil), msgs)
 
-	msgs, err = store.SyncCommitteeMessages(2)
+	msgs, unlock, err = store.SyncCommitteeMessages(2)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage(nil), msgs)
 
-	msgs, err = store.SyncCommitteeMessages(3)
+	msgs, unlock, err = store.SyncCommitteeMessages(3)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage{
 		{Slot: 3, ValidatorIndex: 0, Signature: []byte{'e'}},
 		{Slot: 3, ValidatorIndex: 1, Signature: []byte{'f'}},
 	}, msgs)
 
-	msgs, err = store.SyncCommitteeMessages(4)
+	msgs, unlock, err = store.SyncCommitteeMessages(4)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage{
 		{Slot: 4, ValidatorIndex: 0, Signature: []byte{'g'}},
 		{Slot: 4, ValidatorIndex: 1, Signature: []byte{'h'}},
 	}, msgs)
 
-	msgs, err = store.SyncCommitteeMessages(5)
+	msgs, unlock, err = store.SyncCommitteeMessages(5)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage{
 		{Slot: 5, ValidatorIndex: 0, Signature: []byte{'i'}},
 		{Slot: 5, ValidatorIndex: 1, Signature: []byte{'j'}},
 	}, msgs)
 
-	msgs, err = store.SyncCommitteeMessages(6)
+	msgs, unlock, err = store.SyncCommitteeMessages(6)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage{
 		{Slot: 6, ValidatorIndex: 0, Signature: []byte{'k'}},
 		{Slot: 6, ValidatorIndex: 1, Signature: []byte{'l'}},
 	}, msgs)
+	unlock()
 
 	// Messages should persist after retrieval.
-	msgs, err = store.SyncCommitteeMessages(1)
+	msgs, unlock, err = store.SyncCommitteeMessages(1)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage(nil), msgs)
+	unlock()
 
-	msgs, err = store.SyncCommitteeMessages(2)
+	msgs, unlock, err = store.SyncCommitteeMessages(2)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage(nil), msgs)
+	unlock()
 
-	msgs, err = store.SyncCommitteeMessages(3)
+	msgs, unlock, err = store.SyncCommitteeMessages(3)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage{
 		{Slot: 3, ValidatorIndex: 0, Signature: []byte{'e'}},
 		{Slot: 3, ValidatorIndex: 1, Signature: []byte{'f'}},
 	}, msgs)
+	unlock()
 
-	msgs, err = store.SyncCommitteeMessages(4)
+	msgs, unlock, err = store.SyncCommitteeMessages(4)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage{
 		{Slot: 4, ValidatorIndex: 0, Signature: []byte{'g'}},
 		{Slot: 4, ValidatorIndex: 1, Signature: []byte{'h'}},
 	}, msgs)
+	unlock()
 
-	msgs, err = store.SyncCommitteeMessages(5)
+	msgs, unlock, err = store.SyncCommitteeMessages(5)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage{
 		{Slot: 5, ValidatorIndex: 0, Signature: []byte{'i'}},
 		{Slot: 5, ValidatorIndex: 1, Signature: []byte{'j'}},
 	}, msgs)
+	unlock()
 
-	msgs, err = store.SyncCommitteeMessages(6)
+	msgs, unlock, err = store.SyncCommitteeMessages(6)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeMessage{
 		{Slot: 6, ValidatorIndex: 0, Signature: []byte{'k'}},
 		{Slot: 6, ValidatorIndex: 1, Signature: []byte{'l'}},
 	}, msgs)
+	unlock()
+
 }

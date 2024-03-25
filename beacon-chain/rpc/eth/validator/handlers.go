@@ -477,7 +477,8 @@ func (s *Server) produceSyncCommitteeContribution(
 	index uint64,
 	blockRoot []byte,
 ) (*structs.SyncCommitteeContribution, bool) {
-	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
+	msgs, unlock, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
+	defer unlock()
 	if err != nil {
 		httputil.HandleError(w, "Could not get sync subcommittee messages: "+err.Error(), http.StatusInternalServerError)
 		return nil, false
