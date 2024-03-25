@@ -11,6 +11,7 @@ go_library(
     visibility = ["//testing/spectest:__subpackages__"],
     deps = [
         "//config/params:go_default_library",
+        "//io/file:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_json_iterator_go//:go_default_library",
