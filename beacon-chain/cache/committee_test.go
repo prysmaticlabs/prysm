@@ -131,7 +131,6 @@ func TestCommitteeCacheOutOfRange(t *testing.T) {
 		ShuffledIndices: []primitives.ValidatorIndex{0},
 		SortedIndices:   []primitives.ValidatorIndex{},
 	}
-	//key, err := committeeCachesKeyFn(comms)
 	err = cache.AddCommitteeShuffledList(context.Background(), comms)
 	require.NoError(t, err)
 
