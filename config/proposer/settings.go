@@ -223,13 +223,18 @@ func (bc *BuilderConfig) Clone() *BuilderConfig {
 	if bc == nil {
 		return nil
 	}
-	c := &BuilderConfig{}
-	c.Enabled = bc.Enabled
-	c.GasLimit = bc.GasLimit
-	c.BuilderBoostFactor = bc.BuilderBoostFactor
 	var relays []string
 	if bc.Relays != nil {
 		relays = make([]string, len(bc.Relays))
+		copy(relays, bc.Relays)
+	}
+	
+	return &BuilderConfig{
+		Enabled:            bc.Enabled,
+		GasLimit:           bc.GasLimit,
+		BuilderBoostFactor: bc.BuilderBoostFactor,
+		Relays:             relays
+	}
 		copy(relays, bc.Relays)
 		c.Relays = relays
 	}
