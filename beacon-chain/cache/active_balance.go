@@ -56,20 +56,20 @@ func NewEffectiveBalanceCache[K string, V uint64]() (*BalanceCache[K, V], error)
 	}, nil
 }
 
-func (c *BalanceCache[K, V]) get() *lru.Cache[K, V] {
+func (c *BalanceCache[K, V]) get() *lru.Cache[K, V] { //nolint: unused, -- bug in golangci-lint 1.55
 	return c.lru
 }
 
-func (c *BalanceCache[K, V]) hitCache() {
+func (c *BalanceCache[K, V]) hitCache() { //nolint: unused, -- bug in golangci-lint 1.55
 	c.promCacheHit.Inc()
 }
 
-func (c *BalanceCache[K, V]) missCache() {
+func (c *BalanceCache[K, V]) missCache() { //nolint: unused, -- bug in golangci-lint 1.55
 	c.promCacheMiss.Inc()
 }
 
 // Clear the BalanceCache to its initial state
-func (c *BalanceCache[K, V]) Clear() {
+func (c *BalanceCache[K, V]) Clear() { //nolint: unused, -- bug in golangci-lint 1.55
 	purge[K, V](c)
 }
 

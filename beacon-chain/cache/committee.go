@@ -74,15 +74,15 @@ func NewCommitteesCache[K string, V Committees]() (*CommitteeCache[K, V], error)
 	}, nil
 }
 
-func (c *CommitteeCache[K, V]) get() *lru.Cache[K, V] {
+func (c *CommitteeCache[K, V]) get() *lru.Cache[K, V] { //nolint: unused, -- bug in golangci-lint 1.55
 	return c.lru
 }
 
-func (c *CommitteeCache[K, V]) hitCache() {
+func (c *CommitteeCache[K, V]) hitCache() { //nolint: unused, -- bug in golangci-lint 1.55
 	c.promCacheHit.Inc()
 }
 
-func (c *CommitteeCache[K, V]) missCache() {
+func (c *CommitteeCache[K, V]) missCache() { //nolint: unused, -- bug in golangci-lint 1.55
 	c.promCacheMiss.Inc()
 }
 

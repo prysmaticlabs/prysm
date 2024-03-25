@@ -56,15 +56,15 @@ func NewCheckpointStateCache[K CheckpointHash, V any]() (*CheckpointStateCache[K
 	}, nil
 }
 
-func (c *CheckpointStateCache[K, V]) get() *lru.Cache[K, V] {
+func (c *CheckpointStateCache[K, V]) get() *lru.Cache[K, V] { //nolint: unused, -- bug in golangci-lint 1.55
 	return c.lru
 }
 
-func (c *CheckpointStateCache[K, V]) hitCache() {
+func (c *CheckpointStateCache[K, V]) hitCache() { //nolint: unused, -- bug in golangci-lint 1.55
 	c.promCacheHit.Inc()
 }
 
-func (c *CheckpointStateCache[K, V]) missCache() {
+func (c *CheckpointStateCache[K, V]) missCache() { //nolint: unused, -- bug in golangci-lint 1.55
 	c.promCacheMiss.Inc()
 }
 

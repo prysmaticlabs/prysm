@@ -68,15 +68,15 @@ func NewSkipSlotCache[K addr, V state.BeaconState]() (*SkipSlotCache[K, V], erro
 	}, nil
 }
 
-func (c *SkipSlotCache[K, V]) get() *lru.Cache[K, V] {
+func (c *SkipSlotCache[K, V]) get() *lru.Cache[K, V] { //nolint: unused, -- bug in golangci-lint 1.55
 	return c.lru
 }
 
-func (c *SkipSlotCache[K, V]) hitCache() {
+func (c *SkipSlotCache[K, V]) hitCache() { //nolint: unused, -- bug in golangci-lint 1.55
 	c.promCacheHit.Inc()
 }
 
-func (c *SkipSlotCache[K, V]) missCache() {
+func (c *SkipSlotCache[K, V]) missCache() { //nolint: unused, -- bug in golangci-lint 1.55
 	c.promCacheMiss.Inc()
 }
 

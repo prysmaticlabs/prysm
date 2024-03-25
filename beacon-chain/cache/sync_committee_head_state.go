@@ -52,15 +52,15 @@ func NewSyncCommitteeHeadStateCache[K primitives.Slot, V state.BeaconState]() (*
 	}, nil
 }
 
-func (c *SyncCommitteeHeadStateCache[K, V]) get() *lru.Cache[K, V] {
+func (c *SyncCommitteeHeadStateCache[K, V]) get() *lru.Cache[K, V] { //nolint: unused, -- bug in golangci-lint 1.55
 	return c.lru
 }
 
-func (c *SyncCommitteeHeadStateCache[K, V]) hitCache() {
+func (c *SyncCommitteeHeadStateCache[K, V]) hitCache() { //nolint: unused, -- bug in golangci-lint 1.55
 	c.promCacheHit.Inc()
 }
 
-func (c *SyncCommitteeHeadStateCache[K, V]) missCache() {
+func (c *SyncCommitteeHeadStateCache[K, V]) missCache() { //nolint: unused, -- bug in golangci-lint 1.55
 	c.promCacheMiss.Inc()
 }
 
