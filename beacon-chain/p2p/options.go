@@ -11,7 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
-	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
+	libp2ptcp "github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	gomplex "github.com/libp2p/go-mplex"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -67,7 +67,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Op
 		libp2p.ListenAddrs(listen),
 		libp2p.UserAgent(version.BuildData()),
 		libp2p.ConnectionGater(s),
-		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Transport(libp2ptcp.NewTCPTransport),
 		libp2p.DefaultMuxers,
 		libp2p.Muxer("/mplex/6.7.0", mplex.DefaultTransport),
 		libp2p.Security(noise.ID, noise.New),
