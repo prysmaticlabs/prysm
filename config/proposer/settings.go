@@ -228,17 +228,13 @@ func (bc *BuilderConfig) Clone() *BuilderConfig {
 		relays = make([]string, len(bc.Relays))
 		copy(relays, bc.Relays)
 	}
-	
+
 	return &BuilderConfig{
 		Enabled:            bc.Enabled,
 		GasLimit:           bc.GasLimit,
 		BuilderBoostFactor: bc.BuilderBoostFactor,
-		Relays:             relays
+		Relays:             relays,
 	}
-		copy(relays, bc.Relays)
-		c.Relays = relays
-	}
-	return c
 }
 
 // Clone creates a deep copy of graffiti config
@@ -254,12 +250,7 @@ func (bc *BuilderConfig) ToConsensus() *validatorpb.BuilderConfig {
 	if bc == nil {
 		return nil
 	}
-	c := &validatorpb.BuilderConfig{}
-	c.Enabled = bc.Enabled
-	var relays []string
-	if bc.Relays != nil {
-		relays = make([]string, len(bc.Relays))
-		copy(relays, bc.Relays)
+
 	var relays []string
 	if bc.Relays != nil {
 		relays = make([]string, len(bc.Relays))

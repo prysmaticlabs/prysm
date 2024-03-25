@@ -129,7 +129,7 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*proposer.Settings, error)
 	loadConfig := &validatorpb.ProposerSettingsPayload{}
 
 	// override settings based on other options
-	if psl.options.builderConfig != nil {
+	if psl.options != nil && psl.options.builderConfig != nil {
 		if psl.options.gasLimit != nil {
 			psl.options.builderConfig.GasLimit = *psl.options.gasLimit
 		}

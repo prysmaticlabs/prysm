@@ -369,8 +369,8 @@ var (
 	// BuilderBoostFactorFlag sets a multiplier for builder block construction as a Uint64.
 	BuilderBoostFactorFlag = &cli.Uint64Flag{
 		Name: "builder-boost-factor",
-		Usage: "A multiplier for builder block construction as a Uint64 with a default of 100. This is used to prioritize local block construction over relay/builder block construction" +
-			"Boost factor is a multiplier against the builder value. Use builder block if: builderValueGwei*builderBoostFactor(default is 100) > local_block_value * (local-block-value-boost + 100)",
+		Usage: "A multiplier for builder block construction as a Uint64. This is used to prioritize relay/builder block construction over local block construction. " +
+			"Boost factor is a multiplier against the builder value. Use builder block if: builder_value * builder-boost-factor > local_value * (local-block-value-boost + 100)",
 		Value: 100,
 	}
 
