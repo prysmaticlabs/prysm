@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	committeeCache, _    = cache.NewCommitteesCache[string, cache.Committees]()
+	committeeCache, _    = cache.NewCommitteesCache()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
 )
 

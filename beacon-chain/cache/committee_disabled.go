@@ -14,8 +14,8 @@ type FakeCommitteeCache struct {
 }
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
-func NewCommitteesCache() *FakeCommitteeCache {
-	return &FakeCommitteeCache{}
+func NewCommitteesCache() (*FakeCommitteeCache, error) {
+	return &FakeCommitteeCache{}, nil
 }
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
@@ -56,7 +56,7 @@ func (c *FakeCommitteeCache) ProposerIndices(seed [32]byte) ([]primitives.Valida
 }
 
 // HasEntry returns true if the committee cache has a value.
-func (c *FakeCommitteeCache) HasEntry(string) bool {
+func (c *FakeCommitteeCache) HasEntry(seed [32]byte) bool {
 	return false
 }
 
