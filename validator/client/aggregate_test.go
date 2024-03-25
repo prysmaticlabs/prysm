@@ -63,6 +63,8 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 			m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
+				gomock.Any(),
+				gomock.Any(),
 			).Return(&ethpb.AggregateSelectionResponse{
 				AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 					AggregatorIndex: 0,
@@ -106,6 +108,8 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 			m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
+				gomock.Any(),
+				gomock.Any(),
 			).Return(&ethpb.AggregateSelectionResponse{
 				AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 					AggregatorIndex: 0,
@@ -166,6 +170,8 @@ func TestSubmitAggregateAndProof_Distributed(t *testing.T) {
 			m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
+				gomock.Any(),
+				gomock.Any(),
 			).Return(&ethpb.AggregateSelectionResponse{
 				AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 					AggregatorIndex: 0,

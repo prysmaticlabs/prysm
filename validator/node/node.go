@@ -660,6 +660,8 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 		ClientGrpcRetryDelay:     grpcRetryDelay,
 		ClientGrpcHeaders:        strings.Split(grpcHeaders, ","),
 		ClientWithCert:           clientCert,
+		BeaconApiTimeout:         time.Second * 30,
+		BeaconApiEndpoint:        c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 		Router:                   router,
 	})
 	return c.services.RegisterService(server)
