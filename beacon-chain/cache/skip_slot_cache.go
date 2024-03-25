@@ -62,8 +62,8 @@ func NewSkipSlotCache[K addr, V state.BeaconState]() (*SkipSlotCache[K, V], erro
 
 	return &SkipSlotCache[K, V]{
 		lru:           cache,
-		promCacheMiss: balanceCacheMiss,
-		promCacheHit:  balanceCacheHit,
+		promCacheMiss: skipSlotCacheMiss,
+		promCacheHit:  skipSlotCacheHit,
 		inProgress:    make(map[[32]byte]bool),
 	}, nil
 }
