@@ -228,23 +228,27 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 }
 
 func findBuilderBoost(pubKey [fieldparams.BLSPubkeyLength]byte, proposerSettings *proposer.Settings) *wrapperspb.UInt64Value {
-	if proposerSettings != nil {
-		if proposerSettings.ProposeConfig != nil {
-			option, ok := proposerSettings.ProposeConfig[pubKey]
-			if ok && option.BuilderConfig != nil && option.BuilderConfig.BuilderBoostFactor != nil {
-				return &wrapperspb.UInt64Value{
-					Value: *option.BuilderConfig.BuilderBoostFactor,
-				}
-			}
-		}
-		if proposerSettings.DefaultConfig != nil &&
-			proposerSettings.DefaultConfig.BuilderConfig != nil &&
-			proposerSettings.DefaultConfig.BuilderConfig.BuilderBoostFactor != nil {
+	if proposerSettings == nil {
+		return nil
+	}
+
+	if proposerSettings.ProposeConfig != nil {
+		option, ok := proposerSettings.ProposeConfig[pubKey]
+		if ok && option.BuilderConfig != nil && option.BuilderConfig.BuilderBoostFactor != nil {
 			return &wrapperspb.UInt64Value{
-				Value: *proposerSettings.DefaultConfig.BuilderConfig.BuilderBoostFactor,
+				Value: *option.BuilderConfig.BuilderBoostFactor,
 			}
 		}
 	}
+
+	if proposerSettings.DefaultConfig != nil &&
+		proposerSettings.DefaultConfig.BuilderConfig != nil &&
+		proposerSettings.DefaultConfig.BuilderConfig.BuilderBoostFactor != nil {
+		return &wrapperspb.UInt64Value{
+			Value: *proposerSettings.DefaultConfig.BuilderConfig.BuilderBoostFactor,
+		}
+	}
+
 	return nil
 }
 
