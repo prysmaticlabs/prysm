@@ -457,7 +457,7 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")
 	}
-	return multiAddressBuilderWithID(node.IP(), "tcp", uint(node.TCP()), id)
+	return multiAddressBuilderWithID(node.IP(), tcp, uint(node.TCP()), id)
 }
 
 func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
@@ -475,14 +475,14 @@ func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 	var ip4 enr.IPv4
 	var ip6 enr.IPv6
 	if node.Load(&ip4) == nil {
-		address, ipErr := multiAddressBuilderWithID(net.IP(ip4), "udp", uint(node.UDP()), id)
+		address, ipErr := multiAddressBuilderWithID(net.IP(ip4), udp, uint(node.UDP()), id)
 		if ipErr != nil {
 			return nil, errors.Wrap(ipErr, "could not build IPv4 address")
 		}
 		addresses = append(addresses, address)
 	}
 	if node.Load(&ip6) == nil {
-		address, ipErr := multiAddressBuilderWithID(net.IP(ip6), "udp", uint(node.UDP()), id)
+		address, ipErr := multiAddressBuilderWithID(net.IP(ip6), udp, uint(node.UDP()), id)
 		if ipErr != nil {
 			return nil, errors.Wrap(ipErr, "could not build IPv6 address")
 		}
