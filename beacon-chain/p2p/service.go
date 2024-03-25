@@ -216,7 +216,7 @@ func (s *Service) Start() {
 	if len(s.cfg.StaticPeers) > 0 {
 		addrs, err := PeersFromStringAddrs(s.cfg.StaticPeers)
 		if err != nil {
-			log.WithError(err).Error("Could not connect to static peer")
+			log.WithError(err).Error("could not convert ENR to multiaddr")
 		}
 		// Set trusted peers for those that are provided as static addresses.
 		pids := peerIdsFromMultiAddrs(addrs)
