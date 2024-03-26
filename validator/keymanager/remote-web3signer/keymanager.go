@@ -529,7 +529,7 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 
 	// Copy each [48]byte array from the original slice to the new slice
 	for i, publicKey := range km.providedPublicKeys {
-		tempPublicKeys[i] = publicKey
+		tempPublicKeys[i] = bytesutil.ToBytes48(bytesutil.SafeCopyBytes(publicKey[:]))
 	}
 	for i, pubkey := range pubKeys {
 		found := false
@@ -595,7 +595,7 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) ([]*keymanager.KeyStatu
 
 	// Copy each [48]byte array from the original slice to the new slice
 	for i, publicKey := range km.providedPublicKeys {
-		tempPublicKeys[i] = publicKey
+		tempPublicKeys[i] = bytesutil.ToBytes48(bytesutil.SafeCopyBytes(publicKey[:]))
 	}
 	for i, pubkey := range pubKeys {
 		for in, key := range km.providedPublicKeys {

@@ -34,7 +34,7 @@ func walletWithWeb3SignerKeymanager(c *cli.Context, config *remote_web3signer.Se
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "unable to use wallet directory for remote signer")
 	}
-	config.Wallet = w
+	config.WalletDir = w.Dir()
 	km, err := w.InitializeKeymanager(c.Context, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
 	if err != nil {
 		return nil, nil, err
