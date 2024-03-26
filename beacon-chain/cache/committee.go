@@ -92,7 +92,7 @@ func (c *CommitteeCache[K, V]) Clear() {
 	defer c.lock.Unlock()
 
 	purge[K, V](c)
-	c.CompressCommitteeCache()
+	c.compressCommitteeCache()
 	c.inProgress = make(map[string]bool)
 }
 
@@ -109,7 +109,19 @@ func (c *CommitteeCache[K, V]) ExpandCommitteeCache() {
 	log.Warnf("Expanding committee cache size from %d to %d", maxCommitteesCacheSize, expandedCommitteeCacheSize)
 }
 
+// compressCommitteeCache compresses the size of the committee cache.
+// This method is not thread safe and should be called with a lock.
+func (c *CommitteeCache[K, V]) compressCommitteeCache() {
+	if c.size == maxCommitteesCacheSize {
+		return
+	}
+	resize(c, maxCommitteesCacheSize)
+	c.size = maxCommitteesCacheSize
+	log.Warnf("Reducing committee cache size from %d to %d", expandedCommitteeCacheSize, maxCommitteesCacheSize)
+}
+
 // CompressCommitteeCache compresses the size of the committee cache.
+// This method is thread safe and should be called without a lock.
 func (c *CommitteeCache[K, V]) CompressCommitteeCache() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
