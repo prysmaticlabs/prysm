@@ -73,8 +73,6 @@ func TestBalanceCache_BalanceKey(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(primitives.Slot(math.MaxUint64)))
 
-	cache, err := NewEffectiveBalanceCache[string, uint64]()
-	require.NoError(t, err)
-	_, err = cache.balanceCacheKey(st)
+	_, err = balanceCacheKey(st)
 	require.NoError(t, err)
 }
