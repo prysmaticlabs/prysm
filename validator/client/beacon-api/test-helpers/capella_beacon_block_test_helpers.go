@@ -1,11 +1,10 @@
 package test_helpers
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 func GenerateProtoCapellaBeaconBlock() *ethpb.BeaconBlockCapella {
@@ -522,24 +521,24 @@ func GenerateProtoBlindedCapellaBeaconBlock() *ethpb.BlindedBeaconBlockCapella {
 	}
 }
 
-func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
-	return &apimiddleware.BeaconBlockCapellaJson{
+func GenerateJsonCapellaBeaconBlock() *structs.BeaconBlockCapella {
+	return &structs.BeaconBlockCapella{
 		Slot:          "1",
 		ProposerIndex: "2",
 		ParentRoot:    FillEncodedByteSlice(32, 3),
 		StateRoot:     FillEncodedByteSlice(32, 4),
-		Body: &apimiddleware.BeaconBlockBodyCapellaJson{
+		Body: &structs.BeaconBlockBodyCapella{
 			RandaoReveal: FillEncodedByteSlice(96, 5),
-			Eth1Data: &apimiddleware.Eth1DataJson{
+			Eth1Data: &structs.Eth1Data{
 				DepositRoot:  FillEncodedByteSlice(32, 6),
 				DepositCount: "7",
 				BlockHash:    FillEncodedByteSlice(32, 8),
 			},
 			Graffiti: FillEncodedByteSlice(32, 9),
-			ProposerSlashings: []*apimiddleware.ProposerSlashingJson{
+			ProposerSlashings: []*structs.ProposerSlashing{
 				{
-					Header_1: &apimiddleware.SignedBeaconBlockHeaderJson{
-						Header: &apimiddleware.BeaconBlockHeaderJson{
+					SignedHeader1: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "10",
 							ProposerIndex: "11",
 							ParentRoot:    FillEncodedByteSlice(32, 12),
@@ -548,8 +547,8 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 						},
 						Signature: FillEncodedByteSlice(96, 15),
 					},
-					Header_2: &apimiddleware.SignedBeaconBlockHeaderJson{
-						Header: &apimiddleware.BeaconBlockHeaderJson{
+					SignedHeader2: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "16",
 							ProposerIndex: "17",
 							ParentRoot:    FillEncodedByteSlice(32, 18),
@@ -560,8 +559,8 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 					},
 				},
 				{
-					Header_1: &apimiddleware.SignedBeaconBlockHeaderJson{
-						Header: &apimiddleware.BeaconBlockHeaderJson{
+					SignedHeader1: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "22",
 							ProposerIndex: "23",
 							ParentRoot:    FillEncodedByteSlice(32, 24),
@@ -570,8 +569,8 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 						},
 						Signature: FillEncodedByteSlice(96, 27),
 					},
-					Header_2: &apimiddleware.SignedBeaconBlockHeaderJson{
-						Header: &apimiddleware.BeaconBlockHeaderJson{
+					SignedHeader2: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "28",
 							ProposerIndex: "29",
 							ParentRoot:    FillEncodedByteSlice(32, 30),
@@ -582,36 +581,36 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 					},
 				},
 			},
-			AttesterSlashings: []*apimiddleware.AttesterSlashingJson{
+			AttesterSlashings: []*structs.AttesterSlashing{
 				{
-					Attestation_1: &apimiddleware.IndexedAttestationJson{
+					Attestation1: &structs.IndexedAttestation{
 						AttestingIndices: []string{"34", "35"},
-						Data: &apimiddleware.AttestationDataJson{
+						Data: &structs.AttestationData{
 							Slot:            "36",
 							CommitteeIndex:  "37",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &apimiddleware.CheckpointJson{
+							Source: &structs.Checkpoint{
 								Epoch: "39",
 								Root:  FillEncodedByteSlice(32, 40),
 							},
-							Target: &apimiddleware.CheckpointJson{
+							Target: &structs.Checkpoint{
 								Epoch: "41",
 								Root:  FillEncodedByteSlice(32, 42),
 							},
 						},
 						Signature: FillEncodedByteSlice(96, 43),
 					},
-					Attestation_2: &apimiddleware.IndexedAttestationJson{
+					Attestation2: &structs.IndexedAttestation{
 						AttestingIndices: []string{"44", "45"},
-						Data: &apimiddleware.AttestationDataJson{
+						Data: &structs.AttestationData{
 							Slot:            "46",
 							CommitteeIndex:  "47",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &apimiddleware.CheckpointJson{
+							Source: &structs.Checkpoint{
 								Epoch: "49",
 								Root:  FillEncodedByteSlice(32, 50),
 							},
-							Target: &apimiddleware.CheckpointJson{
+							Target: &structs.Checkpoint{
 								Epoch: "51",
 								Root:  FillEncodedByteSlice(32, 52),
 							},
@@ -620,34 +619,34 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 					},
 				},
 				{
-					Attestation_1: &apimiddleware.IndexedAttestationJson{
+					Attestation1: &structs.IndexedAttestation{
 						AttestingIndices: []string{"54", "55"},
-						Data: &apimiddleware.AttestationDataJson{
+						Data: &structs.AttestationData{
 							Slot:            "56",
 							CommitteeIndex:  "57",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &apimiddleware.CheckpointJson{
+							Source: &structs.Checkpoint{
 								Epoch: "59",
 								Root:  FillEncodedByteSlice(32, 60),
 							},
-							Target: &apimiddleware.CheckpointJson{
+							Target: &structs.Checkpoint{
 								Epoch: "61",
 								Root:  FillEncodedByteSlice(32, 62),
 							},
 						},
 						Signature: FillEncodedByteSlice(96, 63),
 					},
-					Attestation_2: &apimiddleware.IndexedAttestationJson{
+					Attestation2: &structs.IndexedAttestation{
 						AttestingIndices: []string{"64", "65"},
-						Data: &apimiddleware.AttestationDataJson{
+						Data: &structs.AttestationData{
 							Slot:            "66",
 							CommitteeIndex:  "67",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &apimiddleware.CheckpointJson{
+							Source: &structs.Checkpoint{
 								Epoch: "69",
 								Root:  FillEncodedByteSlice(32, 70),
 							},
-							Target: &apimiddleware.CheckpointJson{
+							Target: &structs.Checkpoint{
 								Epoch: "71",
 								Root:  FillEncodedByteSlice(32, 72),
 							},
@@ -656,18 +655,18 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 					},
 				},
 			},
-			Attestations: []*apimiddleware.AttestationJson{
+			Attestations: []*structs.Attestation{
 				{
 					AggregationBits: FillEncodedByteSlice(4, 74),
-					Data: &apimiddleware.AttestationDataJson{
+					Data: &structs.AttestationData{
 						Slot:            "75",
 						CommitteeIndex:  "76",
 						BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-						Source: &apimiddleware.CheckpointJson{
+						Source: &structs.Checkpoint{
 							Epoch: "78",
 							Root:  FillEncodedByteSlice(32, 79),
 						},
-						Target: &apimiddleware.CheckpointJson{
+						Target: &structs.Checkpoint{
 							Epoch: "80",
 							Root:  FillEncodedByteSlice(32, 81),
 						},
@@ -676,15 +675,15 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 				},
 				{
 					AggregationBits: FillEncodedByteSlice(4, 83),
-					Data: &apimiddleware.AttestationDataJson{
+					Data: &structs.AttestationData{
 						Slot:            "84",
 						CommitteeIndex:  "85",
 						BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-						Source: &apimiddleware.CheckpointJson{
+						Source: &structs.Checkpoint{
 							Epoch: "87",
 							Root:  FillEncodedByteSlice(32, 88),
 						},
-						Target: &apimiddleware.CheckpointJson{
+						Target: &structs.Checkpoint{
 							Epoch: "89",
 							Root:  FillEncodedByteSlice(32, 90),
 						},
@@ -692,11 +691,11 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 					Signature: FillEncodedByteSlice(96, 91),
 				},
 			},
-			Deposits: []*apimiddleware.DepositJson{
+			Deposits: []*structs.Deposit{
 				{
 					Proof: FillEncodedByteArraySlice(33, FillEncodedByteSlice(32, 92)),
-					Data: &apimiddleware.Deposit_DataJson{
-						PublicKey:             FillEncodedByteSlice(48, 94),
+					Data: &structs.DepositData{
+						Pubkey:                FillEncodedByteSlice(48, 94),
 						WithdrawalCredentials: FillEncodedByteSlice(32, 95),
 						Amount:                "96",
 						Signature:             FillEncodedByteSlice(96, 97),
@@ -704,35 +703,35 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 				},
 				{
 					Proof: FillEncodedByteArraySlice(33, FillEncodedByteSlice(32, 98)),
-					Data: &apimiddleware.Deposit_DataJson{
-						PublicKey:             FillEncodedByteSlice(48, 100),
+					Data: &structs.DepositData{
+						Pubkey:                FillEncodedByteSlice(48, 100),
 						WithdrawalCredentials: FillEncodedByteSlice(32, 101),
 						Amount:                "102",
 						Signature:             FillEncodedByteSlice(96, 103),
 					},
 				},
 			},
-			VoluntaryExits: []*apimiddleware.SignedVoluntaryExitJson{
+			VoluntaryExits: []*structs.SignedVoluntaryExit{
 				{
-					Exit: &apimiddleware.VoluntaryExitJson{
+					Message: &structs.VoluntaryExit{
 						Epoch:          "104",
 						ValidatorIndex: "105",
 					},
 					Signature: FillEncodedByteSlice(96, 106),
 				},
 				{
-					Exit: &apimiddleware.VoluntaryExitJson{
+					Message: &structs.VoluntaryExit{
 						Epoch:          "107",
 						ValidatorIndex: "108",
 					},
 					Signature: FillEncodedByteSlice(96, 109),
 				},
 			},
-			SyncAggregate: &apimiddleware.SyncAggregateJson{
+			SyncAggregate: &structs.SyncAggregate{
 				SyncCommitteeBits:      FillEncodedByteSlice(64, 110),
 				SyncCommitteeSignature: FillEncodedByteSlice(96, 111),
 			},
-			ExecutionPayload: &apimiddleware.ExecutionPayloadCapellaJson{
+			ExecutionPayload: &structs.ExecutionPayloadCapella{
 				ParentHash:    FillEncodedByteSlice(32, 112),
 				FeeRecipient:  FillEncodedByteSlice(20, 113),
 				StateRoot:     FillEncodedByteSlice(32, 114),
@@ -742,7 +741,7 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 				BlockNumber:   "118",
 				GasLimit:      "119",
 				GasUsed:       "120",
-				TimeStamp:     "121",
+				Timestamp:     "121",
 				ExtraData:     FillEncodedByteSlice(32, 122),
 				BaseFeePerGas: bytesutil.LittleEndianBytesToBigInt(FillByteSlice(32, 123)).String(),
 				BlockHash:     FillEncodedByteSlice(32, 124),
@@ -750,7 +749,7 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 					FillEncodedByteSlice(32, 125),
 					FillEncodedByteSlice(32, 126),
 				},
-				Withdrawals: []*apimiddleware.WithdrawalJson{
+				Withdrawals: []*structs.Withdrawal{
 					{
 						WithdrawalIndex:  "127",
 						ValidatorIndex:   "128",
@@ -765,9 +764,9 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 					},
 				},
 			},
-			BLSToExecutionChanges: []*apimiddleware.SignedBLSToExecutionChangeJson{
+			BLSToExecutionChanges: []*structs.SignedBLSToExecutionChange{
 				{
-					Message: &apimiddleware.BLSToExecutionChangeJson{
+					Message: &structs.BLSToExecutionChange{
 						ValidatorIndex:     "135",
 						FromBLSPubkey:      FillEncodedByteSlice(48, 136),
 						ToExecutionAddress: FillEncodedByteSlice(20, 137),
@@ -775,7 +774,7 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 					Signature: FillEncodedByteSlice(96, 138),
 				},
 				{
-					Message: &apimiddleware.BLSToExecutionChangeJson{
+					Message: &structs.BLSToExecutionChange{
 						ValidatorIndex:     "139",
 						FromBLSPubkey:      FillEncodedByteSlice(48, 140),
 						ToExecutionAddress: FillEncodedByteSlice(20, 141),
@@ -787,24 +786,24 @@ func GenerateJsonCapellaBeaconBlock() *apimiddleware.BeaconBlockCapellaJson {
 	}
 }
 
-func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
-	return &shared.BlindedBeaconBlockCapella{
+func GenerateJsonBlindedCapellaBeaconBlock() *structs.BlindedBeaconBlockCapella {
+	return &structs.BlindedBeaconBlockCapella{
 		Slot:          "1",
 		ProposerIndex: "2",
 		ParentRoot:    FillEncodedByteSlice(32, 3),
 		StateRoot:     FillEncodedByteSlice(32, 4),
-		Body: &shared.BlindedBeaconBlockBodyCapella{
+		Body: &structs.BlindedBeaconBlockBodyCapella{
 			RandaoReveal: FillEncodedByteSlice(96, 5),
-			Eth1Data: &shared.Eth1Data{
+			Eth1Data: &structs.Eth1Data{
 				DepositRoot:  FillEncodedByteSlice(32, 6),
 				DepositCount: "7",
 				BlockHash:    FillEncodedByteSlice(32, 8),
 			},
 			Graffiti: FillEncodedByteSlice(32, 9),
-			ProposerSlashings: []*shared.ProposerSlashing{
+			ProposerSlashings: []*structs.ProposerSlashing{
 				{
-					SignedHeader1: &shared.SignedBeaconBlockHeader{
-						Message: &shared.BeaconBlockHeader{
+					SignedHeader1: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "10",
 							ProposerIndex: "11",
 							ParentRoot:    FillEncodedByteSlice(32, 12),
@@ -813,8 +812,8 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 						},
 						Signature: FillEncodedByteSlice(96, 15),
 					},
-					SignedHeader2: &shared.SignedBeaconBlockHeader{
-						Message: &shared.BeaconBlockHeader{
+					SignedHeader2: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "16",
 							ProposerIndex: "17",
 							ParentRoot:    FillEncodedByteSlice(32, 18),
@@ -825,8 +824,8 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 					},
 				},
 				{
-					SignedHeader1: &shared.SignedBeaconBlockHeader{
-						Message: &shared.BeaconBlockHeader{
+					SignedHeader1: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "22",
 							ProposerIndex: "23",
 							ParentRoot:    FillEncodedByteSlice(32, 24),
@@ -835,8 +834,8 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 						},
 						Signature: FillEncodedByteSlice(96, 27),
 					},
-					SignedHeader2: &shared.SignedBeaconBlockHeader{
-						Message: &shared.BeaconBlockHeader{
+					SignedHeader2: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "28",
 							ProposerIndex: "29",
 							ParentRoot:    FillEncodedByteSlice(32, 30),
@@ -847,36 +846,36 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 					},
 				},
 			},
-			AttesterSlashings: []*shared.AttesterSlashing{
+			AttesterSlashings: []*structs.AttesterSlashing{
 				{
-					Attestation1: &shared.IndexedAttestation{
+					Attestation1: &structs.IndexedAttestation{
 						AttestingIndices: []string{"34", "35"},
-						Data: &shared.AttestationData{
+						Data: &structs.AttestationData{
 							Slot:            "36",
 							CommitteeIndex:  "37",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &shared.Checkpoint{
+							Source: &structs.Checkpoint{
 								Epoch: "39",
 								Root:  FillEncodedByteSlice(32, 40),
 							},
-							Target: &shared.Checkpoint{
+							Target: &structs.Checkpoint{
 								Epoch: "41",
 								Root:  FillEncodedByteSlice(32, 42),
 							},
 						},
 						Signature: FillEncodedByteSlice(96, 43),
 					},
-					Attestation2: &shared.IndexedAttestation{
+					Attestation2: &structs.IndexedAttestation{
 						AttestingIndices: []string{"44", "45"},
-						Data: &shared.AttestationData{
+						Data: &structs.AttestationData{
 							Slot:            "46",
 							CommitteeIndex:  "47",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &shared.Checkpoint{
+							Source: &structs.Checkpoint{
 								Epoch: "49",
 								Root:  FillEncodedByteSlice(32, 50),
 							},
-							Target: &shared.Checkpoint{
+							Target: &structs.Checkpoint{
 								Epoch: "51",
 								Root:  FillEncodedByteSlice(32, 52),
 							},
@@ -885,34 +884,34 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 					},
 				},
 				{
-					Attestation1: &shared.IndexedAttestation{
+					Attestation1: &structs.IndexedAttestation{
 						AttestingIndices: []string{"54", "55"},
-						Data: &shared.AttestationData{
+						Data: &structs.AttestationData{
 							Slot:            "56",
 							CommitteeIndex:  "57",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &shared.Checkpoint{
+							Source: &structs.Checkpoint{
 								Epoch: "59",
 								Root:  FillEncodedByteSlice(32, 60),
 							},
-							Target: &shared.Checkpoint{
+							Target: &structs.Checkpoint{
 								Epoch: "61",
 								Root:  FillEncodedByteSlice(32, 62),
 							},
 						},
 						Signature: FillEncodedByteSlice(96, 63),
 					},
-					Attestation2: &shared.IndexedAttestation{
+					Attestation2: &structs.IndexedAttestation{
 						AttestingIndices: []string{"64", "65"},
-						Data: &shared.AttestationData{
+						Data: &structs.AttestationData{
 							Slot:            "66",
 							CommitteeIndex:  "67",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &shared.Checkpoint{
+							Source: &structs.Checkpoint{
 								Epoch: "69",
 								Root:  FillEncodedByteSlice(32, 70),
 							},
-							Target: &shared.Checkpoint{
+							Target: &structs.Checkpoint{
 								Epoch: "71",
 								Root:  FillEncodedByteSlice(32, 72),
 							},
@@ -921,18 +920,18 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 					},
 				},
 			},
-			Attestations: []*shared.Attestation{
+			Attestations: []*structs.Attestation{
 				{
 					AggregationBits: FillEncodedByteSlice(4, 74),
-					Data: &shared.AttestationData{
+					Data: &structs.AttestationData{
 						Slot:            "75",
 						CommitteeIndex:  "76",
 						BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-						Source: &shared.Checkpoint{
+						Source: &structs.Checkpoint{
 							Epoch: "78",
 							Root:  FillEncodedByteSlice(32, 79),
 						},
-						Target: &shared.Checkpoint{
+						Target: &structs.Checkpoint{
 							Epoch: "80",
 							Root:  FillEncodedByteSlice(32, 81),
 						},
@@ -941,15 +940,15 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 				},
 				{
 					AggregationBits: FillEncodedByteSlice(4, 83),
-					Data: &shared.AttestationData{
+					Data: &structs.AttestationData{
 						Slot:            "84",
 						CommitteeIndex:  "85",
 						BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-						Source: &shared.Checkpoint{
+						Source: &structs.Checkpoint{
 							Epoch: "87",
 							Root:  FillEncodedByteSlice(32, 88),
 						},
-						Target: &shared.Checkpoint{
+						Target: &structs.Checkpoint{
 							Epoch: "89",
 							Root:  FillEncodedByteSlice(32, 90),
 						},
@@ -957,10 +956,10 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 					Signature: FillEncodedByteSlice(96, 91),
 				},
 			},
-			Deposits: []*shared.Deposit{
+			Deposits: []*structs.Deposit{
 				{
 					Proof: FillEncodedByteArraySlice(33, FillEncodedByteSlice(32, 92)),
-					Data: &shared.DepositData{
+					Data: &structs.DepositData{
 						Pubkey:                FillEncodedByteSlice(48, 94),
 						WithdrawalCredentials: FillEncodedByteSlice(32, 95),
 						Amount:                "96",
@@ -969,7 +968,7 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 				},
 				{
 					Proof: FillEncodedByteArraySlice(33, FillEncodedByteSlice(32, 98)),
-					Data: &shared.DepositData{
+					Data: &structs.DepositData{
 						Pubkey:                FillEncodedByteSlice(48, 100),
 						WithdrawalCredentials: FillEncodedByteSlice(32, 101),
 						Amount:                "102",
@@ -977,27 +976,27 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 					},
 				},
 			},
-			VoluntaryExits: []*shared.SignedVoluntaryExit{
+			VoluntaryExits: []*structs.SignedVoluntaryExit{
 				{
-					Message: &shared.VoluntaryExit{
+					Message: &structs.VoluntaryExit{
 						Epoch:          "104",
 						ValidatorIndex: "105",
 					},
 					Signature: FillEncodedByteSlice(96, 106),
 				},
 				{
-					Message: &shared.VoluntaryExit{
+					Message: &structs.VoluntaryExit{
 						Epoch:          "107",
 						ValidatorIndex: "108",
 					},
 					Signature: FillEncodedByteSlice(96, 109),
 				},
 			},
-			SyncAggregate: &shared.SyncAggregate{
+			SyncAggregate: &structs.SyncAggregate{
 				SyncCommitteeBits:      FillEncodedByteSlice(64, 110),
 				SyncCommitteeSignature: FillEncodedByteSlice(96, 111),
 			},
-			ExecutionPayloadHeader: &shared.ExecutionPayloadHeaderCapella{
+			ExecutionPayloadHeader: &structs.ExecutionPayloadHeaderCapella{
 				ParentHash:       FillEncodedByteSlice(32, 112),
 				FeeRecipient:     FillEncodedByteSlice(20, 113),
 				StateRoot:        FillEncodedByteSlice(32, 114),
@@ -1014,19 +1013,19 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 				TransactionsRoot: FillEncodedByteSlice(32, 125),
 				WithdrawalsRoot:  FillEncodedByteSlice(32, 126),
 			},
-			BlsToExecutionChanges: []*shared.SignedBlsToExecutionChange{
+			BLSToExecutionChanges: []*structs.SignedBLSToExecutionChange{
 				{
-					Message: &shared.BlsToExecutionChange{
+					Message: &structs.BLSToExecutionChange{
 						ValidatorIndex:     "135",
-						FromBlsPubkey:      FillEncodedByteSlice(48, 136),
+						FromBLSPubkey:      FillEncodedByteSlice(48, 136),
 						ToExecutionAddress: FillEncodedByteSlice(20, 137),
 					},
 					Signature: FillEncodedByteSlice(96, 138),
 				},
 				{
-					Message: &shared.BlsToExecutionChange{
+					Message: &structs.BLSToExecutionChange{
 						ValidatorIndex:     "139",
-						FromBlsPubkey:      FillEncodedByteSlice(48, 140),
+						FromBLSPubkey:      FillEncodedByteSlice(48, 140),
 						ToExecutionAddress: FillEncodedByteSlice(20, 141),
 					},
 					Signature: FillEncodedByteSlice(96, 142),

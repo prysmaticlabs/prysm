@@ -4,19 +4,20 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
@@ -134,6 +135,10 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 }
 
 func TestVerifyExitAndSignature(t *testing.T) {
+	undo := util.HackDenebMaxuint(t)
+	defer undo()
+	denebSlot, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+	require.NoError(t, err)
 	tests := []struct {
 		name    string
 		setup   func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, state.ReadOnlyBeaconState, error)
@@ -241,11 +246,11 @@ func TestVerifyExitAndSignature(t *testing.T) {
 				fork := &ethpb.Fork{
 					PreviousVersion: params.BeaconConfig().CapellaForkVersion,
 					CurrentVersion:  params.BeaconConfig().DenebForkVersion,
-					Epoch:           primitives.Epoch(2),
+					Epoch:           params.BeaconConfig().DenebForkEpoch,
 				}
 				signedExit := &ethpb.SignedVoluntaryExit{
 					Exit: &ethpb.VoluntaryExit{
-						Epoch:          2,
+						Epoch:          params.BeaconConfig().CapellaForkEpoch,
 						ValidatorIndex: 0,
 					},
 				}
@@ -253,7 +258,7 @@ func TestVerifyExitAndSignature(t *testing.T) {
 				bs, err := state_native.InitializeFromProtoUnsafeDeneb(&ethpb.BeaconStateDeneb{
 					GenesisValidatorsRoot: bs.GenesisValidatorsRoot(),
 					Fork:                  fork,
-					Slot:                  (params.BeaconConfig().SlotsPerEpoch * 2) + 1,
+					Slot:                  denebSlot,
 					Validators:            bs.Validators(),
 				})
 				if err != nil {

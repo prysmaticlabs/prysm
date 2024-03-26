@@ -7,13 +7,13 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/test-helpers"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	"go.uber.org/mock/gomock"
 )
 
 func TestProposeBeaconBlock_Phase0(t *testing.T) {
@@ -26,14 +26,14 @@ func TestProposeBeaconBlock_Phase0(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = phase0Block
 
-	jsonPhase0Block := &apimiddleware.SignedBeaconBlockJson{
+	jsonPhase0Block := &structs.SignedBeaconBlock{
 		Signature: hexutil.Encode(phase0Block.Phase0.Signature),
-		Message: &apimiddleware.BeaconBlockJson{
+		Message: &structs.BeaconBlock{
 			ParentRoot:    hexutil.Encode(phase0Block.Phase0.Block.ParentRoot),
 			ProposerIndex: uint64ToString(phase0Block.Phase0.Block.ProposerIndex),
 			Slot:          uint64ToString(phase0Block.Phase0.Block.Slot),
 			StateRoot:     hexutil.Encode(phase0Block.Phase0.Block.StateRoot),
-			Body: &apimiddleware.BeaconBlockBodyJson{
+			Body: &structs.BeaconBlockBody{
 				Attestations:      jsonifyAttestations(phase0Block.Phase0.Block.Body.Attestations),
 				AttesterSlashings: jsonifyAttesterSlashings(phase0Block.Phase0.Block.Body.AttesterSlashings),
 				Deposits:          jsonifyDeposits(phase0Block.Phase0.Block.Body.Deposits),

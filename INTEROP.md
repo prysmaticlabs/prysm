@@ -30,9 +30,6 @@ You can use `bazel run //tools/genesis-state-gen` to create a deterministic gene
 - **--output-ssz** string: Output filename of the SSZ marshaling of the generated genesis state
 - **--config-name=interop** string: name of the beacon chain config to use when generating the state. ex mainnet|minimal|interop
 
-**deprecated flag: use --config-name instead**
-- **--mainnet-config** bool: Select whether genesis state should be generated with mainnet or minimal (default) params
-
 The example below creates 64 validator keys, instantiates a genesis state with those 64 validators and with genesis unix timestamp 1567542540,
 and finally writes a ssz encoded output to ~/Desktop/genesis.ssz. This file can be used to kickstart the beacon chain in the next section. When using the `--interop-*` flags, the beacon node will assume the `interop` config should be used, unless a different config is specified on the command line.
 

@@ -7,9 +7,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 func (c beaconApiValidatorClient) getAttestationData(
@@ -22,14 +22,10 @@ func (c beaconApiValidatorClient) getAttestationData(
 	params.Add("committee_index", strconv.FormatUint(uint64(reqCommitteeIndex), 10))
 
 	query := buildURL("/eth/v1/validator/attestation_data", params)
-	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
+	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 
-	errJson, err := c.jsonRestHandler.Get(ctx, query, &produceAttestationDataResponseJson)
-	if err != nil {
-		return nil, errors.Wrap(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err := c.jsonRestHandler.Get(ctx, query, &produceAttestationDataResponseJson); err != nil {
+		return nil, err
 	}
 
 	if produceAttestationDataResponseJson.Data == nil {

@@ -12,10 +12,10 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -23,29 +23,14 @@ import (
 // These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
 // IMPORTANT: Use one field per line and sort these alphabetically to reduce conflicts.
 var placeholderFields = []string{
-	"ATTESTATION_PROPAGATION_SLOT_RANGE",
-	"ATTESTATION_SUBNET_COUNT",
-	"ATTESTATION_SUBNET_EXTRA_BITS",
-	"ATTESTATION_SUBNET_PREFIX_BITS",
 	"EIP6110_FORK_EPOCH",
 	"EIP6110_FORK_VERSION",
 	"EIP7002_FORK_EPOCH",
 	"EIP7002_FORK_VERSION",
-	"EPOCHS_PER_SUBNET_SUBSCRIPTION",
-	"GOSSIP_MAX_SIZE",
-	"MAXIMUM_GOSSIP_CLOCK_DISPARITY",
+	"EIP7594_FORK_EPOCH",
+	"EIP7594_FORK_VERSION",
 	"MAX_BLOBS_PER_BLOCK",
-	"MAX_CHUNK_SIZE",
-	"MAX_REQUEST_BLOB_SIDECARS",
-	"MAX_REQUEST_BLOCKS",
-	"MAX_REQUEST_BLOCKS_DENEB",
-	"MESSAGE_DOMAIN_INVALID_SNAPPY",
-	"MESSAGE_DOMAIN_VALID_SNAPPY",
-	"MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS",
-	"MIN_EPOCHS_FOR_BLOCK_REQUESTS",
-	"RESP_TIMEOUT",
-	"SUBNETS_PER_NODE",
-	"TTFB_TIMEOUT",
+	"REORG_HEAD_WEIGHT_THRESHOLD",
 	"UPDATE_TIMEOUT",
 	"WHISK_EPOCHS_PER_SHUFFLING_PHASE",
 	"WHISK_FORK_EPOCH",
@@ -79,9 +64,6 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.HysteresisQuotient, actual.HysteresisQuotient, "%s: HysteresisQuotient", name)
 	assert.Equal(t, expected.HysteresisDownwardMultiplier, actual.HysteresisDownwardMultiplier, "%s: HysteresisDownwardMultiplier", name)
 	assert.Equal(t, expected.HysteresisUpwardMultiplier, actual.HysteresisUpwardMultiplier, "%s: HysteresisUpwardMultiplier", name)
-
-	// Fork Choice params.
-	assert.Equal(t, expected.DeprecatedSafeSlotsToUpdateJustified, actual.DeprecatedSafeSlotsToUpdateJustified, "%s: SafeSlotsToUpdateJustified", name)
 
 	// Validator params.
 	assert.Equal(t, expected.Eth1FollowDistance, actual.Eth1FollowDistance, "%s: Eth1FollowDistance", name)

@@ -4,21 +4,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/rewards"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type blockType uint8
@@ -56,18 +59,18 @@ func (s *Server) ProduceBlockV2(w http.ResponseWriter, r *http.Request) {
 	if rawSkipRandaoVerification == "true" {
 		randaoReveal = primitives.PointAtInfinity
 	} else {
-		rr, err := shared.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
+		rr, err := bytesutil.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
+			httputil.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
 			return
 		}
 		randaoReveal = rr
 	}
 	var graffiti []byte
 	if rawGraffiti != "" {
-		g, err := shared.DecodeHexWithLength(rawGraffiti, 32)
+		g, err := bytesutil.DecodeHexWithLength(rawGraffiti, 32)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
+			httputil.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
 			return
 		}
 		graffiti = g
@@ -77,7 +80,7 @@ func (s *Server) ProduceBlockV2(w http.ResponseWriter, r *http.Request) {
 		Slot:         primitives.Slot(slot),
 		RandaoReveal: randaoReveal,
 		Graffiti:     graffiti,
-		SkipMevBoost: false,
+		SkipMevBoost: true,
 	}, full)
 }
 
@@ -108,18 +111,18 @@ func (s *Server) ProduceBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	if rawSkipRandaoVerification == "true" {
 		randaoReveal = primitives.PointAtInfinity
 	} else {
-		rr, err := shared.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
+		rr, err := bytesutil.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
+			httputil.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
 			return
 		}
 		randaoReveal = rr
 	}
 	var graffiti []byte
 	if rawGraffiti != "" {
-		g, err := shared.DecodeHexWithLength(rawGraffiti, 32)
+		g, err := bytesutil.DecodeHexWithLength(rawGraffiti, 32)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
+			httputil.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
 			return
 		}
 		graffiti = g
@@ -155,6 +158,15 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	rawGraffiti := r.URL.Query().Get("graffiti")
 	rawSkipRandaoVerification := r.URL.Query().Get("skip_randao_verification")
 
+	var bbFactor *wrapperspb.UInt64Value // default the factor via fall back
+	rawBbFactor, bbValue, ok := shared.UintFromQuery(w, r, "builder_boost_factor", false)
+	if !ok {
+		return
+	}
+	if rawBbFactor != "" {
+		bbFactor = &wrapperspb.UInt64Value{Value: bbValue}
+	}
+
 	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
 	if !valid {
 		return
@@ -164,55 +176,56 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	if rawSkipRandaoVerification == "true" {
 		randaoReveal = primitives.PointAtInfinity
 	} else {
-		rr, err := shared.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
+		rr, err := bytesutil.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
+			httputil.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
 			return
 		}
 		randaoReveal = rr
 	}
 	var graffiti []byte
 	if rawGraffiti != "" {
-		g, err := shared.DecodeHexWithLength(rawGraffiti, 32)
+		g, err := bytesutil.DecodeHexWithLength(rawGraffiti, 32)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
+			httputil.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
 			return
 		}
 		graffiti = g
 	}
 
 	s.produceBlockV3(ctx, w, r, &eth.BlockRequest{
-		Slot:         primitives.Slot(slot),
-		RandaoReveal: randaoReveal,
-		Graffiti:     graffiti,
-		SkipMevBoost: false,
+		Slot:               primitives.Slot(slot),
+		RandaoReveal:       randaoReveal,
+		Graffiti:           graffiti,
+		SkipMevBoost:       false,
+		BuilderBoostFactor: bbFactor,
 	}, any)
 }
 
 func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *http.Request, v1alpha1req *eth.BlockRequest, requiredType blockType) {
-	isSSZ := http2.SszRequested(r)
+	isSSZ := httputil.RespondWithSsz(r)
 	v1alpha1resp, err := s.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if requiredType == blinded && !v1alpha1resp.IsBlinded {
-		http2.HandleError(w, "Prepared block is not blinded", http.StatusInternalServerError)
+		httputil.HandleError(w, "Prepared block is not blinded", http.StatusInternalServerError)
 		return
 	} else if requiredType == full && v1alpha1resp.IsBlinded {
-		http2.HandleError(w, "Prepared block is blinded", http.StatusInternalServerError)
+		httputil.HandleError(w, "Prepared block is blinded", http.StatusInternalServerError)
 		return
 	}
 
 	consensusBlockValue, httpError := getConsensusBlockValue(ctx, s.BlockRewardFetcher, v1alpha1resp.Block)
 	if httpError != nil {
-		http2.WriteError(w, httpError)
+		httputil.WriteError(w, httpError)
 		return
 	}
 
 	w.Header().Set(api.ExecutionPayloadBlindedHeader, fmt.Sprintf("%v", v1alpha1resp.IsBlinded))
-	w.Header().Set(api.ExecutionPayloadValueHeader, fmt.Sprintf("%d", v1alpha1resp.PayloadValue))
+	w.Header().Set(api.ExecutionPayloadValueHeader, v1alpha1resp.PayloadValue)
 	w.Header().Set(api.ConsensusBlockValueHeader, consensusBlockValue)
 
 	phase0Block, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Phase0)
@@ -230,11 +243,11 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	}
 	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
-		http2.HandleError(w, errors.Wrap(err, "Could not determine if the node is a optimistic node").Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, errors.Wrap(err, "Could not determine if the node is a optimistic node").Error(), http.StatusInternalServerError)
 		return
 	}
 	if optimistic {
-		http2.HandleError(w, "The node is currently optimistic and cannot serve validators", http.StatusServiceUnavailable)
+		httputil.HandleError(w, "The node is currently optimistic and cannot serve validators", http.StatusServiceUnavailable)
 		return
 	}
 	blindedBellatrixBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedBellatrix)
@@ -275,82 +288,60 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	}
 }
 
-func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.BlockRewardsFetcher, i interface{} /* block as argument */) (string, *http2.DefaultErrorJson) {
-	var wrapper interfaces.ReadOnlySignedBeaconBlock
-	var err error
-
-	// TODO: we should not require this fake signed wrapper and fix associated functions in the future.
-	switch b := i.(type) {
-	case *eth.GenericBeaconBlock_Phase0:
-		//ignore for phase0
-		return "", nil
-	case *eth.GenericBeaconBlock_Altair:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Altair{Altair: &eth.SignedBeaconBlockAltair{Block: b.Altair}})
-	case *eth.GenericBeaconBlock_Bellatrix:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: &eth.SignedBeaconBlockBellatrix{Block: b.Bellatrix}})
-	case *eth.GenericBeaconBlock_BlindedBellatrix:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedBellatrix{BlindedBellatrix: &eth.SignedBlindedBeaconBlockBellatrix{Block: b.BlindedBellatrix}})
-	case *eth.GenericBeaconBlock_Capella:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Capella{Capella: &eth.SignedBeaconBlockCapella{Block: b.Capella}})
-	case *eth.GenericBeaconBlock_BlindedCapella:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: &eth.SignedBlindedBeaconBlockCapella{Block: b.BlindedCapella}})
-	case *eth.GenericBeaconBlock_Deneb:
-		// no need for sidecar
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockAndBlobsDeneb{Block: &eth.SignedBeaconBlockDeneb{Block: b.Deneb.Block}}})
-	case *eth.GenericBeaconBlock_BlindedDeneb:
-		// no need for sidecar
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{Message: b.BlindedDeneb.Block}}})
-	default:
-		return "", &http2.DefaultErrorJson{
-			Message: fmt.Errorf("type %T is not supported", b).Error(),
-			Code:    http.StatusInternalServerError,
-		}
-	}
+func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.BlockRewardsFetcher, i interface{} /* block as argument */) (string, *httputil.DefaultJsonError) {
+	bb, err := blocks.NewBeaconBlock(i)
 	if err != nil {
-		return "", &http2.DefaultErrorJson{
+		return "", &httputil.DefaultJsonError{
 			Message: err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
-
-	//get consensus payload value which is the same as the total from the block rewards api
-	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, wrapper)
+	if bb.Version() == version.Phase0 {
+		// ignore for phase 0
+		return "", nil
+	}
+	// Get consensus payload value which is the same as the total from the block rewards api.
+	// The value is in Gwei, but Wei should be returned from the endpoint.
+	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, bb)
 	if httpError != nil {
 		return "", httpError
 	}
-	return blockRewards.Total, nil
+	gwei, ok := big.NewInt(0).SetString(blockRewards.Total, 10)
+	if !ok {
+		return "", &httputil.DefaultJsonError{
+			Message: "Could not parse consensus block value",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+	wei := gwei.Mul(gwei, big.NewInt(1e9))
+	return wei.String(), nil
 }
 
 func handleProducePhase0V3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Phase0,
-	payloadValue uint64,
+	payloadValue string,
 ) {
 	if isSSZ {
 		sszResp, err := blk.Phase0.MarshalSSZ()
 		if err != nil {
-			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http2.WriteSsz(w, sszResp, "phase0Block.ssz")
+		httputil.WriteSsz(w, sszResp, "phase0Block.ssz")
 		return
 	}
-	block, err := shared.BeaconBlockFromConsensus(blk.Phase0)
+	jsonBytes, err := json.Marshal(structs.BeaconBlockFromConsensus(blk.Phase0))
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	jsonBytes, err := json.Marshal(block)
-	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	http2.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Phase0),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue), // mev not available at this point
-		ConsensusBlockValue:     "",                              // rewards not applicable before altair
+		ExecutionPayloadValue:   payloadValue, // mev not available at this point
+		ConsensusBlockValue:     "",           // rewards not applicable before altair
 		Data:                    jsonBytes,
 	})
 }
@@ -359,32 +350,27 @@ func handleProduceAltairV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Altair,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
 		sszResp, err := blk.Altair.MarshalSSZ()
 		if err != nil {
-			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http2.WriteSsz(w, sszResp, "altairBlock.ssz")
+		httputil.WriteSsz(w, sszResp, "altairBlock.ssz")
 		return
 	}
-	block, err := shared.BeaconBlockAltairFromConsensus(blk.Altair)
+	jsonBytes, err := json.Marshal(structs.BeaconBlockAltairFromConsensus(blk.Altair))
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	jsonBytes, err := json.Marshal(block)
-	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	http2.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Altair),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -394,32 +380,32 @@ func handleProduceBellatrixV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Bellatrix,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
 		sszResp, err := blk.Bellatrix.MarshalSSZ()
 		if err != nil {
-			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http2.WriteSsz(w, sszResp, "bellatrixBlock.ssz")
+		httputil.WriteSsz(w, sszResp, "bellatrixBlock.ssz")
 		return
 	}
-	block, err := shared.BeaconBlockBellatrixFromConsensus(blk.Bellatrix)
+	block, err := structs.BeaconBlockBellatrixFromConsensus(blk.Bellatrix)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	jsonBytes, err := json.Marshal(block)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http2.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Bellatrix),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -429,32 +415,32 @@ func handleProduceBlindedBellatrixV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedBellatrix,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
 		sszResp, err := blk.BlindedBellatrix.MarshalSSZ()
 		if err != nil {
-			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http2.WriteSsz(w, sszResp, "blindedBellatrixBlock.ssz")
+		httputil.WriteSsz(w, sszResp, "blindedBellatrixBlock.ssz")
 		return
 	}
-	block, err := shared.BlindedBeaconBlockBellatrixFromConsensus(blk.BlindedBellatrix)
+	block, err := structs.BlindedBeaconBlockBellatrixFromConsensus(blk.BlindedBellatrix)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	jsonBytes, err := json.Marshal(block)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http2.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Bellatrix),
 		ExecutionPayloadBlinded: true,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
+		ExecutionPayloadValue:   executionPayloadValue,
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -464,32 +450,32 @@ func handleProduceBlindedCapellaV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedCapella,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
 		sszResp, err := blk.BlindedCapella.MarshalSSZ()
 		if err != nil {
-			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http2.WriteSsz(w, sszResp, "blindedCapellaBlock.ssz")
+		httputil.WriteSsz(w, sszResp, "blindedCapellaBlock.ssz")
 		return
 	}
-	block, err := shared.BlindedBeaconBlockCapellaFromConsensus(blk.BlindedCapella)
+	block, err := structs.BlindedBeaconBlockCapellaFromConsensus(blk.BlindedCapella)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	jsonBytes, err := json.Marshal(block)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http2.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Capella),
 		ExecutionPayloadBlinded: true,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
+		ExecutionPayloadValue:   executionPayloadValue,
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -499,32 +485,32 @@ func handleProduceCapellaV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Capella,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
 		sszResp, err := blk.Capella.MarshalSSZ()
 		if err != nil {
-			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http2.WriteSsz(w, sszResp, "capellaBlock.ssz")
+		httputil.WriteSsz(w, sszResp, "capellaBlock.ssz")
 		return
 	}
-	block, err := shared.BeaconBlockCapellaFromConsensus(blk.Capella)
+	block, err := structs.BeaconBlockCapellaFromConsensus(blk.Capella)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	jsonBytes, err := json.Marshal(block)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http2.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Capella),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -534,32 +520,32 @@ func handleProduceBlindedDenebV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedDeneb,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
 		sszResp, err := blk.BlindedDeneb.MarshalSSZ()
 		if err != nil {
-			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http2.WriteSsz(w, sszResp, "blindedDenebBlockContents.ssz")
+		httputil.WriteSsz(w, sszResp, "blindedDenebBlockContents.ssz")
 		return
 	}
-	blockContents, err := shared.BlindedBeaconBlockContentsDenebFromConsensus(blk.BlindedDeneb)
+	blindedBlock, err := structs.BlindedBeaconBlockDenebFromConsensus(blk.BlindedDeneb)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	jsonBytes, err := json.Marshal(blockContents)
+	jsonBytes, err := json.Marshal(blindedBlock)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http2.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Deneb),
 		ExecutionPayloadBlinded: true,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
+		ExecutionPayloadValue:   executionPayloadValue,
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -569,32 +555,33 @@ func handleProduceDenebV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Deneb,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusBlockValue string,
 ) {
 	if isSSZ {
 		sszResp, err := blk.Deneb.MarshalSSZ()
 		if err != nil {
-			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http2.WriteSsz(w, sszResp, "denebBlockContents.ssz")
+		httputil.WriteSsz(w, sszResp, "denebBlockContents.ssz")
 		return
 	}
-	blockContents, err := shared.BeaconBlockContentsDenebFromConsensus(blk.Deneb)
+
+	blockContents, err := structs.BeaconBlockContentsDenebFromConsensus(blk.Deneb)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	jsonBytes, err := json.Marshal(blockContents)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http2.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Deneb),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
 		ConsensusBlockValue:     consensusBlockValue,
 		Data:                    jsonBytes,
 	})

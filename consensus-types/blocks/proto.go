@@ -1,12 +1,14 @@
 package blocks
 
 import (
+	"math/big"
+
 	"github.com/pkg/errors"
-	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -313,7 +315,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			SyncAggregate:     b.syncAggregate,
 		}, nil
 	case version.Bellatrix:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeader
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -356,7 +358,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			ExecutionPayload:  p,
 		}, nil
 	case version.Capella:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderCapella
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -401,7 +403,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			BlsToExecutionChanges: b.blsToExecutionChanges,
 		}, nil
 	case version.Deneb:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderDeneb
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -755,7 +757,6 @@ func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, er
 
 	b := &BeaconBlockBody{
 		version:           version.Phase0,
-		isBlinded:         false,
 		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:          pb.Eth1Data,
 		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
@@ -775,7 +776,6 @@ func initBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBo
 
 	b := &BeaconBlockBody{
 		version:           version.Altair,
-		isBlinded:         false,
 		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:          pb.Eth1Data,
 		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
@@ -801,7 +801,6 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 	}
 	b := &BeaconBlockBody{
 		version:           version.Bellatrix,
-		isBlinded:         false,
 		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:          pb.Eth1Data,
 		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
@@ -828,7 +827,6 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 	}
 	b := &BeaconBlockBody{
 		version:                version.Bellatrix,
-		isBlinded:              true,
 		randaoReveal:           bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:               pb.Eth1Data,
 		graffiti:               bytesutil.ToBytes32(pb.Graffiti),
@@ -848,14 +846,13 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload, 0)
+	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
 		version:               version.Capella,
-		isBlinded:             false,
 		randaoReveal:          bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:              pb.Eth1Data,
 		graffiti:              bytesutil.ToBytes32(pb.Graffiti),
@@ -876,14 +873,13 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader, 0)
+	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
 		version:                version.Capella,
-		isBlinded:              true,
 		randaoReveal:           bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:               pb.Eth1Data,
 		graffiti:               bytesutil.ToBytes32(pb.Graffiti),
@@ -904,14 +900,13 @@ func initBlockBodyFromProtoDeneb(pb *eth.BeaconBlockBodyDeneb) (*BeaconBlockBody
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload, 0)
+	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
 		version:               version.Deneb,
-		isBlinded:             false,
 		randaoReveal:          bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:              pb.Eth1Data,
 		graffiti:              bytesutil.ToBytes32(pb.Graffiti),
@@ -933,14 +928,13 @@ func initBlindedBlockBodyFromProtoDeneb(pb *eth.BlindedBeaconBlockBodyDeneb) (*B
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader, 0)
+	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
 		version:                version.Deneb,
-		isBlinded:              true,
 		randaoReveal:           bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:               pb.Eth1Data,
 		graffiti:               bytesutil.ToBytes32(pb.Graffiti),

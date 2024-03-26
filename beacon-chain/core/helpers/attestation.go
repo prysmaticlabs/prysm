@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -113,7 +113,7 @@ func ComputeSubnetFromCommitteeAndSlot(activeValCount uint64, comIdx primitives.
 	slotSinceStart := slots.SinceEpochStarts(attSlot)
 	comCount := SlotCommitteeCount(activeValCount)
 	commsSinceStart := uint64(slotSinceStart.Mul(comCount))
-	computedSubnet := (commsSinceStart + uint64(comIdx)) % params.BeaconNetworkConfig().AttestationSubnetCount
+	computedSubnet := (commsSinceStart + uint64(comIdx)) % params.BeaconConfig().AttestationSubnetCount
 	return computedSubnet
 }
 
@@ -151,8 +151,8 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 	// An attestation cannot be older than the current slot - attestation propagation slot range
 	// with a minor tolerance for peer clock disparity.
 	lowerBoundsSlot := primitives.Slot(0)
-	if currentSlot > params.BeaconNetworkConfig().AttestationPropagationSlotRange {
-		lowerBoundsSlot = currentSlot - params.BeaconNetworkConfig().AttestationPropagationSlotRange
+	if currentSlot > params.BeaconConfig().AttestationPropagationSlotRange {
+		lowerBoundsSlot = currentSlot - params.BeaconConfig().AttestationPropagationSlotRange
 	}
 	lowerTime, err := slots.ToTime(uint64(genesisTime.Unix()), lowerBoundsSlot)
 	if err != nil {

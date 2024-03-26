@@ -8,12 +8,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 var errInvalidUint256 = errors.New("invalid Uint256")
@@ -117,7 +117,7 @@ type VersionResponse struct {
 	Version string `json:"version"`
 }
 
-// ExecHeaderResponse is a JSON representation of  the builder API header response for Bellatrix.
+// ExecHeaderResponse is a JSON representation of the builder API header response for Bellatrix.
 type ExecHeaderResponse struct {
 	Version string `json:"version"`
 	Data    struct {
@@ -354,6 +354,45 @@ func FromProtoCapella(payload *v1.ExecutionPayloadCapella) (ExecutionPayloadCape
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  txs,
 		Withdrawals:   withdrawals,
+	}, nil
+}
+
+func FromProtoDeneb(payload *v1.ExecutionPayloadDeneb) (ExecutionPayloadDeneb, error) {
+	bFee, err := sszBytesToUint256(payload.BaseFeePerGas)
+	if err != nil {
+		return ExecutionPayloadDeneb{}, err
+	}
+	txs := make([]hexutil.Bytes, len(payload.Transactions))
+	for i := range payload.Transactions {
+		txs[i] = bytesutil.SafeCopyBytes(payload.Transactions[i])
+	}
+	withdrawals := make([]Withdrawal, len(payload.Withdrawals))
+	for i, w := range payload.Withdrawals {
+		withdrawals[i] = Withdrawal{
+			Index:          Uint256{Int: big.NewInt(0).SetUint64(w.Index)},
+			ValidatorIndex: Uint256{Int: big.NewInt(0).SetUint64(uint64(w.ValidatorIndex))},
+			Address:        bytesutil.SafeCopyBytes(w.Address),
+			Amount:         Uint256{Int: big.NewInt(0).SetUint64(w.Amount)},
+		}
+	}
+	return ExecutionPayloadDeneb{
+		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:   Uint64String(payload.BlockNumber),
+		GasLimit:      Uint64String(payload.GasLimit),
+		GasUsed:       Uint64String(payload.GasUsed),
+		Timestamp:     Uint64String(payload.Timestamp),
+		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas: bFee,
+		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:  txs,
+		Withdrawals:   withdrawals,
+		BlobGasUsed:   Uint64String(payload.BlobGasUsed),
+		ExcessBlobGas: Uint64String(payload.ExcessBlobGas),
 	}, nil
 }
 
@@ -869,16 +908,19 @@ func (bb *BuilderBidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
 	if err != nil {
 		return nil, err
 	}
-	var bundle *v1.BlindedBlobsBundle
-	if bb.BlindedBlobsBundle != nil {
-		bundle, err = bb.BlindedBlobsBundle.ToProto()
-		if err != nil {
-			return nil, err
+	if len(bb.BlobKzgCommitments) > fieldparams.MaxBlobsPerBlock {
+		return nil, fmt.Errorf("too many blob commitments: %d", len(bb.BlobKzgCommitments))
+	}
+	kzgCommitments := make([][]byte, len(bb.BlobKzgCommitments))
+	for i, commit := range bb.BlobKzgCommitments {
+		if len(commit) != fieldparams.BLSPubkeyLength {
+			return nil, fmt.Errorf("commitment length %d is not %d", len(commit), fieldparams.BLSPubkeyLength)
 		}
+		kzgCommitments[i] = bytesutil.SafeCopyBytes(commit)
 	}
 	return &eth.BuilderBidDeneb{
 		Header:             header,
-		BlindedBlobsBundle: bundle,
+		BlobKzgCommitments: kzgCommitments,
 		Value:              bytesutil.SafeCopyBytes(bb.Value.SSZBytes()),
 		Pubkey:             bytesutil.SafeCopyBytes(bb.Pubkey),
 	}, nil
@@ -887,40 +929,9 @@ func (bb *BuilderBidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
 // BuilderBidDeneb is a field of ExecHeaderResponseDeneb.
 type BuilderBidDeneb struct {
 	Header             *ExecutionPayloadHeaderDeneb `json:"header"`
-	BlindedBlobsBundle *BlindedBlobsBundle          `json:"blinded_blobs_bundle"`
+	BlobKzgCommitments []hexutil.Bytes              `json:"blob_kzg_commitments"`
 	Value              Uint256                      `json:"value"`
 	Pubkey             hexutil.Bytes                `json:"pubkey"`
-}
-
-// BlindedBlobsBundle is a field of BuilderBidDeneb and represents the blinded blobs of the associated header.
-type BlindedBlobsBundle struct {
-	KzgCommitments []hexutil.Bytes `json:"commitments"`
-	Proofs         []hexutil.Bytes `json:"proofs"`
-	BlobRoots      []hexutil.Bytes `json:"blob_roots"`
-}
-
-// ToProto creates a BlindedBlobsBundle Proto from BlindedBlobsBundle.
-func (r *BlindedBlobsBundle) ToProto() (*v1.BlindedBlobsBundle, error) {
-	kzg := make([][]byte, len(r.KzgCommitments))
-	for i := range kzg {
-		kzg[i] = bytesutil.SafeCopyBytes(r.KzgCommitments[i])
-	}
-
-	proofs := make([][]byte, len(r.Proofs))
-	for i := range proofs {
-		proofs[i] = bytesutil.SafeCopyBytes(r.Proofs[i])
-	}
-
-	blobRoots := make([][]byte, len(r.BlobRoots))
-	for i := range blobRoots {
-		blobRoots[i] = bytesutil.SafeCopyBytes(r.BlobRoots[i])
-	}
-
-	return &v1.BlindedBlobsBundle{
-		KzgCommitments: kzg,
-		Proofs:         proofs,
-		BlobRoots:      blobRoots,
-	}, nil
 }
 
 // ExecutionPayloadHeaderDeneb a field part of the BuilderBidDeneb.
@@ -1052,6 +1063,16 @@ type BlobsBundle struct {
 
 // ToProto returns a BlobsBundle Proto.
 func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
+	if len(b.Blobs) > fieldparams.MaxBlobCommitmentsPerBlock {
+		return nil, fmt.Errorf("blobs length %d is more than max %d", len(b.Blobs), fieldparams.MaxBlobCommitmentsPerBlock)
+	}
+	if len(b.Commitments) != len(b.Blobs) {
+		return nil, fmt.Errorf("commitments length %d does not equal blobs length %d", len(b.Commitments), len(b.Blobs))
+	}
+	if len(b.Proofs) != len(b.Blobs) {
+		return nil, fmt.Errorf("proofs length %d does not equal blobs length %d", len(b.Proofs), len(b.Blobs))
+	}
+
 	commitments := make([][]byte, len(b.Commitments))
 	for i := range b.Commitments {
 		if len(b.Commitments[i]) != fieldparams.BLSPubkeyLength {
@@ -1066,9 +1087,6 @@ func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
 		}
 		proofs[i] = bytesutil.SafeCopyBytes(b.Proofs[i])
 	}
-	if len(b.Blobs) > fieldparams.MaxBlobsPerBlock {
-		return nil, fmt.Errorf("blobs length %d is more than max %d", len(b.Blobs), fieldparams.MaxBlobsPerBlock)
-	}
 	blobs := make([][]byte, len(b.Blobs))
 	for i := range b.Blobs {
 		if len(b.Blobs[i]) != fieldparams.BlobLength {
@@ -1081,6 +1099,28 @@ func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
 		Proofs:         proofs,
 		Blobs:          blobs,
 	}, nil
+}
+
+// FromBundleProto converts the proto bundle type to the builder
+// type.
+func FromBundleProto(bundle *v1.BlobsBundle) *BlobsBundle {
+	commitments := make([]hexutil.Bytes, len(bundle.KzgCommitments))
+	for i := range bundle.KzgCommitments {
+		commitments[i] = bytesutil.SafeCopyBytes(bundle.KzgCommitments[i])
+	}
+	proofs := make([]hexutil.Bytes, len(bundle.Proofs))
+	for i := range bundle.Proofs {
+		proofs[i] = bytesutil.SafeCopyBytes(bundle.Proofs[i])
+	}
+	blobs := make([]hexutil.Bytes, len(bundle.Blobs))
+	for i := range bundle.Blobs {
+		blobs[i] = bytesutil.SafeCopyBytes(bundle.Blobs[i])
+	}
+	return &BlobsBundle{
+		Commitments: commitments,
+		Proofs:      proofs,
+		Blobs:       blobs,
+	}
 }
 
 // ToProto returns ExecutionPayloadDeneb Proto and BlobsBundle Proto separately.

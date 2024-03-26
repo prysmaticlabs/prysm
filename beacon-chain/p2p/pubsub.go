@@ -10,10 +10,10 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	pbrpc "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	pbrpc "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 	// gossip parameters
 	gossipSubMcacheLen    = 6   // number of windows to retain full messages in cache for `IWANT` responses
 	gossipSubMcacheGossip = 3   // number of windows to gossip about
-	gossipSubSeenTTL      = 550 // number of heartbeat intervals to retain message IDs
+	gossipSubSeenTTL      = 768 // number of seconds to retain message IDs ( 2 epochs)
 
 	// fanout ttl
 	gossipSubFanoutTTL = 60000000000 // TTL for fanout maps for topics we are not subscribed to but have published to, in nano seconds
@@ -139,9 +139,9 @@ func (s *Service) pubsubOptions() []pubsub.Option {
 			return MsgID(s.genesisValidatorsRoot, pmsg)
 		}),
 		pubsub.WithSubscriptionFilter(s),
-		pubsub.WithPeerOutboundQueueSize(pubsubQueueSize),
-		pubsub.WithMaxMessageSize(int(params.BeaconNetworkConfig().GossipMaxSizeBellatrix)),
-		pubsub.WithValidateQueueSize(pubsubQueueSize),
+		pubsub.WithPeerOutboundQueueSize(int(s.cfg.QueueSize)),
+		pubsub.WithMaxMessageSize(int(params.BeaconConfig().GossipMaxSize)),
+		pubsub.WithValidateQueueSize(int(s.cfg.QueueSize)),
 		pubsub.WithPeerScore(peerScoringParams()),
 		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 		pubsub.WithGossipSubParams(pubsubGossipParam()),
@@ -165,7 +165,8 @@ func pubsubGossipParam() pubsub.GossipSubParams {
 // to configure our message id time-cache rather than instantiating
 // it with a router instance.
 func setPubSubParameters() {
-	pubsub.TimeCacheDuration = 550 * gossipSubHeartbeatInterval
+	seenTtl := 2 * time.Second * time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	pubsub.TimeCacheDuration = seenTtl
 }
 
 // convert from libp2p's internal schema to a compatible prysm protobuf format.

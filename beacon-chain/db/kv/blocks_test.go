@@ -7,16 +7,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -124,23 +124,6 @@ var blockTests = []struct {
 			return blocks.NewSignedBeaconBlock(b)
 		},
 	},
-}
-
-func TestStore_SaveBackfillBlockRoot(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-
-	_, err := db.BackfillBlockRoot(ctx)
-	require.ErrorIs(t, err, ErrNotFoundBackfillBlockRoot)
-
-	var expected [32]byte
-	copy(expected[:], []byte{0x23})
-	err = db.SaveBackfillBlockRoot(ctx, expected)
-	require.NoError(t, err)
-	actual, err := db.BackfillBlockRoot(ctx)
-	require.NoError(t, err)
-	require.Equal(t, expected, actual)
-
 }
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
@@ -306,7 +289,7 @@ func TestStore_DeleteBlock(t *testing.T) {
 	require.Equal(t, b, nil)
 	require.Equal(t, false, db.HasStateSummary(ctx, root2))
 
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteFinalized)
 }
 
 func TestStore_DeleteJustifiedBlock(t *testing.T) {
@@ -326,7 +309,7 @@ func TestStore_DeleteJustifiedBlock(t *testing.T) {
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteFinalized)
 }
 
 func TestStore_DeleteFinalizedBlock(t *testing.T) {
@@ -346,7 +329,7 @@ func TestStore_DeleteFinalizedBlock(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteFinalized)
 }
 func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)

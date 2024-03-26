@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -48,10 +48,5 @@ func (v *validator) HandleKeyReload(ctx context.Context, currentKeys [][fieldpar
 		valCount = int64(valCounts[0].Count)
 	}
 
-	anyActive = v.checkAndLogValidatorStatus(statuses, valCount)
-	if anyActive {
-		logActiveValidatorStatus(statuses)
-	}
-
-	return anyActive, nil
+	return v.checkAndLogValidatorStatus(statuses, valCount), nil
 }

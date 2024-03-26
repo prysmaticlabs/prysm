@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"time"
 
@@ -11,26 +12,26 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
-	"github.com/prysmaticlabs/prysm/v4/validator/db"
-	"github.com/prysmaticlabs/prysm/v4/validator/graffiti"
-	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
+	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
+	beaconApi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
+	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-chain-client-factory"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	nodeClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/node-client-factory"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/validator-client-factory"
+	"github.com/prysmaticlabs/prysm/v5/validator/db"
+	"github.com/prysmaticlabs/prysm/v5/validator/graffiti"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v5/validator/helpers"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -52,28 +53,30 @@ type GenesisFetcher interface {
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	useWeb                bool
-	emitAccountMetrics    bool
-	logValidatorBalances  bool
-	interopKeysConfig     *local.InteropKeymanagerConfig
-	conn                  validatorHelpers.NodeConnection
-	grpcRetryDelay        time.Duration
-	grpcRetries           uint
-	maxCallRecvMsgSize    int
-	cancel                context.CancelFunc
-	walletInitializedFeed *event.Feed
-	wallet                *wallet.Wallet
-	graffitiStruct        *graffiti.Graffiti
-	dataDir               string
-	withCert              string
-	endpoint              string
-	ctx                   context.Context
-	validator             iface.Validator
-	db                    db.Database
-	grpcHeaders           []string
-	graffiti              []byte
-	Web3SignerConfig      *remoteweb3signer.SetupConfig
-	proposerSettings      *validatorserviceconfig.ProposerSettings
+	useWeb                 bool
+	emitAccountMetrics     bool
+	logValidatorBalances   bool
+	distributed            bool
+	interopKeysConfig      *local.InteropKeymanagerConfig
+	conn                   validatorHelpers.NodeConnection
+	grpcRetryDelay         time.Duration
+	grpcRetries            uint
+	maxCallRecvMsgSize     int
+	cancel                 context.CancelFunc
+	walletInitializedFeed  *event.Feed
+	wallet                 *wallet.Wallet
+	graffitiStruct         *graffiti.Graffiti
+	dataDir                string
+	withCert               string
+	endpoint               string
+	ctx                    context.Context
+	validator              iface.Validator
+	db                     db.Database
+	grpcHeaders            []string
+	graffiti               []byte
+	Web3SignerConfig       *remoteweb3signer.SetupConfig
+	proposerSettings       *proposer.Settings
+	validatorsRegBatchSize int
 }
 
 // Config for the validator service.
@@ -81,6 +84,7 @@ type Config struct {
 	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
+	Distributed                bool
 	InteropKeysConfig          *local.InteropKeymanagerConfig
 	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
@@ -96,9 +100,10 @@ type Config struct {
 	GraffitiFlag               string
 	Endpoint                   string
 	Web3SignerConfig           *remoteweb3signer.SetupConfig
-	ProposerSettings           *validatorserviceconfig.ProposerSettings
+	ProposerSettings           *proposer.Settings
 	BeaconApiEndpoint          string
 	BeaconApiTimeout           time.Duration
+	ValidatorsRegBatchSize     int
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -106,27 +111,29 @@ type Config struct {
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &ValidatorService{
-		ctx:                   ctx,
-		cancel:                cancel,
-		endpoint:              cfg.Endpoint,
-		withCert:              cfg.CertFlag,
-		dataDir:               cfg.DataDir,
-		graffiti:              []byte(cfg.GraffitiFlag),
-		logValidatorBalances:  cfg.LogValidatorBalances,
-		emitAccountMetrics:    cfg.EmitAccountMetrics,
-		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
-		grpcRetries:           cfg.GrpcRetriesFlag,
-		grpcRetryDelay:        cfg.GrpcRetryDelay,
-		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
-		validator:             cfg.Validator,
-		db:                    cfg.ValDB,
-		wallet:                cfg.Wallet,
-		walletInitializedFeed: cfg.WalletInitializedFeed,
-		useWeb:                cfg.UseWeb,
-		interopKeysConfig:     cfg.InteropKeysConfig,
-		graffitiStruct:        cfg.GraffitiStruct,
-		Web3SignerConfig:      cfg.Web3SignerConfig,
-		proposerSettings:      cfg.ProposerSettings,
+		ctx:                    ctx,
+		cancel:                 cancel,
+		endpoint:               cfg.Endpoint,
+		withCert:               cfg.CertFlag,
+		dataDir:                cfg.DataDir,
+		graffiti:               []byte(cfg.GraffitiFlag),
+		logValidatorBalances:   cfg.LogValidatorBalances,
+		emitAccountMetrics:     cfg.EmitAccountMetrics,
+		maxCallRecvMsgSize:     cfg.GrpcMaxCallRecvMsgSizeFlag,
+		grpcRetries:            cfg.GrpcRetriesFlag,
+		grpcRetryDelay:         cfg.GrpcRetryDelay,
+		grpcHeaders:            strings.Split(cfg.GrpcHeadersFlag, ","),
+		validator:              cfg.Validator,
+		db:                     cfg.ValDB,
+		wallet:                 cfg.Wallet,
+		walletInitializedFeed:  cfg.WalletInitializedFeed,
+		useWeb:                 cfg.UseWeb,
+		interopKeysConfig:      cfg.InteropKeysConfig,
+		graffitiStruct:         cfg.GraffitiStruct,
+		Web3SignerConfig:       cfg.Web3SignerConfig,
+		proposerSettings:       cfg.ProposerSettings,
+		validatorsRegBatchSize: cfg.ValidatorsRegBatchSize,
+		distributed:            cfg.Distributed,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -187,15 +194,19 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	validatorClient := validatorClientFactory.NewValidatorClient(v.conn)
-	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
-	prysmBeaconClient := beaconChainClientFactory.NewPrysmBeaconClient(v.conn)
+	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
+		http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
+		v.conn.GetBeaconApiUrl(),
+	)
+
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
 
 	valStruct := &validator{
-		db:                             v.db,
 		validatorClient:                validatorClient,
-		beaconClient:                   beaconClient,
-		node:                           nodeClientFactory.NewNodeClient(v.conn),
+		beaconClient:                   beaconChainClientFactory.NewBeaconChainClient(v.conn, restHandler),
+		nodeClient:                     nodeClientFactory.NewNodeClient(v.conn, restHandler),
+		prysmBeaconClient:              beaconChainClientFactory.NewPrysmBeaconClient(v.conn, restHandler),
+		db:                             v.db,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -203,7 +214,8 @@ func (v *ValidatorService) Start() {
 		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		pubkeyToValidatorIndex:         make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 		signedValidatorRegistrations:   make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
-		attLogs:                        make(map[[32]byte]*attSubmitted),
+		submittedAtts:                  make(map[submittedAttKey]*submittedAtt),
+		submittedAggregates:            make(map[submittedAttKey]*submittedAtt),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		voteStats:                      voteStats{startEpoch: primitives.Epoch(^uint64(0))},
@@ -212,25 +224,17 @@ func (v *ValidatorService) Start() {
 		interopKeysConfig:              v.interopKeysConfig,
 		wallet:                         v.wallet,
 		walletInitializedFeed:          v.walletInitializedFeed,
-		blockFeed:                      new(event.Feed),
+		slotFeed:                       new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		Web3SignerConfig:               v.Web3SignerConfig,
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
-		prysmBeaconClient:              prysmBeaconClient,
+		validatorsRegBatchSize:         v.validatorsRegBatchSize,
+		distributed:                    v.distributed,
+		attSelections:                  make(map[attSelectionKey]iface.BeaconCommitteeSelection),
 	}
-
-	// To resolve a race condition at startup due to the interface
-	// nature of the abstracted block type. We initialize
-	// the inner type of the feed before hand. So that
-	// during future accesses, there will be no panics here
-	// from type incompatibility.
-	tempChan := make(chan interfaces.ReadOnlySignedBeaconBlock)
-	sub := valStruct.blockFeed.Subscribe(tempChan)
-	sub.Unsubscribe()
-	close(tempChan)
 
 	v.validator = valStruct
 	go run(v.ctx, v.validator)
@@ -265,7 +269,7 @@ func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
 }
 
 // ProposerSettings returns a deep copy of the underlying proposer settings in the validator
-func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+func (v *ValidatorService) ProposerSettings() *proposer.Settings {
 	settings := v.validator.ProposerSettings()
 	if settings != nil {
 		return settings.Clone()
@@ -274,7 +278,7 @@ func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSe
 }
 
 // SetProposerSettings sets the proposer settings on the validator service as well as the underlying validator
-func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *proposer.Settings) error {
 	// validator service proposer settings is only used for pass through from node -> validator service -> validator.
 	// in memory use of proposer settings happens on validator.
 	v.proposerSettings = settings
@@ -353,4 +357,25 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
 	nc := ethpb.NewNodeClient(v.conn.GetGrpcClientConn())
 	return nc.GetGenesis(ctx, &emptypb.Empty{})
+}
+
+func (v *ValidatorService) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	if v.validator == nil {
+		return nil, errors.New("validator is unavailable")
+	}
+	return v.validator.GetGraffiti(ctx, pubKey)
+}
+
+func (v *ValidatorService) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	if v.validator == nil {
+		return errors.New("validator is unavailable")
+	}
+	return v.validator.SetGraffiti(ctx, pubKey, graffiti)
+}
+
+func (v *ValidatorService) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
+	if v.validator == nil {
+		return errors.New("validator is unavailable")
+	}
+	return v.validator.DeleteGraffiti(ctx, pubKey)
 }

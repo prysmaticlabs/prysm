@@ -8,12 +8,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	"go.uber.org/mock/gomock"
 )
 
 const submitSignedContributionAndProofTestEndpoint = "/eth/v1/validator/contribution_and_proofs"
@@ -22,11 +22,11 @@ func TestSubmitSignedContributionAndProof_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonContributionAndProofs := []apimiddleware.SignedContributionAndProofJson{
+	jsonContributionAndProofs := []structs.SignedContributionAndProof{
 		{
-			Message: &apimiddleware.ContributionAndProofJson{
+			Message: &structs.ContributionAndProof{
 				AggregatorIndex: "1",
-				Contribution: &apimiddleware.SyncCommitteeContributionJson{
+				Contribution: &structs.SyncCommitteeContribution{
 					Slot:              "2",
 					BeaconBlockRoot:   hexutil.Encode([]byte{3}),
 					SubcommitteeIndex: "4",
@@ -52,7 +52,6 @@ func TestSubmitSignedContributionAndProof_Valid(t *testing.T) {
 		bytes.NewBuffer(marshalledContributionAndProofs),
 		nil,
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 
@@ -128,7 +127,6 @@ func TestSubmitSignedContributionAndProof_Error(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).Return(
-					nil,
 					errors.New("foo error"),
 				).Times(1)
 			}

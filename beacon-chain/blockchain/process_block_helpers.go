@@ -3,26 +3,279 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	mathutil "github.com/prysmaticlabs/prysm/v4/math"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	mathutil "github.com/prysmaticlabs/prysm/v5/math"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // CurrentSlot returns the current slot based on time.
 func (s *Service) CurrentSlot() primitives.Slot {
 	return slots.CurrentSlot(uint64(s.genesisTime.Unix()))
+}
+
+// getFCUArgs returns the arguments to call forkchoice update
+func (s *Service) getFCUArgs(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) error {
+	if err := s.getFCUArgsEarlyBlock(cfg, fcuArgs); err != nil {
+		return err
+	}
+	if !s.inRegularSync() {
+		return nil
+	}
+	slot := cfg.signed.Block().Slot()
+	if slots.WithinVotingWindow(uint64(s.genesisTime.Unix()), slot) {
+		return nil
+	}
+	return s.computePayloadAttributes(cfg, fcuArgs)
+}
+
+func (s *Service) getFCUArgsEarlyBlock(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) error {
+	if cfg.blockRoot == cfg.headRoot {
+		fcuArgs.headState = cfg.postState
+		fcuArgs.headBlock = cfg.signed
+		fcuArgs.headRoot = cfg.headRoot
+		fcuArgs.proposingSlot = s.CurrentSlot() + 1
+		return nil
+	}
+	return s.fcuArgsNonCanonicalBlock(cfg, fcuArgs)
+}
+
+// logNonCanonicalBlockReceived prints a message informing that the received
+// block is not the head of the chain. It requires the caller holds a lock on
+// Foprkchoice.
+func (s *Service) logNonCanonicalBlockReceived(blockRoot [32]byte, headRoot [32]byte) {
+	receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
+	if err != nil {
+		log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Warn("could not determine node weight")
+	}
+	headWeight, err := s.cfg.ForkChoiceStore.Weight(headRoot)
+	if err != nil {
+		log.WithField("root", fmt.Sprintf("%#x", headRoot)).Warn("could not determine node weight")
+	}
+	log.WithFields(logrus.Fields{
+		"receivedRoot":   fmt.Sprintf("%#x", blockRoot),
+		"receivedWeight": receivedWeight,
+		"headRoot":       fmt.Sprintf("%#x", headRoot),
+		"headWeight":     headWeight,
+	}).Debug("Head block is not the received block")
+}
+
+// fcuArgsNonCanonicalBlock returns the arguments to the FCU call when the
+// incoming block is non-canonical, that is, based on the head root.
+func (s *Service) fcuArgsNonCanonicalBlock(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) error {
+	headState, headBlock, err := s.getStateAndBlock(cfg.ctx, cfg.headRoot)
+	if err != nil {
+		return err
+	}
+	fcuArgs.headState = headState
+	fcuArgs.headBlock = headBlock
+	fcuArgs.headRoot = cfg.headRoot
+	fcuArgs.proposingSlot = s.CurrentSlot() + 1
+	return nil
+}
+
+// sendStateFeedOnBlock sends an event that a new block has been synced
+func (s *Service) sendStateFeedOnBlock(cfg *postBlockProcessConfig) {
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(cfg.blockRoot)
+	if err != nil {
+		log.WithError(err).Debug("Could not check if block is optimistic")
+		optimistic = true
+	}
+	// Send notification of the processed block to the state feed.
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			Slot:        cfg.signed.Block().Slot(),
+			BlockRoot:   cfg.blockRoot,
+			SignedBlock: cfg.signed,
+			Verified:    true,
+			Optimistic:  optimistic,
+		},
+	})
+}
+
+// sendLightClientFeeds sends the light client feeds when feature flag is enabled.
+func (s *Service) sendLightClientFeeds(cfg *postBlockProcessConfig) {
+	if features.Get().EnableLightClient {
+		if _, err := s.sendLightClientOptimisticUpdate(cfg.ctx, cfg.signed, cfg.postState); err != nil {
+			log.WithError(err).Error("Failed to send light client optimistic update")
+		}
+
+		// Get the finalized checkpoint
+		finalized := s.ForkChoicer().FinalizedCheckpoint()
+
+		// LightClientFinalityUpdate needs super majority
+		s.tryPublishLightClientFinalityUpdate(cfg.ctx, cfg.signed, finalized, cfg.postState)
+	}
+}
+
+func (s *Service) tryPublishLightClientFinalityUpdate(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, finalized *forkchoicetypes.Checkpoint, postState state.BeaconState) {
+	if finalized.Epoch <= s.lastPublishedLightClientEpoch {
+		return
+	}
+
+	config := params.BeaconConfig()
+	if finalized.Epoch < config.AltairForkEpoch {
+		return
+	}
+
+	syncAggregate, err := signed.Block().Body().SyncAggregate()
+	if err != nil || syncAggregate == nil {
+		return
+	}
+
+	// LightClientFinalityUpdate needs super majority
+	if syncAggregate.SyncCommitteeBits.Count()*3 < config.SyncCommitteeSize*2 {
+		return
+	}
+
+	_, err = s.sendLightClientFinalityUpdate(ctx, signed, postState)
+	if err != nil {
+		log.WithError(err).Error("Failed to send light client finality update")
+	} else {
+		s.lastPublishedLightClientEpoch = finalized.Epoch
+	}
+}
+
+// sendLightClientFinalityUpdate sends a light client finality update notification to the state feed.
+func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock,
+	postState state.BeaconState) (int, error) {
+	// Get attested state
+	attestedRoot := signed.Block().ParentRoot()
+	attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get attested state")
+	}
+
+	// Get finalized block
+	var finalizedBlock interfaces.ReadOnlySignedBeaconBlock
+	finalizedCheckPoint := attestedState.FinalizedCheckpoint()
+	if finalizedCheckPoint != nil {
+		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
+		finalizedBlock, err = s.cfg.BeaconDB.Block(ctx, finalizedRoot)
+		if err != nil {
+			finalizedBlock = nil
+		}
+	}
+
+	update, err := NewLightClientFinalityUpdateFromBeaconState(
+		ctx,
+		postState,
+		signed,
+		attestedState,
+		finalizedBlock,
+	)
+
+	if err != nil {
+		return 0, errors.Wrap(err, "could not create light client update")
+	}
+
+	// Return the result
+	result := &ethpbv2.LightClientFinalityUpdateWithVersion{
+		Version: ethpbv2.Version(signed.Version()),
+		Data:    CreateLightClientFinalityUpdate(update),
+	}
+
+	// Send event
+	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.LightClientFinalityUpdate,
+		Data: result,
+	}), nil
+}
+
+// sendLightClientOptimisticUpdate sends a light client optimistic update notification to the state feed.
+func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock,
+	postState state.BeaconState) (int, error) {
+	// Get attested state
+	attestedRoot := signed.Block().ParentRoot()
+	attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get attested state")
+	}
+
+	update, err := NewLightClientOptimisticUpdateFromBeaconState(
+		ctx,
+		postState,
+		signed,
+		attestedState,
+	)
+
+	if err != nil {
+		return 0, errors.Wrap(err, "could not create light client update")
+	}
+
+	// Return the result
+	result := &ethpbv2.LightClientOptimisticUpdateWithVersion{
+		Version: ethpbv2.Version(signed.Version()),
+		Data:    CreateLightClientOptimisticUpdate(update),
+	}
+
+	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.LightClientOptimisticUpdate,
+		Data: result,
+	}), nil
+}
+
+// updateCachesPostBlockProcessing updates the next slot cache and handles the epoch
+// boundary in order to compute the right proposer indices after processing
+// state transition. This function is called on late blocks while still locked,
+// before sending FCU to the engine.
+func (s *Service) updateCachesPostBlockProcessing(cfg *postBlockProcessConfig) error {
+	slot := cfg.postState.Slot()
+	if err := transition.UpdateNextSlotCache(cfg.ctx, cfg.blockRoot[:], cfg.postState); err != nil {
+		return errors.Wrap(err, "could not update next slot state cache")
+	}
+	if !slots.IsEpochEnd(slot) {
+		return nil
+	}
+	return s.handleEpochBoundary(cfg.ctx, slot, cfg.postState, cfg.blockRoot[:])
+}
+
+// handleSecondFCUCall handles a second call to FCU when syncing a new block.
+// This is useful when proposing in the next block and we want to defer the
+// computation of the next slot shuffling.
+func (s *Service) handleSecondFCUCall(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) {
+	if (fcuArgs.attributes == nil || fcuArgs.attributes.IsEmpty()) && cfg.headRoot == cfg.blockRoot {
+		go s.sendFCUWithAttributes(cfg, fcuArgs)
+	}
+}
+
+// reportProcessingTime reports the metric of how long it took to process the
+// current block
+func reportProcessingTime(startTime time.Time) {
+	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
+}
+
+// computePayloadAttributes modifies the passed FCU arguments to
+// contain the right payload attributes with the tracked proposer. It gets
+// called on blocks that arrive after the attestation voting window, or in a
+// background routine after syncing early blocks.
+func (s *Service) computePayloadAttributes(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) error {
+	if cfg.blockRoot == cfg.headRoot {
+		if err := s.updateCachesPostBlockProcessing(cfg); err != nil {
+			return err
+		}
+	}
+	fcuArgs.attributes = s.getPayloadAttribute(cfg.ctx, fcuArgs.headState, fcuArgs.proposingSlot, cfg.headRoot[:])
+	return nil
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
@@ -46,7 +299,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.ReadOnlyBea
 	}
 
 	// Verify block slot time is not from the future.
-	if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), b.Slot(), params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
 		return nil, err
 	}
 

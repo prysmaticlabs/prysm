@@ -5,21 +5,16 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/pagination"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/pagination"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -283,113 +278,6 @@ func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksR
 // DEPRECATED: This endpoint is superseded by the /eth/v1/beacon API endpoint
 func (bs *Server) GetChainHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.ChainHead, error) {
 	return bs.chainHeadRetrieval(ctx)
-}
-
-// StreamBlocks to clients every single time a block is received by the beacon node.
-// DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconChain_StreamBlocksServer) error {
-	blocksChannel := make(chan *feed.Event, 1)
-	var blockSub event.Subscription
-	if req.VerifiedOnly {
-		blockSub = bs.StateNotifier.StateFeed().Subscribe(blocksChannel)
-	} else {
-		blockSub = bs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
-	}
-	defer blockSub.Unsubscribe()
-
-	for {
-		select {
-		case blockEvent := <-blocksChannel:
-			if req.VerifiedOnly {
-				if blockEvent.Type == statefeed.BlockProcessed {
-					data, ok := blockEvent.Data.(*statefeed.BlockProcessedData)
-					if !ok || data == nil {
-						continue
-					}
-					phBlk, err := data.SignedBlock.PbPhase0Block()
-					if err != nil {
-						log.Error(err)
-						continue
-					}
-					if err := stream.Send(phBlk); err != nil {
-						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-					}
-				}
-			} else {
-				if blockEvent.Type == blockfeed.ReceivedBlock {
-					data, ok := blockEvent.Data.(*blockfeed.ReceivedBlockData)
-					if !ok {
-						// Got bad data over the stream.
-						continue
-					}
-					if data.SignedBlock == nil {
-						// One nil block shouldn't stop the stream.
-						continue
-					}
-					headState, err := bs.HeadFetcher.HeadStateReadOnly(bs.Ctx)
-					if err != nil {
-						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not get head state")
-						continue
-					}
-					signed := data.SignedBlock
-					sig := signed.Signature()
-					if err := blocks.VerifyBlockSignature(headState, signed.Block().ProposerIndex(), sig[:], signed.Block().HashTreeRoot); err != nil {
-						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not verify block signature")
-						continue
-					}
-					phBlk, err := signed.PbPhase0Block()
-					if err != nil {
-						log.Error(err)
-						continue
-					}
-					if err := stream.Send(phBlk); err != nil {
-						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-					}
-				}
-			}
-		case <-blockSub.Err():
-			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
-		case <-bs.Ctx.Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		}
-	}
-}
-
-// StreamChainHead to clients every single time the head block and state of the chain change.
-// DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-func (bs *Server) StreamChainHead(_ *emptypb.Empty, stream ethpb.BeaconChain_StreamChainHeadServer) error {
-	stateChannel := make(chan *feed.Event, 4)
-	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-	for {
-		select {
-		case stateEvent := <-stateChannel:
-			// In the event our node is in sync mode
-			// we do not send the chainhead to the caller
-			// due to the possibility of deadlocks when retrieving
-			// all the chain related data.
-			if bs.SyncChecker.Syncing() {
-				continue
-			}
-			if stateEvent.Type == statefeed.BlockProcessed {
-				res, err := bs.chainHeadRetrieval(stream.Context())
-				if err != nil {
-					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)
-				}
-				if err := stream.Send(res); err != nil {
-					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-				}
-			}
-		case <-stateSub.Err():
-			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
-		case <-bs.Ctx.Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		}
-	}
 }
 
 // Retrieve chain head information from the DB and the current beacon state.

@@ -11,13 +11,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestGetDepositContract(t *testing.T) {
@@ -33,7 +34,7 @@ func TestGetDepositContract(t *testing.T) {
 
 	GetDepositContract(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	response := GetDepositContractResponse{}
+	response := structs.GetDepositContractResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &response))
 	assert.Equal(t, "10", response.Data.ChainId)
 	assert.Equal(t, "0x4242424242424242424242424242424242424242", response.Data.Address)
@@ -155,9 +156,6 @@ func TestGetSpec(t *testing.T) {
 	var dam [4]byte
 	copy(dam[:], []byte{'1', '0', '0', '0'})
 	config.DomainApplicationMask = dam
-	var dbs [4]byte
-	copy(dam[:], []byte{'2', '0', '0', '0'})
-	config.DomainBlobSidecar = dbs
 
 	params.OverrideBeaconConfig(config)
 
@@ -167,12 +165,12 @@ func TestGetSpec(t *testing.T) {
 
 	GetSpec(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := GetSpecResponse{}
+	resp := structs.GetSpecResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 113, len(data))
+	assert.Equal(t, 129, len(data))
 	for k, v := range data {
 		switch k {
 		case "CONFIG_NAME":
@@ -418,6 +416,44 @@ func TestGetSpec(t *testing.T) {
 		case "MAX_REQUEST_LIGHT_CLIENT_UPDATES":
 			assert.Equal(t, "128", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
+		case "NODE_ID_BITS":
+			assert.Equal(t, "256", v)
+		case "ATTESTATION_SUBNET_EXTRA_BITS":
+			assert.Equal(t, "0", v)
+		case "ATTESTATION_SUBNET_PREFIX_BITS":
+			assert.Equal(t, "6", v)
+		case "SUBNETS_PER_NODE":
+			assert.Equal(t, "2", v)
+		case "EPOCHS_PER_SUBNET_SUBSCRIPTION":
+			assert.Equal(t, "256", v)
+		case "MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS":
+			assert.Equal(t, "4096", v)
+		case "MAX_REQUEST_BLOB_SIDECARS":
+			assert.Equal(t, "768", v)
+		case "MESSAGE_DOMAIN_INVALID_SNAPPY":
+			assert.Equal(t, "0x00000000", v)
+		case "MESSAGE_DOMAIN_VALID_SNAPPY":
+			assert.Equal(t, "0x01000000", v)
+		case "ATTESTATION_PROPAGATION_SLOT_RANGE":
+			assert.Equal(t, "32", v)
+		case "RESP_TIMEOUT":
+			assert.Equal(t, "10", v)
+		case "TTFB_TIMEOUT":
+			assert.Equal(t, "5", v)
+		case "MIN_EPOCHS_FOR_BLOCK_REQUESTS":
+			assert.Equal(t, "33024", v)
+		case "GOSSIP_MAX_SIZE":
+			assert.Equal(t, "10485760", v)
+		case "MAX_CHUNK_SIZE":
+			assert.Equal(t, "10485760", v)
+		case "ATTESTATION_SUBNET_COUNT":
+			assert.Equal(t, "64", v)
+		case "MAXIMUM_GOSSIP_CLOCK_DISPARITY":
+			assert.Equal(t, "500", v)
+		case "MAX_REQUEST_BLOCKS":
+			assert.Equal(t, "1024", v)
+		case "MAX_REQUEST_BLOCKS_DENEB":
+			assert.Equal(t, "128", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}
@@ -448,7 +484,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 
 		GetForkSchedule(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetForkScheduleResponse{}
+		resp := &structs.GetForkScheduleResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 3, len(resp.Data))
 		fork := resp.Data[0]
@@ -471,7 +507,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 
 		GetForkSchedule(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetForkScheduleResponse{}
+		resp := &structs.GetForkScheduleResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		os := forks.NewOrderedSchedule(params.BeaconConfig())
 		assert.Equal(t, os.Len(), len(resp.Data))

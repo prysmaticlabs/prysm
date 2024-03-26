@@ -1,10 +1,10 @@
 package wallet
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/runtime/tos"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/runtime/tos"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -15,7 +15,7 @@ var log = logrus.WithField("prefix", "wallet")
 var Commands = &cli.Command{
 	Name:     "wallet",
 	Category: "wallet",
-	Usage:    "defines commands for interacting with Ethereum validator wallets",
+	Usage:    "Defines commands for interacting with Ethereum validator wallets.",
 	Subcommands: []*cli.Command{
 		{
 			Name: "create",

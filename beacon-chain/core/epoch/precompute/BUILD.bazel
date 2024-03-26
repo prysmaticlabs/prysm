@@ -10,10 +10,11 @@ go_library(
         "slashing.go",
         "type.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
+        "//tools:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",

@@ -7,14 +7,14 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/test-helpers"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	"go.uber.org/mock/gomock"
 )
 
 func TestProposeBeaconBlock_Capella(t *testing.T) {
@@ -27,14 +27,14 @@ func TestProposeBeaconBlock_Capella(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = capellaBlock
 
-	jsonCapellaBlock := &apimiddleware.SignedBeaconBlockCapellaJson{
+	jsonCapellaBlock := &structs.SignedBeaconBlockCapella{
 		Signature: hexutil.Encode(capellaBlock.Capella.Signature),
-		Message: &apimiddleware.BeaconBlockCapellaJson{
+		Message: &structs.BeaconBlockCapella{
 			ParentRoot:    hexutil.Encode(capellaBlock.Capella.Block.ParentRoot),
 			ProposerIndex: uint64ToString(capellaBlock.Capella.Block.ProposerIndex),
 			Slot:          uint64ToString(capellaBlock.Capella.Block.Slot),
 			StateRoot:     hexutil.Encode(capellaBlock.Capella.Block.StateRoot),
-			Body: &apimiddleware.BeaconBlockBodyCapellaJson{
+			Body: &structs.BeaconBlockBodyCapella{
 				Attestations:      jsonifyAttestations(capellaBlock.Capella.Block.Body.Attestations),
 				AttesterSlashings: jsonifyAttesterSlashings(capellaBlock.Capella.Block.Body.AttesterSlashings),
 				Deposits:          jsonifyDeposits(capellaBlock.Capella.Block.Body.Deposits),
@@ -43,11 +43,11 @@ func TestProposeBeaconBlock_Capella(t *testing.T) {
 				ProposerSlashings: jsonifyProposerSlashings(capellaBlock.Capella.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(capellaBlock.Capella.Block.Body.RandaoReveal),
 				VoluntaryExits:    JsonifySignedVoluntaryExits(capellaBlock.Capella.Block.Body.VoluntaryExits),
-				SyncAggregate: &apimiddleware.SyncAggregateJson{
+				SyncAggregate: &structs.SyncAggregate{
 					SyncCommitteeBits:      hexutil.Encode(capellaBlock.Capella.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(capellaBlock.Capella.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
-				ExecutionPayload: &apimiddleware.ExecutionPayloadCapellaJson{
+				ExecutionPayload: &structs.ExecutionPayloadCapella{
 					BaseFeePerGas: bytesutil.LittleEndianBytesToBigInt(capellaBlock.Capella.Block.Body.ExecutionPayload.BaseFeePerGas).String(),
 					BlockHash:     hexutil.Encode(capellaBlock.Capella.Block.Body.ExecutionPayload.BlockHash),
 					BlockNumber:   uint64ToString(capellaBlock.Capella.Block.Body.ExecutionPayload.BlockNumber),
@@ -60,7 +60,7 @@ func TestProposeBeaconBlock_Capella(t *testing.T) {
 					PrevRandao:    hexutil.Encode(capellaBlock.Capella.Block.Body.ExecutionPayload.PrevRandao),
 					ReceiptsRoot:  hexutil.Encode(capellaBlock.Capella.Block.Body.ExecutionPayload.ReceiptsRoot),
 					StateRoot:     hexutil.Encode(capellaBlock.Capella.Block.Body.ExecutionPayload.StateRoot),
-					TimeStamp:     uint64ToString(capellaBlock.Capella.Block.Body.ExecutionPayload.Timestamp),
+					Timestamp:     uint64ToString(capellaBlock.Capella.Block.Body.ExecutionPayload.Timestamp),
 					Transactions:  jsonifyTransactions(capellaBlock.Capella.Block.Body.ExecutionPayload.Transactions),
 					Withdrawals:   jsonifyWithdrawals(capellaBlock.Capella.Block.Body.ExecutionPayload.Withdrawals),
 				},

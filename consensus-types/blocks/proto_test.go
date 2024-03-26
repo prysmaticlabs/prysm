@@ -1,15 +1,16 @@
 package blocks
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 type fields struct {
@@ -1312,7 +1313,6 @@ func bodyBlindedBellatrix(t *testing.T) *BeaconBlockBody {
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
-		isBlinded:    true,
 		randaoReveal: f.sig,
 		eth1Data: &eth.Eth1Data{
 			DepositRoot:  f.root[:],
@@ -1332,7 +1332,7 @@ func bodyBlindedBellatrix(t *testing.T) *BeaconBlockBody {
 
 func bodyCapella(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	p, err := WrappedExecutionPayloadCapella(f.execPayloadCapella, 0)
+	p, err := WrappedExecutionPayloadCapella(f.execPayloadCapella, big.NewInt(0))
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Capella,
@@ -1356,11 +1356,10 @@ func bodyCapella(t *testing.T) *BeaconBlockBody {
 
 func bodyBlindedCapella(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	ph, err := WrappedExecutionPayloadHeaderCapella(f.execPayloadHeaderCapella, 0)
+	ph, err := WrappedExecutionPayloadHeaderCapella(f.execPayloadHeaderCapella, big.NewInt(0))
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Capella,
-		isBlinded:    true,
 		randaoReveal: f.sig,
 		eth1Data: &eth.Eth1Data{
 			DepositRoot:  f.root[:],
@@ -1381,7 +1380,7 @@ func bodyBlindedCapella(t *testing.T) *BeaconBlockBody {
 
 func bodyDeneb(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	p, err := WrappedExecutionPayloadDeneb(f.execPayloadDeneb, 0)
+	p, err := WrappedExecutionPayloadDeneb(f.execPayloadDeneb, big.NewInt(0))
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Deneb,
@@ -1406,11 +1405,10 @@ func bodyDeneb(t *testing.T) *BeaconBlockBody {
 
 func bodyBlindedDeneb(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	ph, err := WrappedExecutionPayloadHeaderDeneb(f.execPayloadHeaderDeneb, 0)
+	ph, err := WrappedExecutionPayloadHeaderDeneb(f.execPayloadHeaderDeneb, big.NewInt(0))
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Deneb,
-		isBlinded:    true,
 		randaoReveal: f.sig,
 		eth1Data: &eth.Eth1Data{
 			DepositRoot:  f.root[:],

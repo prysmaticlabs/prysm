@@ -7,13 +7,13 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	"go.uber.org/mock/gomock"
 )
 
 const proposeExitTestEndpoint = "/eth/v1/beacon/pool/voluntary_exits"
@@ -24,8 +24,8 @@ func TestProposeExit_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonSignedVoluntaryExit := apimiddleware.SignedVoluntaryExitJson{
-		Exit: &apimiddleware.VoluntaryExitJson{
+	jsonSignedVoluntaryExit := structs.SignedVoluntaryExit{
+		Message: &structs.VoluntaryExit{
 			Epoch:          "1",
 			ValidatorIndex: "2",
 		},
@@ -45,7 +45,6 @@ func TestProposeExit_Valid(t *testing.T) {
 		bytes.NewBuffer(marshalledVoluntaryExit),
 		nil,
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 
@@ -95,7 +94,6 @@ func TestProposeExit_BadRequest(t *testing.T) {
 		gomock.Any(),
 		nil,
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(1)
 

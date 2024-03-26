@@ -1,8 +1,6 @@
 package params
 
 import (
-	"math"
-
 	eth1Params "github.com/ethereum/go-ethereum/params"
 )
 
@@ -37,7 +35,7 @@ func SepoliaConfig() *BeaconChainConfig {
 	cfg.BellatrixForkVersion = []byte{0x90, 0x00, 0x00, 0x71}
 	cfg.CapellaForkEpoch = 56832
 	cfg.CapellaForkVersion = []byte{0x90, 0x00, 0x00, 0x72}
-	cfg.DenebForkEpoch = math.MaxUint64
+	cfg.DenebForkEpoch = 132608
 	cfg.DenebForkVersion = []byte{0x90, 0x00, 0x00, 0x73}
 	cfg.TerminalTotalDifficulty = "17000000000000000"
 	cfg.DepositContractAddress = "0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"

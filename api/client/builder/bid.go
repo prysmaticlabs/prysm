@@ -3,12 +3,11 @@ package builder
 import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // SignedBid is an interface describing the method set of a signed builder bid.
@@ -22,7 +21,7 @@ type SignedBid interface {
 // Bid is an interface describing the method set of a builder bid.
 type Bid interface {
 	Header() (interfaces.ExecutionData, error)
-	BlindedBlobsBundle() (*enginev1.BlindedBlobsBundle, error)
+	BlobKzgCommitments() ([][]byte, error)
 	Value() []byte
 	Pubkey() []byte
 	Version() int
@@ -115,9 +114,9 @@ func (b builderBid) Header() (interfaces.ExecutionData, error) {
 	return blocks.WrappedExecutionPayloadHeader(b.p.Header)
 }
 
-// BlindedBlobsBundle --
-func (b builderBid) BlindedBlobsBundle() (*enginev1.BlindedBlobsBundle, error) {
-	return nil, errors.New("blinded blobs bundle not available before Deneb")
+// BlobKzgCommitments --
+func (b builderBid) BlobKzgCommitments() ([][]byte, error) {
+	return [][]byte{}, errors.New("blob kzg commitments not available before Deneb")
 }
 
 // Version --
@@ -166,12 +165,12 @@ func WrappedBuilderBidCapella(p *ethpb.BuilderBidCapella) (Bid, error) {
 // Header returns the execution data interface.
 func (b builderBidCapella) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, blocks.PayloadValueToGwei(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, blocks.PayloadValueToWei(b.p.Value))
 }
 
-// BlindedBlobsBundle --
-func (b builderBidCapella) BlindedBlobsBundle() (*enginev1.BlindedBlobsBundle, error) {
-	return nil, errors.New("blinded blobs bundle not available before Deneb")
+// BlobKzgCommitments --
+func (b builderBidCapella) BlobKzgCommitments() ([][]byte, error) {
+	return [][]byte{}, errors.New("blob kzg commitments not available before Deneb")
 }
 
 // Version --
@@ -250,12 +249,12 @@ func (b builderBidDeneb) HashTreeRootWith(hh *ssz.Hasher) error {
 // Header --
 func (b builderBidDeneb) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return blocks.WrappedExecutionPayloadHeaderDeneb(b.p.Header, blocks.PayloadValueToGwei(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderDeneb(b.p.Header, blocks.PayloadValueToWei(b.p.Value))
 }
 
-// BlindedBlobsBundle --
-func (b builderBidDeneb) BlindedBlobsBundle() (*enginev1.BlindedBlobsBundle, error) {
-	return b.p.BlindedBlobsBundle, nil
+// BlobKzgCommitments --
+func (b builderBidDeneb) BlobKzgCommitments() ([][]byte, error) {
+	return b.p.BlobKzgCommitments, nil
 }
 
 type signedBuilderBidDeneb struct {

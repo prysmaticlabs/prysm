@@ -3,19 +3,19 @@ package sync
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func (c *blobsTestCase) defaultOldestSlotByRange(t *testing.T) types.Slot {
 	currentEpoch := slots.ToEpoch(c.chain.CurrentSlot())
-	oldestEpoch := currentEpoch - params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	oldestEpoch := currentEpoch - params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	if oldestEpoch < params.BeaconConfig().DenebForkEpoch {
 		oldestEpoch = params.BeaconConfig().DenebForkEpoch
 	}
@@ -54,7 +54,7 @@ func (c *blobsTestCase) filterExpectedByRange(t *testing.T, scs []blocks.ROBlob,
 		if sc.Slot() < rreq.StartSlot || sc.Slot() > rreq.StartSlot+types.Slot(rreq.Count)-1 {
 			continue
 		}
-		if writes == params.BeaconNetworkConfig().MaxRequestBlobSidecars {
+		if writes == params.BeaconConfig().MaxRequestBlobSidecars {
 			continue
 		}
 		expect = append(expect, &expectedBlobChunk{
@@ -90,15 +90,15 @@ func (c *blobsTestCase) runTestBlobSidecarsByRange(t *testing.T) {
 }
 
 func TestBlobByRangeOK(t *testing.T) {
-	origNC := params.BeaconNetworkConfig()
+	origNC := params.BeaconConfig()
 	// restore network config after test completes
 	defer func() {
-		params.OverrideBeaconNetworkConfig(origNC)
+		params.OverrideBeaconConfig(origNC)
 	}()
 	// set MaxRequestBlobSidecars to a low-ish value so the test doesn't timeout.
-	nc := params.BeaconNetworkConfig().Copy()
+	nc := params.BeaconConfig().Copy()
 	nc.MaxRequestBlobSidecars = 100
-	params.OverrideBeaconNetworkConfig(nc)
+	params.OverrideBeaconConfig(nc)
 
 	cases := []*blobsTestCase{
 		{
@@ -139,14 +139,14 @@ func TestBlobByRangeOK(t *testing.T) {
 		},
 		{
 			name:    "when request count > MAX_REQUEST_BLOCKS_DENEB, MAX_REQUEST_BLOBS_SIDECARS sidecars in response",
-			nblocks: int(params.BeaconNetworkConfig().MaxRequestBlocksDeneb) + 10,
+			nblocks: int(params.BeaconConfig().MaxRequestBlocksDeneb) + 10,
 			requestFromSidecars: func(scs []blocks.ROBlob) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
 					StartSlot: scs[0].Slot(),
-					Count:     params.BeaconNetworkConfig().MaxRequestBlocksDeneb + 1,
+					Count:     params.BeaconConfig().MaxRequestBlocksDeneb + 1,
 				}
 			},
-			total: func() *int { x := int(params.BeaconNetworkConfig().MaxRequestBlobSidecars); return &x }(),
+			total: func() *int { x := int(params.BeaconConfig().MaxRequestBlobSidecars); return &x }(),
 		},
 	}
 	for _, c := range cases {
@@ -167,7 +167,7 @@ func TestBlobsByRangeValidation(t *testing.T) {
 	denebSlot, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
 	require.NoError(t, err)
 
-	minReqEpochs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	minReqEpochs := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	minReqSlots, err := slots.EpochStart(minReqEpochs)
 	require.NoError(t, err)
 	// spec criteria for mix,max bound checking
@@ -178,7 +178,7 @@ func TestBlobsByRangeValidation(t *testing.T) {
 		and clients MUST support serving requests of blobs on this range.
 	*/
 	defaultCurrent := denebSlot + 100 + minReqSlots
-	defaultMinStart, err := BlobsByRangeMinStartSlot(defaultCurrent)
+	defaultMinStart, err := BlobRPCMinValidSlot(defaultCurrent)
 	require.NoError(t, err)
 	cases := []struct {
 		name    string
@@ -282,6 +282,70 @@ func TestBlobsByRangeValidation(t *testing.T) {
 			require.Equal(t, c.start, rp.start)
 			require.Equal(t, c.end, rp.end)
 			require.Equal(t, c.batch, rp.size)
+		})
+	}
+}
+
+func TestBlobRPCMinValidSlot(t *testing.T) {
+	denebSlot, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+	require.NoError(t, err)
+	cases := []struct {
+		name     string
+		current  func(t *testing.T) types.Slot
+		expected types.Slot
+		err      error
+	}{
+		{
+			name: "before deneb",
+			current: func(t *testing.T) types.Slot {
+				st, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch - 1)
+				// note: we no longer need to deal with deneb fork epoch being far future
+				require.NoError(t, err)
+				return st
+			},
+			expected: denebSlot,
+		},
+		{
+			name: "equal to deneb",
+			current: func(t *testing.T) types.Slot {
+				st, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+				// note: we no longer need to deal with deneb fork epoch being far future
+				require.NoError(t, err)
+				return st
+			},
+			expected: denebSlot,
+		},
+		{
+			name: "after deneb, before expiry starts",
+			current: func(t *testing.T) types.Slot {
+				st, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch + params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
+				// note: we no longer need to deal with deneb fork epoch being far future
+				require.NoError(t, err)
+				return st
+			},
+			expected: denebSlot,
+		},
+		{
+			name: "expiry starts one epoch after deneb + MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS",
+			current: func(t *testing.T) types.Slot {
+				st, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch + params.BeaconConfig().MinEpochsForBlobsSidecarsRequest + 1)
+				// note: we no longer need to deal with deneb fork epoch being far future
+				require.NoError(t, err)
+				return st
+			},
+			expected: denebSlot + params.BeaconConfig().SlotsPerEpoch,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			current := c.current(t)
+			got, err := BlobRPCMinValidSlot(current)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, c.expected, got)
 		})
 	}
 }
