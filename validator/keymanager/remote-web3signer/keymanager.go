@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/internal"
@@ -37,7 +36,7 @@ const (
 // a keymanager, such as passwords, the wallet, and more.
 // Web3Signer contains one public keys option. Either through a URL or a static key list.
 type SetupConfig struct {
-	Wallet                iface.Wallet
+	WalletDir             string
 	BaseEndpoint          string
 	GenesisValidatorsRoot []byte
 
@@ -59,7 +58,7 @@ type Keymanager struct {
 	providedPublicKeys    [][48]byte
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
-	Wallet                iface.Wallet
+	walletDir             string
 }
 
 // NewKeymanager instantiates a new web3signer key manager.
@@ -74,20 +73,12 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		return nil, errors.Wrap(err, "could not create apiClient")
 	}
 
-	if cfg.Wallet == nil {
-		return nil, errors.New("wallet is empty")
-	}
-
-	if cfg.Wallet.KeymanagerKind() != keymanager.Web3Signer {
-		return nil, errors.New("wallet is not meant for remote signer use")
-	}
-
 	km := &Keymanager{
 		client:                internal.HttpSignerClient(client),
 		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
 		validator:             validator.New(),
-		Wallet:                cfg.Wallet,
+		walletDir:             cfg.WalletDir,
 	}
 
 	var ppk [][fieldparams.BLSPubkeyLength]byte
@@ -115,9 +106,9 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 }
 
 func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys [][fieldparams.BLSPubkeyLength]byte) error {
-	remoteKeysFile := filepath.Join(km.Wallet.Dir(), remoteKeysFileName)
-	if err := file.MkdirAll(km.Wallet.Dir()); err != nil {
-		return errors.Wrapf(err, "could not create directory %s", km.Wallet.Dir())
+	remoteKeysFile := filepath.Join(km.walletDir, remoteKeysFileName)
+	if err := file.MkdirAll(km.walletDir); err != nil {
+		return errors.Wrapf(err, "could not create directory %s", km.walletDir)
 	}
 
 	var bytesBuf bytes.Buffer
@@ -134,7 +125,7 @@ func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys [][fieldparams.B
 }
 
 func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
-	remoteKeysFile := filepath.Join(km.Wallet.Dir(), remoteKeysFileName)
+	remoteKeysFile := filepath.Join(km.walletDir, remoteKeysFileName)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.WithError(err).Error("Could not initialize file watcher")
