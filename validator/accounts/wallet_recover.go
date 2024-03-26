@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/derived"
 )
 
 const (
@@ -48,7 +48,7 @@ func (acm *CLIManager) WalletRecover(ctx context.Context) (*wallet.Wallet, error
 	if err := km.RecoverAccountsFromMnemonic(ctx, acm.mnemonic, acm.mnemonicLanguage, acm.mnemonic25thWord, acm.numAccounts); err != nil {
 		return nil, err
 	}
-	log.WithField("wallet-path", w.AccountsDir()).Infof(
+	log.WithField("walletPath", w.AccountsDir()).Infof(
 		"Successfully recovered HD wallet with %d accounts. Please use `accounts list` to view details for your accounts",
 		acm.numAccounts,
 	)

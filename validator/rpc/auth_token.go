@@ -15,8 +15,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 )
 
 const (
@@ -51,7 +51,12 @@ func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
 // of the URL. This token is then used as the bearer token for jwt auth.
 func (s *Server) initializeAuthToken(walletDir string) (string, error) {
 	authTokenFile := filepath.Join(walletDir, AuthTokenFileName)
-	if file.Exists(authTokenFile) {
+	exists, err := file.Exists(authTokenFile, file.Regular)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not check if file exists: %s", authTokenFile)
+	}
+
+	if exists {
 		// #nosec G304
 		f, err := os.Open(authTokenFile)
 		if err != nil {
@@ -137,19 +142,28 @@ func logValidatorWebAuth(validatorWebAddr, token string, tokenPath string) {
 func saveAuthToken(walletDirPath string, jwtKey []byte, token string) error {
 	hashFilePath := filepath.Join(walletDirPath, AuthTokenFileName)
 	bytesBuf := new(bytes.Buffer)
-	if _, err := bytesBuf.Write([]byte(fmt.Sprintf("%x", jwtKey))); err != nil {
+	if _, err := bytesBuf.WriteString(fmt.Sprintf("%x", jwtKey)); err != nil {
 		return err
 	}
-	if _, err := bytesBuf.Write([]byte("\n")); err != nil {
+	if _, err := bytesBuf.WriteString("\n"); err != nil {
 		return err
 	}
-	if _, err := bytesBuf.Write([]byte(token)); err != nil {
+	if _, err := bytesBuf.WriteString(token); err != nil {
 		return err
 	}
-	if _, err := bytesBuf.Write([]byte("\n")); err != nil {
+	if _, err := bytesBuf.WriteString("\n"); err != nil {
 		return err
 	}
-	return file.WriteFile(hashFilePath, bytesBuf.Bytes())
+
+	if err := file.MkdirAll(walletDirPath); err != nil {
+		return errors.Wrapf(err, "could not create directory %s", walletDirPath)
+	}
+
+	if err := file.WriteFile(hashFilePath, bytesBuf.Bytes()); err != nil {
+		return errors.Wrapf(err, "could not write to file %s", hashFilePath)
+	}
+
+	return nil
 }
 
 func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
@@ -182,7 +196,6 @@ func createTokenString(jwtKey []byte) (string, error) {
 	return tokenString, nil
 }
 
-// DEPRECATED: associated to Initialize Web UI API
 func createRandomJWTSecret() ([]byte, error) {
 	r := rand.NewGenerator()
 	jwtKey := make([]byte, 32)

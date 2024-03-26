@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
 	"go.opencensus.io/trace"
 )
 
@@ -21,8 +21,13 @@ func (s *Server) Initialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	authTokenPath := filepath.Join(s.walletDir, AuthTokenFileName)
+	exists, err := file.Exists(authTokenPath, file.Regular)
+	if err != nil {
+		httputil.HandleError(w, errors.Wrap(err, "Could not check if auth token exists").Error(), http.StatusInternalServerError)
+		return
+	}
 	httputil.WriteJson(w, &InitializeAuthResponse{
-		HasSignedUp: file.Exists(authTokenPath),
+		HasSignedUp: exists,
 		HasWallet:   walletExists,
 	})
 }

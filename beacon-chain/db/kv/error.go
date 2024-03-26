@@ -2,8 +2,8 @@ package kv
 
 import "github.com/pkg/errors"
 
-// ErrDeleteJustifiedAndFinalized is raised when we attempt to delete a finalized block/state
-var ErrDeleteJustifiedAndFinalized = errors.New("cannot delete finalized block or state")
+// ErrDeleteFinalized is raised when we attempt to delete a finalized block/state
+var ErrDeleteFinalized = errors.New("cannot delete finalized block or state")
 
 // ErrNotFound can be used directly, or as a wrapped DBError, whenever a db method needs to
 // indicate that a value couldn't be found.
@@ -21,3 +21,8 @@ var ErrNotFoundBackfillBlockRoot = errors.Wrap(ErrNotFound, "BackfillBlockRoot")
 
 // ErrNotFoundFeeRecipient is a not found error specifically for the fee recipient getter
 var ErrNotFoundFeeRecipient = errors.Wrap(ErrNotFound, "fee recipient")
+
+var errEmptyBlockSlice = errors.New("[]blocks.ROBlock is empty")
+var errIncorrectBlockParent = errors.New("unexpected missing or forked blocks in a []ROBlock")
+var errFinalizedChildNotFound = errors.New("unable to find finalized root descending from backfill batch")
+var errNotConnectedToFinalized = errors.New("unable to finalize backfill blocks, finalized parent_root does not match")

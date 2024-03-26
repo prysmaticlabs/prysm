@@ -3,9 +3,9 @@ package blockchain
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // CachedHeadRoot returns the corresponding value from Forkchoice
@@ -20,6 +20,13 @@ func (s *Service) GetProposerHead() [32]byte {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.GetProposerHead()
+}
+
+// ShouldOverrideFCU returns the corresponding value from forkchoice
+func (s *Service) ShouldOverrideFCU() bool {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.ShouldOverrideFCU()
 }
 
 // SetForkChoiceGenesisTime sets the genesis time in Forkchoice

@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	"go.uber.org/mock/gomock"
 )
 
 func TestComputeWaitElements_LastRecvTimeZero(t *testing.T) {
@@ -100,14 +100,14 @@ func TestActivation_Nominal(t *testing.T) {
 		},
 	}
 
-	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
+	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
 
 	// Instantiate a cancellable context.
 	ctx, cancel := context.WithCancel(context.Background())
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	req := &beacon.GetValidatorsRequest{
+	req := &structs.GetValidatorsRequest{
 		Ids:      stringPubKeys,
 		Statuses: []string{},
 	}
@@ -123,29 +123,28 @@ func TestActivation_Nominal(t *testing.T) {
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		4,
-		beacon.GetValidatorsResponse{
-			Data: []*beacon.ValidatorContainer{
+		structs.GetValidatorsResponse{
+			Data: []*structs.ValidatorContainer{
 				{
 					Index:  "55293",
 					Status: "active_ongoing",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKeys[0],
 					},
 				},
 				{
 					Index:  "11877",
 					Status: "active_exiting",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKeys[1],
 					},
 				},
 				{
 					Index:  "210439",
 					Status: "exited_slashed",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKeys[3],
 					},
 				},
@@ -187,16 +186,16 @@ func TestActivation_Nominal(t *testing.T) {
 func TestActivation_InvalidData(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		data                 []*beacon.ValidatorContainer
+		data                 []*structs.ValidatorContainer
 		expectedErrorMessage string
 	}{
 		{
 			name: "bad validator public key",
-			data: []*beacon.ValidatorContainer{
+			data: []*structs.ValidatorContainer{
 				{
 					Index:  "55293",
 					Status: "active_ongoing",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: "NotAPubKey",
 					},
 				},
@@ -205,11 +204,11 @@ func TestActivation_InvalidData(t *testing.T) {
 		},
 		{
 			name: "bad validator index",
-			data: []*beacon.ValidatorContainer{
+			data: []*structs.ValidatorContainer{
 				{
 					Index:  "NotAnIndex",
 					Status: "active_ongoing",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKey,
 					},
 				},
@@ -218,11 +217,11 @@ func TestActivation_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid validator status",
-			data: []*beacon.ValidatorContainer{
+			data: []*structs.ValidatorContainer{
 				{
 					Index:  "12345",
 					Status: "NotAStatus",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKey,
 					},
 				},
@@ -248,10 +247,9 @@ func TestActivation_InvalidData(t *testing.T) {
 					gomock.Any(),
 				).Return(
 					nil,
-					nil,
 				).SetArg(
 					4,
-					beacon.GetValidatorsResponse{
+					structs.GetValidatorsResponse{
 						Data: testCase.data,
 					},
 				).Times(1)
@@ -289,7 +287,14 @@ func TestActivation_JsonResponseError(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
-		nil,
+		errors.New("some specific json error"),
+	).Times(1)
+
+	jsonRestHandler.EXPECT().Get(
+		ctx,
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
 		errors.New("some specific json error"),
 	).Times(1)
 

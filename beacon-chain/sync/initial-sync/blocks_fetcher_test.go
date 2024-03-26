@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 	"sync"
@@ -11,26 +12,26 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	p2pm "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	beaconsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/verify"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	dbtest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	p2pm "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2pt "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	beaconsync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/verify"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -306,9 +307,9 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				fetcher.stop()
 			}()
 
-			processFetchedBlocks := func() ([]blocks.BlockWithVerifiedBlobs, error) {
+			processFetchedBlocks := func() ([]blocks.BlockWithROBlobs, error) {
 				defer cancel()
-				var unionRespBlocks []blocks.BlockWithVerifiedBlobs
+				var unionRespBlocks []blocks.BlockWithROBlobs
 
 				for {
 					select {
@@ -347,7 +348,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			bwb, err := processFetchedBlocks()
 			assert.NoError(t, err)
 
-			sort.Sort(blocks.BlockWithVerifiedBlobsSlice(bwb))
+			sort.Sort(blocks.BlockWithROBlobsSlice(bwb))
 			ss := make([]primitives.Slot, len(bwb))
 			for i, b := range bwb {
 				ss[i] = b.Block.Block().Slot()
@@ -454,7 +455,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 			}
 		}()
 
-		var bwb []blocks.BlockWithVerifiedBlobs
+		var bwb []blocks.BlockWithROBlobs
 		select {
 		case <-ctx.Done():
 			t.Error(ctx.Err())
@@ -606,9 +607,7 @@ func TestBlocksFetcher_WaitForBandwidth(t *testing.T) {
 	p1.Connect(p2)
 	require.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	req := &ethpb.BeaconBlocksByRangeRequest{
-		StartSlot: 100,
-		Step:      1,
-		Count:     64,
+		Count: 64,
 	}
 
 	topic := p2pm.RPCBlocksByRangeTopicV1
@@ -1015,7 +1014,7 @@ func TestLowestSlotNeedsBlob(t *testing.T) {
 func TestBlobRequest(t *testing.T) {
 	var nilReq *ethpb.BlobSidecarsByRangeRequest
 	// no blocks
-	req := blobRequest([]blocks.BlockWithVerifiedBlobs{}, 0)
+	req := blobRequest([]blocks.BlockWithROBlobs{}, 0)
 	require.Equal(t, nilReq, req)
 	blks, _ := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
@@ -1047,7 +1046,7 @@ func TestBlobRequest(t *testing.T) {
 	require.Equal(t, len(allAfter), int(req.Count))
 }
 
-func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithVerifiedBlobs, []blocks.ROBlob) {
+func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithROBlobs, []blocks.ROBlob) {
 	blks, blobs := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, nblocks)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
 	for i := range blks {
@@ -1143,4 +1142,27 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	}
 	// We delete each entry we've seen, so if we see all expected commits, the map should be empty at the end.
 	require.Equal(t, 0, len(expectedCommits))
+}
+
+func TestBatchLimit(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	testCfg := params.BeaconConfig().Copy()
+	testCfg.DenebForkEpoch = math.MaxUint64
+	params.OverrideBeaconConfig(testCfg)
+
+	resetFlags := flags.Get()
+	flags.Init(&flags.GlobalFlags{
+		BlockBatchLimit:            640,
+		BlockBatchLimitBurstFactor: 10,
+	})
+	defer func() {
+		flags.Init(resetFlags)
+	}()
+
+	assert.Equal(t, 640, maxBatchLimit())
+
+	testCfg.DenebForkEpoch = 100000
+	params.OverrideBeaconConfig(testCfg)
+
+	assert.Equal(t, params.BeaconConfig().MaxRequestBlocksDeneb, uint64(maxBatchLimit()))
 }

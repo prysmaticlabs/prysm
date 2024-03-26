@@ -8,8 +8,8 @@ import (
 
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -91,7 +91,7 @@ func (km *Keymanager) ImportKeystores(
 	}
 
 	log.WithFields(logrus.Fields{
-		"publicKeys": CreatePrintoutOfKeys(importedKeys),
+		"pubkeys": CreatePrintoutOfKeys(importedKeys),
 	}).Info("Successfully imported validator key(s)")
 
 	// 5) Return Statuses

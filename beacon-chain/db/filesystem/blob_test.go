@@ -2,18 +2,19 @@ package filesystem
 
 import (
 	"bytes"
+	"os"
 	"path"
+	"sync"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/spf13/afero"
 )
 
@@ -71,7 +72,61 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepSSZEqual(t, expected, actual)
 	})
+
+	t.Run("round trip write, read and delete", func(t *testing.T) {
+		bs := NewEphemeralBlobStorage(t)
+		err := bs.Save(testSidecars[0])
+		require.NoError(t, err)
+
+		expected := testSidecars[0]
+		actual, err := bs.Get(expected.BlockRoot(), expected.Index)
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, expected, actual)
+
+		require.NoError(t, bs.Remove(expected.BlockRoot()))
+		_, err = bs.Get(expected.BlockRoot(), expected.Index)
+		require.ErrorContains(t, "file does not exist", err)
+	})
+
+	t.Run("clear", func(t *testing.T) {
+		blob := testSidecars[0]
+		b := NewEphemeralBlobStorage(t)
+		require.NoError(t, b.Save(blob))
+		res, err := b.Get(blob.BlockRoot(), blob.Index)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.NoError(t, b.Clear())
+		// After clearing, the blob should not exist in the db.
+		_, err = b.Get(blob.BlockRoot(), blob.Index)
+		require.ErrorIs(t, err, os.ErrNotExist)
+	})
+
+	t.Run("race conditions", func(t *testing.T) {
+		// There was a bug where saving the same blob in multiple go routines would cause a partial blob
+		// to be empty. This test ensures that several routines can safely save the same blob at the
+		// same time. This isn't ideal behavior from the caller, but should be handled safely anyway.
+		// See https://github.com/prysmaticlabs/prysm/pull/13648
+		b, err := NewBlobStorage(WithBasePath(t.TempDir()))
+		require.NoError(t, err)
+		blob := testSidecars[0]
+
+		var wg sync.WaitGroup
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				require.NoError(t, b.Save(blob))
+			}()
+		}
+
+		wg.Wait()
+		res, err := b.Get(blob.BlockRoot(), blob.Index)
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, blob, res)
+	})
 }
+
+// pollUntil polls a condition function until it returns true or a timeout is reached.
 
 func TestBlobIndicesBounds(t *testing.T) {
 	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
@@ -118,7 +173,22 @@ func TestBlobStoragePrune(t *testing.T) {
 			require.NoError(t, bs.Save(sidecar))
 		}
 
-		require.NoError(t, bs.Prune(currentSlot))
+		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
+
+		remainingFolders, err := afero.ReadDir(fs, ".")
+		require.NoError(t, err)
+		require.Equal(t, 0, len(remainingFolders))
+	})
+	t.Run("Prune dangling blob", func(t *testing.T) {
+		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 299, fieldparams.MaxBlobsPerBlock)
+		testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
+		require.NoError(t, err)
+
+		for _, sidecar := range testSidecars[4:] {
+			require.NoError(t, bs.Save(sidecar))
+		}
+
+		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
 
 		remainingFolders, err := afero.ReadDir(fs, ".")
 		require.NoError(t, err)
@@ -126,7 +196,7 @@ func TestBlobStoragePrune(t *testing.T) {
 	})
 	t.Run("PruneMany", func(t *testing.T) {
 		blockQty := 10
-		slot := primitives.Slot(0)
+		slot := primitives.Slot(1)
 
 		for j := 0; j <= blockQty; j++ {
 			root := bytesutil.ToBytes32(bytesutil.ToBytes(uint64(slot), 32))
@@ -138,7 +208,7 @@ func TestBlobStoragePrune(t *testing.T) {
 			slot += 10000
 		}
 
-		require.NoError(t, bs.Prune(currentSlot))
+		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
 
 		remainingFolders, err := afero.ReadDir(fs, ".")
 		require.NoError(t, err)
@@ -167,42 +237,14 @@ func BenchmarkPruning(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := bs.Prune(currentSlot)
+		err := bs.pruner.prune(currentSlot)
 		require.NoError(b, err)
 	}
 }
 
-func TestBlobStorageDelete(t *testing.T) {
-	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-	require.NoError(t, err)
-	rawRoot := "0xcf9bb70c98f58092c9d6459227c9765f984d240be9690e85179bc5a6f60366ad"
-	blockRoot, err := hexutil.Decode(rawRoot)
-	require.NoError(t, err)
-
-	_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, fieldparams.MaxBlobsPerBlock)
-	testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
-	require.NoError(t, err)
-	for _, sidecar := range testSidecars {
-		require.NoError(t, bs.Save(sidecar))
-	}
-
-	exists, err := afero.DirExists(fs, hexutil.Encode(blockRoot))
-	require.NoError(t, err)
-	require.Equal(t, true, exists)
-
-	// Delete the directory corresponding to the block root
-	require.NoError(t, bs.Delete(bytesutil.ToBytes32(blockRoot)))
-
-	// Ensure that the directory no longer exists after deletion
-	exists, err = afero.DirExists(fs, hexutil.Encode(blockRoot))
-	require.NoError(t, err)
-	require.Equal(t, false, exists)
-
-	// Deleting a non-existent root does not return an error.
-	require.NoError(t, bs.Delete(bytesutil.ToBytes32([]byte{0x1})))
-}
-
 func TestNewBlobStorage(t *testing.T) {
-	_, err := NewBlobStorage(path.Join(t.TempDir(), "good"))
+	_, err := NewBlobStorage()
+	require.ErrorIs(t, err, errNoBasePath)
+	_, err = NewBlobStorage(WithBasePath(path.Join(t.TempDir(), "good")))
 	require.NoError(t, err)
 }

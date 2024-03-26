@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
-	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/endtoend/policies"
+	e2etypes "github.com/prysmaticlabs/prysm/v5/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc"
 )
 
@@ -44,7 +44,7 @@ func verify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 }
 
 func run(nodeIdx int) error {
-	genesisResp := &beacon.GetGenesisResponse{}
+	genesisResp := &structs.GetGenesisResponse{}
 	if err := doJSONGetRequest(v1PathTemplate, "/beacon/genesis", nodeIdx, genesisResp); err != nil {
 		return errors.Wrap(err, "error getting genesis data")
 	}
@@ -76,28 +76,16 @@ func run(nodeIdx int) error {
 		}
 	}
 
-	return postEvaluation(requests)
+	return postEvaluation(requests, currentEpoch)
 }
 
 // postEvaluation performs additional evaluation after all requests have been completed.
 // It is useful for things such as checking if specific fields match between endpoints.
-func postEvaluation(requests map[string]endpoint) error {
+func postEvaluation(requests map[string]endpoint, epoch primitives.Epoch) error {
 	// verify that block SSZ responses have the correct structure
-	forkData := requests["/beacon/states/{param1}/fork"]
-	fork, ok := forkData.getPResp().(*beacon.GetStateForkResponse)
-	if !ok {
-		return fmt.Errorf(msgWrongJson, &beacon.GetStateForkResponse{}, forkData.getPResp())
-	}
-	finalizedEpoch, err := strconv.ParseUint(fork.Data.Epoch, 10, 64)
-	if err != nil {
-		return err
-	}
 	blockData := requests["/beacon/blocks/{param1}"]
 	blindedBlockData := requests["/beacon/blinded_blocks/{param1}"]
-	if !ok {
-		return errSszCast
-	}
-	if finalizedEpoch < helpers.AltairE2EForkEpoch+2 {
+	if epoch < params.BeaconConfig().AltairForkEpoch {
 		b := &ethpb.SignedBeaconBlock{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
@@ -106,7 +94,7 @@ func postEvaluation(requests map[string]endpoint) error {
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
-	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch+2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
+	} else if epoch < params.BeaconConfig().BellatrixForkEpoch {
 		b := &ethpb.SignedBeaconBlockAltair{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
@@ -115,7 +103,7 @@ func postEvaluation(requests map[string]endpoint) error {
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
-	} else if finalizedEpoch >= helpers.BellatrixE2EForkEpoch && finalizedEpoch < helpers.CapellaE2EForkEpoch {
+	} else if epoch < params.BeaconConfig().CapellaForkEpoch {
 		b := &ethpb.SignedBeaconBlockBellatrix{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
@@ -124,7 +112,7 @@ func postEvaluation(requests map[string]endpoint) error {
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
-	} else if finalizedEpoch >= helpers.CapellaE2EForkEpoch && finalizedEpoch < helpers.DenebE2EForkEpoch {
+	} else if epoch < params.BeaconConfig().DenebForkEpoch {
 		b := &ethpb.SignedBeaconBlockCapella{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
@@ -146,14 +134,14 @@ func postEvaluation(requests map[string]endpoint) error {
 
 	// verify that dependent root of proposer duties matches block header
 	blockHeaderData := requests["/beacon/headers/{param1}"]
-	header, ok := blockHeaderData.getPResp().(*beacon.GetBlockHeaderResponse)
+	header, ok := blockHeaderData.getPResp().(*structs.GetBlockHeaderResponse)
 	if !ok {
-		return fmt.Errorf(msgWrongJson, &beacon.GetBlockHeaderResponse{}, blockHeaderData.getPResp())
+		return fmt.Errorf(msgWrongJson, &structs.GetBlockHeaderResponse{}, blockHeaderData.getPResp())
 	}
 	dutiesData := requests["/validator/duties/proposer/{param1}"]
-	duties, ok := dutiesData.getPResp().(*validator.GetProposerDutiesResponse)
+	duties, ok := dutiesData.getPResp().(*structs.GetProposerDutiesResponse)
 	if !ok {
-		return fmt.Errorf(msgWrongJson, &validator.GetProposerDutiesResponse{}, dutiesData.getPResp())
+		return fmt.Errorf(msgWrongJson, &structs.GetProposerDutiesResponse{}, dutiesData.getPResp())
 	}
 	if header.Data.Root != duties.DependentRoot {
 		return fmt.Errorf("header root %s does not match duties root %s ", header.Data.Root, duties.DependentRoot)

@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"math/big"
 	"os"
 	"path"
 	"strings"
@@ -8,15 +9,15 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	blocks2 "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	blocks2 "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -56,7 +57,7 @@ func RunExecutionPayloadTest(t *testing.T, config string) {
 				require.NoError(t, err)
 			}
 
-			payload, err := blocks2.WrappedExecutionPayloadDeneb(body.ExecutionPayload, 0)
+			payload, err := blocks2.WrappedExecutionPayloadDeneb(body.ExecutionPayload, big.NewInt(0))
 			require.NoError(t, err)
 
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "execution.yaml")

@@ -1,18 +1,21 @@
 package rpc
 
 import (
+	"net/http"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
-	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
-	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
-	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
+	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	beaconApi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
+	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-chain-client-factory"
+	nodeClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/node-client-factory"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v5/validator/helpers"
 	"google.golang.org/grpc"
 )
 
@@ -51,8 +54,11 @@ func (s *Server) registerBeaconClient() error {
 		s.beaconApiTimeout,
 	)
 
-	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn)
-	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn)
-	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn)
+	restHandler := beaconApi.NewBeaconApiJsonRestHandler(http.Client{Timeout: s.beaconApiTimeout}, s.beaconApiEndpoint)
+
+	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn, restHandler)
+	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn, restHandler)
+	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn, restHandler)
+
 	return nil
 }

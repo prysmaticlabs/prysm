@@ -3,23 +3,31 @@ package filesystem
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/spf13/afero"
 )
 
 // NewEphemeralBlobStorage should only be used for tests.
 // The instance of BlobStorage returned is backed by an in-memory virtual filesystem,
 // improving test performance and simplifying cleanup.
-func NewEphemeralBlobStorage(_ testing.TB) *BlobStorage {
-	return &BlobStorage{fs: afero.NewMemMapFs()}
+func NewEphemeralBlobStorage(t testing.TB) *BlobStorage {
+	fs := afero.NewMemMapFs()
+	pruner, err := newBlobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
+	if err != nil {
+		t.Fatal("test setup issue", err)
+	}
+	return &BlobStorage{fs: fs, pruner: pruner}
 }
 
 // NewEphemeralBlobStorageWithFs can be used by tests that want access to the virtual filesystem
 // in order to interact with it outside the parameters of the BlobStorage api.
-func NewEphemeralBlobStorageWithFs(_ testing.TB) (afero.Fs, *BlobStorage, error) {
+func NewEphemeralBlobStorageWithFs(t testing.TB) (afero.Fs, *BlobStorage, error) {
 	fs := afero.NewMemMapFs()
-	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
-	return fs, &BlobStorage{fs: fs, retentionEpochs: retentionEpoch}, nil
+	pruner, err := newBlobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
+	if err != nil {
+		t.Fatal("test setup issue", err)
+	}
+	return fs, &BlobStorage{fs: fs, pruner: pruner}, nil
 }
 
 type BlobMocker struct {
@@ -29,7 +37,7 @@ type BlobMocker struct {
 
 // CreateFakeIndices creates empty blob sidecar files at the expected path for the given
 // root and indices to influence the result of Indices().
-func (bm *BlobMocker) CreateFakeIndices(root [32]byte, indices []uint64) error {
+func (bm *BlobMocker) CreateFakeIndices(root [32]byte, indices ...uint64) error {
 	for i := range indices {
 		n := blobNamer{root: root, index: indices[i]}
 		if err := bm.fs.MkdirAll(n.dir(), directoryPermissions); err != nil {

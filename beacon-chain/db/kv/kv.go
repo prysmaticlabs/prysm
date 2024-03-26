@@ -14,12 +14,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	prombolt "github.com/prysmaticlabs/prombbolt"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -91,7 +90,6 @@ type Store struct {
 	validatorEntryCache *ristretto.Cache
 	stateSummaryCache   *stateSummaryCache
 	ctx                 context.Context
-	blobRetentionEpochs primitives.Epoch
 }
 
 // StoreDatafilePath is the canonical construction of a full
@@ -102,48 +100,28 @@ func StoreDatafilePath(dirPath string) string {
 }
 
 var Buckets = [][]byte{
-	attestationsBucket,
 	blocksBucket,
 	stateBucket,
-	proposerSlashingsBucket,
-	attesterSlashingsBucket,
-	voluntaryExitsBucket,
 	chainMetadataBucket,
 	checkpointBucket,
 	powchainBucket,
 	stateSummaryBucket,
 	stateValidatorsBucket,
 	// Indices buckets.
-	attestationHeadBlockRootBucket,
-	attestationSourceRootIndicesBucket,
-	attestationSourceEpochIndicesBucket,
-	attestationTargetRootIndicesBucket,
-	attestationTargetEpochIndicesBucket,
 	blockSlotIndicesBucket,
 	stateSlotIndicesBucket,
 	blockParentRootIndicesBucket,
 	finalizedBlockRootsIndexBucket,
 	blockRootValidatorHashesBucket,
-	// State management service bucket.
-	newStateServiceCompatibleBucket,
 	// Migrations
 	migrationsBucket,
 
 	feeRecipientBucket,
 	registrationBucket,
-
-	blobsBucket,
 }
 
 // KVStoreOption is a functional option that modifies a kv.Store.
 type KVStoreOption func(*Store)
-
-// WithBlobRetentionEpochs sets the variable configuring the blob retention window.
-func WithBlobRetentionEpochs(e primitives.Epoch) KVStoreOption {
-	return func(s *Store) {
-		s.blobRetentionEpochs = e
-	}
-}
 
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
@@ -159,7 +137,7 @@ func NewKVStore(ctx context.Context, dirPath string, opts ...KVStoreOption) (*St
 		}
 	}
 	datafile := StoreDatafilePath(dirPath)
-	log.Infof("Opening Bolt DB at %s", datafile)
+	log.WithField("path", datafile).Info("Opening Bolt DB")
 	boltDB, err := bolt.Open(
 		datafile,
 		params.BeaconIoConfig().ReadWritePermissions,
@@ -217,19 +195,14 @@ func NewKVStore(ctx context.Context, dirPath string, opts ...KVStoreOption) (*St
 		return nil, err
 	}
 
-	if err := kv.checkEpochsForBlobSidecarsRequestBucket(boltDB); err != nil {
-		return nil, errors.Wrap(err, "failed to check epochs for blob sidecars request bucket")
-	}
-
-	// set a default so that tests don't break
-	if kv.blobRetentionEpochs == 0 {
-		kv.blobRetentionEpochs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
-	}
 	return kv, nil
 }
 
 // ClearDB removes the previously stored database in the data directory.
 func (s *Store) ClearDB() error {
+	if err := s.Close(); err != nil {
+		return fmt.Errorf("failed to close db: %w", err)
+	}
 	if _, err := os.Stat(s.databasePath); os.IsNotExist(err) {
 		return nil
 	}

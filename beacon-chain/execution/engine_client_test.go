@@ -19,19 +19,18 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	mocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	mocks "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -128,7 +127,7 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
 		require.Equal(t, true, ok)
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, big.NewInt(0))
 		require.NoError(t, err)
 		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.NoError(t, err)
@@ -477,7 +476,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.NoError(t, err)
@@ -491,7 +490,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.NoError(t, err)
@@ -519,7 +518,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -533,7 +532,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -561,7 +560,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -575,7 +574,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -603,7 +602,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -617,7 +616,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -758,26 +757,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
 		require.NoError(t, err)
 		payload.Transactions = encodedBinaryTxs
-		jsonPayload["transactions"] = txs
-		num := big.NewInt(1)
-		encodedNum := hexutil.EncodeBig(num)
-		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
-		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
-		jsonPayload["sha3Uncles"] = common.BytesToHash([]byte("uncles"))
-		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
-		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
-		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
-		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
-		jsonPayload["logsBloom"] = gethtypes.BytesToBloom([]byte("bloom"))
-		jsonPayload["gasLimit"] = hexutil.EncodeUint64(1)
-		jsonPayload["gasUsed"] = hexutil.EncodeUint64(2)
-		jsonPayload["timestamp"] = hexutil.EncodeUint64(3)
-		jsonPayload["number"] = encodedNum
-		jsonPayload["extraData"] = common.BytesToHash([]byte("extra"))
-		jsonPayload["totalDifficulty"] = "0x123456"
-		jsonPayload["difficulty"] = encodedNum
-		jsonPayload["size"] = encodedNum
-		jsonPayload["baseFeePerGas"] = encodedNum
+		jsonPayload["transactions"] = []hexutil.Bytes{encodedBinaryTxs[0]}
 
 		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
 		require.NoError(t, err)
@@ -792,7 +772,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 			respJSON := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      1,
-				"result":  jsonPayload,
+				"result":  []map[string]interface{}{jsonPayload},
 			}
 			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
 		}))
@@ -869,26 +849,7 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
 		require.NoError(t, err)
 		payload.Transactions = encodedBinaryTxs
-		jsonPayload["transactions"] = txs
-		num := big.NewInt(1)
-		encodedNum := hexutil.EncodeBig(num)
-		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
-		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
-		jsonPayload["sha3Uncles"] = common.BytesToHash([]byte("uncles"))
-		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
-		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
-		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
-		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
-		jsonPayload["logsBloom"] = gethtypes.BytesToBloom([]byte("bloom"))
-		jsonPayload["gasLimit"] = hexutil.EncodeUint64(1)
-		jsonPayload["gasUsed"] = hexutil.EncodeUint64(2)
-		jsonPayload["timestamp"] = hexutil.EncodeUint64(3)
-		jsonPayload["number"] = encodedNum
-		jsonPayload["extraData"] = common.BytesToHash([]byte("extra"))
-		jsonPayload["totalDifficulty"] = "0x123456"
-		jsonPayload["difficulty"] = encodedNum
-		jsonPayload["size"] = encodedNum
-		jsonPayload["baseFeePerGas"] = encodedNum
+		jsonPayload["transactions"] = []hexutil.Bytes{encodedBinaryTxs[0]}
 
 		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
 		require.NoError(t, err)
@@ -912,19 +873,11 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 				require.NoError(t, r.Body.Close())
 			}()
 
-			respJSON := []map[string]interface{}{
-				{
-					"jsonrpc": "2.0",
-					"id":      1,
-					"result":  jsonPayload,
-				},
-				{
-					"jsonrpc": "2.0",
-					"id":      2,
-					"result":  jsonPayload,
-				},
+			respJSON := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  []map[string]interface{}{jsonPayload, jsonPayload},
 			}
-			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
 			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
 
 		}))
@@ -958,6 +911,73 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 		got, err = reconstructed[2].Block().Body().Execution()
 		require.NoError(t, err)
 		require.DeepEqual(t, payload, got.Proto())
+	})
+	t.Run("handles invalid response from EL", func(t *testing.T) {
+		fix := fixtures()
+		payload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
+
+		jsonPayload := make(map[string]interface{})
+		tx := gethtypes.NewTransaction(
+			0,
+			common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			big.NewInt(0), 0, big.NewInt(0),
+			nil,
+		)
+		txs := []*gethtypes.Transaction{tx}
+		encodedBinaryTxs := make([][]byte, 1)
+		var err error
+		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+		require.NoError(t, err)
+		payload.Transactions = encodedBinaryTxs
+		jsonPayload["transactions"] = []hexutil.Bytes{encodedBinaryTxs[0]}
+
+		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := blocks.PayloadToHeader(wrappedPayload)
+		require.NoError(t, err)
+
+		bellatrixBlock := util.NewBlindedBeaconBlockBellatrix()
+		wanted := util.NewBeaconBlockBellatrix()
+		wanted.Block.Slot = 1
+		// Make sure block hash is the zero hash.
+		bellatrixBlock.Block.Body.ExecutionPayloadHeader.BlockHash = make([]byte, 32)
+		bellatrixBlock.Block.Slot = 1
+		wrappedEmpty, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+
+			respJSON := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  []map[string]interface{}{},
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
+
+		blindedBlock.Block.Body.ExecutionPayloadHeader = header
+		wrapped, err := blocks.NewSignedBeaconBlock(blindedBlock)
+		require.NoError(t, err)
+		copiedWrapped, err := wrapped.Copy()
+		require.NoError(t, err)
+
+		_, err = service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.ReadOnlySignedBeaconBlock{wrappedEmpty, wrapped, copiedWrapped})
+		require.ErrorContains(t, "mismatch of payloads retrieved from the execution client", err)
 	})
 }
 
@@ -1288,6 +1308,10 @@ func fixtures() map[string]interface{} {
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 	}
+	executionPayloadBodyFixture := &pb.ExecutionPayloadBodyV1{
+		Transactions: [][]byte{foo[:]},
+		Withdrawals:  []*pb.Withdrawal{},
+	}
 	executionPayloadFixtureCapella := &pb.ExecutionPayloadCapella{
 		ParentHash:    foo[:],
 		FeeRecipient:  bar,
@@ -1459,6 +1483,7 @@ func fixtures() map[string]interface{} {
 	}
 	return map[string]interface{}{
 		"ExecutionBlock":                    executionBlock,
+		"ExecutionPayloadBody":              executionPayloadBodyFixture,
 		"ExecutionPayload":                  executionPayloadFixture,
 		"ExecutionPayloadCapella":           executionPayloadFixtureCapella,
 		"ExecutionPayloadDeneb":             executionPayloadFixtureDeneb,
@@ -1579,7 +1604,7 @@ func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 				p, err := blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
 					BlockHash:    wantedHash[:],
 					Transactions: [][]byte{},
-				}, 0)
+				}, big.NewInt(0))
 				require.NoError(t, err)
 				return p
 			},
@@ -1587,7 +1612,7 @@ func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrapped, err := blocks.WrappedExecutionPayloadHeaderCapella(tt.args.header, 0)
+			wrapped, err := blocks.WrappedExecutionPayloadHeaderCapella(tt.args.header, big.NewInt(0))
 			require.NoError(t, err)
 			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
 			if err != nil {
@@ -1640,7 +1665,7 @@ func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
 				p, err := blocks.WrappedExecutionPayloadDeneb(&pb.ExecutionPayloadDeneb{
 					BlockHash:    wantedHash[:],
 					Transactions: [][]byte{},
-				}, 0)
+				}, big.NewInt(0))
 				require.NoError(t, err)
 				return p
 			},
@@ -1648,7 +1673,7 @@ func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrapped, err := blocks.WrappedExecutionPayloadHeaderDeneb(tt.args.header, 0)
+			wrapped, err := blocks.WrappedExecutionPayloadHeaderDeneb(tt.args.header, big.NewInt(0))
 			require.NoError(t, err)
 			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
 			if err != nil {
@@ -2007,10 +2032,6 @@ func newPayloadV3Setup(t *testing.T, status *pb.PayloadStatus, payload *pb.Execu
 }
 
 func TestCapella_PayloadBodiesByHash(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOptionalEngineMethods: true,
-	})
-	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -2067,7 +2088,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		service := &Service{}
 		service.rpcClient = rpcClient
 
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		bRoot := [32]byte{}
+		copy(bRoot[:], "hash")
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(results))
 
@@ -2113,7 +2136,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		service := &Service{}
 		service.rpcClient = rpcClient
 
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		bRoot := [32]byte{}
+		copy(bRoot[:], "hash")
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot, bRoot, bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 3, len(results))
 
@@ -2154,7 +2179,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		service := &Service{}
 		service.rpcClient = rpcClient
 
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		bRoot := [32]byte{}
+		copy(bRoot[:], "hash")
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(results))
 
@@ -2204,7 +2231,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		service := &Service{}
 		service.rpcClient = rpcClient
 
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		bRoot := [32]byte{}
+		copy(bRoot[:], "hash")
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot, bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 2, len(results))
 
@@ -2247,7 +2276,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		service := &Service{}
 		service.rpcClient = rpcClient
 
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		bRoot := [32]byte{}
+		copy(bRoot[:], "hash")
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot, bRoot, bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 3, len(results))
 
@@ -2258,10 +2289,6 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 }
 
 func TestCapella_PayloadBodiesByRange(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOptionalEngineMethods: true,
-	})
-	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -2509,10 +2536,6 @@ func TestCapella_PayloadBodiesByRange(t *testing.T) {
 }
 
 func Test_ExchangeCapabilities(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOptionalEngineMethods: true,
-	})
-	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

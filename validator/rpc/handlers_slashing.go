@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
-	slashing "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	slashing "github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history"
 	"go.opencensus.io/trace"
 )
 
@@ -76,7 +76,7 @@ func (s *Server) ImportSlashingProtection(w http.ResponseWriter, r *http.Request
 	}
 	enc := []byte(req.SlashingProtectionJson)
 	buf := bytes.NewBuffer(enc)
-	if err := slashing.ImportStandardProtectionJSON(ctx, s.valDB, buf); err != nil {
+	if err := s.valDB.ImportStandardProtectionJSON(ctx, buf); err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "could not import slashing protection history").Error(), http.StatusInternalServerError)
 		return
 	}

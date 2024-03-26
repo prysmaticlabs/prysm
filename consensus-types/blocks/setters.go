@@ -1,11 +1,11 @@
 package blocks
 
 import (
-	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // SetSignature sets the signature of the signed beacon block.
@@ -36,12 +36,6 @@ func (b *SignedBeaconBlock) SetParentRoot(parentRoot []byte) {
 // This function is not thread safe, it is only used during block creation.
 func (b *SignedBeaconBlock) SetStateRoot(root []byte) {
 	copy(b.block.stateRoot[:], root)
-}
-
-// SetBlinded sets the blinded flag of the beacon block.
-// This function is not thread safe, it is only used during block creation.
-func (b *SignedBeaconBlock) SetBlinded(blinded bool) {
-	b.block.body.isBlinded = blinded
 }
 
 // SetRandaoReveal sets the randao reveal in the block body.
@@ -108,7 +102,7 @@ func (b *SignedBeaconBlock) SetExecution(e interfaces.ExecutionData) error {
 	if b.version == version.Phase0 || b.version == version.Altair {
 		return consensus_types.ErrNotSupported("Execution", b.version)
 	}
-	if b.block.body.isBlinded {
+	if e.IsBlinded() {
 		b.block.body.executionPayloadHeader = e
 		return nil
 	}

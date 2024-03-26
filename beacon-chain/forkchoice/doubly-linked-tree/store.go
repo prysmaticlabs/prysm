@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -238,6 +238,20 @@ func (f *ForkChoice) HighestReceivedBlockSlot() primitives.Slot {
 		return 0
 	}
 	return f.store.highestReceivedNode.slot
+}
+
+// HighestReceivedBlockSlotDelay returns the number of slots that the highest
+// received block was late when receiving it
+func (f *ForkChoice) HighestReceivedBlockDelay() primitives.Slot {
+	n := f.store.highestReceivedNode
+	if n == nil {
+		return 0
+	}
+	secs, err := slots.SecondsSinceSlotStart(n.slot, f.store.genesisTime, n.timestamp)
+	if err != nil {
+		return 0
+	}
+	return primitives.Slot(secs / params.BeaconConfig().SecondsPerSlot)
 }
 
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch

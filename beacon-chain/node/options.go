@@ -1,11 +1,11 @@
 package node
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // Option for beacon node configuration.
@@ -39,6 +39,15 @@ func WithBuilderFlagOptions(opts []builder.Option) Option {
 func WithBlobStorage(bs *filesystem.BlobStorage) Option {
 	return func(bn *BeaconNode) error {
 		bn.BlobStorage = bs
+		return nil
+	}
+}
+
+// WithBlobStorageOptions appends 1 or more filesystem.BlobStorageOption on the beacon node,
+// to be used when initializing blob storage.
+func WithBlobStorageOptions(opt ...filesystem.BlobStorageOption) Option {
+	return func(bn *BeaconNode) error {
+		bn.BlobStorageOptions = append(bn.BlobStorageOptions, opt...)
 		return nil
 	}
 }

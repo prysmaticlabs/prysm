@@ -15,16 +15,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/client"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	apibeacon "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	log "github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/v5/api/client"
+	"github.com/prysmaticlabs/prysm/v5/api/server"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -149,8 +147,8 @@ func (c *Client) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fo
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting fork by state id = %s", stateId)
 	}
-	fr := &shared.Fork{}
-	dataWrapper := &struct{ Data *shared.Fork }{Data: fr}
+	fr := &structs.Fork{}
+	dataWrapper := &struct{ Data *structs.Fork }{Data: fr}
 	err = json.Unmarshal(body, dataWrapper)
 	if err != nil {
 		return nil, errors.Wrap(err, "error decoding json response in GetFork")
@@ -178,12 +176,12 @@ func (c *Client) GetForkSchedule(ctx context.Context) (forks.OrderedSchedule, er
 }
 
 // GetConfigSpec retrieve the current configs of the network used by the beacon node.
-func (c *Client) GetConfigSpec(ctx context.Context) (*config.GetSpecResponse, error) {
+func (c *Client) GetConfigSpec(ctx context.Context) (*structs.GetSpecResponse, error) {
 	body, err := c.Get(ctx, getConfigSpecPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting configSpecPath")
 	}
-	fsr := &config.GetSpecResponse{}
+	fsr := &structs.GetSpecResponse{}
 	err = json.Unmarshal(body, fsr)
 	if err != nil {
 		return nil, err
@@ -258,7 +256,7 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 	if err != nil {
 		return nil, err
 	}
-	v := &apibeacon.GetWeakSubjectivityResponse{}
+	v := &structs.GetWeakSubjectivityResponse{}
 	err = json.Unmarshal(body, v)
 	if err != nil {
 		return nil, err
@@ -284,7 +282,7 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 
 // SubmitChangeBLStoExecution calls a beacon API endpoint to set the withdrawal addresses based on the given signed messages.
 // If the API responds with something other than OK there will be failure messages associated to the corresponding request message.
-func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*shared.SignedBLSToExecutionChange) error {
+func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*structs.SignedBLSToExecutionChange) error {
 	u := c.BaseURL().ResolveReference(&url.URL{Path: changeBLStoExecutionPath})
 	body, err := json.Marshal(request)
 	if err != nil {
@@ -305,15 +303,15 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*shar
 	if resp.StatusCode != http.StatusOK {
 		decoder := json.NewDecoder(resp.Body)
 		decoder.DisallowUnknownFields()
-		errorJson := &shared.IndexedVerificationFailureError{}
+		errorJson := &server.IndexedVerificationFailureError{}
 		if err := decoder.Decode(errorJson); err != nil {
 			return errors.Wrapf(err, "failed to decode error JSON for %s", resp.Request.URL)
 		}
 		for _, failure := range errorJson.Failures {
 			w := request[failure.Index].Message
-			log.WithFields(log.Fields{
-				"validator_index":    w.ValidatorIndex,
-				"withdrawal_address": w.ToExecutionAddress,
+			log.WithFields(logrus.Fields{
+				"validatorIndex":    w.ValidatorIndex,
+				"withdrawalAddress": w.ToExecutionAddress,
 			}).Error(failure.Message)
 		}
 		return errors.Errorf("POST error %d: %s", errorJson.Code, errorJson.Message)
@@ -323,12 +321,12 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*shar
 
 // GetBLStoExecutionChanges gets all the set withdrawal messages in the node's operation pool.
 // Returns a struct representation of json response.
-func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*beacon.BLSToExecutionChangesPoolResponse, error) {
+func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*structs.BLSToExecutionChangesPoolResponse, error) {
 	body, err := c.Get(ctx, changeBLStoExecutionPath)
 	if err != nil {
 		return nil, err
 	}
-	poolResponse := &beacon.BLSToExecutionChangesPoolResponse{}
+	poolResponse := &structs.BLSToExecutionChangesPoolResponse{}
 	err = json.Unmarshal(body, poolResponse)
 	if err != nil {
 		return nil, err
@@ -337,15 +335,15 @@ func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*beacon.BLSToExe
 }
 
 type forkScheduleResponse struct {
-	Data []shared.Fork
+	Data []structs.Fork
 }
 
 func (fsr *forkScheduleResponse) OrderedForkSchedule() (forks.OrderedSchedule, error) {
 	ofs := make(forks.OrderedSchedule, 0)
 	for _, d := range fsr.Data {
-		epoch, err := strconv.Atoi(d.Epoch)
+		epoch, err := strconv.ParseUint(d.Epoch, 10, 64)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "error parsing epoch %s", d.Epoch)
 		}
 		vSlice, err := hexutil.Decode(d.CurrentVersion)
 		if err != nil {
@@ -357,7 +355,7 @@ func (fsr *forkScheduleResponse) OrderedForkSchedule() (forks.OrderedSchedule, e
 		version := bytesutil.ToBytes4(vSlice)
 		ofs = append(ofs, forks.ForkScheduleEntry{
 			Version: version,
-			Epoch:   primitives.Epoch(uint64(epoch)),
+			Epoch:   primitives.Epoch(epoch),
 		})
 	}
 	sort.Sort(ofs)

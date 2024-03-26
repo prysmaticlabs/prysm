@@ -1,10 +1,12 @@
 package params_test
 
 import (
+	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/build/bazel"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestPraterConfigMatchesUpstreamYaml(t *testing.T) {
@@ -16,7 +18,9 @@ func TestPraterConfigMatchesUpstreamYaml(t *testing.T) {
 		cfg, err = params.UnmarshalConfigFile(fp, cfg)
 		require.NoError(t, err)
 	}
-	configFP := testnetConfigFilePath(t, "prater")
+	fPath, err := bazel.Runfile("external/goerli_testnet")
+	require.NoError(t, err)
+	configFP := path.Join(fPath, "prater", "config.yaml")
 	pcfg, err := params.UnmarshalConfigFile(configFP, nil)
 	require.NoError(t, err)
 	fields := fieldsFromYamls(t, append(presetFPs, configFP))

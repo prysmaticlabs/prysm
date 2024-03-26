@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 )
 
 func TestSlotsSinceGenesis(t *testing.T) {
@@ -599,4 +599,11 @@ func TestTimeIntoSlot(t *testing.T) {
 	genesisTime := uint64(time.Now().Add(-37 * time.Second).Unix())
 	require.Equal(t, true, TimeIntoSlot(genesisTime) > 900*time.Millisecond)
 	require.Equal(t, true, TimeIntoSlot(genesisTime) < 3000*time.Millisecond)
+}
+
+func TestWithinVotingWindow(t *testing.T) {
+	genesisTime := uint64(time.Now().Add(-37 * time.Second).Unix())
+	require.Equal(t, true, WithinVotingWindow(genesisTime, 3))
+	genesisTime = uint64(time.Now().Add(-40 * time.Second).Unix())
+	require.Equal(t, false, WithinVotingWindow(genesisTime, 3))
 }

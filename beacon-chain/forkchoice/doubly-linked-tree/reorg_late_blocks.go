@@ -3,9 +3,8 @@ package doublylinkedtree
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // orphanLateBlockProposingEarly determines the maximum threshold that we
@@ -83,6 +82,15 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 		return
 	}
 
+	// Return early if we are checking before 10 seconds into the slot
+	secs, err := slots.SecondsSinceSlotStart(head.slot, f.store.genesisTime, uint64(time.Now().Unix()))
+	if err != nil {
+		log.WithError(err).Error("could not check current slot")
+		return true
+	}
+	if secs < ProcessAttestationsThreshold {
+		return true
+	}
 	// Only orphan a block if the parent LMD vote is strong
 	if parent.weight*100 < f.store.committeeWeight*params.BeaconConfig().ReorgParentWeightThreshold {
 		return
@@ -98,9 +106,6 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 // This function needs to be called only when proposing a block and all
 // attestation processing has already happened.
 func (f *ForkChoice) GetProposerHead() [32]byte {
-	if features.Get().DisableReorgLateBlocks {
-		return f.CachedHeadRoot()
-	}
 	head := f.store.headNode
 	if head == nil {
 		return [32]byte{}

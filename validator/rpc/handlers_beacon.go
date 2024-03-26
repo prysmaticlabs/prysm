@@ -10,11 +10,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -53,7 +53,7 @@ func (s *Server) GetBeaconStatus(w http.ResponseWriter, r *http.Request) {
 		Syncing:                syncStatus.Syncing,
 		GenesisTime:            fmt.Sprintf("%d", genesisTime),
 		DepositContractAddress: hexutil.Encode(address),
-		ChainHead:              shared.ChainHeadResponseFromConsensus(chainHead),
+		ChainHead:              ChainHeadResponseFromConsensus(chainHead),
 	})
 }
 
@@ -90,7 +90,7 @@ func (s *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request)
 		httputil.HandleError(w, errors.Wrap(err, "GetValidatorPerformance call failed").Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, shared.ValidatorPerformanceResponseFromConsensus(validatorPerformance))
+	httputil.WriteJson(w, ValidatorPerformanceResponseFromConsensus(validatorPerformance))
 }
 
 // GetValidatorBalances is a wrapper around the /eth/v1alpha1 endpoint of the same name.
@@ -138,7 +138,7 @@ func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, errors.Wrap(err, "ListValidatorBalances call failed").Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := shared.ValidatorBalancesResponseFromConsensus(listValidatorBalances)
+	response, err := ValidatorBalancesResponseFromConsensus(listValidatorBalances)
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "Failed to convert to json").Error(), http.StatusInternalServerError)
 		return
@@ -158,24 +158,29 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	pageToken := r.URL.Query().Get("page_token")
 	publicKeys := r.URL.Query()["public_keys"]
-	pubkeys := make([][]byte, len(publicKeys))
+	pubkeys := make([][]byte, 0)
 	for i, key := range publicKeys {
-		var pk []byte
+		if key == "" {
+			continue
+		}
 		if strings.HasPrefix(key, "0x") {
 			k, ok := shared.ValidateHex(w, fmt.Sprintf("PublicKeys[%d]", i), key, fieldparams.BLSPubkeyLength)
 			if !ok {
 				return
 			}
-			pk = bytesutil.SafeCopyBytes(k)
+			pubkeys = append(pubkeys, bytesutil.SafeCopyBytes(k))
 		} else {
 			data, err := base64.StdEncoding.DecodeString(key)
 			if err != nil {
 				httputil.HandleError(w, errors.Wrap(err, "Failed to decode base64").Error(), http.StatusBadRequest)
 				return
 			}
-			pk = bytesutil.SafeCopyBytes(data)
+			pubkeys = append(pubkeys, bytesutil.SafeCopyBytes(data))
 		}
-		pubkeys[i] = pk
+	}
+	if len(pubkeys) == 0 {
+		httputil.HandleError(w, "no pubkeys provided", http.StatusBadRequest)
+		return
 	}
 	req := &ethpb.ListValidatorsRequest{
 		PublicKeys: pubkeys,
@@ -187,7 +192,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, errors.Wrap(err, "ListValidators call failed").Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := shared.ValidatorsResponseFromConsensus(validators)
+	response, err := ValidatorsResponseFromConsensus(validators)
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "Failed to convert to json").Error(), http.StatusInternalServerError)
 		return

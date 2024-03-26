@@ -6,17 +6,21 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -116,7 +120,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 		return
 	}
 
-	selectionProofs, err := v.selectionProofs(ctx, slot, pubKey, indexRes)
+	selectionProofs, err := v.selectionProofs(ctx, slot, pubKey, indexRes, duty.ValidatorIndex)
 	if err != nil {
 		log.WithError(err).Error("Could not get selection proofs")
 		return
@@ -147,7 +151,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 		if contribution.AggregationBits.Count() == 0 {
 			log.WithFields(logrus.Fields{
 				"slot":   slot,
-				"pubkey": pubKey,
+				"pubkey": hexutil.Encode(pubKey[:]),
 				"subnet": subnet,
 			}).Warn("Sync contribution for validator has no bits set.")
 			continue
@@ -187,11 +191,12 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 }
 
 // Signs and returns selection proofs per validator for slot and pub key.
-func (v *validator) selectionProofs(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte, indexRes *ethpb.SyncSubcommitteeIndexResponse) ([][]byte, error) {
+func (v *validator) selectionProofs(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte, indexRes *ethpb.SyncSubcommitteeIndexResponse, validatorIndex primitives.ValidatorIndex) ([][]byte, error) {
 	selectionProofs := make([][]byte, len(indexRes.Indices))
 	cfg := params.BeaconConfig()
 	size := cfg.SyncCommitteeSize
 	subCount := cfg.SyncCommitteeSubnetCount
+	selections := make([]iface.SyncCommitteeSelection, len(indexRes.Indices))
 	for i, index := range indexRes.Indices {
 		subSize := size / subCount
 		subnet := uint64(index) / subSize
@@ -200,7 +205,27 @@ func (v *validator) selectionProofs(ctx context.Context, slot primitives.Slot, p
 			return nil, err
 		}
 		selectionProofs[i] = selectionProof
+		selections[i] = iface.SyncCommitteeSelection{
+			SelectionProof:    selectionProof,
+			Slot:              slot,
+			SubcommitteeIndex: primitives.CommitteeIndex(subnet),
+			ValidatorIndex:    validatorIndex,
+		}
 	}
+
+	// Override selection proofs with aggregated ones if the node is part of a Distributed Validator.
+	if v.distributed && len(selections) > 0 {
+		var err error
+		selections, err := v.validatorClient.GetAggregatedSyncSelections(ctx, selections)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get aggregated sync selections")
+		}
+
+		for i, s := range selections {
+			selectionProofs[i] = s.SelectionProof
+		}
+	}
+
 	return selectionProofs, nil
 }
 

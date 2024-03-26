@@ -7,24 +7,26 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
-	slashingprotection "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
-	"github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history/format"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/derived"
+	slashingprotection "github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -131,9 +133,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 		keystores[i] = k
 	}
 	if req.SlashingProtection != "" {
-		if err := slashingprotection.ImportStandardProtectionJSON(
-			ctx, s.valDB, bytes.NewBuffer([]byte(req.SlashingProtection)),
-		); err != nil {
+		if s.valDB == nil || s.valDB.ImportStandardProtectionJSON(ctx, bytes.NewBufferString(req.SlashingProtection)) != nil {
 			statuses := make([]*keymanager.KeyStatus, len(req.Keystores))
 			for i := 0; i < len(req.Keystores); i++ {
 				statuses[i] = &keymanager.KeyStatus{
@@ -216,7 +216,7 @@ func (s *Server) DeleteKeystores(w http.ResponseWriter, r *http.Request) {
 	}
 	bytePubKeys := make([][]byte, len(req.Pubkeys))
 	for i, pubkey := range req.Pubkeys {
-		key, ok := shared.ValidateHex(w, "Pubkey", pubkey, fieldparams.BLSPubkeyLength)
+		key, ok := shared.ValidateHex(w, fmt.Sprintf("pubkeys[%d]", i), pubkey, fieldparams.BLSPubkeyLength)
 		if !ok {
 			return
 		}
@@ -336,27 +336,17 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
-		return
-	}
-
-	var epoch primitives.Epoch
-	ok, _, e := shared.UintFromQuery(w, r, "epoch")
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
 	if !ok {
-		httputil.HandleError(w, "Invalid epoch", http.StatusBadRequest)
 		return
 	}
-	epoch = primitives.Epoch(e)
+	rawEpoch, e, ok := shared.UintFromQuery(w, r, "epoch", false)
+	if !ok {
+		return
+	}
+	epoch := primitives.Epoch(e)
 
-	if epoch == 0 {
+	if rawEpoch == "" {
 		genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Failed to get genesis time").Error(), http.StatusInternalServerError)
@@ -382,8 +372,8 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := &SetVoluntaryExitResponse{
-		Data: &shared.SignedVoluntaryExit{
-			Message: &shared.VoluntaryExit{
+		Data: &structs.SignedVoluntaryExit{
+			Message: &structs.VoluntaryExit{
 				Epoch:          fmt.Sprintf("%d", sve.Exit.Epoch),
 				ValidatorIndex: fmt.Sprintf("%d", sve.Exit.ValidatorIndex),
 			},
@@ -491,7 +481,7 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if isUrlUsed {
-		log.Warnf("Setting web3signer base url for IMPORTED keys is not supported. Prysm only uses the url from --validators-external-signer-url flag for web3signerKeymanagerKind.")
+		log.Warnf("Setting the remote signer base url within the request is not supported. The remote signer url can only be set from the --%s flag.", flags.Web3SignerURLFlag.Name)
 	}
 
 	httputil.WriteJson(w, &RemoteKeysResponse{Data: adder.AddPublicKeys(remoteKeys)})
@@ -556,15 +546,8 @@ func (s *Server) ListFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request
 		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
 		return
 	}
-
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 	finalResp := &GetFeeRecipientByPubkeyResponse{
@@ -605,15 +588,8 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
 		return
 	}
-
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 
@@ -627,8 +603,7 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	ethAddress, valid := shared.ValidateHex(w, "Ethereum Address", req.Ethaddress, fieldparams.FeeRecipientLength)
+	ethAddress, valid := shared.ValidateHex(w, "ethaddress", req.Ethaddress, fieldparams.FeeRecipientLength)
 	if !valid {
 		return
 	}
@@ -636,10 +611,10 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 	settings := s.validatorService.ProposerSettings()
 	switch {
 	case settings == nil:
-		settings = &validatorServiceConfig.ProposerSettings{
-			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+		settings = &proposer.Settings{
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
 				bytesutil.ToBytes48(pubkey): {
-					FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: feeRecipient,
 					},
 					BuilderConfig: nil,
@@ -648,13 +623,13 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 			DefaultConfig: nil,
 		}
 	case settings.ProposeConfig == nil:
-		var builderConfig *validatorServiceConfig.BuilderConfig
+		var builderConfig *proposer.BuilderConfig
 		if settings.DefaultConfig != nil && settings.DefaultConfig.BuilderConfig != nil {
 			builderConfig = settings.DefaultConfig.BuilderConfig.Clone()
 		}
-		settings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+		settings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
 			bytesutil.ToBytes48(pubkey): {
-				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: feeRecipient,
 				},
 				BuilderConfig: builderConfig,
@@ -663,16 +638,16 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 	default:
 		proposerOption, found := settings.ProposeConfig[bytesutil.ToBytes48(pubkey)]
 		if found && proposerOption != nil {
-			proposerOption.FeeRecipientConfig = &validatorServiceConfig.FeeRecipientConfig{
+			proposerOption.FeeRecipientConfig = &proposer.FeeRecipientConfig{
 				FeeRecipient: feeRecipient,
 			}
 		} else {
-			var builderConfig = &validatorServiceConfig.BuilderConfig{}
+			var builderConfig = &proposer.BuilderConfig{}
 			if settings.DefaultConfig != nil && settings.DefaultConfig.BuilderConfig != nil {
 				builderConfig = settings.DefaultConfig.BuilderConfig.Clone()
 			}
-			settings.ProposeConfig[bytesutil.ToBytes48(pubkey)] = &validatorServiceConfig.ProposerOption{
-				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+			settings.ProposeConfig[bytesutil.ToBytes48(pubkey)] = &proposer.Option{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: feeRecipient,
 				},
 				BuilderConfig: builderConfig,
@@ -697,18 +672,12 @@ func (s *Server) DeleteFeeRecipientByPubkey(w http.ResponseWriter, r *http.Reque
 		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
 		return
 	}
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
-		return
-	}
 	settings := s.validatorService.ProposerSettings()
-
 	if settings != nil && settings.ProposeConfig != nil {
 		proposerOption, found := settings.ProposeConfig[bytesutil.ToBytes48(pubkey)]
 		if found {
@@ -736,14 +705,8 @@ func (s *Server) GetGasLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 
@@ -776,14 +739,8 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Validator service not ready", http.StatusServiceUnavailable)
 		return
 	}
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 
@@ -798,7 +755,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gasLimit, valid := shared.ValidateUint(w, "Gas Limit", req.GasLimit)
+	gasLimit, valid := shared.ValidateUint(w, "gas_limit", req.GasLimit)
 	if !valid {
 		return
 	}
@@ -812,7 +769,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 			httputil.HandleError(w, "Gas limit changes only apply when builder is enabled", http.StatusInternalServerError)
 			return
 		}
-		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
+		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
 		option := settings.DefaultConfig.Clone()
 		option.BuilderConfig.GasLimit = validator.Uint64(gasLimit)
 		settings.ProposeConfig[bytesutil.ToBytes48(pubkey)] = option
@@ -852,14 +809,8 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Validator service not ready", http.StatusServiceUnavailable)
 		return
 	}
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 
@@ -887,5 +838,88 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 	}
 	// Otherwise, either no proposerOption is found for the pubkey or proposerOption.BuilderConfig is not enabled at all,
 	// we respond "not found".
-	httputil.HandleError(w, fmt.Sprintf("No gas limit found for pubkey: %q", rawPubkey), http.StatusNotFound)
+	httputil.HandleError(w, fmt.Sprintf("No gas limit found for pubkey %q", rawPubkey), http.StatusNotFound)
+}
+
+func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.GetGraffiti")
+	defer span.End()
+
+	if s.validatorService == nil {
+		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
+		return
+	}
+
+	graffiti, err := s.validatorService.GetGraffiti(ctx, bytesutil.ToBytes48(pubkey))
+	if err != nil {
+		if strings.Contains(err.Error(), "unavailable") {
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		httputil.HandleError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	httputil.WriteJson(w, &GetGraffitiResponse{
+		Data: &GraffitiData{
+			Pubkey:   rawPubkey,
+			Graffiti: string(graffiti),
+		},
+	})
+}
+
+func (s *Server) SetGraffiti(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.SetGraffiti")
+	defer span.End()
+
+	if s.validatorService == nil {
+		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Graffiti string `json:"graffiti"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case err == io.EOF:
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.validatorService.SetGraffiti(ctx, bytesutil.ToBytes48(pubkey), []byte(req.Graffiti)); err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *Server) DeleteGraffiti(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.DeleteGraffiti")
+	defer span.End()
+
+	if s.validatorService == nil {
+		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
+		return
+	}
+
+	if err := s.validatorService.DeleteGraffiti(ctx, bytesutil.ToBytes48(pubkey)); err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusNotFound)
+		return
+	}
 }

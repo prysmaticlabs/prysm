@@ -8,13 +8,12 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/testing/endtoend/params"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	errSszCast             = errors.New("SSZ response is not a byte array")
 	errEmptyPrysmData      = errors.New("Prysm data is empty")
 	errEmptyLighthouseData = errors.New("Lighthouse data is empty")
 )
@@ -84,7 +83,7 @@ func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnT
 
 	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
 
-	req, err := http.NewRequest("GET", basePath+requestPath, nil)
+	req, err := http.NewRequest(http.MethodGet, basePath+requestPath, nil)
 	if err != nil {
 		return nil, err
 	}

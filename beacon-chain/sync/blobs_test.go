@@ -12,26 +12,26 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	db "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	db "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 type blobsTestCase struct {
@@ -136,11 +136,7 @@ func generateTestSidecar(t *testing.T, root [32]byte, block interfaces.ReadOnlyS
 }
 
 func fakeEmptyProof(_ *testing.T, _ interfaces.ReadOnlySignedBeaconBlock, _ *ethpb.BlobSidecar) [][]byte {
-	r := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
-	for i := range r {
-		r[i] = make([]byte, fieldparams.RootLength)
-	}
-	return r
+	return util.HydrateCommitmentInclusionProofs()
 }
 
 type expectedBlobChunk struct {
@@ -177,11 +173,12 @@ func (r *expectedBlobChunk) requireExpected(t *testing.T, s *Service, stream net
 
 func (c *blobsTestCase) setup(t *testing.T) (*Service, []blocks.ROBlob, func()) {
 	cfg := params.BeaconConfig()
-	repositionFutureEpochs(cfg)
-	undo, err := params.SetActiveWithUndo(cfg)
-	require.NoError(t, err)
+	copiedCfg := cfg.Copy()
+	repositionFutureEpochs(copiedCfg)
+	copiedCfg.InitializeForkSchedule()
+	params.OverrideBeaconConfig(copiedCfg)
 	cleanup := func() {
-		require.NoError(t, undo())
+		params.OverrideBeaconConfig(cfg)
 	}
 	maxBlobs := fieldparams.MaxBlobsPerBlock
 	chain, clock := defaultMockChain(t)
@@ -221,8 +218,8 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []blocks.ROBlob, func()) 
 		rateLimiter: newRateLimiter(client),
 	}
 
-	byRootRate := params.BeaconNetworkConfig().MaxRequestBlobSidecars * fieldparams.MaxBlobsPerBlock
-	byRangeRate := params.BeaconNetworkConfig().MaxRequestBlobSidecars * fieldparams.MaxBlobsPerBlock
+	byRootRate := params.BeaconConfig().MaxRequestBlobSidecars * fieldparams.MaxBlobsPerBlock
+	byRangeRate := params.BeaconConfig().MaxRequestBlobSidecars * fieldparams.MaxBlobsPerBlock
 	s.setRateCollector(p2p.RPCBlobSidecarsByRootTopicV1, leakybucket.NewCollector(0.000001, int64(byRootRate), time.Second, false))
 	s.setRateCollector(p2p.RPCBlobSidecarsByRangeTopicV1, leakybucket.NewCollector(0.000001, int64(byRangeRate), time.Second, false))
 
@@ -287,7 +284,7 @@ func defaultMockChain(t *testing.T) (*mock.ChainService, *startup.Clock) {
 	de := params.BeaconConfig().DenebForkEpoch
 	df, err := forks.Fork(de)
 	require.NoError(t, err)
-	denebBuffer := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest + 1000
+	denebBuffer := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest + 1000
 	ce := de + denebBuffer
 	fe := ce - 2
 	cs, err := slots.EpochStart(ce)
@@ -328,42 +325,5 @@ func TestTestcaseSetup_BlocksAndBlobs(t *testing.T) {
 			}
 		}
 		require.Equal(t, true, found != nil)
-	}
-}
-
-func TestRoundTripDenebSave(t *testing.T) {
-	ctx := context.Background()
-	cfg := params.BeaconConfig()
-	repositionFutureEpochs(cfg)
-	undo, err := params.SetActiveWithUndo(cfg)
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, undo())
-	}()
-	parentRoot := [32]byte{}
-	c := blobsTestCase{nblocks: 10}
-	chain, clock := defaultMockChain(t)
-	c.chain = chain
-	c.clock = clock
-	oldest, err := slots.EpochStart(blobMinReqEpoch(c.chain.FinalizedCheckPoint.Epoch, slots.ToEpoch(c.clock.CurrentSlot())))
-	require.NoError(t, err)
-	maxBlobs := fieldparams.MaxBlobsPerBlock
-	block, bsc := generateTestBlockWithSidecars(t, parentRoot, oldest, maxBlobs)
-	require.Equal(t, len(block.Block.Body.BlobKzgCommitments), len(bsc))
-	require.Equal(t, maxBlobs, len(bsc))
-	for i := range bsc {
-		require.DeepEqual(t, block.Block.Body.BlobKzgCommitments[i], bsc[i].KzgCommitment)
-	}
-	d := db.SetupDB(t)
-	util.SaveBlock(t, ctx, d, block)
-	root, err := block.Block.HashTreeRoot()
-	require.NoError(t, err)
-	dbBlock, err := d.Block(ctx, root)
-	require.NoError(t, err)
-	comms, err := dbBlock.Block().Body().BlobKzgCommitments()
-	require.NoError(t, err)
-	require.Equal(t, maxBlobs, len(comms))
-	for i := range bsc {
-		require.DeepEqual(t, comms[i], bsc[i].KzgCommitment)
 	}
 }

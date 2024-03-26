@@ -4,9 +4,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"google.golang.org/grpc"
 )
 
@@ -33,14 +33,6 @@ func WithKeymanager(km keymanager.IKeymanager) Option {
 func WithKeymanagerType(k keymanager.Kind) Option {
 	return func(acc *CLIManager) error {
 		acc.keymanagerKind = k
-		return nil
-	}
-}
-
-// WithShowDepositData enables displaying deposit data in the accounts cli manager.
-func WithShowDepositData() Option {
-	return func(acc *CLIManager) error {
-		acc.showDepositData = true
 		return nil
 	}
 }

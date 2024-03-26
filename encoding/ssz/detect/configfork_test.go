@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestSlotFromBlock(t *testing.T) {
@@ -201,6 +201,97 @@ func TestUnmarshalState(t *testing.T) {
 		actual, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
 		require.DeepEqual(t, expected, actual)
+	}
+}
+
+func TestDetectAndUnmarshalBlock(t *testing.T) {
+	undo := util.HackDenebMaxuint(t)
+	defer undo()
+	altairS, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
+	require.NoError(t, err)
+	bellaS, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+	require.NoError(t, err)
+	capellaS, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+	require.NoError(t, err)
+	denebS, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+	require.NoError(t, err)
+	cases := []struct {
+		b         func(*testing.T, primitives.Slot) interfaces.ReadOnlySignedBeaconBlock
+		name      string
+		slot      primitives.Slot
+		errExists bool
+	}{
+		{
+			name: "genesis - slot 0",
+			b:    signedTestBlockGenesis,
+		},
+		{
+			name: "last slot of phase 0",
+			b:    signedTestBlockGenesis,
+			slot: altairS - 1,
+		},
+		{
+			name: "first slot of altair",
+			b:    signedTestBlockAltair,
+			slot: altairS,
+		},
+		{
+			name: "last slot of altair",
+			b:    signedTestBlockAltair,
+			slot: bellaS - 1,
+		},
+		{
+			name: "first slot of bellatrix",
+			b:    signedTestBlockBellatrix,
+			slot: bellaS,
+		},
+		{
+			name: "first slot of capella",
+			b:    signedTestBlockCapella,
+			slot: capellaS,
+		},
+		{
+			name: "last slot of capella",
+			b:    signedTestBlockCapella,
+			slot: denebS - 1,
+		},
+		{
+			name: "first slot of deneb",
+			b:    signedTestBlockDeneb,
+			slot: denebS,
+		},
+		{
+			name:      "bellatrix block in altair slot",
+			b:         signedTestBlockBellatrix,
+			slot:      bellaS - 1,
+			errExists: true,
+		},
+		{
+			name:      "genesis block in altair slot",
+			b:         signedTestBlockGenesis,
+			slot:      bellaS - 1,
+			errExists: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			b := c.b(t, c.slot)
+			marshaled, err := b.MarshalSSZ()
+			require.NoError(t, err)
+			cf, err := FromBlock(marshaled)
+			require.NoError(t, err)
+			bcf, err := cf.UnmarshalBeaconBlock(marshaled)
+			if c.errExists {
+				require.NotNil(t, err)
+				return
+			}
+			require.NoError(t, err)
+			expected, err := b.Block().HashTreeRoot()
+			require.NoError(t, err)
+			actual, err := bcf.Block().HashTreeRoot()
+			require.NoError(t, err)
+			require.Equal(t, expected, actual)
+		})
 	}
 }
 

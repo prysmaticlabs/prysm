@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/snappy"
 	fastssz "github.com/prysmaticlabs/fastssz"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -15,6 +15,10 @@ import (
 func decode(ctx context.Context, data []byte, dst proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.decode")
 	defer span.End()
+
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 
 	data, err := snappy.Decode(nil, data)
 	if err != nil {
@@ -29,6 +33,10 @@ func decode(ctx context.Context, data []byte, dst proto.Message) error {
 func encode(ctx context.Context, msg proto.Message) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.encode")
 	defer span.End()
+
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	if msg == nil || reflect.ValueOf(msg).IsNil() {
 		return nil, errors.New("cannot encode nil message")
