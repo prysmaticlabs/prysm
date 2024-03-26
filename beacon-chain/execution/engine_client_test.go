@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
-	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	mocks "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
@@ -45,7 +44,7 @@ type RPCClientBad struct {
 }
 
 func (RPCClientBad) Close() {}
-func (RPCClientBad) BatchCall([]gethRPC.BatchElem) error {
+func (RPCClientBad) BatchCall([]rpc.BatchElem) error {
 	return errors.New("rpc client is not initialized")
 }
 
