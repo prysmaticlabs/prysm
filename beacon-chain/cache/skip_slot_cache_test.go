@@ -15,7 +15,8 @@ import (
 
 func TestSkipSlotCache_RoundTrip(t *testing.T) {
 	ctx := context.Background()
-	c := cache.NewSkipSlotCache()
+	c, err := cache.NewSkipSlotCache[[32]byte, state.BeaconState]()
+	require.NoError(t, err)
 
 	r := [32]byte{'a'}
 	s, err := c.Get(ctx, r)
@@ -29,7 +30,8 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	c.Put(ctx, r, s)
+	err = c.Put(ctx, r, s)
+	require.NoError(t, err)
 	c.MarkNotInProgress(r)
 
 	res, err := c.Get(ctx, r)
@@ -39,7 +41,8 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 
 func TestSkipSlotCache_DisabledAndEnabled(t *testing.T) {
 	ctx := context.Background()
-	c := cache.NewSkipSlotCache()
+	c, err := cache.NewSkipSlotCache[[32]byte, state.BeaconState]()
+	require.NoError(t, err)
 
 	r := [32]byte{'a'}
 	c.Disable()

@@ -14,7 +14,7 @@ import (
 // the current slot. If the beacon chain were ever to be stalled for several epochs, it may be
 // difficult or impossible to compute the appropriate beacon state for assignments within a
 // reasonable amount of time.
-var SkipSlotCache = cache.NewSkipSlotCache()
+var SkipSlotCache, _ = cache.NewSkipSlotCache[[32]byte, state.BeaconState]()
 
 // The key for skip slot cache is mixed between state root and state slot.
 // state root is in the mix to defend against different forks with same skip slots

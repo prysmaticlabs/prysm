@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/async"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
@@ -19,7 +20,9 @@ import (
 )
 
 // Initialize the state cache for sync committees.
-var syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState()
+var (
+	syncCommitteeHeadStateCache, _ = cache.NewSyncCommitteeHeadStateCache[primitives.Slot, state.BeaconState]()
+)
 
 // HeadSyncCommitteeFetcher is the interface that wraps the head sync committee related functions.
 // The head sync committee functions return callers sync committee indices and public keys with respect to current head state.
@@ -142,7 +145,7 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot primitives
 	mLock.Lock()
 	defer mLock.Unlock()
 
-	// If there's already a head state exists with the request slot, we don't need to process slots.
+	// If there's already a head state existing with the request slot, we don't need to process slots.
 	cachedState, err := syncCommitteeHeadStateCache.Get(slot)
 	switch {
 	case err == nil:

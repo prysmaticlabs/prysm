@@ -27,7 +27,8 @@ func TestBalanceCache_AddGetBalance(t *testing.T) {
 	st, err := state_native.InitializeFromProtoPhase0(raw)
 	require.NoError(t, err)
 
-	cache := NewEffectiveBalanceCache()
+	cache, err := NewEffectiveBalanceCache[string, uint64]()
+	require.NoError(t, err)
 	_, err = cache.Get(st)
 	require.ErrorContains(t, ErrNotFound.Error(), err)
 
@@ -72,6 +73,8 @@ func TestBalanceCache_BalanceKey(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(primitives.Slot(math.MaxUint64)))
 
-	_, err = balanceCacheKey(st)
+	cache, err := NewEffectiveBalanceCache[string, uint64]()
+	require.NoError(t, err)
+	_, err = cache.balanceCacheKey(st)
 	require.NoError(t, err)
 }

@@ -6,12 +6,18 @@ import (
 	"sync"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/pkg/errors"
+
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
-	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
 	"go.opencensus.io/trace"
+)
+
+const (
+	// maxSkipSlotCacheSize defines the max number of active balances that can be cached.
+	maxSkipSlotCacheSize = int(8)
 )
 
 var (
@@ -31,41 +37,74 @@ var (
 	})
 )
 
+type addr = [32]byte
+
 // SkipSlotCache is used to store the cached results of processing skip slots in transition.ProcessSlots.
-type SkipSlotCache struct {
-	cache      *lru.Cache
+type SkipSlotCache[K addr, V state.BeaconState] struct {
+	lru                         *lru.Cache[K, V]
+	promCacheMiss, promCacheHit prometheus.Counter
+
 	lock       sync.RWMutex
 	disabled   bool // Allow for programmatic toggling of the cache, useful during initial sync.
 	inProgress map[[32]byte]bool
 }
 
-// NewSkipSlotCache initializes the map and underlying cache.
-func NewSkipSlotCache() *SkipSlotCache {
-	return &SkipSlotCache{
-		cache:      lruwrpr.New(8),
-		inProgress: make(map[[32]byte]bool),
+// NewSkipSlotCache creates a new effective balance cache for storing/accessing total balance by epoch.
+func NewSkipSlotCache[K addr, V state.BeaconState]() (*SkipSlotCache[K, V], error) {
+	cache, err := lru.New[K, V](maxSkipSlotCacheSize)
+	if err != nil {
+		return nil, ErrCacheCannotBeNil
 	}
+
+	if skipSlotCacheMiss == nil || skipSlotCacheHit == nil {
+		return nil, ErrCacheMetricsCannotBeNil
+	}
+
+	return &SkipSlotCache[K, V]{
+		lru:           cache,
+		promCacheMiss: skipSlotCacheMiss,
+		promCacheHit:  skipSlotCacheHit,
+		inProgress:    make(map[[32]byte]bool),
+	}, nil
+}
+
+func (c *SkipSlotCache[K, V]) get() *lru.Cache[K, V] { //nolint: unused, -- bug in golangci-lint 1.55
+	return c.lru
+}
+
+func (c *SkipSlotCache[K, V]) hitCache() { //nolint: unused, -- bug in golangci-lint 1.55
+	c.promCacheHit.Inc()
+}
+
+func (c *SkipSlotCache[K, V]) missCache() { //nolint: unused, -- bug in golangci-lint 1.55
+	c.promCacheMiss.Inc()
+}
+
+// Clear the SkipSlotCache to its initial state
+func (c *SkipSlotCache[K, V]) Clear() {
+	purge[K, V](c)
 }
 
 // Enable the skip slot cache.
-func (c *SkipSlotCache) Enable() {
+func (c *SkipSlotCache[K, V]) Enable() {
 	c.disabled = false
 }
 
 // Disable the skip slot cache.
-func (c *SkipSlotCache) Disable() {
+func (c *SkipSlotCache[K, V]) Disable() {
 	c.disabled = true
 }
 
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
-func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (state.BeaconState, error) {
+func (c *SkipSlotCache[K, V]) Get(ctx context.Context, r K) (V, error) {
 	ctx, span := trace.StartSpan(ctx, "skipSlotCache.Get")
 	defer span.End()
+	var noState V
 	if c.disabled {
 		// Return a miss result if cache is not enabled.
 		skipSlotCacheMiss.Inc()
-		return nil, nil
+		return noState, nil
 	}
 
 	delay := minDelay
@@ -75,7 +114,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (state.BeaconState,
 	inProgress := false
 	for {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return noState, ctx.Err()
 		}
 
 		c.lock.RLock()
@@ -94,21 +133,27 @@ func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (state.BeaconState,
 	}
 	span.AddAttributes(trace.BoolAttribute("inProgress", inProgress))
 
-	item, exists := c.cache.Get(r)
-
-	if exists && item != nil {
-		skipSlotCacheHit.Inc()
-		span.AddAttributes(trace.BoolAttribute("hit", true))
-		return item.(state.BeaconState).Copy(), nil
+	item, err := get(c, r)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			span.AddAttributes(trace.BoolAttribute("hit", false))
+			return noState, nil
+		}
+		return noState, err
 	}
-	skipSlotCacheMiss.Inc()
-	span.AddAttributes(trace.BoolAttribute("hit", false))
-	return nil, nil
+
+	span.AddAttributes(trace.BoolAttribute("hit", true))
+	switch beaconState := any(item).(type) {
+	case state.BeaconState:
+		return beaconState.Copy().(V), nil
+	}
+
+	return noState, errors.Wrap(ErrCastingFailed, "item in cache is not of type state.BeaconState")
 }
 
 // MarkInProgress a request so that any other similar requests will block on
 // Get until MarkNotInProgress is called.
-func (c *SkipSlotCache) MarkInProgress(r [32]byte) error {
+func (c *SkipSlotCache[K, V]) MarkInProgress(r [32]byte) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -121,7 +166,7 @@ func (c *SkipSlotCache) MarkInProgress(r [32]byte) error {
 
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
-func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) {
+func (c *SkipSlotCache[K, V]) MarkNotInProgress(r [32]byte) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -129,10 +174,10 @@ func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) {
 }
 
 // Put the response in the cache.
-func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state state.BeaconState) {
+func (c *SkipSlotCache[K, V]) Put(_ context.Context, r K, state V) error {
 	if c.disabled {
-		return
+		return nil
 	}
 	// Copy state so cached value is not mutated.
-	c.cache.Add(r, state.Copy())
+	return add(c, r, state.Copy().(V))
 }

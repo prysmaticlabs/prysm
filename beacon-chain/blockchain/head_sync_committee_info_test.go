@@ -125,7 +125,7 @@ func TestService_HeadSyncSelectionProofDomain(t *testing.T) {
 func TestSyncCommitteeHeadStateCache_RoundTrip(t *testing.T) {
 	c := syncCommitteeHeadStateCache
 	t.Cleanup(func() {
-		syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState()
+		c.Clear()
 	})
 	beaconState, _ := util.DeterministicGenesisStateAltair(t, 100)
 	require.NoError(t, beaconState.SetSlot(100))

@@ -23,18 +23,19 @@ func TestCommitteeKeyFn_OK(t *testing.T) {
 		ShuffledIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5},
 	}
 
-	k, err := committeeKeyFn(item)
+	k, err := committeeCachesKeyFn(item)
 	require.NoError(t, err)
-	assert.Equal(t, key(item.Seed), k)
+	assert.Equal(t, committeeCachesKey(item.Seed), k)
 }
 
 func TestCommitteeKeyFn_InvalidObj(t *testing.T) {
-	_, err := committeeKeyFn("bad")
+	_, err := committeeCachesKeyFn("bad")
 	assert.Equal(t, ErrNotCommittee, err)
 }
 
 func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
-	cache := NewCommitteesCache()
+	cache, err := NewCommitteesCache[string, Committees]()
+	require.NoError(t, err)
 
 	item := &Committees{
 		ShuffledIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6},
@@ -60,7 +61,8 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 }
 
 func TestCommitteeCache_ActiveIndices(t *testing.T) {
-	cache := NewCommitteesCache()
+	cache, err := NewCommitteesCache[string, Committees]()
+	require.NoError(t, err)
 
 	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6}}
 	indices, err := cache.ActiveIndices(context.Background(), item.Seed)
@@ -77,7 +79,8 @@ func TestCommitteeCache_ActiveIndices(t *testing.T) {
 }
 
 func TestCommitteeCache_ActiveCount(t *testing.T) {
-	cache := NewCommitteesCache()
+	cache, err := NewCommitteesCache[string, Committees]()
+	require.NoError(t, err)
 
 	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6}}
 	count, err := cache.ActiveIndicesCount(context.Background(), item.Seed)
@@ -92,7 +95,8 @@ func TestCommitteeCache_ActiveCount(t *testing.T) {
 }
 
 func TestCommitteeCache_CanRotate(t *testing.T) {
-	cache := NewCommitteesCache()
+	cache, err := NewCommitteesCache[string, Committees]()
+	require.NoError(t, err)
 
 	// Should rotate out all the epochs except 190 through 199.
 	start := 100
@@ -103,22 +107,23 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 		require.NoError(t, cache.AddCommitteeShuffledList(context.Background(), item))
 	}
 
-	k := cache.CommitteeCache.Keys()
+	k := keys(cache)
 	assert.Equal(t, maxCommitteesCacheSize, len(k))
 
 	sort.Slice(k, func(i, j int) bool {
-		return k[i].(string) < k[j].(string)
+		return string(k[i]) < string(k[j])
 	})
 	wanted := end - maxCommitteesCacheSize
 	s := bytesutil.ToBytes32([]byte(strconv.Itoa(wanted)))
-	assert.Equal(t, key(s), k[0], "incorrect key received for slot 190")
+	assert.Equal(t, committeeCachesKey(s), k[0], "incorrect key received for slot 190")
 
 	s = bytesutil.ToBytes32([]byte(strconv.Itoa(199)))
-	assert.Equal(t, key(s), k[len(k)-1], "incorrect key received for slot 199")
+	assert.Equal(t, committeeCachesKey(s), k[len(k)-1], "incorrect key received for slot 199")
 }
 
 func TestCommitteeCacheOutOfRange(t *testing.T) {
-	cache := NewCommitteesCache()
+	cache, err := NewCommitteesCache[string, Committees]()
+	require.NoError(t, err)
 	seed := bytesutil.ToBytes32([]byte("foo"))
 	comms := &Committees{
 		CommitteeCount:  1,
@@ -126,16 +131,17 @@ func TestCommitteeCacheOutOfRange(t *testing.T) {
 		ShuffledIndices: []primitives.ValidatorIndex{0},
 		SortedIndices:   []primitives.ValidatorIndex{},
 	}
-	key, err := committeeKeyFn(comms)
-	assert.NoError(t, err)
-	_ = cache.CommitteeCache.Add(key, comms)
+	//key, err := committeeCachesKeyFn(comms)
+	err = cache.AddCommitteeShuffledList(context.Background(), comms)
+	require.NoError(t, err)
 
 	_, err = cache.Committee(context.Background(), 0, seed, math.MaxUint64) // Overflow!
 	require.NotNil(t, err, "Did not fail as expected")
 }
 
 func TestCommitteeCache_DoesNothingWhenCancelledContext(t *testing.T) {
-	cache := NewCommitteesCache()
+	cache, err := NewCommitteesCache[string, Committees]()
+	require.NoError(t, err)
 
 	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6}}
 	count, err := cache.ActiveIndicesCount(context.Background(), item.Seed)
