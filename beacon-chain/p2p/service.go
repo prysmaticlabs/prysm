@@ -235,11 +235,19 @@ func (s *Service) Start() {
 	async.RunEvery(s.ctx, time.Duration(params.BeaconConfig().RespTimeout)*time.Second, s.updateMetrics)
 	async.RunEvery(s.ctx, refreshRate, s.RefreshENR)
 	async.RunEvery(s.ctx, 1*time.Minute, func() {
+		inboundQUICCount := len(s.peers.InboundConnectedQUIC())
+		inboundTCPCount := len(s.peers.InboundConnectedTCP())
+		outboundQUICCount := len(s.peers.OutboundConnectedQUIC())
+		outboundTCPCount := len(s.peers.OutboundConnectedTCP())
+		total := inboundQUICCount + inboundTCPCount + outboundQUICCount + outboundTCPCount
+
 		log.WithFields(logrus.Fields{
-			"inbound":     len(s.peers.InboundConnected()),
-			"outbound":    len(s.peers.OutboundConnected()),
-			"activePeers": len(s.peers.Active()),
-		}).Info("Peer summary")
+			"inboundQUIC":  inboundQUICCount,
+			"inboundTCP":   inboundTCPCount,
+			"outboundQUIC": outboundQUICCount,
+			"outboundTCP":  outboundTCPCount,
+			"total":        total,
+		}).Info("Connected peers")
 	})
 
 	multiAddrs := s.host.Network().ListenAddresses()
