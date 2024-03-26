@@ -386,9 +386,15 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 			currEpoch = slots.ToEpoch(sub.Slot)
 		}
 		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, sub.CommitteeIndex, sub.Slot)
-		cache.SubnetIDs.AddAttesterSubnetID(sub.Slot, subnet)
+		err = cache.SubnetIDs.AddAttesterSubnetID(sub.Slot, subnet)
+		if err != nil {
+			log.WithError(err).Error("failed to add attester subnet id")
+		}
 		if sub.IsAggregator {
-			cache.SubnetIDs.AddAggregatorSubnetID(sub.Slot, subnet)
+			err = cache.SubnetIDs.AddAggregatorSubnetID(sub.Slot, subnet)
+			if err != nil {
+				log.WithError(err).Error("failed to add aggregator subnet id")
+			}
 		}
 	}
 }

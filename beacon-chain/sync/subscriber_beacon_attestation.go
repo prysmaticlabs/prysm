@@ -45,7 +45,11 @@ func (_ *Service) aggregatorSubnetIndices(currentSlot primitives.Slot) []uint64 
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
 	var commIds []uint64
 	for i := currentSlot; i <= endSlot; i++ {
-		commIds = append(commIds, cache.SubnetIDs.GetAggregatorSubnetIDs(i)...)
+		subnetIDs, err := cache.SubnetIDs.GetAggregatorSubnetIDs(i)
+		if err != nil {
+			log.WithError(err).Error("failed to get aggregator subnet ids")
+		}
+		commIds = append(commIds, subnetIDs...)
 	}
 	return slice.SetUint64(commIds)
 }
@@ -53,9 +57,15 @@ func (_ *Service) aggregatorSubnetIndices(currentSlot primitives.Slot) []uint64 
 func (_ *Service) attesterSubnetIndices(currentSlot primitives.Slot) []uint64 {
 	endEpoch := slots.ToEpoch(currentSlot) + 1
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
-	var commIds []uint64
+	var (
+		commIds []uint64
+	)
 	for i := currentSlot; i <= endSlot; i++ {
-		commIds = append(commIds, cache.SubnetIDs.GetAttesterSubnetIDs(i)...)
+		subnetIDs, err := cache.SubnetIDs.GetAttesterSubnetIDs(i)
+		if err != nil {
+			log.WithError(err).Error("failed to get aggregator subnet ids")
+		}
+		commIds = append(commIds, subnetIDs...)
 	}
 	return slice.SetUint64(commIds)
 }

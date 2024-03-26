@@ -483,10 +483,12 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 	})
 	require.NoError(t, err)
 	for i := primitives.Slot(100); i < 200; i++ {
-		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(i)
+		subnets, err := cache.SubnetIDs.GetAttesterSubnetIDs(i)
+		assert.NoError(t, err)
 		assert.Equal(t, 1, len(subnets))
 		if isAggregator[i-100] {
-			subnets = cache.SubnetIDs.GetAggregatorSubnetIDs(i)
+			subnets, err = cache.SubnetIDs.GetAggregatorSubnetIDs(i)
+			assert.NoError(t, err)
 			assert.Equal(t, 1, len(subnets))
 		}
 	}

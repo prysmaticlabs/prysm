@@ -8,41 +8,58 @@ import (
 )
 
 func TestSubnetIDsCache_RoundTrip(t *testing.T) {
-	c := newSubnetIDs()
+	c, err := newSubnetIDs()
+	assert.NoError(t, err)
+
 	slot := primitives.Slot(100)
-	committeeIDs := c.GetAggregatorSubnetIDs(slot)
+	committeeIDs, err := c.GetAggregatorSubnetIDs(slot)
+	assert.Equal(t, err, nil)
 	assert.Equal(t, 0, len(committeeIDs), "Empty cache returned an object")
 
-	c.AddAggregatorSubnetID(slot, 1)
-	res := c.GetAggregatorSubnetIDs(slot)
+	err = c.AddAggregatorSubnetID(slot, 1)
+	assert.NoError(t, err)
+	res, err := c.GetAggregatorSubnetIDs(slot)
+	assert.NoError(t, err)
 	assert.DeepEqual(t, []uint64{1}, res)
 
-	c.AddAggregatorSubnetID(slot, 2)
-	res = c.GetAggregatorSubnetIDs(slot)
+	err = c.AddAggregatorSubnetID(slot, 2)
+	assert.NoError(t, err)
+	res, err = c.GetAggregatorSubnetIDs(slot)
+	assert.NoError(t, err)
 	assert.DeepEqual(t, []uint64{1, 2}, res)
 
-	c.AddAggregatorSubnetID(slot, 3)
-	res = c.GetAggregatorSubnetIDs(slot)
+	err = c.AddAggregatorSubnetID(slot, 3)
+	assert.NoError(t, err)
+	res, err = c.GetAggregatorSubnetIDs(slot)
+	assert.NoError(t, err)
 	assert.DeepEqual(t, []uint64{1, 2, 3}, res)
 
-	committeeIDs = c.GetAttesterSubnetIDs(slot)
+	committeeIDs, err = c.GetAttesterSubnetIDs(slot)
+	assert.NoError(t, err)
 	assert.Equal(t, 0, len(committeeIDs), "Empty cache returned an object")
 
-	c.AddAttesterSubnetID(slot, 11)
-	res = c.GetAttesterSubnetIDs(slot)
+	err = c.AddAttesterSubnetID(slot, 11)
+	assert.NoError(t, err)
+	res, err = c.GetAttesterSubnetIDs(slot)
+	assert.NoError(t, err)
 	assert.DeepEqual(t, []uint64{11}, res)
 
-	c.AddAttesterSubnetID(slot, 22)
-	res = c.GetAttesterSubnetIDs(slot)
+	err = c.AddAttesterSubnetID(slot, 22)
+	assert.NoError(t, err)
+	res, err = c.GetAttesterSubnetIDs(slot)
+	assert.NoError(t, err)
 	assert.DeepEqual(t, []uint64{11, 22}, res)
 
-	c.AddAttesterSubnetID(slot, 33)
-	res = c.GetAttesterSubnetIDs(slot)
+	err = c.AddAttesterSubnetID(slot, 33)
+	assert.NoError(t, err)
+	res, err = c.GetAttesterSubnetIDs(slot)
+	assert.NoError(t, err)
 	assert.DeepEqual(t, []uint64{11, 22, 33}, res)
 }
 
 func TestSubnetIDsCache_PersistentCommitteeRoundtrip(t *testing.T) {
-	c := newSubnetIDs()
+	c, err := newSubnetIDs()
+	assert.NoError(t, err)
 
 	c.AddPersistentCommittee([]uint64{0, 1, 2, 7, 8}, 0)
 

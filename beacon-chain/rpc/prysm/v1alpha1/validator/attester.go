@@ -3,6 +3,8 @@ package validator
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
@@ -128,9 +130,15 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 			currEpoch = slots.ToEpoch(req.Slots[i])
 		}
 		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, req.CommitteeIds[i], req.Slots[i])
-		cache.SubnetIDs.AddAttesterSubnetID(req.Slots[i], subnet)
+		err = cache.SubnetIDs.AddAttesterSubnetID(req.Slots[i], subnet)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not add attester subnet ID")
+		}
 		if req.IsAggregator[i] {
-			cache.SubnetIDs.AddAggregatorSubnetID(req.Slots[i], subnet)
+			err = cache.SubnetIDs.AddAggregatorSubnetID(req.Slots[i], subnet)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not add aggregator subnet ID")
+			}
 		}
 	}
 

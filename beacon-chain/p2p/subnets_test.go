@@ -127,7 +127,9 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 			Attnets: bitfield.NewBitvector64(),
 		}),
 	}
-	cache.SubnetIDs.AddAttesterSubnetID(0, 10)
+	err = cache.SubnetIDs.AddAttesterSubnetID(0, 10)
+	require.NoError(t, err)
+
 	testService.RefreshENR()
 	time.Sleep(2 * time.Second)
 

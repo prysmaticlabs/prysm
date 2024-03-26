@@ -502,10 +502,12 @@ func TestFilterSubnetPeers(t *testing.T) {
 	assert.NoError(t, err)
 	defaultTopic := "/eth2/%x/beacon_attestation_%d" + r.cfg.p2p.Encoding().ProtocolSuffix()
 	subnet10 := r.addDigestAndIndexToTopic(defaultTopic, digest, 10)
-	cache.SubnetIDs.AddAggregatorSubnetID(currSlot, 10)
+	err = cache.SubnetIDs.AddAggregatorSubnetID(currSlot, 10)
+	assert.NoError(t, err)
 
 	subnet20 := r.addDigestAndIndexToTopic(defaultTopic, digest, 20)
-	cache.SubnetIDs.AddAttesterSubnetID(currSlot, 20)
+	err = cache.SubnetIDs.AddAttesterSubnetID(currSlot, 20)
+	assert.NoError(t, err)
 
 	p1 := createPeer(t, subnet10)
 	p2 := createPeer(t, subnet10, subnet20)

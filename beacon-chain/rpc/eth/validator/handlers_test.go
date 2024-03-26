@@ -723,7 +723,8 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 
 		s.SubmitBeaconCommitteeSubscription(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
+		subnets, err := cache.SubnetIDs.GetAttesterSubnetIDs(1)
+		require.NoError(t, err)
 		require.Equal(t, 1, len(subnets))
 		assert.Equal(t, uint64(5), subnets[0])
 	})
@@ -739,7 +740,8 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 
 		s.SubmitBeaconCommitteeSubscription(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
+		subnets, err := cache.SubnetIDs.GetAttesterSubnetIDs(1)
+		require.NoError(t, err)
 		require.Equal(t, 2, len(subnets))
 		assert.Equal(t, uint64(5), subnets[0])
 		assert.Equal(t, uint64(4), subnets[1])
@@ -756,7 +758,8 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 
 		s.SubmitBeaconCommitteeSubscription(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		subnets := cache.SubnetIDs.GetAggregatorSubnetIDs(1)
+		subnets, err := cache.SubnetIDs.GetAggregatorSubnetIDs(1)
+		require.NoError(t, err)
 		require.Equal(t, 1, len(subnets))
 		assert.Equal(t, uint64(5), subnets[0])
 	})
