@@ -151,3 +151,32 @@ func TestCommitteeCache_DoesNothingWhenCancelledContext(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, count)
 }
+
+func TestCommitteeCache_DoesNotChangeCommittees_AfterInsertingInCache(t *testing.T) {
+	cache, err := NewCommitteesCache()
+	require.NoError(t, err)
+
+	item := &Committees{
+		ShuffledIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6},
+		Seed:            [32]byte{'A'},
+		CommitteeCount:  3,
+	}
+
+	validatorIndexes, err := cache.ActiveIndices(context.Background(), item.Seed)
+	require.NoError(t, err)
+	if validatorIndexes != nil {
+		t.Error("Expected committee not to exist in empty cache")
+	}
+	require.NoError(t, cache.AddCommitteeShuffledList(context.Background(), item))
+
+	validatorIndexes2, err := cache.ActiveIndices(context.Background(), item.Seed)
+	require.NoError(t, err)
+
+	//mutate item
+	item.ShuffledIndices = append(item.ShuffledIndices, 7)
+
+	// request from cache again
+	validatorIndexes3, err := cache.ActiveIndices(context.Background(), item.Seed)
+	require.NoError(t, err)
+	require.DeepEqual(t, validatorIndexes2, validatorIndexes3)
+}
