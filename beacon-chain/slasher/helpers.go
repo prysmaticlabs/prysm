@@ -2,8 +2,11 @@ package slasher
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/slasherkv"
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -158,4 +161,94 @@ func isDoubleProposal(incomingSigningRoot, existingSigningRoot [32]byte) bool {
 		return false
 	}
 	return incomingSigningRoot != existingSigningRoot
+}
+
+type GetChunkFromDatabaseFilters struct {
+	ChunkKind                     slashertypes.ChunkKind
+	ValidatorIndex                primitives.ValidatorIndex
+	SourceEpoch                   primitives.Epoch
+	IsDisplayAllValidatorsInChunk bool
+	IsDisplayAllEpochsInChunk     bool
+}
+
+// GetChunkFromDatabase Utility function aiming at retrieving a chunk from the
+// database.
+func GetChunkFromDatabase(
+	ctx context.Context,
+	dbPath string,
+	filters GetChunkFromDatabaseFilters,
+	params *Parameters,
+) (lastEpochForValidatorIndex primitives.Epoch, chunkIndex, validatorChunkIndex uint64, chunk Chunker, err error) {
+	// init store
+	d, err := slasherkv.NewKVStore(ctx, dbPath)
+	if err != nil {
+		return lastEpochForValidatorIndex, chunkIndex, validatorChunkIndex, chunk, fmt.Errorf("could not open database at path %s: %w", dbPath, err)
+	}
+	defer closeDB(d)
+
+	// init service
+	s := Service{
+		params: params,
+		serviceCfg: &ServiceConfig{
+			Database: d,
+		},
+	}
+
+	// variables
+	validatorIndex := filters.ValidatorIndex
+	sourceEpoch := filters.SourceEpoch
+	chunkKind := filters.ChunkKind
+	validatorChunkIndex = s.params.validatorChunkIndex(validatorIndex)
+	chunkIndex = s.params.chunkIndex(sourceEpoch)
+
+	// before getting the chunk, we need to verify if the requested epoch is in database
+	lastEpochForValidator, err := s.serviceCfg.Database.LastEpochWrittenForValidators(ctx, []primitives.ValidatorIndex{validatorIndex})
+	if err != nil {
+		return lastEpochForValidatorIndex,
+			chunkIndex,
+			validatorChunkIndex,
+			chunk,
+			fmt.Errorf("could not get last epoch written for validator %d: %w", validatorIndex, err)
+	}
+
+	if len(lastEpochForValidator) == 0 {
+		return lastEpochForValidatorIndex,
+			chunkIndex,
+			validatorChunkIndex,
+			chunk,
+			fmt.Errorf("could not get information at epoch %d for validator %d: there's no record found in slasher database",
+				sourceEpoch, validatorIndex,
+			)
+	}
+	lastEpochForValidatorIndex = lastEpochForValidator[0].Epoch
+
+	// if the epoch requested is within the range, we can proceed to get the chunk, otherwise return error
+	atBestSmallestEpoch := lastEpochForValidatorIndex.Sub(uint64(params.historyLength))
+	if sourceEpoch < atBestSmallestEpoch || sourceEpoch > lastEpochForValidatorIndex {
+		return lastEpochForValidatorIndex,
+			chunkIndex,
+			validatorChunkIndex,
+			chunk,
+			fmt.Errorf("requested epoch %d is outside the slasher history length %d, data can be provided within the epoch range [%d:%d] for validator %d",
+				sourceEpoch, params.historyLength, atBestSmallestEpoch, lastEpochForValidatorIndex, validatorIndex,
+			)
+	}
+
+	// fetch chunk from DB
+	chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
+	if err != nil {
+		return lastEpochForValidatorIndex,
+			chunkIndex,
+			validatorChunkIndex,
+			chunk,
+			fmt.Errorf("could not get chunk at index %d: %w", chunkIndex, err)
+	}
+
+	return lastEpochForValidatorIndex, chunkIndex, validatorChunkIndex, chunk, nil
+}
+
+func closeDB(d *slasherkv.Store) {
+	if err := d.Close(); err != nil {
+		log.WithError(err).Error("could not close database")
+	}
 }
