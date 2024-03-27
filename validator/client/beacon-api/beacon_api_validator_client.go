@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -28,7 +29,7 @@ type beaconApiValidatorClient struct {
 
 func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...ValidatorClientOpt) iface.ValidatorClient {
 	c := &beaconApiValidatorClient{
-		genesisProvider:         beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
+		genesisProvider:         &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
 		dutiesProvider:          beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler},
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler:         jsonRestHandler,
@@ -192,7 +193,8 @@ func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *emp
 }
 
 func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *event.Event) {
-	eventStream, err := event.NewEventStream(ctx, c.jsonRestHandler.HttpClient(), c.jsonRestHandler.Host(), topics)
+	client := &http.Client{} // event stream should not be subject to the same settings as other api calls, so we won't use c.jsonRestHandler.HttpClient()
+	eventStream, err := event.NewEventStream(ctx, client, c.jsonRestHandler.Host(), topics)
 	if err != nil {
 		eventsChannel <- &event.Event{
 			EventType: event.EventError,

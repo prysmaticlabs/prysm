@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	mockstategen "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen/mock"
@@ -192,6 +193,7 @@ func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, int
 }
 
 func TestBlockRewards(t *testing.T) {
+	db := dbutil.SetupDB(t)
 	phase0block, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	t.Run("phase 0", func(t *testing.T) {
@@ -227,7 +229,10 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher: &BlockRewardService{
+				Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
+				DB:       db,
+			},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -260,7 +265,10 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher: &BlockRewardService{
+				Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
+				DB:       db,
+			},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -293,7 +301,10 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher: &BlockRewardService{
+				Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
+				DB:       db,
+			},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -326,7 +337,10 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher: &BlockRewardService{
+				Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
+				DB:       db,
+			},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -715,7 +729,9 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		}},
 		OptimisticModeFetcher: mockChainService,
 		FinalizationFetcher:   mockChainService,
-		BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
+		BlockRewardFetcher: &BlockRewardService{
+			Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
+			DB:       dbutil.SetupDB(t)},
 	}
 
 	t.Run("ok - filtered vals", func(t *testing.T) {
