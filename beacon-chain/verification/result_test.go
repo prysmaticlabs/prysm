@@ -39,7 +39,7 @@ func TestResultList(t *testing.T) {
 func TestExportedBlobSanityCheck(t *testing.T) {
 	// make sure all requirement lists contain the bare minimum checks
 	sanity := []Requirement{RequireValidProposerSignature, RequireSidecarKzgProofVerified, RequireBlobIndexInBounds, RequireSidecarInclusionProven}
-	reqs := [][]Requirement{GossipSidecarRequirements, SpectestSidecarRequirements, InitsyncSidecarRequirements, BackfillSidecarRequirements}
+	reqs := [][]Requirement{GossipSidecarRequirements, SpectestSidecarRequirements, InitsyncSidecarRequirements, BackfillSidecarRequirements, PendingQueueSidecarRequirements}
 	for i := range reqs {
 		r := reqs[i]
 		reqMap := make(map[Requirement]struct{})
