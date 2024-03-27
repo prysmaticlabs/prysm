@@ -89,6 +89,7 @@ type config struct {
 	AttService              *attestations.Service
 	StateGen                *stategen.State
 	SlasherAttestationsFeed *event.Feed
+	SlasherDB               db.SlasherDatabase
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	BlockFetcher            execution.POWBlockFetcher
 	FinalizedStateAtStartUp state.BeaconState
