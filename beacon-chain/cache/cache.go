@@ -20,8 +20,8 @@ type lruCache[K comparable, V any] interface {
 	missCache()
 }
 
-func newLRUCache[K comparable, V any]() *lru.Cache[K, V] {
-	cache, err := lru.New[K, V](maxCommitteesCacheSize)
+func newLRUCache[K comparable, V any](cacheSize int) *lru.Cache[K, V] {
+	cache, err := lru.New[K, V](cacheSize)
 	if err != nil {
 		panic(fmt.Errorf("%w: %v", ErrNilCache, err))
 	}
