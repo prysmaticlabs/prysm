@@ -99,6 +99,16 @@ type SetFeeRecipientByPubkeyRequest struct {
 	Ethaddress string `json:"ethaddress"`
 }
 
+// Graffiti keymanager api
+type GetGraffitiResponse struct {
+	Data *GraffitiData `json:"data"`
+}
+
+type GraffitiData struct {
+	Pubkey   string `json:"pubkey"`
+	Graffiti string `json:"graffiti"`
+}
+
 type BeaconStatusResponse struct {
 	BeaconNodeEndpoint     string     `json:"beacon_node_endpoint"`
 	Connected              bool       `json:"connected"`

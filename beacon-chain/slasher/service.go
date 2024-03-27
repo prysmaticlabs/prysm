@@ -161,7 +161,7 @@ func (s *Service) Stop() error {
 	ctx, innerCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer innerCancel()
 	log.Info("Flushing last epoch written for each validator to disk, please wait")
-	if err := s.serviceCfg.Database.SaveLastEpochsWrittenForValidators(
+	if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(
 		ctx, s.latestEpochUpdatedForValidator,
 	); err != nil {
 		log.Error(err)

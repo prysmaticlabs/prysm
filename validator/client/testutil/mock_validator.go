@@ -58,6 +58,7 @@ type FakeValidator struct {
 	proposerSettings                  *proposer.Settings
 	ProposerSettingWait               time.Duration
 	Km                                keymanager.IKeymanager
+	graffiti                          string
 	Tracker                           *beacon.NodeHealthTracker
 }
 
@@ -282,7 +283,25 @@ func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *propos
 	return nil
 }
 
+// GetGraffiti for mocking
+func (f *FakeValidator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	return []byte(f.graffiti), nil
+}
+
+// SetGraffiti for mocking
+func (f *FakeValidator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	f.graffiti = string(graffiti)
+	return nil
+}
+
+// DeleteGraffiti for mocking
+func (f *FakeValidator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
+	f.graffiti = ""
+	return nil
+}
+
 func (*FakeValidator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
+
 }
 
 func (*FakeValidator) ProcessEvent(_ *event.Event) {}

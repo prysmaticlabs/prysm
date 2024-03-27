@@ -115,7 +115,7 @@ func NewNodeClientWithFallback(jsonRestHandler JsonRestHandler, fallbackClient i
 	b := &beaconApiNodeClient{
 		jsonRestHandler: jsonRestHandler,
 		fallbackClient:  fallbackClient,
-		genesisProvider: beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
+		genesisProvider: &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
 	}
 	b.healthTracker = beacon.NewNodeHealthTracker(b)
 	return b

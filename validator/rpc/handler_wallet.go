@@ -23,7 +23,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// CreateWallet via an API request, allowing a user to save a new
+// CreateWallet via an API request, allowing a user to save a new wallet.
 func (s *Server) CreateWallet(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.web.CreateWallet")
 	defer span.End()

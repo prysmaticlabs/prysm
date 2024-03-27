@@ -60,10 +60,13 @@ type Validator interface {
 	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
 	StartEventStream(ctx context.Context, topics []string, eventsChan chan<- *event.Event)
+	EventStreamIsRunning() bool
 	ProcessEvent(event *event.Event)
 	ProposerSettings() *proposer.Settings
 	SetProposerSettings(context.Context, *proposer.Settings) error
-	EventStreamIsRunning() bool
+	GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error)
+	SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error
+	DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error
 	HealthTracker() *beacon.NodeHealthTracker
 }
 
