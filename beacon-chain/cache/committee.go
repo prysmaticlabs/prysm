@@ -59,7 +59,7 @@ type CommitteeCache[K string, V Committees] struct {
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache[K string, V Committees]() *CommitteeCache[K, V] {
 	return &CommitteeCache[K, V]{
-		lru:           newLRUCache[K, V](maxCommitteesCacheSize),
+		lru:           newLRUCache[K, V](maxCommitteesCacheSize, committeeCacheHit, committeeCacheMiss),
 		promCacheMiss: committeeCacheMiss,
 		promCacheHit:  committeeCacheHit,
 		inProgress:    make(map[string]bool),
@@ -91,7 +91,7 @@ func (c *CommitteeCache[K, V]) Clear() {
 	c.inProgress = make(map[string]bool)
 }
 
-// ------------------------------------------------------------------------------------------------------------------ //
+// ------------------------------------------------------------------------------------ //
 
 // ExpandCommitteeCache expands the size of the committee cache.
 func (c *CommitteeCache[K, V]) ExpandCommitteeCache() {

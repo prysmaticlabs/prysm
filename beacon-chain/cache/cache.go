@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	lru "github.com/hashicorp/golang-lru/v2"
 )
 
@@ -20,24 +22,27 @@ type lruCache[K comparable, V any] interface {
 	missCache()
 }
 
-func newLRUCache[K comparable, V any](cacheSize int) *lru.Cache[K, V] {
+// newLRUCache initialise a new thread-safe cache with Prometheus metrics
+func newLRUCache[K comparable, V any](cacheSize int, committeeCacheHit, committeeCacheMiss prometheus.Counter) *lru.Cache[K, V] {
 	cache, err := lru.New[K, V](cacheSize)
 	if err != nil {
 		panic(fmt.Errorf("%w: %v", ErrNilCache, err))
 	}
 
-	isCacheMissNil, isCacheHitNil := committeeCacheMiss == nil, committeeCacheMiss == nil
-	if isCacheMissNil || isCacheHitNil {
-		panic(fmt.Errorf("%w: isCacheMissNil=<%t>, isCacheHitNil=<%t>",
+	isCacheHitNil, isCacheMissNil := committeeCacheHit == nil, committeeCacheMiss == nil
+	if isCacheHitNil || isCacheMissNil {
+		panic(fmt.Errorf("%w: isCacheHitNil=<%t>, isCacheMissNil=<%t>",
 			ErrNilMetrics,
 			isCacheHitNil,
-			isCacheHitNil,
+			isCacheMissNil,
 		))
 	}
 
 	return cache
 }
 
+// get looks for a value in the cache, returns nil if not found
+// and increments the prometheus counters
 func get[K comparable, V any](c lruCache[K, V], key K) (V, error) {
 	value, ok := c.get().Get(key)
 	if !ok {
@@ -49,7 +54,8 @@ func get[K comparable, V any](c lruCache[K, V], key K) (V, error) {
 	return value, nil
 }
 
-// method helpers
+// add adds a value to the cache
+// it returns an error if the value is nil
 func add[K comparable, V any](c lruCache[K, V], key K, value V) error {
 	if isNil(value) {
 		return ErrNilValueProvided
@@ -58,25 +64,27 @@ func add[K comparable, V any](c lruCache[K, V], key K, value V) error {
 	return nil
 }
 
+// keys returns all the keys present in the cache
 func keys[K comparable, V any](c lruCache[K, V]) []K {
 	return c.get().Keys()
 }
 
+// purge removes all the keys and values in the cache
 func purge[K comparable, V any](c lruCache[K, V]) {
 	c.get().Purge()
 }
 
+// resize changes the size of the cache
 func resize[K comparable, V any](c lruCache[K, V], size int) {
 	c.get().Resize(size)
 }
 
+// exist looks into the cache whether the key exists or not
 func exist[K comparable, V any](c lruCache[K, V], key K) bool {
 	_, ok := c.get().Get(key)
 	return ok
 }
 
-// comparison helpers
-//
 // isNil is a safeguard when trying to insert key -> value, where value is nil
 //
 // it helps with the confusing Go case where a pointer structure is equal to nil and not flagged by "V == nil"
