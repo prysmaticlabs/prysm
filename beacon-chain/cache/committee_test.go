@@ -166,7 +166,7 @@ func TestCommitteeCache_DoesNotChangeCommittees_AfterInsertingInCache(t *testing
 
 	indices2, err := cache.Committee(context.Background(), slot, item.Seed, committeeIndex)
 	require.NoError(t, err)
-	//mutate item
+	// mutate item
 	item.ShuffledIndices = append(item.ShuffledIndices, 7)
 
 	// request from cache again
