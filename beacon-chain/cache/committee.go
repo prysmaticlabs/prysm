@@ -241,6 +241,7 @@ func (c *CommitteeCache[K, V]) HasEntry(seed [32]byte) bool {
 func (c *CommitteeCache[K, V]) MarkInProgress(seed [32]byte) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
 	s := committeeCachesKey(seed)
 	if c.inProgress[s] {
 		return ErrAlreadyInProgress
@@ -254,6 +255,7 @@ func (c *CommitteeCache[K, V]) MarkInProgress(seed [32]byte) error {
 func (c *CommitteeCache[K, V]) MarkNotInProgress(seed [32]byte) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
 	s := committeeCachesKey(seed)
 	delete(c.inProgress, s)
 	return nil
@@ -302,7 +304,6 @@ func committeeCachesKey[K string](seed [32]byte) K {
 // committeeCachesKeyFn takes the seed as the key to retrieve shuffled indices of a committee in a given epoch.
 func committeeCachesKeyFn[K string, V Committees](obj *V) (K, error) {
 	var noKey K
-
 	committees, ok := any(obj).(*Committees)
 	if !ok {
 		return noKey, fmt.Errorf("%v: %w", ErrCast, errNotCommittees)
