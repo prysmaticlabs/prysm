@@ -26,6 +26,7 @@ import (
 	"context"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -449,6 +450,32 @@ func (p *Status) InboundConnected() []peer.ID {
 	return peers
 }
 
+// InboundConnectedTCP returns the current batch of inbound peers that are connected using TCP.
+func (p *Status) InboundConnectedTCP() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound && strings.Contains(peerData.Address.String(), "tcp") {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// InboundConnectedTCP returns the current batch of inbound peers that are connected using QUIC.
+func (p *Status) InboundConnectedQUIC() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound && strings.Contains(peerData.Address.String(), "quic") {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
 // Outbound returns the current batch of outbound peers.
 func (p *Status) Outbound() []peer.ID {
 	p.store.RLock()
@@ -475,7 +502,33 @@ func (p *Status) OutboundConnected() []peer.ID {
 	return peers
 }
 
-// Active returns the peers that are connecting or connected.
+// OutboundConnected returns the current batch of outbound peers that are connected using TCP.
+func (p *Status) OutboundConnectedTCP() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirOutbound && strings.Contains(peerData.Address.String(), "tcp") {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// OutboundConnected returns the current batch of outbound peers that are connected using QUIC.
+func (p *Status) OutboundConnectedQUIC() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirOutbound && strings.Contains(peerData.Address.String(), "quic") {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// Active returns the peers that are active (connecting or connected).
 func (p *Status) Active() []peer.ID {
 	p.store.RLock()
 	defer p.store.RUnlock()
@@ -514,7 +567,7 @@ func (p *Status) Disconnected() []peer.ID {
 	return peers
 }
 
-// Inactive returns the peers that are disconnecting or disconnected.
+// Inactive returns the peers that are inactive (disconnecting or disconnected).
 func (p *Status) Inactive() []peer.ID {
 	p.store.RLock()
 	defer p.store.RUnlock()

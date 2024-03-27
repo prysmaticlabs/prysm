@@ -24,6 +24,7 @@ type Config struct {
 	PrivateKey           string
 	DataDir              string
 	MetaDataDir          string
+	QUICPort             uint
 	TCPPort              uint
 	UDPPort              uint
 	MaxPeers             uint

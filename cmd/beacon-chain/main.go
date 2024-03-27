@@ -90,6 +90,7 @@ var appFlags = []cli.Flag{
 	cmd.StaticPeers,
 	cmd.RelayNode,
 	cmd.P2PUDPPort,
+	cmd.P2PQUICPort,
 	cmd.P2PTCPPort,
 	cmd.P2PIP,
 	cmd.P2PHost,

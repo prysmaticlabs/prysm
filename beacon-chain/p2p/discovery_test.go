@@ -166,8 +166,9 @@ func TestCreateLocalNode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Define ports.
 			const (
-				udpPort = 2000
-				tcpPort = 3000
+				udpPort  = 2000
+				tcpPort  = 3000
+				quicPort = 3000
 			)
 
 			// Create a private key.
@@ -180,7 +181,7 @@ func TestCreateLocalNode(t *testing.T) {
 				cfg:                   tt.cfg,
 			}
 
-			localNode, err := service.createLocalNode(privKey, address, udpPort, tcpPort)
+			localNode, err := service.createLocalNode(privKey, address, udpPort, tcpPort, quicPort)
 			if tt.expectedError {
 				require.NotNil(t, err)
 				return
@@ -237,7 +238,7 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
-	node, err := s.createLocalNode(pkey, addr, 0, 0)
+	node, err := s.createLocalNode(pkey, addr, 0, 0, 0)
 	require.NoError(t, err)
 	multiAddr := convertToMultiAddr([]*enode.Node{node.Node()})
 	assert.Equal(t, 0, len(multiAddr), "Invalid ip address converted successfully")
@@ -248,8 +249,9 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	s := &Service{
 		cfg: &Config{
-			TCPPort: 0,
-			UDPPort: 0,
+			UDPPort:  2000,
+			TCPPort:  3000,
+			QUICPort: 3000,
 		},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),

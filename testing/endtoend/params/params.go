@@ -46,6 +46,7 @@ type ports struct {
 	Eth1ProxyPort                   int
 	PrysmBeaconNodeRPCPort          int
 	PrysmBeaconNodeUDPPort          int
+	PrysmBeaconNodeQUICPort         int
 	PrysmBeaconNodeTCPPort          int
 	PrysmBeaconNodeGatewayPort      int
 	PrysmBeaconNodeMetricsPort      int
@@ -144,10 +145,11 @@ const (
 
 	PrysmBeaconNodeRPCPort     = 4150
 	PrysmBeaconNodeUDPPort     = PrysmBeaconNodeRPCPort + portSpan
-	PrysmBeaconNodeTCPPort     = PrysmBeaconNodeRPCPort + 2*portSpan
-	PrysmBeaconNodeGatewayPort = PrysmBeaconNodeRPCPort + 3*portSpan
-	PrysmBeaconNodeMetricsPort = PrysmBeaconNodeRPCPort + 4*portSpan
-	PrysmBeaconNodePprofPort   = PrysmBeaconNodeRPCPort + 5*portSpan
+	PrysmBeaconNodeQUICPort    = PrysmBeaconNodeRPCPort + 2*portSpan
+	PrysmBeaconNodeTCPPort     = PrysmBeaconNodeRPCPort + 3*portSpan
+	PrysmBeaconNodeGatewayPort = PrysmBeaconNodeRPCPort + 4*portSpan
+	PrysmBeaconNodeMetricsPort = PrysmBeaconNodeRPCPort + 5*portSpan
+	PrysmBeaconNodePprofPort   = PrysmBeaconNodeRPCPort + 6*portSpan
 
 	LighthouseBeaconNodeP2PPort     = 5150
 	LighthouseBeaconNodeHTTPPort    = LighthouseBeaconNodeP2PPort + portSpan
@@ -330,6 +332,10 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	if err != nil {
 		return err
 	}
+	beaconNodeQUICPort, err := port(PrysmBeaconNodeQUICPort, shardCount, shardIndex, existingRegistrations)
+	if err != nil {
+		return err
+	}
 	beaconNodeTCPPort, err := port(PrysmBeaconNodeTCPPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
@@ -367,6 +373,7 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	ports.Eth1ProxyPort = eth1ProxyPort
 	ports.PrysmBeaconNodeRPCPort = beaconNodeRPCPort
 	ports.PrysmBeaconNodeUDPPort = beaconNodeUDPPort
+	ports.PrysmBeaconNodeQUICPort = beaconNodeQUICPort
 	ports.PrysmBeaconNodeTCPPort = beaconNodeTCPPort
 	ports.PrysmBeaconNodeGatewayPort = beaconNodeGatewayPort
 	ports.PrysmBeaconNodeMetricsPort = beaconNodeMetricsPort
