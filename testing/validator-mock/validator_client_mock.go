@@ -253,19 +253,19 @@ func (mr *MockValidatorClientMockRecorder) PrepareBeaconProposer(arg0, arg1 any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareBeaconProposer", reflect.TypeOf((*MockValidatorClient)(nil).PrepareBeaconProposer), arg0, arg1)
 }
 
-// ProposeAttestation mocks base method.
-func (m *MockValidatorClient) ProposeAttestation(arg0 context.Context, arg1 *eth.Attestation) (*eth.AttestResponse, error) {
+// ProposeAttestations mocks base method.
+func (m *MockValidatorClient) ProposeAttestations(arg0 context.Context, arg1 []*eth.Attestation) ([]*eth.AttestResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProposeAttestation", arg0, arg1)
-	ret0, _ := ret[0].(*eth.AttestResponse)
+	ret := m.ctrl.Call(m, "ProposeAttestations", arg0, arg1)
+	ret0, _ := ret[0].([]*eth.AttestResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ProposeAttestation indicates an expected call of ProposeAttestation.
-func (mr *MockValidatorClientMockRecorder) ProposeAttestation(arg0, arg1 any) *gomock.Call {
+// ProposeAttestations indicates an expected call of ProposeAttestations.
+func (mr *MockValidatorClientMockRecorder) ProposeAttestations(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeAttestation", reflect.TypeOf((*MockValidatorClient)(nil).ProposeAttestation), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeAttestations", reflect.TypeOf((*MockValidatorClient)(nil).ProposeAttestations), arg0, arg1)
 }
 
 // ProposeBeaconBlock mocks base method.

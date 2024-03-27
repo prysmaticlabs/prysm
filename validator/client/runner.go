@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"go.opencensus.io/trace"
@@ -232,6 +233,10 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 }
 
 func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, wg *sync.WaitGroup, span *trace.Span) {
+	attesterPubkeys := make([][fieldparams.BLSPubkeyLength]byte, 0, len(allRoles))
+	attData := make([]*ethpb.AttestationData, 0, len(allRoles))
+	lock := sync.Mutex{}
+
 	for pubKey, roles := range allRoles {
 		wg.Add(len(roles))
 		for _, role := range roles {
@@ -239,7 +244,13 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 				defer wg.Done()
 				switch role {
 				case iface.RoleAttester:
-					v.SubmitAttestation(slotCtx, slot, pubKey)
+					data := v.GetAttestationData(slotCtx, slot, pubKey)
+					if data != nil {
+						lock.Lock()
+						attesterPubkeys = append(attesterPubkeys, pubKey)
+						attData = append(attData, data)
+						lock.Unlock()
+					}
 				case iface.RoleProposer:
 					v.ProposeBlock(slotCtx, slot, pubKey)
 				case iface.RoleAggregator:
@@ -260,6 +271,7 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 	// Wait for all processes to complete, then report span complete.
 	go func() {
 		wg.Wait()
+		v.SubmitAttestations(slotCtx, slot, attesterPubkeys, attData)
 		defer span.End()
 		defer func() {
 			if err := recover(); err != nil { // catch any panic in logging

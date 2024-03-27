@@ -115,9 +115,9 @@ func (c *beaconApiValidatorClient) PrepareBeaconProposer(ctx context.Context, in
 	})
 }
 
-func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
-	return wrapInMetrics[*ethpb.AttestResponse]("ProposeAttestation", func() (*ethpb.AttestResponse, error) {
-		return c.proposeAttestation(ctx, in)
+func (c *beaconApiValidatorClient) ProposeAttestations(ctx context.Context, in []*ethpb.Attestation) ([]*ethpb.AttestResponse, error) {
+	return wrapInMetrics[[]*ethpb.AttestResponse]("ProposeAttestations", func() ([]*ethpb.AttestResponse, error) {
+		return c.proposeAttestations(ctx, in)
 	})
 }
 
