@@ -177,6 +177,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
+		pendingAttCount.Inc()
 		s.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{att}
 		return
 	}
@@ -187,6 +188,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 			return
 		}
 	}
+	pendingAttCount.Inc()
 	s.blkRootToPendingAtts[root] = append(s.blkRootToPendingAtts[root], att)
 }
 
