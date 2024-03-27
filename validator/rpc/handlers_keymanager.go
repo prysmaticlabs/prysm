@@ -538,8 +538,12 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteJson(w, &RemoteKeysResponse{Data: statuses})
 		return
 	}
-
-	httputil.WriteJson(w, RemoteKeysResponse{Data: deleter.DeletePublicKeys(req.Pubkeys)})
+	data, err := deleter.DeletePublicKeys(req.Pubkeys)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, RemoteKeysResponse{Data: data})
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.

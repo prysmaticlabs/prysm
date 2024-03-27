@@ -85,7 +85,7 @@ const (
 
 // PublicKeyDeleter allows deleting public keys set in keymanager.
 type PublicKeyDeleter interface {
-	DeletePublicKeys(publicKeys []string) []*KeyStatus
+	DeletePublicKeys(publicKeys []string) ([]*KeyStatus, error)
 }
 
 type ListKeymanagerAccountConfig struct {

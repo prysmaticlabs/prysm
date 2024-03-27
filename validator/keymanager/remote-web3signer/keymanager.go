@@ -94,9 +94,29 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	} else {
 		ppk = cfg.ProvidedPublicKeys
 	}
+
+	// Construct the full path for the file
+	fullPath := filepath.Join(km.walletDir, remoteKeysFileName)
+
+	// Check if the directory and file exists, if not create it
+	keyFileExists, err := file.Exists(fullPath, file.Regular)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if web3signer persistent keys exists in %s", fullPath)
+	}
+
+	if !keyFileExists {
+		if err = file.MkdirAll(km.walletDir); err != nil {
+			return nil, errors.Wrapf(err, "could not create web3signer persistent keys directory in %s", fullPath)
+		}
+	}
+
 	if len(ppk) != 0 {
 		if err := km.saveProvidedPublicKeys(ppk); err != nil {
 			return nil, err
+		}
+	} else {
+		if err := file.WriteFile(fullPath, []byte{}); err != nil {
+			return nil, errors.Wrapf(err, "could not write %s", fullPath)
 		}
 	}
 
@@ -107,9 +127,6 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 
 func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys [][fieldparams.BLSPubkeyLength]byte) error {
 	remoteKeysFile := filepath.Join(km.walletDir, remoteKeysFileName)
-	if err := file.MkdirAll(km.walletDir); err != nil {
-		return errors.Wrapf(err, "could not create directory %s", km.walletDir)
-	}
 
 	var bytesBuf bytes.Buffer
 	for _, key := range providedPublicKeys {
@@ -579,8 +596,8 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 }
 
 // DeletePublicKeys removes a list of public keys from the keymanager for web3signer use. Returns status with message.
-func (km *Keymanager) DeletePublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, error) {
-	deletedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(pubKeys))
+func (km *Keymanager) DeletePublicKeys(publicKeys []string) ([]*keymanager.KeyStatus, error) {
+	deletedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(publicKeys))
 	if len(km.providedPublicKeys) == 0 {
 		for i := range deletedRemoteKeysStatuses {
 			deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
@@ -597,7 +614,7 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) ([]*keymanager.KeyStatu
 	for i, publicKey := range km.providedPublicKeys {
 		tempPublicKeys[i] = bytesutil.ToBytes48(bytesutil.SafeCopyBytes(publicKey[:]))
 	}
-	for i, pubkey := range pubKeys {
+	for i, pubkey := range publicKeys {
 		for in, key := range km.providedPublicKeys {
 			pubkeyBytes, err := hexutil.Decode(pubkey)
 			if err != nil {
