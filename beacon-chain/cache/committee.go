@@ -106,7 +106,7 @@ func (c *CommitteeCache[K, V]) Clear() {
 	c.inProgress = make(map[string]bool)
 }
 
-// -------------------------------------------------------------------------------------------------------------------//
+// ------------------------------------------------------------------------------------------------------------------ //
 
 // ExpandCommitteeCache expands the size of the committee cache.
 func (c *CommitteeCache[K, V]) ExpandCommitteeCache() {
