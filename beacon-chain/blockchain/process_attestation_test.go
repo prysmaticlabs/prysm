@@ -146,6 +146,28 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, service.OnAttestation(ctx, att[0], 0))
 }
 
+func TestService_GetRecentPreState(t *testing.T) {
+	service, _ := minimalTestService(t)
+	ctx := context.Background()
+
+	s, err := util.NewBeaconState()
+	require.NoError(t, err)
+	ckRoot := bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)
+	cp0 := &ethpb.Checkpoint{Epoch: 0, Root: ckRoot}
+	err = s.SetFinalizedCheckpoint(cp0)
+	require.NoError(t, err)
+
+	st, root, err := prepareForkchoiceState(ctx, 31, [32]byte(ckRoot), [32]byte{}, [32]byte{'R'}, cp0, cp0)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, root))
+	service.head = &head{
+		root:  [32]byte(ckRoot),
+		state: s,
+		slot:  31,
+	}
+	require.NotNil(t, service.getRecentPreState(ctx, &ethpb.Checkpoint{Epoch: 1, Root: ckRoot}))
+}
+
 func TestService_GetAttPreState_Concurrency(t *testing.T) {
 	service, _ := minimalTestService(t)
 	ctx := context.Background()

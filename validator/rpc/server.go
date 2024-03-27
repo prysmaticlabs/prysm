@@ -53,6 +53,8 @@ type Config struct {
 	GenesisFetcher           client.GenesisFetcher
 	WalletInitializedFeed    *event.Feed
 	NodeGatewayEndpoint      string
+	BeaconApiEndpoint        string
+	BeaconApiTimeout         time.Duration
 	Router                   *mux.Router
 	Wallet                   *wallet.Wallet
 }
@@ -130,6 +132,8 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorMonitoringPort:  cfg.ValidatorMonitoringPort,
 		validatorGatewayHost:     cfg.ValidatorGatewayHost,
 		validatorGatewayPort:     cfg.ValidatorGatewayPort,
+		beaconApiTimeout:         cfg.BeaconApiTimeout,
+		beaconApiEndpoint:        cfg.BeaconApiEndpoint,
 		router:                   cfg.Router,
 	}
 	// immediately register routes to override any catchalls
@@ -230,6 +234,10 @@ func (s *Server) InitializeRoutes() error {
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.SetFeeRecipientByPubkey).Methods(http.MethodPost)
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.DeleteFeeRecipientByPubkey).Methods(http.MethodDelete)
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/voluntary_exit", s.SetVoluntaryExit).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/graffiti", s.GetGraffiti).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/graffiti", s.SetGraffiti).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/graffiti", s.DeleteGraffiti).Methods(http.MethodDelete)
+
 	// auth endpoint
 	s.router.HandleFunc(api.WebUrlPrefix+"initialize", s.Initialize).Methods(http.MethodGet)
 	// accounts endpoints

@@ -119,7 +119,9 @@ func TestDefaultMultiplexers(t *testing.T) {
 	svc.privKey, err = privKey(svc.cfg)
 	assert.NoError(t, err)
 	ipAddr := network.IPAddr()
-	opts := svc.buildOptions(ipAddr, svc.privKey)
+	opts, err := svc.buildOptions(ipAddr, svc.privKey)
+	assert.NoError(t, err)
+
 	err = cfg.Apply(append(opts, libp2p.FallbackDefaults)...)
 	assert.NoError(t, err)
 

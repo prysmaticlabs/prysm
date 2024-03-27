@@ -45,7 +45,7 @@ func (w *p2pWorker) run(ctx context.Context) {
 
 func (w *p2pWorker) handleBlocks(ctx context.Context, b batch) batch {
 	cs := w.c.CurrentSlot()
-	blobRetentionStart, err := sync.BlobsByRangeMinStartSlot(cs)
+	blobRetentionStart, err := sync.BlobRPCMinValidSlot(cs)
 	if err != nil {
 		return b.withRetryableError(errors.Wrap(err, "configuration issue, could not compute minimum blob retention slot"))
 	}

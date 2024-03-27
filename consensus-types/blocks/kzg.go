@@ -15,7 +15,8 @@ const (
 	bodyLength    = 12 // The number of elements in the BeaconBlockBody Container
 	logBodyLength = 4  // The log 2 of bodyLength
 	kzgPosition   = 11 // The index of the KZG commitment list in the Body
-	KZGOffset     = 54 * field_params.MaxBlobCommitmentsPerBlock
+	kzgRootIndex  = 54 // The Merkle index of the KZG commitment list's root in the Body's Merkle tree
+	KZGOffset     = kzgRootIndex * field_params.MaxBlobCommitmentsPerBlock
 )
 
 var (
@@ -37,9 +38,7 @@ func VerifyKZGInclusionProof(blob ROBlob) error {
 	if len(root) != field_params.RootLength {
 		return errInvalidBodyRoot
 	}
-	chunks := make([][32]byte, 2)
-	copy(chunks[0][:], blob.KzgCommitment)
-	copy(chunks[1][:], blob.KzgCommitment[field_params.RootLength:])
+	chunks := makeChunk(blob.KzgCommitment)
 	gohashtree.HashChunks(chunks, chunks)
 	verified := trie.VerifyMerkleProof(root, chunks[0][:], blob.Index+KZGOffset, blob.CommitmentInclusionProof)
 	if !verified {
@@ -85,13 +84,19 @@ func MerkleProofKZGCommitment(body interfaces.ReadOnlyBeaconBlockBody, index int
 func leavesFromCommitments(commitments [][]byte) [][]byte {
 	leaves := make([][]byte, len(commitments))
 	for i, kzg := range commitments {
-		chunk := make([][32]byte, 2)
-		copy(chunk[0][:], kzg)
-		copy(chunk[1][:], kzg[field_params.RootLength:])
+		chunk := makeChunk(kzg)
 		gohashtree.HashChunks(chunk, chunk)
 		leaves[i] = chunk[0][:]
 	}
 	return leaves
+}
+
+// makeChunk constructs a chunk from a KZG commitment.
+func makeChunk(commitment []byte) [][32]byte {
+	chunk := make([][32]byte, 2)
+	copy(chunk[0][:], commitment)
+	copy(chunk[1][:], commitment[field_params.RootLength:])
+	return chunk
 }
 
 // bodyProof returns the Merkle proof of the subtree up to the root of the KZG

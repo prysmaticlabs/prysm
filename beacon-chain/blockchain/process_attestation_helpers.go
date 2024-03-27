@@ -18,17 +18,63 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
+func (s *Service) getRecentPreState(ctx context.Context, c *ethpb.Checkpoint) state.ReadOnlyBeaconState {
+	headEpoch := slots.ToEpoch(s.HeadSlot())
+	if c.Epoch < headEpoch {
+		return nil
+	}
+	if !s.cfg.ForkChoiceStore.IsCanonical([32]byte(c.Root)) {
+		return nil
+	}
+	if c.Epoch == headEpoch {
+		targetSlot, err := s.cfg.ForkChoiceStore.Slot([32]byte(c.Root))
+		if err != nil {
+			return nil
+		}
+		if slots.ToEpoch(targetSlot)+1 < headEpoch {
+			return nil
+		}
+		st, err := s.HeadStateReadOnly(ctx)
+		if err != nil {
+			return nil
+		}
+		return st
+	}
+	slot, err := slots.EpochStart(c.Epoch)
+	if err != nil {
+		return nil
+	}
+	// Try if we have already set the checkpoint cache
+	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
+	lock := async.NewMultilock(string(c.Root) + epochKey)
+	lock.Lock()
+	defer lock.Unlock()
+	cachedState, err := s.checkpointStateCache.StateByCheckpoint(c)
+	if err != nil {
+		return nil
+	}
+	if cachedState != nil && !cachedState.IsNil() {
+		return cachedState
+	}
+	st, err := s.HeadState(ctx)
+	if err != nil {
+		return nil
+	}
+	st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, c.Root, slot)
+	if err != nil {
+		return nil
+	}
+	if err := s.checkpointStateCache.AddCheckpointState(c, st); err != nil {
+		return nil
+	}
+	return st
+}
+
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
 	// If the attestation is recent and canonical we can use the head state to compute the shuffling.
-	headEpoch := slots.ToEpoch(s.HeadSlot())
-	if c.Epoch == headEpoch {
-		targetSlot, err := s.cfg.ForkChoiceStore.Slot([32]byte(c.Root))
-		if err == nil && slots.ToEpoch(targetSlot)+1 >= headEpoch {
-			if s.cfg.ForkChoiceStore.IsCanonical([32]byte(c.Root)) {
-				return s.HeadStateReadOnly(ctx)
-			}
-		}
+	if st := s.getRecentPreState(ctx, c); st != nil {
+		return st, nil
 	}
 	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
 	// allowing us to behave smarter in terms of how this function is used concurrently.
