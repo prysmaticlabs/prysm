@@ -5,6 +5,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/stretchr/testify/assert"
@@ -170,4 +171,17 @@ func (c *TestCache[K, V]) missCache() {
 
 func (c *TestCache[K, V]) Clear() {
 	purge[K, V](c)
+}
+
+func Test_isNil(t *testing.T) {
+	var proto interface{}
+	var beaconState *state.BeaconState
+
+	proto = beaconState
+	require.Equal(t, isNil(proto), true)
+	require.Equal(t, confusingIsNil(&proto), false)
+}
+
+func confusingIsNil[T any](arg *T) bool {
+	return arg == nil
 }
