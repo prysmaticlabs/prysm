@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -19,6 +20,13 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	defer b.lock.RUnlock()
 
 	return b.validatorsVal()
+}
+
+func (b *BeaconState) ValidatorsReadOnly() []validator.ReadOnlyValidator {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.validatorsReadOnlyVal()
 }
 
 func (b *BeaconState) validatorsVal() []*ethpb.Validator {
@@ -42,6 +50,35 @@ func (b *BeaconState) validatorsVal() []*ethpb.Validator {
 			continue
 		}
 		res[i] = ethpb.CopyValidator(val)
+	}
+	return res
+}
+
+func (b *BeaconState) validatorsReadOnlyVal() []validator.ReadOnlyValidator {
+	var v []*ethpb.Validator
+	if features.Get().EnableExperimentalState {
+		if b.validatorsMultiValue == nil {
+			return nil
+		}
+		v = b.validatorsMultiValue.Value(b)
+	} else {
+		if b.validators == nil {
+			return nil
+		}
+		v = b.validators
+	}
+
+	res := make([]validator.ReadOnlyValidator, len(v))
+	var err error
+	for i := 0; i < len(res); i++ {
+		val := v[i]
+		if val == nil {
+			continue
+		}
+		res[i], err = validator.NewValidator(val)
+		if err != nil {
+			continue
+		}
 	}
 	return res
 }
@@ -108,7 +145,7 @@ func (b *BeaconState) validatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Va
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
-func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
+func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (validator.ReadOnlyValidator, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -120,7 +157,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (s
 		if err != nil {
 			return nil, err
 		}
-		return NewValidator(v)
+		return validator.NewValidator(v)
 	}
 
 	if b.validators == nil {
@@ -130,7 +167,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (s
 		return nil, errors.Wrapf(consensus_types.ErrOutOfBounds, "validator index %d does not exist", idx)
 	}
 	val := b.validators[idx]
-	return NewValidator(val)
+	return validator.NewValidator(val)
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
@@ -213,7 +250,7 @@ func (b *BeaconState) NumValidators() int {
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
 //
 // WARNING: This method is potentially unsafe, as it exposes the actual validator registry.
-func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyValidator) error) error {
+func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val validator.ReadOnlyValidator) error) error {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -228,7 +265,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 	validators := b.validators
 
 	for i, v := range validators {
-		v, err := NewValidator(v)
+		v, err := validator.NewValidator(v)
 		if err != nil {
 			return err
 		}
@@ -240,7 +277,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 }
 
 // WARNING: This function works only for the multi-value slice feature.
-func (b *BeaconState) readFromEveryValidatorMVSlice(f func(idx int, val state.ReadOnlyValidator) error) error {
+func (b *BeaconState) readFromEveryValidatorMVSlice(f func(idx int, val validator.ReadOnlyValidator) error) error {
 	if b.validatorsMultiValue == nil {
 		return state.ErrNilValidatorsInState
 	}
@@ -250,7 +287,7 @@ func (b *BeaconState) readFromEveryValidatorMVSlice(f func(idx int, val state.Re
 		if err != nil {
 			return err
 		}
-		rov, err := NewValidator(v)
+		rov, err := validator.NewValidator(v)
 		if err != nil {
 			return err
 		}

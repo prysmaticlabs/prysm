@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/backfill/coverage"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -153,7 +154,7 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	go populatePubkeyCacheOnce.Do(func() {
 		log.Debug("Populating pubkey cache")
 		start := time.Now()
-		if err := fState.ReadFromEveryValidator(func(_ int, val state.ReadOnlyValidator) error {
+		if err := fState.ReadFromEveryValidator(func(_ int, val validator.ReadOnlyValidator) error {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}

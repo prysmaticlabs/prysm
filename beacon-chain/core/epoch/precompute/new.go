@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"go.opencensus.io/trace"
 )
 
@@ -27,7 +28,7 @@ func New(ctx context.Context, s state.BeaconState) ([]*Validator, *Balance, erro
 	currentEpoch := time.CurrentEpoch(s)
 	prevEpoch := time.PrevEpoch(s)
 
-	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	if err := s.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
 		withdrawable := prevEpoch+1 >= val.WithdrawableEpoch()
 		pVal := &Validator{

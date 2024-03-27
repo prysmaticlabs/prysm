@@ -32,6 +32,7 @@ import (
 	blocktest "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -2832,7 +2833,13 @@ func Test_validatorStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := validatorStatus(tt.validator, tt.epoch); got != tt.want {
+			var roval validator2.ReadOnlyValidator
+			if tt.validator != nil {
+				var err error
+				roval, err = validator2.NewValidator(tt.validator)
+				require.NoError(t, err)
+			}
+			if got := validatorStatus(roval, tt.epoch); got != tt.want {
 				t.Errorf("validatorStatus() = %v, want %v", got, tt.want)
 			}
 		})

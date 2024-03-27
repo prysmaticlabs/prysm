@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
@@ -301,7 +302,7 @@ func (s *Service) headGenesisValidatorsRoot() [32]byte {
 // This returns the validator referenced by the provided index in
 // the head state.
 // This is a lock free version.
-func (s *Service) headValidatorAtIndex(index primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
+func (s *Service) headValidatorAtIndex(index primitives.ValidatorIndex) (validator.ReadOnlyValidator, error) {
 	return s.head.state.ValidatorAtIndexReadOnly(index)
 }
 

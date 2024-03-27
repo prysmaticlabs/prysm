@@ -11,12 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
-	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
-	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -106,7 +104,7 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	epoch := slots.ToEpoch(st.Slot())
-	valCount, err := validatorCountByStatus(st.Validators(), statusVals, epoch)
+	valCount, err := validatorCountByStatus(st.ValidatorsReadOnly(), statusVals, epoch)
 	if err != nil {
 		errJson := &httputil.DefaultJsonError{
 			Message: fmt.Sprintf("could not get validator count: %v", err),
@@ -126,18 +124,14 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 }
 
 // validatorCountByStatus returns a slice of validator count for each status in the given epoch.
-func validatorCountByStatus(validators []*eth.Validator, statuses []validator.Status, epoch primitives.Epoch) ([]*structs.ValidatorCount, error) {
+func validatorCountByStatus(validators []validator.ReadOnlyValidator, statuses []validator.Status, epoch primitives.Epoch) ([]*structs.ValidatorCount, error) {
 	countByStatus := make(map[validator.Status]uint64)
 	for _, val := range validators {
-		readOnlyVal, err := statenative.NewValidator(val)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert validator: %v", err)
-		}
-		valStatus, err := helpers.ValidatorStatus(readOnlyVal, epoch)
+		valStatus, err := helpers.ValidatorStatus(val, epoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not get validator status: %v", err)
 		}
-		valSubStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
+		valSubStatus, err := helpers.ValidatorSubStatus(val, epoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not get validator sub status: %v", err)
 		}

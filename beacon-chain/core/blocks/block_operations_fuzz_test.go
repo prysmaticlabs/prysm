@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -434,7 +435,7 @@ func TestFuzzVerifyExit_10000(t *testing.T) {
 		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
 		require.NoError(t, err)
 
-		val, err := state_native.NewValidator(&ethpb.Validator{})
+		val, err := validator.NewValidator(&ethpb.Validator{})
 		_ = err
 		err = VerifyExitAndSignature(val, s, ve)
 		_ = err

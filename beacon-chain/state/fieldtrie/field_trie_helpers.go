@@ -9,6 +9,7 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v5/container/multi-value-slice"
 	pmath "github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -178,10 +179,19 @@ func handle32ByteMVslice(mv multi_value_slice.MultiValueSliceComposite[[32]byte]
 func handleValidatorMVSlice(mv multi_value_slice.MultiValueSliceComposite[*ethpb.Validator], indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
-		return stateutil.OptimizedValidatorRoots(mv.Value(mv.State()))
+		vals := mv.Value(mv.State())
+		rovals := make([]validator.ReadOnlyValidator, len(vals))
+		var err error
+		for i, v := range vals {
+			rovals[i], err = validator.NewValidator(v)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return stateutil.OptimizedValidatorRoots(rovals)
 	}
 	roots := make([][32]byte, 0, length)
-	rootCreator := func(input *ethpb.Validator) error {
+	rootCreator := func(input validator.ReadOnlyValidator) error {
 		newRoot, err := stateutil.ValidatorRootWithHasher(input)
 		if err != nil {
 			return err
@@ -199,7 +209,11 @@ func handleValidatorMVSlice(mv multi_value_slice.MultiValueSliceComposite[*ethpb
 			if err != nil {
 				return nil, err
 			}
-			err = rootCreator(val)
+			roval, err := validator.NewValidator(val)
+			if err != nil {
+				return nil, err
+			}
+			err = rootCreator(roval)
 			if err != nil {
 				return nil, err
 			}

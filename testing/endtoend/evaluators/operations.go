@@ -13,10 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	corehelpers "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz/detect"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -364,7 +364,7 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 		return errors.Wrap(err, "could not get state")
 	}
 	var execIndices []int
-	err = st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	err = st.ReadFromEveryValidator(func(idx int, val validator.ReadOnlyValidator) error {
 		if val.WithdrawalCredentials()[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte {
 			execIndices = append(execIndices, idx)
 		}
