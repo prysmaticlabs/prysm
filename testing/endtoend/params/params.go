@@ -146,10 +146,10 @@ const (
 	PrysmBeaconNodeRPCPort     = 4150
 	PrysmBeaconNodeUDPPort     = PrysmBeaconNodeRPCPort + portSpan
 	PrysmBeaconNodeQUICPort    = PrysmBeaconNodeRPCPort + 2*portSpan
-	PrysmBeaconNodeTCPPort     = PrysmBeaconNodeRPCPort + 2*portSpan
-	PrysmBeaconNodeGatewayPort = PrysmBeaconNodeRPCPort + 3*portSpan
-	PrysmBeaconNodeMetricsPort = PrysmBeaconNodeRPCPort + 4*portSpan
-	PrysmBeaconNodePprofPort   = PrysmBeaconNodeRPCPort + 5*portSpan
+	PrysmBeaconNodeTCPPort     = PrysmBeaconNodeRPCPort + 3*portSpan
+	PrysmBeaconNodeGatewayPort = PrysmBeaconNodeRPCPort + 4*portSpan
+	PrysmBeaconNodeMetricsPort = PrysmBeaconNodeRPCPort + 5*portSpan
+	PrysmBeaconNodePprofPort   = PrysmBeaconNodeRPCPort + 6*portSpan
 
 	LighthouseBeaconNodeP2PPort     = 5150
 	LighthouseBeaconNodeHTTPPort    = LighthouseBeaconNodeP2PPort + portSpan
