@@ -86,6 +86,7 @@ go_library(
         "//proto/migration:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/attestation:go_default_library",
+        "//runtime/debug:go_default_library",
         "//runtime/version:go_default_library",
         "//time:go_default_library",
         "//time/slots:go_default_library",

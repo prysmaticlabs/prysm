@@ -46,6 +46,10 @@ var (
 		Name:  "save-invalid-block-temp",
 		Usage: "Writes invalid blocks to temp directory.",
 	}
+	saveUnavailableBlockTempFlag = &cli.BoolFlag{
+		Name:  "save-unavailable-block-temp",
+		Usage: "Writes DA unavailable blocks to temp directory. These are blocks missing blobs on chain.",
+	}
 	saveInvalidBlobTempFlag = &cli.BoolFlag{
 		Name:  "save-invalid-blob-temp",
 		Usage: "Writes invalid blobs to temp directory.",
@@ -206,6 +210,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	writeSSZStateTransitionsFlag,
 	saveInvalidBlockTempFlag,
 	saveInvalidBlobTempFlag,
+	saveUnavailableBlockTempFlag,
 	disableGRPCConnectionLogging,
 	HoleskyTestnet,
 	PraterTestnet,
