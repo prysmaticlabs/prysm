@@ -27,7 +27,7 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// GetAttestationData fetches the attestation data that should be signed signed
+// GetAttestationData fetches the attestation data that should be signed
 // and submitted to the beacon node by an attester.
 func (v *validator) GetAttestationData(ctx context.Context, slot primitives.Slot, pubkey [fieldparams.BLSPubkeyLength]byte) *ethpb.AttestationData {
 	ctx, span := trace.StartSpan(ctx, "validator.GetAttestationData")
