@@ -12,6 +12,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
+func TestCommitteeKey_Nil(t *testing.T) {
+	var c *Committees
+
+	_, err := committeeCachesKeyFn(c)
+	require.ErrorIs(t, err, ErrNilValueProvided)
+}
+
 func TestCommitteeKeyFuzz_OK(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	c := &Committees{}
@@ -52,9 +59,7 @@ func TestCommitteeCache_FuzzActiveIndices(t *testing.T) {
 
 	for i := 0; i < 100000; i++ {
 		fuzzer.Fuzz(c)
-		err := cache.AddCommitteeShuffledList(context.Background(), c)
-		if err != nil {
-			require.Equal(t, false, !errors.Is(err, ErrNilValueProvided))
+		if err = cache.AddCommitteeShuffledList(context.Background(), c); err != nil {
 			continue
 		}
 
