@@ -57,28 +57,13 @@ type CommitteeCache[K string, V Committees] struct {
 }
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
-func NewCommitteesCache[K string, V Committees]() (*CommitteeCache[K, V], error) {
-	cache, err := lru.New[K, V](maxCommitteesCacheSize)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrNilCache, err)
-	}
-
-	isCacheMissNil, isCacheHitNil := committeeCacheMiss == nil, committeeCacheMiss == nil
-	if isCacheMissNil || isCacheHitNil {
-		return nil,
-			fmt.Errorf("%w: isCacheMissNil=<%t>, isCacheHitNil=<%t>",
-				ErrNilMetrics,
-				isCacheHitNil,
-				isCacheHitNil,
-			)
-	}
-
+func NewCommitteesCache[K string, V Committees]() *CommitteeCache[K, V] {
 	return &CommitteeCache[K, V]{
-		lru:           cache,
+		lru:           newLRUCache[K, V](),
 		promCacheMiss: committeeCacheMiss,
 		promCacheHit:  committeeCacheHit,
 		inProgress:    make(map[string]bool),
-	}, nil
+	}
 }
 
 // get returns the underlying lru cache.

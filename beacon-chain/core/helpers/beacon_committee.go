@@ -25,17 +25,9 @@ import (
 )
 
 var (
-	committeeCache       = getCommitteeCacheOrPanic()
+	committeeCache       = cache.NewCommitteesCache()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
 )
-
-func getCommitteeCacheOrPanic() *cache.CommitteeCache[string, cache.Committees] {
-	committeeCache, err := cache.NewCommitteesCache()
-	if err != nil {
-		panic(fmt.Errorf("could not get committee cache: %w", err))
-	}
-	return committeeCache
-}
 
 // SlotCommitteeCount returns the number of beacon committees of a slot. The
 // active validator count is provided as an argument rather than an imported implementation
