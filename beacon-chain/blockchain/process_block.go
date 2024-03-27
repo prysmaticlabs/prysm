@@ -587,8 +587,8 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			s.blobNotifiers.delete(root)
 			return nil
 		case <-ctx.Done():
-			debug.SaveBlockToTemp(signed)
-			return errors.Wrap(ctx.Err(), "context deadline waiting for blob sidecars")
+      debug.SaveBlockToTemp(signed)
+			return errors.Wrapf(ctx.Err(), "context deadline waiting for blob sidecars slot: %d, BlockRoot: %#x", block.Slot(), root)
 		}
 	}
 }
@@ -596,7 +596,7 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 func daCheckLogFields(root [32]byte, slot primitives.Slot, expected, missing int) logrus.Fields {
 	return logrus.Fields{
 		"slot":          slot,
-		"root":          root,
+		"root":          fmt.Sprintf("%#x", root),
 		"blobsExpected": expected,
 		"blobsWaiting":  missing,
 	}

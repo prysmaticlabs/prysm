@@ -44,7 +44,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 				r := uint64(123)
 				a, err := New(&enginev1.PayloadAttributes{Timestamp: r})
 				require.NoError(t, err)
-				require.Equal(t, r, a.Timestamps())
+				require.Equal(t, r, a.Timestamp())
 			},
 		},
 		{

@@ -399,7 +399,7 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	assert.Equal(t, 0, len(s.blkRootToPendingAtts), "Did not delete block keys")
 }
 
-func TestValidatePendingAtts_NoDuplicatingAggregatorIndex(t *testing.T) {
+func TestValidatePendingAtts_NoDuplicatingAtts(t *testing.T) {
 	s := &Service{
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
@@ -420,7 +420,7 @@ func TestValidatePendingAtts_NoDuplicatingAggregatorIndex(t *testing.T) {
 		Message: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 2,
 			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: r2[:]}}}})
+				Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r2[:]}}}})
 
 	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r1]), "Did not save pending atts")
 	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r2]), "Did not save pending atts")

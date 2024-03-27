@@ -29,7 +29,7 @@ type beaconApiValidatorClient struct {
 
 func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...ValidatorClientOpt) iface.ValidatorClient {
 	c := &beaconApiValidatorClient{
-		genesisProvider:         beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
+		genesisProvider:         &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
 		dutiesProvider:          beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler},
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler:         jsonRestHandler,

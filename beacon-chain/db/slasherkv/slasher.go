@@ -70,12 +70,12 @@ func (s *Store) LastEpochWrittenForValidators(
 	return attestedEpochs, err
 }
 
-// SaveLastEpochsWrittenForValidators updates the latest epoch a slice
-// of validator indices has attested to.
-func (s *Store) SaveLastEpochsWrittenForValidators(
+// SaveLastEpochWrittenForValidators saves the latest epoch
+// that each validator has attested to in the provided map.
+func (s *Store) SaveLastEpochWrittenForValidators(
 	ctx context.Context, epochByValIndex map[primitives.ValidatorIndex]primitives.Epoch,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochsWrittenForValidators")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochWrittenForValidators")
 	defer span.End()
 
 	const batchSize = 10000
@@ -157,7 +157,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 				attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 
 				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
-				localDoubleVotes := []*slashertypes.AttesterDoubleVote{}
+				localDoubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
 
 				for _, valIdx := range attToProcess.IndexedAttestation.AttestingIndices {
 					// Check if there is signing root in the database for this combination
@@ -166,7 +166,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 					validatorEpochKey := append(encEpoch, encIdx...)
 					attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
 
-					// An attestation record key is comprised of a signing root (32 bytes).
+					// An attestation record key consists of a signing root (32 bytes).
 					if len(attRecordsKey) < attestationRecordKeySize {
 						// If there is no signing root for this combination,
 						// then there is no double vote. We can continue to the next validator.
