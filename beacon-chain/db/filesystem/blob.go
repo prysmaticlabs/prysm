@@ -121,7 +121,7 @@ var ErrBlobStorageSummarizerUnavailable = errors.New("BlobStorage not initialize
 // BlobStorageSummarizer is not ready immediately on node startup because it needs to sample the blob filesystem to
 // determine which blobs are available.
 func (bs *BlobStorage) WaitForSummarizer(ctx context.Context) (BlobStorageSummarizer, error) {
-	if bs.pruner == nil {
+	if bs == nil || bs.pruner == nil {
 		return nil, ErrBlobStorageSummarizerUnavailable
 	}
 	return bs.pruner.waitForCache(ctx)

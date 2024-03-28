@@ -37,13 +37,27 @@ type blobPruner struct {
 	fs           afero.Fs
 }
 
-func newBlobPruner(fs afero.Fs, retain primitives.Epoch) (*blobPruner, error) {
+type prunerOpt func(*blobPruner) error
+
+func withWarmedCache() prunerOpt {
+	return func(p *blobPruner) error {
+		return p.warmCache()
+	}
+}
+
+func newBlobPruner(fs afero.Fs, retain primitives.Epoch, opts ...prunerOpt) (*blobPruner, error) {
 	r, err := slots.EpochStart(retain + retentionBuffer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set retentionSlots")
 	}
 	cw := make(chan struct{})
-	return &blobPruner{fs: fs, windowSize: r, cache: newBlobStorageCache(), cacheWarmed: cw}, nil
+	p := &blobPruner{fs: fs, windowSize: r, cache: newBlobStorageCache(), cacheWarmed: cw}
+	for _, o := range opts {
+		if err := o(p); err != nil {
+			return nil, err
+		}
+	}
+	return p, nil
 }
 
 // notify updates the pruner's view of root->blob mappings. This allows the pruner to build a cache
