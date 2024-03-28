@@ -173,15 +173,156 @@ func (c *TestCache[K, V]) Clear() {
 	purge[K, V](c)
 }
 
-func Test_isNil(t *testing.T) {
-	var proto interface{}
-	var beaconState *state.BeaconState
+// --------------------------------------------------------------------------------- //
 
-	proto = beaconState
-	require.Equal(t, isNil(proto), true)
-	require.Equal(t, confusingIsNil(&proto), false)
+const (
+	maxTestBeaconCacheSize = int(4)
+)
+
+var (
+	testPromBeaconCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_beacon_test_cache_hit",
+		Help: "The number of get requests that are present in the cache.",
+	})
+	testPromBeaconCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_beacon_test_cache_miss",
+		Help: "The number of get requests that aren't present in the cache.",
+	})
+)
+
+type TestBeaconCache[K string, V state.BeaconState] struct {
+	lru                         *lru.Cache[K, V]
+	promCacheMiss, promCacheHit prometheus.Counter
 }
 
-func confusingIsNil[T any](arg *T) bool {
-	return arg == nil
+func (c *TestBeaconCache[K, V]) get() *lru.Cache[K, V] {
+	return c.lru
+}
+
+func (c *TestBeaconCache[K, V]) hitCache() {
+	c.promCacheHit.Inc()
+}
+
+func (c *TestBeaconCache[K, V]) missCache() {
+	c.promCacheMiss.Inc()
+}
+
+func (c *TestBeaconCache[K, V]) Clear() {
+	purge[K, V](c)
+}
+
+func NewTestBeaconCache[K string, V state.BeaconState]() (*TestBeaconCache[K, V], error) {
+	return &TestBeaconCache[K, V]{
+		lru:           newLRUCacheOrPanics[K, V](maxTestBeaconCacheSize, testPromBeaconCacheHit, testPromBeaconCacheMiss),
+		promCacheMiss: testPromBeaconCacheMiss,
+		promCacheHit:  testPromBeaconCacheHit,
+	}, nil
+}
+
+func (c *TestBeaconCache[K, V]) putIsNil(k K, v V) error {
+	return add[K, V](c, k, v)
+}
+
+func (c *TestBeaconCache[K, V]) putIsNilPtr(k K, v *V) error {
+	return add[K, V](c, k, *v)
+}
+
+// --------------------------------------------------------------------------------- //
+
+const (
+	maxTestPrimitiveCacheSize = int(4)
+)
+
+var (
+	testPromPrimitiveCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_primitive_test_cache_hit",
+		Help: "The number of get requests that are present in the cache.",
+	})
+	testPromPrimitiveCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_primitive_test_cache_miss",
+		Help: "The number of get requests that aren't present in the cache.",
+	})
+)
+
+type TestPrimitiveCache[K string, V int] struct {
+	lru                         *lru.Cache[K, V]
+	promCacheMiss, promCacheHit prometheus.Counter
+}
+
+func (c *TestPrimitiveCache[K, V]) get() *lru.Cache[K, V] {
+	return c.lru
+}
+
+func (c *TestPrimitiveCache[K, V]) hitCache() {
+	c.promCacheHit.Inc()
+}
+
+func (c *TestPrimitiveCache[K, V]) missCache() {
+	c.promCacheMiss.Inc()
+}
+
+func (c *TestPrimitiveCache[K, V]) Clear() {
+	purge[K, V](c)
+}
+
+func NewTestPrimitiveCache[K string, V int]() (*TestPrimitiveCache[K, V], error) {
+	return &TestPrimitiveCache[K, V]{
+		lru:           newLRUCacheOrPanics[K, V](maxTestPrimitiveCacheSize, testPromPrimitiveCacheHit, testPromPrimitiveCacheMiss),
+		promCacheMiss: testPromPrimitiveCacheMiss,
+		promCacheHit:  testPromPrimitiveCacheHit,
+	}, nil
+}
+
+func (c *TestPrimitiveCache[K, V]) putIsNil(k K, v V) error {
+	return add[K, V](c, k, v)
+}
+
+func (c *TestPrimitiveCache[K, V]) putIsNilPtr(k K, v *V) error {
+	return add[K, V](c, k, *v)
+}
+
+func Test_isNil(t *testing.T) {
+	c, err := NewTestBeaconCache[string, state.BeaconState]()
+	require.NoError(t, err)
+
+	type put struct {
+		key   string
+		state state.BeaconState
+	}
+
+	putObj := put{}
+	targetErr := ErrNilValueProvided
+	require.Equal(t, true, putObj.state == nil)
+	require.ErrorIs(t, c.putIsNil(putObj.key, putObj.state), targetErr)
+	require.ErrorIs(t, c.putIsNilPtr(putObj.key, &putObj.state), targetErr)
+	putObjPtr := &put{}
+	require.ErrorIs(t, c.putIsNil(putObj.key, putObjPtr.state), targetErr)
+	require.ErrorIs(t, c.putIsNilPtr(putObj.key, &putObjPtr.state), targetErr)
+	var b state.BeaconState
+	putObjWithNilState := put{state: b}
+	require.ErrorIs(t, c.putIsNil(putObj.key, putObjWithNilState.state), targetErr)
+	require.ErrorIs(t, c.putIsNilPtr(putObj.key, &putObjWithNilState.state), targetErr)
+
+	// As generics doesn't differentiate primitives from custom objects,
+	// we need to verify that it also works with primitives as they have default values
+
+	cp, err := NewTestPrimitiveCache[string, int]()
+	require.NoError(t, err)
+
+	type putp struct {
+		key   string
+		state int
+	}
+
+	putpObj := putp{}
+	targetErr = nil
+	require.ErrorIs(t, cp.putIsNil(putpObj.key, putpObj.state), targetErr)
+	require.ErrorIs(t, cp.putIsNilPtr(putpObj.key, &putpObj.state), targetErr)
+	putpObjPtr := &putp{}
+	require.ErrorIs(t, cp.putIsNil(putpObjPtr.key, putpObjPtr.state), targetErr)
+	require.ErrorIs(t, cp.putIsNilPtr(putpObjPtr.key, &putpObjPtr.state), targetErr)
+	var p int
+	putpObjWithNilState := putp{state: p}
+	require.ErrorIs(t, cp.putIsNil(putpObj.key, putpObjWithNilState.state), targetErr)
+	require.ErrorIs(t, cp.putIsNilPtr(putpObj.key, &putpObjWithNilState.state), targetErr)
 }
