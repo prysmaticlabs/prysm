@@ -297,6 +297,7 @@ func TestKeymanager_AddPublicKeys(t *testing.T) {
 		require.Equal(t, keymanager.StatusImported, status.Status)
 	}
 	statuses, err = km.AddPublicKeys(publicKeys)
+	require.NoError(t, err)
 	for _, status := range statuses {
 		require.Equal(t, keymanager.StatusDuplicate, status.Status)
 	}
