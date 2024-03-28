@@ -28,7 +28,7 @@ func (s BlobStorageSummary) HasIndex(idx uint64) bool {
 
 // AllAvailable returns true if we have all blobs for all indices from 0 to count-1.
 func (s BlobStorageSummary) AllAvailable(count int) bool {
-	if count >= fieldparams.MaxBlobsPerBlock {
+	if count > fieldparams.MaxBlobsPerBlock {
 		return false
 	}
 	for i := 0; i < count; i++ {
