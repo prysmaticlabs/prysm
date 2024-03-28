@@ -137,9 +137,10 @@ var (
 
 	// AuthTokenPathFlag defines the path to the auth token used to secure the validator api.
 	AuthTokenPathFlag = &cli.StringFlag{
-		Name:  "token-file",
-		Usage: "Path to auth token file used for validator apis",
-		Value: filepath.Join(filepath.Join(DefaultValidatorDir(), WalletDefaultDirName), api.AuthTokenFileName),
+		Name:    "keymanager-token-file",
+		Usage:   "Path to auth token file used for validator apis",
+		Value:   filepath.Join(filepath.Join(DefaultValidatorDir(), WalletDefaultDirName), api.AuthTokenFileName),
+		Aliases: []string{"validator-api-bearer-file"},
 	}
 
 	// WalletDirFlag defines the path to a wallet directory for Prysm accounts.
