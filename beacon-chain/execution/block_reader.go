@@ -189,8 +189,8 @@ func (s *Service) findMinTargetEth1Block(ctx context.Context, lowerBoundBlk uint
 		info, err := s.retrieveHeaderInfo(ctx, bn)
 		if err != nil {
 			// If the header with the number bn does not exist,
-			// the previous block is the earliest block whose timestamp
-			// is less than or equal to the target time.
+			// the previous block is the latest block whose timestamp
+			// is just earlier than or equal to the target time.
 			if errors.Is(err, ethereum.NotFound) {
 				return s.retrieveHeaderInfo(ctx, bn-1)
 			}
