@@ -40,10 +40,10 @@ func GetWords(number int) string {
 
 As you see above codes are the same, but the second code are easier to understand, that is why the cognitive complexity score are lower compare to the first one.
 
-## Comparison with cyclometic complexity
+## Comparison with cyclomatic complexity
 
 ### Example 1
-#### Cyclometic complexity
+#### Cyclomatic complexity
 ```go
 func GetWords(number int) string {      // +1
     switch number {
