@@ -739,6 +739,9 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 			return err
 		}
 	}
+	if err != nil {
+		return err
+	}
 	s.chainStartData = eth1DataInDB.ChainstartData
 	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {
 		s.preGenesisState, err = native.InitializeFromProtoPhase0(eth1DataInDB.BeaconState)
