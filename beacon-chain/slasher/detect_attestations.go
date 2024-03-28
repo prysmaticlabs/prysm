@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
+	"golang.org/x/exp/maps"
 )
 
 // Takes in a list of indexed attestation wrappers and returns any
@@ -131,7 +132,7 @@ func (s *Service) checkSurroundVotes(
 		}
 
 		// Update the latest updated epoch for all validators involved to the current chunk.
-		indexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
+		indexes := s.params.ValidatorIndexesInChunk(validatorChunkIndex)
 		for _, index := range indexes {
 			s.latestEpochUpdatedForValidator[index] = currentEpoch
 		}
@@ -272,44 +273,20 @@ func (s *Service) updatedChunkByChunkIndex(
 
 	// minFirstEpochToUpdate is set to the smallest first epoch to update for all validators in the chunk
 	// corresponding to the `validatorChunkIndex`.
-	var minFirstEpochToUpdate *primitives.Epoch
+	var (
+		minFirstEpochToUpdate *primitives.Epoch
+		neededChunkIndexesMap map[uint64]bool
 
-	neededChunkIndexesMap := map[uint64]bool{}
+		err error
+	)
+	validatorIndexes := s.params.ValidatorIndexesInChunk(validatorChunkIndex)
 
-	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
-	for _, validatorIndex := range validatorIndexes {
-		// Retrieve the first epoch to write for the validator index.
-		isAnEpochToUpdate, firstEpochToUpdate, err := s.firstEpochToUpdate(validatorIndex, currentEpoch)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get first epoch to write for validator index %d with current epoch %d", validatorIndex, currentEpoch)
-		}
-
-		if !isAnEpochToUpdate {
-			// If there is no epoch to write, skip.
-			continue
-		}
-
-		// If, for this validator index, the chunk corresponding to the first epoch to write
-		// (and all following epochs until the current epoch) are already flagged as needed,
-		// skip.
-		if minFirstEpochToUpdate != nil && *minFirstEpochToUpdate <= firstEpochToUpdate {
-			continue
-		}
-
-		minFirstEpochToUpdate = &firstEpochToUpdate
-
-		// Add new needed chunk indexes to the map.
-		for i := firstEpochToUpdate; i <= currentEpoch; i++ {
-			chunkIndex := s.params.chunkIndex(i)
-			neededChunkIndexesMap[chunkIndex] = true
-		}
+	if neededChunkIndexesMap, err = s.findNeededChunkIndexes(validatorIndexes, currentEpoch, minFirstEpochToUpdate); err != nil {
+		return nil, errors.Wrap(err, "could not find the needed chunk indexed")
 	}
 
-	// Get the list of needed chunk indexes.
-	neededChunkIndexes := make([]uint64, 0, len(neededChunkIndexesMap))
-	for chunkIndex := range neededChunkIndexesMap {
-		neededChunkIndexes = append(neededChunkIndexes, chunkIndex)
-	}
+	// Transform the map of needed chunk indexes to a slice.
+	neededChunkIndexes := maps.Keys(neededChunkIndexesMap)
 
 	// Retrieve needed chunks from the database.
 	chunkByChunkIndex, err := s.loadChunksFromDisk(ctx, validatorChunkIndex, chunkKind, neededChunkIndexes)
@@ -332,7 +309,7 @@ func (s *Service) updatedChunkByChunkIndex(
 		epochToUpdate := firstEpochToUpdate
 
 		for epochToUpdate <= currentEpoch {
-			// Get the chunk index for the ecpoh to write.
+			// Get the chunk index for the epoch to write.
 			chunkIndex := s.params.chunkIndex(epochToUpdate)
 
 			// Get the chunk corresponding to the chunk index from the `chunkByChunkIndex` map.
@@ -361,6 +338,45 @@ func (s *Service) updatedChunkByChunkIndex(
 	}
 
 	return chunkByChunkIndex, nil
+}
+
+// findNeededChunkIndexes returns a map of chunk indexes
+// it loops over the validator indexes and finds the first epoch to update for each validator index.
+func (s *Service) findNeededChunkIndexes(
+	validatorIndexes []primitives.ValidatorIndex,
+	currentEpoch primitives.Epoch,
+	minFirstEpochToUpdate *primitives.Epoch,
+) (map[uint64]bool, error) {
+	neededChunkIndexesMap := map[uint64]bool{}
+
+	for _, validatorIndex := range validatorIndexes {
+		// Retrieve the first epoch to write for the validator index.
+		isAnEpochToUpdate, firstEpochToUpdate, err := s.firstEpochToUpdate(validatorIndex, currentEpoch)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get first epoch to write for validator index %d with current epoch %d", validatorIndex, currentEpoch)
+		}
+
+		if !isAnEpochToUpdate {
+			// If there is no epoch to write, skip.
+			continue
+		}
+
+		// If, for this validator index, the chunk corresponding to the first epoch to write
+		// (and all following epochs until the current epoch) are already flagged as needed,
+		// skip.
+		if minFirstEpochToUpdate != nil && *minFirstEpochToUpdate <= firstEpochToUpdate {
+			continue
+		}
+
+		minFirstEpochToUpdate = &firstEpochToUpdate
+
+		// Add new needed chunk indexes to the map.
+		for i := firstEpochToUpdate; i <= currentEpoch; i++ {
+			chunkIndex := s.params.chunkIndex(i)
+			neededChunkIndexesMap[chunkIndex] = true
+		}
+	}
+	return neededChunkIndexesMap, nil
 }
 
 // firstEpochToUpdate, given a validator index and the current epoch, returns a boolean indicating
