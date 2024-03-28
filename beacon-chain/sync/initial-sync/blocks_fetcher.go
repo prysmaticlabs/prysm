@@ -336,6 +336,10 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		Count:     count,
 		Step:      1,
 	}
+	bestPeers := f.hasSufficientBandwith(peers, req.Count)
+	// We append the best peers to the front so that higher capacity
+	// peers are dialed first.
+	peers = append(bestPeers, peers...)
 	for i := 0; i < len(peers); i++ {
 		p := peers[i]
 		blocks, err := f.requestBlocks(ctx, req, p)
@@ -472,7 +476,7 @@ func missingCommitError(root [32]byte, slot primitives.Slot, missing [][]byte) e
 }
 
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
-func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.BlockWithROBlobs, pid peer.ID) ([]blocks2.BlockWithROBlobs, error) {
+func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.BlockWithROBlobs, pid peer.ID, peers []peer.ID) ([]blocks2.BlockWithROBlobs, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsFromPeer")
 	defer span.End()
 	if slots.ToEpoch(f.clock.CurrentSlot()) < params.BeaconConfig().DenebForkEpoch {
@@ -487,13 +491,28 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 	if req == nil {
 		return bwb, nil
 	}
-	// Request blobs from the same peer that gave us the blob batch.
-	blobs, err := f.requestBlobs(ctx, req, pid)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not request blobs by range")
+	// We dial the initial peer first to ensure that we get the desired set of blobs.
+	wantedPeers := append([]peer.ID{pid}, peers...)
+	bestPeers := f.hasSufficientBandwith(wantedPeers, req.Count)
+	// We append the best peers to the front so that higher capacity
+	// peers are dialed first.
+	peers = append(bestPeers, peers...)
+	for i := 0; i < len(peers); i++ {
+		p := peers[i]
+		blobs, err := f.requestBlobs(ctx, req, p)
+		if err != nil {
+			log.WithField("peer", p).WithError(err).Debug("Could not request blocks by range from peer")
+			continue
+		}
+		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(p)
+		robs, err := verifyAndPopulateBlobs(bwb, blobs, blobWindowStart)
+		if err != nil {
+			log.WithField("peer", p).WithError(err).Debug("invalid BeaconBlocksByRange response")
+			continue
+		}
+		return robs, err
 	}
-	f.p2p.Peers().Scorers().BlockProviderScorer().Touch(pid)
-	return verifyAndPopulateBlobs(bwb, blobs, blobWindowStart)
+	return nil, errNoPeersAvailable
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
@@ -604,6 +623,18 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 		// Peer has gathered enough capacity to be polled again.
 	}
 	return nil
+}
+
+func (f *blocksFetcher) hasSufficientBandwith(peers []peer.ID, count uint64) []peer.ID {
+	filteredPeers := []peer.ID{}
+	for _, p := range peers {
+		if f.rateLimiter.Remaining(p.String()) < int64(count) {
+			continue
+		}
+		copiedP := p
+		filteredPeers = append(filteredPeers, copiedP)
+	}
+	return filteredPeers
 }
 
 // Determine how long it will take for us to have the required number of blocks allowed by our rate limiter.
