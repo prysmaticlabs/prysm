@@ -42,7 +42,9 @@ func TestGet(t *testing.T) {
 
 	jsonRestHandler := BeaconApiJsonRestHandler{
 		client: http.Client{Timeout: time.Second * 5},
-		host:   server.URL,
+		host: func() string {
+			return server.URL
+		},
 	}
 	resp := &structs.GetGenesisResponse{}
 	require.NoError(t, jsonRestHandler.Get(ctx, endpoint+"?arg1=abc&arg2=def", resp))
@@ -88,7 +90,9 @@ func TestPost(t *testing.T) {
 
 	jsonRestHandler := BeaconApiJsonRestHandler{
 		client: http.Client{Timeout: time.Second * 5},
-		host:   server.URL,
+		host: func() string {
+			return server.URL
+		},
 	}
 	resp := &structs.GetGenesisResponse{}
 	require.NoError(t, jsonRestHandler.Post(ctx, endpoint, headers, bytes.NewBuffer(dataBytes), resp))

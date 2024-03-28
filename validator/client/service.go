@@ -15,6 +15,7 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
@@ -194,12 +195,19 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
+	u := strings.ReplaceAll(v.conn.GetBeaconApiUrl(), " ", "")
+	urls := strings.Split(u, ",")
 	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
 		http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
-		v.conn.GetBeaconApiUrl(),
+		func() string {
+			return urls[0]
+		},
 	)
 
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
+	if len(urls) > 1 && features.Get().EnableBeaconRESTApi {
+		runNodeSwitcherRoutine(v.ctx, v.validator, urls)
+	}
 
 	valStruct := &validator{
 		validatorClient:                validatorClient,
@@ -378,4 +386,31 @@ func (v *ValidatorService) DeleteGraffiti(ctx context.Context, pubKey [fieldpara
 		return errors.New("validator is unavailable")
 	}
 	return v.validator.DeleteGraffiti(ctx, pubKey)
+}
+
+func runNodeSwitcherRoutine(ctx context.Context, v iface.Validator, endpoints []string) {
+	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	go func() {
+		for {
+			select {
+			case <-healthCheckTicker.C:
+				healthTracker := v.HealthTracker()
+				if !healthTracker.IsHealthy() {
+					for i, url := range endpoints {
+						if url == v.RetrieveHost() {
+							next := (i + 1) % len(endpoints)
+							log.Infof("Beacon node at %s is not responding, switching to %s", url, endpoints[next])
+							v.UpdateHost(endpoints[next])
+						}
+					}
+				}
+			case <-ctx.Done():
+				if ctx.Err() != nil {
+					log.WithError(ctx.Err()).Error("Context cancelled")
+				}
+				log.Error("Context cancelled")
+				return
+			}
+		}
+	}()
 }

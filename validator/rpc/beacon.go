@@ -54,7 +54,12 @@ func (s *Server) registerBeaconClient() error {
 		s.beaconApiTimeout,
 	)
 
-	restHandler := beaconApi.NewBeaconApiJsonRestHandler(http.Client{Timeout: s.beaconApiTimeout}, s.beaconApiEndpoint)
+	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
+		http.Client{Timeout: s.beaconApiTimeout},
+		func() string {
+			return s.beaconApiEndpoint
+		},
+	)
 
 	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn, restHandler)
 	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn, restHandler)

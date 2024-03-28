@@ -230,3 +230,11 @@ func wrapInMetrics[Resp any](action string, f func() (Resp, error)) (Resp, error
 	}
 	return resp, err
 }
+
+func (c *beaconApiValidatorClient) RetrieveHost() string {
+	return c.jsonRestHandler.Host()
+}
+
+func (c *beaconApiValidatorClient) UpdateHost(host string) {
+	c.jsonRestHandler.ChangeHost(host)
+}
