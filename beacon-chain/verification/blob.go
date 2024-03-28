@@ -163,6 +163,7 @@ func (bv *ROBlobVerifier) NotFromFutureSlot() (err error) {
 	earliestStart := bv.clock.SlotStart(bv.blob.Slot()).Add(-1 * params.BeaconConfig().MaximumGossipClockDisparityDuration())
 	// If the system time is still before earliestStart, we consider the blob from a future slot and return an error.
 	if bv.clock.Now().Before(earliestStart) {
+		log.WithFields(logging.BlobFields(bv.blob)).Debug("sidecar slot is too far in the future")
 		return ErrFromFutureSlot
 	}
 	return nil
@@ -179,6 +180,7 @@ func (bv *ROBlobVerifier) SlotAboveFinalized() (err error) {
 		return errors.Wrapf(ErrSlotNotAfterFinalized, "error computing epoch start slot for finalized checkpoint (%d) %s", fcp.Epoch, err.Error())
 	}
 	if bv.blob.Slot() <= fSlot {
+		log.WithFields(logging.BlobFields(bv.blob)).Debug("sidecar slot is not after finalized checkpoint")
 		return ErrSlotNotAfterFinalized
 	}
 	return nil
@@ -228,6 +230,7 @@ func (bv *ROBlobVerifier) SidecarParentSeen(parentSeen func([32]byte) bool) (err
 	if bv.fc.HasNode(bv.blob.ParentRoot()) {
 		return nil
 	}
+	log.WithFields(logging.BlobFields(bv.blob)).Debug("parent root has not been seen")
 	return ErrSidecarParentNotSeen
 }
 
@@ -236,6 +239,7 @@ func (bv *ROBlobVerifier) SidecarParentSeen(parentSeen func([32]byte) bool) (err
 func (bv *ROBlobVerifier) SidecarParentValid(badParent func([32]byte) bool) (err error) {
 	defer bv.recordResult(RequireSidecarParentValid, &err)
 	if badParent != nil && badParent(bv.blob.ParentRoot()) {
+		log.WithFields(logging.BlobFields(bv.blob)).Debug("parent root is invalid")
 		return ErrSidecarParentInvalid
 	}
 	return nil
@@ -261,6 +265,7 @@ func (bv *ROBlobVerifier) SidecarParentSlotLower() (err error) {
 func (bv *ROBlobVerifier) SidecarDescendsFromFinalized() (err error) {
 	defer bv.recordResult(RequireSidecarDescendsFromFinalized, &err)
 	if !bv.fc.HasNode(bv.blob.ParentRoot()) {
+		log.WithFields(logging.BlobFields(bv.blob)).Debug("parent root not in forkchoice")
 		return ErrSidecarNotFinalizedDescendent
 	}
 	return nil
