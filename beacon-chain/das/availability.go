@@ -94,6 +94,11 @@ func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current pri
 	entry := s.cache.ensure(key)
 	defer s.cache.delete(key)
 	root := b.Root()
+	sumz, err := s.store.WaitForSummarizer(ctx)
+	if err == nil {
+		entry.setDiskSummary(sumz.Summary(root))
+	}
+
 	// Verify we have all the expected sidecars, and fail fast if any are missing or inconsistent.
 	// We don't try to salvage problematic batches because this indicates a misbehaving peer and we'd rather
 	// ignore their response and decrease their peer score.

@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/verify"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	blocks2 "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -28,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	p2ppb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -422,7 +422,7 @@ func slotRangeForCommitmentCounts(fc []commitmentCount, bs filesystem.BlobStorag
 	if len(fc) == 0 {
 		return nil
 	}
-	// If we don't have a blob summarizer, assume no blobs present and use [0,-1] indices for the request.
+	// If we don't have a blob summarizer, can't check local blobs, request blobs over complete range.
 	if bs == nil {
 		return &slotRange{low: fc[0].slot, high: fc[len(fc)-1].slot}
 	}
@@ -469,54 +469,56 @@ func sortBlobs(blobs []blocks.ROBlob) []blocks.ROBlob {
 var errBlobVerification = errors.New("peer unable to serve aligned BlobSidecarsByRange and BeaconBlockSidecarsByRange responses")
 var errMissingBlobsForBlockCommitments = errors.Wrap(errBlobVerification, "blobs unavailable for processing block with kzg commitments")
 
-func verifyAndPopulateBlobs(bwb []blocks2.BlockWithROBlobs, blobs []blocks.ROBlob, blobWindowStart primitives.Slot, bss filesystem.BlobStorageSummarizer) ([]blocks2.BlockWithROBlobs, error) {
-	if len(blobs) == 0 {
-		return bwb, nil
-	}
+func verifyAndPopulateBlobs(bwb []blocks2.BlockWithROBlobs, blobs []blocks.ROBlob, req *p2ppb.BlobSidecarsByRangeRequest, bss filesystem.BlobStorageSummarizer) ([]blocks2.BlockWithROBlobs, error) {
 	blobsByRoot := make(map[[32]byte][]blocks.ROBlob)
 	for i := range blobs {
-		if blobs[i].Slot() < blobWindowStart {
+		if blobs[i].Slot() < req.StartSlot {
 			continue
 		}
 		br := blobs[i].BlockRoot()
 		blobsByRoot[br] = append(blobsByRoot[br], blobs[i])
 	}
 	for i := range bwb {
-		bb := bwb[i]
-		if bb.Block.Block().Slot() < blobWindowStart {
-			continue
-		}
-		commits, err := bb.Block.Block().Body().BlobKzgCommitments()
+		bwi, err := populateBlock(bwb[i], blobsByRoot[bwb[i].Block.Root()], req, bss)
 		if err != nil {
-			if errors.Is(err, consensus_types.ErrUnsupportedField) {
-				log.
-					WithField("blockSlot", bb.Block.Block().Slot()).
-					WithField("retentionStart", blobWindowStart).
-					Warn("block with slot within blob retention period has version which does not support commitments")
+			if errors.Is(err, errDidntPopulate) {
 				continue
 			}
-			return nil, err
+			return bwb, err
 		}
-		if len(commits) == 0 {
-			continue
-		}
-		// If we already have the blobs locally, we shouldn't have requested them and don't expect them in the response.
-		if bss.Summary(bb.Block.Root()).AllAvailable(len(commits)) {
-			continue
-		}
-		blkblb, ok := blobsByRoot[bb.Block.Root()]
-		if !ok || len(commits) != len(blkblb) {
-			return nil, missingCommitError(bb.Block.Root(), bb.Block.Block().Slot(), commits)
-		}
-		for ci := range commits {
-			if err := verify.BlobAlignsWithBlock(blkblb[ci], bb.Block); err != nil {
-				return nil, err
-			}
-		}
-		bb.Blobs = blkblb
-		bwb[i] = bb
+		bwb[i] = bwi
 	}
 	return bwb, nil
+}
+
+var errDidntPopulate = errors.New("skipping population of block")
+
+func populateBlock(bw blocks2.BlockWithROBlobs, blobs []blocks.ROBlob, req *p2ppb.BlobSidecarsByRangeRequest, bss filesystem.BlobStorageSummarizer) (blocks2.BlockWithROBlobs, error) {
+	blk := bw.Block
+	if blk.Version() < version.Deneb || blk.Block().Slot() < req.StartSlot {
+		return bw, errDidntPopulate
+	}
+	commits, err := blk.Block().Body().BlobKzgCommitments()
+	if err != nil {
+		return bw, errDidntPopulate
+	}
+	if len(commits) == 0 {
+		return bw, errDidntPopulate
+	}
+	// Drop blobs on the floor if we already have them.
+	if bss != nil && bss.Summary(blk.Root()).AllAvailable(len(commits)) {
+		return bw, errDidntPopulate
+	}
+	if len(commits) != len(blobs) {
+		return bw, missingCommitError(blk.Root(), blk.Block().Slot(), commits)
+	}
+	for ci := range commits {
+		if err := verify.BlobAlignsWithBlock(blobs[ci], blk); err != nil {
+			return bw, err
+		}
+	}
+	bw.Blobs = blobs
+	return bw, nil
 }
 
 func missingCommitError(root [32]byte, slot primitives.Slot, missing [][]byte) error {
@@ -550,7 +552,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 		return nil, errors.Wrap(err, "could not request blobs by range")
 	}
 	f.p2p.Peers().Scorers().BlockProviderScorer().Touch(pid)
-	return verifyAndPopulateBlobs(bwb, blobs, blobWindowStart)
+	return verifyAndPopulateBlobs(bwb, blobs, req, f.bs)
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
