@@ -61,7 +61,12 @@ func Test_IsValid_RandomFiles(t *testing.T) {
 }
 
 func TestWallet_InitializeKeymanager_web3Signer_HappyPath(t *testing.T) {
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
+	require.NoError(t, err)
 	ctx := context.Background()
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	require.NoError(t, err)
@@ -70,7 +75,6 @@ func TestWallet_InitializeKeymanager_web3Signer_HappyPath(t *testing.T) {
 		Web3SignerConfig: &remoteweb3signer.SetupConfig{
 			BaseEndpoint:          "http://localhost:8545",
 			GenesisValidatorsRoot: root,
-			PublicKeysURL:         "http://localhost:8545/public_keys",
 		},
 	}
 	km, err := w.InitializeKeymanager(ctx, config)
@@ -79,7 +83,12 @@ func TestWallet_InitializeKeymanager_web3Signer_HappyPath(t *testing.T) {
 }
 
 func TestWallet_InitializeKeymanager_web3Signer_nilConfig(t *testing.T) {
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
+	require.NoError(t, err)
 	ctx := context.Background()
 	config := iface.InitKeymanagerConfig{
 		ListenForChanges: false,

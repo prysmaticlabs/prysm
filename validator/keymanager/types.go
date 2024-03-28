@@ -61,7 +61,7 @@ type KeyStoreExtractor interface {
 
 // PublicKeyAdder allows adding public keys to the keymanager.
 type PublicKeyAdder interface {
-	AddPublicKeys(publicKeys []string) []*KeyStatus
+	AddPublicKeys(publicKeys []string) ([]*KeyStatus, error)
 }
 
 // KeyStatus is a json representation of the status fields for the keymanager apis
@@ -85,7 +85,7 @@ const (
 
 // PublicKeyDeleter allows deleting public keys set in keymanager.
 type PublicKeyDeleter interface {
-	DeletePublicKeys(publicKeys []string) []*KeyStatus
+	DeletePublicKeys(publicKeys []string) ([]*KeyStatus, error)
 }
 
 type ListKeymanagerAccountConfig struct {

@@ -291,11 +291,12 @@ func TestKeymanager_AddPublicKeys(t *testing.T) {
 		fmt.Printf("error: %v", err)
 	}
 	publicKeys := []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"}
-	statuses := km.AddPublicKeys(publicKeys)
+	statuses, err := km.AddPublicKeys(publicKeys)
+	require.NoError(t, err)
 	for _, status := range statuses {
 		require.Equal(t, keymanager.StatusImported, status.Status)
 	}
-	statuses = km.AddPublicKeys(publicKeys)
+	statuses, err = km.AddPublicKeys(publicKeys)
 	for _, status := range statuses {
 		require.Equal(t, keymanager.StatusDuplicate, status.Status)
 	}
@@ -316,17 +317,20 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 		fmt.Printf("error: %v", err)
 	}
 	publicKeys := []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"}
-	statuses := km.AddPublicKeys(publicKeys)
+	statuses, err := km.AddPublicKeys(publicKeys)
+	require.NoError(t, err)
 	for _, status := range statuses {
 		require.Equal(t, keymanager.StatusImported, status.Status)
 	}
 
-	s := km.DeletePublicKeys(publicKeys)
+	s, err := km.DeletePublicKeys(publicKeys)
+	require.NoError(t, err)
 	for _, status := range s {
 		require.Equal(t, keymanager.StatusDeleted, status.Status)
 	}
 
-	s = km.DeletePublicKeys(publicKeys)
+	s, err = km.DeletePublicKeys(publicKeys)
+	require.NoError(t, err)
 	for _, status := range s {
 		require.Equal(t, keymanager.StatusNotFound, status.Status)
 	}

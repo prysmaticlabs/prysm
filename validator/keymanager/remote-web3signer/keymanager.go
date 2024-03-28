@@ -1,13 +1,16 @@
 package remote_web3signer
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/fsnotify/fsnotify"
 	"github.com/go-playground/validator/v10"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
@@ -15,18 +18,25 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/internal"
 	web3signerv1 "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+)
+
+const (
+	remoteKeysFileName = "remote_keys"
 )
 
 // SetupConfig includes configuration values for initializing.
 // a keymanager, such as passwords, the wallet, and more.
 // Web3Signer contains one public keys option. Either through a URL or a static key list.
 type SetupConfig struct {
+	WalletDir             string
 	BaseEndpoint          string
 	GenesisValidatorsRoot []byte
 
@@ -45,15 +55,16 @@ type SetupConfig struct {
 type Keymanager struct {
 	client                internal.HttpSignerClient
 	genesisValidatorsRoot []byte
-	publicKeysURL         string
 	providedPublicKeys    [][48]byte
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
-	publicKeysUrlCalled   bool
+	walletDir             string
 }
 
 // NewKeymanager instantiates a new web3signer key manager.
-func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
+func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
+	ctx, span := trace.StartSpan(ctx, "remoteKeymanager")
+	defer span.End()
 	if cfg.BaseEndpoint == "" || !bytesutil.IsValidRoot(cfg.GenesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
 	}
@@ -61,31 +72,139 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create apiClient")
 	}
-	return &Keymanager{
+
+	km := &Keymanager{
 		client:                internal.HttpSignerClient(client),
 		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
-		publicKeysURL:         cfg.PublicKeysURL,
-		providedPublicKeys:    cfg.ProvidedPublicKeys,
 		validator:             validator.New(),
-		publicKeysUrlCalled:   false,
-	}, nil
+		walletDir:             cfg.WalletDir,
+	}
+
+	var ppk [][fieldparams.BLSPubkeyLength]byte
+
+	if cfg.PublicKeysURL != "" {
+		providedPublicKeys, err := km.client.GetPublicKeys(ctx, cfg.PublicKeysURL)
+		if err != nil {
+			erroredResponsesTotal.Inc()
+			return nil, errors.Wrap(err, fmt.Sprintf("could not get public keys from remote server url: %v", cfg.PublicKeysURL))
+		}
+		// makes sure that if the public keys are deleted the validator does not call URL again.
+		ppk = providedPublicKeys
+	} else {
+		ppk = cfg.ProvidedPublicKeys
+	}
+
+	// Construct the full path for the file
+	fullPath := filepath.Join(km.walletDir, remoteKeysFileName)
+
+	// Check if the directory and file exists, if not create it
+	keyFileExists, err := file.Exists(fullPath, file.Regular)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if web3signer persistent keys exists in %s", fullPath)
+	}
+
+	if !keyFileExists {
+		if err = file.MkdirAll(km.walletDir); err != nil {
+			return nil, errors.Wrapf(err, "could not create web3signer persistent keys directory in %s", fullPath)
+		}
+	}
+
+	if len(ppk) != 0 {
+		if err := km.saveProvidedPublicKeys(ppk); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := file.WriteFile(fullPath, []byte{}); err != nil {
+			return nil, errors.Wrapf(err, "could not write %s", fullPath)
+		}
+	}
+
+	go km.refreshRemoteKeysFromFileChanges(ctx)
+
+	return km, nil
+}
+
+func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys [][fieldparams.BLSPubkeyLength]byte) error {
+	remoteKeysFile := filepath.Join(km.walletDir, remoteKeysFileName)
+
+	var bytesBuf bytes.Buffer
+	for _, key := range providedPublicKeys {
+		bytesBuf.Write(key[:])
+		bytesBuf.WriteString("\n")
+	}
+
+	if err := file.WriteFile(remoteKeysFile, bytesBuf.Bytes()); err != nil {
+		return errors.Wrapf(err, "could not write to file %s", remoteKeysFile)
+	}
+	km.providedPublicKeys = providedPublicKeys
+	return nil
+}
+
+func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
+	remoteKeysFile := filepath.Join(km.walletDir, remoteKeysFileName)
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.WithError(err).Error("Could not initialize file watcher")
+		return
+	}
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			log.WithError(err).Error("Could not close file watcher")
+		}
+	}()
+	if err := watcher.Add(remoteKeysFile); err != nil {
+		log.WithError(err).Errorf("Could not add file %s to file watcher", remoteKeysFile)
+		return
+	}
+	for {
+		select {
+		case <-watcher.Events:
+			// If a file was modified, we attempt to read that file
+			f, err := os.Open(filepath.Clean(remoteKeysFile))
+			if err != nil {
+				log.WithError(err).Error("Could not open file")
+			}
+			defer func() {
+				if err := f.Close(); err != nil {
+					log.Error(err)
+				}
+			}()
+
+			// Use a map to track and skip duplicate lines
+			seenLines := make(map[string]bool)
+			keys := make([][48]byte, 0)
+			// Create a new scanner to read the file line by line
+			scanner := bufio.NewScanner(f)
+			for scanner.Scan() {
+				line := scanner.Text()
+				// Check if the line has already been seen
+				if _, found := seenLines[line]; !found {
+					// If it's a new line, mark it as seen and process it
+					seenLines[line] = true
+					decoded, err := hexutil.Decode(line)
+					if err != nil {
+						log.WithError(err).Error("could not decode line")
+					}
+					// Process the unique line here. For now, we'll just print it.
+					keys = append(keys, bytesutil.ToBytes48(decoded))
+				}
+			}
+			// Check for any errors encountered while reading
+			if err := scanner.Err(); err != nil {
+				log.WithError(fmt.Errorf("error reading file %s: %w", remoteKeysFile, err)).Error("Could not finish scanning")
+			}
+			km.providedPublicKeys = keys
+		case err := <-watcher.Errors:
+			log.WithError(err).Errorf("Could not watch for file changes for: %s", remoteKeysFile)
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys
-// from the remote server or from the provided keys if there are no existing public keys set
-// or provides the existing keys in the keymanager.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	if km.publicKeysURL != "" && !km.publicKeysUrlCalled {
-		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
-		if err != nil {
-			erroredResponsesTotal.Inc()
-			return nil, errors.Wrap(err, fmt.Sprintf("could not get public keys from remote server url: %v", km.publicKeysURL))
-		}
-		// makes sure that if the public keys are deleted the validator does not call URL again.
-		km.publicKeysUrlCalled = true
-		km.providedPublicKeys = providedPublicKeys
-	}
 	return km.providedPublicKeys, nil
 }
 
@@ -420,8 +539,15 @@ func DisplayRemotePublicKeys(validatingPubKeys [][48]byte) {
 }
 
 // AddPublicKeys imports a list of public keys into the keymanager for web3signer use. Returns status with message.
-func (km *Keymanager) AddPublicKeys(pubKeys []string) []*keymanager.KeyStatus {
+func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, error) {
 	importedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(pubKeys))
+	// Initialize a new slice of [48]byte arrays with the same length as providedPublicKeys
+	tempPublicKeys := make([][48]byte, len(km.providedPublicKeys))
+
+	// Copy each [48]byte array from the original slice to the new slice
+	for i, publicKey := range km.providedPublicKeys {
+		tempPublicKeys[i] = bytesutil.ToBytes48(bytesutil.SafeCopyBytes(publicKey[:]))
+	}
 	for i, pubkey := range pubKeys {
 		found := false
 		pubkeyBytes, err := hexutil.Decode(pubkey)
@@ -439,7 +565,7 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) []*keymanager.KeyStatus {
 			}
 			continue
 		}
-		for _, key := range km.providedPublicKeys {
+		for _, key := range tempPublicKeys {
 			if bytes.Equal(key[:], pubkeyBytes) {
 				found = true
 				break
@@ -452,20 +578,26 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) []*keymanager.KeyStatus {
 			}
 			continue
 		}
-		km.providedPublicKeys = append(km.providedPublicKeys, bytesutil.ToBytes48(pubkeyBytes))
+		tempPublicKeys = append(tempPublicKeys, bytesutil.ToBytes48(pubkeyBytes))
 		importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
 			Status:  keymanager.StatusImported,
 			Message: fmt.Sprintf("Successfully added pubkey: %v", pubkey),
 		}
 		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", pubkey)
 	}
+
+	if err := km.saveProvidedPublicKeys(tempPublicKeys); err != nil {
+		return nil, err
+	}
+
 	km.accountsChangedFeed.Send(km.providedPublicKeys)
-	return importedRemoteKeysStatuses
+
+	return importedRemoteKeysStatuses, nil
 }
 
 // DeletePublicKeys removes a list of public keys from the keymanager for web3signer use. Returns status with message.
-func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus {
-	deletedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(pubKeys))
+func (km *Keymanager) DeletePublicKeys(publicKeys []string) ([]*keymanager.KeyStatus, error) {
+	deletedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(publicKeys))
 	if len(km.providedPublicKeys) == 0 {
 		for i := range deletedRemoteKeysStatuses {
 			deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
@@ -473,9 +605,16 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 				Message: "No pubkeys are set in validator",
 			}
 		}
-		return deletedRemoteKeysStatuses
+		return deletedRemoteKeysStatuses, nil
 	}
-	for i, pubkey := range pubKeys {
+	// Initialize a new slice of [48]byte arrays with the same length as providedPublicKeys
+	tempPublicKeys := make([][48]byte, len(km.providedPublicKeys))
+
+	// Copy each [48]byte array from the original slice to the new slice
+	for i, publicKey := range km.providedPublicKeys {
+		tempPublicKeys[i] = bytesutil.ToBytes48(bytesutil.SafeCopyBytes(publicKey[:]))
+	}
+	for i, pubkey := range publicKeys {
 		for in, key := range km.providedPublicKeys {
 			pubkeyBytes, err := hexutil.Decode(pubkey)
 			if err != nil {
@@ -493,7 +632,7 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 				continue
 			}
 			if bytes.Equal(key[:], pubkeyBytes) {
-				km.providedPublicKeys = append(km.providedPublicKeys[:in], km.providedPublicKeys[in+1:]...)
+				tempPublicKeys = append(tempPublicKeys[:in], tempPublicKeys[in+1:]...)
 				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
 					Status:  keymanager.StatusDeleted,
 					Message: fmt.Sprintf("Successfully deleted pubkey: %v", pubkey),
@@ -509,6 +648,11 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 			}
 		}
 	}
+
+	if err := km.saveProvidedPublicKeys(tempPublicKeys); err != nil {
+		return nil, err
+	}
+
 	km.accountsChangedFeed.Send(km.providedPublicKeys)
-	return deletedRemoteKeysStatuses
+	return deletedRemoteKeysStatuses, nil
 }

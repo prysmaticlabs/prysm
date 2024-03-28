@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
@@ -40,6 +44,7 @@ import (
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/v5/validator/testing"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -342,13 +347,19 @@ func TestServer_ImportKeystores(t *testing.T) {
 
 func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	require.NoError(t, os.MkdirAll(newDir, 0700))
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
+	require.NoError(t, err)
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "http://example.com/public_keys",
+		ProvidedPublicKeys:    make([][48]byte, 0),
 	}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -620,14 +631,20 @@ func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
 
 func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	require.NoError(t, os.MkdirAll(newDir, 0700))
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
+	require.NoError(t, err)
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false,
 		Web3SignerConfig: &remoteweb3signer.SetupConfig{
 			BaseEndpoint:          "http://example.com",
 			GenesisValidatorsRoot: root,
-			PublicKeysURL:         "http://example.com/public_keys",
+			ProvidedPublicKeys:    make([][48]byte, 0),
 		}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -1312,7 +1329,12 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 
 func TestServer_ListRemoteKeys(t *testing.T) {
 	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
+	require.NoError(t, err)
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	bytevalue, err := hexutil.Decode("0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
@@ -1357,7 +1379,12 @@ func TestServer_ListRemoteKeys(t *testing.T) {
 
 func TestServer_ImportRemoteKeys(t *testing.T) {
 	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
+	require.NoError(t, err)
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	config := &remoteweb3signer.SetupConfig{
@@ -1414,7 +1441,12 @@ func TestServer_ImportRemoteKeys(t *testing.T) {
 
 func TestServer_DeleteRemoteKeys(t *testing.T) {
 	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
+	require.NoError(t, err)
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	pkey := "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
