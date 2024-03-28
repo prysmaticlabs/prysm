@@ -203,10 +203,14 @@ func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName
 		if !ok {
 			return errors.Errorf("wrong argument type provided: %T", obj)
 		}
-		*assertedObj = &types.HeaderInfo{
-			Hash:   h.Hash(),
-			Number: h.Number,
-			Time:   h.Time,
+		if h == nil {
+			*assertedObj = nil
+		} else {
+			*assertedObj = &types.HeaderInfo{
+				Hash:   h.Hash(),
+				Number: h.Number,
+				Time:   h.Time,
+			}
 		}
 	case "eth_getBlockByHash":
 		val, ok := args[0].(common.Hash)

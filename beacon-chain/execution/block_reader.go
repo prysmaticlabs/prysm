@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
@@ -110,11 +111,11 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 		return nil, errors.Wrap(errBlockTimeTooLate, fmt.Sprintf("(%d > %d)", time, latestBlkTime))
 	}
 	// Initialize a pointer to eth1 chain's history to start our search from.
-	cursorNum := new(big.Int).SetUint64(latestBlkHeight)
+	cursorNum := latestBlkHeight
 	cursorTime := latestBlkTime
 
 	var numOfBlocks uint64
-	estimatedBlk := cursorNum.Uint64()
+	estimatedBlk := cursorNum
 	maxTimeBuffer := searchThreshold * params.BeaconConfig().SecondsPerETH1Block
 	// Terminate if we can't find an acceptable block after
 	// repeated searches.
@@ -126,18 +127,18 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 			numOfBlocks = (time - cursorTime) / params.BeaconConfig().SecondsPerETH1Block
 			// In the event we have an infeasible estimated block, this is a defensive
 			// check to ensure it does not exceed rational bounds.
-			if cursorNum.Uint64()+numOfBlocks > latestBlkHeight {
+			if cursorNum+numOfBlocks > latestBlkHeight {
 				break
 			}
-			estimatedBlk = cursorNum.Uint64() + numOfBlocks
+			estimatedBlk = cursorNum + numOfBlocks
 		} else if time+maxTimeBuffer < cursorTime {
 			numOfBlocks = (cursorTime - time) / params.BeaconConfig().SecondsPerETH1Block
 			// In the event we have an infeasible number of blocks
 			// we exit early.
-			if numOfBlocks >= cursorNum.Uint64() {
+			if numOfBlocks >= cursorNum {
 				break
 			}
-			estimatedBlk = cursorNum.Uint64() - numOfBlocks
+			estimatedBlk = cursorNum - numOfBlocks
 		} else {
 			// Exit if we are in the range of
 			// time - buffer <= head.time <= time + buffer
@@ -147,28 +148,28 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 		if err != nil {
 			return nil, err
 		}
-		cursorNum = hInfo.Number
+		cursorNum = hInfo.Number.Uint64()
 		cursorTime = hInfo.Time
 	}
 
 	// Exit early if we get the desired block.
 	if cursorTime == time {
-		return s.retrieveHeaderInfo(ctx, cursorNum.Uint64())
+		return s.retrieveHeaderInfo(ctx, cursorNum)
 	}
 	if cursorTime > time {
-		return s.findMaxTargetEth1Block(ctx, new(big.Int).SetUint64(estimatedBlk), time)
+		return s.findMaxTargetEth1Block(ctx, estimatedBlk, time)
 	}
-	return s.findMinTargetEth1Block(ctx, new(big.Int).SetUint64(estimatedBlk), time)
+	return s.findMinTargetEth1Block(ctx, estimatedBlk, time)
 }
 
 // Performs a search to find a target eth1 block which is earlier than or equal to the
 // target time. This method is used when head.time > targetTime
-func (s *Service) findMaxTargetEth1Block(ctx context.Context, upperBoundBlk *big.Int, targetTime uint64) (*types.HeaderInfo, error) {
-	for bn := upperBoundBlk; ; bn = new(big.Int).Sub(bn, big.NewInt(1)) {
+func (s *Service) findMaxTargetEth1Block(ctx context.Context, upperBoundBlk uint64, targetTime uint64) (*types.HeaderInfo, error) {
+	for bn := upperBoundBlk; ; bn-- {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		info, err := s.retrieveHeaderInfo(ctx, bn.Uint64())
+		info, err := s.retrieveHeaderInfo(ctx, bn)
 		if err != nil {
 			return nil, err
 		}
@@ -180,18 +181,24 @@ func (s *Service) findMaxTargetEth1Block(ctx context.Context, upperBoundBlk *big
 
 // Performs a search to find a target eth1 block which is just earlier than or equal to the
 // target time. This method is used when head.time < targetTime
-func (s *Service) findMinTargetEth1Block(ctx context.Context, lowerBoundBlk *big.Int, targetTime uint64) (*types.HeaderInfo, error) {
-	for bn := lowerBoundBlk; ; bn = new(big.Int).Add(bn, big.NewInt(1)) {
+func (s *Service) findMinTargetEth1Block(ctx context.Context, lowerBoundBlk uint64, targetTime uint64) (*types.HeaderInfo, error) {
+	for bn := lowerBoundBlk; ; bn++ {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		info, err := s.retrieveHeaderInfo(ctx, bn.Uint64())
+		info, err := s.retrieveHeaderInfo(ctx, bn)
 		if err != nil {
+			// If the header with the number bn does not exist,
+			// the previous block is the earliest block whose timestamp
+			// is less than or equal to the target time.
+			if errors.Is(err, ethereum.NotFound) {
+				return s.retrieveHeaderInfo(ctx, bn-1)
+			}
 			return nil, err
 		}
 		// Return the last block before we hit the threshold time.
 		if info.Time > targetTime {
-			return s.retrieveHeaderInfo(ctx, info.Number.Uint64()-1)
+			return s.retrieveHeaderInfo(ctx, bn-1)
 		}
 		// If time is equal, this is our target block.
 		if info.Time == targetTime {
@@ -211,9 +218,10 @@ func (s *Service) retrieveHeaderInfo(ctx context.Context, bNum uint64) (*types.H
 		if err != nil {
 			return nil, err
 		}
-		if hdr == nil {
-			return nil, errors.Errorf("header with the number %d does not exist", bNum)
-		}
+		// We don't need to consider the case hdr == nil
+		// as it is handled by the HeaderByNumber method.
+		// In particular, HeaderByNumber never returns
+		// a nil header and a nil error at the same time.
 		if err := s.headerCache.AddHeader(hdr); err != nil {
 			return nil, err
 		}
