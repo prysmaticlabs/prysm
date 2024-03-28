@@ -629,7 +629,7 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 func (f *blocksFetcher) hasSufficientBandwith(peers []peer.ID, count uint64) []peer.ID {
 	filteredPeers := []peer.ID{}
 	for _, p := range peers {
-		if f.rateLimiter.Remaining(p.String()) < int64(count) {
+		if uint64(f.rateLimiter.Remaining(p.String())) < count {
 			continue
 		}
 		copiedP := p
