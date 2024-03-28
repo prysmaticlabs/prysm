@@ -115,11 +115,11 @@ func (s *Service) checkSurroundVotes(
 
 		if chunksCounts >= maxChunkBeforeFlush {
 			// Save the updated chunks to disk if we have reached the maximum number of chunks to store in memory.
-			if err := s.saveChunksToDisk(ctx, slashertypes.MinSpan, minChunkByChunkIndexByValidatorChunkIndex); err != nil {
+			if err := s.saveChunksToDisk(ctx, slashertypes.MinSpan, filterByUpdatedChunk(minChunkByChunkIndexByValidatorChunkIndex)); err != nil {
 				return nil, errors.Wrap(err, "could not save updated min chunks to disk")
 			}
 
-			if err := s.saveChunksToDisk(ctx, slashertypes.MaxSpan, maxChunkByChunkIndexByValidatorChunkIndex); err != nil {
+			if err := s.saveChunksToDisk(ctx, slashertypes.MaxSpan, filterByUpdatedChunk(maxChunkByChunkIndexByValidatorChunkIndex)); err != nil {
 				return nil, errors.Wrap(err, "could not save updated max chunks to disk")
 			}
 
@@ -139,15 +139,30 @@ func (s *Service) checkSurroundVotes(
 	}
 
 	// Save the updated chunks to disk.
-	if err := s.saveChunksToDisk(ctx, slashertypes.MinSpan, minChunkByChunkIndexByValidatorChunkIndex); err != nil {
+	if err := s.saveChunksToDisk(ctx, slashertypes.MinSpan, filterByUpdatedChunk(minChunkByChunkIndexByValidatorChunkIndex)); err != nil {
 		return nil, errors.Wrap(err, "could not save updated min chunks to disk")
 	}
 
-	if err := s.saveChunksToDisk(ctx, slashertypes.MaxSpan, maxChunkByChunkIndexByValidatorChunkIndex); err != nil {
+	if err := s.saveChunksToDisk(ctx, slashertypes.MaxSpan, filterByUpdatedChunk(maxChunkByChunkIndexByValidatorChunkIndex)); err != nil {
 		return nil, errors.Wrap(err, "could not save updated max chunks to disk")
 	}
 
 	return slashings, nil
+}
+
+func filterByUpdatedChunk(chunkByChunkIndex map[uint64]map[uint64]Chunker) map[uint64]map[uint64]Chunker {
+	updatedChunkByChunkIndex := map[uint64]map[uint64]Chunker{}
+	for i, c := range chunkByChunkIndex {
+		for j, chunk := range c {
+			if chunk.HasBeenUpdated() {
+				if updatedChunkByChunkIndex[i] == nil {
+					updatedChunkByChunkIndex[i] = map[uint64]Chunker{}
+				}
+				updatedChunkByChunkIndex[i][j] = chunk
+			}
+		}
+	}
+	return updatedChunkByChunkIndex
 }
 
 // Check for double votes in our database given a list of incoming attestations.
@@ -497,20 +512,18 @@ func (s *Service) applyAttestationForValidator(
 	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
 	defer span.End()
 
-	var err error
+	var (
+		chunk Chunker
 
+		err error
+	)
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
-	chunkIndex := s.params.chunkIndex(sourceEpoch)
 
-	chunk, ok := chunksByChunkIdx[chunkIndex]
-	if !ok {
-		chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
-		}
+	if chunk, _, err = s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, sourceEpoch); err != nil {
+		return nil, errors.Wrap(err, "could not get chunk")
 	}
 
 	// Check slashable, if so, return the slashing.
@@ -541,28 +554,22 @@ func (s *Service) applyAttestationForValidator(
 	// Given a single attestation could span across multiple chunks
 	// for a validator min or max span, we attempt to update the current chunk
 	// for the source epoch of the attestation. If the update function tells
-	// us we need to proceed to the next chunk, we continue by determining
-	// the start epoch of the next chunk. We exit once no longer need to
+	// us we need to proceed to the next chunk, we continue by updating
+	// the start epoch of the next chunk. We exit once we no longer need to
 	// keep updating chunks.
+	var chunkIndex uint64
 	for {
-		chunkIndex = s.params.chunkIndex(startEpoch)
-
-		chunk, ok := chunksByChunkIdx[chunkIndex]
-		if !ok {
-			chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
-			}
+		if chunk, chunkIndex, err = s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, startEpoch); err != nil {
+			return nil, errors.Wrap(err, "could not get chunk before updating its values")
 		}
 
-		keepGoing, err := chunk.Update(
+		keepGoingFromEpoch, keepGoing, err := chunk.Update(
 			chunkIndex,
 			currentEpoch,
 			validatorIndex,
 			startEpoch,
 			targetEpoch,
 		)
-
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
@@ -573,17 +580,39 @@ func (s *Service) applyAttestationForValidator(
 			)
 		}
 
-		// We update the chunksByChunkIdx map with the chunk we just updated.
+		// We update the chunksByChunkIdx.
 		chunksByChunkIdx[chunkIndex] = chunk
+
+		// Move to next epoch from next chunk if needed.
 		if !keepGoing {
 			break
 		}
-
-		// Move to first epoch of next chunk if needed.
-		startEpoch = chunk.NextChunkStartEpoch(startEpoch)
+		startEpoch = keepGoingFromEpoch
 	}
 
 	return nil, nil
+}
+
+// getChunk retrieves a chunk from the chunksByChunkIdx first. If it does not exist,
+// we attempt to retrieve it from the database. If it does not exist in the database,
+// an error is returned to the caller.
+func (s *Service) getChunk(
+	ctx context.Context,
+	chunksByChunkIdx map[uint64]Chunker,
+	chunkKind slashertypes.ChunkKind,
+	validatorChunkIndex uint64,
+	startEpoch primitives.Epoch,
+) (chunk Chunker, chunkIndex uint64, err error) {
+	chunkIndex = s.params.chunkIndex(startEpoch)
+
+	var ok bool
+	chunk, ok = chunksByChunkIdx[chunkIndex]
+	if !ok {
+		if chunk, err = s.getChunkFromDatabase(ctx, chunkKind, validatorChunkIndex, chunkIndex); err != nil {
+			return chunk, chunkIndex, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
+		}
+	}
+	return chunk, chunkIndex, nil
 }
 
 // Retrieve a chunk from database.

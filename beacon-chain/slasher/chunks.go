@@ -33,9 +33,9 @@ type Chunker interface {
 		validatorIndex primitives.ValidatorIndex,
 		startEpoch,
 		newTargetEpoch primitives.Epoch,
-	) (keepGoing bool, err error)
+	) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error)
 	StartEpoch(sourceEpoch, currentEpoch primitives.Epoch) (epoch primitives.Epoch, exists bool)
-	NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch
+	HasBeenUpdated() bool
 }
 
 // MinSpanChunksSlice represents a slice containing a chunk for K different validator's min spans.
@@ -77,8 +77,9 @@ type Chunker interface {
 //
 // MinSpanChunksSlice represents the data structure above for a single chunk index.
 type MinSpanChunksSlice struct {
-	params *Parameters
-	data   []uint16
+	params         *Parameters
+	data           []uint16
+	hasBeenUpdated bool
 }
 
 var _ Chunker = (*MinSpanChunksSlice)(nil)
@@ -86,8 +87,9 @@ var _ Chunker = (*MinSpanChunksSlice)(nil)
 // MaxSpanChunksSlice represents the same data structure as MinSpanChunksSlice however
 // keeps track of validator max spans for slashing detection instead.
 type MaxSpanChunksSlice struct {
-	params *Parameters
-	data   []uint16
+	params         *Parameters
+	data           []uint16
+	hasBeenUpdated bool
 }
 
 var _ Chunker = (*MaxSpanChunksSlice)(nil)
@@ -386,11 +388,12 @@ func (m *MinSpanChunksSlice) Update(
 	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch primitives.Epoch,
-) (keepGoing bool, err error) {
+) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error) {
 	// The lowest epoch we need to update.
 	minEpoch := primitives.Epoch(0)
-	if currentEpoch > (m.params.historyLength - 1) {
-		minEpoch = currentEpoch - (m.params.historyLength - 1)
+	historyLength := m.params.historyLength - 1
+	if currentEpoch > historyLength {
+		minEpoch = currentEpoch - historyLength
 	}
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at startEpoch down to minEpoch.
@@ -410,6 +413,7 @@ func (m *MinSpanChunksSlice) Update(
 				err = errors.Wrapf(err, "could not set chunk data at epoch %d", epochInChunk)
 				return
 			}
+			m.hasBeenUpdated = true
 		} else {
 			// We can stop because spans are guaranteed to be minimums and
 			// if we did not meet the minimum condition, there is nothing to update.
@@ -422,6 +426,7 @@ func (m *MinSpanChunksSlice) Update(
 	// We should keep going and update the previous chunk if we are yet to reach
 	// the minimum epoch required for the update procedure.
 	keepGoing = epochInChunk >= minEpoch
+	keepGoingFromEpoch = epochInChunk
 	return
 }
 
@@ -429,14 +434,14 @@ func (m *MinSpanChunksSlice) Update(
 // up to the current epoch according to the definition of max spans. If we need to continue updating
 // a next chunk, this function returns a boolean letting the caller know it should keep going. To understand
 // more about how update exactly works, refer to the detailed documentation for the Update function for
-// MinSpanChunksSlice.
+// MaxSpanChunksSlice.
 func (m *MaxSpanChunksSlice) Update(
 	chunkIndex uint64,
 	currentEpoch primitives.Epoch,
 	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch primitives.Epoch,
-) (keepGoing bool, err error) {
+) (keepGoingFromEpoch primitives.Epoch, keepGoing bool, err error) {
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at startEpoch up to
 	// and including the current epoch. As long as the epoch, e, is in the same chunk index and e <= currentEpoch,
@@ -455,6 +460,7 @@ func (m *MaxSpanChunksSlice) Update(
 				err = errors.Wrapf(err, "could not set chunk data at epoch %d", epochInChunk)
 				return
 			}
+			m.hasBeenUpdated = true
 		} else {
 			// We can stop because spans are guaranteed to be maxima and
 			// if we did not meet the condition, there is nothing to update.
@@ -465,6 +471,7 @@ func (m *MaxSpanChunksSlice) Update(
 	// If the epoch to update now lies beyond the current chunk, then
 	// continue to the next chunk to update it.
 	keepGoing = epochInChunk <= currentEpoch
+	keepGoingFromEpoch = epochInChunk
 	return
 }
 
@@ -513,46 +520,14 @@ func (*MaxSpanChunksSlice) StartEpoch(
 	return
 }
 
-// NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For min
-// span chunks, this will be the last epoch of chunk index = (current chunk - 1). For example:
-//
-//	                     chunk0     chunk1     chunk2
-//	                       |          |          |
-//	max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
-//
-// If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3 then the next start
-// epoch is the last epoch of chunk 0, which is epoch 2. This is computed as:
-//
-//	last_epoch(chunkIndex(startEpoch)-1)
-//	last_epoch(chunkIndex(3) - 1)
-//	last_epoch(1 - 1)
-//	last_epoch(0)
-//	2
-func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch {
-	prevChunkIdx := m.params.chunkIndex(startEpoch)
-	if prevChunkIdx > 0 {
-		prevChunkIdx--
-	}
-	return m.params.lastEpoch(prevChunkIdx)
+// HasBeenUpdated returns a boolean signifying if the min chunk data has been updated.
+func (m *MinSpanChunksSlice) HasBeenUpdated() bool {
+	return m.hasBeenUpdated
 }
 
-// NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For max
-// span chunks, this will be the start epoch of chunk index = (current chunk + 1). For example:
-//
-//	                     chunk0     chunk1     chunk2
-//	                       |          |          |
-//	max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
-//
-// If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
-// epoch is the start epoch of chunk 2, which is epoch 6. This is computed as:
-//
-//	first_epoch(chunkIndex(startEpoch)+1)
-//	first_epoch(chunkIndex(3)+1)
-//	first_epoch(1 + 1)
-//	first_epoch(2)
-//	6
-func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch {
-	return m.params.firstEpoch(m.params.chunkIndex(startEpoch) + 1)
+// HasBeenUpdated returns a boolean signifying if the max chunk data has been updated.
+func (m *MaxSpanChunksSlice) HasBeenUpdated() bool {
+	return m.hasBeenUpdated
 }
 
 // Given a validator index and epoch, retrieves the target epoch at its specific
@@ -574,7 +549,7 @@ func chunkDataAtEpoch(
 
 // Updates the value at a specific index in a chunk for a validator index + epoch
 // pair given a target epoch. Recall that for min spans, each element in a chunk
-// is the minimum distance between the a given epoch, e, and all attestation target epochs
+// is the minimum distance between a given epoch, e, and all attestation target epochs
 // a validator has created where att.source.epoch > e.
 func setChunkDataAtEpoch(
 	params *Parameters,
@@ -609,7 +584,7 @@ func setChunkRawDistance(
 
 // Computes a distance between two epochs. Given the result stored in
 // min/max spans is at maximum WEAK_SUBJECTIVITY_PERIOD, we are guaranteed the
-// distance can be represented as a uint16 safely.
+// distance can be represented as an uint16 safely.
 func epochDistance(epoch, baseEpoch primitives.Epoch) (uint16, error) {
 	if baseEpoch > epoch {
 		return 0, fmt.Errorf("base epoch %d cannot be less than epoch %d", baseEpoch, epoch)

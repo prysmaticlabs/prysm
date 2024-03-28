@@ -119,7 +119,7 @@ For example: For MIN SPAN, validators 256 to 511 included, epochs 8208 to 8223 i
 | validator     511 |   ∞     ∞     ∞     ∞     ∞     ∞     ∞     ∞     ∞     ∞     ∞     ∞     ∞     ∞     ∞     ∞   |
 \---------------------------------------------------------------------------------------------------------------------/
 
-Chunks are stored into the database a flat array of bytes.
+Chunks are stored into the database as a flat array of bytes.
 For this example, the stored value will be:
 |          validator 256        |           validator 257       |        validator 258          |...|          validator 510        |         validator 511		    |
 [∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,2,2,2,2,2,7,6,5,4,3,2,3,2,∞,∞,∞,2,2,2,2,2,2,2,2,2,2,2,2,∞,∞,∞,∞,...,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞,∞]

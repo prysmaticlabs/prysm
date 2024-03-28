@@ -835,8 +835,6 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 }
 
 func Test_updatedChunkByChunkIndex(t *testing.T) {
-	neutralMin, neutralMax := uint16(65535), uint16(0)
-
 	testCases := []struct {
 		name                               string
 		chunkSize                          uint64
@@ -1132,7 +1130,289 @@ func Test_updatedChunkByChunkIndex(t *testing.T) {
 	}
 }
 
-func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
+func Test_applyAttestationForValidator_ChunkUpdate(t *testing.T) {
+	testCases := []struct {
+		// test case
+		name string
+
+		// slasher service parameters
+		chunkSize          uint64
+		validatorChunkSize uint64
+		historyLength      primitives.Epoch
+
+		// used to init context
+		initialChunkByChunkIndex map[uint64][]uint16
+
+		// function parameters
+		attestation         *slashertypes.IndexedAttestationWrapper
+		chunkKind           slashertypes.ChunkKind
+		validatorChunkIndex uint64
+		validatorIndex      primitives.ValidatorIndex
+		currentEpoch        primitives.Epoch
+
+		// expected result
+		expectedChunkByChunkIndex map[uint64][]uint16
+	}{
+		{
+			name: "no max chunks are being updated",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |  				val 42  					  |     val 43    |
+				0: {neutralMax, neutralMax, neutralMax, neutralMax, 55, 55, 55, 55},
+				1: {neutralMax, neutralMax, neutralMax, neutralMax, 66, 66, 66, 66},
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 7, 8, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MaxSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        9,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |  				val 42  					  |     val 43    |
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, 77, 77, 77, 9999},
+			},
+		},
+		{
+			name: "one single max chunk is being updated",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |  				val 42  					  |     val 43    |
+				0: {neutralMax, neutralMax, neutralMax, neutralMax, 55, 55, 55, 55},
+				// |  				val 42  	         |     val 43    |
+				1: {neutralMax, neutralMax, neutralMax, 2, 66, 66, 66, 66},
+				// |  				val 42  					  |     val 43      |
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 5, 7, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MaxSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        8,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |            val 42          |     val 43    |
+				1: {neutralMax, neutralMax, 1, 2, 66, 66, 66, 66},
+			},
+		},
+		{
+			name: "several max chunks are being updated",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |  			val 42  				 |     val 43    |
+				0: {neutralMax, neutralMax, 2, neutralMax, 55, 55, 55, 55},
+				// |  					val 42  		   	 	  |     val 43    |
+				1: {neutralMax, neutralMax, neutralMax, neutralMax, 66, 66, 66, 66},
+				2: {neutralMax, neutralMax, neutralMax, neutralMax, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 6, 11, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MaxSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        12,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |  				val 42				 |     val 43    |
+				1: {neutralMax, neutralMax, neutralMax, 4, 66, 66, 66, 66},
+				// |  	   val 42	   |      val 43     |
+				2: {3, 2, 1, neutralMax, 77, 77, 77, 9999},
+			},
+		},
+		{
+			name: "no min chunks are being updated",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				0: {3, 3, 3, 2, 55, 55, 55, 55},
+				1: {5, 4, 3, 2, 66, 66, 66, 66},
+				2: {2, 2, 2, 2, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 9, 10, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MinSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        14,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				2: {2, 2, 2, 2, 77, 77, 77, 9999},
+			},
+		},
+		{
+			// Only the first chunk is updated.
+			// The second chunk, the first value is 3 which makes a potential a new target equals to the current epoch (10)
+			// Therefore, the update stops there but still stores the chunk in the map for read ops.
+			name: "one single min chunk is being updated",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42   |     val 43    |
+				0: {7, 8, 9, 10, 55, 55, 55, 55},
+				// |   val 42    |     val 43    |
+				1: {11, 12, 13, 3, 66, 66, 66, 66},
+				// |       val 42               |     val 43      |
+				2: {3, 2, neutralMin, neutralMin, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 9, 10, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MinSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        14,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |   val 42    |     val 43    |
+				1: {11, 12, 13, 3, 66, 66, 66, 66},
+				// |       val 42               |     val 43      |
+				2: {2, 2, neutralMin, neutralMin, 77, 77, 77, 9999},
+			},
+		},
+		{
+			name: "several min chunks are being updated",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |      val 42       |     val 43    |
+				0: {3, 3, 3, neutralMin, 55, 55, 55, 55},
+				// |               val 42                         |     val 43    |
+				1: {neutralMin, neutralMin, neutralMin, neutralMin, 66, 66, 66, 66},
+				2: {neutralMin, neutralMin, neutralMin, neutralMin, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 9, 10, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MinSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        14,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				0: {3, 3, 3, 7, 55, 55, 55, 55},
+				1: {6, 5, 4, 3, 66, 66, 66, 66},
+				// |               val 42                |      val 43     |
+				2: {2, neutralMin, neutralMin, neutralMin, 77, 77, 77, 9999},
+			},
+		},
+		{
+			name: "several min chunks are being updated - when it's the first time the validator data is updated",
+
+			chunkSize:          4,
+			validatorChunkSize: 2,
+			historyLength:      12,
+
+			initialChunkByChunkIndex: map[uint64][]uint16{
+				// |      val 42       |     val 43    |
+				0: {neutralMin, neutralMin, neutralMin, neutralMin, 55, 55, 55, 55},
+				// |               val 42                         |     val 43    |
+				1: {neutralMin, neutralMin, neutralMin, neutralMin, 66, 66, 66, 66},
+				2: {neutralMin, neutralMin, neutralMin, neutralMin, 77, 77, 77, 9999},
+			},
+
+			attestation:         createAttestationWrapperEmptySig(t, 9, 10, []uint64{42, 43}, nil),
+			chunkKind:           slashertypes.MinSpan,
+			validatorChunkIndex: 21,
+			validatorIndex:      42,
+			currentEpoch:        14,
+
+			expectedChunkByChunkIndex: map[uint64][]uint16{
+				// |  val 42  |     val 43    |
+				0: {neutralMin, neutralMin, neutralMin, 7, 55, 55, 55, 55},
+				1: {6, 5, 4, 3, 66, 66, 66, 66},
+				// |               val 42                |      val 43     |
+				2: {2, neutralMin, neutralMin, neutralMin, 77, 77, 77, 9999},
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create context.
+			ctx := context.Background()
+
+			// Initialize the slasher database.
+			slasherDB := dbtest.SetupSlasherDB(t)
+
+			// Initialize the slasher service.
+			service := &Service{
+				params: &Parameters{
+					chunkSize:          tt.chunkSize,
+					validatorChunkSize: tt.validatorChunkSize,
+					historyLength:      tt.historyLength,
+				},
+				serviceCfg: &ServiceConfig{Database: slasherDB},
+			}
+
+			// Save initial chunks if they exist.
+			if tt.initialChunkByChunkIndex != nil {
+				chunkerByChunkerIndex := map[uint64]Chunker{}
+				for chunkIndex, chunk := range tt.initialChunkByChunkIndex {
+					if tt.chunkKind == slashertypes.MinSpan {
+						chunkerByChunkerIndex[chunkIndex] = &MinSpanChunksSlice{data: chunk}
+					} else {
+						chunkerByChunkerIndex[chunkIndex] = &MaxSpanChunksSlice{data: chunk}
+					}
+				}
+
+				chunkerByChunkerIndexByValidatorChunkerIndex := map[uint64]map[uint64]Chunker{
+					tt.validatorChunkIndex: chunkerByChunkerIndex,
+				}
+
+				err := service.saveChunksToDisk(ctx, tt.chunkKind, chunkerByChunkerIndexByValidatorChunkerIndex)
+				require.NoError(t, err)
+			}
+
+			// Get chunks.
+			chunkerByChunkerIndex := make(map[uint64]Chunker)
+			_, err := service.applyAttestationForValidator(
+				ctx,
+				chunkerByChunkerIndex,
+				tt.attestation,
+				tt.chunkKind,
+				tt.validatorChunkIndex,
+				tt.validatorIndex,
+				tt.currentEpoch,
+			)
+
+			// Compare the actual and expected chunks.
+			require.NoError(t, err)
+			require.Equal(t, len(tt.expectedChunkByChunkIndex), len(chunkerByChunkerIndex))
+			for chunkIndex, expectedChunk := range tt.expectedChunkByChunkIndex {
+				chunk, ok := chunkerByChunkerIndex[chunkIndex]
+				require.Equal(t, true, ok)
+				require.Equal(t, len(expectedChunk), len(chunk.Chunk()))
+				require.DeepSSZEqual(t, expectedChunk, chunk.Chunk())
+			}
+		})
+	}
+}
+
+func Test_applyAttestationForValidator_MinSpanChunk_withSlashableOffense(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
 	srv, err := New(context.Background(),
@@ -1189,7 +1469,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	require.NotNil(t, slashing)
 }
 
-func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
+func Test_applyAttestationForValidator_MaxSpanChunk_withSlashableOffense(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
 	srv, err := New(context.Background(),
