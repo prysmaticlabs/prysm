@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"net/http"
-	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
@@ -20,8 +19,7 @@ func (s *Server) Initialize(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, errors.Wrap(err, "Could not check if wallet exists").Error(), http.StatusInternalServerError)
 		return
 	}
-	authTokenPath := filepath.Join(s.walletDir, AuthTokenFileName)
-	exists, err := file.Exists(authTokenPath, file.Regular)
+	exists, err := file.Exists(s.authTokenPath, file.Regular)
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "Could not check if auth token exists").Error(), http.StatusInternalServerError)
 		return

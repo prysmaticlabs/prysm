@@ -2,11 +2,9 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -15,8 +13,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// JWTInterceptor is a gRPC unary interceptor to authorize incoming requests.
-func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
+// AuthTokenInterceptor is a gRPC unary interceptor to authorize incoming requests.
+func (s *Server) AuthTokenInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},
@@ -35,8 +33,8 @@ func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
-// JwtHttpInterceptor is an HTTP handler to authorize a route.
-func (s *Server) JwtHttpInterceptor(next http.Handler) http.Handler {
+// AuthTokenHandler is an HTTP handler to authorize a route.
+func (s *Server) AuthTokenHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// if it's not initialize or has a web prefix
 		if strings.Contains(r.URL.Path, api.WebApiUrlPrefix) || strings.Contains(r.URL.Path, api.KeymanagerApiPrefix) {
@@ -53,9 +51,8 @@ func (s *Server) JwtHttpInterceptor(next http.Handler) http.Handler {
 			}
 
 			token := tokenParts[1]
-			_, err := jwt.Parse(token, s.validateJWT)
-			if err != nil {
-				http.Error(w, fmt.Errorf("forbidden: could not parse JWT token: %v", err).Error(), http.StatusForbidden)
+			if strings.TrimSpace(token) != s.authToken || strings.TrimSpace(s.authToken) == "" {
+				http.Error(w, "Forbidden: token value is invalid", http.StatusForbidden)
 				return
 			}
 		}
@@ -78,16 +75,8 @@ func (s *Server) authorize(ctx context.Context) error {
 		return status.Error(codes.Unauthenticated, "Invalid auth header, needs Bearer {token}")
 	}
 	token := strings.Split(authHeader[0], "Bearer ")[1]
-	_, err := jwt.Parse(token, s.validateJWT)
-	if err != nil {
-		return status.Errorf(codes.Unauthenticated, "Could not parse JWT token: %v", err)
+	if strings.TrimSpace(token) != s.authToken || strings.TrimSpace(s.authToken) == "" {
+		return status.Errorf(codes.Unauthenticated, "Forbidden: token value is invalid")
 	}
 	return nil
-}
-
-func (s *Server) validateJWT(token *jwt.Token) (interface{}, error) {
-	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-		return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
-	}
-	return s.jwtSecret, nil
 }
