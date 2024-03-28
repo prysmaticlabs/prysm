@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
@@ -164,14 +163,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	var depositTrie cache.MerkleTree
 	var err error
-	if features.Get().EnableEIP4881 {
-		depositTrie = depositsnapshot.NewDepositTree()
-	} else {
-		depositTrie, err = trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not set up deposit trie")
-		}
-	}
+	depositTrie = depositsnapshot.NewDepositTree()
 	genState, err := transition.EmptyGenesisState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set up genesis state")
@@ -740,20 +732,12 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 		return nil
 	}
 	var err error
-	if features.Get().EnableEIP4881 {
-		if eth1DataInDB.DepositSnapshot != nil {
-			s.depositTrie, err = depositsnapshot.DepositTreeFromSnapshotProto(eth1DataInDB.DepositSnapshot)
-		} else {
-			if err := s.migrateOldDepositTree(eth1DataInDB); err != nil {
-				return err
-			}
-		}
+	if eth1DataInDB.DepositSnapshot != nil {
+		s.depositTrie, err = depositsnapshot.DepositTreeFromSnapshotProto(eth1DataInDB.DepositSnapshot)
 	} else {
-		if eth1DataInDB.Trie == nil && eth1DataInDB.DepositSnapshot != nil {
-			return errors.Errorf("trying to use old deposit trie after migration to the new trie. "+
-				"Remove the --%s flag to resume normal operations.", features.DisableEIP4881.Name)
+		if err = s.migrateOldDepositTree(eth1DataInDB); err != nil {
+			return err
 		}
-		s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
 	}
 	if err != nil {
 		return err
@@ -766,21 +750,19 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 		}
 	}
 	s.latestEth1Data = eth1DataInDB.CurrentEth1Data
-	if features.Get().EnableEIP4881 {
-		ctrs := eth1DataInDB.DepositContainers
-		// Look at previously finalized index, as we are building off a finalized
-		// snapshot rather than the full trie.
-		lastFinalizedIndex := int64(s.depositTrie.NumOfItems() - 1)
-		// Correctly initialize missing deposits into active trie.
-		for _, c := range ctrs {
-			if c.Index > lastFinalizedIndex {
-				depRoot, err := c.Deposit.Data.HashTreeRoot()
-				if err != nil {
-					return err
-				}
-				if err := s.depositTrie.Insert(depRoot[:], int(c.Index)); err != nil {
-					return err
-				}
+	ctrs := eth1DataInDB.DepositContainers
+	// Look at previously finalized index, as we are building off a finalized
+	// snapshot rather than the full trie.
+	lastFinalizedIndex := int64(s.depositTrie.NumOfItems() - 1)
+	// Correctly initialize missing deposits into active trie.
+	for _, c := range ctrs {
+		if c.Index > lastFinalizedIndex {
+			depRoot, err := c.Deposit.Data.HashTreeRoot()
+			if err != nil {
+				return err
+			}
+			if err := s.depositTrie.Insert(depRoot[:], int(c.Index)); err != nil {
+				return err
 			}
 		}
 	}
@@ -847,21 +829,13 @@ func (s *Service) validPowchainData(ctx context.Context) (*ethpb.ETH1ChainData, 
 			BeaconState:       pbState,
 			DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 		}
-		if features.Get().EnableEIP4881 {
-			trie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
-			if !ok {
-				return nil, errors.New("deposit trie was not EIP4881 DepositTree")
-			}
-			eth1Data.DepositSnapshot, err = trie.ToProto()
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			trie, ok := s.depositTrie.(*trie.SparseMerkleTrie)
-			if !ok {
-				return nil, errors.New("deposit trie was not SparseMerkleTrie")
-			}
-			eth1Data.Trie = trie.ToProto()
+		trie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
+		if !ok {
+			return nil, errors.New("deposit trie was not EIP4881 DepositTree")
+		}
+		eth1Data.DepositSnapshot, err = trie.ToProto()
+		if err != nil {
+			return nil, err
 		}
 		if err := s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data); err != nil {
 			return nil, err
