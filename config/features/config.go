@@ -42,6 +42,7 @@ type Flags struct {
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnableLightClient                   bool // EnableLightClient enables light client APIs.
+	SafeHeadFCU                         bool // SafeHeadFCU enables passing safe head into FCU instead of justified block
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
@@ -206,6 +207,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 
+	if ctx.Bool(safeHeadFCU.Name) {
+		log.WithField(safeHeadFCU.Name, safeHeadFCU.Usage).Warn(enabledFeatureFlag)
+		cfg.SafeHeadFCU = true
+	}
 	cfg.EnablePeerScorer = true
 	if ctx.Bool(disablePeerScorer.Name) {
 		logDisabled(disablePeerScorer)
