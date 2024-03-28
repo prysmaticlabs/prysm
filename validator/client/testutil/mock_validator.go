@@ -166,8 +166,13 @@ func (fv *FakeValidator) RolesAt(_ context.Context, slot primitives.Slot) (map[[
 	return vr, nil
 }
 
-// SubmitAttestation for mocking.
-func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+// GetAttestationData for mocking.
+func (fv *FakeValidator) GetAttestationData(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) *ethpb.AttestationData {
+	return nil
+}
+
+// SubmitAttestations for mocking.
+func (fv *FakeValidator) SubmitAttestations(_ context.Context, slot primitives.Slot, _ [][fieldparams.BLSPubkeyLength]byte, _ []*ethpb.AttestationData) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = uint64(slot)
 }

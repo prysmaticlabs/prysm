@@ -82,6 +82,26 @@ func (mr *MockNodeClientMockRecorder) GetGenesis(arg0, arg1 any, arg2 ...any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGenesis", reflect.TypeOf((*MockNodeClient)(nil).GetGenesis), varargs...)
 }
 
+// GetHealth mocks base method.
+func (m *MockNodeClient) GetHealth(arg0 context.Context, arg1 *eth.HealthRequest, arg2 ...grpc.CallOption) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetHealth", varargs...)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHealth indicates an expected call of GetHealth.
+func (mr *MockNodeClientMockRecorder) GetHealth(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHealth", reflect.TypeOf((*MockNodeClient)(nil).GetHealth), varargs...)
+}
+
 // GetHost mocks base method.
 func (m *MockNodeClient) GetHost(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.HostData, error) {
 	m.ctrl.T.Helper()

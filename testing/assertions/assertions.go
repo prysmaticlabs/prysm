@@ -11,6 +11,7 @@ import (
 
 	"github.com/d4l3k/messagediff"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz/equality"
+	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -232,6 +233,27 @@ func LogsContain(loggerFn assertionLoggerFn, hook *test.Hook, want string, flag 
 	}
 	if errMsg != "" {
 		loggerFn("%s:%d %s: %v\nSearched logs:\n%v", filepath.Base(file), line, errMsg, want, logs)
+	}
+}
+
+// LogsDontHaveErrors checks whether there are no error logs in the output.
+func LogsDontHaveErrors(loggerFn assertionLoggerFn, hook *test.Hook, msg ...interface{}) {
+	_, file, line, _ := runtime.Caller(2)
+	entries := hook.AllEntries()
+	logs := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.Level == logrus.FatalLevel || e.Level == logrus.ErrorLevel {
+			l, err := e.String()
+			if err != nil {
+				loggerFn("%s:%d Failed to format log entry to string: %v", filepath.Base(file), line, err)
+				return
+			}
+			logs = append(logs, l)
+		}
+	}
+	if len(logs) > 0 {
+		errMsg := parseMsg("Unexpected log(s) found", msg...)
+		loggerFn("%s:%d %s: %v", filepath.Base(file), line, errMsg, logs)
 	}
 }
 
