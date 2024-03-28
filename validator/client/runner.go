@@ -115,8 +115,6 @@ func run(ctx context.Context, v iface.Validator) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
 
-			var wg sync.WaitGroup
-
 			allRoles, err := v.RolesAt(ctx, slot)
 			if err != nil {
 				log.WithError(err).Error("Could not get validator roles")
@@ -124,7 +122,7 @@ func run(ctx context.Context, v iface.Validator) {
 				span.End()
 				continue
 			}
-			performRoles(slotCtx, allRoles, v, slot, &wg, span)
+			performRoles(slotCtx, allRoles, v, slot, span)
 		case isHealthyAgain := <-healthTracker.HealthUpdates():
 			if isHealthyAgain {
 				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
@@ -232,10 +230,21 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 	return headSlot, nil
 }
 
-func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, wg *sync.WaitGroup, span *trace.Span) {
+func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, span *trace.Span) {
 	attesterPubkeys := make([][fieldparams.BLSPubkeyLength]byte, 0, len(allRoles))
 	attData := make([]*ethpb.AttestationData, 0, len(allRoles))
+	wg := sync.WaitGroup{}
+	attWg := sync.WaitGroup{}
 	lock := sync.Mutex{}
+
+	// Prepare wait group for attestations so that Wait() isn't executed before we get all attestation data.
+	for _, roles := range allRoles {
+		for _, r := range roles {
+			if r == iface.RoleAttester {
+				attWg.Add(1)
+			}
+		}
+	}
 
 	for pubKey, roles := range allRoles {
 		wg.Add(len(roles))
@@ -244,6 +253,7 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 				defer wg.Done()
 				switch role {
 				case iface.RoleAttester:
+					defer attWg.Done()
 					data := v.GetAttestationData(slotCtx, slot, pubKey)
 					if data != nil {
 						lock.Lock()
@@ -268,10 +278,12 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 		}
 	}
 
-	// Wait for all processes to complete, then report span complete.
 	go func() {
-		wg.Wait()
+		// Wait for all attestation data and submit attestations.
+		attWg.Wait()
 		v.SubmitAttestations(slotCtx, slot, attesterPubkeys, attData)
+		// Wait for all processes to complete.
+		wg.Wait()
 		defer span.End()
 		defer func() {
 			if err := recover(); err != nil { // catch any panic in logging
