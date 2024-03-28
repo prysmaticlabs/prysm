@@ -13,7 +13,7 @@ type blobIndexMask [fieldparams.MaxBlobsPerBlock]bool
 
 // BlobStorageSummary represents cached information about the BlobSidecars on disk for each root the cache knows about.
 type BlobStorageSummary struct {
-	Slot primitives.Slot
+	slot primitives.Slot
 	mask blobIndexMask
 }
 
@@ -75,7 +75,7 @@ func (s *blobStorageCache) ensure(key string, slot primitives.Slot, idx uint64) 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	v := s.cache[key]
-	v.Slot = slot
+	v.slot = slot
 	if !v.mask[idx] {
 		s.updateMetrics(1)
 	}
@@ -91,7 +91,7 @@ func (s *blobStorageCache) slot(key string) (primitives.Slot, bool) {
 	if !ok {
 		return 0, false
 	}
-	return v.Slot, ok
+	return v.slot, ok
 }
 
 func (s *blobStorageCache) evict(key string) {
