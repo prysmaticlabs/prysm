@@ -508,7 +508,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(p)
 		robs, err := verifyAndPopulateBlobs(bwb, blobs, blobWindowStart)
 		if err != nil {
-			log.WithField("peer", p).WithError(err).Debug("invalid BeaconBlocksByRange response")
+			log.WithField("peer", p).WithError(err).Debug("Invalid BeaconBlocksByRange response")
 			continue
 		}
 		return robs, err
