@@ -56,7 +56,7 @@ func (c *FakeCommitteeCache) ProposerIndices(seed [32]byte) ([]primitives.Valida
 }
 
 // HasEntry returns true if the committee cache has a value.
-func (c *FakeCommitteeCache) HasEntry(string) bool {
+func (c *FakeCommitteeCache) HasEntry(seed [32]byte) bool {
 	return false
 }
 
