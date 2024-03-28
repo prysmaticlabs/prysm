@@ -9,7 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-func (c beaconApiValidatorClient) proposeAttestations(ctx context.Context, attestations []*ethpb.Attestation) ([]*ethpb.AttestResponse, error) {
+func (c beaconApiValidatorClient) submitAttestations(ctx context.Context, attestations []*ethpb.Attestation) ([]*ethpb.AttestResponse, error) {
 	for _, a := range attestations {
 		if err := checkNilAttestation(a); err != nil {
 			return nil, err

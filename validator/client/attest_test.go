@@ -178,7 +178,7 @@ func TestSubmitAttestations(t *testing.T) {
 			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
 			var generatedAttestation *ethpb.Attestation
-			m.validatorClient.EXPECT().ProposeAttestations(
+			m.validatorClient.EXPECT().SubmitAttestations(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf([]*ethpb.Attestation{}),
 			).Do(func(_ context.Context, atts []*ethpb.Attestation) {
@@ -259,7 +259,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 				gomock.Any(), // epoch
 			).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-			m.validatorClient.EXPECT().ProposeAttestations(
+			m.validatorClient.EXPECT().SubmitAttestations(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf([]*ethpb.Attestation{}),
 			).Return([]*ethpb.AttestResponse{{AttestationDataRoot: make([]byte, 32)}, {AttestationDataRoot: make([]byte, 32)}}, nil)
@@ -307,7 +307,7 @@ func TestAttestToBlockHead_BlocksSurroundingAtt(t *testing.T) {
 				gomock.Any(), // epoch
 			).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-			m.validatorClient.EXPECT().ProposeAttestations(
+			m.validatorClient.EXPECT().SubmitAttestations(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf([]*ethpb.Attestation{}),
 			).Return([]*ethpb.AttestResponse{{}, {}}, nil)
@@ -355,7 +355,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 				gomock.Any(), // epoch
 			).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-			m.validatorClient.EXPECT().ProposeAttestations(
+			m.validatorClient.EXPECT().SubmitAttestations(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf([]*ethpb.Attestation{}),
 			).Return([]*ethpb.AttestResponse{{}, {}}, nil)
@@ -389,7 +389,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
 			var generatedAttestation *ethpb.Attestation
-			m.validatorClient.EXPECT().ProposeAttestations(
+			m.validatorClient.EXPECT().SubmitAttestations(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf([]*ethpb.Attestation{}),
 			).Do(func(_ context.Context, atts []*ethpb.Attestation) {

@@ -136,7 +136,7 @@ func TestProposeAttestations(t *testing.T) {
 			).Times(test.endpointCall)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			proposeResponse, err := validatorClient.proposeAttestations(ctx, []*ethpb.Attestation{test.attestation})
+			proposeResponse, err := validatorClient.submitAttestations(ctx, []*ethpb.Attestation{test.attestation})
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, test.expectedErrorMessage, err)
 				return
@@ -207,7 +207,7 @@ func TestProposeAttestations_Multiple(t *testing.T) {
 	).Return(nil)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	proposeResponse, err := validatorClient.proposeAttestations(ctx, []*ethpb.Attestation{att1, att2})
+	proposeResponse, err := validatorClient.submitAttestations(ctx, []*ethpb.Attestation{att1, att2})
 	require.NoError(t, err)
 	require.NotNil(t, proposeResponse)
 	expectedRoot1, err := att1.Data.HashTreeRoot()

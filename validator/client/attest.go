@@ -185,13 +185,13 @@ func (v *validator) SubmitAttestations(
 			log.WithError(err).Error("Failed attestation slashing protection check")
 			log.WithFields(
 				attestationLogFields(pubkeys[i], indexedAtt),
-			).Debug("Attempted slashable attestation details")
+			).Debug("Failed attestation slashing protection details")
 			tracing.AnnotateError(span, err)
 			continue
 		}
 	}
 
-	attResp, err := v.validatorClient.ProposeAttestations(ctx, maps.Values(atts))
+	attResp, err := v.validatorClient.SubmitAttestations(ctx, maps.Values(atts))
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
 		if v.emitAccountMetrics {
