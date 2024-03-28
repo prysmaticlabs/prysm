@@ -312,7 +312,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 
 	response.bwb, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
 	if response.err == nil {
-		bwb, err := f.fetchBlobsFromPeer(ctx, response.bwb, response.pid)
+		bwb, err := f.fetchBlobsFromPeer(ctx, response.bwb, response.pid, peers)
 		if err != nil {
 			response.err = err
 		}
@@ -491,6 +491,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 	if req == nil {
 		return bwb, nil
 	}
+	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	// We dial the initial peer first to ensure that we get the desired set of blobs.
 	wantedPeers := append([]peer.ID{pid}, peers...)
 	bestPeers := f.hasSufficientBandwith(wantedPeers, req.Count)
