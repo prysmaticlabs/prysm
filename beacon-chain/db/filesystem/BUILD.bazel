@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "blob.go",
+        "cache.go",
         "ephemeral.go",
         "log.go",
         "metrics.go",
@@ -33,6 +34,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "blob_test.go",
+        "cache_test.go",
         "pruner_test.go",
     ],
     embed = [":go_default_library"],
