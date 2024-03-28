@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const (
@@ -79,9 +80,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 
 	// Request block from beacon node
 	b, err := v.validatorClient.GetBeaconBlock(ctx, &ethpb.BlockRequest{
-		Slot:         slot,
-		RandaoReveal: randaoReveal,
-		Graffiti:     g,
+		Slot:               slot,
+		RandaoReveal:       randaoReveal,
+		Graffiti:           g,
+		BuilderBoostFactor: findBuilderBoost(pubKey, v.proposerSettings),
 	})
 	if err != nil {
 		log.WithField("slot", slot).WithError(err).Error("Failed to request block from beacon node")
@@ -223,6 +225,31 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	if v.emitAccountMetrics {
 		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
 	}
+}
+
+func findBuilderBoost(pubKey [fieldparams.BLSPubkeyLength]byte, proposerSettings *proposer.Settings) *wrapperspb.UInt64Value {
+	if proposerSettings == nil {
+		return nil
+	}
+
+	if proposerSettings.ProposeConfig != nil {
+		option, ok := proposerSettings.ProposeConfig[pubKey]
+		if ok && option.BuilderConfig != nil && option.BuilderConfig.BuilderBoostFactor != nil {
+			return &wrapperspb.UInt64Value{
+				Value: *option.BuilderConfig.BuilderBoostFactor,
+			}
+		}
+	}
+
+	if proposerSettings.DefaultConfig != nil &&
+		proposerSettings.DefaultConfig.BuilderConfig != nil &&
+		proposerSettings.DefaultConfig.BuilderConfig.BuilderBoostFactor != nil {
+		return &wrapperspb.UInt64Value{
+			Value: *proposerSettings.DefaultConfig.BuilderConfig.BuilderBoostFactor,
+		}
+	}
+
+	return nil
 }
 
 // ProposeExit performs a voluntary exit on a validator.
