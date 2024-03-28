@@ -22,23 +22,32 @@ type lruCache[K comparable, V any] interface {
 	missCache()
 }
 
+// newLRUCacheOrPanics initialise a new thread-safe cache with Prometheus metrics and panics if an error occurs
+func newLRUCacheOrPanics[K comparable, V any](cacheSize int, committeeCacheHit, committeeCacheMiss prometheus.Counter) *lru.Cache[K, V] {
+	cache, err := newLRUCache[K, V](cacheSize, committeeCacheHit, committeeCacheMiss)
+	if err != nil {
+		panic(err)
+	}
+	return cache
+}
+
 // newLRUCache initialise a new thread-safe cache with Prometheus metrics
-func newLRUCache[K comparable, V any](cacheSize int, committeeCacheHit, committeeCacheMiss prometheus.Counter) *lru.Cache[K, V] {
+func newLRUCache[K comparable, V any](cacheSize int, committeeCacheHit, committeeCacheMiss prometheus.Counter) (*lru.Cache[K, V], error) {
 	cache, err := lru.New[K, V](cacheSize)
 	if err != nil {
-		panic(fmt.Errorf("%w: %v", ErrNilCache, err))
+		return nil, fmt.Errorf("%w: %v", ErrNilCache, err)
 	}
 
 	isCacheHitNil, isCacheMissNil := committeeCacheHit == nil, committeeCacheMiss == nil
 	if isCacheHitNil || isCacheMissNil {
-		panic(fmt.Errorf("%w: isCacheHitNil=<%t>, isCacheMissNil=<%t>",
+		return nil, fmt.Errorf("%w: isCacheHitNil=<%t>, isCacheMissNil=<%t>",
 			ErrNilMetrics,
 			isCacheHitNil,
 			isCacheMissNil,
-		))
+		)
 	}
 
-	return cache
+	return cache, nil
 }
 
 // get looks for a value in the cache, returns nil if not found
@@ -47,8 +56,8 @@ func get[K comparable, V any](c lruCache[K, V], key K) (V, error) {
 	value, ok := c.get().Get(key)
 	if !ok {
 		c.missCache()
-		var zero V
-		return zero, ErrNotFound
+		var noValue V
+		return noValue, ErrNotFound
 	}
 	c.hitCache()
 	return value, nil
@@ -87,7 +96,7 @@ func exist[K comparable, V any](c lruCache[K, V], key K) bool {
 
 // isNil is a safeguard when trying to insert key -> value, where value is nil
 //
-// it helps with the confusing Go case where a pointer structure is equal to nil and not flagged by "V == nil"
+// it helps with the confusing Go case where a pointer structure is "equal" to nil and not flagged by "V == nil"
 // we know that an interface in Go holds two values:
 // var i interface{}       // (type=nil,value=nil)
 // that the nil operator compares the values of type and value to both be nil such as:
