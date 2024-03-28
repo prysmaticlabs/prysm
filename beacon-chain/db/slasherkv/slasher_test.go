@@ -89,7 +89,7 @@ func TestStore_LastEpochWrittenForValidators(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, len(attestedEpochs))
 
-	err = beaconDB.SaveLastEpochsWrittenForValidators(ctx, epochsByValidator)
+	err = beaconDB.SaveLastEpochWrittenForValidators(ctx, epochsByValidator)
 	require.NoError(t, err)
 
 	retrievedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)

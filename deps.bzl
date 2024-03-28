@@ -5265,6 +5265,12 @@ def prysm_deps():
         sum = "h1:sI7k6L95XOKS281NhVKOFCUNIvv9e0w4BF8N3u+tCRo=",
         version = "v1.26.0",
     )
+    go_repository(
+        name = "com_github_jedib0t_go_pretty_v6",
+        importpath = "github.com/jedib0t/go-pretty/v6",
+        sum = "h1:gOGo0613MoqUcf0xCj+h/V3sHDaZasfv152G6/5l91s=",
+        version = "v6.5.4",
+    )
 
     http_archive(
         name = "com_github_supranational_blst",
