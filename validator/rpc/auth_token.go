@@ -15,7 +15,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 )
 
@@ -23,11 +24,7 @@ import (
 // to a file in the specified directory. Also, it logs out a prepared URL
 // for the user to navigate to and authenticate with the Prysm web interface.
 func CreateAuthToken(authPath, validatorWebAddr string) error {
-	jwtKey, err := createRandomJWTSecret()
-	if err != nil {
-		return err
-	}
-	token, err := createTokenString(jwtKey)
+	token, err := api.GenerateRandomHexString()
 	if err != nil {
 		return err
 	}
@@ -68,21 +65,9 @@ func (s *Server) initializeAuthToken() error {
 		}
 		s.jwtSecret = secret
 		s.authToken = token
-		// TODO: can be removed in the future after fully migrated to the new format
-		if len(secret) > 0 {
-			log.Info(s.authTokenPath)
-			if err := saveAuthToken(s.authTokenPath, token); err != nil {
-				return err
-			}
-		}
 		return nil
 	}
-	jwtKey, err := createRandomJWTSecret()
-	if err != nil {
-		return err
-	}
-	s.jwtSecret = jwtKey
-	token, err := createTokenString(s.jwtSecret)
+	token, err := api.GenerateRandomHexString()
 	if err != nil {
 		return err
 	}
@@ -163,10 +148,11 @@ func saveAuthToken(tokenPath string, token string) error {
 	return nil
 }
 
-func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
+func readAuthTokenFile(r io.Reader) ([]byte, string, error) {
 	scanner := bufio.NewScanner(r)
 	var lines []string
-
+	var secret []byte
+	var token string
 	// Scan the file and collect lines, excluding empty lines
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -176,8 +162,8 @@ func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
 	}
 
 	// Check for scanning errors
-	if err = scanner.Err(); err != nil {
-		return
+	if err := scanner.Err(); err != nil {
+		return nil, "", err
 	}
 
 	// Process based on the number of lines, excluding empty ones
@@ -190,16 +176,20 @@ func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
 		// For legacy files
 		// If there are two lines, the first is the jwt key and the second is the token
 		jwtKeyHex := strings.TrimSpace(lines[0])
-		secret, err = hex.DecodeString(jwtKeyHex)
+		s, err := hex.DecodeString(jwtKeyHex)
 		if err != nil {
 			return nil, "", errors.Wrapf(err, "could not decode JWT secret")
 		}
+		secret = bytesutil.SafeCopyBytes(s)
 		token = strings.TrimSpace(lines[1])
-		log.Warn("Auth token is a legacy file, and will be updated to the new format with the opaque token on the first line.")
+		log.Warn("Auth token is a legacy file and should be regenerated.")
 	default:
-		return nil, "", errors.New("Auth token file format has multiple lines, please update the auth token to a single line file")
+		return nil, "", errors.New("Auth token file format has multiple lines, please update the auth token to a single line that is compliant as a 256bit hexstring")
 	}
-	return
+	if err := api.ValidateAuthToken(token); err != nil {
+		log.WithError(err).Warn("Auth token does not follow our standards and should be regenerated. Tokens can be generated through the `validator web generate-auth-token` command")
+	}
+	return secret, token, nil
 }
 
 // Creates a JWT token string using the JWT key.
@@ -211,17 +201,4 @@ func createTokenString(jwtKey []byte) (string, error) {
 		return "", err
 	}
 	return tokenString, nil
-}
-
-func createRandomJWTSecret() ([]byte, error) {
-	r := rand.NewGenerator()
-	jwtKey := make([]byte, 32)
-	n, err := r.Read(jwtKey)
-	if err != nil {
-		return nil, err
-	}
-	if n != len(jwtKey) {
-		return nil, errors.New("could not create appropriately sized random JWT secret")
-	}
-	return jwtKey, nil
 }

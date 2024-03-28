@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -96,6 +97,7 @@ func TestServer_RefreshAuthTokenOnFileChange(t *testing.T) {
 
 // TODO: remove this test when legacy files are removed
 func TestServer_LegacyTokensStillWork(t *testing.T) {
+	hook := logTest.NewGlobal()
 	// Initializing for the first time, there is no auth token file in
 	// the wallet directory, so we generate a jwt token and secret from scratch.
 	walletDir := setupWalletDir(t)
@@ -139,7 +141,8 @@ func TestServer_LegacyTokensStillWork(t *testing.T) {
 			lines = append(lines, line)
 		}
 	}
-	require.Equal(t, len(lines), 1)
+	require.Equal(t, len(lines), 2)
+	require.LogsContain(t, hook, "Auth token does not follow our standards and should be regenerated")
 	// Check for scanning errors
 	err = scanner.Err()
 	require.NoError(t, err)
