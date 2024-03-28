@@ -133,6 +133,11 @@ func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error)
 	panic(err)
 }
 
+// VerifySignature -- stub
+func VerifySignature(_ []byte, _ [32]byte, _ common.PublicKey) (bool, error) {
+	panic(err)
+}
+
 // VerifyMultipleSignatures -- stub
 func VerifyMultipleSignatures(_ [][]byte, _ [][32]byte, _ []common.PublicKey) (bool, error) {
 	panic(err)
