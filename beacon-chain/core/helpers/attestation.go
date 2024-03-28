@@ -12,7 +12,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -133,9 +132,6 @@ func ComputeSubnetFromCommitteeAndSlot(activeValCount uint64, comIdx primitives.
 //
 // In the attestation must be within the range of 95 to 102 in the example above.
 func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
-	if err := slots.ValidateClock(attSlot, uint64(genesisTime.Unix())); err != nil {
-		return err
-	}
 	attTime, err := slots.ToTime(uint64(genesisTime.Unix()), attSlot)
 	if err != nil {
 		return err
@@ -182,24 +178,15 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 	}
 
 	// EIP-7045: Starting in Deneb, allow any attestations from the current or previous epoch.
-
 	currentEpoch := slots.ToEpoch(currentSlot)
-	prevEpoch, err := currentEpoch.SafeSub(1)
-	if err != nil {
-		log.WithError(err).Debug("Ignoring underflow for a deneb attestation inclusion check in epoch 0")
-		prevEpoch = 0
-	}
-	attSlotEpoch := slots.ToEpoch(attSlot)
-	if attSlotEpoch != currentEpoch && attSlotEpoch != prevEpoch {
+	if attEpoch+1 < currentEpoch {
 		attError = fmt.Errorf(
-			"attestation epoch %d not within current epoch %d or previous epoch %d",
-			attSlot/params.BeaconConfig().SlotsPerEpoch,
+			"attestation epoch %d not within current epoch %d or previous epoch",
+			attEpoch,
 			currentEpoch,
-			prevEpoch,
 		)
 		return errors.Join(ErrTooLate, attError)
 	}
-
 	return nil
 }
 

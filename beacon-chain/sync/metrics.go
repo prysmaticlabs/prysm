@@ -150,6 +150,10 @@ var (
 			Help: "Time to verify gossiped blob sidecars",
 		},
 	)
+	pendingAttCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_pending_attestations_total",
+		Help: "increased when receiving a new pending attestation",
+	})
 
 	// Sync committee verification performance.
 	syncMessagesForUnknownBlocks = promauto.NewCounter(
