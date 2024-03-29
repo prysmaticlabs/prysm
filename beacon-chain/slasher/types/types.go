@@ -14,6 +14,18 @@ const (
 	MaxSpan
 )
 
+// String returns the string representation of the chunk kind.
+func (c ChunkKind) String() string {
+	switch c {
+	case MinSpan:
+		return "minspan"
+	case MaxSpan:
+		return "maxspan"
+	default:
+		return "unknown"
+	}
+}
+
 // IndexedAttestationWrapper contains an indexed attestation with its
 // data root to reduce duplicated computation.
 type IndexedAttestationWrapper struct {

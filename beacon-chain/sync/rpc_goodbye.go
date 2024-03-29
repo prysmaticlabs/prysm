@@ -42,7 +42,7 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 		return fmt.Errorf("wrong message type for goodbye, got %T, wanted *uint64", msg)
 	}
 	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
-		log.WithError(err).Warn("Goodbye message from rate-limited peer.")
+		log.WithError(err).Debug("Goodbye message from rate-limited peer.")
 	} else {
 		s.rateLimiter.add(stream, 1)
 	}
