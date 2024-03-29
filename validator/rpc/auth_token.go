@@ -47,7 +47,7 @@ func (s *Server) initializeAuthToken() error {
 	}
 	exists, err := file.Exists(s.authTokenPath, file.Regular)
 	if err != nil {
-		return errors.Wrapf(err, "could not check if file exists: %s", s.authTokenPath)
+		return errors.Wrapf(err, "could not check if file %s exists", s.authTokenPath)
 	}
 	if exists {
 		f, err := os.Open(filepath.Clean(s.authTokenPath))
