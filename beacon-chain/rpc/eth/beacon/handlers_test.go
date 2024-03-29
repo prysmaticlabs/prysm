@@ -3648,6 +3648,8 @@ func TestServer_broadcastBlobSidecars(t *testing.T) {
 		Broadcaster: &mockp2p.MockBroadcaster{},
 	}
 
-	require.NoError(t, server.broadcastBlobSidecars(context.Background(), b))
+	blk, err := blocks.NewSignedBeaconBlock(b.Block)
+	require.NoError(t, err)
+	require.NoError(t, server.broadcastBlobSidecars(context.Background(), blk, b.GetDeneb().Blobs, b.GetDeneb().KzgProofs))
 	require.LogsContain(t, hook, "Broadcasted blob sidecar")
 }
