@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/v1alpha1/validator"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
@@ -32,6 +33,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -42,7 +44,8 @@ const (
 )
 
 var (
-	errNilBlock = errors.New("nil block")
+	errNilBlock         = errors.New("nil block")
+	errEquivocatedBlock = errors.New("block is equivocated")
 )
 
 type handled bool
@@ -1254,6 +1257,11 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 			},
 		}
 		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			if errors.Is(err, errEquivocatedBlock) {
+				if err := s.broadcastBlobSidecars(ctx, genericBlock); err != nil {
+					log.WithError(err).Error("Failed to broadcast blob sidecars")
+				}
+			}
 			httputil.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -1383,6 +1391,11 @@ func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *htt
 		consensusBlock, err = denebBlockContents.ToGeneric()
 		if err == nil {
 			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				if errors.Is(err, errEquivocatedBlock) {
+					if err := s.broadcastBlobSidecars(ctx, consensusBlock); err != nil {
+						log.WithError(err).Error("Failed to broadcast blob sidecars")
+					}
+				}
 				httputil.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -1547,7 +1560,7 @@ func (s *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnlyS
 
 func (s *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error {
 	if s.ForkchoiceFetcher.HighestReceivedBlockSlot() == blk.Slot() {
-		return fmt.Errorf("block for slot %d already exists in fork choice", blk.Slot())
+		return errors.Wrapf(errEquivocatedBlock, "block for slot %d already exists in fork choice", blk.Slot())
 	}
 	return nil
 }
@@ -2071,4 +2084,27 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 			Data: structs.DepositSnapshotFromConsensus(snapshot),
 		},
 	)
+}
+
+func (s *Server) broadcastBlobSidecars(ctx context.Context, sb *eth.GenericSignedBeaconBlock) error {
+	b, err := blocks.NewSignedBeaconBlock(sb.Block)
+	if err != nil {
+		return err
+	}
+	d := sb.GetDeneb()
+	scs, err := validator.BuildBlobSidecars(b, d.Blobs, d.KzgProofs)
+	if err != nil {
+		return err
+	}
+	for _, sc := range scs {
+		if err := s.Broadcaster.BroadcastBlob(ctx, sc.Index, sc); err != nil {
+			log.WithError(err).Error("Failed to broadcast blob sidecar for index ", sc.Index)
+		}
+		log.WithFields(logrus.Fields{
+			"index":         sc.Index,
+			"slot":          sc.SignedBlockHeader.Header.Slot,
+			"kzgCommitment": fmt.Sprintf("%#x", sc.KzgCommitment),
+		}).Info("Broadcasted blob sidecar")
+	}
+	return nil
 }
