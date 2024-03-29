@@ -15,7 +15,7 @@ func GenerateRandomHexString() (string, error) {
 	n, err := randGen.Read(secret)
 	if err != nil {
 		return "", err
-	} else if n <= 0 {
+	} else if n != 32 {
 		return "", errors.New("rand: unexpected length")
 	}
 	return hexutil.Encode(secret), nil

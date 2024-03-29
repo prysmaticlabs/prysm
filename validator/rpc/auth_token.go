@@ -187,7 +187,10 @@ func readAuthTokenFile(r io.Reader) ([]byte, string, error) {
 		return nil, "", errors.New("Auth token file format has multiple lines, please update the auth token to a single line that is a 256 bit hex string")
 	}
 	if err := api.ValidateAuthToken(token); err != nil {
-		log.WithError(err).Warn("Auth token does not follow our standards and should be regenerated. Tokens can be generated through the `validator web generate-auth-token` command")
+		log.WithError(err).Warn("Auth token does not follow our standards and should be regenerated either \n" +
+			"1. by removing the current token file and restarting \n" +
+			"2. using the `validator web generate-auth-token` command. \n" +
+			"Tokens can be generated through the `validator web generate-auth-token` command")
 	}
 	return secret, token, nil
 }
