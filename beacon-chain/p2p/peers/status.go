@@ -1,7 +1,7 @@
 // Package peers provides information about peers at the Ethereum consensus protocol level.
 //
 // "Protocol level" is the level above the network level, so this layer never sees or interacts with
-// (for example) hosts that are uncontactable due to being down, firewalled, etc. Instead, this works
+// (for example) hosts that are unreachable due to being down, firewalled, etc. Instead, this works
 // with peers that are contactable but may or may not be of the correct fork version, not currently
 // required due to the number of current connections, etc.
 //
@@ -59,8 +59,8 @@ const (
 )
 
 const (
-	// ColocationLimit restricts how many peer identities we can see from a single ip or ipv6 subnet.
-	ColocationLimit = 5
+	// CollocationLimit restricts how many peer identities we can see from a single ip or ipv6 subnet.
+	CollocationLimit = 5
 
 	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 	maxLimitBuffer = 150
@@ -548,7 +548,7 @@ func (p *Status) Prune() {
 	p.store.Lock()
 	defer p.store.Unlock()
 
-	// Default to old method if flag isnt enabled.
+	// Default to old method if flag isn't enabled.
 	if !features.Get().EnablePeerScorer {
 		p.deprecatedPrune()
 		return
@@ -961,7 +961,7 @@ func (p *Status) isfromBadIP(pid peer.ID) bool {
 		return true
 	}
 	if val, ok := p.ipTracker[ip.String()]; ok {
-		if val > ColocationLimit {
+		if val > CollocationLimit {
 			return true
 		}
 	}
@@ -1012,7 +1012,7 @@ func (p *Status) tallyIPTracker() {
 }
 
 func sameIP(firstAddr, secondAddr ma.Multiaddr) bool {
-	// Exit early if we do get nil multiaddresses
+	// Exit early if we do get nil multi-addresses
 	if firstAddr == nil || secondAddr == nil {
 		return false
 	}
