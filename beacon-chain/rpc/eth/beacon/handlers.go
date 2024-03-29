@@ -1263,7 +1263,7 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 					httputil.HandleError(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				if err := s.broadcastBlobSidecars(ctx, b, genericBlock.GetDeneb().Blobs, genericBlock.GetDeneb().KzgProofs); err != nil {
+				if err := s.broadcastSeenBlockSidecars(ctx, b, genericBlock.GetDeneb().Blobs, genericBlock.GetDeneb().KzgProofs); err != nil {
 					log.WithError(err).Error("Failed to broadcast blob sidecars")
 				}
 			}
@@ -1402,7 +1402,7 @@ func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *htt
 						httputil.HandleError(w, err.Error(), http.StatusBadRequest)
 						return
 					}
-					if err := s.broadcastBlobSidecars(ctx, b, consensusBlock.GetDeneb().Blobs, consensusBlock.GetDeneb().KzgProofs); err != nil {
+					if err := s.broadcastSeenBlockSidecars(ctx, b, consensusBlock.GetDeneb().Blobs, consensusBlock.GetDeneb().KzgProofs); err != nil {
 						log.WithError(err).Error("Failed to broadcast blob sidecars")
 					}
 				}
@@ -2096,7 +2096,10 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func (s *Server) broadcastBlobSidecars(
+// Broadcast blob sidecars even if the block of the same slot has been imported.
+// To ensure safety, we will only broadcast blob sidecars if the header references the same block that was previously seen.
+// Otherwise, a proposer could get slashed through a different blob sidecar header reference.
+func (s *Server) broadcastSeenBlockSidecars(
 	ctx context.Context,
 	b interfaces.SignedBeaconBlock,
 	blobs [][]byte,
@@ -2106,6 +2109,15 @@ func (s *Server) broadcastBlobSidecars(
 		return err
 	}
 	for _, sc := range scs {
+		r, err := sc.SignedBlockHeader.Header.HashTreeRoot()
+		if err != nil {
+			log.WithError(err).Error("Failed to hash block header for blob sidecar")
+			continue
+		}
+		if !s.FinalizationFetcher.InForkchoice(r) {
+			log.WithField("root", fmt.Sprintf("%#x", r)).Debug("Block header not in forkchoice, skipping blob sidecar broadcast")
+			continue
+		}
 		if err := s.Broadcaster.BroadcastBlob(ctx, sc.Index, sc); err != nil {
 			log.WithError(err).Error("Failed to broadcast blob sidecar for index ", sc.Index)
 		}

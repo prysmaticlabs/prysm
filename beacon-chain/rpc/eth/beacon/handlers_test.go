@@ -3645,11 +3645,16 @@ func TestServer_broadcastBlobSidecars(t *testing.T) {
 	b := &eth.GenericSignedBeaconBlock{Block: d}
 
 	server := &Server{
-		Broadcaster: &mockp2p.MockBroadcaster{},
+		Broadcaster:         &mockp2p.MockBroadcaster{},
+		FinalizationFetcher: &chainMock.ChainService{NotFinalized: true},
 	}
 
 	blk, err := blocks.NewSignedBeaconBlock(b.Block)
 	require.NoError(t, err)
-	require.NoError(t, server.broadcastBlobSidecars(context.Background(), blk, b.GetDeneb().Blobs, b.GetDeneb().KzgProofs))
+	require.NoError(t, server.broadcastSeenBlockSidecars(context.Background(), blk, b.GetDeneb().Blobs, b.GetDeneb().KzgProofs))
+	require.LogsDoNotContain(t, hook, "Broadcasted blob sidecar")
+
+	server.FinalizationFetcher = &chainMock.ChainService{NotFinalized: false}
+	require.NoError(t, server.broadcastSeenBlockSidecars(context.Background(), blk, b.GetDeneb().Blobs, b.GetDeneb().KzgProofs))
 	require.LogsContain(t, hook, "Broadcasted blob sidecar")
 }
