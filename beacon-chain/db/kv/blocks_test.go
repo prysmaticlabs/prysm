@@ -289,7 +289,7 @@ func TestStore_DeleteBlock(t *testing.T) {
 	require.Equal(t, b, nil)
 	require.Equal(t, false, db.HasStateSummary(ctx, root2))
 
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteFinalized)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
 }
 
 func TestStore_DeleteJustifiedBlock(t *testing.T) {
@@ -309,7 +309,7 @@ func TestStore_DeleteJustifiedBlock(t *testing.T) {
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteFinalized)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
 }
 
 func TestStore_DeleteFinalizedBlock(t *testing.T) {
@@ -329,7 +329,7 @@ func TestStore_DeleteFinalizedBlock(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteFinalized)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
 }
 func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)

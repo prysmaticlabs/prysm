@@ -458,7 +458,7 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		bkt = tx.Bucket(stateBucket)
 		// Safeguard against deleting genesis, finalized, head state.
 		if bytes.Equal(blockRoot[:], finalized.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], justified.Root) {
-			return ErrDeleteFinalized
+			return ErrDeleteJustifiedAndFinalized
 		}
 
 		// Nothing to delete if state doesn't exist.
