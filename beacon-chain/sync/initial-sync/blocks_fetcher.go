@@ -336,7 +336,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		Count:     count,
 		Step:      1,
 	}
-	bestPeers := f.hasSufficientBandwith(peers, req.Count)
+	bestPeers := f.hasSufficientBandwidth(peers, req.Count)
 	// We append the best peers to the front so that higher capacity
 	// peers are dialed first.
 	peers = append(bestPeers, peers...)
@@ -494,10 +494,11 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	// We dial the initial peer first to ensure that we get the desired set of blobs.
 	wantedPeers := append([]peer.ID{pid}, peers...)
-	bestPeers := f.hasSufficientBandwith(wantedPeers, req.Count)
+	bestPeers := f.hasSufficientBandwidth(wantedPeers, req.Count)
 	// We append the best peers to the front so that higher capacity
-	// peers are dialed first.
-	peers = append(bestPeers, peers...)
+	// peers are dialed first. If all of them fail, we fallback to the
+	// initial peer we wanted to request blobs from.
+	peers = append(bestPeers, pid)
 	for i := 0; i < len(peers); i++ {
 		p := peers[i]
 		blobs, err := f.requestBlobs(ctx, req, p)
@@ -626,7 +627,7 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 	return nil
 }
 
-func (f *blocksFetcher) hasSufficientBandwith(peers []peer.ID, count uint64) []peer.ID {
+func (f *blocksFetcher) hasSufficientBandwidth(peers []peer.ID, count uint64) []peer.ID {
 	filteredPeers := []peer.ID{}
 	for _, p := range peers {
 		if uint64(f.rateLimiter.Remaining(p.String())) < count {

@@ -1177,7 +1177,7 @@ func TestBlockFetcher_HasSufficientBandwidth(t *testing.T) {
 	bf.rateLimiter.Add(peer.ID("f").String(), wantedAmt)
 	bf.rateLimiter.Add(peer.ID("d").String(), wantedAmt)
 
-	receivedPeers := bf.hasSufficientBandwith([]peer.ID{"a", "b", "c", "d", "e", "f"}, 110)
+	receivedPeers := bf.hasSufficientBandwidth([]peer.ID{"a", "b", "c", "d", "e", "f"}, 110)
 	for _, p := range receivedPeers {
 		switch p {
 		case "a", "c", "f", "d":
