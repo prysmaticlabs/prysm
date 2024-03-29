@@ -3,7 +3,11 @@ package remote_web3signer
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -213,13 +217,11 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	assert.EqualValues(t, resp, keys)
+	require.NoError(t, os.Remove("remote_keys"))
 }
 
 func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testing.T) {
 	ctx := context.Background()
-	client := &MockClient{
-		PublicKeys: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
-	}
 	decodedKey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
 	if err != nil {
 		fmt.Printf("error: %v", err)
@@ -231,31 +233,38 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode([]string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"})
+		require.NoError(t, err)
+	}))
+	defer srv.Close()
 	config := &SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "http://example2.com/api/v1/eth2/publicKeys",
+		PublicKeysURL:         srv.URL + "/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
-	km.client = client
 	resp, err := km.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		fmt.Printf("error: %v", err)
-	}
+	require.NoError(t, err)
 	assert.NotNil(t, resp)
-	assert.Nil(t, err)
 	assert.EqualValues(t, resp, keys)
+	require.NoError(t, os.Remove("remote_keys"))
 }
 
 func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *testing.T) {
 	ctx := context.Background()
-	client := &MockClient{
-		PublicKeys:      []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
-		isThrowingError: true,
-	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "mock error", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	if err != nil {
 		fmt.Printf("error: %v", err)
@@ -263,17 +272,11 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 	config := &SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "http://example2.com/api/v1/eth2/publicKeys",
+		PublicKeysURL:         srv.URL + "/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
-	if err != nil {
-		fmt.Printf("error: %v", err)
-	}
-	km.client = client
-	resp, err := km.FetchValidatingPublicKeys(ctx)
-	assert.NotNil(t, err)
-	assert.Nil(t, resp)
-	assert.Equal(t, "could not get public keys from remote server url: http://example2.com/api/v1/eth2/publicKeys: mock error", fmt.Sprintf("%v", err))
+	require.ErrorContains(t, fmt.Sprintf("could not get public keys from remote server url: %s/api/v1/eth2/publicKeys", srv.URL), err)
+	assert.Nil(t, km)
 }
 
 func TestKeymanager_AddPublicKeys(t *testing.T) {
@@ -301,6 +304,7 @@ func TestKeymanager_AddPublicKeys(t *testing.T) {
 	for _, status := range statuses {
 		require.Equal(t, keymanager.StatusDuplicate, status.Status)
 	}
+	require.NoError(t, os.Remove("remote_keys"))
 }
 
 func TestKeymanager_DeletePublicKeys(t *testing.T) {
@@ -335,4 +339,5 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 	for _, status := range s {
 		require.Equal(t, keymanager.StatusNotFound, status.Status)
 	}
+	require.NoError(t, os.Remove("remote_keys"))
 }
