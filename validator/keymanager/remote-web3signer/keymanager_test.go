@@ -2,13 +2,11 @@ package remote_web3signer
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -35,19 +33,8 @@ func (mc *MockClient) Sign(_ context.Context, _ string, _ internal.SignRequestJs
 	}
 	return bls.SignatureFromBytes(decoded)
 }
-func (mc *MockClient) GetPublicKeys(_ context.Context, _ string) ([][48]byte, error) {
-	var keys [][48]byte
-	for _, pk := range mc.PublicKeys {
-		decoded, err := hex.DecodeString(strings.TrimPrefix(pk, "0x"))
-		if err != nil {
-			return nil, err
-		}
-		keys = append(keys, bytesutil.ToBytes48(decoded))
-	}
-	if mc.isThrowingError {
-		return nil, fmt.Errorf("mock error")
-	}
-	return keys, nil
+func (mc *MockClient) GetPublicKeys(_ context.Context, _ string) ([]string, error) {
+	return mc.PublicKeys, nil
 }
 
 func TestKeymanager_Sign(t *testing.T) {

@@ -81,7 +81,8 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		walletDir:             cfg.WalletDir,
 	}
 
-	var ppk [][fieldparams.BLSPubkeyLength]byte
+	// Using a map to track hex encoded and decoded public keys
+	combinedKeys := make(map[string][48]byte)
 
 	if cfg.PublicKeysURL != "" {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, cfg.PublicKeysURL)
@@ -89,10 +90,21 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 			erroredResponsesTotal.Inc()
 			return nil, errors.Wrap(err, fmt.Sprintf("could not get public keys from remote server url: %v", cfg.PublicKeysURL))
 		}
-		// makes sure that if the public keys are deleted the validator does not call URL again.
-		ppk = providedPublicKeys
+
+		// Populate the map with existing keys
+		for _, key := range providedPublicKeys {
+			decodedKey, err := hexutil.Decode(key)
+			if err != nil {
+				return nil, err
+			}
+			combinedKeys[key] = bytesutil.ToBytes48(decodedKey)
+		}
 	} else {
-		ppk = cfg.ProvidedPublicKeys
+		// Populate the map with existing keys
+		for _, key := range cfg.ProvidedPublicKeys {
+			encodedKey := hexutil.Encode(key[:])
+			combinedKeys[encodedKey] = key
+		}
 	}
 
 	// Construct the full path for the file
@@ -110,8 +122,8 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		}
 	}
 
-	if len(ppk) != 0 {
-		if err := km.saveProvidedPublicKeys(ppk); err != nil {
+	if len(combinedKeys) != 0 {
+		if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
 			return nil, err
 		}
 	} else {
@@ -125,19 +137,20 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	return km, nil
 }
 
-func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys [][fieldparams.BLSPubkeyLength]byte) error {
+func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys map[string][48]byte) error {
 	remoteKeysFile := filepath.Join(km.walletDir, remoteKeysFileName)
-
+	pubkeys := make([][48]byte, 0)
 	var bytesBuf bytes.Buffer
-	for _, key := range providedPublicKeys {
-		bytesBuf.Write(key[:])
+	for key, value := range providedPublicKeys {
+		bytesBuf.WriteString(key)
 		bytesBuf.WriteString("\n")
+		pubkeys = append(pubkeys, value)
 	}
 
 	if err := file.WriteFile(remoteKeysFile, bytesBuf.Bytes()); err != nil {
 		return errors.Wrapf(err, "could not write to file %s", remoteKeysFile)
 	}
-	km.providedPublicKeys = providedPublicKeys
+	km.providedPublicKeys = pubkeys
 	return nil
 }
 
@@ -541,15 +554,16 @@ func DisplayRemotePublicKeys(validatingPubKeys [][48]byte) {
 // AddPublicKeys imports a list of public keys into the keymanager for web3signer use. Returns status with message.
 func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, error) {
 	importedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(pubKeys))
-	// Initialize a new slice of [48]byte arrays with the same length as providedPublicKeys
-	tempPublicKeys := make([][48]byte, len(km.providedPublicKeys))
+	// Using a map to track both existing and new public keys efficiently
+	combinedKeys := make(map[string][48]byte)
 
-	// Copy each [48]byte array from the original slice to the new slice
-	for i, publicKey := range km.providedPublicKeys {
-		tempPublicKeys[i] = bytesutil.ToBytes48(bytesutil.SafeCopyBytes(publicKey[:]))
+	// Populate the map with existing keys
+	for _, key := range km.providedPublicKeys {
+		encodedKey := hexutil.Encode(key[:])
+		combinedKeys[encodedKey] = key
 	}
+
 	for i, pubkey := range pubKeys {
-		found := false
 		pubkeyBytes, err := hexutil.Decode(pubkey)
 		if err != nil {
 			importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
@@ -565,20 +579,18 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 			}
 			continue
 		}
-		for _, key := range tempPublicKeys {
-			if bytes.Equal(key[:], pubkeyBytes) {
-				found = true
-				break
-			}
-		}
-		if found {
+
+		encodedPubkey := hexutil.Encode(pubkeyBytes)
+		if _, exists := combinedKeys[encodedPubkey]; exists {
 			importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
 				Status:  keymanager.StatusDuplicate,
 				Message: fmt.Sprintf("Duplicate pubkey: %v, already in use", pubkey),
 			}
 			continue
 		}
-		tempPublicKeys = append(tempPublicKeys, bytesutil.ToBytes48(pubkeyBytes))
+
+		// Add the new key to the map
+		combinedKeys[encodedPubkey] = bytesutil.ToBytes48(pubkeyBytes)
 		importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
 			Status:  keymanager.StatusImported,
 			Message: fmt.Sprintf("Successfully added pubkey: %v", pubkey),
@@ -586,11 +598,12 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", pubkey)
 	}
 
-	if err := km.saveProvidedPublicKeys(tempPublicKeys); err != nil {
-		return nil, err
+	if len(km.providedPublicKeys) != len(combinedKeys) {
+		if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
+			return nil, err
+		}
+		km.accountsChangedFeed.Send(km.providedPublicKeys)
 	}
-
-	km.accountsChangedFeed.Send(km.providedPublicKeys)
 
 	return importedRemoteKeysStatuses, nil
 }
@@ -607,52 +620,52 @@ func (km *Keymanager) DeletePublicKeys(publicKeys []string) ([]*keymanager.KeySt
 		}
 		return deletedRemoteKeysStatuses, nil
 	}
-	// Initialize a new slice of [48]byte arrays with the same length as providedPublicKeys
-	tempPublicKeys := make([][48]byte, len(km.providedPublicKeys))
+	// Using a map to track both existing and new public keys efficiently
+	combinedKeys := make(map[string][48]byte)
 
-	// Copy each [48]byte array from the original slice to the new slice
-	for i, publicKey := range km.providedPublicKeys {
-		tempPublicKeys[i] = bytesutil.ToBytes48(bytesutil.SafeCopyBytes(publicKey[:]))
+	// Populate the map with existing keys
+	for _, key := range km.providedPublicKeys {
+		encodedKey := hexutil.Encode(key[:])
+		combinedKeys[encodedKey] = key
 	}
 	for i, pubkey := range publicKeys {
-		for in, key := range km.providedPublicKeys {
-			pubkeyBytes, err := hexutil.Decode(pubkey)
-			if err != nil {
-				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-					Status:  keymanager.StatusError,
-					Message: err.Error(),
-				}
-				continue
+		pubkeyBytes, err := hexutil.Decode(pubkey)
+		if err != nil {
+			deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+				Status:  keymanager.StatusError,
+				Message: err.Error(),
 			}
-			if len(pubkeyBytes) != fieldparams.BLSPubkeyLength {
-				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-					Status:  keymanager.StatusError,
-					Message: fmt.Sprintf("pubkey byte length (%d) did not match bls pubkey byte length (%d)", len(pubkeyBytes), fieldparams.BLSPubkeyLength),
-				}
-				continue
-			}
-			if bytes.Equal(key[:], pubkeyBytes) {
-				tempPublicKeys = append(tempPublicKeys[:in], tempPublicKeys[in+1:]...)
-				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-					Status:  keymanager.StatusDeleted,
-					Message: fmt.Sprintf("Successfully deleted pubkey: %v", pubkey),
-				}
-				log.Debug("Deleted pubkey from keymanager for web3signer", "pubkey", pubkey)
-				break
-			}
+			continue
 		}
-		if deletedRemoteKeysStatuses[i] == nil {
+		if len(pubkeyBytes) != fieldparams.BLSPubkeyLength {
+			deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+				Status:  keymanager.StatusError,
+				Message: fmt.Sprintf("pubkey byte length (%d) did not match bls pubkey byte length (%d)", len(pubkeyBytes), fieldparams.BLSPubkeyLength),
+			}
+			continue
+		}
+		_, exists := combinedKeys[pubkey]
+		if !exists {
 			deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
 				Status:  keymanager.StatusNotFound,
 				Message: fmt.Sprintf("Pubkey: %v not found", pubkey),
 			}
+			continue
 		}
+		delete(combinedKeys, pubkey)
+		deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+			Status:  keymanager.StatusDeleted,
+			Message: fmt.Sprintf("Successfully deleted pubkey: %v", pubkey),
+		}
+		log.Debug("Deleted pubkey from keymanager for web3signer", "pubkey", pubkey)
 	}
 
-	if err := km.saveProvidedPublicKeys(tempPublicKeys); err != nil {
-		return nil, err
+	if len(km.providedPublicKeys) != len(combinedKeys) {
+		if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
+			return nil, err
+		}
+		km.accountsChangedFeed.Send(km.providedPublicKeys)
 	}
 
-	km.accountsChangedFeed.Send(km.providedPublicKeys)
 	return deletedRemoteKeysStatuses, nil
 }
