@@ -195,9 +195,11 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 				if _, found := seenLines[line]; !found {
 					// If it's a new line, mark it as seen and process it
 					seenLines[line] = true
+					// TODO: trim lines and make sure the line is not empty
 					decoded, err := hexutil.Decode(line)
 					if err != nil {
-						log.WithError(err).Error("could not decode line")
+						log.WithError(err).Error(fmt.Sprintf("could not decode line: %s", line))
+						continue
 					}
 					// Process the unique line here. For now, we'll just print it.
 					keys = append(keys, bytesutil.ToBytes48(decoded))
