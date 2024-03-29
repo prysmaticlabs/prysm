@@ -224,7 +224,7 @@ func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
 		if b := bkt.Get(root[:]); b != nil {
-			return ErrDeleteFinalized
+			return ErrDeleteJustifiedAndFinalized
 		}
 
 		if err := tx.Bucket(blocksBucket).Delete(root[:]); err != nil {
