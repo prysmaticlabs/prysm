@@ -31,9 +31,8 @@ func migrateFinalizedParent(ctx context.Context, db *bolt.DB) error {
 		}
 
 		c := bkt.Cursor()
-		var skipped primitives.Slot
-		foundBuggedIdx := false
-		maxBugSearch := params.BeaconConfig().SlotsPerEpoch * 100
+		var slotsWithoutBug primitives.Slot
+		maxBugSearch := params.BeaconConfig().SlotsPerEpoch * 10
 		for k, v := c.Last(); k != nil; k, v = c.Prev() {
 			// check if context is cancelled in between
 			if ctx.Err() != nil {
@@ -46,13 +45,13 @@ func migrateFinalizedParent(ctx context.Context, db *bolt.DB) error {
 			}
 			// Not one of the corrupt values
 			if !bytes.Equal(idxEntry.ParentRoot, k) {
-				skipped += 1
-				if !foundBuggedIdx && skipped > maxBugSearch {
+				slotsWithoutBug += 1
+				if slotsWithoutBug > maxBugSearch {
 					break
 				}
 				continue
 			}
-			foundBuggedIdx = true
+			slotsWithoutBug = 0
 			log.WithField("root", fmt.Sprintf("%#x", k)).Debug("found index entry with incorrect parent root")
 
 			// Look up full block to get the correct parent root.
