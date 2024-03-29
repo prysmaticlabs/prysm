@@ -23,6 +23,7 @@ import (
 )
 
 var requestBlocksFlags = struct {
+	Network      string
 	Peers        string
 	ClientPort   uint
 	APIEndpoints string
@@ -42,6 +43,12 @@ var requestBlocksCmd = &cli.Command{
 	},
 	Flags: []cli.Flag{
 		cmd.ChainConfigFileFlag,
+		&cli.StringFlag{
+			Name:        "network",
+			Usage:       "network to run on (mainnet, sepolia, holesky)",
+			Destination: &requestBlocksFlags.Network,
+			Value:       "mainnet",
+		},
 		&cli.StringFlag{
 			Name:        "peer-multiaddrs",
 			Usage:       "comma-separated, peer multiaddr(s) to connect to for p2p requests",
@@ -82,6 +89,21 @@ var requestBlocksCmd = &cli.Command{
 }
 
 func cliActionRequestBlocks(cliCtx *cli.Context) error {
+	switch requestBlocksFlags.Network {
+	case params.SepoliaName:
+		if err := params.SetActive(params.SepoliaConfig()); err != nil {
+			log.Fatal(err)
+		}
+	case params.HoleskyName:
+		if err := params.SetActive(params.HoleskyConfig()); err != nil {
+			log.Fatal(err)
+		}
+	case params.MainnetName:
+		// Do nothing
+	default:
+		log.Fatalf("Unknown network provided: %s", requestBlocksFlags.Network)
+	}
+
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
 		if err := params.LoadChainConfigFile(chainConfigFileName, nil); err != nil {
