@@ -1258,7 +1258,12 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 		}
 		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			if errors.Is(err, errEquivocatedBlock) {
-				if err := s.broadcastBlobSidecars(ctx, genericBlock); err != nil {
+				b, err := blocks.NewSignedBeaconBlock(genericBlock)
+				if err != nil {
+					httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				if err := s.broadcastBlobSidecars(ctx, b, genericBlock.GetDeneb().Blobs, genericBlock.GetDeneb().KzgProofs); err != nil {
 					log.WithError(err).Error("Failed to broadcast blob sidecars")
 				}
 			}
@@ -1392,7 +1397,12 @@ func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *htt
 		if err == nil {
 			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				if errors.Is(err, errEquivocatedBlock) {
-					if err := s.broadcastBlobSidecars(ctx, consensusBlock); err != nil {
+					b, err := blocks.NewSignedBeaconBlock(consensusBlock)
+					if err != nil {
+						httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					if err := s.broadcastBlobSidecars(ctx, b, consensusBlock.GetDeneb().Blobs, consensusBlock.GetDeneb().KzgProofs); err != nil {
 						log.WithError(err).Error("Failed to broadcast blob sidecars")
 					}
 				}
@@ -2086,13 +2096,12 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func (s *Server) broadcastBlobSidecars(ctx context.Context, sb *eth.GenericSignedBeaconBlock) error {
-	b, err := blocks.NewSignedBeaconBlock(sb.Block)
-	if err != nil {
-		return err
-	}
-	d := sb.GetDeneb()
-	scs, err := validator.BuildBlobSidecars(b, d.Blobs, d.KzgProofs)
+func (s *Server) broadcastBlobSidecars(
+	ctx context.Context,
+	b interfaces.SignedBeaconBlock,
+	blobs [][]byte,
+	kzgProofs [][]byte) error {
+	scs, err := validator.BuildBlobSidecars(b, blobs, kzgProofs)
 	if err != nil {
 		return err
 	}
