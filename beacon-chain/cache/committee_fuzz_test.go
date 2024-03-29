@@ -32,7 +32,8 @@ func TestCommitteeKeyFuzz_OK(t *testing.T) {
 }
 
 func TestCommitteeCache_FuzzCommitteesByEpoch(t *testing.T) {
-	cache := NewCommitteesCache()
+	cache, err := NewCommitteesCache()
+	require.NoError(t, err)
 
 	fuzzer := fuzz.NewWithSeed(0)
 	c := &Committees{}
@@ -51,7 +52,9 @@ func TestCommitteeCache_FuzzCommitteesByEpoch(t *testing.T) {
 }
 
 func TestCommitteeCache_FuzzActiveIndices(t *testing.T) {
-	cache := NewCommitteesCache()
+	cache, err := NewCommitteesCache()
+	require.NoError(t, err)
+
 	fuzzer := fuzz.NewWithSeed(0)
 	c := &Committees{}
 

@@ -56,14 +56,40 @@ type CommitteeCache[K string, V Committees] struct {
 	size       int
 }
 
-// NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
-func NewCommitteesCache[K string, V Committees]() *CommitteeCache[K, V] {
-	return &CommitteeCache[K, V]{
-		lru:           newLRUCacheOrPanics[K, V](maxCommitteesCacheSize, committeeCacheHit, committeeCacheMiss),
-		promCacheMiss: committeeCacheMiss,
-		promCacheHit:  committeeCacheHit,
-		inProgress:    make(map[string]bool),
+// InitializeCommitteeCacheOrPanic initialise a new committee cache or panics.
+// panicking is the default behaviour in the beacon-chain when a cache cannot be initialised
+func InitializeCommitteeCacheOrPanic[K string, V Committees]() *CommitteeCache[K, V] {
+	c, err := NewCommitteesCache[K, V]()
+	if err != nil {
+		panic(err)
 	}
+	return c
+}
+
+// NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
+func NewCommitteesCache[K string, V Committees]() (*CommitteeCache[K, V], error) {
+	lruCache, err := newLRUCache[K, V](maxCommitteesCacheSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialise the lru cache: %w", err)
+	}
+
+	isCacheHitNil, isCacheMissNil := committeeCacheHit == nil, committeeCacheMiss == nil
+	if isCacheHitNil || isCacheMissNil {
+		return nil, fmt.Errorf("failed to initialise committees cache: %w: isCacheHitNil=<%t>, isCacheMissNil=<%t>",
+			ErrNilMetrics,
+			isCacheHitNil,
+			isCacheMissNil,
+		)
+	}
+
+	return &CommitteeCache[K, V]{
+		lru:           lruCache,
+		promCacheHit:  committeeCacheHit,
+		promCacheMiss: committeeCacheMiss,
+
+		inProgress: make(map[string]bool),
+		size:       maxCommitteesCacheSize,
+	}, nil
 }
 
 // get returns the underlying lru cache.

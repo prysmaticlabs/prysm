@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	committeeCache       = cache.NewCommitteesCache()
+	committeeCache       = cache.InitializeCommitteeCacheOrPanic()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
 )
 

@@ -212,8 +212,20 @@ func (c *TestBeaconCache[K, V]) Clear() {
 }
 
 func NewTestBeaconCache[K string, V state.BeaconState]() (*TestBeaconCache[K, V], error) {
+	cache, err := lru.New[K, V](maxTestBeaconCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
+	if testPromCacheHit == nil || testPromCacheMiss == nil {
+		return nil, err
+	}
+
+	reg.MustRegister(testPromBeaconCacheMiss)
+	reg.MustRegister(testPromBeaconCacheHit)
+
 	return &TestBeaconCache[K, V]{
-		lru:           newLRUCacheOrPanics[K, V](maxTestBeaconCacheSize, testPromBeaconCacheHit, testPromBeaconCacheMiss),
+		lru:           cache,
 		promCacheMiss: testPromBeaconCacheMiss,
 		promCacheHit:  testPromBeaconCacheHit,
 	}, nil
@@ -266,8 +278,20 @@ func (c *TestPrimitiveCache[K, V]) Clear() {
 }
 
 func NewTestPrimitiveCache[K string, V int]() (*TestPrimitiveCache[K, V], error) {
+	cache, err := lru.New[K, V](maxTestPrimitiveCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
+	if testPromCacheHit == nil || testPromCacheMiss == nil {
+		return nil, err
+	}
+
+	reg.MustRegister(testPromPrimitiveCacheMiss)
+	reg.MustRegister(testPromPrimitiveCacheHit)
+
 	return &TestPrimitiveCache[K, V]{
-		lru:           newLRUCacheOrPanics[K, V](maxTestPrimitiveCacheSize, testPromPrimitiveCacheHit, testPromPrimitiveCacheMiss),
+		lru:           cache,
 		promCacheMiss: testPromPrimitiveCacheMiss,
 		promCacheHit:  testPromPrimitiveCacheHit,
 	}, nil

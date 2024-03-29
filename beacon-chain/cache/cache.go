@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/prometheus/client_golang/prometheus"
-
 	lru "github.com/hashicorp/golang-lru/v2"
 )
 
@@ -22,29 +20,11 @@ type lruCache[K comparable, V any] interface {
 	missCache()
 }
 
-// newLRUCacheOrPanics initialise a new thread-safe cache with Prometheus metrics and panics if an error occurs
-func newLRUCacheOrPanics[K comparable, V any](cacheSize int, committeeCacheHit, committeeCacheMiss prometheus.Counter) *lru.Cache[K, V] {
-	cache, err := newLRUCache[K, V](cacheSize, committeeCacheHit, committeeCacheMiss)
-	if err != nil {
-		panic(err)
-	}
-	return cache
-}
-
 // newLRUCache initialise a new thread-safe cache with Prometheus metrics
-func newLRUCache[K comparable, V any](cacheSize int, committeeCacheHit, committeeCacheMiss prometheus.Counter) (*lru.Cache[K, V], error) {
+func newLRUCache[K comparable, V any](cacheSize int) (*lru.Cache[K, V], error) {
 	cache, err := lru.New[K, V](cacheSize)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrNilCache, err)
-	}
-
-	isCacheHitNil, isCacheMissNil := committeeCacheHit == nil, committeeCacheMiss == nil
-	if isCacheHitNil || isCacheMissNil {
-		return nil, fmt.Errorf("%w: isCacheHitNil=<%t>, isCacheMissNil=<%t>",
-			ErrNilMetrics,
-			isCacheHitNil,
-			isCacheMissNil,
-		)
 	}
 
 	return cache, nil
