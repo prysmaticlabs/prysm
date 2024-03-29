@@ -3652,9 +3652,9 @@ func TestServer_broadcastBlobSidecars(t *testing.T) {
 	blk, err := blocks.NewSignedBeaconBlock(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, server.broadcastSeenBlockSidecars(context.Background(), blk, b.GetDeneb().Blobs, b.GetDeneb().KzgProofs))
-	require.LogsDoNotContain(t, hook, "Broadcasted blob sidecar")
+	require.LogsDoNotContain(t, hook, "Broadcasted already seen block blob sidecar")
 
 	server.FinalizationFetcher = &chainMock.ChainService{NotFinalized: false}
 	require.NoError(t, server.broadcastSeenBlockSidecars(context.Background(), blk, b.GetDeneb().Blobs, b.GetDeneb().KzgProofs))
-	require.LogsContain(t, hook, "Broadcasted blob sidecar")
+	require.LogsContain(t, hook, "Broadcasted already seen block blob sidecar")
 }

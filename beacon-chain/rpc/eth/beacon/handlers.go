@@ -2125,7 +2125,7 @@ func (s *Server) broadcastSeenBlockSidecars(
 			"index":         sc.Index,
 			"slot":          sc.SignedBlockHeader.Header.Slot,
 			"kzgCommitment": fmt.Sprintf("%#x", sc.KzgCommitment),
-		}).Info("Broadcasted blob sidecar")
+		}).Info("Broadcasted already seen block blob sidecar")
 	}
 	return nil
 }
