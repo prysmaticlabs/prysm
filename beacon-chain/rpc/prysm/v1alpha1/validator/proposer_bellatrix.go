@@ -92,15 +92,16 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		// Use builder payload if the following in true:
 		// builder_bid_value * builderBoostFactor(default 100) > local_block_value * (local-block-value-boost + 100)
 		boost := params.BeaconConfig().LocalBlockValueBoost
-		higherValueBuilder := builderValueGwei*builderBoostFactor > localValueGwei*(100+boost)
 		if boost > 0 && builderBoostFactor != defaultBuilderBoostFactor {
 			log.WithFields(logrus.Fields{
 				"localGweiValue":       localValueGwei,
 				"localBoostPercentage": boost,
 				"builderGweiValue":     builderValueGwei,
 				"builderBoostFactor":   builderBoostFactor,
-			}).Warn("Proposer: both local boost and builder boost are using non default values")
+			}).Warn("Proposer: builder boost will be ignored, because local boost is activated")
+			builderBoostFactor = defaultBuilderBoostFactor
 		}
+		higherValueBuilder := builderValueGwei*builderBoostFactor > localValueGwei*(100+boost)
 		builderValueGweiGauge.Set(float64(builderValueGwei))
 		localValueGweiGauge.Set(float64(localValueGwei))
 
