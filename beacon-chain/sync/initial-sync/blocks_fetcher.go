@@ -340,6 +340,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	// We append the best peers to the front so that higher capacity
 	// peers are dialed first.
 	peers = append(bestPeers, peers...)
+	peers = dedupPeers(peers)
 	for i := 0; i < len(peers); i++ {
 		p := peers[i]
 		blocks, err := f.requestBlocks(ctx, req, p)
@@ -658,4 +659,19 @@ func timeToWait(wanted, rem, capacity int64, timeTillEmpty time.Duration) time.D
 	currentNumBlks := capacity - rem
 	expectedTime := int64(timeTillEmpty) * blocksNeeded / currentNumBlks
 	return time.Duration(expectedTime)
+}
+
+// deduplicates the provided peer list.
+func dedupPeers(peers []peer.ID) []peer.ID {
+	newPeerList := make([]peer.ID, 0, len(peers))
+	peerExists := make(map[peer.ID]bool)
+
+	for i := range peers {
+		if peerExists[peers[i]] {
+			continue
+		}
+		newPeerList = append(newPeerList, peers[i])
+		peerExists[peers[i]] = true
+	}
+	return newPeerList
 }
