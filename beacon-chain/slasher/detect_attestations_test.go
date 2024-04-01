@@ -1059,7 +1059,7 @@ func Test_updatedChunkByChunkIndex(t *testing.T) {
 			// Initialize the slasher database.
 			slasherDB := dbtest.SetupSlasherDB(t)
 
-			// Intialize the slasher service.
+			// Initialize the slasher service.
 			service := &Service{
 				params: &Parameters{
 					chunkSize:          tt.chunkSize,
@@ -1502,7 +1502,7 @@ func runAttestationsBenchmark(b *testing.B, s *Service, numAtts, numValidators u
 
 func Benchmark_checkSurroundVotes(b *testing.B) {
 	const (
-		// Approximatively the number of Holesky active validators on 2024-02-16
+		// Approximately the number of Holesky active validators on 2024-02-16
 		// This number is both a multiple of 32 (the number of slots per epoch) and 256 (the number of validators per chunk)
 		validatorsCount = 1_638_400
 		slotsPerEpoch   = 32
@@ -1526,7 +1526,7 @@ func Benchmark_checkSurroundVotes(b *testing.B) {
 	// So for 1_638_400 validators with 32 slots per epoch, we would have 48_000 attestation wrappers per slot.
 	// With 256 validators per chunk, we would have only 188 modified chunks.
 	//
-	// In this benchmark, we use the worst case scenario where attestating validators are evenly splitted across all validators chunks.
+	// In this benchmark, we use the worst case scenario where attesting validators are evenly split across all validators chunks.
 	// We also suppose that only one chunk per validator chunk index is modified.
 	// For one given validator index, multiple chunk indexes could be modified.
 	//
