@@ -95,6 +95,28 @@ var (
 		Name:  "attest-timely",
 		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details.",
 	}
+	optimisticExecution = &cli.BoolFlag{
+		Name:  "optimistic-execution",
+		Usage: "Allows the beacon to run without a connection to an EL. Useful for nodes without large storage.",
+	}
+	blobsAreAvailable = &cli.BoolFlag{
+		Name:  "blobs-are-available",
+		Usage: "Disables blob gossip, requests, and checks for blob data availability. Useful for nodes without large internet bandwidth.",
+	}
+	allowDeepReorg = &cli.BoolFlag{
+		Name:  "allow-deep-reorg",
+		Usage: "Allow for honest reorgs of arbitrary depth as long as the orphaned chain has less than PROPOSER_SCORE_BOOST.",
+	}
+	withholdAttestations = &cli.BoolFlag{
+		Name:   "withhold_consecutive_attestations",
+		Usage:  "Withhold attestations for consecutive blocks. Useful in conjunction with --allow-deep-reorg.",
+		Hidden: true,
+	}
+	followMajority = &cli.BoolFlag{
+		Name:   "follow-majority",
+		Usage:  "Disable state transition validation and instead follow the attester majority. Useful for systems with low resources.",
+		Hidden: true,
+	}
 	enableSlasherFlag = &cli.BoolFlag{
 		Name:  "slasher",
 		Usage: "Enables a slasher in the beacon node for detecting slashable offenses.",
