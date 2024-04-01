@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-playground/validator/v10"
@@ -84,6 +86,25 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	// Using a map to track hex encoded and decoded public keys
 	combinedKeys := make(map[string][48]byte)
 
+	// Construct the full path for the file
+	fullPath := filepath.Join(km.walletDir, remoteKeysFileName)
+
+	// Check if the directory and file exists, if not create it
+	keyFileExists, err := file.Exists(fullPath, file.Regular)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if web3signer persistent keys exists in %s", fullPath)
+	}
+
+	if !keyFileExists {
+		if err = file.MkdirAll(km.walletDir); err != nil {
+			return nil, errors.Wrapf(err, "could not create web3signer persistent keys directory in %s", fullPath)
+		}
+		if err := file.WriteFile(fullPath, []byte{}); err != nil {
+			return nil, errors.Wrapf(err, "could not write %s", fullPath)
+		}
+	}
+
+	// load key values
 	if cfg.PublicKeysURL != "" {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, cfg.PublicKeysURL)
 		if err != nil {
@@ -99,42 +120,72 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 			}
 			combinedKeys[key] = bytesutil.ToBytes48(decodedKey)
 		}
-	} else {
+
+		// save to the file and update known keys
+		if len(combinedKeys) != 0 {
+			if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
+				return nil, err
+			}
+		}
+	} else if len(cfg.ProvidedPublicKeys) != 0 {
 		// Populate the map with existing keys
 		for _, key := range cfg.ProvidedPublicKeys {
 			encodedKey := hexutil.Encode(key[:])
 			combinedKeys[encodedKey] = key
 		}
-	}
 
-	// Construct the full path for the file
-	fullPath := filepath.Join(km.walletDir, remoteKeysFileName)
-
-	// Check if the directory and file exists, if not create it
-	keyFileExists, err := file.Exists(fullPath, file.Regular)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not check if web3signer persistent keys exists in %s", fullPath)
-	}
-
-	if !keyFileExists {
-		if err = file.MkdirAll(km.walletDir); err != nil {
-			return nil, errors.Wrapf(err, "could not create web3signer persistent keys directory in %s", fullPath)
-		}
-	}
-
-	if len(combinedKeys) != 0 {
-		if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
-			return nil, err
+		// save to the file and update known keys
+		if len(combinedKeys) != 0 {
+			if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
+				return nil, err
+			}
 		}
 	} else {
-		if err := file.WriteFile(fullPath, []byte{}); err != nil {
-			return nil, errors.Wrapf(err, "could not write %s", fullPath)
+		// load from file
+		if keyFileExists {
+			keys, err := readKeyFile(fullPath)
+			if err != nil {
+				return nil, errors.Wrap(err, "Could not read key file")
+			}
+			km.providedPublicKeys = keys
 		}
 	}
 
 	go km.refreshRemoteKeysFromFileChanges(ctx)
 
 	return km, nil
+}
+
+func readKeyFile(fullPath string) ([][48]byte, error) {
+	f, err := os.Open(filepath.Clean(fullPath))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not open web3signer public key file")
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.WithError(err).Error("could not close web3signer public key file")
+		}
+	}()
+	scanner := bufio.NewScanner(f)
+	var lines [][48]byte
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		pubkeyLength := (fieldparams.BLSPubkeyLength * 2) + 2
+		if line == "" || !common.IsHexAddress(line) || len(line) != pubkeyLength {
+			log.Warnf("web3signer key file: invalid public key line: %s", line)
+			continue
+		}
+		pubkey, err := hexutil.Decode(line)
+		if err != nil {
+			return nil, err
+		}
+		lines = append(lines, bytesutil.ToBytes48(pubkey))
+	}
+	// Check for scanning errors
+	if err := scanner.Err(); err != nil {
+		return nil, errors.Wrap(err, "could not scan web3signer public key file")
+	}
+	return lines, nil
 }
 
 func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys map[string][48]byte) error {
