@@ -145,7 +145,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	queue.smm.addEventHandler(eventDataReceived, stateScheduled, queue.onDataReceivedEvent(ctx))
 	queue.smm.addEventHandler(eventTick, stateDataParsed, queue.onReadyToSendEvent(ctx))
 	queue.smm.addEventHandler(eventTick, stateSkipped, queue.onProcessSkippedEvent(ctx))
-	queue.smm.addEventHandler(eventTick, stateSent, queue.onCheckStaleEvent(ctx))
+	queue.smm.addEventHandler(eventTick, stateSent, onCheckStaleEvent(ctx))
 
 	return queue
 }
@@ -457,7 +457,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 // onCheckStaleEvent is an event that allows to mark stale epochs,
 // so that they can be re-processed.
-func (_ *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
+func onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 	return func(m *stateMachine, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()
