@@ -68,22 +68,6 @@ func TestSlotByRoot_Summary(t *testing.T) {
 	}
 }
 
-/*
-// AllAvailable returns true if we have all blobs for all indices from 0 to count-1.
-func (s BlobStorageSummary) AllAvailable(count int) bool {
-	if count >= fieldparams.MaxBlobsPerBlock {
-		return false
-	}
-	for i := 0; i < count; i++ {
-		if !s.mask[i] {
-			return false
-		}
-	}
-	return true
-}
-
-*/
-
 func TestAllAvailable(t *testing.T) {
 	idxUpTo := func(u int) []int {
 		r := make([]int, u)
