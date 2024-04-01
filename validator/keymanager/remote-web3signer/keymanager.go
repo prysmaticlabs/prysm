@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -61,6 +62,7 @@ type Keymanager struct {
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
 	walletDir             string
+	lock                  sync.RWMutex
 }
 
 // NewKeymanager instantiates a new web3signer key manager.
@@ -147,7 +149,9 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "Could not read key file")
 			}
+			km.lock.Lock()
 			km.providedPublicKeys = keys
+			km.lock.Unlock()
 		}
 	}
 
@@ -207,7 +211,9 @@ func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys map[string][48]b
 	if err := file.WriteFile(remoteKeysFile, bytesBuf.Bytes()); err != nil {
 		return errors.Wrapf(err, "could not write to file %s", remoteKeysFile)
 	}
+	km.lock.Lock()
 	km.providedPublicKeys = pubkeys
+	km.lock.Unlock()
 	return nil
 }
 
@@ -234,7 +240,9 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			if err != nil {
 				log.WithError(err).Error("Could not read key file")
 			}
+			km.lock.Lock()
 			km.providedPublicKeys = keys
+			km.lock.Unlock()
 		case err := <-watcher.Errors:
 			log.WithError(err).Errorf("Could not watch for file changes for: %s", remoteKeysFile)
 		case <-ctx.Done():
@@ -245,6 +253,8 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 
 // FetchValidatingPublicKeys fetches the validating public keys
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+	km.lock.RLock()
+	defer km.lock.RUnlock()
 	return km.providedPublicKeys, nil
 }
 
@@ -585,10 +595,13 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 	combinedKeys := make(map[string][48]byte)
 
 	// Populate the map with existing keys
+	km.lock.RLock()
+	originalKeysLen := len(km.providedPublicKeys)
 	for _, key := range km.providedPublicKeys {
 		encodedKey := hexutil.Encode(key[:])
 		combinedKeys[encodedKey] = key
 	}
+	km.lock.RUnlock()
 
 	for i, pubkey := range pubKeys {
 		pubkeyBytes, err := hexutil.Decode(pubkey)
@@ -625,11 +638,13 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", pubkey)
 	}
 
-	if len(km.providedPublicKeys) != len(combinedKeys) {
+	if originalKeysLen != len(combinedKeys) {
 		if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
 			return nil, err
 		}
+		km.lock.RLock()
 		km.accountsChangedFeed.Send(km.providedPublicKeys)
+		km.lock.RUnlock()
 	}
 
 	return importedRemoteKeysStatuses, nil
@@ -638,7 +653,11 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 // DeletePublicKeys removes a list of public keys from the keymanager for web3signer use. Returns status with message.
 func (km *Keymanager) DeletePublicKeys(publicKeys []string) ([]*keymanager.KeyStatus, error) {
 	deletedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(publicKeys))
-	if len(km.providedPublicKeys) == 0 {
+	// Using a map to track both existing and new public keys efficiently
+	combinedKeys := make(map[string][48]byte)
+	km.lock.RLock()
+	originalKeysLen := len(km.providedPublicKeys)
+	if originalKeysLen == 0 {
 		for i := range deletedRemoteKeysStatuses {
 			deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
 				Status:  keymanager.StatusNotFound,
@@ -647,14 +666,14 @@ func (km *Keymanager) DeletePublicKeys(publicKeys []string) ([]*keymanager.KeySt
 		}
 		return deletedRemoteKeysStatuses, nil
 	}
-	// Using a map to track both existing and new public keys efficiently
-	combinedKeys := make(map[string][48]byte)
 
 	// Populate the map with existing keys
 	for _, key := range km.providedPublicKeys {
 		encodedKey := hexutil.Encode(key[:])
 		combinedKeys[encodedKey] = key
 	}
+	km.lock.RUnlock()
+
 	for i, pubkey := range publicKeys {
 		pubkeyBytes, err := hexutil.Decode(pubkey)
 		if err != nil {
@@ -687,11 +706,13 @@ func (km *Keymanager) DeletePublicKeys(publicKeys []string) ([]*keymanager.KeySt
 		log.Debug("Deleted pubkey from keymanager for web3signer", "pubkey", pubkey)
 	}
 
-	if len(km.providedPublicKeys) != len(combinedKeys) {
+	if originalKeysLen != len(combinedKeys) {
 		if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
 			return nil, err
 		}
+		km.lock.RLock()
 		km.accountsChangedFeed.Send(km.providedPublicKeys)
+		km.lock.RUnlock()
 	}
 
 	return deletedRemoteKeysStatuses, nil
