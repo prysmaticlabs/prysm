@@ -166,20 +166,26 @@ func readKeyFile(fullPath string) ([][48]byte, error) {
 			log.WithError(err).Error("could not close web3signer public key file")
 		}
 	}()
+	// Use a map to track and skip duplicate lines
+	seenLines := make(map[string]bool)
 	scanner := bufio.NewScanner(f)
 	var lines [][48]byte
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		pubkeyLength := (fieldparams.BLSPubkeyLength * 2) + 2
-		if line == "" || !common.IsHexAddress(line) || len(line) != pubkeyLength {
-			log.Warnf("web3signer key file: invalid public key line: %s", line)
-			continue
+		if _, found := seenLines[line]; !found {
+			// If it's a new line, mark it as seen and process it
+			seenLines[line] = true
+			pubkeyLength := (fieldparams.BLSPubkeyLength * 2) + 2
+			if line == "" || !common.IsHexAddress(line) || len(line) != pubkeyLength {
+				log.Warnf("web3signer key file: invalid public key line: %s", line)
+				continue
+			}
+			pubkey, err := hexutil.Decode(line)
+			if err != nil {
+				return nil, err
+			}
+			lines = append(lines, bytesutil.ToBytes48(pubkey))
 		}
-		pubkey, err := hexutil.Decode(line)
-		if err != nil {
-			return nil, err
-		}
-		lines = append(lines, bytesutil.ToBytes48(pubkey))
 	}
 	// Check for scanning errors
 	if err := scanner.Err(); err != nil {
@@ -224,41 +230,9 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 	for {
 		select {
 		case <-watcher.Events:
-			// If a file was modified, we attempt to read that file
-			f, err := os.Open(filepath.Clean(remoteKeysFile))
+			keys, err := readKeyFile(remoteKeysFile)
 			if err != nil {
-				log.WithError(err).Error("Could not open file")
-			}
-			defer func() {
-				if err := f.Close(); err != nil {
-					log.Error(err)
-				}
-			}()
-
-			// Use a map to track and skip duplicate lines
-			seenLines := make(map[string]bool)
-			keys := make([][48]byte, 0)
-			// Create a new scanner to read the file line by line
-			scanner := bufio.NewScanner(f)
-			for scanner.Scan() {
-				line := scanner.Text()
-				// Check if the line has already been seen
-				if _, found := seenLines[line]; !found {
-					// If it's a new line, mark it as seen and process it
-					seenLines[line] = true
-					// TODO: trim lines and make sure the line is not empty
-					decoded, err := hexutil.Decode(line)
-					if err != nil {
-						log.WithError(err).Error(fmt.Sprintf("could not decode line: %s", line))
-						continue
-					}
-					// Process the unique line here. For now, we'll just print it.
-					keys = append(keys, bytesutil.ToBytes48(decoded))
-				}
-			}
-			// Check for any errors encountered while reading
-			if err := scanner.Err(); err != nil {
-				log.WithError(fmt.Errorf("error reading file %s: %w", remoteKeysFile, err)).Error("Could not finish scanning")
+				log.WithError(err).Error("Could not read key file")
 			}
 			km.providedPublicKeys = keys
 		case err := <-watcher.Errors:
