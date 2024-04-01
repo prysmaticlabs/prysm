@@ -59,7 +59,7 @@ func TestDB_ConvertDatabase(t *testing.T) {
 					signingRootBytes = signingRoot[:]
 				}
 
-				// Create database directoriy path.
+				// Create database directory path.
 				datadir := t.TempDir()
 
 				// Run source DB preparation.
