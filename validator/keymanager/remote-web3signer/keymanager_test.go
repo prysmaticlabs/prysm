@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -178,20 +177,16 @@ func TestKeymanager_Sign(t *testing.T) {
 func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T) {
 	ctx := context.Background()
 	decodedKey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
-	if err != nil {
-		fmt.Printf("error: %v", err)
-	}
+	require.NoError(t, err)
 	keys := [][48]byte{
 		bytesutil.ToBytes48(decodedKey),
 	}
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
-	if err != nil {
-		fmt.Printf("error: %v", err)
-	}
+	require.NoError(t, err)
 	config := &SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    keys,
+		ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
@@ -204,7 +199,6 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	assert.EqualValues(t, resp, keys)
-	require.NoError(t, os.Remove("remote_keys"))
 }
 
 func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testing.T) {
@@ -240,7 +234,6 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.EqualValues(t, resp, keys)
-	require.NoError(t, os.Remove("remote_keys"))
 }
 
 func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *testing.T) {
@@ -291,7 +284,6 @@ func TestKeymanager_AddPublicKeys(t *testing.T) {
 	for _, status := range statuses {
 		require.Equal(t, keymanager.StatusDuplicate, status.Status)
 	}
-	require.NoError(t, os.Remove("remote_keys"))
 }
 
 func TestKeymanager_DeletePublicKeys(t *testing.T) {
@@ -326,5 +318,4 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 	for _, status := range s {
 		require.Equal(t, keymanager.StatusNotFound, status.Status)
 	}
-	require.NoError(t, os.Remove("remote_keys"))
 }

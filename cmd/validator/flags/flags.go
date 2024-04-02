@@ -294,6 +294,14 @@ var (
 		Usage: "Comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer.",
 	}
 
+	// Web3SignerKeyFileFlag defines a file for keys to persist to.
+	// example:--validators-external-signer-key-file=./path/to/keys.txt
+	Web3SignerKeyFileFlag = &cli.StringFlag{
+		Name:  "validators-external-signer-key-file",
+		Usage: "A file path used to load remote public validator keys and persist them through restarts",
+		Value: "",
+	}
+
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
 	KeymanagerKindFlag = &cli.StringFlag{
 		Name:  "keymanager-kind",

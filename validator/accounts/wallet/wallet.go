@@ -368,7 +368,6 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		if !bytesutil.IsValidRoot(config.GenesisValidatorsRoot) {
 			return nil, errors.New("web3signer requires a genesis validators root value")
 		}
-		config.WalletDir = w.walletDir
 		km, err = remoteweb3signer.NewKeymanager(ctx, config)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize web3signer keymanager")

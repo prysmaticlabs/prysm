@@ -29,6 +29,7 @@ import (
 	web3signerv1 "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"golang.org/x/exp/maps"
 )
 
 const (
@@ -39,7 +40,7 @@ const (
 // a keymanager, such as passwords, the wallet, and more.
 // Web3Signer contains one public keys option. Either through a URL or a static key list.
 type SetupConfig struct {
-	WalletDir             string
+	KeyFilePath           string
 	BaseEndpoint          string
 	GenesisValidatorsRoot []byte
 
@@ -51,7 +52,7 @@ type SetupConfig struct {
 	// Either URL or keylist must be set.
 	// a static list of public keys to be passed by the user to determine what accounts should sign.
 	// This will provide a layer of safety against slashing if the web3signer is shared across validators.
-	ProvidedPublicKeys [][48]byte
+	ProvidedPublicKeys []string
 }
 
 // Keymanager defines the web3signer keymanager.
@@ -61,7 +62,7 @@ type Keymanager struct {
 	providedPublicKeys    [][48]byte
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
-	walletDir             string
+	keyFilePath           string
 	lock                  sync.RWMutex
 }
 
@@ -82,30 +83,19 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
 		validator:             validator.New(),
-		walletDir:             cfg.WalletDir,
+		keyFilePath:           cfg.KeyFilePath,
 	}
 
-	// Using a map to track hex encoded and decoded public keys
-	combinedKeys := make(map[string][48]byte)
-
-	// Construct the full path for the file
-	fullPath := filepath.Join(km.walletDir, remoteKeysFileName)
-
-	// Check if the directory and file exists, if not create it
-	keyFileExists, err := file.Exists(fullPath, file.Regular)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not check if web3signer persistent keys exists in %s", fullPath)
-	}
-
-	if !keyFileExists {
-		if err = file.MkdirAll(km.walletDir); err != nil {
-			return nil, errors.Wrapf(err, "could not create web3signer persistent keys directory in %s", fullPath)
-		}
-		if err := file.WriteFile(fullPath, []byte{}); err != nil {
-			return nil, errors.Wrapf(err, "could not write %s", fullPath)
+	keyFileExists := false
+	if km.keyFilePath != "" {
+		// Check if the directory and file exists, if not create it
+		keyFileExists, err = file.Exists(km.keyFilePath, file.Regular)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not check if web3signer persistent keys exists in %s", km.keyFilePath)
 		}
 	}
 
+	var ppk []string
 	// load key values
 	if cfg.PublicKeysURL != "" {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, cfg.PublicKeysURL)
@@ -113,57 +103,52 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 			erroredResponsesTotal.Inc()
 			return nil, errors.Wrap(err, fmt.Sprintf("could not get public keys from remote server url: %v", cfg.PublicKeysURL))
 		}
-
-		// Populate the map with existing keys
-		for _, key := range providedPublicKeys {
-			decodedKey, err := hexutil.Decode(key)
-			if err != nil {
-				return nil, err
-			}
-			combinedKeys[key] = bytesutil.ToBytes48(decodedKey)
-		}
-
-		// save to the file and update known keys
-		if len(combinedKeys) != 0 {
-			if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
-				return nil, err
-			}
-		}
+		ppk = providedPublicKeys
 	} else if len(cfg.ProvidedPublicKeys) != 0 {
-		// Populate the map with existing keys
-		for _, key := range cfg.ProvidedPublicKeys {
-			encodedKey := hexutil.Encode(key[:])
-			combinedKeys[encodedKey] = key
-		}
-
-		// save to the file and update known keys
-		if len(combinedKeys) != 0 {
-			if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
-				return nil, err
-			}
-		}
-	} else {
-		// load from file
-		if keyFileExists {
-			keys, err := readKeyFile(fullPath)
-			if err != nil {
-				return nil, errors.Wrap(err, "Could not read key file")
-			}
-			km.lock.Lock()
-			km.providedPublicKeys = keys
-			km.lock.Unlock()
-		}
+		ppk = cfg.ProvidedPublicKeys
 	}
 
-	go km.refreshRemoteKeysFromFileChanges(ctx)
+	// use a map to remove duplicates
+	flagLoadedKeys := make(map[string][48]byte)
+
+	// Populate the map with existing keys
+	for _, key := range ppk {
+		decodedKey, err := hexutil.Decode(key)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not decode public key for web3signer")
+		}
+		if len(decodedKey) != fieldparams.BLSPubkeyLength {
+			return nil, fmt.Errorf("invalid public key length: expected %d, got %d", fieldparams.BLSPubkeyLength, len(decodedKey))
+		}
+		flagLoadedKeys[key] = bytesutil.ToBytes48(decodedKey)
+	}
+
+	// load from file
+	if keyFileExists {
+		_, fileKeys, err := readKeyFile(km.keyFilePath)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not read key file")
+		}
+		maps.Copy(fileKeys, flagLoadedKeys)
+		km.lock.Lock()
+
+		km.providedPublicKeys = maps.Values(fileKeys)
+		km.lock.Unlock()
+		// create a file watcher
+		go km.refreshRemoteKeysFromFileChanges(ctx)
+	} else {
+		km.lock.Lock()
+		km.providedPublicKeys = maps.Values(flagLoadedKeys)
+		km.lock.Unlock()
+	}
 
 	return km, nil
 }
 
-func readKeyFile(fullPath string) ([][48]byte, error) {
+func readKeyFile(fullPath string) ([][48]byte, map[string][48]byte, error) {
 	f, err := os.Open(filepath.Clean(fullPath))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not open web3signer public key file")
+		return nil, nil, errors.Wrap(err, "could not open web3signer public key file")
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -171,35 +156,38 @@ func readKeyFile(fullPath string) ([][48]byte, error) {
 		}
 	}()
 	// Use a map to track and skip duplicate lines
-	seenLines := make(map[string]bool)
+	seenKeys := make(map[string][48]byte)
 	scanner := bufio.NewScanner(f)
-	var lines [][48]byte
+	var keys [][48]byte
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if _, found := seenLines[line]; !found {
+		pubkeyLength := (fieldparams.BLSPubkeyLength * 2) + 2
+		if line == "" || !common.IsHexAddress(line) || len(line) != pubkeyLength {
+			log.Warnf("web3signer key file: invalid public key line: %s", line)
+			continue
+		}
+		if _, found := seenKeys[line]; !found {
 			// If it's a new line, mark it as seen and process it
-			seenLines[line] = true
-			pubkeyLength := (fieldparams.BLSPubkeyLength * 2) + 2
-			if line == "" || !common.IsHexAddress(line) || len(line) != pubkeyLength {
-				log.Warnf("web3signer key file: invalid public key line: %s", line)
-				continue
-			}
 			pubkey, err := hexutil.Decode(line)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			lines = append(lines, bytesutil.ToBytes48(pubkey))
+			bPubkey := bytesutil.ToBytes48(pubkey)
+			seenKeys[line] = bPubkey
+			keys = append(keys, bPubkey)
 		}
 	}
 	// Check for scanning errors
 	if err := scanner.Err(); err != nil {
-		return nil, errors.Wrap(err, "could not scan web3signer public key file")
+		return nil, nil, errors.Wrap(err, "could not scan web3signer public key file")
 	}
-	return lines, nil
+	return keys, seenKeys, nil
 }
 
-func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys map[string][48]byte) error {
-	remoteKeysFile := filepath.Join(km.walletDir, remoteKeysFileName)
+func (km *Keymanager) savePublicKeysToFile(providedPublicKeys map[string][48]byte) error {
+	if km.keyFilePath == "" {
+		return errors.New("no key file provided")
+	}
 	pubkeys := make([][48]byte, 0)
 	var bytesBuf bytes.Buffer
 	for key, value := range providedPublicKeys {
@@ -208,8 +196,8 @@ func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys map[string][48]b
 		pubkeys = append(pubkeys, value)
 	}
 
-	if err := file.WriteFile(remoteKeysFile, bytesBuf.Bytes()); err != nil {
-		return errors.Wrapf(err, "could not write to file %s", remoteKeysFile)
+	if err := file.WriteFile(km.keyFilePath, bytesBuf.Bytes()); err != nil {
+		return errors.Wrapf(err, "could not write to file %s", km.keyFilePath)
 	}
 	km.lock.Lock()
 	km.providedPublicKeys = pubkeys
@@ -218,7 +206,6 @@ func (km *Keymanager) saveProvidedPublicKeys(providedPublicKeys map[string][48]b
 }
 
 func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
-	remoteKeysFile := filepath.Join(km.walletDir, remoteKeysFileName)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.WithError(err).Error("Could not initialize file watcher")
@@ -229,14 +216,14 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			log.WithError(err).Error("Could not close file watcher")
 		}
 	}()
-	if err := watcher.Add(remoteKeysFile); err != nil {
-		log.WithError(err).Errorf("Could not add file %s to file watcher", remoteKeysFile)
+	if err := watcher.Add(km.keyFilePath); err != nil {
+		log.WithError(err).Errorf("Could not add file %s to file watcher", km.keyFilePath)
 		return
 	}
 	for {
 		select {
 		case <-watcher.Events:
-			keys, err := readKeyFile(remoteKeysFile)
+			keys, _, err := readKeyFile(km.keyFilePath)
 			if err != nil {
 				log.WithError(err).Error("Could not read key file")
 			}
@@ -244,7 +231,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			km.providedPublicKeys = keys
 			km.lock.Unlock()
 		case err := <-watcher.Errors:
-			log.WithError(err).Errorf("Could not watch for file changes for: %s", remoteKeysFile)
+			log.WithError(err).Errorf("Could not watch for file changes for: %s", km.keyFilePath)
 		case <-ctx.Done():
 			return
 		}
@@ -639,9 +626,16 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 	}
 
 	if originalKeysLen != len(combinedKeys) {
-		if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
-			return nil, err
+		if km.keyFilePath != "" {
+			if err := km.savePublicKeysToFile(combinedKeys); err != nil {
+				return nil, err
+			}
+		} else {
+			km.lock.Lock()
+			km.providedPublicKeys = maps.Values(combinedKeys)
+			km.lock.Unlock()
 		}
+
 		km.lock.RLock()
 		km.accountsChangedFeed.Send(km.providedPublicKeys)
 		km.lock.RUnlock()
@@ -707,9 +701,16 @@ func (km *Keymanager) DeletePublicKeys(publicKeys []string) ([]*keymanager.KeySt
 	}
 
 	if originalKeysLen != len(combinedKeys) {
-		if err := km.saveProvidedPublicKeys(combinedKeys); err != nil {
-			return nil, err
+		if km.keyFilePath != "" {
+			if err := km.savePublicKeysToFile(combinedKeys); err != nil {
+				return nil, err
+			}
+		} else {
+			km.lock.Lock()
+			km.providedPublicKeys = maps.Values(combinedKeys)
+			km.lock.Unlock()
 		}
+
 		km.lock.RLock()
 		km.accountsChangedFeed.Send(km.providedPublicKeys)
 		km.lock.RUnlock()
