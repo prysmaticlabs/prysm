@@ -1368,18 +1368,13 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 			set.String(flags.WalletDirFlag.Name, newDir, "")
 			w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 			require.NoError(t, err)
-			decodedKey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
-			require.NoError(t, err)
-			keys := [][48]byte{
-				bytesutil.ToBytes48(decodedKey),
-			}
 			v := validator{
 				db:     db,
 				useWeb: false,
 				wallet: w,
 				Web3SignerConfig: &remoteweb3signer.SetupConfig{
 					BaseEndpoint:       "http://localhost:8545",
-					ProvidedPublicKeys: keys,
+					ProvidedPublicKeys: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
 				},
 			}
 			err = v.WaitForKeymanagerInitialization(context.Background())
