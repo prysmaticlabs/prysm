@@ -12,6 +12,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	p2pm "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
@@ -1165,4 +1166,23 @@ func TestBatchLimit(t *testing.T) {
 	params.OverrideBeaconConfig(testCfg)
 
 	assert.Equal(t, params.BeaconConfig().MaxRequestBlocksDeneb, uint64(maxBatchLimit()))
+}
+
+func TestBlockFetcher_HasSufficientBandwidth(t *testing.T) {
+	bf := newBlocksFetcher(context.Background(), &blocksFetcherConfig{})
+	currCap := bf.rateLimiter.Capacity()
+	wantedAmt := currCap - 100
+	bf.rateLimiter.Add(peer.ID("a").String(), wantedAmt)
+	bf.rateLimiter.Add(peer.ID("c").String(), wantedAmt)
+	bf.rateLimiter.Add(peer.ID("f").String(), wantedAmt)
+	bf.rateLimiter.Add(peer.ID("d").String(), wantedAmt)
+
+	receivedPeers := bf.hasSufficientBandwidth([]peer.ID{"a", "b", "c", "d", "e", "f"}, 110)
+	for _, p := range receivedPeers {
+		switch p {
+		case "a", "c", "f", "d":
+			t.Errorf("peer has exceeded capacity: %s", p)
+		}
+	}
+	assert.Equal(t, 2, len(receivedPeers))
 }

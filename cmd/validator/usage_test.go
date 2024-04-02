@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/config/features"
@@ -34,10 +35,7 @@ func TestAllFlagsExistInHelp(t *testing.T) {
 }
 
 func doesFlagExist(flag cli.Flag, flags []cli.Flag) bool {
-	for _, f := range flags {
-		if f.String() == flag.String() {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(flags, func(f cli.Flag) bool {
+		return f.String() == flag.String()
+	})
 }

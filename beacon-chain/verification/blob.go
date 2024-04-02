@@ -126,7 +126,7 @@ func (bv *ROBlobVerifier) VerifiedROBlob() (blocks.VerifiedROBlob, error) {
 // For example, when batch syncing, forkchoice is only updated at the end of the batch. So the checks that use
 // forkchoice, like descends from finalized or parent seen, would necessarily fail. Allowing the caller to
 // assert the requirement has been satisfied ensures we have an easy way to audit which piece of code is satisfying
-// a requireent outside of this package.
+// a requirement outside of this package.
 func (bv *ROBlobVerifier) SatisfyRequirement(req Requirement) {
 	bv.recordResult(req, nil)
 }

@@ -59,7 +59,7 @@ func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch primitives.Epoch, 
 	return ComputeDomainAndSignWithoutState(st.Fork(), epoch, domain, st.GenesisValidatorsRoot(), obj, key)
 }
 
-// ComputeDomainAndSignWithoutState offers the same functionalit as ComputeDomainAndSign without the need to provide a BeaconState.
+// ComputeDomainAndSignWithoutState offers the same functionality as ComputeDomainAndSign without the need to provide a BeaconState.
 // This is particularly helpful for signing values in tests.
 func ComputeDomainAndSignWithoutState(fork *ethpb.Fork, epoch primitives.Epoch, domain [4]byte, vr []byte, obj fssz.HashRoot, key bls.SecretKey) ([]byte, error) {
 	// EIP-7044: Beginning in Deneb, fix the fork version to Capella for signed exits.

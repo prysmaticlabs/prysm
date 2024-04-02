@@ -208,8 +208,8 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	}
 
 	if existingAttWrapper == nil {
-		// This case should normally not happen. If this happen, it means we previously
-		// recorded in our min/max DB an distance corresponding to an attestaiton, but WITHOUT
+		// This case should normally not happen. If this happens, it means we previously
+		// recorded in our min/max DB a distance corresponding to an attestation, but WITHOUT
 		// recording the attestation itself. As a consequence, we say there is no surrounding vote,
 		// but we log an error.
 		fields := logrus.Fields{
@@ -287,8 +287,8 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	}
 
 	if existingAttWrapper == nil {
-		// This case should normally not happen. If this happen, it means we previously
-		// recorded in our min/max DB an distance corresponding to an attestaiton, but WITHOUT
+		// This case should normally not happen. If this happens, it means we previously
+		// recorded in our min/max DB a distance corresponding to an attestation, but WITHOUT
 		// recording the attestation itself. As a consequence, we say there is no surrounded vote,
 		// but we log an error.
 		fields := logrus.Fields{

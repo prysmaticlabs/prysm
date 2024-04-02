@@ -170,7 +170,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	// Send finalized events and finalized deposits in the background
 	if newFinalized {
 		finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
-		go s.sendNewFinalizedEvent(blockCopy, postState)
+		go s.sendNewFinalizedEvent(ctx, postState)
 		depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
 		go func() {
 			s.insertFinalizedDeposits(depCtx, finalized.Root)
@@ -443,7 +443,7 @@ func (s *Service) updateFinalizationOnBlock(ctx context.Context, preState, postS
 
 // sendNewFinalizedEvent sends a new finalization checkpoint event over the
 // event feed. It needs to be called on the background
-func (s *Service) sendNewFinalizedEvent(signed interfaces.ReadOnlySignedBeaconBlock, postState state.BeaconState) {
+func (s *Service) sendNewFinalizedEvent(ctx context.Context, postState state.BeaconState) {
 	isValidPayload := false
 	s.headLock.RLock()
 	if s.head != nil {
@@ -451,8 +451,17 @@ func (s *Service) sendNewFinalizedEvent(signed interfaces.ReadOnlySignedBeaconBl
 	}
 	s.headLock.RUnlock()
 
+	blk, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root))
+	if err != nil {
+		log.WithError(err).Error("Could not retrieve block for finalized checkpoint root. Finalized event will not be emitted")
+		return
+	}
+	if blk == nil || blk.IsNil() || blk.Block() == nil || blk.Block().IsNil() {
+		log.WithError(err).Error("Block retrieved for finalized checkpoint root is nil. Finalized event will not be emitted")
+		return
+	}
+	stateRoot := blk.Block().StateRoot()
 	// Send an event regarding the new finalized checkpoint over a common event feed.
-	stateRoot := signed.Block().StateRoot()
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.FinalizedCheckpoint,
 		Data: &ethpbv1.EventFinalizedCheckpoint{

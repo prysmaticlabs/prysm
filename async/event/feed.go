@@ -20,6 +20,7 @@ package event
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"sync"
 )
 
@@ -219,12 +220,9 @@ type caseList []reflect.SelectCase
 
 // find returns the index of a case containing the given channel.
 func (cs caseList) find(channel interface{}) int {
-	for i, cas := range cs {
-		if cas.Chan.Interface() == channel {
-			return i
-		}
-	}
-	return -1
+	return slices.IndexFunc(cs, func(selectCase reflect.SelectCase) bool {
+		return selectCase.Chan.Interface() == channel
+	})
 }
 
 // delete removes the given case from cs.

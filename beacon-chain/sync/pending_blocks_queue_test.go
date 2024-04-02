@@ -646,7 +646,7 @@ func TestService_BatchRootRequest(t *testing.T) {
 	b4Root, err := b4.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	// Send in duplicated roots to also test deduplicaton.
+	// Send in duplicated roots to also test deduplication.
 	sentRoots := p2ptypes.BeaconBlockByRootsReq{b2Root, b2Root, b3Root, b3Root, b4Root, b5Root}
 	expectedRoots := p2ptypes.BeaconBlockByRootsReq{b2Root, b3Root, b4Root, b5Root}
 

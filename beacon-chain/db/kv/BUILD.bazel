@@ -20,6 +20,7 @@ go_library(
         "migration.go",
         "migration_archived_index.go",
         "migration_block_slot_index.go",
+        "migration_finalized_parent.go",
         "migration_state_validators.go",
         "schema.go",
         "state.go",

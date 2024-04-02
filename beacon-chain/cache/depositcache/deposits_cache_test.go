@@ -804,7 +804,7 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	depositTrie, err := trie.GenerateTrieFromItems(trieItems, params.BeaconConfig().DepositContractTreeDepth)
 	assert.NoError(t, err)
 
-	// Perform this in a non-sensical ordering
+	// Perform this in a nonsensical ordering
 	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 10, [32]byte{}, 0))
 	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2, [32]byte{}, 0))
 	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 3, [32]byte{}, 0))

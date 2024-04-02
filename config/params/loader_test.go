@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -401,10 +402,5 @@ func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *p
 }
 
 func isPlaceholderField(field string) bool {
-	for _, f := range placeholderFields {
-		if f == field {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(placeholderFields, field)
 }

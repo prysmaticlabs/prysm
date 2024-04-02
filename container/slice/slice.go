@@ -2,6 +2,7 @@ package slice
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -140,12 +141,7 @@ func NotUint64(a, b []uint64) []uint64 {
 
 // IsInUint64 returns true if a is in b and False otherwise.
 func IsInUint64(a uint64, b []uint64) bool {
-	for _, v := range b {
-		if a == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(b, a)
 }
 
 // IntersectionInt64 of any number of int64 slices with time
@@ -226,12 +222,7 @@ func NotInt64(a, b []int64) []int64 {
 
 // IsInInt64 returns true if a is in b and False otherwise.
 func IsInInt64(a int64, b []int64) bool {
-	for _, v := range b {
-		if a == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(b, a)
 }
 
 // UnionByteSlices returns the all elements between sets of byte slices.
@@ -358,12 +349,7 @@ func NotSlot(a, b []primitives.Slot) []primitives.Slot {
 
 // IsInSlots returns true if a is in b and False otherwise.
 func IsInSlots(a primitives.Slot, b []primitives.Slot) bool {
-	for _, v := range b {
-		if a == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(b, a)
 }
 
 // Unique returns an array with duplicates filtered based on the type given

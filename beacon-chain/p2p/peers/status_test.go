@@ -565,7 +565,7 @@ func TestPeerIPTracker(t *testing.T) {
 
 	badIP := "211.227.218.116"
 	var badPeers []peer.ID
-	for i := 0; i < peers.ColocationLimit+10; i++ {
+	for i := 0; i < peers.CollocationLimit+10; i++ {
 		port := strconv.Itoa(3000 + i)
 		addr, err := ma.NewMultiaddr("/ip4/" + badIP + "/tcp/" + port)
 		if err != nil {

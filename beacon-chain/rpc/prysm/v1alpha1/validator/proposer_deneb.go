@@ -56,8 +56,8 @@ func (c *blobsBundleCache) prune(minSlot primitives.Slot) {
 	}
 }
 
-// buildBlobSidecars given a block, builds the blob sidecars for the block.
-func buildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgProofs [][]byte) ([]*ethpb.BlobSidecar, error) {
+// BuildBlobSidecars given a block, builds the blob sidecars for the block.
+func BuildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgProofs [][]byte) ([]*ethpb.BlobSidecar, error) {
 	if blk.Version() < version.Deneb {
 		return nil, nil // No blobs before deneb.
 	}

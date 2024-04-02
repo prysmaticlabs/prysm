@@ -60,7 +60,7 @@ func (s *Service) getFCUArgsEarlyBlock(cfg *postBlockProcessConfig, fcuArgs *fcu
 
 // logNonCanonicalBlockReceived prints a message informing that the received
 // block is not the head of the chain. It requires the caller holds a lock on
-// Foprkchoice.
+// Forkchoice.
 func (s *Service) logNonCanonicalBlockReceived(blockRoot [32]byte, headRoot [32]byte) {
 	receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
 	if err != nil {

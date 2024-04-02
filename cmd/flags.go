@@ -4,6 +4,7 @@ package cmd
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -323,10 +324,10 @@ func ValidateNoArgs(ctx *cli.Context) error {
 
 // verifies that the provided command is in the command list.
 func checkCommandList(commands []*cli.Command, name string) *cli.Command {
-	for _, c := range commands {
-		if c.Name == name {
-			return c
-		}
+	if i := slices.IndexFunc(commands, func(c *cli.Command) bool {
+		return c.Name == name
+	}); i >= 0 {
+		return commands[i]
 	}
 	return nil
 }

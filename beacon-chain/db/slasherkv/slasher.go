@@ -697,7 +697,7 @@ func decodeSlasherChunk(enc []byte) ([]uint16, error) {
 }
 
 // Encode attestation record to bytes.
-// The output encoded attestation record consists in the signing root concatened with the compressed attestation record.
+// The output encoded attestation record consists in the signing root concatenated with the compressed attestation record.
 func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byte, error) {
 	if att == nil || att.IndexedAttestation == nil {
 		return []byte{}, errors.New("nil proposal record")
@@ -716,7 +716,7 @@ func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byt
 }
 
 // Decode attestation record from bytes.
-// The input encoded attestation record consists in the signing root concatened with the compressed attestation record.
+// The input encoded attestation record consists in the signing root concatenated with the compressed attestation record.
 func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWrapper, error) {
 	if len(encoded) < rootSize {
 		return nil, fmt.Errorf("wrong length for encoded attestation record, want minimum %d, got %d", rootSize, len(encoded))

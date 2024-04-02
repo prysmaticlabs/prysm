@@ -127,7 +127,7 @@ func feeRecipientIsPresent(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 			// In e2e we generate deterministic keys by validator index, and then use a slice of their public key bytes
 			// as the fee recipient, so that this will also be deterministic, so this test can statelessly verify it.
 			// These should be the only keys we see.
-			// Otherwise something has changed in e2e and this test needs to be updated.
+			// Otherwise, something has changed in e2e and this test needs to be updated.
 			_, knownKey := valkeys[pk]
 			if !knownKey {
 				log.WithField("pubkey", pk).

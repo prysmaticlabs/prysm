@@ -312,7 +312,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 
 	response.bwb, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
 	if response.err == nil {
-		bwb, err := f.fetchBlobsFromPeer(ctx, response.bwb, response.pid)
+		bwb, err := f.fetchBlobsFromPeer(ctx, response.bwb, response.pid, peers)
 		if err != nil {
 			response.err = err
 		}
@@ -336,6 +336,11 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		Count:     count,
 		Step:      1,
 	}
+	bestPeers := f.hasSufficientBandwidth(peers, req.Count)
+	// We append the best peers to the front so that higher capacity
+	// peers are dialed first.
+	peers = append(bestPeers, peers...)
+	peers = dedupPeers(peers)
 	for i := 0; i < len(peers); i++ {
 		p := peers[i]
 		blocks, err := f.requestBlocks(ctx, req, p)
@@ -472,7 +477,7 @@ func missingCommitError(root [32]byte, slot primitives.Slot, missing [][]byte) e
 }
 
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
-func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.BlockWithROBlobs, pid peer.ID) ([]blocks2.BlockWithROBlobs, error) {
+func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.BlockWithROBlobs, pid peer.ID, peers []peer.ID) ([]blocks2.BlockWithROBlobs, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsFromPeer")
 	defer span.End()
 	if slots.ToEpoch(f.clock.CurrentSlot()) < params.BeaconConfig().DenebForkEpoch {
@@ -487,13 +492,30 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 	if req == nil {
 		return bwb, nil
 	}
-	// Request blobs from the same peer that gave us the blob batch.
-	blobs, err := f.requestBlobs(ctx, req, pid)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not request blobs by range")
+	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
+	// We dial the initial peer first to ensure that we get the desired set of blobs.
+	wantedPeers := append([]peer.ID{pid}, peers...)
+	bestPeers := f.hasSufficientBandwidth(wantedPeers, req.Count)
+	// We append the best peers to the front so that higher capacity
+	// peers are dialed first. If all of them fail, we fallback to the
+	// initial peer we wanted to request blobs from.
+	peers = append(bestPeers, pid)
+	for i := 0; i < len(peers); i++ {
+		p := peers[i]
+		blobs, err := f.requestBlobs(ctx, req, p)
+		if err != nil {
+			log.WithField("peer", p).WithError(err).Debug("Could not request blobs by range from peer")
+			continue
+		}
+		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(p)
+		robs, err := verifyAndPopulateBlobs(bwb, blobs, blobWindowStart)
+		if err != nil {
+			log.WithField("peer", p).WithError(err).Debug("Invalid BeaconBlobsByRange response")
+			continue
+		}
+		return robs, err
 	}
-	f.p2p.Peers().Scorers().BlockProviderScorer().Touch(pid)
-	return verifyAndPopulateBlobs(bwb, blobs, blobWindowStart)
+	return nil, errNoPeersAvailable
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
@@ -606,6 +628,18 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 	return nil
 }
 
+func (f *blocksFetcher) hasSufficientBandwidth(peers []peer.ID, count uint64) []peer.ID {
+	filteredPeers := []peer.ID{}
+	for _, p := range peers {
+		if uint64(f.rateLimiter.Remaining(p.String())) < count {
+			continue
+		}
+		copiedP := p
+		filteredPeers = append(filteredPeers, copiedP)
+	}
+	return filteredPeers
+}
+
 // Determine how long it will take for us to have the required number of blocks allowed by our rate limiter.
 // We do this by calculating the duration till the rate limiter can request these blocks without exceeding
 // the provided bandwidth limits per peer.
@@ -625,4 +659,19 @@ func timeToWait(wanted, rem, capacity int64, timeTillEmpty time.Duration) time.D
 	currentNumBlks := capacity - rem
 	expectedTime := int64(timeTillEmpty) * blocksNeeded / currentNumBlks
 	return time.Duration(expectedTime)
+}
+
+// deduplicates the provided peer list.
+func dedupPeers(peers []peer.ID) []peer.ID {
+	newPeerList := make([]peer.ID, 0, len(peers))
+	peerExists := make(map[peer.ID]bool)
+
+	for i := range peers {
+		if peerExists[peers[i]] {
+			continue
+		}
+		newPeerList = append(newPeerList, peers[i])
+		peerExists[peers[i]] = true
+	}
+	return newPeerList
 }
