@@ -8,12 +8,14 @@ import (
 
 	blockchainTesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -377,4 +379,39 @@ func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
 		require.Equal(t, false, pool.ValidatorExists(idx))
 	})
+}
+
+func Test_sendNewFinalizedEvent(t *testing.T) {
+	s, _ := minimalTestService(t)
+	notifier := &blockchainTesting.MockStateNotifier{RecordEvents: true}
+	s.cfg.StateNotifier = notifier
+	finalizedSt, err := util.NewBeaconState()
+	require.NoError(t, err)
+	finalizedStRoot, err := finalizedSt.HashTreeRoot(s.ctx)
+	require.NoError(t, err)
+	b := util.NewBeaconBlock()
+	b.Block.StateRoot = finalizedStRoot[:]
+	sbb, err := blocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+	sbbRoot, err := sbb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, s.cfg.BeaconDB.SaveBlock(s.ctx, sbb))
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Epoch: 123,
+		Root:  sbbRoot[:],
+	}))
+
+	s.sendNewFinalizedEvent(s.ctx, st)
+
+	require.Equal(t, 1, len(notifier.ReceivedEvents()))
+	e := notifier.ReceivedEvents()[0]
+	assert.Equal(t, statefeed.FinalizedCheckpoint, int(e.Type))
+	fc, ok := e.Data.(*ethpbv1.EventFinalizedCheckpoint)
+	require.Equal(t, true, ok, "event has wrong data type")
+	assert.Equal(t, primitives.Epoch(123), fc.Epoch)
+	assert.DeepEqual(t, sbbRoot[:], fc.Block)
+	assert.DeepEqual(t, finalizedStRoot[:], fc.State)
+	assert.Equal(t, false, fc.ExecutionOptimistic)
 }
