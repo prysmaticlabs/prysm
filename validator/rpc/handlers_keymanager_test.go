@@ -359,7 +359,7 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    make([][48]byte, 0),
+		ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
 	}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -644,7 +644,7 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 		Web3SignerConfig: &remoteweb3signer.SetupConfig{
 			BaseEndpoint:          "http://example.com",
 			GenesisValidatorsRoot: root,
-			ProvidedPublicKeys:    make([][48]byte, 0),
+			ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
 		}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -1337,13 +1337,10 @@ func TestServer_ListRemoteKeys(t *testing.T) {
 	require.NoError(t, err)
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
-	bytevalue, err := hexutil.Decode("0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
-	require.NoError(t, err)
-	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
 	config := &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    pubkeys,
+		ProvidedPublicKeys:    []string{"0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"},
 	}
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
 	require.NoError(t, err)
@@ -1450,13 +1447,10 @@ func TestServer_DeleteRemoteKeys(t *testing.T) {
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	pkey := "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
-	bytevalue, err := hexutil.Decode(pkey)
-	require.NoError(t, err)
-	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
 	config := &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    pubkeys,
+		ProvidedPublicKeys:    []string{pkey},
 	}
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
 	require.NoError(t, err)
