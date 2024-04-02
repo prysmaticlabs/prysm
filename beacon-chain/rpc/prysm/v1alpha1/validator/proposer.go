@@ -341,7 +341,7 @@ func (vs *Server) handleUnblindedBlock(block interfaces.SignedBeaconBlock, req *
 	if dbBlockContents == nil {
 		return nil, nil
 	}
-	return buildBlobSidecars(block, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
+	return BuildBlobSidecars(block, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
 }
 
 // broadcastReceiveBlock broadcasts a block and handles its reception.

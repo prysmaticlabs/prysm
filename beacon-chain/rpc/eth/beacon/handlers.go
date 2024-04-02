@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/prysm/v1alpha1/validator"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
@@ -32,6 +33,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -42,7 +44,8 @@ const (
 )
 
 var (
-	errNilBlock = errors.New("nil block")
+	errNilBlock         = errors.New("nil block")
+	errEquivocatedBlock = errors.New("block is equivocated")
 )
 
 type handled bool
@@ -1254,6 +1257,16 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 			},
 		}
 		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			if errors.Is(err, errEquivocatedBlock) {
+				b, err := blocks.NewSignedBeaconBlock(genericBlock)
+				if err != nil {
+					httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				if err := s.broadcastSeenBlockSidecars(ctx, b, genericBlock.GetDeneb().Blobs, genericBlock.GetDeneb().KzgProofs); err != nil {
+					log.WithError(err).Error("Failed to broadcast blob sidecars")
+				}
+			}
 			httputil.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -1383,6 +1396,16 @@ func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *htt
 		consensusBlock, err = denebBlockContents.ToGeneric()
 		if err == nil {
 			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				if errors.Is(err, errEquivocatedBlock) {
+					b, err := blocks.NewSignedBeaconBlock(consensusBlock)
+					if err != nil {
+						httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					if err := s.broadcastSeenBlockSidecars(ctx, b, consensusBlock.GetDeneb().Blobs, consensusBlock.GetDeneb().KzgProofs); err != nil {
+						log.WithError(err).Error("Failed to broadcast blob sidecars")
+					}
+				}
 				httputil.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -1547,7 +1570,7 @@ func (s *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnlyS
 
 func (s *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error {
 	if s.ForkchoiceFetcher.HighestReceivedBlockSlot() == blk.Slot() {
-		return fmt.Errorf("block for slot %d already exists in fork choice", blk.Slot())
+		return errors.Wrapf(errEquivocatedBlock, "block for slot %d already exists in fork choice", blk.Slot())
 	}
 	return nil
 }
@@ -2071,4 +2094,38 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 			Data: structs.DepositSnapshotFromConsensus(snapshot),
 		},
 	)
+}
+
+// Broadcast blob sidecars even if the block of the same slot has been imported.
+// To ensure safety, we will only broadcast blob sidecars if the header references the same block that was previously seen.
+// Otherwise, a proposer could get slashed through a different blob sidecar header reference.
+func (s *Server) broadcastSeenBlockSidecars(
+	ctx context.Context,
+	b interfaces.SignedBeaconBlock,
+	blobs [][]byte,
+	kzgProofs [][]byte) error {
+	scs, err := validator.BuildBlobSidecars(b, blobs, kzgProofs)
+	if err != nil {
+		return err
+	}
+	for _, sc := range scs {
+		r, err := sc.SignedBlockHeader.Header.HashTreeRoot()
+		if err != nil {
+			log.WithError(err).Error("Failed to hash block header for blob sidecar")
+			continue
+		}
+		if !s.FinalizationFetcher.InForkchoice(r) {
+			log.WithField("root", fmt.Sprintf("%#x", r)).Debug("Block header not in forkchoice, skipping blob sidecar broadcast")
+			continue
+		}
+		if err := s.Broadcaster.BroadcastBlob(ctx, sc.Index, sc); err != nil {
+			log.WithError(err).Error("Failed to broadcast blob sidecar for index ", sc.Index)
+		}
+		log.WithFields(logrus.Fields{
+			"index":         sc.Index,
+			"slot":          sc.SignedBlockHeader.Header.Slot,
+			"kzgCommitment": fmt.Sprintf("%#x", sc.KzgCommitment),
+		}).Info("Broadcasted blob sidecar for already seen block")
+	}
+	return nil
 }
