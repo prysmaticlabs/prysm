@@ -79,7 +79,7 @@ func (s *Service) filterAttestations(
 			continue
 		}
 
-		// If an attestations's target epoch is in the future, we defer processing for later.
+		// If an attestation's target epoch is in the future, we defer processing for later.
 		if attWrapper.IndexedAttestation.Data.Target.Epoch > currentEpoch {
 			validInFuture = append(validInFuture, attWrapper)
 			continue

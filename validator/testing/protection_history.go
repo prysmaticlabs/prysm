@@ -60,7 +60,7 @@ func MockAttestingAndProposalHistories(pubkeys [][fieldparams.BLSPubkeyLength]by
 	gen := rand.NewGenerator()
 	for v := 0; v < numValidators; v++ {
 		latestTarget := primitives.Epoch(gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000))
-		// If 0, we change the value to 1 as the we compute source by doing (target-1)
+		// If 0, we change the value to 1 as we compute source by doing (target-1)
 		// to prevent any underflows in this setup helper.
 		if latestTarget == 0 {
 			latestTarget = 1
