@@ -196,17 +196,16 @@ func (v *ValidatorService) Start() {
 	}
 
 	u := strings.ReplaceAll(v.conn.GetBeaconApiUrl(), " ", "")
-	urls := strings.Split(u, ",")
+	hosts := strings.Split(u, ",")
 	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
 		http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
 		func() string {
-			return urls[0]
+			return hosts[0]
 		},
 	)
 
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
-	if len(urls) > 1 && features.Get().EnableBeaconRESTApi {
-		runNodeSwitcherRoutine(v.ctx, v.validator, urls)
+	if len(hosts) > 1 && features.Get().EnableBeaconRESTApi {
 	}
 
 	valStruct := &validator{
@@ -245,7 +244,7 @@ func (v *ValidatorService) Start() {
 	}
 
 	v.validator = valStruct
-	go run(v.ctx, v.validator)
+	go run(v.ctx, v.validator, hosts)
 }
 
 // Stop the validator service.
@@ -386,31 +385,4 @@ func (v *ValidatorService) DeleteGraffiti(ctx context.Context, pubKey [fieldpara
 		return errors.New("validator is unavailable")
 	}
 	return v.validator.DeleteGraffiti(ctx, pubKey)
-}
-
-func runNodeSwitcherRoutine(ctx context.Context, v iface.Validator, endpoints []string) {
-	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-	go func() {
-		for {
-			select {
-			case <-healthCheckTicker.C:
-				healthTracker := v.HealthTracker()
-				if !healthTracker.IsHealthy() {
-					for i, url := range endpoints {
-						if url == v.RetrieveHost() {
-							next := (i + 1) % len(endpoints)
-							log.Infof("Beacon node at %s is not responding, switching to %s", url, endpoints[next])
-							v.UpdateHost(endpoints[next])
-						}
-					}
-				}
-			case <-ctx.Done():
-				if ctx.Err() != nil {
-					log.WithError(ctx.Err()).Error("Context cancelled")
-				}
-				log.Error("Context cancelled")
-				return
-			}
-		}
-	}()
 }

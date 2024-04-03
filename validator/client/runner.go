@@ -33,7 +33,7 @@ var backOffPeriod = 10 * time.Second
 // 4 - Update assignments
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
-func run(ctx context.Context, v iface.Validator) {
+func run(ctx context.Context, v iface.Validator, hosts []string) {
 	cleanup := v.Done
 	defer cleanup()
 
@@ -46,7 +46,7 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 	eventsChan := make(chan *event.Event, 1)
 	healthTracker := v.HealthTracker()
-	runHealthCheckRoutine(ctx, v, eventsChan)
+	runHealthCheckRoutine(ctx, v, eventsChan, hosts)
 
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	km, err := v.Keymanager()
@@ -293,7 +293,7 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 	}
 }
 
-func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan chan<- *event.Event) {
+func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan chan<- *event.Event, hosts []string) {
 	log.Info("Starting health check routine for beacon node apis")
 	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	tracker := v.HealthTracker()
@@ -305,6 +305,32 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 				return
 			}
 			isHealthy := tracker.CheckHealth(ctx)
+			for !isHealthy {
+				cSlot, err := v.CanonicalHeadSlot(ctx)
+				if err != nil {
+					log.WithError(err).Error("Could not get canonical head slot")
+				}
+				nSlot := <-v.NextSlot()
+				for {
+					if cSlot == nSlot {
+						for i, url := range hosts {
+							if url == v.RetrieveHost() {
+								next := (i + 1) % len(hosts)
+								log.Infof("Beacon node at %s is not responding, switching to %s", url, hosts[next])
+								v.UpdateHost(hosts[next])
+								v.ProposerSettings()
+							}
+						}
+						break
+					}
+					time.Sleep(time.Second)
+					cSlot, err = v.CanonicalHeadSlot(ctx)
+					if err != nil {
+						log.WithError(err).Error("Could not get canonical head slot")
+					}
+				}
+				isHealthy = v.HealthTracker().CheckHealth(ctx)
+			}
 			// in case of node returning healthy but event stream died
 			if isHealthy && !v.EventStreamIsRunning() {
 				log.Info("Event stream reconnecting...")
