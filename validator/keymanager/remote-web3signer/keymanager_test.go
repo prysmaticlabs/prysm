@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"slices"
 	"sync"
@@ -189,7 +190,7 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
+	keyFilePath := filepath.Join("./testing/", "keyfile.txt")
 	bytesBuf := new(bytes.Buffer)
 	_, err := bytesBuf.WriteString("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055")
 	require.NoError(t, err)
@@ -213,6 +214,7 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 	require.NoError(t, err)
 	wantSlice := []string{"0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"}
 	keys := make([]string, len(km.providedPublicKeys))
+	require.Equal(t, 3, len(km.providedPublicKeys))
 	for i, key := range km.providedPublicKeys {
 		keys[i] = hexutil.Encode(key[:])
 		require.Equal(t, slices.Contains(wantSlice, keys[i]), true)
@@ -226,17 +228,28 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 		require.NoError(t, err)
 		_, err = bytesBuf.WriteString("\n")
 		require.NoError(t, err)
-		err = file.WriteFile(keyFilePath, bytesBuf.Bytes())
+		// Open the file for writing, create it if it does not exist, and truncate it if it does.
+		f, err := os.OpenFile(km.keyFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		require.NoError(t, err)
-		// wait for file watcher to pick up change
-		time.Sleep(1 * time.Second)
+
+		// Write the buffer's contents to the file.
+		_, err = f.Write(bytesBuf.Bytes())
+		require.NoError(t, err)
+		require.NoError(t, f.Sync())
+		require.NoError(t, f.Close())
+		time.Sleep(2 * time.Second)
 	}()
 	wg.Wait() // Wait for all goroutines to finish
-	key, err := km.FetchValidatingPublicKeys(ctx)
+
+	ks, _, err := km.readKeyFile()
 	require.NoError(t, err)
+	require.Equal(t, 1, len(ks))
+	require.Equal(t, "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", hexutil.Encode(ks[0][:]))
+
+	key := km.providedPublicKeys
 	require.Equal(t, 1, len(key))
-	wantSlice = []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"}
 	require.Equal(t, "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", hexutil.Encode(km.providedPublicKeys[0][:]))
+	require.NoError(t, os.Remove(km.keyFilePath))
 }
 
 func TestKeymanager_Sign(t *testing.T) {
@@ -489,6 +502,40 @@ func TestKeymanager_AddPublicKeys(t *testing.T) {
 	}
 }
 
+func TestKeymanager_AddPublicKeys_WithFile(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	config := &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+		KeyFilePath:           keyFilePath,
+	}
+	km, err := NewKeymanager(ctx, config)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	publicKeys := []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"}
+	statuses, err := km.AddPublicKeys(publicKeys)
+	require.NoError(t, err)
+	for _, status := range statuses {
+		require.Equal(t, keymanager.StatusImported, status.Status)
+	}
+	statuses, err = km.AddPublicKeys(publicKeys)
+	require.NoError(t, err)
+	for _, status := range statuses {
+		require.Equal(t, keymanager.StatusDuplicate, status.Status)
+	}
+	keys, _, err := km.readKeyFile()
+	require.NoError(t, err)
+	require.Equal(t, len(keys), len(publicKeys))
+	require.Equal(t, hexutil.Encode(keys[0][:]), publicKeys[0])
+}
+
 func TestKeymanager_DeletePublicKeys(t *testing.T) {
 	ctx := context.Background()
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
@@ -521,4 +568,45 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 	for _, status := range s {
 		require.Equal(t, keymanager.StatusNotFound, status.Status)
 	}
+}
+
+func TestKeymanager_DeletePublicKeys_WithFile(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	config := &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+		KeyFilePath:           keyFilePath,
+	}
+	km, err := NewKeymanager(ctx, config)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	publicKeys := []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"}
+	statuses, err := km.AddPublicKeys(publicKeys)
+	require.NoError(t, err)
+	for _, status := range statuses {
+		require.Equal(t, keymanager.StatusImported, status.Status)
+	}
+
+	s, err := km.DeletePublicKeys([]string{publicKeys[0]})
+	require.NoError(t, err)
+	for _, status := range s {
+		require.Equal(t, keymanager.StatusDeleted, status.Status)
+	}
+
+	s, err = km.DeletePublicKeys([]string{publicKeys[0]})
+	require.NoError(t, err)
+	for _, status := range s {
+		require.Equal(t, keymanager.StatusNotFound, status.Status)
+	}
+	keys, _, err := km.readKeyFile()
+	require.NoError(t, err)
+	require.Equal(t, len(keys), 1)
+	require.Equal(t, hexutil.Encode(keys[0][:]), publicKeys[1])
 }

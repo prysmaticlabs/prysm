@@ -129,7 +129,6 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		}
 		maps.Copy(fileKeys, flagLoadedKeys)
 		km.lock.Lock()
-
 		km.providedPublicKeys = maps.Values(fileKeys)
 		km.lock.Unlock()
 		// create a file watcher
@@ -239,15 +238,20 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			if err != nil {
 				log.WithError(err).Error("Could not read key file")
 			}
-			km.lock.Lock()
-			km.providedPublicKeys = keys
-			km.lock.Unlock()
+			km.updatePublicKeys(keys)
 		case err := <-watcher.Errors:
 			log.WithError(err).Errorf("Could not watch for file changes for: %s", km.keyFilePath)
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+func (km *Keymanager) updatePublicKeys(keys [][48]byte) {
+	km.lock.Lock()
+	km.providedPublicKeys = keys
+	km.accountsChangedFeed.Send(keys)
+	km.lock.Unlock()
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys
@@ -643,14 +647,8 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) ([]*keymanager.KeyStatus, 
 				return nil, err
 			}
 		} else {
-			km.lock.Lock()
-			km.providedPublicKeys = maps.Values(combinedKeys)
-			km.lock.Unlock()
+			km.updatePublicKeys(maps.Values(combinedKeys))
 		}
-
-		km.lock.RLock()
-		km.accountsChangedFeed.Send(km.providedPublicKeys)
-		km.lock.RUnlock()
 	}
 
 	return importedRemoteKeysStatuses, nil
@@ -718,14 +716,8 @@ func (km *Keymanager) DeletePublicKeys(publicKeys []string) ([]*keymanager.KeySt
 				return nil, err
 			}
 		} else {
-			km.lock.Lock()
-			km.providedPublicKeys = maps.Values(combinedKeys)
-			km.lock.Unlock()
+			km.updatePublicKeys(maps.Values(combinedKeys))
 		}
-
-		km.lock.RLock()
-		km.accountsChangedFeed.Send(km.providedPublicKeys)
-		km.lock.RUnlock()
 	}
 
 	return deletedRemoteKeysStatuses, nil
