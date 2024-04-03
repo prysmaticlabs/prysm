@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sync"
 	"testing"
 	"time"
 
@@ -190,7 +189,7 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	keyFilePath := filepath.Join("./testing/", "keyfile.txt")
+	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
 	bytesBuf := new(bytes.Buffer)
 	_, err := bytesBuf.WriteString("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055")
 	require.NoError(t, err)
@@ -219,37 +218,31 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 		keys[i] = hexutil.Encode(key[:])
 		require.Equal(t, slices.Contains(wantSlice, keys[i]), true)
 	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		bytesBuf = new(bytes.Buffer)
-		_, err = bytesBuf.WriteString("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055")
-		require.NoError(t, err)
-		_, err = bytesBuf.WriteString("\n")
-		require.NoError(t, err)
-		// Open the file for writing, create it if it does not exist, and truncate it if it does.
-		f, err := os.OpenFile(km.keyFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		require.NoError(t, err)
+	// sleep needs to be at the front because of how watching the file works
+	time.Sleep(1 * time.Second)
 
-		// Write the buffer's contents to the file.
-		_, err = f.Write(bytesBuf.Bytes())
-		require.NoError(t, err)
-		require.NoError(t, f.Sync())
-		require.NoError(t, f.Close())
-		time.Sleep(2 * time.Second)
-	}()
-	wg.Wait() // Wait for all goroutines to finish
+	bytesBuf = new(bytes.Buffer)
+	_, err = bytesBuf.WriteString("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055")
+	require.NoError(t, err)
+	_, err = bytesBuf.WriteString("\n")
+	require.NoError(t, err)
+	// Open the file for writing, create it if it does not exist, and truncate it if it does.
+	f, err := os.OpenFile(keyFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	require.NoError(t, err)
+
+	// Write the buffer's contents to the file.
+	_, err = f.Write(bytesBuf.Bytes())
+	require.NoError(t, err)
+	require.NoError(t, f.Sync())
+	require.NoError(t, f.Close())
 
 	ks, _, err := km.readKeyFile()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(ks))
 	require.Equal(t, "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", hexutil.Encode(ks[0][:]))
 
-	key := km.providedPublicKeys
-	require.Equal(t, 1, len(key))
+	require.Equal(t, 1, len(km.providedPublicKeys))
 	require.Equal(t, "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", hexutil.Encode(km.providedPublicKeys[0][:]))
-	require.NoError(t, os.Remove(km.keyFilePath))
 }
 
 func TestKeymanager_Sign(t *testing.T) {
