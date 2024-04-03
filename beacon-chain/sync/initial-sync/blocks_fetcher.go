@@ -240,7 +240,7 @@ func (f *blocksFetcher) loop() {
 
 	// Main loop.
 	for {
-		// Make sure there is are available peers before processing requests.
+		// Make sure there are available peers before processing requests.
 		if _, err := f.waitForMinimumPeers(f.ctx); err != nil {
 			log.Error(err)
 		}
