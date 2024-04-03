@@ -24,14 +24,6 @@ func TestDisplayExitInfo(t *testing.T) {
 	displayExitInfo([][]byte{key}, []string{string(key)})
 	assert.LogsContain(t, logHook, "https://beaconcha.in/validator/3078313233343536")
 
-	params.BeaconConfig().ConfigName = params.GoerliName
-	displayExitInfo([][]byte{key}, []string{string(key)})
-	assert.LogsContain(t, logHook, "https://prater.beaconcha.in/validator/3078313233343536")
-
-	params.BeaconConfig().ConfigName = params.PraterName
-	displayExitInfo([][]byte{key}, []string{string(key)})
-	assert.LogsContain(t, logHook, "https://prater.beaconcha.in/validator/3078313233343536")
-
 	params.BeaconConfig().ConfigName = params.HoleskyName
 	displayExitInfo([][]byte{key}, []string{string(key)})
 	assert.LogsContain(t, logHook, "https://holesky.beaconcha.in/validator/3078313233343536")
