@@ -8,12 +8,6 @@ import (
 )
 
 var (
-	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
-	PraterTestnet = &cli.BoolFlag{
-		Name:    "prater",
-		Usage:   "Runs Prysm configured for the Prater / Goerli test network.",
-		Aliases: []string{"goerli"},
-	}
 	// SepoliaTestnet flag for the multiclient Ethereum consensus testnet.
 	SepoliaTestnet = &cli.BoolFlag{
 		Name:  "sepolia",
@@ -183,7 +177,6 @@ var devModeFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	HoleskyTestnet,
-	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
@@ -208,7 +201,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	saveInvalidBlobTempFlag,
 	disableGRPCConnectionLogging,
 	HoleskyTestnet,
-	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
 	disablePeerScorer,
@@ -239,7 +231,6 @@ var E2EBeaconChainFlags = []string{
 // NetworkFlags contains a list of network flags.
 var NetworkFlags = []cli.Flag{
 	Mainnet,
-	PraterTestnet,
 	SepoliaTestnet,
 	HoleskyTestnet,
 }
