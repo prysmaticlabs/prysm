@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
 	prysmnetwork "github.com/prysmaticlabs/prysm/v5/network"
@@ -241,13 +242,18 @@ func (s *Service) Start() {
 		outboundTCPCount := len(s.peers.OutboundConnectedWithProtocol(peers.TCP))
 		total := inboundQUICCount + inboundTCPCount + outboundQUICCount + outboundTCPCount
 
-		log.WithFields(logrus.Fields{
-			"inboundQUIC":  inboundQUICCount,
-			"inboundTCP":   inboundTCPCount,
-			"outboundQUIC": outboundQUICCount,
-			"outboundTCP":  outboundTCPCount,
-			"total":        total,
-		}).Info("Connected peers")
+		fields := logrus.Fields{
+			"inboundTCP":  inboundTCPCount,
+			"outboundTCP": outboundTCPCount,
+			"total":       total,
+		}
+
+		if features.Get().EnableQUIC {
+			fields["inboundQUIC"] = inboundQUICCount
+			fields["outboundQUIC"] = outboundQUICCount
+		}
+
+		log.WithFields(fields).Info("Connected peers")
 	})
 
 	multiAddrs := s.host.Network().ListenAddresses()

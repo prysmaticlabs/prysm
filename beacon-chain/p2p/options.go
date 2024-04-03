@@ -37,12 +37,6 @@ func MultiAddressBuilder(ip net.IP, tcpPort, quicPort uint) ([]ma.Multiaddr, err
 		return nil, errors.Wrap(err, "unable to determine IP type")
 	}
 
-	// Example: /ip4/1.2.3.4/udp/5678/quic-v1
-	multiAddrQUIC, err := ma.NewMultiaddr(fmt.Sprintf("/%s/%s/udp/%d/quic-v1", ipType, ip, quicPort))
-	if err != nil {
-		return nil, errors.Wrapf(err, "cannot produce QUIC multiaddr format from %s:%d", ip, tcpPort)
-	}
-
 	// Example: /ip4/1.2.3.4./tcp/5678
 	multiaddrStr := fmt.Sprintf("/%s/%s/tcp/%d", ipType, ip, tcpPort)
 	multiAddrTCP, err := ma.NewMultiaddr(multiaddrStr)
@@ -50,7 +44,19 @@ func MultiAddressBuilder(ip net.IP, tcpPort, quicPort uint) ([]ma.Multiaddr, err
 		return nil, errors.Wrapf(err, "cannot produce TCP multiaddr format from %s:%d", ip, tcpPort)
 	}
 
-	return []ma.Multiaddr{multiAddrTCP, multiAddrQUIC}, nil
+	multiaddrs := []ma.Multiaddr{multiAddrTCP}
+
+	if features.Get().EnableQUIC {
+		// Example: /ip4/1.2.3.4/udp/5678/quic-v1
+		multiAddrQUIC, err := ma.NewMultiaddr(fmt.Sprintf("/%s/%s/udp/%d/quic-v1", ipType, ip, quicPort))
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot produce QUIC multiaddr format from %s:%d", ip, tcpPort)
+		}
+
+		multiaddrs = append(multiaddrs, multiAddrQUIC)
+	}
+
+	return multiaddrs, nil
 }
 
 // buildOptions for the libp2p host.
@@ -87,12 +93,15 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) ([]libp2p.Op
 		libp2p.ListenAddrs(multiaddrs...),
 		libp2p.UserAgent(version.BuildData()),
 		libp2p.ConnectionGater(s),
-		libp2p.Transport(libp2pquic.NewTransport),
 		libp2p.Transport(libp2ptcp.NewTCPTransport),
 		libp2p.DefaultMuxers,
 		libp2p.Muxer("/mplex/6.7.0", mplex.DefaultTransport),
 		libp2p.Security(noise.ID, noise.New),
 		libp2p.Ping(false), // Disable Ping Service.
+	}
+
+	if features.Get().EnableQUIC {
+		options = append(options, libp2p.Transport(libp2pquic.NewTransport))
 	}
 
 	if cfg.EnableUPnP {

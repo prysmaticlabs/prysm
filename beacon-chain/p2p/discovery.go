@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -230,14 +231,18 @@ func (s *Service) createLocalNode(
 	localNode := enode.NewLocalNode(db, privKey)
 
 	ipEntry := enr.IP(ipAddr)
-	udpEntry := enr.UDP(udpPort)
-	tcpEntry := enr.TCP(tcpPort)
-	quicEntry := quicProtocol(quicPort)
-
 	localNode.Set(ipEntry)
+
+	udpEntry := enr.UDP(udpPort)
 	localNode.Set(udpEntry)
+
+	tcpEntry := enr.TCP(tcpPort)
 	localNode.Set(tcpEntry)
-	localNode.Set(quicEntry)
+
+	if features.Get().EnableQUIC {
+		quicEntry := quicProtocol(quicPort)
+		localNode.Set(quicEntry)
+	}
 
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
@@ -502,23 +507,25 @@ func convertToMultiAddrs(node *enode.Node) ([]ma.Multiaddr, error) {
 		return nil, errors.Wrap(err, "could not get peer id")
 	}
 
-	// If the QUIC entry is present in the ENR, build the corresponding multiaddress.
-	port, ok, err := getPort(node, quic)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get QUIC port")
-	}
-
-	if ok {
-		addr, err := multiAddressBuilderWithID(node.IP(), quic, port, id)
+	if features.Get().EnableQUIC {
+		// If the QUIC entry is present in the ENR, build the corresponding multiaddress.
+		port, ok, err := getPort(node, quic)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not build QUIC address")
+			return nil, errors.Wrap(err, "could not get QUIC port")
 		}
 
-		multiaddrs = append(multiaddrs, addr)
+		if ok {
+			addr, err := multiAddressBuilderWithID(node.IP(), quic, port, id)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not build QUIC address")
+			}
+
+			multiaddrs = append(multiaddrs, addr)
+		}
 	}
 
 	// If the TCP entry is present in the ENR, build the corresponding multiaddress.
-	port, ok, err = getPort(node, tcp)
+	port, ok, err := getPort(node, tcp)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get TCP port")
 	}
