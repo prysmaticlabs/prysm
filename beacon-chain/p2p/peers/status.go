@@ -77,6 +77,13 @@ const (
 	MaxBackOffDuration = 5000
 )
 
+type InternetProtocol string
+
+const (
+	TCP  = "tcp"
+	QUIC = "quic"
+)
+
 // Status is the structure holding the peer status information.
 type Status struct {
 	ctx       context.Context
@@ -450,26 +457,13 @@ func (p *Status) InboundConnected() []peer.ID {
 	return peers
 }
 
-// InboundConnectedTCP returns the current batch of inbound peers that are connected using TCP.
-func (p *Status) InboundConnectedTCP() []peer.ID {
+// InboundConnectedWithProtocol returns the current batch of inbound peers that are connected with a given protocol.
+func (p *Status) InboundConnectedWithProtocol(protocol InternetProtocol) []peer.ID {
 	p.store.RLock()
 	defer p.store.RUnlock()
 	peers := make([]peer.ID, 0)
 	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound && strings.Contains(peerData.Address.String(), "tcp") {
-			peers = append(peers, pid)
-		}
-	}
-	return peers
-}
-
-// InboundConnectedTCP returns the current batch of inbound peers that are connected using QUIC.
-func (p *Status) InboundConnectedQUIC() []peer.ID {
-	p.store.RLock()
-	defer p.store.RUnlock()
-	peers := make([]peer.ID, 0)
-	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound && strings.Contains(peerData.Address.String(), "quic") {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound && strings.Contains(peerData.Address.String(), string(protocol)) {
 			peers = append(peers, pid)
 		}
 	}
@@ -502,26 +496,13 @@ func (p *Status) OutboundConnected() []peer.ID {
 	return peers
 }
 
-// OutboundConnected returns the current batch of outbound peers that are connected using TCP.
-func (p *Status) OutboundConnectedTCP() []peer.ID {
+// OutboundConnectedWithProtocol returns the current batch of outbound peers that are connected with a given protocol.
+func (p *Status) OutboundConnectedWithProtocol(protocol InternetProtocol) []peer.ID {
 	p.store.RLock()
 	defer p.store.RUnlock()
 	peers := make([]peer.ID, 0)
 	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirOutbound && strings.Contains(peerData.Address.String(), "tcp") {
-			peers = append(peers, pid)
-		}
-	}
-	return peers
-}
-
-// OutboundConnected returns the current batch of outbound peers that are connected using QUIC.
-func (p *Status) OutboundConnectedQUIC() []peer.ID {
-	p.store.RLock()
-	defer p.store.RUnlock()
-	peers := make([]peer.ID, 0)
-	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirOutbound && strings.Contains(peerData.Address.String(), "quic") {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirOutbound && strings.Contains(peerData.Address.String(), string(protocol)) {
 			peers = append(peers, pid)
 		}
 	}
