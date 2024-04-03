@@ -519,6 +519,35 @@ func missingCommitError(root [32]byte, slot primitives.Slot, missing [][]byte) e
 		"block root %#x at slot %d missing %d commitments %s", root, slot, len(missing), strings.Join(missStr, ","))
 }
 
+func logBlobReqSavings(bwb []blocks2.BlockWithROBlobs, req *p2ppb.BlobSidecarsByRangeRequest) {
+	if len(bwb) == 0 {
+		log.Warn("fetchBlobsFromPeer called on response with zero blocks")
+		return
+	}
+	blkMin := bwb[0].Block.Block().Slot()
+	blkMax := bwb[len(bwb)-1].Block.Block().Slot()
+	fields := logrus.Fields{
+		"block_min": blkMin,
+		"block_max": blkMax,
+	}
+	blkSpan := blkMax - blkMin
+	if req == nil {
+		fields["savedSlots"] = blkSpan
+		fields["blob_min"] = "n/a"
+		fields["blob_max"] = "n/a"
+	} else {
+		blobMax := req.StartSlot + primitives.Slot(req.Count) - 1
+		if (blkMin == req.StartSlot) && blkMax == blobMax {
+			log.WithFields(fields).Debug("Blob request bounds same as blk bounds, no blob requests saved.")
+			return
+		}
+		fields["blob_min"] = req.StartSlot
+		fields["blob_max"] = blobMax
+		fields["savedSlots"] = (req.StartSlot - blkMin) + (blkMax - blobMax)
+	}
+	log.WithFields(fields).Debug("Some blob requests saved")
+}
+
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
 func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.BlockWithROBlobs, pid peer.ID, peers []peer.ID) ([]blocks2.BlockWithROBlobs, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsFromPeer")
@@ -532,6 +561,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 	}
 	// Construct request message based on observed interval of blocks in need of blobs.
 	req := blobRangeForBlocks(blobWindowStart, bwb, f.bs).Request()
+	logBlobReqSavings(bwb, req)
 	if req == nil {
 		return bwb, nil
 	}
