@@ -219,7 +219,7 @@ func TestSyncService_StopCleanly(t *testing.T) {
 	require.NotEqual(t, 0, len(r.cfg.p2p.PubSub().GetTopics()))
 	require.NotEqual(t, 0, len(r.cfg.p2p.Host().Mux().Protocols()))
 
-	// Both pubsub and rpc topcis should be unsubscribed.
+	// Both pubsub and rpc topics should be unsubscribed.
 	require.NoError(t, r.Stop())
 
 	// Sleep to allow pubsub topics to be deregistered.

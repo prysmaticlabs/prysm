@@ -27,7 +27,7 @@ type doubleAttestationHelper struct {
 	committee []primitives.ValidatorIndex
 }
 
-// Initializes helper with details needed to make a double attestation for testint purposes
+// Initializes helper with details needed to make a double attestation for testing purposes
 // Populates the committee of that is responsible for the
 func (h *doubleAttestationHelper) setup(ctx context.Context) error {
 	chainHead, err := h.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
