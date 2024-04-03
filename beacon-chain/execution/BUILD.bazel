@@ -93,7 +93,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//async/event:go_default_library",
-        "//beacon-chain/cache/depositcache:go_default_library",
+        "//beacon-chain/cache/depositsnapshot:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
