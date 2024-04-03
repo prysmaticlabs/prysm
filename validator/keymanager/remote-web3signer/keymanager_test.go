@@ -1,21 +1,28 @@
 package remote_web3signer
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"slices"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/internal"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/v1/mock"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,6 +41,202 @@ func (mc *MockClient) Sign(_ context.Context, _ string, _ internal.SignRequestJs
 }
 func (mc *MockClient) GetPublicKeys(_ context.Context, _ string) ([]string, error) {
 	return mc.PublicKeys, nil
+}
+
+func TestNewKeymanager(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode([]string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"})
+		require.NoError(t, err)
+	}))
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	tests := []struct {
+		name    string
+		args    *SetupConfig
+		want    []string
+		wantErr string
+		wantLog string
+	}{
+		{
+			name: "happy path public key url",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				PublicKeysURL:         srv.URL + "/public_keys",
+			},
+			want: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
+		},
+		{
+			name: "bad public key url",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				PublicKeysURL:         "0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69",
+			},
+			wantErr: "could not get public keys from remote server url",
+		},
+		{
+			name: "happy path provided public keys",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
+			},
+			want: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
+		},
+		{
+			name: "path provided public keys, some bad key",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "http://prysm.xyz/"},
+			},
+			wantErr: "could not decode public key for web3signer",
+		},
+		{
+			name: "path provided public keys, some bad hex for key",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937"},
+			},
+			wantErr: "invalid public key length",
+		},
+		{
+			name: "happy path key file",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				KeyFilePath:           "./testing/good_keyfile.txt",
+			},
+			want: []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
+		},
+		{
+			name: "empty key file",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				KeyFilePath:           "./testing/empty_keyfile.txt",
+			},
+			want:    []string{},
+			wantLog: "web3signer key file: no valid public keys found",
+		},
+		{
+			name: "key file not found",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				KeyFilePath:           "./testing/invalid.txt",
+			},
+			wantLog: "key file does not exist",
+		},
+		{
+			name: "bad key file, ignores bad public keys and uses the good ones",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				KeyFilePath:           "./testing/bad_keyfile.txt",
+			},
+			want: []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"},
+		},
+		{
+			name: "happy path public key url with good keyfile",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				PublicKeysURL:         srv.URL + "/public_keys",
+				KeyFilePath:           "./testing/good_keyfile.txt",
+			},
+			want: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
+		},
+		{
+			name: "happy path provided public keys with good keyfile",
+			args: &SetupConfig{
+				BaseEndpoint:          "http://prysm.xyz/",
+				GenesisValidatorsRoot: root,
+				ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
+			},
+			want: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logHook := logTest.NewGlobal()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			km, err := NewKeymanager(ctx, tt.args)
+			if tt.wantLog != "" {
+				require.LogsContain(t, logHook, tt.wantLog)
+			}
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
+			keys := make([]string, len(km.providedPublicKeys))
+			for i, key := range km.providedPublicKeys {
+				keys[i] = hexutil.Encode(key[:])
+				require.Equal(t, true, slices.Contains(tt.want, keys[i]))
+			}
+		})
+	}
+}
+
+func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
+	bytesBuf := new(bytes.Buffer)
+	_, err := bytesBuf.WriteString("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055")
+	require.NoError(t, err)
+	_, err = bytesBuf.WriteString("\n")
+	require.NoError(t, err)
+	_, err = bytesBuf.WriteString("0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be")
+	require.NoError(t, err)
+	_, err = bytesBuf.WriteString("\n")
+	require.NoError(t, err)
+	err = file.WriteFile(keyFilePath, bytesBuf.Bytes())
+	require.NoError(t, err)
+
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	require.NoError(t, err)
+	km, err := NewKeymanager(ctx, &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+		KeyFilePath:           keyFilePath,
+		ProvidedPublicKeys:    []string{"0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6"},
+	})
+	require.NoError(t, err)
+	wantSlice := []string{"0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"}
+	keys := make([]string, len(km.providedPublicKeys))
+	for i, key := range km.providedPublicKeys {
+		keys[i] = hexutil.Encode(key[:])
+		require.Equal(t, slices.Contains(wantSlice, keys[i]), true)
+	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		bytesBuf = new(bytes.Buffer)
+		_, err = bytesBuf.WriteString("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055")
+		require.NoError(t, err)
+		_, err = bytesBuf.WriteString("\n")
+		require.NoError(t, err)
+		err = file.WriteFile(keyFilePath, bytesBuf.Bytes())
+		require.NoError(t, err)
+		// wait for file watcher to pick up change
+		time.Sleep(1 * time.Second)
+	}()
+	wg.Wait() // Wait for all goroutines to finish
+	key, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(key))
+	wantSlice = []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"}
+	require.Equal(t, "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", hexutil.Encode(km.providedPublicKeys[0][:]))
 }
 
 func TestKeymanager_Sign(t *testing.T) {

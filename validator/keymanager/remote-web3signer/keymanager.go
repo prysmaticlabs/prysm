@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-playground/validator/v10"
@@ -30,10 +29,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/exp/maps"
-)
-
-const (
-	remoteKeysFileName = "remote_keys"
 )
 
 // SetupConfig includes configuration values for initializing.
@@ -93,6 +88,9 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not check if web3signer persistent keys exists in %s", km.keyFilePath)
 		}
+		if !keyFileExists {
+			log.WithField("path", km.keyFilePath).Warn("key file does not exist. please create a new one. the file should contain public keys in hex format 1 on each line.")
+		}
 	}
 
 	var ppk []string
@@ -125,7 +123,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 
 	// load from file
 	if keyFileExists {
-		_, fileKeys, err := readKeyFile(km.keyFilePath)
+		_, fileKeys, err := km.readKeyFile()
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not read key file")
 		}
@@ -145,8 +143,14 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	return km, nil
 }
 
-func readKeyFile(fullPath string) ([][48]byte, map[string][48]byte, error) {
-	f, err := os.Open(filepath.Clean(fullPath))
+func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
+	km.lock.RLock()
+	defer km.lock.RUnlock()
+
+	if km.keyFilePath == "" {
+		return nil, nil, errors.New("no key file path provided")
+	}
+	f, err := os.Open(filepath.Clean(km.keyFilePath))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not open web3signer public key file")
 	}
@@ -162,7 +166,11 @@ func readKeyFile(fullPath string) ([][48]byte, map[string][48]byte, error) {
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		pubkeyLength := (fieldparams.BLSPubkeyLength * 2) + 2
-		if line == "" || !common.IsHexAddress(line) || len(line) != pubkeyLength {
+		if line == "" {
+			// skip empty line
+			continue
+		}
+		if len(line) != pubkeyLength {
 			log.Warnf("web3signer key file: invalid public key line: %s", line)
 			continue
 		}
@@ -181,6 +189,9 @@ func readKeyFile(fullPath string) ([][48]byte, map[string][48]byte, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, nil, errors.Wrap(err, "could not scan web3signer public key file")
 	}
+	if len(keys) == 0 {
+		log.Warn("web3signer key file: no valid public keys found")
+	}
 	return keys, seenKeys, nil
 }
 
@@ -196,10 +207,11 @@ func (km *Keymanager) savePublicKeysToFile(providedPublicKeys map[string][48]byt
 		pubkeys = append(pubkeys, value)
 	}
 
+	km.lock.Lock()
 	if err := file.WriteFile(km.keyFilePath, bytesBuf.Bytes()); err != nil {
+		km.lock.Unlock()
 		return errors.Wrapf(err, "could not write to file %s", km.keyFilePath)
 	}
-	km.lock.Lock()
 	km.providedPublicKeys = pubkeys
 	km.lock.Unlock()
 	return nil
@@ -223,7 +235,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 	for {
 		select {
 		case <-watcher.Events:
-			keys, _, err := readKeyFile(km.keyFilePath)
+			keys, _, err := km.readKeyFile()
 			if err != nil {
 				log.WithError(err).Error("Could not read key file")
 			}
