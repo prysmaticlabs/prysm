@@ -376,21 +376,6 @@ func sortedBlockWithVerifiedBlobSlice(blocks []interfaces.ReadOnlySignedBeaconBl
 	return rb, nil
 }
 
-func blobRequest(bwb []blocks2.BlockWithROBlobs, blobWindowStart primitives.Slot, bs filesystem.BlobStorageSummarizer) *p2ppb.BlobSidecarsByRangeRequest {
-	if len(bwb) == 0 {
-		return nil
-	}
-	bounds := blobRequestBounds(blobWindowStart, bwb, bs)
-	if bounds == nil {
-		return nil
-	}
-	lowest, highest := bounds.low, bounds.high
-	return &p2ppb.BlobSidecarsByRangeRequest{
-		StartSlot: lowest,
-		Count:     uint64(highest.SubSlot(lowest)) + 1,
-	}
-}
-
 type commitmentCount struct {
 	slot  primitives.Slot
 	root  [32]byte
@@ -423,13 +408,13 @@ func countCommitments(retentionStart primitives.Slot, bwb []blocks2.BlockWithROB
 	return fc
 }
 
-func slotRangeForCommitmentCounts(fc []commitmentCount, bs filesystem.BlobStorageSummarizer) *slotRange {
+func slotRangeForCommitmentCounts(fc []commitmentCount, bs filesystem.BlobStorageSummarizer) *blobRange {
 	if len(fc) == 0 {
 		return nil
 	}
 	// If we don't have a blob summarizer, can't check local blobs, request blobs over complete range.
 	if bs == nil {
-		return &slotRange{low: fc[0].slot, high: fc[len(fc)-1].slot}
+		return &blobRange{low: fc[0].slot, high: fc[len(fc)-1].slot}
 	}
 	for i := range fc {
 		hci := fc[i]
@@ -437,7 +422,7 @@ func slotRangeForCommitmentCounts(fc []commitmentCount, bs filesystem.BlobStorag
 			continue
 		}
 		// We found a missing blob
-		needed := &slotRange{low: hci.slot, high: hci.slot}
+		needed := &blobRange{low: hci.slot, high: hci.slot}
 		for z := len(fc) - 1; z > i; z-- {
 			hcz := fc[z]
 			if bs.Summary(hcz.root).AllAvailable(hcz.count) {
@@ -451,24 +436,23 @@ func slotRangeForCommitmentCounts(fc []commitmentCount, bs filesystem.BlobStorag
 	return nil
 }
 
-type slotRange struct {
+type blobRange struct {
 	low  primitives.Slot
 	high primitives.Slot
 }
 
-func blobRequestBounds(retentionStart primitives.Slot, bwb []blocks2.BlockWithROBlobs, bs filesystem.BlobStorageSummarizer) *slotRange {
-	return slotRangeForCommitmentCounts(countCommitments(retentionStart, bwb), bs)
+func (r *blobRange) Request() *p2ppb.BlobSidecarsByRangeRequest {
+	if r == nil {
+		return nil
+	}
+	return &p2ppb.BlobSidecarsByRangeRequest{
+		StartSlot: r.low,
+		Count:     uint64(r.high.SubSlot(r.low)) + 1,
+	}
 }
 
-func sortBlobs(blobs []blocks.ROBlob) []blocks.ROBlob {
-	sort.Slice(blobs, func(i, j int) bool {
-		if blobs[i].Slot() == blobs[j].Slot() {
-			return blobs[i].Index < blobs[j].Index
-		}
-		return blobs[i].Slot() < blobs[j].Slot()
-	})
-
-	return blobs
+func blobRangeForBlocks(retentionStart primitives.Slot, bwb []blocks2.BlockWithROBlobs, bs filesystem.BlobStorageSummarizer) *blobRange {
+	return slotRangeForCommitmentCounts(countCommitments(retentionStart, bwb), bs)
 }
 
 var errBlobVerification = errors.New("peer unable to serve aligned BlobSidecarsByRange and BeaconBlockSidecarsByRange responses")
@@ -547,7 +531,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 		return nil, err
 	}
 	// Construct request message based on observed interval of blocks in need of blobs.
-	req := blobRequest(bwb, blobWindowStart, f.bs)
+	req := blobRangeForBlocks(blobWindowStart, bwb, f.bs).Request()
 	if req == nil {
 		return bwb, nil
 	}
