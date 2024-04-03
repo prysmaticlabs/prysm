@@ -10,6 +10,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/multiformats/go-multiaddr"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
@@ -145,8 +146,25 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		// About the special case for quic-v1, please see:
 		// https://github.com/quic-go/quic-go/issues/3291
 		defer func() {
-			if strings.Contains(stream.Conn().RemoteMultiaddr().String(), "quic-v1") {
-				time.Sleep(2 * time.Second)
+			isQuic := false
+			multiaddr.ForEach(stream.Conn().RemoteMultiaddr(), func(c multiaddr.Component) bool {
+				pCode := c.Protocol().Code
+				if pCode == multiaddr.P_QUIC || pCode == multiaddr.P_QUIC_V1 {
+					isQuic = true
+					return false
+				}
+				return true
+			})
+
+			// We special case for QUIC connections as unlike yamux where a reset is a no-op for a successful close. An abrupt
+			// stream termination can lead to the remote peer dropping the inbound data. For that reason, we only reset streams
+			// in the event there is an error while closing them.
+			if isQuic {
+				if err := stream.Close(); err != nil {
+					_err := stream.Reset()
+					_ = _err
+				}
+				return
 			}
 
 			_err := stream.Reset()
