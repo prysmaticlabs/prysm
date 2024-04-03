@@ -8,7 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
@@ -70,7 +70,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	vs := &Server{

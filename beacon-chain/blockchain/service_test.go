@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
@@ -80,7 +80,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	attService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	fc := doublylinkedtree.New()
