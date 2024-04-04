@@ -182,6 +182,7 @@ var (
 var devModeFlags = []cli.Flag{
 	enableExperimentalState,
 	backfill.EnableExperimentalBackfill,
+	EnableQUIC,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
