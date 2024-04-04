@@ -103,8 +103,8 @@ var (
 	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
-		Usage: `Enables the validator to perform a doppelganger check.
-		This is not "a foolproof method to find duplicate instances in the network.
+		Usage: `Enables the validator to perform a doppelganger check. 
+		This is not a foolproof method to find duplicate instances in the network. 
 		Your validator will still be vulnerable if it is being run in unsafe configurations.`,
 	}
 	disableStakinContractCheck = &cli.BoolFlag{
@@ -165,12 +165,18 @@ var (
 		Name:  "blob-save-fsync",
 		Usage: "Forces new blob files to be fysnc'd before continuing, ensuring durable blob writes.",
 	}
+	// EnableQUIC enables connection using the QUIC protocol for peers which support it.
+	EnableQUIC = &cli.BoolFlag{
+		Name:  "enable-quic",
+		Usage: "Enables connection using the QUIC protocol for peers which support it.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableExperimentalState,
 	backfill.EnableExperimentalBackfill,
+	EnableQUIC,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -221,6 +227,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	DisableRegistrationCache,
 	EnableLightClient,
 	BlobSaveFsync,
+	EnableQUIC,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

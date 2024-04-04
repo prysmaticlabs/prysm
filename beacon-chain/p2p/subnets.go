@@ -93,6 +93,11 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 			if err != nil {
 				continue
 			}
+
+			if info == nil {
+				continue
+			}
+
 			wg.Add(1)
 			go func() {
 				if err := s.connectWithPeer(ctx, *info); err != nil {
