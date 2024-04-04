@@ -57,8 +57,9 @@ type BeaconState struct {
 	latestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader
 	latestExecutionPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella
 	latestExecutionPayloadHeaderDeneb   *enginev1.ExecutionPayloadHeaderDeneb
-	nextWithdrawalIndex                 uint64
-	nextWithdrawalValidatorIndex        primitives.ValidatorIndex
+
+	nextWithdrawalIndex          uint64
+	nextWithdrawalValidatorIndex primitives.ValidatorIndex
 
 	id                    uint64
 	lock                  sync.RWMutex

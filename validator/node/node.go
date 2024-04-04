@@ -261,7 +261,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 		if isWeb3SignerURLFlagSet {
 			w, err := wallet.NewWalletForWeb3Signer(cliCtx)
 			if err != nil {
-				return errors.Wrap(err, "unable to use wallet directory for remote signer")
+				return errors.Wrap(err, "unable to create new wallet for remote signer")
 			}
 			c.wallet = w
 		} else {
