@@ -321,7 +321,7 @@ func (s *Service) filterPeer(node *enode.Node) bool {
 		return false
 	}
 
-	if len(multiAddrs) == 0 {
+	if peerData == nil || len(multiAddrs) == 0 {
 		return false
 	}
 
@@ -476,12 +476,8 @@ func convertToAddrInfo(node *enode.Node) (*peer.AddrInfo, []ma.Multiaddr, error)
 		return nil, nil, errors.Wrapf(err, "could not convert to peer info: %v", multiAddrs)
 	}
 
-	if len(infos) > 1 {
-		return nil, nil, errors.Errorf("infos contains %v elements, expected not more than 1", len(infos))
-	}
-
-	if len(infos) == 0 {
-		return nil, multiAddrs, nil
+	if len(infos) != 1 {
+		return nil, nil, errors.Errorf("infos contains %v elements, expected exactly 1", len(infos))
 	}
 
 	return &infos[0], multiAddrs, nil
