@@ -261,7 +261,7 @@ func NewWalletForWeb3Signer(cliCtx *cli.Context) (*Wallet, error) {
 		return nil, errors.Wrap(err, "unable to open wallet dir")
 	}
 	if exists {
-		return nil, fmt.Errorf("an valid prysm wallet already exists at %s", walletDir)
+		return nil, fmt.Errorf("a valid prysm wallet already exists at %s", walletDir)
 	}
 	// wallet is just a temporary wallet for web3 signer used to call initialize keymanager.
 	return &Wallet{
