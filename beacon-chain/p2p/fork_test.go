@@ -28,7 +28,8 @@ import (
 )
 
 func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
-	port := 2000
+	const port = 2000
+
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, fieldparams.RootLength)
@@ -53,7 +54,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
-		port = 3000 + i
+		port := 3000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 
@@ -98,13 +99,14 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
-	var addrs []ma.Multiaddr
 
-	for _, n := range nodes {
-		if s.filterPeer(n) {
-			addr, err := convertToSingleMultiAddr(n)
+	addrs := make([]ma.Multiaddr, 0)
+
+	for _, node := range nodes {
+		if s.filterPeer(node) {
+			nodeAddrs, err := retrieveMultiAddrsFromNode(node)
 			require.NoError(t, err)
-			addrs = append(addrs, addr)
+			addrs = append(addrs, nodeAddrs...)
 		}
 	}
 
@@ -114,10 +116,11 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 }
 
 func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
+	const port = 2000
+
 	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 	logrus.SetLevel(logrus.TraceLevel)
-	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
@@ -138,7 +141,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
-		port = 3000 + i
+		port := 3000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 
@@ -188,13 +191,13 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
-	var addrs []ma.Multiaddr
+	addrs := make([]ma.Multiaddr, 0, len(nodes))
 
-	for _, n := range nodes {
-		if s.filterPeer(n) {
-			addr, err := convertToSingleMultiAddr(n)
+	for _, node := range nodes {
+		if s.filterPeer(node) {
+			nodeAddrs, err := retrieveMultiAddrsFromNode(node)
 			require.NoError(t, err)
-			addrs = append(addrs, addr)
+			addrs = append(addrs, nodeAddrs...)
 		}
 	}
 	if len(addrs) == 0 {
