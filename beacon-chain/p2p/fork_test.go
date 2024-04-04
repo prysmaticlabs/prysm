@@ -104,7 +104,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 
 	for _, node := range nodes {
 		if s.filterPeer(node) {
-			nodeAddrs, err := convertToMultiAddrs(node)
+			nodeAddrs, err := retrieveMultiAddrsFromNode(node)
 			require.NoError(t, err)
 			addrs = append(addrs, nodeAddrs...)
 		}
@@ -195,7 +195,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 
 	for _, node := range nodes {
 		if s.filterPeer(node) {
-			nodeAddrs, err := convertToMultiAddrs(node)
+			nodeAddrs, err := retrieveMultiAddrsFromNode(node)
 			require.NoError(t, err)
 			addrs = append(addrs, nodeAddrs...)
 		}

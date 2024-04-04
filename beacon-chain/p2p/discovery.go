@@ -400,7 +400,7 @@ func PeersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "Could not get enode from string")
 		}
-		nodeAddrs, err := convertToMultiAddrs(enodeAddr)
+		nodeAddrs, err := retrieveMultiAddrsFromNode(enodeAddr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Could not get multiaddr")
 		}
@@ -449,7 +449,7 @@ func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
 		}
 
 		// Get up to two multiaddrs (TCP and QUIC) for each node.
-		nodeMultiAddrs, err := convertToMultiAddrs(node)
+		nodeMultiAddrs, err := retrieveMultiAddrsFromNode(node)
 		if err != nil {
 			log.WithError(err).Errorf("Could not convert to multiAddr node %s", node)
 			continue
@@ -462,7 +462,7 @@ func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
 }
 
 func convertToAddrInfo(node *enode.Node) (*peer.AddrInfo, []ma.Multiaddr, error) {
-	multiAddrs, err := convertToMultiAddrs(node)
+	multiAddrs, err := retrieveMultiAddrsFromNode(node)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -487,11 +487,11 @@ func convertToAddrInfo(node *enode.Node) (*peer.AddrInfo, []ma.Multiaddr, error)
 	return &infos[0], multiAddrs, nil
 }
 
-// convertToMultiAddrs converts an enode.Node to a list of multiaddrs.
+// retrieveMultiAddrsFromNode converts an enode.Node to a list of multiaddrs.
 // If the node has a both a QUIC and a TCP port set in their ENR, then
 // the multiaddr corresponding to the QUIC port is added first, followed
 // by the multiaddr corresponding to the TCP port.
-func convertToMultiAddrs(node *enode.Node) ([]ma.Multiaddr, error) {
+func retrieveMultiAddrsFromNode(node *enode.Node) ([]ma.Multiaddr, error) {
 	multiaddrs := make([]ma.Multiaddr, 0, 2)
 
 	// Retrieve the node public key.

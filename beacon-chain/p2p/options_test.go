@@ -89,7 +89,7 @@ func TestIPV6Support(t *testing.T) {
 	lNode := enode.NewLocalNode(db, key)
 	mockIPV6 := net.IP{0xff, 0x02, 0xAA, 0, 0x1F, 0, 0x2E, 0, 0, 0x36, 0x45, 0, 0, 0, 0, 0x02}
 	lNode.Set(enr.IP(mockIPV6))
-	mas, err := convertToMultiAddrs(lNode.Node())
+	mas, err := retrieveMultiAddrsFromNode(lNode.Node())
 	if err != nil {
 		t.Fatal(err)
 	}
