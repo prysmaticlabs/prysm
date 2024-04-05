@@ -95,7 +95,11 @@ func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current pri
 	defer s.cache.delete(key)
 	root := b.Root()
 	sumz, err := s.store.WaitForSummarizer(ctx)
-	if err == nil {
+	if err != nil {
+		log.WithField("root", fmt.Sprintf("%#x", b.Root())).
+			WithError(err).
+			Debug("Failed to receive BlobStorageSummarizer within IsDataAvailable")
+	} else {
 		entry.setDiskSummary(sumz.Summary(root))
 	}
 
