@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"sync"
-	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -117,16 +116,4 @@ func (s *blobStorageCache) updateMetrics(delta float64) {
 	s.nBlobs += delta
 	blobDiskCount.Set(s.nBlobs)
 	blobDiskSize.Set(s.nBlobs * bytesPerSidecar)
-}
-
-func NewMockBlobStorageSummarizer(t *testing.T, set map[[32]byte][]int) BlobStorageSummarizer {
-	c := newBlobStorageCache()
-	for k, v := range set {
-		for i := range v {
-			if err := c.ensure(rootString(k), 0, uint64(v[i])); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-	return c
 }

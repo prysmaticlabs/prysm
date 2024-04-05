@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	beaconsync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -959,7 +960,7 @@ func TestTimeToWait(t *testing.T) {
 	}
 }
 
-func TestLowestSlotNeedsBlob(t *testing.T) {
+func TestBlobRangeForBlocks(t *testing.T) {
 	blks, _ := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
 	for i := range blks {
@@ -1023,6 +1024,160 @@ func TestBlobRequest(t *testing.T) {
 	req = blobRangeForBlocks(before, allAfter, nil).Request()
 	require.Equal(t, allAfter[0].Block.Block().Slot(), req.StartSlot)
 	require.Equal(t, len(allAfter), int(req.Count))
+}
+
+func TestCountCommitments(t *testing.T) {
+	// no blocks
+	// blocks before retention start filtered
+	// blocks without commitments filtered
+	// pre-deneb filtered
+	// variety of commitment counts are accurate, from 1 to max
+	type testcase struct {
+		name      string
+		bwb       func(t *testing.T, c testcase) []blocks.BlockWithROBlobs
+		numBlocks int
+		retStart  primitives.Slot
+		resCount  int
+	}
+	cases := []testcase{
+		{
+			name: "nil blocks is safe",
+			bwb: func(t *testing.T, c testcase) []blocks.BlockWithROBlobs {
+				return nil
+			},
+			retStart: 0,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			bwb := c.bwb(t, c)
+			cc := countCommitments(c.retStart, bwb)
+			require.Equal(t, c.resCount, len(cc))
+		})
+	}
+}
+
+func TestSlotRangeForCommitmentCounts(t *testing.T) {
+	cases := []struct {
+		name     string
+		cc       []commitmentCount
+		bss      func(*testing.T) filesystem.BlobStorageSummarizer
+		expected *blobRange
+		request  *ethpb.BlobSidecarsByRangeRequest
+	}{
+		{
+			name:     "nil commitmentCount is safe",
+			cc:       nil,
+			expected: nil,
+			request:  nil,
+		},
+		{
+			name: "nil bss, single slot",
+			cc: []commitmentCount{
+				{slot: 11235, count: 1},
+			},
+			expected: &blobRange{low: 11235, high: 11235},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 11235, Count: 1},
+		},
+		{
+			name: "nil bss, sparse slots",
+			cc: []commitmentCount{
+				{slot: 11235, count: 1},
+				{slot: 11240, count: fieldparams.MaxBlobsPerBlock},
+				{slot: 11250, count: 3},
+			},
+			expected: &blobRange{low: 11235, high: 11250},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 11235, Count: 16},
+		},
+		{
+			name: "AllAvailable in middle, some avail low, none high",
+			bss: func(t *testing.T) filesystem.BlobStorageSummarizer {
+				onDisk := map[[32]byte][]int{
+					bytesutil.ToBytes32([]byte("0")): {0, 1},
+					bytesutil.ToBytes32([]byte("1")): {0, 1, 2, 3, 4, 5},
+				}
+				return filesystem.NewMockBlobStorageSummarizer(t, onDisk)
+			},
+			cc: []commitmentCount{
+				{slot: 0, count: 3, root: bytesutil.ToBytes32([]byte("0"))},
+				{slot: 5, count: fieldparams.MaxBlobsPerBlock, root: bytesutil.ToBytes32([]byte("1"))},
+				{slot: 15, count: 3},
+			},
+			expected: &blobRange{low: 0, high: 15},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 0, Count: 16},
+		},
+		{
+			name: "AllAvailable at high and low",
+			bss: func(t *testing.T) filesystem.BlobStorageSummarizer {
+				onDisk := map[[32]byte][]int{
+					bytesutil.ToBytes32([]byte("0")): {0, 1},
+					bytesutil.ToBytes32([]byte("2")): {0, 1, 2, 3, 4, 5},
+				}
+				return filesystem.NewMockBlobStorageSummarizer(t, onDisk)
+			},
+			cc: []commitmentCount{
+				{slot: 0, count: 2, root: bytesutil.ToBytes32([]byte("0"))},
+				{slot: 5, count: 3},
+				{slot: 15, count: fieldparams.MaxBlobsPerBlock, root: bytesutil.ToBytes32([]byte("2"))},
+			},
+			expected: &blobRange{low: 5, high: 5},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 5, Count: 1},
+		},
+		{
+			name: "AllAvailable at high and low, adjacent range in middle",
+			bss: func(t *testing.T) filesystem.BlobStorageSummarizer {
+				onDisk := map[[32]byte][]int{
+					bytesutil.ToBytes32([]byte("0")): {0, 1},
+					bytesutil.ToBytes32([]byte("2")): {0, 1, 2, 3, 4, 5},
+				}
+				return filesystem.NewMockBlobStorageSummarizer(t, onDisk)
+			},
+			cc: []commitmentCount{
+				{slot: 0, count: 2, root: bytesutil.ToBytes32([]byte("0"))},
+				{slot: 5, count: 3},
+				{slot: 6, count: 3},
+				{slot: 15, count: fieldparams.MaxBlobsPerBlock, root: bytesutil.ToBytes32([]byte("2"))},
+			},
+			expected: &blobRange{low: 5, high: 6},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 5, Count: 2},
+		},
+		{
+			name: "AllAvailable at high and low, range in middle",
+			bss: func(t *testing.T) filesystem.BlobStorageSummarizer {
+				onDisk := map[[32]byte][]int{
+					bytesutil.ToBytes32([]byte("0")): {0, 1},
+					bytesutil.ToBytes32([]byte("1")): {0, 1},
+					bytesutil.ToBytes32([]byte("2")): {0, 1, 2, 3, 4, 5},
+				}
+				return filesystem.NewMockBlobStorageSummarizer(t, onDisk)
+			},
+			cc: []commitmentCount{
+				{slot: 0, count: 2, root: bytesutil.ToBytes32([]byte("0"))},
+				{slot: 5, count: 3, root: bytesutil.ToBytes32([]byte("1"))},
+				{slot: 10, count: 3},
+				{slot: 15, count: fieldparams.MaxBlobsPerBlock, root: bytesutil.ToBytes32([]byte("2"))},
+			},
+			expected: &blobRange{low: 5, high: 10},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 5, Count: 6},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var bss filesystem.BlobStorageSummarizer
+			if c.bss != nil {
+				bss = c.bss(t)
+			}
+			br := slotRangeForCommitmentCounts(c.cc, bss)
+			require.DeepEqual(t, c.expected, br)
+			if c.request == nil {
+				require.IsNil(t, br.Request())
+			} else {
+				req := br.Request()
+				require.DeepEqual(t, req.StartSlot, c.request.StartSlot)
+				require.DeepEqual(t, req.Count, c.request.Count)
+			}
+		})
+	}
 }
 
 func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithROBlobs, []blocks.ROBlob) {

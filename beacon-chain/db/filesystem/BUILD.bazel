@@ -5,9 +5,9 @@ go_library(
     srcs = [
         "blob.go",
         "cache.go",
-        "ephemeral.go",
         "log.go",
         "metrics.go",
+        "mock.go",
         "pruner.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem",

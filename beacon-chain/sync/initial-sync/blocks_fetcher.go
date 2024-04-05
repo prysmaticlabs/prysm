@@ -396,6 +396,9 @@ func countCommitments(retentionStart primitives.Slot, bwb []blocks2.BlockWithROB
 	for i := range bwb {
 		b := bwb[i]
 		slot := b.Block.Block().Slot()
+		if b.Block.Version() < version.Deneb {
+			continue
+		}
 		if slot < retentionStart {
 			continue
 		}
