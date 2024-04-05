@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
 	prysmnetwork "github.com/prysmaticlabs/prysm/v5/network"
@@ -124,31 +125,34 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to build p2p options")
 	}
+
 	// Sets mplex timeouts
 	configureMplex()
 	h, err := libp2p.New(opts...)
 	if err != nil {
-		log.WithError(err).Error("Failed to create p2p host")
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to create p2p host")
 	}
 
 	s.host = h
+
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
 	// object.
 	psOpts := s.pubsubOptions()
+
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
+
 	// Reinitialize them in the event we are running a custom config.
 	attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount
 	syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
-		log.WithError(err).Error("Failed to start pubsub")
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to create p2p pubsub")
 	}
+
 	s.pubsub = gs
 
 	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
@@ -213,7 +217,7 @@ func (s *Service) Start() {
 	if len(s.cfg.StaticPeers) > 0 {
 		addrs, err := PeersFromStringAddrs(s.cfg.StaticPeers)
 		if err != nil {
-			log.WithError(err).Error("Could not connect to static peer")
+			log.WithError(err).Error("could not convert ENR to multiaddr")
 		}
 		// Set trusted peers for those that are provided as static addresses.
 		pids := peerIdsFromMultiAddrs(addrs)
@@ -232,11 +236,24 @@ func (s *Service) Start() {
 	async.RunEvery(s.ctx, time.Duration(params.BeaconConfig().RespTimeout)*time.Second, s.updateMetrics)
 	async.RunEvery(s.ctx, refreshRate, s.RefreshENR)
 	async.RunEvery(s.ctx, 1*time.Minute, func() {
-		log.WithFields(logrus.Fields{
-			"inbound":     len(s.peers.InboundConnected()),
-			"outbound":    len(s.peers.OutboundConnected()),
-			"activePeers": len(s.peers.Active()),
-		}).Info("Peer summary")
+		inboundQUICCount := len(s.peers.InboundConnectedWithProtocol(peers.QUIC))
+		inboundTCPCount := len(s.peers.InboundConnectedWithProtocol(peers.TCP))
+		outboundQUICCount := len(s.peers.OutboundConnectedWithProtocol(peers.QUIC))
+		outboundTCPCount := len(s.peers.OutboundConnectedWithProtocol(peers.TCP))
+		total := inboundQUICCount + inboundTCPCount + outboundQUICCount + outboundTCPCount
+
+		fields := logrus.Fields{
+			"inboundTCP":  inboundTCPCount,
+			"outboundTCP": outboundTCPCount,
+			"total":       total,
+		}
+
+		if features.Get().EnableQUIC {
+			fields["inboundQUIC"] = inboundQUICCount
+			fields["outboundQUIC"] = outboundQUICCount
+		}
+
+		log.WithFields(fields).Info("Connected peers")
 	})
 
 	multiAddrs := s.host.Network().ListenAddresses()
@@ -244,9 +261,10 @@ func (s *Service) Start() {
 
 	p2pHostAddress := s.cfg.HostAddress
 	p2pTCPPort := s.cfg.TCPPort
+	p2pQUICPort := s.cfg.QUICPort
 
 	if p2pHostAddress != "" {
-		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort)
+		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort, p2pQUICPort)
 		verifyConnectivity(p2pHostAddress, p2pTCPPort, "tcp")
 	}
 
