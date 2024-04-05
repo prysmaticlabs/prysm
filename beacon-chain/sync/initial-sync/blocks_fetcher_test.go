@@ -969,10 +969,10 @@ func TestBlobRangeForBlocks(t *testing.T) {
 	retentionStart := primitives.Slot(5)
 	bwb, err := sortedBlockWithVerifiedBlobSlice(sbbs)
 	require.NoError(t, err)
-	bounds := blobRangeForBlocks(retentionStart, bwb, nil)
+	bounds := countCommitments(bwb, retentionStart).blobRange(nil)
 	require.Equal(t, retentionStart, bounds.low)
 	higher := primitives.Slot(len(blks) + 1)
-	bounds = blobRangeForBlocks(higher, bwb, nil)
+	bounds = countCommitments(bwb, higher).blobRange(nil)
 	var nilBounds *blobRange
 	require.Equal(t, nilBounds, bounds)
 
@@ -987,14 +987,14 @@ func TestBlobRangeForBlocks(t *testing.T) {
 	next := bwb[6].Block.Block().Slot()
 	skip := bwb[5].Block.Block()
 	bwb[5].Block, _ = util.GenerateTestDenebBlockWithSidecar(t, skip.ParentRoot(), skip.Slot(), 0)
-	bounds = blobRangeForBlocks(retentionStart, bwb, nil)
+	bounds = countCommitments(bwb, retentionStart).blobRange(nil)
 	require.Equal(t, next, bounds.low)
 }
 
 func TestBlobRequest(t *testing.T) {
 	var nilReq *ethpb.BlobSidecarsByRangeRequest
 	// no blocks
-	req := blobRangeForBlocks(0, []blocks.BlockWithROBlobs{}, nil).Request()
+	req := countCommitments([]blocks.BlockWithROBlobs{}, 0).blobRange(nil).Request()
 	require.Equal(t, nilReq, req)
 	blks, _ := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
@@ -1006,22 +1006,22 @@ func TestBlobRequest(t *testing.T) {
 	maxBlkSlot := primitives.Slot(len(blks) - 1)
 
 	tooHigh := primitives.Slot(len(blks) + 1)
-	req = blobRangeForBlocks(tooHigh, bwb, nil).Request()
+	req = countCommitments(bwb, tooHigh).blobRange(nil).Request()
 	require.Equal(t, nilReq, req)
 
-	req = blobRangeForBlocks(maxBlkSlot, bwb, nil).Request()
+	req = countCommitments(bwb, maxBlkSlot).blobRange(nil).Request()
 	require.Equal(t, uint64(1), req.Count)
 	require.Equal(t, maxBlkSlot, req.StartSlot)
 
 	halfway := primitives.Slot(5)
-	req = blobRangeForBlocks(halfway, bwb, nil).Request()
+	req = countCommitments(bwb, halfway).blobRange(nil).Request()
 	require.Equal(t, halfway, req.StartSlot)
 	// adding 1 to include the halfway slot itself
 	require.Equal(t, uint64(1+maxBlkSlot-halfway), req.Count)
 
 	before := bwb[0].Block.Block().Slot()
 	allAfter := bwb[1:]
-	req = blobRangeForBlocks(before, allAfter, nil).Request()
+	req = countCommitments(allAfter, before).blobRange(nil).Request()
 	require.Equal(t, allAfter[0].Block.Block().Slot(), req.StartSlot)
 	require.Equal(t, len(allAfter), int(req.Count))
 }
@@ -1051,16 +1051,16 @@ func TestCountCommitments(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			bwb := c.bwb(t, c)
-			cc := countCommitments(c.retStart, bwb)
+			cc := countCommitments(bwb, c.retStart)
 			require.Equal(t, c.resCount, len(cc))
 		})
 	}
 }
 
-func TestSlotRangeForCommitmentCounts(t *testing.T) {
+func TestCommitmentCountList(t *testing.T) {
 	cases := []struct {
 		name     string
-		cc       []commitmentCount
+		cc       commitmentCountList
 		bss      func(*testing.T) filesystem.BlobStorageSummarizer
 		expected *blobRange
 		request  *ethpb.BlobSidecarsByRangeRequest
@@ -1167,7 +1167,7 @@ func TestSlotRangeForCommitmentCounts(t *testing.T) {
 			if c.bss != nil {
 				bss = c.bss(t)
 			}
-			br := slotRangeForCommitmentCounts(c.cc, bss)
+			br := c.cc.blobRange(bss)
 			require.DeepEqual(t, c.expected, br)
 			if c.request == nil {
 				require.IsNil(t, br.Request())

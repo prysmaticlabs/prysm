@@ -382,7 +382,11 @@ type commitmentCount struct {
 	count int
 }
 
-func countCommitments(retentionStart primitives.Slot, bwb []blocks2.BlockWithROBlobs) []commitmentCount {
+type commitmentCountList []commitmentCount
+
+// countCommitments makes a list of all blocks that have commitments that need to be satisfied.
+// This gives us a representation to finish building the request that is lightweight and readable for testing.
+func countCommitments(bwb []blocks2.BlockWithROBlobs, retentionStart primitives.Slot) commitmentCountList {
 	if len(bwb) == 0 {
 		return nil
 	}
@@ -411,23 +415,30 @@ func countCommitments(retentionStart primitives.Slot, bwb []blocks2.BlockWithROB
 	return fc
 }
 
-func slotRangeForCommitmentCounts(fc []commitmentCount, bs filesystem.BlobStorageSummarizer) *blobRange {
-	if len(fc) == 0 {
+// func slotRangeForCommitmentCounts(cc []commitmentCount, bs filesystem.BlobStorageSummarizer) *blobRange {
+func (cc commitmentCountList) blobRange(bs filesystem.BlobStorageSummarizer) *blobRange {
+	if len(cc) == 0 {
 		return nil
 	}
 	// If we don't have a blob summarizer, can't check local blobs, request blobs over complete range.
 	if bs == nil {
-		return &blobRange{low: fc[0].slot, high: fc[len(fc)-1].slot}
+		return &blobRange{low: cc[0].slot, high: cc[len(cc)-1].slot}
 	}
-	for i := range fc {
-		hci := fc[i]
+	for i := range cc {
+		hci := cc[i]
+		// This list is always ordered by increasing slot, per req/resp validation rules.
+		// Skip through slots until we find one with missing blobs.
 		if bs.Summary(hci.root).AllAvailable(hci.count) {
 			continue
 		}
-		// We found a missing blob
+		// The slow of the first missing blob is the lower bound.
+		// If we don't find an upper bound, we'll have a 1 slot request (same low/high).
 		needed := &blobRange{low: hci.slot, high: hci.slot}
-		for z := len(fc) - 1; z > i; z-- {
-			hcz := fc[z]
+		// Iterate backward through the list to find the highest missing slot above the lower bound.
+		// Return the complete range as soon as we find it; if lower bound is already the last element,
+		// or if we never find an upper bound, we'll fall through to the bounds being equal after this loop.
+		for z := len(cc) - 1; z > i; z-- {
+			hcz := cc[z]
 			if bs.Summary(hcz.root).AllAvailable(hcz.count) {
 				continue
 			}
@@ -452,10 +463,6 @@ func (r *blobRange) Request() *p2ppb.BlobSidecarsByRangeRequest {
 		StartSlot: r.low,
 		Count:     uint64(r.high.SubSlot(r.low)) + 1,
 	}
-}
-
-func blobRangeForBlocks(retentionStart primitives.Slot, bwb []blocks2.BlockWithROBlobs, bs filesystem.BlobStorageSummarizer) *blobRange {
-	return slotRangeForCommitmentCounts(countCommitments(retentionStart, bwb), bs)
 }
 
 var errBlobVerification = errors.New("peer unable to serve aligned BlobSidecarsByRange and BeaconBlockSidecarsByRange responses")
@@ -522,35 +529,6 @@ func missingCommitError(root [32]byte, slot primitives.Slot, missing [][]byte) e
 		"block root %#x at slot %d missing %d commitments %s", root, slot, len(missing), strings.Join(missStr, ","))
 }
 
-func logBlobReqSavings(bwb []blocks2.BlockWithROBlobs, req *p2ppb.BlobSidecarsByRangeRequest) {
-	if len(bwb) == 0 {
-		log.Warn("fetchBlobsFromPeer called on response with zero blocks")
-		return
-	}
-	blkMin := bwb[0].Block.Block().Slot()
-	blkMax := bwb[len(bwb)-1].Block.Block().Slot()
-	fields := logrus.Fields{
-		"block_min": blkMin,
-		"block_max": blkMax,
-	}
-	blkSpan := blkMax - blkMin
-	if req == nil {
-		fields["savedSlots"] = blkSpan
-		fields["blob_min"] = "n/a"
-		fields["blob_max"] = "n/a"
-	} else {
-		blobMax := req.StartSlot + primitives.Slot(req.Count) - 1
-		if (blkMin == req.StartSlot) && blkMax == blobMax {
-			log.WithFields(fields).Debug("Blob request bounds same as blk bounds, no blob requests saved.")
-			return
-		}
-		fields["blob_min"] = req.StartSlot
-		fields["blob_max"] = blobMax
-		fields["savedSlots"] = (req.StartSlot - blkMin) + (blkMax - blobMax)
-	}
-	log.WithFields(fields).Debug("Some blob requests saved")
-}
-
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
 func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.BlockWithROBlobs, pid peer.ID, peers []peer.ID) ([]blocks2.BlockWithROBlobs, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsFromPeer")
@@ -563,8 +541,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 		return nil, err
 	}
 	// Construct request message based on observed interval of blocks in need of blobs.
-	req := blobRangeForBlocks(blobWindowStart, bwb, f.bs).Request()
-	logBlobReqSavings(bwb, req)
+	req := countCommitments(bwb, blobWindowStart).blobRange(f.bs).Request()
 	if req == nil {
 		return bwb, nil
 	}
