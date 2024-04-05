@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
-	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 )
 
 // NewPrysmBeaconChainClient returns implementation of iface.PrysmBeaconChainClient.
@@ -44,7 +44,7 @@ func (c prysmBeaconChainClient) GetValidatorCount(ctx context.Context, stateID s
 
 	queryUrl := buildURL(fmt.Sprintf("/eth/v1/beacon/states/%s/validator_count", stateID), queryParams)
 
-	var validatorCountResponse validator.CountResponse
+	var validatorCountResponse structs.GetValidatorCountResponse
 	if err = c.jsonRestHandler.Get(ctx, queryUrl, &validatorCountResponse); err != nil {
 		return nil, err
 	}

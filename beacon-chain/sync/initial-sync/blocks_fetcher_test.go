@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 	"sync"
@@ -11,26 +12,27 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	p2pm "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	beaconsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/verify"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/libp2p/go-libp2p/core/peer"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	dbtest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	p2pm "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2pt "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	beaconsync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/verify"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -1141,4 +1143,46 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	}
 	// We delete each entry we've seen, so if we see all expected commits, the map should be empty at the end.
 	require.Equal(t, 0, len(expectedCommits))
+}
+
+func TestBatchLimit(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	testCfg := params.BeaconConfig().Copy()
+	testCfg.DenebForkEpoch = math.MaxUint64
+	params.OverrideBeaconConfig(testCfg)
+
+	resetFlags := flags.Get()
+	flags.Init(&flags.GlobalFlags{
+		BlockBatchLimit:            640,
+		BlockBatchLimitBurstFactor: 10,
+	})
+	defer func() {
+		flags.Init(resetFlags)
+	}()
+
+	assert.Equal(t, 640, maxBatchLimit())
+
+	testCfg.DenebForkEpoch = 100000
+	params.OverrideBeaconConfig(testCfg)
+
+	assert.Equal(t, params.BeaconConfig().MaxRequestBlocksDeneb, uint64(maxBatchLimit()))
+}
+
+func TestBlockFetcher_HasSufficientBandwidth(t *testing.T) {
+	bf := newBlocksFetcher(context.Background(), &blocksFetcherConfig{})
+	currCap := bf.rateLimiter.Capacity()
+	wantedAmt := currCap - 100
+	bf.rateLimiter.Add(peer.ID("a").String(), wantedAmt)
+	bf.rateLimiter.Add(peer.ID("c").String(), wantedAmt)
+	bf.rateLimiter.Add(peer.ID("f").String(), wantedAmt)
+	bf.rateLimiter.Add(peer.ID("d").String(), wantedAmt)
+
+	receivedPeers := bf.hasSufficientBandwidth([]peer.ID{"a", "b", "c", "d", "e", "f"}, 110)
+	for _, p := range receivedPeers {
+		switch p {
+		case "a", "c", "f", "d":
+			t.Errorf("peer has exceeded capacity: %s", p)
+		}
+	}
+	assert.Equal(t, 2, len(receivedPeers))
 }

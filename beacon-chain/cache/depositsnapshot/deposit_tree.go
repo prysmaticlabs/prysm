@@ -8,15 +8,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
-	protodb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	protodb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 var (
-	// ErrEmptyExecutionBlock occurs when the execution block is nil.
-	ErrEmptyExecutionBlock = errors.New("empty execution block")
 	// ErrInvalidSnapshotRoot occurs when the snapshot root does not match the calculated root.
 	ErrInvalidSnapshotRoot = errors.New("snapshot root is invalid")
 	// ErrInvalidDepositCount occurs when the value for mix in length is 0.

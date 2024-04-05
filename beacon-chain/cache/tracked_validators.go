@@ -3,7 +3,7 @@ package cache
 import (
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 type TrackedValidator struct {
@@ -40,4 +40,10 @@ func (t *TrackedValidatorsCache) Prune() {
 	t.Lock()
 	defer t.Unlock()
 	t.trackedValidators = make(map[primitives.ValidatorIndex]TrackedValidator)
+}
+
+func (t *TrackedValidatorsCache) Validating() bool {
+	t.Lock()
+	defer t.Unlock()
+	return len(t.trackedValidators) > 0
 }

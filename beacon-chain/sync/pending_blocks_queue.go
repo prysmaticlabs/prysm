@@ -10,18 +10,18 @@ import (
 
 	"github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/equality"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/async"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz/equality"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
 	"go.opencensus.io/trace"
@@ -99,7 +99,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			// Skip blocks that are already being processed.
 			if s.cfg.chain.BlockBeingSynced(blkRoot) {
-				log.WithField("BlockRoot", fmt.Sprintf("%#x", blkRoot)).Info("Skipping pending block already being processed")
+				log.WithField("blockRoot", fmt.Sprintf("%#x", blkRoot)).Info("Skipping pending block already being processed")
 				continue
 			}
 
@@ -192,6 +192,8 @@ func (s *Service) hasPeer() bool {
 	return len(s.cfg.p2p.Peers().Connected()) > 0
 }
 
+var errNoPeersForPending = errors.New("no suitable peers to process pending block queue, delaying")
+
 // processAndBroadcastBlock validates, processes, and broadcasts a block.
 // part of the function is to request missing blobs from peers if the block contains kzg commitments.
 func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) error {
@@ -202,10 +204,17 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 	}
 
-	peers := s.getBestPeers()
-	peerCount := len(peers)
-	if peerCount > 0 {
-		if err := s.requestPendingBlobs(ctx, b, blkRoot, peers[rand.NewGenerator().Int()%peerCount]); err != nil {
+	request, err := s.pendingBlobsRequestForBlock(blkRoot, b)
+	if err != nil {
+		return err
+	}
+	if len(request) > 0 {
+		peers := s.getBestPeers()
+		peerCount := len(peers)
+		if peerCount == 0 {
+			return errors.Wrapf(errNoPeersForPending, "block root=%#x", blkRoot)
+		}
+		if err := s.sendAndSaveBlobSidecars(ctx, request, peers[rand.NewGenerator().Int()%peerCount], b); err != nil {
 			return err
 		}
 	}

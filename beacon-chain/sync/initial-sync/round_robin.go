@@ -9,13 +9,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -167,7 +168,7 @@ func (s *Service) processFetchedDataRegSync(
 	if len(bwb) == 0 {
 		return
 	}
-	bv := newBlobBatchVerifier(s.newBlobVerifier)
+	bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncSidecarRequirements)
 	avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
 	batchFields := logrus.Fields{
 		"firstSlot":        data.bwb[0].Block.Block().Slot(),
@@ -243,13 +244,13 @@ func (s *Service) logBatchSyncStatus(genesis time.Time, firstBlk blocks.ROBlock,
 	firstRoot := firstBlk.Root()
 	timeRemaining := time.Duration(float64(slots.Since(genesis)-firstBlk.Block().Slot())/rate) * time.Second
 	log.WithFields(logrus.Fields{
-		"peers":           len(s.cfg.P2P.Peers().Connected()),
-		"blocksPerSecond": fmt.Sprintf("%.1f", rate),
-	}).Infof(
-		"Processing block batch of size %d starting from  %s %d/%d - estimated time remaining %s",
-		nBlocks, fmt.Sprintf("0x%s...", hex.EncodeToString(firstRoot[:])[:8]),
-		firstBlk.Block().Slot(), slots.Since(genesis), timeRemaining,
-	)
+		"peers":                           len(s.cfg.P2P.Peers().Connected()),
+		"blocksPerSecond":                 fmt.Sprintf("%.1f", rate),
+		"batchSize":                       nBlocks,
+		"startingFrom":                    fmt.Sprintf("0x%s...", hex.EncodeToString(firstRoot[:])[:8]),
+		"latestProcessedSlot/currentSlot": fmt.Sprintf("%d/%d", firstBlk.Block().Slot(), slots.Since(genesis)),
+		"estimatedTimeRemaining":          timeRemaining,
+	}).Info("Processing blocks")
 }
 
 // processBlock performs basic checks on incoming block, and triggers receiver function.
@@ -326,7 +327,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 			errParentDoesNotExist, first.Block().ParentRoot(), first.Block().Slot())
 	}
 
-	bv := newBlobBatchVerifier(s.newBlobVerifier)
+	bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncSidecarRequirements)
 	avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
 	s.logBatchSyncStatus(genesis, first, len(bwb))
 	for _, bb := range bwb {

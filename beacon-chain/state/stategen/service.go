@@ -10,14 +10,16 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/backfill/coverage"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/backfill/coverage"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -144,6 +146,7 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	}()
 
 	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
+	fEpoch := slots.ToEpoch(fState.Slot())
 
 	// Pre-populate the pubkey cache with the validator public keys from the finalized state.
 	// This process takes about 30 seconds on mainnet with 450,000 validators.
@@ -153,6 +156,10 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 		if err := fState.ReadFromEveryValidator(func(_ int, val state.ReadOnlyValidator) error {
 			if ctx.Err() != nil {
 				return ctx.Err()
+			}
+			// Do not cache for non-active validators.
+			if !helpers.IsActiveValidatorUsingTrie(val, fEpoch) {
+				return nil
 			}
 			pub := val.PublicKey()
 			_, err := bls.PublicKeyFromBytes(pub[:])

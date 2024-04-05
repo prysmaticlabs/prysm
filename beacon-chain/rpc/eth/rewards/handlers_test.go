@@ -13,26 +13,28 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	mockstategen "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen/mock"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls/blst"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	mockstategen "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen/mock"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls/blst"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, interfaces.SignedBeaconBlock, error) {
@@ -191,6 +193,7 @@ func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, int
 }
 
 func TestBlockRewards(t *testing.T) {
+	db := dbutil.SetupDB(t)
 	phase0block, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	t.Run("phase 0", func(t *testing.T) {
@@ -226,7 +229,10 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher: &BlockRewardService{
+				Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
+				DB:       db,
+			},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -236,7 +242,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &BlockRewardsResponse{}
+		resp := &structs.BlockRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "12", resp.Data.ProposerIndex)
 		assert.Equal(t, "125089490", resp.Data.Total)
@@ -259,7 +265,10 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher: &BlockRewardService{
+				Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
+				DB:       db,
+			},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -269,7 +278,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &BlockRewardsResponse{}
+		resp := &structs.BlockRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "12", resp.Data.ProposerIndex)
 		assert.Equal(t, "125089490", resp.Data.Total)
@@ -292,7 +301,10 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher: &BlockRewardService{
+				Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
+				DB:       db,
+			},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -302,7 +314,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &BlockRewardsResponse{}
+		resp := &structs.BlockRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "12", resp.Data.ProposerIndex)
 		assert.Equal(t, "125089490", resp.Data.Total)
@@ -325,7 +337,10 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher: &BlockRewardService{
+				Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
+				DB:       db,
+			},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -335,7 +350,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &BlockRewardsResponse{}
+		resp := &structs.BlockRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "12", resp.Data.ProposerIndex)
 		assert.Equal(t, "125089490", resp.Data.Total)
@@ -404,7 +419,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AttestationRewardsResponse{}
+		resp := &structs.AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 16, len(resp.Data.IdealRewards))
 		sum := uint64(0)
@@ -433,7 +448,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AttestationRewardsResponse{}
+		resp := &structs.AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data.TotalRewards))
 		sum := uint64(0)
@@ -456,7 +471,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AttestationRewardsResponse{}
+		resp := &structs.AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 64, len(resp.Data.TotalRewards))
 		sum := uint64(0)
@@ -498,7 +513,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AttestationRewardsResponse{}
+		resp := &structs.AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "0", resp.Data.TotalRewards[0].Head)
 		assert.Equal(t, "-439299", resp.Data.TotalRewards[0].Source)
@@ -536,7 +551,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AttestationRewardsResponse{}
+		resp := &structs.AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "-4768", resp.Data.TotalRewards[0].Inactivity)
 	})
@@ -714,7 +729,9 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		}},
 		OptimisticModeFetcher: mockChainService,
 		FinalizationFetcher:   mockChainService,
-		BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
+		BlockRewardFetcher: &BlockRewardService{
+			Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
+			DB:       dbutil.SetupDB(t)},
 	}
 
 	t.Run("ok - filtered vals", func(t *testing.T) {
@@ -737,7 +754,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SyncCommitteeRewardsResponse{}
+		resp := &structs.SyncCommitteeRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		sum := uint64(0)
@@ -764,7 +781,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SyncCommitteeRewardsResponse{}
+		resp := &structs.SyncCommitteeRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 512, len(resp.Data))
 		sum := 0
@@ -795,7 +812,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SyncCommitteeRewardsResponse{}
+		resp := &structs.SyncCommitteeRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		sum := 0
@@ -826,7 +843,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SyncCommitteeRewardsResponse{}
+		resp := &structs.SyncCommitteeRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 3, len(resp.Data))
 		sum := 0

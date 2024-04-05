@@ -19,17 +19,17 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
-	prysmnetwork "github.com/prysmaticlabs/prysm/v4/network"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/v4/runtime"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/async"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	prysmnetwork "github.com/prysmaticlabs/prysm/v5/network"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/v5/runtime"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -56,6 +56,7 @@ type Service struct {
 	started               bool
 	isPreGenesis          bool
 	pingMethod            func(ctx context.Context, id peer.ID) error
+	pingMethodLock        sync.RWMutex
 	cancel                context.CancelFunc
 	cfg                   *Config
 	peers                 *peers.Status
@@ -81,44 +82,50 @@ type Service struct {
 // NewService initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
-	var err error
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
+
+	cfg = validateConfig(cfg)
+	privKey, err := privKey(cfg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate p2p private key")
+	}
+
+	metaData, err := metaDataFromConfig(cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to create peer metadata")
+		return nil, err
+	}
+
+	addrFilter, err := configureFilter(cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to create address filter")
+		return nil, err
+	}
+
+	ipLimiter := leakybucket.NewCollector(ipLimit, ipBurst, 30*time.Second, true /* deleteEmptyBuckets */)
 
 	s := &Service{
 		ctx:          ctx,
 		cancel:       cancel,
 		cfg:          cfg,
+		addrFilter:   addrFilter,
+		ipLimiter:    ipLimiter,
+		privKey:      privKey,
+		metaData:     metaData,
 		isPreGenesis: true,
 		joinedTopics: make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
 		subnetsLock:  make(map[uint64]*sync.RWMutex),
 	}
 
-	s.cfg = validateConfig(s.cfg)
-
-	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
-
-	cfg.Discv5BootStrapAddr = dv5Nodes
-
 	ipAddr := prysmnetwork.IPAddr()
-	s.privKey, err = privKey(s.cfg)
-	if err != nil {
-		log.WithError(err).Error("Failed to generate p2p private key")
-		return nil, err
-	}
-	s.metaData, err = metaDataFromConfig(s.cfg)
-	if err != nil {
-		log.WithError(err).Error("Failed to create peer metadata")
-		return nil, err
-	}
-	s.addrFilter, err = configureFilter(s.cfg)
-	if err != nil {
-		log.WithError(err).Error("Failed to create address filter")
-		return nil, err
-	}
-	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, 30*time.Second, true /* deleteEmptyBuckets */)
 
-	opts := s.buildOptions(ipAddr, s.privKey)
+	opts, err := s.buildOptions(ipAddr, s.privKey)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to build p2p options")
+	}
+	// Sets mplex timeouts
+	configureMplex()
 	h, err := libp2p.New(opts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to create p2p host")
@@ -284,7 +291,7 @@ func (s *Service) Started() bool {
 }
 
 // Encoding returns the configured networking encoding.
-func (_ *Service) Encoding() encoder.NetworkEncoding {
+func (*Service) Encoding() encoder.NetworkEncoding {
 	return &encoder.SszNetworkEncoder{}
 }
 
@@ -354,10 +361,14 @@ func (s *Service) MetadataSeq() uint64 {
 // AddPingMethod adds the metadata ping rpc method to the p2p service, so that it can
 // be used to refresh ENR.
 func (s *Service) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
+	s.pingMethodLock.Lock()
 	s.pingMethod = reqFunc
+	s.pingMethodLock.Unlock()
 }
 
 func (s *Service) pingPeers() {
+	s.pingMethodLock.RLock()
+	defer s.pingMethodLock.RUnlock()
 	if s.pingMethod == nil {
 		return
 	}
@@ -446,8 +457,8 @@ func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error
 }
 
 func (s *Service) connectToBootnodes() error {
-	nodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddr))
-	for _, addr := range s.cfg.Discv5BootStrapAddr {
+	nodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddrs))
+	for _, addr := range s.cfg.Discv5BootStrapAddrs {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return err

@@ -17,7 +17,7 @@ go_library(
         "types.go",
         "unrealized_justification.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
@@ -77,5 +77,6 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
+        "//time/slots:go_default_library",
     ],
 )

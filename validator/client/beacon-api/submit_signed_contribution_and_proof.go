@@ -8,8 +8,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 func (c beaconApiValidatorClient) submitSignedContributionAndProof(ctx context.Context, in *ethpb.SignedContributionAndProof) error {
@@ -25,11 +25,11 @@ func (c beaconApiValidatorClient) submitSignedContributionAndProof(ctx context.C
 		return errors.New("signed contribution and proof contribution is nil")
 	}
 
-	jsonContributionAndProofs := []shared.SignedContributionAndProof{
+	jsonContributionAndProofs := []structs.SignedContributionAndProof{
 		{
-			Message: &shared.ContributionAndProof{
+			Message: &structs.ContributionAndProof{
 				AggregatorIndex: strconv.FormatUint(uint64(in.Message.AggregatorIndex), 10),
-				Contribution: &shared.SyncCommitteeContribution{
+				Contribution: &structs.SyncCommitteeContribution{
 					Slot:              strconv.FormatUint(uint64(in.Message.Contribution.Slot), 10),
 					BeaconBlockRoot:   hexutil.Encode(in.Message.Contribution.BlockRoot),
 					SubcommitteeIndex: strconv.FormatUint(in.Message.Contribution.SubcommitteeIndex, 10),

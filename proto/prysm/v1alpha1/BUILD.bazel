@@ -35,8 +35,8 @@ proto_library(
         "@com_google_protobuf//:any_proto",
         "@com_google_protobuf//:descriptor_proto",
         "@com_google_protobuf//:empty_proto",
-        "@com_google_protobuf//:wrappers_proto",
         "@com_google_protobuf//:timestamp_proto",
+        "@com_google_protobuf//:wrappers_proto",
         "@googleapis//google/api:annotations_proto",
     ],
 )
@@ -130,6 +130,7 @@ ssz_gen_marshal(
         "BlobSidecar",
         "BlobSidecars",
         "BlobIdentifier",
+        "DepositSnapshot",
     ],
 )
 
@@ -138,7 +139,7 @@ go_proto_library(
     compilers = [
         "@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast_grpc",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1",
+    importpath = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
@@ -155,8 +156,8 @@ go_proto_library(
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
         "@org_golang_google_protobuf//types/descriptorpb:go_default_library",
         "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
-        "@org_golang_google_protobuf//types/known/wrapperspb:go_default_library",
         "@org_golang_google_protobuf//types/known/timestamppb:go_default_library",
+        "@org_golang_google_protobuf//types/known/wrapperspb:go_default_library",
     ],
 )
 
@@ -166,7 +167,7 @@ go_proto_library(
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
     ],
     embed = [":go_proto"],
-    importpath = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1",
+    importpath = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
     protos = [":proto"],
     visibility = ["//visibility:private"],
     deps = [
@@ -176,8 +177,8 @@ go_proto_library(
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@googleapis//google/api:annotations_go_proto",
         "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
-        "@io_bazel_rules_go//proto/wkt:wrappers_go_proto",
         "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
+        "@io_bazel_rules_go//proto/wkt:wrappers_go_proto",
         "@org_golang_google_protobuf//types/descriptorpb:go_default_library",
         "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
@@ -194,7 +195,7 @@ go_library(
     embed = [
         ":go_grpc_gateway_library",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1",
+    importpath = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS + [
         "//encoding/bytesutil:go_default_library",

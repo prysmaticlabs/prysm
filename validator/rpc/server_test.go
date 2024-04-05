@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestServer_InitializeRoutes(t *testing.T) {
@@ -21,6 +21,7 @@ func TestServer_InitializeRoutes(t *testing.T) {
 		"/eth/v1/validator/{pubkey}/gas_limit":       {http.MethodGet, http.MethodPost, http.MethodDelete},
 		"/eth/v1/validator/{pubkey}/feerecipient":    {http.MethodGet, http.MethodPost, http.MethodDelete},
 		"/eth/v1/validator/{pubkey}/voluntary_exit":  {http.MethodPost},
+		"/eth/v1/validator/{pubkey}/graffiti":        {http.MethodGet, http.MethodPost, http.MethodDelete},
 		"/v2/validator/health/version":               {http.MethodGet},
 		"/v2/validator/health/logs/validator/stream": {http.MethodGet},
 		"/v2/validator/health/logs/beacon/stream":    {http.MethodGet},

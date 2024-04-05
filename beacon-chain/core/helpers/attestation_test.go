@@ -6,16 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestAttestation_IsAggregator(t *testing.T) {
@@ -197,7 +197,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 					-500 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(200 * time.Millisecond),
 			},
-			wantedErr: "attestation epoch 8 not within current epoch 15 or previous epoch 14",
+			wantedErr: "attestation epoch 8 not within current epoch 15 or previous epoch",
 		},
 		{
 			name: "attestation.slot is well beyond current slot",
@@ -205,7 +205,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 				attSlot:     1 << 32,
 				genesisTime: prysmTime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
-			wantedErr: "which exceeds max allowed value relative to the local clock",
+			wantedErr: "attestation slot 4294967296 not within attestation propagation range of 0 to 15 (current slot)",
 		},
 	}
 	for _, tt := range tests {

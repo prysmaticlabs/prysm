@@ -5,28 +5,32 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/proto/dbval"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 type mockMinimumSlotter struct {
 	min primitives.Slot
 }
 
-var _ minimumSlotter = &mockMinimumSlotter{}
-
-func (m mockMinimumSlotter) minimumSlot() primitives.Slot {
+func (m mockMinimumSlotter) minimumSlot(_ primitives.Slot) primitives.Slot {
 	return m.min
 }
 
-func (m mockMinimumSlotter) setClock(*startup.Clock) {
+type mockInitalizerWaiter struct {
+}
+
+func (*mockInitalizerWaiter) WaitForInitializer(_ context.Context) (*verification.Initializer, error) {
+	return &verification.Initializer{}, nil
 }
 
 func TestServiceInit(t *testing.T) {
@@ -52,16 +56,18 @@ func TestServiceInit(t *testing.T) {
 	require.NoError(t, cw.SetClock(startup.NewClock(time.Now(), [32]byte{})))
 	pool := &mockPool{todoChan: make(chan batch, nWorkers), finishedChan: make(chan batch, nWorkers)}
 	p2pt := p2ptest.NewTestP2P(t)
-	srv, err := NewService(ctx, su, cw, p2pt, &mockAssigner{}, WithBatchSize(batchSize), WithWorkerCount(nWorkers), WithEnableBackfill(true))
+	bfs := filesystem.NewEphemeralBlobStorage(t)
+	srv, err := NewService(ctx, su, bfs, cw, p2pt, &mockAssigner{},
+		WithBatchSize(batchSize), WithWorkerCount(nWorkers), WithEnableBackfill(true), WithVerifierWaiter(&mockInitalizerWaiter{}))
 	require.NoError(t, err)
-	srv.ms = mockMinimumSlotter{min: primitives.Slot(high - batchSize*uint64(nBatches))}
+	srv.ms = mockMinimumSlotter{min: primitives.Slot(high - batchSize*uint64(nBatches))}.minimumSlot
 	srv.pool = pool
-	srv.batchImporter = func(context.Context, batch, *Store) (*dbval.BackfillStatus, error) {
+	srv.batchImporter = func(context.Context, primitives.Slot, batch, *Store) (*dbval.BackfillStatus, error) {
 		return &dbval.BackfillStatus{}, nil
 	}
 	go srv.Start()
 	todo := make([]batch, 0)
-	todo = testReadN(t, ctx, pool.todoChan, nWorkers, todo)
+	todo = testReadN(ctx, t, pool.todoChan, nWorkers, todo)
 	require.Equal(t, nWorkers, len(todo))
 	for i := 0; i < remaining; i++ {
 		b := todo[i]
@@ -69,7 +75,7 @@ func TestServiceInit(t *testing.T) {
 			b.state = batchImportable
 		}
 		pool.finishedChan <- b
-		todo = testReadN(t, ctx, pool.todoChan, 1, todo)
+		todo = testReadN(ctx, t, pool.todoChan, 1, todo)
 	}
 	require.Equal(t, remaining+nWorkers, len(todo))
 	for i := remaining; i < remaining+nWorkers; i++ {
@@ -84,14 +90,12 @@ func TestMinimumBackfillSlot(t *testing.T) {
 	minSlot := minimumBackfillSlot(primitives.Slot(currSlot))
 	require.Equal(t, 100*params.BeaconConfig().SlotsPerEpoch, minSlot)
 
-	oe = helpers.MinEpochsForBlockRequests()
-
 	currSlot = oe.Mul(uint64(params.BeaconConfig().SlotsPerEpoch))
 	minSlot = minimumBackfillSlot(primitives.Slot(currSlot))
 	require.Equal(t, primitives.Slot(1), minSlot)
 }
 
-func testReadN(t *testing.T, ctx context.Context, c chan batch, n int, into []batch) []batch {
+func testReadN(ctx context.Context, t *testing.T, c chan batch, n int, into []batch) []batch {
 	for i := 0; i < n; i++ {
 		select {
 		case b := <-c:
@@ -102,4 +106,29 @@ func testReadN(t *testing.T, ctx context.Context, c chan batch, n int, into []ba
 		}
 	}
 	return into
+}
+
+func TestBackfillMinSlotDefault(t *testing.T) {
+	oe := helpers.MinEpochsForBlockRequests()
+	current := primitives.Slot((oe + 100).Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+	s := &Service{}
+	specMin := minimumBackfillSlot(current)
+
+	t.Run("equal to specMin", func(t *testing.T) {
+		opt := WithMinimumSlot(specMin)
+		require.NoError(t, opt(s))
+		require.Equal(t, specMin, s.ms(current))
+	})
+	t.Run("older than specMin", func(t *testing.T) {
+		opt := WithMinimumSlot(specMin - 1)
+		require.NoError(t, opt(s))
+		// if WithMinimumSlot is older than the spec minimum, we should use it.
+		require.Equal(t, specMin-1, s.ms(current))
+	})
+	t.Run("newer than specMin", func(t *testing.T) {
+		opt := WithMinimumSlot(specMin + 1)
+		require.NoError(t, opt(s))
+		// if WithMinimumSlot is newer than the spec minimum, we should use the spec minimum
+		require.Equal(t, specMin, s.ms(current))
+	})
 }

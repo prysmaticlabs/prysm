@@ -11,19 +11,19 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
-	mock "github.com/prysmaticlabs/prysm/v4/validator/accounts/testing"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
+	mock "github.com/prysmaticlabs/prysm/v5/validator/accounts/testing"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -268,7 +268,9 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 
 	// Password File should have been written.
 	passwordFilePath := filepath.Join(localWalletDir, wallet.DefaultWalletPasswordFile)
-	assert.Equal(t, true, file.Exists(passwordFilePath))
+	exists, err := file.Exists(passwordFilePath, file.Regular)
+	require.NoError(t, err, "could not check if password file exists")
+	assert.Equal(t, true, exists)
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(localWalletDir, "somepassword")
@@ -474,7 +476,9 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 
 	// Expected a silent failure if the feature flag is not enabled.
 	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	assert.Equal(t, false, file.Exists(passwordFilePath))
+	exists, err := file.Exists(passwordFilePath, file.Regular)
+	require.NoError(t, err, "could not check if password file exists")
+	assert.Equal(t, false, exists, "password file should not exist")
 	resetCfg = features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: true,
 	})
@@ -483,7 +487,9 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 	require.NoError(t, err)
 
 	// File should have been written.
-	assert.Equal(t, true, file.Exists(passwordFilePath))
+	exists, err = file.Exists(passwordFilePath, file.Regular)
+	require.NoError(t, err, "could not check if password file exists")
+	assert.Equal(t, true, exists, "password file should exist")
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(walletDir, "somepassword")

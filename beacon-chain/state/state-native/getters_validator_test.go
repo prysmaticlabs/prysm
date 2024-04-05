@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	testtmpl "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/testing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	testtmpl "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/testing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Phase0(t *testing.T) {

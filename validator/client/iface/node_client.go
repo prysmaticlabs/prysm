@@ -4,7 +4,8 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 type NodeClient interface {
@@ -12,5 +13,5 @@ type NodeClient interface {
 	GetGenesis(ctx context.Context, in *empty.Empty) (*ethpb.Genesis, error)
 	GetVersion(ctx context.Context, in *empty.Empty) (*ethpb.Version, error)
 	ListPeers(ctx context.Context, in *empty.Empty) (*ethpb.Peers, error)
-	IsHealthy(ctx context.Context) bool
+	HealthTracker() *beacon.NodeHealthTracker
 }

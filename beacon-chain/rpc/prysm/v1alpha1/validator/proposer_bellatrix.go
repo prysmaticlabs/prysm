@@ -10,27 +10,37 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
-// builderGetPayloadMissCount tracks the number of misses when validator tries to get a payload from builder
-var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "builder_get_payload_miss_count",
-	Help: "The number of get payload misses for validator requests to builder",
-})
+var (
+	builderValueGweiGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "builder_value_gwei",
+		Help: "Builder payload value in gwei",
+	})
+	localValueGweiGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "local_value_gwei",
+		Help: "Local payload value in gwei",
+	})
+	builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "builder_get_payload_miss_count",
+		Help: "The number of get payload misses for validator requests to builder",
+	})
+)
 
 // emptyTransactionsRoot represents the returned value of ssz.TransactionsRoot([][]byte{}) and
 // can be used as a constant to avoid recomputing this value in every call.
@@ -91,6 +101,8 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 				"builderBoostFactor":   builderBoostFactor,
 			}).Warn("Proposer: both local boost and builder boost are using non default values")
 		}
+		builderValueGweiGauge.Set(float64(builderValueGwei))
+		localValueGweiGauge.Set(float64(localValueGwei))
 
 		// If we can't get the builder value, just use local block.
 		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
@@ -231,7 +243,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	}
 
 	l := log.WithFields(logrus.Fields{
-		"value":              v.String(),
+		"gweiValue":          math.WeiToGwei(v),
 		"builderPubKey":      fmt.Sprintf("%#x", bid.Pubkey()),
 		"blockHash":          fmt.Sprintf("%#x", header.BlockHash()),
 		"slot":               slot,

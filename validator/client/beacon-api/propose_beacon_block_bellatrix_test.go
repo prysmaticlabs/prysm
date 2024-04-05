@@ -7,14 +7,14 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/test-helpers"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	"go.uber.org/mock/gomock"
 )
 
 func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
@@ -27,14 +27,14 @@ func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = bellatrixBlock
 
-	jsonBellatrixBlock := &shared.SignedBeaconBlockBellatrix{
+	jsonBellatrixBlock := &structs.SignedBeaconBlockBellatrix{
 		Signature: hexutil.Encode(bellatrixBlock.Bellatrix.Signature),
-		Message: &shared.BeaconBlockBellatrix{
+		Message: &structs.BeaconBlockBellatrix{
 			ParentRoot:    hexutil.Encode(bellatrixBlock.Bellatrix.Block.ParentRoot),
 			ProposerIndex: uint64ToString(bellatrixBlock.Bellatrix.Block.ProposerIndex),
 			Slot:          uint64ToString(bellatrixBlock.Bellatrix.Block.Slot),
 			StateRoot:     hexutil.Encode(bellatrixBlock.Bellatrix.Block.StateRoot),
-			Body: &shared.BeaconBlockBodyBellatrix{
+			Body: &structs.BeaconBlockBodyBellatrix{
 				Attestations:      jsonifyAttestations(bellatrixBlock.Bellatrix.Block.Body.Attestations),
 				AttesterSlashings: jsonifyAttesterSlashings(bellatrixBlock.Bellatrix.Block.Body.AttesterSlashings),
 				Deposits:          jsonifyDeposits(bellatrixBlock.Bellatrix.Block.Body.Deposits),
@@ -43,11 +43,11 @@ func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 				ProposerSlashings: jsonifyProposerSlashings(bellatrixBlock.Bellatrix.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.RandaoReveal),
 				VoluntaryExits:    JsonifySignedVoluntaryExits(bellatrixBlock.Bellatrix.Block.Body.VoluntaryExits),
-				SyncAggregate: &shared.SyncAggregate{
+				SyncAggregate: &structs.SyncAggregate{
 					SyncCommitteeBits:      hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
-				ExecutionPayload: &shared.ExecutionPayload{
+				ExecutionPayload: &structs.ExecutionPayload{
 					BaseFeePerGas: bytesutil.LittleEndianBytesToBigInt(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.BaseFeePerGas).String(),
 					BlockHash:     hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.BlockHash),
 					BlockNumber:   uint64ToString(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.BlockNumber),

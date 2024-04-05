@@ -1,17 +1,18 @@
 package blob
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -21,7 +22,11 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 	var sidecars []*eth.BlobSidecar
 
-	indices := parseIndices(r.URL)
+	indices, err := parseIndices(r.URL)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	segments := strings.Split(r.URL.Path, "/")
 	blockId := segments[len(segments)-1]
 
@@ -63,16 +68,19 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseIndices filters out invalid and duplicate blob indices
-func parseIndices(url *url.URL) []uint64 {
+func parseIndices(url *url.URL) ([]uint64, error) {
 	rawIndices := url.Query()["indices"]
 	indices := make([]uint64, 0, field_params.MaxBlobsPerBlock)
+	invalidIndices := make([]string, 0)
 loop:
 	for _, raw := range rawIndices {
 		ix, err := strconv.ParseUint(raw, 10, 64)
 		if err != nil {
+			invalidIndices = append(invalidIndices, raw)
 			continue
 		}
 		if ix >= field_params.MaxBlobsPerBlock {
+			invalidIndices = append(invalidIndices, raw)
 			continue
 		}
 		for i := range indices {
@@ -82,21 +90,25 @@ loop:
 		}
 		indices = append(indices, ix)
 	}
-	return indices
+
+	if len(invalidIndices) > 0 {
+		return nil, fmt.Errorf("requested blob indices %v are invalid", invalidIndices)
+	}
+	return indices, nil
 }
 
-func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *SidecarsResponse {
-	resp := &SidecarsResponse{Data: make([]*Sidecar, len(sidecars))}
+func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *structs.SidecarsResponse {
+	resp := &structs.SidecarsResponse{Data: make([]*structs.Sidecar, len(sidecars))}
 	for i, sc := range sidecars {
 		proofs := make([]string, len(sc.CommitmentInclusionProof))
 		for j := range sc.CommitmentInclusionProof {
 			proofs[j] = hexutil.Encode(sc.CommitmentInclusionProof[j])
 		}
-		resp.Data[i] = &Sidecar{
+		resp.Data[i] = &structs.Sidecar{
 			Index:                    strconv.FormatUint(sc.Index, 10),
 			Blob:                     hexutil.Encode(sc.Blob),
 			KzgCommitment:            hexutil.Encode(sc.KzgCommitment),
-			SignedBeaconBlockHeader:  shared.SignedBeaconBlockHeaderFromConsensus(sc.SignedBlockHeader),
+			SignedBeaconBlockHeader:  structs.SignedBeaconBlockHeaderFromConsensus(sc.SignedBlockHeader),
 			KzgProof:                 hexutil.Encode(sc.KzgProof),
 			CommitmentInclusionProof: proofs,
 		}

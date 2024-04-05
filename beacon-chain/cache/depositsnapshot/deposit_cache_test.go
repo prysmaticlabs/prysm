@@ -7,14 +7,14 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 var _ cache.DepositCache = (*Cache)(nil)
@@ -796,7 +796,7 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	err = dc.InsertFinalizedDeposits(context.Background(), 4, [32]byte{}, 0)
 	require.NoError(t, err)
 
-	// Mimick finalized deposit trie fetch.
+	// Mimic finalized deposit trie fetch.
 	fd, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
 	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), nil)
@@ -1187,13 +1187,5 @@ func BenchmarkDepositTree_HashTreeRootOldImplementation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err = dt.HashTreeRoot()
 		require.NoError(b, err)
-	}
-}
-
-func emptyEth1data() *ethpb.Eth1Data {
-	return &ethpb.Eth1Data{
-		DepositRoot:  make([]byte, 32),
-		DepositCount: 0,
-		BlockHash:    make([]byte, 32),
 	}
 }

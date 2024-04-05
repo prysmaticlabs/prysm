@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/api/client"
+	"github.com/prysmaticlabs/prysm/v5/api/client/event"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,12 +41,12 @@ func run(ctx context.Context, v iface.Validator) {
 	if err != nil {
 		return // Exit if context is canceled.
 	}
-
-	connectionErrorChannel := make(chan error, 1)
-	go v.ReceiveSlots(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
+	eventsChan := make(chan *event.Event, 1)
+	healthTracker := v.HealthTracker()
+	runHealthCheckRoutine(ctx, v, eventsChan)
 
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	km, err := v.Keymanager()
@@ -76,15 +77,10 @@ func run(ctx context.Context, v iface.Validator) {
 			sub.Unsubscribe()
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
-		case slotsError := <-connectionErrorChannel:
-			if slotsError != nil {
-				log.WithError(slotsError).Warn("slots stream interrupted")
-				go v.ReceiveSlots(ctx, connectionErrorChannel)
+		case slot := <-v.NextSlot():
+			if !healthTracker.IsHealthy() {
 				continue
 			}
-		case currentKeys := <-accountsChangedChan:
-			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
-		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 			deadline := v.SlotDeadline(slot)
@@ -128,6 +124,22 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
+		case isHealthyAgain := <-healthTracker.HealthUpdates():
+			if isHealthyAgain {
+				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
+				if err != nil {
+					log.WithError(err).Error("Failed to re initialize validator and get head slot")
+					continue
+				}
+				if err := v.UpdateDuties(ctx, headSlot); err != nil {
+					handleAssignmentError(err, headSlot)
+					continue
+				}
+			}
+		case e := <-eventsChan:
+			v.ProcessEvent(e)
+		case currentKeys := <-accountsChangedChan: // should be less of a priority than next slot
+			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		}
 	}
 }
@@ -196,13 +208,6 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
 
-		if features.Get().EnableBeaconRESTApi {
-			if err = v.StartEventStream(ctx); err != nil {
-				log.WithError(err).Fatal("Could not start API event stream")
-			}
-			runHealthCheckRoutine(ctx, v)
-		}
-
 		headSlot, err = v.CanonicalHeadSlot(ctx)
 		if isConnectionError(err) {
 			log.WithError(err).Warn("Could not get current canonical head slot")
@@ -244,7 +249,7 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 				case iface.RoleSyncCommitteeAggregator:
 					v.SubmitSignedContributionAndProof(slotCtx, slot, pubKey)
 				case iface.RoleUnknown:
-					log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
+					log.WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
 				default:
 					log.Warnf("Unhandled role %v", role)
 				}
@@ -258,14 +263,14 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 		defer span.End()
 		defer func() {
 			if err := recover(); err != nil { // catch any panic in logging
-				log.WithField("err", err).
+				log.WithField("error", err).
 					Error("Panic occurred when logging validator report. This" +
 						" should never happen! Please file a report at github.com/prysmaticlabs/prysm/issues/new")
 			}
 		}()
-		// Log this client performance in the previous epoch
-		v.LogAttestationsSubmitted()
-		v.LogSyncCommitteeMessagesSubmitted()
+		// Log performance in the previous slot
+		v.LogSubmittedAtts(slot)
+		v.LogSubmittedSyncCommitteeMessages()
 		if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 			log.WithError(err).Error("Could not report validator's rewards/penalties")
 		}
@@ -273,7 +278,7 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 }
 
 func isConnectionError(err error) bool {
-	return err != nil && errors.Is(err, iface.ErrConnectionIssue)
+	return err != nil && errors.Is(err, client.ErrConnectionIssue)
 }
 
 func handleAssignmentError(err error, slot primitives.Slot) {
@@ -284,27 +289,26 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 			"epoch", slot/params.BeaconConfig().SlotsPerEpoch,
 		).Warn("Validator not yet assigned to epoch")
 	} else {
-		log.WithField("error", err).Error("Failed to update assignments")
+		log.WithError(err).Error("Failed to update assignments")
 	}
 }
 
-func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
+func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan chan<- *event.Event) {
+	log.Info("Starting health check routine for beacon node apis")
 	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	tracker := v.HealthTracker()
 	go func() {
-		for {
-			select {
-			case <-healthCheckTicker.C:
-				if v.NodeIsHealthy(ctx) && !v.EventStreamIsRunning() {
-					if err := v.StartEventStream(ctx); err != nil {
-						log.WithError(err).Error("Could not start API event stream")
-					}
-				}
-			case <-ctx.Done():
-				if ctx.Err() != nil {
-					log.WithError(ctx.Err()).Error("Context cancelled")
-				}
-				log.Error("Context cancelled")
+		// trigger the healthcheck immediately the first time
+		for ; true; <-healthCheckTicker.C {
+			if ctx.Err() != nil {
+				log.WithError(ctx.Err()).Error("Context cancelled")
 				return
+			}
+			isHealthy := tracker.CheckHealth(ctx)
+			// in case of node returning healthy but event stream died
+			if isHealthy && !v.EventStreamIsRunning() {
+				log.Info("Event stream reconnecting...")
+				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
 			}
 		}
 	}()

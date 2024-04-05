@@ -14,15 +14,15 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/io/logs"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
-	iface "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v4/validator/db"
+	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/io/logs"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -53,6 +53,8 @@ type Config struct {
 	GenesisFetcher           client.GenesisFetcher
 	WalletInitializedFeed    *event.Feed
 	NodeGatewayEndpoint      string
+	BeaconApiEndpoint        string
+	BeaconApiTimeout         time.Duration
 	Router                   *mux.Router
 	Wallet                   *wallet.Wallet
 }
@@ -130,6 +132,8 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorMonitoringPort:  cfg.ValidatorMonitoringPort,
 		validatorGatewayHost:     cfg.ValidatorGatewayHost,
 		validatorGatewayPort:     cfg.ValidatorGatewayPort,
+		beaconApiTimeout:         cfg.BeaconApiTimeout,
+		beaconApiEndpoint:        cfg.BeaconApiEndpoint,
 		router:                   cfg.Router,
 	}
 	// immediately register routes to override any catchalls
@@ -170,8 +174,8 @@ func (s *Server) Start() {
 		}
 		opts = append(opts, grpc.Creds(creds))
 		log.WithFields(logrus.Fields{
-			"crt-path": s.withCert,
-			"key-path": s.withKey,
+			"certPath": s.withCert,
+			"keyPath":  s.withKey,
 		}).Info("Loaded TLS certificates")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
@@ -230,6 +234,10 @@ func (s *Server) InitializeRoutes() error {
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.SetFeeRecipientByPubkey).Methods(http.MethodPost)
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.DeleteFeeRecipientByPubkey).Methods(http.MethodDelete)
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/voluntary_exit", s.SetVoluntaryExit).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/graffiti", s.GetGraffiti).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/graffiti", s.SetGraffiti).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/graffiti", s.DeleteGraffiti).Methods(http.MethodDelete)
+
 	// auth endpoint
 	s.router.HandleFunc(api.WebUrlPrefix+"initialize", s.Initialize).Methods(http.MethodGet)
 	// accounts endpoints
