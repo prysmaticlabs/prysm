@@ -55,6 +55,8 @@ const (
 	batchEndSequence
 )
 
+var retryDelay = time.Second
+
 type batchId string
 
 type batch struct {
@@ -62,6 +64,7 @@ type batch struct {
 	scheduled      time.Time
 	seq            int // sequence identifier, ie how many times has the sequence() method served this batch
 	retries        int
+	retryAfter     time.Time
 	begin          primitives.Slot
 	end            primitives.Slot // half-open interval, [begin, end), ie >= start, < end.
 	results        verifiedROBlocks
@@ -74,7 +77,7 @@ type batch struct {
 }
 
 func (b batch) logFields() logrus.Fields {
-	return map[string]interface{}{
+	f := map[string]interface{}{
 		"batchId":   b.id(),
 		"state":     b.state.String(),
 		"scheduled": b.scheduled.String(),
@@ -86,6 +89,10 @@ func (b batch) logFields() logrus.Fields {
 		"blockPid":  b.blockPid,
 		"blobPid":   b.blobPid,
 	}
+	if b.retries > 0 {
+		f["retryAfter"] = b.retryAfter.String()
+	}
+	return f
 }
 
 func (b batch) replaces(r batch) bool {
@@ -153,7 +160,8 @@ func (b batch) withState(s batchState) batch {
 		switch b.state {
 		case batchErrRetryable:
 			b.retries += 1
-			log.WithFields(b.logFields()).Info("Sequencing batch for retry")
+			b.retryAfter = time.Now().Add(retryDelay)
+			log.WithFields(b.logFields()).Info("Sequencing batch for retry after delay")
 		case batchInit, batchNil:
 			b.firstScheduled = b.scheduled
 		}

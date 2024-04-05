@@ -143,6 +143,17 @@ func (p *p2pBatchWorkerPool) batchRouter(pa PeerAssigner) {
 			return
 		}
 		for _, pid := range assigned {
+			// Wait to retry a failed batch to avoid hammering peers
+			// if we've hit a state where batches will consistently fail.
+			// Avoids spamming requests and logs.
+			if todo[0].retries > 0 {
+				untilRetry := time.Until(todo[0].retryAfter)
+				if untilRetry > time.Millisecond {
+					log.WithFields(todo[0].logFields()).WithField("untilRetry", untilRetry.String()).
+						Debug("Sleeping for retry backoff delay")
+					time.Sleep(untilRetry)
+				}
+			}
 			busy[pid] = true
 			todo[0].busy = pid
 			p.toWorkers <- todo[0].withPeer(pid)
