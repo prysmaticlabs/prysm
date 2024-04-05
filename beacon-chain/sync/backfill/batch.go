@@ -1,6 +1,7 @@
 package backfill
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"time"
@@ -196,6 +197,30 @@ func (b batch) blobResponseValidator() sync.BlobResponseValidation {
 
 func (b batch) availabilityStore() das.AvailabilityStore {
 	return b.bs.store
+}
+
+var batchBlockUntil = func(ctx context.Context, untilRetry time.Duration, b batch) error {
+	log.WithFields(b.logFields()).WithField("untilRetry", untilRetry.String()).
+		Debug("Sleeping for retry backoff delay")
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(untilRetry):
+		return nil
+	}
+}
+
+func (b batch) waitUntilReady(ctx context.Context) error {
+	// Wait to retry a failed batch to avoid hammering peers
+	// if we've hit a state where batches will consistently fail.
+	// Avoids spamming requests and logs.
+	if b.retries > 0 {
+		untilRetry := time.Until(b.retryAfter)
+		if untilRetry > time.Millisecond {
+			return batchBlockUntil(ctx, untilRetry, b)
+		}
+	}
+	return nil
 }
 
 func sortBatchDesc(bb []batch) {
