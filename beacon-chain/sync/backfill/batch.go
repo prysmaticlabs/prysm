@@ -225,6 +225,6 @@ func (b batch) waitUntilReady(ctx context.Context) error {
 
 func sortBatchDesc(bb []batch) {
 	sort.Slice(bb, func(i, j int) bool {
-		return bb[j].end < bb[i].end
+		return bb[i].end > bb[j].end
 	})
 }
