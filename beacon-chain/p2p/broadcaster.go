@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
@@ -137,13 +138,11 @@ func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint6
 	// In the event our attestation is outdated and beyond the
 	// acceptable threshold, we exit early and do not broadcast it.
 	currSlot := slots.CurrentSlot(uint64(s.genesisTime.Unix()))
-	currEpoch := slots.ToEpoch(currSlot)
-	attEpoch := slots.ToEpoch(att.Data.Slot)
-	if attEpoch+1 < currEpoch {
+	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.genesisTime, params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
 		log.WithFields(logrus.Fields{
 			"attestationSlot": att.Data.Slot,
 			"currentSlot":     currSlot,
-		}).Warning("Attestation is too old to broadcast, discarding it")
+		}).WithError(err).Warning("Attestation is too old to broadcast, discarding it")
 		return
 	}
 
