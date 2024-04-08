@@ -23,12 +23,14 @@ import (
 )
 
 var requestBlocksFlags = struct {
-	Peers        string
-	ClientPort   uint
-	APIEndpoints string
-	StartSlot    uint64
-	Count        uint64
-	Step         uint64
+	Network        string
+	Peers          string
+	ClientPortTCP  uint
+	ClientPortQUIC uint
+	APIEndpoints   string
+	StartSlot      uint64
+	Count          uint64
+	Step           uint64
 }{}
 
 var requestBlocksCmd = &cli.Command{
@@ -43,15 +45,28 @@ var requestBlocksCmd = &cli.Command{
 	Flags: []cli.Flag{
 		cmd.ChainConfigFileFlag,
 		&cli.StringFlag{
+			Name:        "network",
+			Usage:       "network to run on (mainnet, sepolia, holesky)",
+			Destination: &requestBlocksFlags.Network,
+			Value:       "mainnet",
+		},
+		&cli.StringFlag{
 			Name:        "peer-multiaddrs",
 			Usage:       "comma-separated, peer multiaddr(s) to connect to for p2p requests",
 			Destination: &requestBlocksFlags.Peers,
 			Value:       "",
 		},
 		&cli.UintFlag{
-			Name:        "client-port",
-			Usage:       "port to use for the client as a libp2p host",
-			Destination: &requestBlocksFlags.ClientPort,
+			Name:        "client-port-tcp",
+			Aliases:     []string{"client-port"},
+			Usage:       "TCP port to use for the client as a libp2p host",
+			Destination: &requestBlocksFlags.ClientPortTCP,
+			Value:       13001,
+		},
+		&cli.UintFlag{
+			Name:        "client-port-quic",
+			Usage:       "QUIC port to use for the client as a libp2p host",
+			Destination: &requestBlocksFlags.ClientPortQUIC,
 			Value:       13001,
 		},
 		&cli.StringFlag{
@@ -82,6 +97,21 @@ var requestBlocksCmd = &cli.Command{
 }
 
 func cliActionRequestBlocks(cliCtx *cli.Context) error {
+	switch requestBlocksFlags.Network {
+	case params.SepoliaName:
+		if err := params.SetActive(params.SepoliaConfig()); err != nil {
+			log.Fatal(err)
+		}
+	case params.HoleskyName:
+		if err := params.SetActive(params.HoleskyConfig()); err != nil {
+			log.Fatal(err)
+		}
+	case params.MainnetName:
+		// Do nothing
+	default:
+		log.Fatalf("Unknown network provided: %s", requestBlocksFlags.Network)
+	}
+
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
 		if err := params.LoadChainConfigFile(chainConfigFileName, nil); err != nil {
@@ -98,7 +128,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		allAPIEndpoints = strings.Split(requestBlocksFlags.APIEndpoints, ",")
 	}
 	var err error
-	c, err := newClient(allAPIEndpoints, requestBlocksFlags.ClientPort)
+	c, err := newClient(allAPIEndpoints, requestBlocksFlags.ClientPortTCP, requestBlocksFlags.ClientPortQUIC)
 	if err != nil {
 		return err
 	}

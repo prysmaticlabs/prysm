@@ -9,7 +9,7 @@ var (
 	backfillWorkerCountName = "backfill-worker-count"
 
 	// EnableExperimentalBackfill enables backfill for checkpoint synced nodes.
-	// This flag will be removed onced backfill is enabled by default.
+	// This flag will be removed once backfill is enabled by default.
 	EnableExperimentalBackfill = &cli.BoolFlag{
 		Name: "enable-experimental-backfill",
 		Usage: "Backfill is still experimental at this time. " +

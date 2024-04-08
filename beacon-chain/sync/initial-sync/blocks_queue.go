@@ -7,6 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	beaconsync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
@@ -69,6 +70,7 @@ type blocksQueueConfig struct {
 	p2p                 p2p.P2P
 	db                  db.ReadOnlyDatabase
 	mode                syncMode
+	bs                  filesystem.BlobStorageSummarizer
 }
 
 // blocksQueue is a priority queue that serves as a intermediary between block fetchers (producers)
@@ -101,12 +103,16 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 
 	blocksFetcher := cfg.blocksFetcher
 	if blocksFetcher == nil {
+		if cfg.bs == nil {
+			log.Warn("rpc fetcher starting without blob availability cache, duplicate blobs may be requested.")
+		}
 		blocksFetcher = newBlocksFetcher(ctx, &blocksFetcherConfig{
 			ctxMap: cfg.ctxMap,
 			chain:  cfg.chain,
 			p2p:    cfg.p2p,
 			db:     cfg.db,
 			clock:  cfg.clock,
+			bs:     cfg.bs,
 		})
 	}
 	highestExpectedSlot := cfg.highestExpectedSlot
@@ -139,7 +145,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	queue.smm.addEventHandler(eventDataReceived, stateScheduled, queue.onDataReceivedEvent(ctx))
 	queue.smm.addEventHandler(eventTick, stateDataParsed, queue.onReadyToSendEvent(ctx))
 	queue.smm.addEventHandler(eventTick, stateSkipped, queue.onProcessSkippedEvent(ctx))
-	queue.smm.addEventHandler(eventTick, stateSent, queue.onCheckStaleEvent(ctx))
+	queue.smm.addEventHandler(eventTick, stateSent, onCheckStaleEvent(ctx))
 
 	return queue
 }
@@ -451,7 +457,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 // onCheckStaleEvent is an event that allows to mark stale epochs,
 // so that they can be re-processed.
-func (_ *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
+func onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 	return func(m *stateMachine, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()
