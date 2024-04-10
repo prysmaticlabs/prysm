@@ -131,6 +131,7 @@ ssz_gen_marshal(
         "BlobSidecars",
         "BlobIdentifier",
         "DepositSnapshot",
+        "DataColumnSidecar",
     ],
 )
 
@@ -229,6 +230,7 @@ ssz_proto_files(
         "beacon_block.proto",
         "beacon_state.proto",
         "blobs.proto",
+        "data_columns.proto",
         "sync_committee.proto",
         "withdrawals.proto",
     ],
