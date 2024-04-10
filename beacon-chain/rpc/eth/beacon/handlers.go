@@ -2054,29 +2054,24 @@ func (s *Server) GetGenesis(w http.ResponseWriter, r *http.Request) {
 // GetDepositSnapshot retrieves the EIP-4881 Deposit Tree Snapshot. Either a JSON or,
 // if the Accept header was added, bytes serialized by SSZ will be returned.
 func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "beacon.GetDepositSnapshot")
+	_, span := trace.StartSpan(r.Context(), "beacon.GetDepositSnapshot")
 	defer span.End()
 
-	if s.BeaconDB == nil {
-		httputil.HandleError(w, "Could not retrieve beaconDB", http.StatusInternalServerError)
-		return
-	}
-	eth1data, err := s.BeaconDB.ExecutionChainData(ctx)
+	snapshot, err := s.DepositFetcher.Snapshot()
 	if err != nil {
-		httputil.HandleError(w, "Could not retrieve execution chain data: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not retrieve snapshot: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if eth1data == nil {
-		httputil.HandleError(w, "Could not retrieve execution chain data: empty Eth1Data", http.StatusInternalServerError)
-		return
-	}
-	snapshot := eth1data.DepositSnapshot
 	if snapshot == nil || len(snapshot.Finalized) == 0 {
-		httputil.HandleError(w, "No Finalized Snapshot Available", http.StatusNotFound)
+		httputil.HandleError(w, "Could not retrieve snapshot: empty snapshot", http.StatusInternalServerError)
 		return
 	}
 	if len(snapshot.Finalized) > depositsnapshot.DepositContractDepth {
-		httputil.HandleError(w, "Retrieved invalid deposit snapshot", http.StatusInternalServerError)
+		httputil.HandleError(
+			w,
+			fmt.Sprintf("Snapshot depth %d bigger than deposit contract depth %d", len(snapshot.Finalized), depositsnapshot.DepositContractDepth),
+			http.StatusInternalServerError,
+		)
 		return
 	}
 	if httputil.RespondWithSsz(r) {

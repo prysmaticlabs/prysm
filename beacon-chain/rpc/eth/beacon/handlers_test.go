@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	testing2 "github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"go.uber.org/mock/gomock"
@@ -3575,7 +3576,6 @@ func TestGetGenesis(t *testing.T) {
 }
 
 func TestGetDepositSnapshot(t *testing.T) {
-	beaconDB := dbTest.SetupDB(t)
 	mockTrie := depositsnapshot.NewDepositTree()
 	deposits := [][32]byte{
 		bytesutil.ToBytes32([]byte{1}),
@@ -3596,13 +3596,8 @@ func TestGetDepositSnapshot(t *testing.T) {
 	require.NoError(t, err)
 	root, err := snapshot.CalculateRoot()
 	require.NoError(t, err)
-	chainData := &eth.ETH1ChainData{
-		DepositSnapshot: snapshot.ToProto(),
-	}
-	err = beaconDB.SaveExecutionChainData(context.Background(), chainData)
-	require.NoError(t, err)
 	s := Server{
-		BeaconDB: beaconDB,
+		DepositFetcher: &testing2.MockDepositFetcher{Snap: snapshot.ToProto()},
 	}
 
 	request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/deposit_snapshot", nil)

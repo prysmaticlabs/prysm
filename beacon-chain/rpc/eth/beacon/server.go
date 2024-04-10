@@ -5,6 +5,7 @@ package beacon
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
@@ -48,4 +49,5 @@ type Server struct {
 	BLSChangesPool                blstoexec.PoolManager
 	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
 	CoreService                   *core.Service
+	DepositFetcher                cache.DepositFetcher
 }

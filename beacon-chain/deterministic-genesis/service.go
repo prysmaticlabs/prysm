@@ -64,6 +64,11 @@ func (s *Service) PruneProofs(ctx context.Context, untilDepositIndex int64) erro
 	return nil
 }
 
+func (s *Service) Snapshot() (*ethpb.DepositSnapshot, error) {
+	log.Error("Snapshot should not be called")
+	return nil, nil
+}
+
 // Config options for the interop service.
 type Config struct {
 	GenesisTime   uint64

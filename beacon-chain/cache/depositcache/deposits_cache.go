@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -310,6 +311,10 @@ func (dc *DepositCache) PruneProofs(ctx context.Context, untilDepositIndex int64
 	}
 
 	return nil
+}
+
+func (dc *DepositCache) Snapshot() (*ethpb.DepositSnapshot, error) {
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // Deposits returns the cached internal deposit tree.

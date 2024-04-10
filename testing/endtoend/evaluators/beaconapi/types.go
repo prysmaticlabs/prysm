@@ -4,6 +4,8 @@ import "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 
 type endpoint interface {
 	getBasePath() string
+	sanityCheckOnlyEnabled() bool
+	enableSanityCheckOnly()
 	sszEnabled() bool
 	enableSsz()
 	getSszResp() []byte     // retrieves the Prysm SSZ response
@@ -22,6 +24,7 @@ type endpoint interface {
 
 type apiEndpoint[Resp any] struct {
 	basePath   string
+	sanity     bool
 	ssz        bool
 	start      primitives.Epoch
 	req        interface{}
@@ -34,6 +37,14 @@ type apiEndpoint[Resp any] struct {
 
 func (e *apiEndpoint[Resp]) getBasePath() string {
 	return e.basePath
+}
+
+func (e *apiEndpoint[Resp]) sanityCheckOnlyEnabled() bool {
+	return e.sanity
+}
+
+func (e *apiEndpoint[Resp]) enableSanityCheckOnly() {
+	e.sanity = true
 }
 
 func (e *apiEndpoint[Resp]) sszEnabled() bool {
@@ -109,30 +120,42 @@ func newMetadata[Resp any](basePath string, opts ...endpointOpt) *apiEndpoint[Re
 
 type endpointOpt func(endpoint)
 
+// We only care if the request was successful, without comparing responses.
+func withSanityCheckOnly() endpointOpt {
+	return func(e endpoint) {
+		e.enableSanityCheckOnly()
+	}
+}
+
+// We request SSZ data too.
 func withSsz() endpointOpt {
 	return func(e endpoint) {
 		e.enableSsz()
 	}
 }
 
+// We begin issuing the request at a particular epoch.
 func withStart(start primitives.Epoch) endpointOpt {
 	return func(e endpoint) {
 		e.setStart(start)
 	}
 }
 
+// We pass in a specific request object.
 func withReq(req interface{}) endpointOpt {
 	return func(e endpoint) {
 		e.setReq(req)
 	}
 }
 
+// We specify URL parameters.
 func withParams(f func(currentEpoch primitives.Epoch) []string) endpointOpt {
 	return func(e endpoint) {
 		e.setParams(f)
 	}
 }
 
+// We perform custom evaluation on responses.
 func withCustomEval(f func(interface{}, interface{}) error) endpointOpt {
 	return func(e endpoint) {
 		e.setCustomEval(f)

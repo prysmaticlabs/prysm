@@ -70,7 +70,6 @@ func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnT
 		bnType = []string{"prysm"}
 	}
 
-	client := &http.Client{}
 	var port int
 	switch bnType[0] {
 	case "prysm":
@@ -88,19 +87,19 @@ func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnT
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/octet-stream")
-	rsp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	if rsp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK {
 		var body interface{}
-		if err := json.NewDecoder(rsp.Body).Decode(&body); err != nil {
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 			return nil, err
 		}
-		return nil, fmt.Errorf(msgRequestFailed, bnType[0], rsp.StatusCode, body)
+		return nil, fmt.Errorf(msgRequestFailed, bnType[0], resp.StatusCode, body)
 	}
-	defer closeBody(rsp.Body)
-	body, err := io.ReadAll(rsp.Body)
+	defer closeBody(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

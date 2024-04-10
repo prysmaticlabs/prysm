@@ -72,6 +72,15 @@ var requests = map[string]endpoint{
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
+	"/beacon/blob_sidecars/{param1}": newMetadata[structs.SidecarsResponse](v1PathTemplate,
+		withStart(params.BeaconConfig().DenebForkEpoch),
+		withSsz(),
+		withParams(func(_ primitives.Epoch) []string {
+			return []string{"head"}
+		})),
+	"/beacon/deposit_snapshot": newMetadata[structs.DepositSnapshot](v1PathTemplate,
+		withStart(13), // we need to wait until finalization
+		withSsz()),
 	"/beacon/blinded_blocks/{param1}": newMetadata[structs.GetBlockV2Response](v1PathTemplate,
 		withSsz(),
 		withParams(func(_ primitives.Epoch) []string {
@@ -161,8 +170,19 @@ var requests = map[string]endpoint{
 			}
 			return compareJSON(pResp, lhResp)
 		})),
+	"/config/spec": newMetadata[structs.GetSpecResponse](v1PathTemplate,
+		withSanityCheckOnly()),
 	"/config/deposit_contract": newMetadata[structs.GetDepositContractResponse](v1PathTemplate),
-	"/debug/beacon/heads":      newMetadata[structs.GetForkChoiceHeadsV2Response](v2PathTemplate),
+	"/debug/beacon/states/{param1}": newMetadata[structs.GetBeaconStateV2Response](v2PathTemplate,
+		withSanityCheckOnly(),
+		withSsz(),
+		withParams(func(_ primitives.Epoch) []string {
+			return []string{"head"}
+		})),
+	"/debug/beacon/heads": newMetadata[structs.GetForkChoiceHeadsV2Response](v2PathTemplate,
+		withSanityCheckOnly()),
+	"/debug/fork_choice": newMetadata[structs.GetForkChoiceDumpResponse](v1PathTemplate,
+		withSanityCheckOnly()),
 	"/node/identity": newMetadata[structs.GetIdentityResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*structs.GetIdentityResponse)
@@ -242,7 +262,7 @@ var requests = map[string]endpoint{
 			}
 			if lhResp.Data[0].Slot == "0" {
 				// remove the first item from lighthouse data since lighthouse is returning a value despite no proposer
-				// there is no proposer on slot 0 so prysm don't return anything for slot 0
+				// there is no proposer on slot 0 so prysm doesn't return anything for slot 0
 				lhResp.Data = lhResp.Data[1:]
 			}
 			return compareJSON(pResp, lhResp)
