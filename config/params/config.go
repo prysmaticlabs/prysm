@@ -226,6 +226,12 @@ type BeaconChainConfig struct {
 	MaxRequestBlobSidecars           uint64           `yaml:"MAX_REQUEST_BLOB_SIDECARS" spec:"true"`             // MaxRequestBlobSidecars is the maximum number of blobs to request in a single request.
 	MaxRequestBlocksDeneb            uint64           `yaml:"MAX_REQUEST_BLOCKS_DENEB" spec:"true"`              // MaxRequestBlocksDeneb is the maximum number of blocks in a single request after the deneb epoch.
 
+	// PeerDAS Values
+	NumberOfColumns              uint64 `yaml:"NUMBER_OF_COLUMNS"`                // NumberOfColumns refers to the total number of columns in the extended data matrix.
+	DataColumnSidecarSubnetCount uint64 `yaml:"DATA_COLUMN_SIDECAR_SUBNET_COUNT"` // DataColumnSidecarSubnetCount refers to the total number of column subnets used in the protocol.
+	SamplesPerSlot               uint64 `yaml:"SAMPLES_PER_SLOT"`                 // SamplesPerSlot refers to the humber of random samples a node queries per slot.
+	CustodyRequirement           uint64 `yaml:"CUSTODY_REQUIREMENT"`              // CustodyRequirement refers to the minimum amount of subnets a peer must custody and serve samples from.
+
 	// Networking Specific Parameters
 	GossipMaxSize                   uint64          `yaml:"GOSSIP_MAX_SIZE" spec:"true"`                    // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.
 	MaxChunkSize                    uint64          `yaml:"MAX_CHUNK_SIZE" spec:"true"`                     // MaxChunkSize is the maximum allowed size of uncompressed req/resp chunked responses.

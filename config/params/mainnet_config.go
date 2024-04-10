@@ -265,6 +265,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxRequestBlobSidecars:           768,
 	MaxRequestBlocksDeneb:            128,
 
+	// PeerDAS
+	NumberOfColumns:              128,
+	DataColumnSidecarSubnetCount: 32,
+	SamplesPerSlot:               8,
+	CustodyRequirement:           1,
+
 	// Values related to networking parameters.
 	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
 	MaxChunkSize:                    10 * 1 << 20, // 10 MiB
