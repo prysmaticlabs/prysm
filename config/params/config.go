@@ -235,6 +235,10 @@ type BeaconChainConfig struct {
 	MinPerEpochChurnLimitElectra        uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA" spec:"true"`         // MinPerEpochChurnLimitElectra is the minimum amount of churn allotted for validator rotations for electra.
 	MaxRequestDataColumnSidecars        uint64 `yaml:"MAX_REQUEST_DATA_COLUMN_SIDECARS" spec:"true"`          // MaxRequestDataColumnSidecars is the maximum number of data column sidecars in a single request
 
+	// PeerDAS Values
+	SamplesPerSlot     uint64 `yaml:"SAMPLES_PER_SLOT"`    // SamplesPerSlot refers to the humber of random samples a node queries per slot.
+	CustodyRequirement uint64 `yaml:"CUSTODY_REQUIREMENT"` // CustodyRequirement refers to the minimum amount of subnets a peer must custody and serve samples from.
+
 	// Networking Specific Parameters
 	GossipMaxSize                   uint64          `yaml:"GOSSIP_MAX_SIZE" spec:"true"`                    // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.
 	MaxChunkSize                    uint64          `yaml:"MAX_CHUNK_SIZE" spec:"true"`                     // MaxChunkSize is the maximum allowed size of uncompressed req/resp chunked responses.
