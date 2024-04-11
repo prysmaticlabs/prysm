@@ -143,7 +143,7 @@ func withStart(start primitives.Epoch) endpointOpt {
 	}
 }
 
-// We perform a POST instead of or in addition to GET, sending an object.
+// We perform a POST instead of GET, sending an object.
 func withPOSTObj(obj interface{}) endpointOpt {
 	return func(e endpoint) {
 		e.setPOSTObj(obj)
