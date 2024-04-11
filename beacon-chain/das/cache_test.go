@@ -37,13 +37,15 @@ func filterTestCaseSetup(slot primitives.Slot, nBlobs int, onDisk []int, numExpe
 		commits, err := commitmentsToCheck(blk, blk.Block().Slot())
 		require.NoError(t, err)
 		entry := &cacheEntry{}
-		od := map[[32]byte][]int{blk.Root(): onDisk}
-		sumz := filesystem.NewMockBlobStorageSummarizer(t, od)
-		sum := sumz.Summary(blk.Root())
-		entry.setDiskSummary(sum)
+		if len(onDisk) > 0 {
+			od := map[[32]byte][]int{blk.Root(): onDisk}
+			sumz := filesystem.NewMockBlobStorageSummarizer(t, od)
+			sum := sumz.Summary(blk.Root())
+			entry.setDiskSummary(sum)
+		}
 		expected := make([]blocks.ROBlob, 0, nBlobs)
 		for i := 0; i < commits.count(); i++ {
-			if sum.HasIndex(uint64(i)) {
+			if entry.diskSummary.HasIndex(uint64(i)) {
 				continue
 			}
 			// If we aren't telling the cache a blob is on disk, add it to the expected list and stash.
@@ -60,8 +62,7 @@ func TestFilterDiskSummary(t *testing.T) {
 	require.NoError(t, err)
 	cases := []struct {
 		name  string
-		setup func(t *testing.T) (*cacheEntry, safeCommitmentArray, []blocks.ROBlob)
-		err   error
+		setup filterTestCaseSetupFunc
 	}{
 		{
 			name:  "full blobs, all on disk",
@@ -106,6 +107,53 @@ func TestFilterDiskSummary(t *testing.T) {
 		{
 			name:  "two commitments, all on disk",
 			setup: filterTestCaseSetup(denebSlot, 2, []int{0, 1}, 0),
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			entry, commits, expected := c.setup(t)
+			// first (root) argument doesn't matter, it is just for logs
+			got, err := entry.filter([32]byte{}, commits)
+			require.NoError(t, err)
+			require.Equal(t, len(expected), len(got))
+		})
+	}
+}
+
+func TestFilter(t *testing.T) {
+	denebSlot, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+	require.NoError(t, err)
+	cases := []struct {
+		name  string
+		setup func(t *testing.T) (*cacheEntry, safeCommitmentArray, []blocks.ROBlob)
+		err   error
+	}{
+		{
+			name: "commitments mismatch - extra sidecar",
+			setup: func(t *testing.T) (*cacheEntry, safeCommitmentArray, []blocks.ROBlob) {
+				entry, commits, expected := filterTestCaseSetup(denebSlot, 6, []int{0, 1}, 4)(t)
+				commits[5] = nil
+				return entry, commits, expected
+			},
+			err: errCommitmentMismatch,
+		},
+		{
+			name: "sidecar missing",
+			setup: func(t *testing.T) (*cacheEntry, safeCommitmentArray, []blocks.ROBlob) {
+				entry, commits, expected := filterTestCaseSetup(denebSlot, 6, []int{0, 1}, 4)(t)
+				entry.scs[5] = nil
+				return entry, commits, expected
+			},
+			err: errMissingSidecar,
+		},
+		{
+			name: "commitments mismatch - different bytes",
+			setup: func(t *testing.T) (*cacheEntry, safeCommitmentArray, []blocks.ROBlob) {
+				entry, commits, expected := filterTestCaseSetup(denebSlot, 6, []int{0, 1}, 4)(t)
+				entry.scs[5].KzgCommitment = []byte("nope")
+				return entry, commits, expected
+			},
+			err: errCommitmentMismatch,
 		},
 	}
 	for _, c := range cases {
