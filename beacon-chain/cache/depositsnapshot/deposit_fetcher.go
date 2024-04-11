@@ -244,10 +244,6 @@ func (c *Cache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, bloc
 	span.AddAttributes(trace.Int64Attribute("count", int64(len(c.pendingDeposits))))
 }
 
-func (c *Cache) Snapshot() (*ethpb.DepositSnapshot, error) {
-	return c.finalizedDeposits.depositTree.ToProto()
-}
-
 // Deposits returns the cached internal deposit tree.
 func (fd *finalizedDepositsContainer) Deposits() cache.MerkleTree {
 	return fd.depositTree

@@ -358,7 +358,6 @@ func (s *Service) beaconEndpoints(
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
 		ForkchoiceFetcher:             s.cfg.ForkchoiceFetcher,
 		CoreService:                   coreService,
-		DepositFetcher:                s.cfg.DepositFetcher,
 	}
 
 	const namespace = "beacon"
@@ -548,12 +547,6 @@ func (s *Service) beaconEndpoints(
 			name:     namespace + ".GetValidatorBalances",
 			handler:  server.GetValidatorBalances,
 			methods:  []string{http.MethodGet, http.MethodPost},
-		},
-		{
-			template: "/eth/v1/beacon/deposit_snapshot",
-			name:     namespace + ",GetDepositSnapshot",
-			handler:  server.GetDepositSnapshot,
-			methods:  []string{http.MethodGet},
 		},
 	}
 }

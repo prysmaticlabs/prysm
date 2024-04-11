@@ -25,7 +25,6 @@ type DepositFetcher interface {
 	PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer
 	PrunePendingDeposits(ctx context.Context, merkleTreeIndex int64)
 	PruneProofs(ctx context.Context, untilDepositIndex int64) error
-	Snapshot() (*ethpb.DepositSnapshot, error)
 	FinalizedFetcher
 }
 
