@@ -651,8 +651,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_crate_crypto_go_kzg_4844",
         importpath = "github.com/crate-crypto/go-kzg-4844",
-        sum = "h1:C0vgZRk4q4EZ/JgPfzuSoxdCq3C3mOZMBShovmncxvA=",
-        version = "v0.7.0",
+        sum = "h1:TsSgHwrkTKecKJ4kadtHi4b3xHW5dCFUDFnUp1TsawI=",
+        version = "v1.0.0",
     )
     go_repository(
         name = "com_github_creack_pty",
