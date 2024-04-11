@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
 	"time"
 
 	"github.com/pkg/errors"
@@ -90,6 +91,11 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
+
+	if err := s.broadcastDoubleBlockProposals(ctx, cfg.signed, cfg.blockRoot); err != nil {
+		return errors.Wrap(err, "could not broadcast equivocating blocks to the network")
+	}
+
 	start := time.Now()
 	cfg.headRoot, err = s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
@@ -108,6 +114,38 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		return errors.Wrap(err, "could not send FCU to engine")
 	}
 
+	return nil
+}
+
+// broadcastDoubleBlockProposals checks if the given block is a double block proposal (equivocating block) and broadcasts it to the network if it is
+// returns an error if the process fails to check whether the block is a double block proposal or if the broadcast fails
+func (s *Service) broadcastDoubleBlockProposals(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
+	header, err := signed.Header()
+	if err != nil {
+		return errors.Wrap(err, "could not get block header")
+	}
+	proposals := []*slashertypes.SignedBlockHeaderWrapper{{
+		SignedBeaconBlockHeader: header,
+		SigningRoot:             blockRoot,
+	}}
+	// check if there are any slashable double proposals
+	proposerSlashings, err := s.cfg.SlasherDB.CheckDoubleBlockProposals(ctx, proposals)
+	if err != nil {
+		return errors.Wrap(err, "could not check double block proposals")
+	}
+	if len(proposerSlashings) > 0 {
+		// we can only have one entry here as we only check for double proposals for a one and only one block header
+		proposerSlashing := proposerSlashings[0]
+		// transform to protobuf object
+		proposerSlashingProto := ethpb.ProposerSlashing{
+			Header_1: proposerSlashing.Header_1,
+			Header_2: proposerSlashing.Header_2,
+		}
+		// broadcast over the network
+		if err := s.cfg.P2p.Broadcast(ctx, &proposerSlashingProto); err != nil {
+			return errors.Wrap(err, "could not broadcast slashing object")
+		}
+	}
 	return nil
 }
 

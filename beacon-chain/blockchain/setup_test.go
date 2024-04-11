@@ -80,6 +80,7 @@ type testServiceRequirements struct {
 	attSrv  *attestations.Service
 	blsPool *blstoexec.Pool
 	dc      *depositcache.DepositCache
+	sDB     db.SlasherDatabase
 }
 
 func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceRequirements) {
@@ -96,6 +97,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 	blsPool := blstoexec.NewPool()
 	dc, err := depositcache.New()
 	require.NoError(t, err)
+	sDB := testDB.SetupSlasherDB(t)
 	req := &testServiceRequirements{
 		ctx:     ctx,
 		db:      beaconDB,
@@ -107,6 +109,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		attSrv:  attSrv,
 		blsPool: blsPool,
 		dc:      dc,
+		sDB:     sDB,
 	}
 	defOpts := []Option{WithDatabase(req.db),
 		WithStateNotifier(req.notif),
@@ -114,6 +117,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		WithForkChoiceStore(req.fcs),
 		WithClockSynchronizer(req.cs),
 		WithAttestationPool(req.attPool),
+		WithSlasherDB(req.sDB),
 		WithAttestationService(req.attSrv),
 		WithBLSToExecPool(req.blsPool),
 		WithDepositCache(dc),
