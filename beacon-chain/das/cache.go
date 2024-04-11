@@ -92,7 +92,7 @@ func (e *cacheEntry) filter(root [32]byte, kc safeCommitmentArray) ([]blocks.ROB
 	if e.diskSummary.AllAvailable(kc.count()) {
 		return nil, nil
 	}
-	scs := make([]blocks.ROBlob, kc.count())
+	scs := make([]blocks.ROBlob, 0, kc.count())
 	for i := uint64(0); i < fieldparams.MaxBlobsPerBlock; i++ {
 		// We already have this blob, we don't need to write it or validate it.
 		if e.diskSummary.HasIndex(i) {
@@ -111,7 +111,7 @@ func (e *cacheEntry) filter(root [32]byte, kc safeCommitmentArray) ([]blocks.ROB
 		if !bytes.Equal(kc[i], e.scs[i].KzgCommitment) {
 			return nil, errors.Wrapf(errCommitmentMismatch, "root=%#x, index=%#x, commitment=%#x, block commitment=%#x", root, i, e.scs[i].KzgCommitment, kc[i])
 		}
-		scs[i] = *e.scs[i]
+		scs = append(scs, *e.scs[i])
 	}
 
 	return scs, nil
