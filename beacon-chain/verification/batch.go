@@ -46,10 +46,12 @@ func (batch *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, blk blocks.
 	if len(scs) == 0 {
 		return nil, nil
 	}
+	blkSig := blk.Signature()
 	// We assume the proposer is validated wrt the block in batch block processing before performing the DA check.
 	// So at this stage we just need to make sure the value being signed and signature bytes match the block.
 	for i := range scs {
-		if blk.Signature() != bytesutil.ToBytes96(scs[i].SignedBlockHeader.Signature) {
+		blobSig := bytesutil.ToBytes96(scs[i].SignedBlockHeader.Signature)
+		if blkSig != blobSig {
 			return nil, ErrBatchSignatureMismatch
 		}
 		// Extra defensive check to make sure the roots match. This should be unnecessary in practice since the root from
