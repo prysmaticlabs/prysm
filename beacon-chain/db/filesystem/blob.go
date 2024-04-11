@@ -299,6 +299,11 @@ func (bs *BlobStorage) Clear() error {
 	return nil
 }
 
+// WithinRetentionPeriod checks if the requested epoch is within the blob retention period.
+func (bs *BlobStorage) WithinRetentionPeriod(requested, current primitives.Epoch) bool {
+	return requested+bs.retentionEpochs >= current
+}
+
 type blobNamer struct {
 	root  [32]byte
 	index uint64

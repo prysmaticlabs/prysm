@@ -248,3 +248,45 @@ func TestNewBlobStorage(t *testing.T) {
 	_, err = NewBlobStorage(WithBasePath(path.Join(t.TempDir(), "good")))
 	require.NoError(t, err)
 }
+
+func TestConfig_WithinRetentionPeriod(t *testing.T) {
+	retention := primitives.Epoch(16)
+	storage := &BlobStorage{retentionEpochs: retention}
+
+	cases := []struct {
+		name      string
+		requested primitives.Epoch
+		current   primitives.Epoch
+		within    bool
+	}{
+		{
+			name:      "before",
+			requested: 0,
+			current:   retention + 1,
+			within:    false,
+		},
+		{
+			name:      "same",
+			requested: 0,
+			current:   0,
+			within:    true,
+		},
+		{
+			name:      "boundary",
+			requested: 0,
+			current:   retention,
+			within:    true,
+		},
+		{
+			name:      "one less",
+			requested: retention - 1,
+			current:   retention,
+			within:    true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			require.Equal(t, c.within, storage.WithinRetentionPeriod(c.requested, c.current))
+		})
+	}
+}
