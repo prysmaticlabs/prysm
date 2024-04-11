@@ -277,8 +277,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxPerEpochActivationExitChurnLimit: 256000000000,
 
 	// PeerDAS
-	SamplesPerSlot:     8,
-	CustodyRequirement: 1,
+	SamplesPerSlot:                        8,
+	CustodyRequirement:                    1,
+	MinEpochsForDataColumnSidecarsRequest: 4096,
 
 	// Values related to networking parameters.
 	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
