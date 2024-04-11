@@ -1,6 +1,8 @@
 package beaconapi
 
-import "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+import (
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+)
 
 type endpoint interface {
 	getBasePath() string
@@ -12,8 +14,8 @@ type endpoint interface {
 	setSszResp(resp []byte) // sets the Prysm SSZ response
 	getStart() primitives.Epoch
 	setStart(start primitives.Epoch)
-	getReq() interface{}
-	setReq(req interface{})
+	getPOSTObj() interface{}
+	setPOSTObj(obj interface{})
 	getPResp() interface{}  // retrieves the Prysm JSON response
 	getLHResp() interface{} // retrieves the Lighthouse JSON response
 	getParams(epoch primitives.Epoch) []string
@@ -27,7 +29,7 @@ type apiEndpoint[Resp any] struct {
 	sanity     bool
 	ssz        bool
 	start      primitives.Epoch
-	req        interface{}
+	postObj    interface{}
 	pResp      *Resp  // Prysm JSON response
 	lhResp     *Resp  // Lighthouse JSON response
 	sszResp    []byte // Prysm SSZ response
@@ -71,12 +73,12 @@ func (e *apiEndpoint[Resp]) setStart(start primitives.Epoch) {
 	e.start = start
 }
 
-func (e *apiEndpoint[Resp]) getReq() interface{} {
-	return e.req
+func (e *apiEndpoint[Resp]) getPOSTObj() interface{} {
+	return e.postObj
 }
 
-func (e *apiEndpoint[Resp]) setReq(req interface{}) {
-	e.req = req
+func (e *apiEndpoint[Resp]) setPOSTObj(obj interface{}) {
+	e.postObj = obj
 }
 
 func (e *apiEndpoint[Resp]) getPResp() interface{} {
@@ -141,10 +143,10 @@ func withStart(start primitives.Epoch) endpointOpt {
 	}
 }
 
-// We pass in a specific request object.
-func withReq(req interface{}) endpointOpt {
+// We perform a POST instead of or in addition to GET, sending an object.
+func withPOSTObj(obj interface{}) endpointOpt {
 	return func(e endpoint) {
-		e.setReq(req)
+		e.setPOSTObj(obj)
 	}
 }
 
