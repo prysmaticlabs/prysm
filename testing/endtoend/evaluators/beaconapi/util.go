@@ -25,7 +25,7 @@ const (
 	msgSSZUnmarshalFailed = "failed to unmarshal SSZ"
 )
 
-func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, resp interface{}, bnType ...string) error {
+func doJSONGetRequest(template, requestPath string, beaconNodeIdx int, resp interface{}, bnType ...string) error {
 	if len(bnType) == 0 {
 		bnType = []string{"Prysm"}
 	}
@@ -66,7 +66,7 @@ func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, re
 	return json.NewDecoder(httpResp.Body).Decode(&resp)
 }
 
-func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnType ...string) ([]byte, error) {
+func doSSZGetRequest(template, requestPath string, beaconNodeIdx int, bnType ...string) ([]byte, error) {
 	if len(bnType) == 0 {
 		bnType = []string{"Prysm"}
 	}
@@ -83,7 +83,7 @@ func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnT
 
 	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
 
-	req, err := http.NewRequest(http.MethodGet, basePath+requestPath, nil)
+	req, err := http.NewRequest(http.MethodGet, basePath+requestPath, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnT
 	return body, nil
 }
 
-func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, postObj, resp interface{}, bnType ...string) error {
+func doJSONPostRequest(template, requestPath string, beaconNodeIdx int, postObj, resp interface{}, bnType ...string) error {
 	if len(bnType) == 0 {
 		bnType = []string{"Prysm"}
 	}

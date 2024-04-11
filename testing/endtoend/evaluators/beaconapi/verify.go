@@ -248,7 +248,7 @@ func compareGETSSZ(nodeIdx int, base, path string) ([]byte, error) {
 	return pResp, nil
 }
 
-func compareJSON(pResp interface{}, lhResp interface{}) error {
+func compareJSON(pResp, lhResp interface{}) error {
 	if !reflect.DeepEqual(pResp, lhResp) {
 		p, err := json.Marshal(pResp)
 		if err != nil {
