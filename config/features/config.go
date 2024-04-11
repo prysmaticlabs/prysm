@@ -42,6 +42,7 @@ type Flags struct {
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnableLightClient                   bool // EnableLightClient enables light client APIs.
+	EnableQUIC                          bool // EnableQUIC specifies whether to enable QUIC transport for libp2p.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
@@ -123,14 +124,7 @@ func InitWithReset(c *Flags) func() {
 
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context) error {
-	if ctx.Bool(PraterTestnet.Name) {
-		log.Info("Running on the Prater Testnet")
-		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
-			return err
-		}
-		applyPraterFeatureFlags(ctx)
-		params.UsePraterNetworkConfig()
-	} else if ctx.Bool(SepoliaTestnet.Name) {
+	if ctx.Bool(SepoliaTestnet.Name) {
 		log.Info("Running on the Sepolia Beacon Chain Testnet")
 		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
 			return err
@@ -155,10 +149,6 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 	}
 	return nil
-}
-
-// Insert feature flags within the function to be enabled for Prater testnet.
-func applyPraterFeatureFlags(ctx *cli.Context) {
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
@@ -264,6 +254,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(BlobSaveFsync.Name) {
 		logEnabled(BlobSaveFsync)
 		cfg.BlobSaveFsync = true
+	}
+	if ctx.IsSet(EnableQUIC.Name) {
+		logEnabled(EnableQUIC)
+		cfg.EnableQUIC = true
 	}
 
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
