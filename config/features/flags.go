@@ -171,6 +171,10 @@ var (
 		Name:  "eip6110-validator-cache",
 		Usage: "Enables the EIP-6110 validator cache.",
 	}
+	EnablePeerDAS = &cli.BoolFlag{
+		Name:  "peer-das",
+		Usage: "Enables Prysm to run with the experimental peer data availability sampling scheme.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -229,6 +233,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	BlobSaveFsync,
 	EnableQUIC,
 	eip6110ValidatorCache,
+	EnablePeerDAS,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
