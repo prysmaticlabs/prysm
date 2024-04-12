@@ -21,6 +21,14 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	return b.validatorsVal()
 }
 
+// ValidatorsReadOnly participating in consensus on the beacon chain.
+func (b *BeaconState) ValidatorsReadOnly() []state.ReadOnlyValidator {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.validatorsReadOnlyVal()
+}
+
 func (b *BeaconState) validatorsVal() []*ethpb.Validator {
 	var v []*ethpb.Validator
 	if features.Get().EnableExperimentalState {
@@ -42,6 +50,35 @@ func (b *BeaconState) validatorsVal() []*ethpb.Validator {
 			continue
 		}
 		res[i] = ethpb.CopyValidator(val)
+	}
+	return res
+}
+
+func (b *BeaconState) validatorsReadOnlyVal() []state.ReadOnlyValidator {
+	var v []*ethpb.Validator
+	if features.Get().EnableExperimentalState {
+		if b.validatorsMultiValue == nil {
+			return nil
+		}
+		v = b.validatorsMultiValue.Value(b)
+	} else {
+		if b.validators == nil {
+			return nil
+		}
+		v = b.validators
+	}
+
+	res := make([]state.ReadOnlyValidator, len(v))
+	var err error
+	for i := 0; i < len(res); i++ {
+		val := v[i]
+		if val == nil {
+			continue
+		}
+		res[i], err = NewValidator(val)
+		if err != nil {
+			continue
+		}
 	}
 	return res
 }
