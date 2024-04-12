@@ -3,6 +3,7 @@ package filesystem
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"strconv"
@@ -301,6 +302,10 @@ func (bs *BlobStorage) Clear() error {
 
 // WithinRetentionPeriod checks if the requested epoch is within the blob retention period.
 func (bs *BlobStorage) WithinRetentionPeriod(requested, current primitives.Epoch) bool {
+	if requested > math.MaxUint64-bs.retentionEpochs {
+		// If there is an overflow, then the retention period was set to an extremely large number.
+		return true
+	}
 	return requested+bs.retentionEpochs >= current
 }
 
