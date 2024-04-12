@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"bytes"
+	"math"
 	"os"
 	"path"
 	"sync"
@@ -289,4 +290,9 @@ func TestConfig_WithinRetentionPeriod(t *testing.T) {
 			require.Equal(t, c.within, storage.WithinRetentionPeriod(c.requested, c.current))
 		})
 	}
+
+	t.Run("overflow", func(t *testing.T) {
+		storage := &BlobStorage{retentionEpochs: math.MaxUint64}
+		require.Equal(t, true, storage.WithinRetentionPeriod(1, 1))
+	})
 }
