@@ -64,7 +64,9 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16
 	minimalConfig.MaxAttesterSlashings = 2
+	minimalConfig.MaxAttesterSlashingsElectra = 1
 	minimalConfig.MaxAttestations = 128
+	minimalConfig.MaxAttestationsElectra = 8
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
 	minimalConfig.MaxWithdrawalsPerPayload = 4
