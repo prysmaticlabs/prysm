@@ -27,10 +27,13 @@ const (
 var (
 	// ErrUnsupportedVersion for beacon block methods.
 	ErrUnsupportedVersion    = errors.New("unsupported beacon block version")
+	errNilBlob               = errors.New("received nil blob sidecar")
 	errNilBlock              = errors.New("received nil beacon block")
 	errNilBlockBody          = errors.New("received nil beacon block body")
 	errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
 	errIncorrectBodyVersion  = errors.New(incorrectBodyVersion)
+	errNilBlockHeader        = errors.New("received nil beacon block header")
+	errMissingBlockSignature = errors.New("received nil beacon block signature")
 )
 
 // BeaconBlockBody is the main beacon block body structure. It can represent any block type.

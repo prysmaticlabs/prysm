@@ -143,6 +143,11 @@ func (p *p2pBatchWorkerPool) batchRouter(pa PeerAssigner) {
 			return
 		}
 		for _, pid := range assigned {
+			if err := todo[0].waitUntilReady(p.ctx); err != nil {
+				log.WithError(p.ctx.Err()).Info("p2pBatchWorkerPool context canceled, shutting down")
+				p.shutdown(p.ctx.Err())
+				return
+			}
 			busy[pid] = true
 			todo[0].busy = pid
 			p.toWorkers <- todo[0].withPeer(pid)
