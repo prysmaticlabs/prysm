@@ -445,8 +445,7 @@ func TestConstructPendingBlobsRequest(t *testing.T) {
 		util.GenerateTestDenebBlobSidecar(t, root, header, 0, bytesutil.PadTo([]byte{}, 48), make([][]byte, 0)),
 		util.GenerateTestDenebBlobSidecar(t, root, header, 2, bytesutil.PadTo([]byte{}, 48), make([][]byte, 0)),
 	}
-	vscs, err := verification.BlobSidecarSliceNoop(blobSidecars)
-	require.NoError(t, err)
+	vscs := verification.FakeVerifySliceForTest(t, blobSidecars)
 	for i := range vscs {
 		require.NoError(t, bs.Save(vscs[i]))
 	}
