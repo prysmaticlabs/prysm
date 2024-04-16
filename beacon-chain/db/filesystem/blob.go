@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -37,6 +38,7 @@ const (
 	partExt = "part"
 
 	directoryPermissions = 0700
+	rootPrefixLen        = 4
 )
 
 // BlobStorageOption is a functional option for configuring a BlobStorage.
@@ -321,8 +323,14 @@ func namerForSidecar(sc blocks.VerifiedROBlob) blobNamer {
 	return blobNamer{root: sc.BlockRoot(), index: sc.Index}
 }
 
+func (p blobNamer) groupDir() string {
+	return oneBytePrefix(rootString(p.root))
+}
+
 func (p blobNamer) dir() string {
-	return rootString(p.root)
+	rs := rootString(p.root)
+	parentDir := oneBytePrefix(rs)
+	return filepath.Join(parentDir, rs)
 }
 
 func (p blobNamer) partPath(entropy string) string {
@@ -335,6 +343,11 @@ func (p blobNamer) path() string {
 
 func rootString(root [32]byte) string {
 	return fmt.Sprintf("%#x", root)
+}
+
+func oneBytePrefix(p string) string {
+	// returns eg 0x00 from 0x0002fb4db510b8618b04dc82d023793739c26346a8b02eb73482e24b0fec0555
+	return p[0:rootPrefixLen]
 }
 
 func stringToRoot(str string) ([32]byte, error) {

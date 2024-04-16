@@ -28,6 +28,10 @@ var (
 	errNotBlobSSZ      = errors.New("not a blob ssz file")
 )
 
+// Full root in directory will be 66 chars, eg:
+// >>> len('0x0002fb4db510b8618b04dc82d023793739c26346a8b02eb73482e24b0fec0555') == 66
+const legacyRootLen = 66
+
 type blobPruner struct {
 	sync.Mutex
 	prunedBefore atomic.Uint64
@@ -74,7 +78,7 @@ func (p *blobPruner) notify(root [32]byte, latest primitives.Slot, idx uint64) e
 	go func() {
 		p.Lock()
 		defer p.Unlock()
-		if err := p.prune(primitives.Slot(pruned)); err != nil {
+		if err := p.prune(primitives.Slot(pruned), nil); err != nil {
 			log.WithError(err).Errorf("Failed to prune blobs from slot %d", latest)
 		}
 	}()
@@ -93,7 +97,7 @@ func windowMin(latest, offset primitives.Slot) primitives.Slot {
 func (p *blobPruner) warmCache() error {
 	p.Lock()
 	defer p.Unlock()
-	if err := p.prune(0); err != nil {
+	if err := p.prune(0, &oneBytePrefixMigrator{}); err != nil {
 		return err
 	}
 	if !p.warmed {
@@ -115,7 +119,7 @@ func (p *blobPruner) waitForCache(ctx context.Context) (*blobStorageCache, error
 // Prune prunes blobs in the base directory based on the retention epoch.
 // It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
-func (p *blobPruner) prune(pruneBefore primitives.Slot) error {
+func (p *blobPruner) prune(pruneBefore primitives.Slot, m directoryMigrator) error {
 	start := time.Now()
 	totalPruned, totalErr := 0, 0
 	// Customize logging/metrics behavior for the initial cache warmup when slot=0.
@@ -135,12 +139,11 @@ func (p *blobPruner) prune(pruneBefore primitives.Slot) error {
 		}()
 	}
 
-	entries, err := listDir(p.fs, ".")
+	entries, err := walkAndMigrateBasedir(p.fs, m)
 	if err != nil {
 		return errors.Wrap(err, "unable to list root blobs directory")
 	}
-	dirs := filter(entries, filterRoot)
-	for _, dir := range dirs {
+	for _, dir := range entries {
 		pruned, err := p.tryPruneDir(dir, pruneBefore)
 		if err != nil {
 			totalErr += 1
@@ -274,6 +277,40 @@ func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
 	return primitives.Slot(rawSlot), nil
 }
 
+// walkAndMigrateBasedir manages executing any needed directory migrations while also returning a list of every
+// individual root directory containing blob files.
+func walkAndMigrateBasedir(fs afero.Fs, m directoryMigrator) ([]string, error) {
+	listing := make([]string, 0)
+	topDirs, err := listDir(fs, ".")
+	if err != nil {
+		return nil, err
+	}
+	if m != nil {
+		if err := m.migrate(fs, topDirs); err != nil {
+			return nil, err
+		}
+	}
+	// list all the subdirs to get the full listing.
+	for i := range topDirs {
+		dir := topDirs[i]
+		// We're not worried about any dangling legacy format paths because migrator should have already done its job.
+		if !filterRootGroupDir(dir) {
+			continue
+		}
+		subdirs, err := listDir(fs, dir)
+		if err != nil {
+			return nil, err
+		}
+		for _, sd := range subdirs {
+			if !filterRoot(sd) {
+				continue
+			}
+			listing = append(listing, filepath.Join(dir, sd))
+		}
+	}
+	return listing, nil
+}
+
 func listDir(fs afero.Fs, dir string) ([]string, error) {
 	top, err := fs.Open(dir)
 	if err != nil {
@@ -304,6 +341,14 @@ func filter(entries []string, filt func(string) bool) []string {
 
 func filterRoot(s string) bool {
 	return strings.HasPrefix(s, "0x")
+}
+
+func filterLegacy(s string) bool {
+	return filterRoot(s) && len(s) == legacyRootLen
+}
+
+func filterRootGroupDir(s string) bool {
+	return filterRoot(s) && len(filepath.Base(s)) == rootPrefixLen
 }
 
 var dotSszExt = "." + sszExt

@@ -170,10 +170,15 @@ func TestBlobStoragePrune(t *testing.T) {
 		for _, sidecar := range testSidecars {
 			require.NoError(t, bs.Save(sidecar))
 		}
+		namer := namerForSidecar(testSidecars[0])
 
-		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
+		beforeFolders, err := afero.ReadDir(fs, namer.groupDir())
+		require.NoError(t, err)
+		require.Equal(t, 1, len(beforeFolders))
 
-		remainingFolders, err := afero.ReadDir(fs, ".")
+		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize, nil))
+
+		remainingFolders, err := afero.ReadDir(fs, namer.groupDir())
 		require.NoError(t, err)
 		require.Equal(t, 0, len(remainingFolders))
 	})
@@ -181,36 +186,51 @@ func TestBlobStoragePrune(t *testing.T) {
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 299, fieldparams.MaxBlobsPerBlock)
 		testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
 		require.NoError(t, err)
+		namer := namerForSidecar(testSidecars[0])
 
 		for _, sidecar := range testSidecars[4:] {
 			require.NoError(t, bs.Save(sidecar))
 		}
 
-		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
+		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize, nil))
 
-		remainingFolders, err := afero.ReadDir(fs, ".")
+		remainingFolders, err := afero.ReadDir(fs, namer.groupDir())
 		require.NoError(t, err)
 		require.Equal(t, 0, len(remainingFolders))
 	})
 	t.Run("PruneMany", func(t *testing.T) {
-		blockQty := 10
-		slot := primitives.Slot(1)
-
-		for j := 0; j <= blockQty; j++ {
-			root := bytesutil.ToBytes32(bytesutil.ToBytes(uint64(slot), 32))
-			_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, root, slot, fieldparams.MaxBlobsPerBlock)
+		pruneBefore := currentSlot - bs.pruner.windowSize
+		increment := primitives.Slot(10000)
+		slots := []primitives.Slot{
+			pruneBefore - increment,
+			pruneBefore - (2 * increment),
+			pruneBefore,
+			pruneBefore + increment,
+			pruneBefore + (2 * increment),
+		}
+		namers := make([]blobNamer, len(slots))
+		for i, s := range slots {
+			_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, s, 1)
 			testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
 			require.NoError(t, err)
 			require.NoError(t, bs.Save(testSidecars[0]))
-
-			slot += 10000
+			namers[i] = namerForSidecar(testSidecars[0])
 		}
 
-		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
+		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize, nil))
 
-		remainingFolders, err := afero.ReadDir(fs, ".")
-		require.NoError(t, err)
-		require.Equal(t, 4, len(remainingFolders))
+		// first 2 subdirs should be removed
+		for _, nmr := range namers[0:2] {
+			entries, err := listDir(fs, nmr.dir())
+			require.Equal(t, 0, len(entries))
+			require.ErrorIs(t, err, os.ErrNotExist)
+		}
+		// the rest should still be there
+		for _, nmr := range namers[2:] {
+			entries, err := listDir(fs, nmr.dir())
+			require.NoError(t, err)
+			require.Equal(t, 1, len(entries))
+		}
 	})
 }
 
@@ -234,7 +254,7 @@ func BenchmarkPruning(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := bs.pruner.prune(currentSlot)
+		err := bs.pruner.prune(currentSlot, nil)
 		require.NoError(b, err)
 	}
 }
