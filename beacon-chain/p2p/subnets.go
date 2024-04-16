@@ -265,8 +265,12 @@ func computeSubscribedColumnSubnets(nodeID enode.ID) ([]uint64, error) {
 		}
 		subs = append(subs, sub)
 	}
-	if len(subs) != int(subnetsPerNode) {
-		return nil, errors.Errorf("inconsistent subnet assignment: %d vs %d", len(subs), subnetsPerNode)
+	isubnetsPerNode, err := mathutil.Int(subnetsPerNode)
+	if err != nil {
+		return nil, err
+	}
+	if len(subs) != isubnetsPerNode {
+		return nil, errors.Errorf("inconsistent subnet assignment: %d vs %d", len(subs), isubnetsPerNode)
 	}
 	return subs, nil
 }
