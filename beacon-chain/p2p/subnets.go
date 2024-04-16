@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
@@ -202,6 +203,19 @@ func initializePersistentSubnets(id enode.ID, epoch primitives.Epoch) error {
 	return nil
 }
 
+func initializePersistentColumnSubnets(id enode.ID) error {
+	_, ok, expTime := cache.ColumnSubnetIDs.GetColumnSubnets()
+	if ok && expTime.After(time.Now()) {
+		return nil
+	}
+	subs, err := computeSubscribedColumnSubnets(id)
+	if err != nil {
+		return err
+	}
+	cache.ColumnSubnetIDs.AddColumnSubnets(subs)
+	return nil
+}
+
 // Spec pseudocode definition:
 //
 // def compute_subscribed_subnets(node_id: NodeID, epoch: Epoch) -> Sequence[SubnetID]:
@@ -217,6 +231,42 @@ func computeSubscribedSubnets(nodeID enode.ID, epoch primitives.Epoch) ([]uint64
 			return nil, err
 		}
 		subs = append(subs, sub)
+	}
+	return subs, nil
+}
+
+func computeCustodyColumns(nodeID enode.ID) ([]uint64, error) {
+	subs, err := computeSubscribedColumnSubnets(nodeID)
+	if err != nil {
+		return nil, err
+	}
+	colsPerSub := params.BeaconConfig().NumberOfColumns / params.BeaconConfig().DataColumnSidecarSubnetCount
+	colIdxs := []uint64{}
+	for _, sub := range subs {
+		for i := uint64(0); i < colsPerSub; i++ {
+			colId := params.BeaconConfig().DataColumnSidecarSubnetCount*i + sub
+			colIdxs = append(colIdxs, colId)
+		}
+	}
+	return colIdxs, nil
+}
+
+func computeSubscribedColumnSubnets(nodeID enode.ID) ([]uint64, error) {
+	subnetsPerNode := params.BeaconConfig().CustodyRequirement
+	subs := make([]uint64, 0, subnetsPerNode)
+
+	for i := uint64(0); i < subnetsPerNode; i++ {
+		sub, err := computeSubscribedColumnSubnet(nodeID, i)
+		if err != nil {
+			return nil, err
+		}
+		if slice.IsInUint64(sub, subs) {
+			continue
+		}
+		subs = append(subs, sub)
+	}
+	if len(subs) != int(subnetsPerNode) {
+		return nil, errors.Errorf("inconsistent subnet assignment: %d vs %d", len(subs), subnetsPerNode)
 	}
 	return subs, nil
 }
@@ -244,6 +294,16 @@ func computeSubscribedSubnet(nodeID enode.ID, epoch primitives.Epoch, index uint
 	}
 	subnet := (uint64(permutatedPrefix) + index) % params.BeaconConfig().AttestationSubnetCount
 	return subnet, nil
+}
+
+func computeSubscribedColumnSubnet(nodeID enode.ID, index uint64) (uint64, error) {
+	num := uint256.NewInt(0).SetBytes(nodeID.Bytes())
+	num = num.Add(num, uint256.NewInt(index))
+	num64bit := num.Uint64()
+	byteNum := bytesutil.Uint64ToBytesLittleEndian(num64bit)
+	hashedObj := hash.Hash(byteNum)
+	subnetID := bytesutil.FromBytes8(hashedObj[:8]) % params.BeaconConfig().DataColumnSidecarSubnetCount
+	return subnetID, nil
 }
 
 func computeSubscriptionExpirationTime(nodeID enode.ID, epoch primitives.Epoch) time.Duration {

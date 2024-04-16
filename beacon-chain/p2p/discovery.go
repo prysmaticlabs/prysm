@@ -58,6 +58,10 @@ func (s *Service) RefreshENR() {
 		log.WithError(err).Error("Could not initialize persistent subnets")
 		return
 	}
+	if err := initializePersistentColumnSubnets(s.dv5Listener.LocalNode().ID()); err != nil {
+		log.WithError(err).Error("Could not initialize persistent column subnets")
+		return
+	}
 
 	bitV := bitfield.NewBitvector64()
 	committees := cache.SubnetIDs.GetAllSubnets()
