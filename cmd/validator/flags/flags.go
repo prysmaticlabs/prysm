@@ -322,7 +322,7 @@ var (
 		Usage: "(Work in progress): Enables the web portal for the validator client.",
 		Value: false,
 	}
-	// SlashingProtectionExportDirFlag allows specifying the outpt directory
+	// SlashingProtectionExportDirFlag allows specifying the output directory
 	// for a validator's slashing protection history.
 	SlashingProtectionExportDirFlag = &cli.StringFlag{
 		Name:  "slashing-protection-export-dir",

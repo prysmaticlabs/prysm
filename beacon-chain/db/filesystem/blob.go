@@ -1,7 +1,9 @@
 package filesystem
 
 import (
+	"context"
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"strconv"
@@ -103,10 +105,27 @@ func (bs *BlobStorage) WarmCache() {
 		return
 	}
 	go func() {
-		if err := bs.pruner.prune(0); err != nil {
+		start := time.Now()
+		if err := bs.pruner.warmCache(); err != nil {
 			log.WithError(err).Error("Error encountered while warming up blob pruner cache")
 		}
+		log.WithField("elapsed", time.Since(start)).Info("Blob filesystem cache warm-up complete.")
 	}()
+}
+
+// ErrBlobStorageSummarizerUnavailable is a sentinel error returned when there is no pruner/cache available.
+// This should be used by code that optionally uses the summarizer to optimize rpc requests. Being able to
+// fallback when there is no summarizer allows client code to avoid test complexity where the summarizer doesn't matter.
+var ErrBlobStorageSummarizerUnavailable = errors.New("BlobStorage not initialized with a pruner or cache")
+
+// WaitForSummarizer blocks until the BlobStorageSummarizer is ready to use.
+// BlobStorageSummarizer is not ready immediately on node startup because it needs to sample the blob filesystem to
+// determine which blobs are available.
+func (bs *BlobStorage) WaitForSummarizer(ctx context.Context) (BlobStorageSummarizer, error) {
+	if bs == nil || bs.pruner == nil {
+		return nil, ErrBlobStorageSummarizerUnavailable
+	}
+	return bs.pruner.waitForCache(ctx)
 }
 
 // Save saves blobs given a list of sidecars.
@@ -279,6 +298,15 @@ func (bs *BlobStorage) Clear() error {
 		}
 	}
 	return nil
+}
+
+// WithinRetentionPeriod checks if the requested epoch is within the blob retention period.
+func (bs *BlobStorage) WithinRetentionPeriod(requested, current primitives.Epoch) bool {
+	if requested > math.MaxUint64-bs.retentionEpochs {
+		// If there is an overflow, then the retention period was set to an extremely large number.
+		return true
+	}
+	return requested+bs.retentionEpochs >= current
 }
 
 type blobNamer struct {
