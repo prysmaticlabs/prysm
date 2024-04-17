@@ -387,7 +387,7 @@ func FeeRecipientFromPubkey(key string) string {
 // writeLinesToFile writes a slice of strings to a file, each string on a new line.
 func writeLinesToFile(lines []string, filename string) error {
 	// Open the file for writing. If the file does not exist, create it, or truncate it if it does.
-	file, err := os.Create(filename)
+	f, err := os.Create(filepath.Clean(filename))
 	if err != nil {
 		return fmt.Errorf("error creating file: %w", err)
 	}
@@ -396,10 +396,10 @@ func writeLinesToFile(lines []string, filename string) error {
 		if err != nil {
 			log.Error(err.Error())
 		}
-	}(file)
+	}(f)
 
 	// Create a buffered writer from the file
-	writer := bufio.NewWriter(file)
+	writer := bufio.NewWriter(f)
 
 	// Iterate through all lines in the slice and write them to the file
 	for _, line := range lines {
