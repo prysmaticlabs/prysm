@@ -45,10 +45,10 @@ type quicProtocol uint16
 // quicProtocol is the "quic" key, which holds the QUIC port of the node.
 func (quicProtocol) ENRKey() string { return "quic" }
 
-// UpdateLocalSubnets checks that we are tracking our local persistent subnets for a variety of gossip topics.
+// RefreshPersistentSubnets checks that we are tracking our local persistent subnets for a variety of gossip topics.
 // This routine checks for our attestation, sync committee and data column subnets and updates them if they have
 // been rotated.
-func (s *Service) UpdateLocalSubnets() {
+func (s *Service) RefreshPersistentSubnets() {
 	// return early if discv5 isnt running
 	if s.dv5Listener == nil || !s.isInitialized() {
 		return

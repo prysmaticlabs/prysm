@@ -601,7 +601,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := tt.svcBuilder(t)
-			s.UpdateLocalSubnets()
+			s.RefreshPersistentSubnets()
 			tt.postValidation(t, s)
 			s.dv5Listener.Close()
 			cache.SubnetIDs.EmptyAllCaches()
