@@ -48,7 +48,7 @@ func (m MockPeerManager) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 }
 
 // RefreshENR .
-func (_ MockPeerManager) RefreshENR() {}
+func (_ MockPeerManager) RefreshPersistentSubnets() {}
 
 // FindPeersWithSubnet .
 func (_ MockPeerManager) FindPeersWithSubnet(_ context.Context, _ string, _ uint64, _ int) (bool, error) {
