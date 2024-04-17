@@ -293,6 +293,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 
 	switch b.version {
 	case version.Phase0:
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.attestations))
 		for i, att := range b.attestations {
 			a, ok := att.(*eth.Attestation)
@@ -311,6 +312,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			VoluntaryExits:    b.voluntaryExits,
 		}, nil
 	case version.Altair:
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.attestations))
 		for i, att := range b.attestations {
 			a, ok := att.(*eth.Attestation)
@@ -339,6 +341,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 					return nil, errPayloadHeaderWrongType
 				}
 			}
+			// TODO: extend to Electra
 			atts := make([]*eth.Attestation, len(b.attestations))
 			for i, att := range b.attestations {
 				a, ok := att.(*eth.Attestation)
@@ -367,6 +370,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				return nil, errPayloadWrongType
 			}
 		}
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.attestations))
 		for i, att := range b.attestations {
 			a, ok := att.(*eth.Attestation)
@@ -396,6 +400,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 					return nil, errPayloadHeaderWrongType
 				}
 			}
+			// TODO: extend to Electra
 			atts := make([]*eth.Attestation, len(b.attestations))
 			for i, att := range b.attestations {
 				a, ok := att.(*eth.Attestation)
@@ -425,6 +430,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				return nil, errPayloadWrongType
 			}
 		}
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.attestations))
 		for i, att := range b.attestations {
 			a, ok := att.(*eth.Attestation)
@@ -455,6 +461,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 					return nil, errPayloadHeaderWrongType
 				}
 			}
+			// TODO: extend to Electra
 			atts := make([]*eth.Attestation, len(b.attestations))
 			for i, att := range b.attestations {
 				a, ok := att.(*eth.Attestation)
@@ -485,6 +492,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				return nil, errPayloadWrongType
 			}
 		}
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.attestations))
 		for i, att := range b.attestations {
 			a, ok := att.(*eth.Attestation)

@@ -251,6 +251,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 		if err != nil {
 			return nil, err
 		}
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.block.body.attestations))
 		for i, att := range b.block.body.attestations {
 			a, ok := att.(*eth.Attestation)
@@ -285,6 +286,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 		if err != nil {
 			return nil, err
 		}
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.block.body.attestations))
 		for i, att := range b.block.body.attestations {
 			a, ok := att.(*eth.Attestation)
@@ -320,6 +322,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 		if err != nil {
 			return nil, err
 		}
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.block.body.attestations))
 		for i, att := range b.block.body.attestations {
 			a, ok := att.(*eth.Attestation)

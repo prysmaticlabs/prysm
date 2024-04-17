@@ -272,6 +272,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	var fullBlock interface{}
 	switch p := payload.(type) {
 	case *enginev1.ExecutionPayload:
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.Body().Attestations()))
 		for i, att := range b.Body().Attestations() {
 			a, ok := att.(*eth.Attestation)
@@ -305,6 +306,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		if err != nil {
 			return nil, err
 		}
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.Body().Attestations()))
 		for i, att := range b.Body().Attestations() {
 			a, ok := att.(*eth.Attestation)
@@ -343,6 +345,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		if err != nil {
 			return nil, err
 		}
+		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.Body().Attestations()))
 		for i, att := range b.Body().Attestations() {
 			a, ok := att.(*eth.Attestation)
