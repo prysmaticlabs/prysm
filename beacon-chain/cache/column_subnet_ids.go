@@ -33,23 +33,23 @@ func (s *columnSubnetIDs) GetColumnSubnets() ([]uint64, bool, time.Time) {
 
 	id, duration, ok := s.colSubCache.GetWithExpiration(columnKey)
 	if !ok {
-		return []uint64{}, ok, time.Time{}
+		return nil, false, time.Time{}
 	}
 	// Retrieve indices from the cache.
 	idxs, ok := id.([]uint64)
 	if !ok {
-		return []uint64{}, ok, time.Time{}
+		return nil, false, time.Time{}
 	}
 
 	return idxs, ok, duration
 }
 
 // AddColumnSubnets adds the relevant data column subnets.
-func (s *columnSubnetIDs) AddColumnSubnets(comIndex []uint64) {
-	s.colSubLock.RLock()
-	defer s.colSubLock.RUnlock()
+func (s *columnSubnetIDs) AddColumnSubnets(colIdx []uint64) {
+	s.colSubLock.Lock()
+	defer s.colSubLock.Unlock()
 
-	s.colSubCache.Set(columnKey, comIndex, 0)
+	s.colSubCache.Set(columnKey, colIdx, 0)
 }
 
 // EmptyAllCaches empties out all the related caches and flushes any stored
@@ -58,8 +58,8 @@ func (s *columnSubnetIDs) AddColumnSubnets(comIndex []uint64) {
 // separately.
 func (s *columnSubnetIDs) EmptyAllCaches() {
 	// Clear the cache.
-
 	s.colSubLock.Lock()
+	defer s.colSubLock.Unlock()
+
 	s.colSubCache.Flush()
-	s.colSubLock.Unlock()
 }
