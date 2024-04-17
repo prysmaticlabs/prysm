@@ -21,13 +21,13 @@ func NewEphemeralBlobStorage(t testing.TB) *BlobStorage {
 
 // NewEphemeralBlobStorageWithFs can be used by tests that want access to the virtual filesystem
 // in order to interact with it outside the parameters of the BlobStorage api.
-func NewEphemeralBlobStorageWithFs(t testing.TB) (afero.Fs, *BlobStorage, error) {
+func NewEphemeralBlobStorageWithFs(t testing.TB) (afero.Fs, *BlobStorage) {
 	fs := afero.NewMemMapFs()
 	pruner, err := newBlobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest, withWarmedCache())
 	if err != nil {
 		t.Fatal("test setup issue", err)
 	}
-	return fs, &BlobStorage{fs: fs, pruner: pruner}, nil
+	return fs, &BlobStorage{fs: fs, pruner: pruner}
 }
 
 type BlobMocker struct {
