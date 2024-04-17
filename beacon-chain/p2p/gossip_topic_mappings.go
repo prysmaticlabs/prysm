@@ -11,34 +11,34 @@ import (
 
 // gossipTopicMappings represent the protocol ID to protobuf message type map for easy
 // lookup.
-var gossipTopicMappings = map[string][]proto.Message{
-	BlockSubnetTopicFormat:                    {&ethpb.SignedBeaconBlock{}},
-	AttestationSubnetTopicFormat:              {&ethpb.Attestation{}, &ethpb.AttestationElectra{}},
-	ExitSubnetTopicFormat:                     {&ethpb.SignedVoluntaryExit{}},
-	ProposerSlashingSubnetTopicFormat:         {&ethpb.ProposerSlashing{}},
-	AttesterSlashingSubnetTopicFormat:         {&ethpb.AttesterSlashing{}},
-	AggregateAndProofSubnetTopicFormat:        {&ethpb.SignedAggregateAttestationAndProof{}},
-	SyncContributionAndProofSubnetTopicFormat: {&ethpb.SignedContributionAndProof{}},
-	SyncCommitteeSubnetTopicFormat:            {&ethpb.SyncCommitteeMessage{}},
-	BlsToExecutionChangeSubnetTopicFormat:     {&ethpb.SignedBLSToExecutionChange{}},
-	BlobSubnetTopicFormat:                     {&ethpb.BlobSidecar{}},
+var gossipTopicMappings = map[string]proto.Message{
+	BlockSubnetTopicFormat:                    &ethpb.SignedBeaconBlock{},
+	AttestationSubnetTopicFormat:              &ethpb.Attestation{}, // TODO: how to extend to Electra?
+	ExitSubnetTopicFormat:                     &ethpb.SignedVoluntaryExit{},
+	ProposerSlashingSubnetTopicFormat:         &ethpb.ProposerSlashing{},
+	AttesterSlashingSubnetTopicFormat:         &ethpb.AttesterSlashing{},
+	AggregateAndProofSubnetTopicFormat:        &ethpb.SignedAggregateAttestationAndProof{},
+	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
+	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
+	BlsToExecutionChangeSubnetTopicFormat:     &ethpb.SignedBLSToExecutionChange{},
+	BlobSubnetTopicFormat:                     &ethpb.BlobSidecar{},
 }
 
 // GossipTopicMappings is a function to return the assigned data type
 // versioned by epoch.
-func GossipTopicMappings(topic string, epoch primitives.Epoch) []proto.Message {
+func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 	if topic == BlockSubnetTopicFormat {
 		if epoch >= params.BeaconConfig().DenebForkEpoch {
-			return []proto.Message{&ethpb.SignedBeaconBlockDeneb{}}
+			return &ethpb.SignedBeaconBlockDeneb{}
 		}
 		if epoch >= params.BeaconConfig().CapellaForkEpoch {
-			return []proto.Message{&ethpb.SignedBeaconBlockCapella{}}
+			return &ethpb.SignedBeaconBlockCapella{}
 		}
 		if epoch >= params.BeaconConfig().BellatrixForkEpoch {
-			return []proto.Message{&ethpb.SignedBeaconBlockBellatrix{}}
+			return &ethpb.SignedBeaconBlockBellatrix{}
 		}
 		if epoch >= params.BeaconConfig().AltairForkEpoch {
-			return []proto.Message{&ethpb.SignedBeaconBlockAltair{}}
+			return &ethpb.SignedBeaconBlockAltair{}
 		}
 	}
 	return gossipTopicMappings[topic]
