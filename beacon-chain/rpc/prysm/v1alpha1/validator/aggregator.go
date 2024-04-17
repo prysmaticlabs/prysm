@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -85,22 +86,26 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		// The aggregator should prefer an attestation that they have signed. We check this by
 		// looking at the attestation's committee index against the validator's committee index
 		// and check the aggregate bits to ensure the validator's index is set.
-		if aggregatedAtt.Data.CommitteeIndex == req.CommitteeIndex &&
-			aggregatedAtt.AggregationBits.BitAt(indexInCommittee) &&
-			(!best.AggregationBits.BitAt(indexInCommittee) ||
-				aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count()) {
+		if aggregatedAtt.GetData().CommitteeIndex == req.CommitteeIndex &&
+			aggregatedAtt.GetAggregationBits().BitAt(indexInCommittee) &&
+			(!best.GetAggregationBits().BitAt(indexInCommittee) ||
+				aggregatedAtt.GetAggregationBits().Count() > best.GetAggregationBits().Count()) {
 			best = aggregatedAtt
 		}
 
 		// If the "best" still doesn't contain the validator's index, check the aggregation bits to
 		// choose the attestation with the most bits set.
-		if !best.AggregationBits.BitAt(indexInCommittee) &&
-			aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count() {
+		if !best.GetAggregationBits().BitAt(indexInCommittee) &&
+			aggregatedAtt.GetAggregationBits().Count() > best.GetAggregationBits().Count() {
 			best = aggregatedAtt
 		}
 	}
+	att, ok := best.(*ethpb.Attestation)
+	if !ok {
+		return nil, errors.New("best attestation has wrong type")
+	}
 	a := &ethpb.AggregateAttestationAndProof{
-		Aggregate:       best,
+		Aggregate:       att,
 		SelectionProof:  req.SlotSignature,
 		AggregatorIndex: validatorIndex,
 	}

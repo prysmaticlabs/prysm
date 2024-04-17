@@ -3,6 +3,7 @@ package operation
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
@@ -37,7 +38,7 @@ const (
 // UnAggregatedAttReceivedData is the data sent with UnaggregatedAttReceived events.
 type UnAggregatedAttReceivedData struct {
 	// Attestation is the unaggregated attestation object.
-	Attestation *ethpb.Attestation
+	Attestation interfaces.Attestation
 }
 
 // AggregatedAttReceivedData is the data sent with AggregatedAttReceived events.

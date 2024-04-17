@@ -190,6 +190,7 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     srcs = [
+        "attestation.go",
         "cloners.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep

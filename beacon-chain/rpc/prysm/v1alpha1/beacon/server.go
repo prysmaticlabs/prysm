@@ -50,3 +50,13 @@ type Server struct {
 	OptimisticModeFetcher       blockchain.OptimisticModeFetcher
 	CoreService                 *core.Service
 }
+
+func (bs *Server) ListAttestationsElectra(ctx context.Context, request *ethpb.ListAttestationsRequest) (*ethpb.ListAttestationsResponseElectra, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (bs *Server) AttestationPoolElectra(ctx context.Context, request *ethpb.AttestationPoolRequest) (*ethpb.AttestationPoolResponseElectra, error) {
+	//TODO implement me
+	panic("implement me")
+}

@@ -70,7 +70,7 @@ func (b *SignedBeaconBlock) SetAttesterSlashings(a []*eth.AttesterSlashing) {
 
 // SetAttestations sets the attestations in the block.
 // This function is not thread safe, it is only used during block creation.
-func (b *SignedBeaconBlock) SetAttestations(a []*eth.Attestation) {
+func (b *SignedBeaconBlock) SetAttestations(a []interfaces.Attestation) {
 	b.block.body.attestations = a
 }
 

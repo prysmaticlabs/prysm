@@ -272,6 +272,13 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	var fullBlock interface{}
 	switch p := payload.(type) {
 	case *enginev1.ExecutionPayload:
+		atts := make([]*eth.Attestation, len(b.Body().Attestations()))
+		for i, att := range b.Body().Attestations() {
+			a, ok := att.(*eth.Attestation)
+			if ok {
+				atts[i] = a
+			}
+		}
 		fullBlock = &eth.SignedBeaconBlockBellatrix{
 			Block: &eth.BeaconBlockBellatrix{
 				Slot:          b.Slot(),
@@ -284,7 +291,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 					Graffiti:          graffiti[:],
 					ProposerSlashings: b.Body().ProposerSlashings(),
 					AttesterSlashings: b.Body().AttesterSlashings(),
-					Attestations:      b.Body().Attestations(),
+					Attestations:      atts,
 					Deposits:          b.Body().Deposits(),
 					VoluntaryExits:    b.Body().VoluntaryExits(),
 					SyncAggregate:     syncAgg,
@@ -298,6 +305,13 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		if err != nil {
 			return nil, err
 		}
+		atts := make([]*eth.Attestation, len(b.Body().Attestations()))
+		for i, att := range b.Body().Attestations() {
+			a, ok := att.(*eth.Attestation)
+			if ok {
+				atts[i] = a
+			}
+		}
 		fullBlock = &eth.SignedBeaconBlockCapella{
 			Block: &eth.BeaconBlockCapella{
 				Slot:          b.Slot(),
@@ -310,7 +324,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 					Graffiti:              graffiti[:],
 					ProposerSlashings:     b.Body().ProposerSlashings(),
 					AttesterSlashings:     b.Body().AttesterSlashings(),
-					Attestations:          b.Body().Attestations(),
+					Attestations:          atts,
 					Deposits:              b.Body().Deposits(),
 					VoluntaryExits:        b.Body().VoluntaryExits(),
 					SyncAggregate:         syncAgg,
@@ -329,6 +343,13 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		if err != nil {
 			return nil, err
 		}
+		atts := make([]*eth.Attestation, len(b.Body().Attestations()))
+		for i, att := range b.Body().Attestations() {
+			a, ok := att.(*eth.Attestation)
+			if ok {
+				atts[i] = a
+			}
+		}
 		fullBlock = &eth.SignedBeaconBlockDeneb{
 			Block: &eth.BeaconBlockDeneb{
 				Slot:          b.Slot(),
@@ -341,7 +362,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 					Graffiti:              graffiti[:],
 					ProposerSlashings:     b.Body().ProposerSlashings(),
 					AttesterSlashings:     b.Body().AttesterSlashings(),
-					Attestations:          b.Body().Attestations(),
+					Attestations:          atts,
 					Deposits:              b.Body().Deposits(),
 					VoluntaryExits:        b.Body().VoluntaryExits(),
 					SyncAggregate:         syncAgg,

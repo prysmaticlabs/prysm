@@ -15,12 +15,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -257,8 +257,8 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation bitfields is
 // a valid length matching the size of the committee.
-func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyBeaconState, att *ethpb.Attestation) error {
-	committee, err := BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
+func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyBeaconState, att interfaces.Attestation) error {
+	committee, err := BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve beacon committees")
 	}
@@ -267,7 +267,7 @@ func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyB
 		return errors.New("no committee exist for this attestation")
 	}
 
-	if err := VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
+	if err := VerifyBitfieldLength(att.GetAggregationBits(), uint64(len(committee))); err != nil {
 		return errors.Wrap(err, "failed to verify aggregation bitfield")
 	}
 	return nil

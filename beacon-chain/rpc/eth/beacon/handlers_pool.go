@@ -58,7 +58,10 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	if isEmptyReq {
 		allAtts := make([]*structs.Attestation, len(attestations))
 		for i, att := range attestations {
-			allAtts[i] = structs.AttFromConsensus(att)
+			a, ok := att.(*eth.Attestation)
+			if ok {
+				allAtts[i] = structs.AttFromConsensus(a)
+			}
 		}
 		httputil.WriteJson(w, &structs.ListAttestationsResponse{Data: allAtts})
 		return
@@ -67,11 +70,14 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	bothDefined := rawSlot != "" && rawCommitteeIndex != ""
 	filteredAtts := make([]*structs.Attestation, 0, len(attestations))
 	for _, att := range attestations {
-		committeeIndexMatch := rawCommitteeIndex != "" && att.Data.CommitteeIndex == primitives.CommitteeIndex(committeeIndex)
-		slotMatch := rawSlot != "" && att.Data.Slot == primitives.Slot(slot)
+		committeeIndexMatch := rawCommitteeIndex != "" && att.GetData().CommitteeIndex == primitives.CommitteeIndex(committeeIndex)
+		slotMatch := rawSlot != "" && att.GetData().Slot == primitives.Slot(slot)
 		shouldAppend := (bothDefined && committeeIndexMatch && slotMatch) || (!bothDefined && (committeeIndexMatch || slotMatch))
 		if shouldAppend {
-			filteredAtts = append(filteredAtts, structs.AttFromConsensus(att))
+			a, ok := att.(*eth.Attestation)
+			if ok {
+				filteredAtts = append(filteredAtts, structs.AttFromConsensus(a))
+			}
 		}
 	}
 	httputil.WriteJson(w, &structs.ListAttestationsResponse{Data: filteredAtts})

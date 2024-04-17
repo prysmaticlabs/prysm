@@ -878,7 +878,10 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	consensusAtts := blk.Block().Body().Attestations()
 	atts := make([]*structs.Attestation, len(consensusAtts))
 	for i, att := range consensusAtts {
-		atts[i] = structs.AttFromConsensus(att)
+		a, ok := att.(*eth.Attestation)
+		if ok {
+			atts[i] = structs.AttFromConsensus(a)
+		}
 	}
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
