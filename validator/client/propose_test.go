@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
@@ -31,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"go.uber.org/mock/gomock"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type mocks struct {
@@ -1256,6 +1259,159 @@ func Test_validator_SetGraffiti(t *testing.T) {
 					require.Equal(t, v.proposerSettings.ProposeConfig[pubKey].GraffitiConfig.Graffiti, tt.graffiti)
 				}
 
+			}
+		})
+	}
+}
+
+func Test_findBuilderBoost(t *testing.T) {
+	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
+
+	type args struct {
+		proposerSettings *proposer.Settings
+	}
+	tests := []struct {
+		name string
+		args args
+		want *wrapperspb.UInt64Value
+	}{
+		{
+			name: "no proposer settings",
+			args: args{
+				proposerSettings: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "Proposer settings without builder settings",
+			args: args{
+				proposerSettings: &proposer.Settings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
+						config[pubKey] = &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+						}
+						return config
+					}(),
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "Proposer settings with builder settings but without builder boost factor",
+			args: args{
+				proposerSettings: &proposer.Settings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
+						config[pubKey] = &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+							BuilderConfig: &proposer.BuilderConfig{
+								Enabled: true,
+							},
+						}
+						return config
+					}(),
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "Proposer settings with builder settings and specific propose config",
+			args: args{
+				proposerSettings: &proposer.Settings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
+						bb := uint64(123)
+						config[pubKey] = &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+							BuilderConfig: &proposer.BuilderConfig{
+								Enabled:            true,
+								BuilderBoostFactor: &bb,
+							},
+						}
+						return config
+					}(),
+				},
+			},
+			want: &wrapperspb.UInt64Value{
+				Value: 123,
+			},
+		},
+		{
+			name: "Proposer settings with builder settings and specific propose config but wrong pubkey",
+			args: args{
+				proposerSettings: &proposer.Settings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
+						bb := uint64(123)
+						config[[fieldparams.BLSPubkeyLength]byte{'z'}] = &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+							BuilderConfig: &proposer.BuilderConfig{
+								Enabled:            true,
+								BuilderBoostFactor: &bb,
+							},
+						}
+						return config
+					}(),
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "Proposer settings with builder settings and default config",
+			args: args{
+				proposerSettings: &proposer.Settings{
+					DefaultConfig: func() *proposer.Option {
+						bb := uint64(123)
+						return &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+							BuilderConfig: &proposer.BuilderConfig{
+								Enabled:            true,
+								BuilderBoostFactor: &bb,
+							},
+						}
+					}(),
+				},
+			},
+			want: &wrapperspb.UInt64Value{
+				Value: 123,
+			},
+		},
+		{
+			name: "Proposer settings with nil boost settings",
+			args: args{
+				proposerSettings: &proposer.Settings{
+					DefaultConfig: func() *proposer.Option {
+						var bb *uint64
+						return &proposer.Option{
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+							BuilderConfig: &proposer.BuilderConfig{
+								Enabled:            true,
+								BuilderBoostFactor: bb,
+							},
+						}
+					}(),
+				},
+			},
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := findBuilderBoost(pubKey, tt.args.proposerSettings); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("findBuilderBoost() = %v, want %v", got, tt.want)
 			}
 		})
 	}

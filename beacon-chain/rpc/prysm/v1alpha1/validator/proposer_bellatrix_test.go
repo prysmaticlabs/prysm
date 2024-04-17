@@ -290,7 +290,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint64(2), e.BlockNumber()) // builder block
 	})
-	t.Run("Builder builder has higher value but forced to local payload with builder boost factor", func(t *testing.T) {
+	t.Run("Builder has higher value but forced to local payload with builder boost factor at 0", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
@@ -364,6 +364,23 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
 		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
+
+		require.LogsContain(t, hook, "builderGweiValue=1 localBoostPercentage=0 localGweiValue=2")
+	})
+	t.Run("Builder configured. Local block has higher value even with higher builder boost factor", func(t *testing.T) {
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		require.NoError(t, err)
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 2 * 1e9}
+		b := blk.Block()
+		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, 99999))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block

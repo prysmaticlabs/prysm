@@ -26,12 +26,14 @@ import (
 )
 
 func TestProposerSettingsLoader(t *testing.T) {
+	bbf := uint64(100)
 	hook := logtest.NewGlobal()
 	type proposerSettingsFlag struct {
-		dir        string
-		url        string
-		defaultfee string
-		defaultgas string
+		dir                string
+		url                string
+		defaultfee         string
+		defaultgas         string
+		builderBoostFactor *uint64
 	}
 
 	type args struct {
@@ -49,6 +51,200 @@ func TestProposerSettingsLoader(t *testing.T) {
 		validatorRegistrationEnabled bool
 		skipDBSavedCheck             bool
 	}{
+		{
+			name: "builder boost factor set in proposer settings",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-with-builder-boost-config.yaml",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *proposer.Settings {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				tempBBF := uint64(90)
+				return &proposer.Settings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
+							BuilderConfig: &proposer.BuilderConfig{
+								Enabled:            true,
+								GasLimit:           40000000,
+								BuilderBoostFactor: &tempBBF,
+							},
+						},
+					},
+					DefaultConfig: &proposer.Option{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
+						BuilderConfig: &proposer.BuilderConfig{
+							Enabled:  false,
+							GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+						},
+					},
+				}
+			},
+			withdb: func(db iface.ValidatorDB) error {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				tempBBF := uint64(90)
+				settings := &proposer.Settings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
+							BuilderConfig: &proposer.BuilderConfig{
+								Enabled:            true,
+								GasLimit:           40000000,
+								BuilderBoostFactor: &tempBBF,
+							},
+						},
+					},
+					DefaultConfig: &proposer.Option{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
+						BuilderConfig: &proposer.BuilderConfig{
+							Enabled:  false,
+							GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+						},
+					},
+				}
+				return db.SaveProposerSettings(context.Background(), settings)
+			},
+		},
+		{
+			name: "builder boost factor flag set with proposer settings file",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:                "./testdata/good-prepare-beacon-proposer-config.yaml",
+					url:                "",
+					defaultfee:         "",
+					builderBoostFactor: &bbf,
+				},
+			},
+			want: func() *proposer.Settings {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &proposer.Settings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
+							BuilderConfig: &proposer.BuilderConfig{
+								Enabled:            true,
+								GasLimit:           40000000,
+								BuilderBoostFactor: &bbf,
+							},
+						},
+					},
+					DefaultConfig: &proposer.Option{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
+						BuilderConfig: &proposer.BuilderConfig{
+							Enabled:            false,
+							GasLimit:           validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+							BuilderBoostFactor: &bbf,
+						},
+					},
+				}
+			},
+			withdb: func(db iface.ValidatorDB) error {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				settings := &proposer.Settings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipientConfig: &proposer.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
+							BuilderConfig: &proposer.BuilderConfig{
+								Enabled:            true,
+								GasLimit:           40000000,
+								BuilderBoostFactor: &bbf,
+							},
+						},
+					},
+					DefaultConfig: &proposer.Option{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
+						BuilderConfig: &proposer.BuilderConfig{
+							Enabled:            false,
+							GasLimit:           validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+							BuilderBoostFactor: &bbf,
+						},
+					},
+				}
+				return db.SaveProposerSettings(context.Background(), settings)
+			},
+		},
+		{
+			name: "builder boost factor set from flag happy path",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:                "",
+					url:                "",
+					defaultfee:         "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
+					builderBoostFactor: &bbf,
+				},
+			},
+			want: func() *proposer.Settings {
+				return &proposer.Settings{
+					ProposeConfig: nil,
+					DefaultConfig: &proposer.Option{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
+						BuilderConfig: &proposer.BuilderConfig{
+							Enabled:            true,
+							GasLimit:           validator.Uint64(30000000),
+							BuilderBoostFactor: &bbf,
+						},
+					},
+				}
+			},
+			withdb: func(db iface.ValidatorDB) error {
+				settings := &proposer.Settings{
+					ProposeConfig: nil,
+					DefaultConfig: &proposer.Option{
+						FeeRecipientConfig: &proposer.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
+						BuilderConfig: &proposer.BuilderConfig{
+							Enabled:            true,
+							GasLimit:           validator.Uint64(30000000),
+							BuilderBoostFactor: &bbf,
+						},
+					},
+				}
+				return db.SaveProposerSettings(context.Background(), settings)
+			},
+			validatorRegistrationEnabled: true,
+		},
+		{
+			name: "builder boost factor set without builder enabled",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:                "",
+					url:                "",
+					defaultfee:         "",
+					builderBoostFactor: &bbf,
+				},
+			},
+			want: func() *proposer.Settings {
+				return nil
+			},
+			wantLog:          "No proposer settings were provided",
+			skipDBSavedCheck: true,
+		},
 		{
 			name: "graffiti in db without fee recipient",
 			args: args{
@@ -926,6 +1122,10 @@ func TestProposerSettingsLoader(t *testing.T) {
 					set.String(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas, "")
 					require.NoError(t, set.Set(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas))
 				}
+				if tt.args.proposerSettingsFlagValues.builderBoostFactor != nil {
+					set.Uint64(flags.BuilderBoostFactorFlag.Name, uint64(*tt.args.proposerSettingsFlagValues.builderBoostFactor), "")
+					require.NoError(t, set.Set(flags.BuilderBoostFactorFlag.Name, fmt.Sprintf("%d", *tt.args.proposerSettingsFlagValues.builderBoostFactor)))
+				}
 				if tt.validatorRegistrationEnabled {
 					set.Bool(flags.EnableBuilderFlag.Name, true, "")
 				}
@@ -940,6 +1140,7 @@ func TestProposerSettingsLoader(t *testing.T) {
 					validatorDB,
 					WithBuilderConfig(),
 					WithGasLimit(),
+					WithBuilderBoostFactor(),
 				)
 				if tt.wantInitErr != "" {
 					require.ErrorContains(t, tt.wantInitErr, err)
