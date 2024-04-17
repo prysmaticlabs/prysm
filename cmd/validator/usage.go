@@ -116,6 +116,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GraffitiFileFlag,
 			flags.Web3SignerURLFlag,
 			flags.Web3SignerPublicValidatorKeysFlag,
+			flags.Web3SignerKeyFileFlag,
 			flags.ProposerSettingsFlag,
 			flags.ProposerSettingsURLFlag,
 			flags.SuggestedFeeRecipientFlag,

@@ -1,6 +1,7 @@
 package components
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -258,7 +259,17 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
 		args = append(args,
 			fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort),
-			fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(validatorHexPubKeys, ",")))
+		)
+		if v.config.UsePersistentKeyFile {
+			testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/proposer-settings/validator_%d", index)
+			keysPath := filepath.Join(testNetDir, "keys.txt")
+			if err := writeLinesToFile(validatorHexPubKeys, keysPath); err != nil {
+				return err
+			}
+			args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerKeyFileFlag.Name, keysPath))
+		} else {
+			args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(validatorHexPubKeys, ",")))
+		}
 	} else {
 		// When not using remote key signer, use interop keys.
 		args = append(args,
@@ -371,4 +382,36 @@ func createProposerSettingsPath(pubkeys []string, nodeIdx int) (string, error) {
 func FeeRecipientFromPubkey(key string) string {
 	// pubkey[:(2+fieldparams.FeeRecipientLength*2)] slicing 2 (for the 0x preamble) + 2 hex chars for each byte
 	return common.HexToAddress(key[:(2 + fieldparams.FeeRecipientLength*2)]).Hex()
+}
+
+// writeLinesToFile writes a slice of strings to a file, each string on a new line.
+func writeLinesToFile(lines []string, filename string) error {
+	// Open the file for writing. If the file does not exist, create it, or truncate it if it does.
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("error creating file: %w", err)
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Error(err.Error())
+		}
+	}(file)
+
+	// Create a buffered writer from the file
+	writer := bufio.NewWriter(file)
+
+	// Iterate through all lines in the slice and write them to the file
+	for _, line := range lines {
+		if _, err := writer.WriteString(line + "\n"); err != nil {
+			return fmt.Errorf("error writing line to file: %w", err)
+		}
+	}
+
+	// Flush remaining buffered data to the file
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("error flushing data to file: %w", err)
+	}
+
+	return nil
 }
