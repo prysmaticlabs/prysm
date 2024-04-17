@@ -26,6 +26,8 @@ mainnet = {
     "max_blobs_per_block.size": "6",
     "max_blob_commitments.size": "4096",
     "kzg_commitment_inclusion_proof_depth.size": "17",
+    "max_attesting_indices.size": "131072",
+    "max_committees_per_slot.size": "64",
 }
 
 minimal = {
@@ -48,6 +50,8 @@ minimal = {
     "max_blobs_per_block.size": "6",
     "max_blob_commitments.size": "16",
     "kzg_commitment_inclusion_proof_depth.size": "9",
+    "max_attestation_electra_aggregation_bits.size": "8192",
+    "max_committees_per_slot.size": "4",
 }
 
 ###### Rules definitions #######
