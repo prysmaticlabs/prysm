@@ -61,7 +61,7 @@ func TestService_headNextSyncCommitteeIndices(t *testing.T) {
 	indices, err := c.headNextSyncCommitteeIndices(context.Background(), 0, primitives.Slot(slot))
 	require.NoError(t, err)
 
-	// NextSyncCommittee should be be empty after `ProcessSyncCommitteeUpdates`. Validator should get indices.
+	// NextSyncCommittee should be empty after `ProcessSyncCommitteeUpdates`. Validator should get indices.
 	require.NotEqual(t, 0, len(indices))
 }
 

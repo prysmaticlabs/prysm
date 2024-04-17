@@ -482,7 +482,10 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 func TestBlobValidatorFromRootReq(t *testing.T) {
 	rootA := bytesutil.PadTo([]byte("valid"), 32)
 	rootB := bytesutil.PadTo([]byte("invalid"), 32)
-	header := &ethpb.SignedBeaconBlockHeader{}
+	header := &ethpb.SignedBeaconBlockHeader{
+		Header:    &ethpb.BeaconBlockHeader{Slot: 0},
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
+	}
 	blobSidecarA0 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootA), header, 0, []byte{}, make([][]byte, 0))
 	blobSidecarA1 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootA), header, 1, []byte{}, make([][]byte, 0))
 	blobSidecarB0 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootB), header, 0, []byte{}, make([][]byte, 0))
@@ -590,7 +593,8 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			vf := blobValidatorFromRangeReq(c.req)
 			header := &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{Slot: c.responseSlot},
+				Header:    &ethpb.BeaconBlockHeader{Slot: c.responseSlot},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
 			}
 			sc := util.GenerateTestDenebBlobSidecar(t, [32]byte{}, header, 0, []byte{}, make([][]byte, 0))
 			err := vf(sc)

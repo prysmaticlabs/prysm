@@ -3,6 +3,7 @@ package filesystem
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"strconv"
@@ -121,7 +122,7 @@ var ErrBlobStorageSummarizerUnavailable = errors.New("BlobStorage not initialize
 // BlobStorageSummarizer is not ready immediately on node startup because it needs to sample the blob filesystem to
 // determine which blobs are available.
 func (bs *BlobStorage) WaitForSummarizer(ctx context.Context) (BlobStorageSummarizer, error) {
-	if bs.pruner == nil {
+	if bs == nil || bs.pruner == nil {
 		return nil, ErrBlobStorageSummarizerUnavailable
 	}
 	return bs.pruner.waitForCache(ctx)
@@ -297,6 +298,15 @@ func (bs *BlobStorage) Clear() error {
 		}
 	}
 	return nil
+}
+
+// WithinRetentionPeriod checks if the requested epoch is within the blob retention period.
+func (bs *BlobStorage) WithinRetentionPeriod(requested, current primitives.Epoch) bool {
+	if requested > math.MaxUint64-bs.retentionEpochs {
+		// If there is an overflow, then the retention period was set to an extremely large number.
+		return true
+	}
+	return requested+bs.retentionEpochs >= current
 }
 
 type blobNamer struct {

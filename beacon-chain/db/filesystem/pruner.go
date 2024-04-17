@@ -33,17 +33,32 @@ type blobPruner struct {
 	prunedBefore atomic.Uint64
 	windowSize   primitives.Slot
 	cache        *blobStorageCache
-	cacheWarmed  chan struct{}
+	cacheReady   chan struct{}
+	warmed       bool
 	fs           afero.Fs
 }
 
-func newBlobPruner(fs afero.Fs, retain primitives.Epoch) (*blobPruner, error) {
+type prunerOpt func(*blobPruner) error
+
+func withWarmedCache() prunerOpt {
+	return func(p *blobPruner) error {
+		return p.warmCache()
+	}
+}
+
+func newBlobPruner(fs afero.Fs, retain primitives.Epoch, opts ...prunerOpt) (*blobPruner, error) {
 	r, err := slots.EpochStart(retain + retentionBuffer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set retentionSlots")
 	}
 	cw := make(chan struct{})
-	return &blobPruner{fs: fs, windowSize: r, cache: newBlobStorageCache(), cacheWarmed: cw}, nil
+	p := &blobPruner{fs: fs, windowSize: r, cache: newBlobStorageCache(), cacheReady: cw}
+	for _, o := range opts {
+		if err := o(p); err != nil {
+			return nil, err
+		}
+	}
+	return p, nil
 }
 
 // notify updates the pruner's view of root->blob mappings. This allows the pruner to build a cache
@@ -57,6 +72,8 @@ func (p *blobPruner) notify(root [32]byte, latest primitives.Slot, idx uint64) e
 		return nil
 	}
 	go func() {
+		p.Lock()
+		defer p.Unlock()
 		if err := p.prune(primitives.Slot(pruned)); err != nil {
 			log.WithError(err).Errorf("Failed to prune blobs from slot %d", latest)
 		}
@@ -74,16 +91,21 @@ func windowMin(latest, offset primitives.Slot) primitives.Slot {
 }
 
 func (p *blobPruner) warmCache() error {
+	p.Lock()
+	defer p.Unlock()
 	if err := p.prune(0); err != nil {
 		return err
 	}
-	close(p.cacheWarmed)
+	if !p.warmed {
+		p.warmed = true
+		close(p.cacheReady)
+	}
 	return nil
 }
 
 func (p *blobPruner) waitForCache(ctx context.Context) (*blobStorageCache, error) {
 	select {
-	case <-p.cacheWarmed:
+	case <-p.cacheReady:
 		return p.cache, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -94,8 +116,6 @@ func (p *blobPruner) waitForCache(ctx context.Context) (*blobStorageCache, error
 // It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
 func (p *blobPruner) prune(pruneBefore primitives.Slot) error {
-	p.Lock()
-	defer p.Unlock()
 	start := time.Now()
 	totalPruned, totalErr := 0, 0
 	// Customize logging/metrics behavior for the initial cache warmup when slot=0.

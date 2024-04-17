@@ -118,6 +118,7 @@ type ReadOnlyValidator interface {
 // ReadOnlyValidators defines a struct which only has read access to validators methods.
 type ReadOnlyValidators interface {
 	Validators() []*ethpb.Validator
+	ValidatorsReadOnly() []ReadOnlyValidator
 	ValidatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Validator, error)
 	ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (ReadOnlyValidator, error)
 	ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool)
