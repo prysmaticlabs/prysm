@@ -25,8 +25,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("no error for duplicate", func(t *testing.T) {
-		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-		require.NoError(t, err)
+		fs, bs := NewEphemeralBlobStorageWithFs(t)
 		existingSidecar := testSidecars[0]
 
 		blobPath := namerForSidecar(existingSidecar).path()
@@ -130,8 +129,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 // pollUntil polls a condition function until it returns true or a timeout is reached.
 
 func TestBlobIndicesBounds(t *testing.T) {
-	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-	require.NoError(t, err)
+	fs, bs := NewEphemeralBlobStorageWithFs(t)
 	root := [32]byte{}
 
 	okIdx := uint64(fieldparams.MaxBlobsPerBlock - 1)
@@ -162,8 +160,7 @@ func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, idx uint64) {
 
 func TestBlobStoragePrune(t *testing.T) {
 	currentSlot := primitives.Slot(200000)
-	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-	require.NoError(t, err)
+	fs, bs := NewEphemeralBlobStorageWithFs(t)
 
 	t.Run("PruneOne", func(t *testing.T) {
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 300, fieldparams.MaxBlobsPerBlock)
@@ -219,8 +216,7 @@ func TestBlobStoragePrune(t *testing.T) {
 
 func BenchmarkPruning(b *testing.B) {
 	var t *testing.T
-	_, bs, err := NewEphemeralBlobStorageWithFs(t)
-	require.NoError(t, err)
+	_, bs := NewEphemeralBlobStorageWithFs(t)
 
 	blockQty := 10000
 	currentSlot := primitives.Slot(150000)
