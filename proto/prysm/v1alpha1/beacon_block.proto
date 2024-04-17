@@ -327,7 +327,7 @@ message SignedBeaconBlockHeader {
 }
 
 message IndexedAttestation {
-    repeated uint64 attesting_indices = 1 [(ethereum.eth.ext.ssz_max) = "2048"];
+    repeated uint64 attesting_indices = 1 [(ethereum.eth.ext.ssz_max) = "max_attesting_indices.size"];
 
     AttestationData data = 2;
 
@@ -788,7 +788,7 @@ message BeaconBlockBodyElectra {
     repeated AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "1"];
 
     // At most MAX_ATTESTATIONS_ELECTRA.
-    repeated Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "8"];
+    repeated AttestationElectra attestations = 6 [(ethereum.eth.ext.ssz_max) = "8"];
 
     // At most MAX_DEPOSITS.
     repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
@@ -851,7 +851,7 @@ message BlindedBeaconBlockBodyElectra {
     repeated AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "1"];
 
     // At most MAX_ATTESTATIONS_ELECTRA.
-    repeated Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "8"];
+    repeated AttestationElectra attestations = 6 [(ethereum.eth.ext.ssz_max) = "8"];
 
     // At most MAX_DEPOSITS.
     repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
