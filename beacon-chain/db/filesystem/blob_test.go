@@ -133,7 +133,7 @@ func TestBlobIndicesBounds(t *testing.T) {
 	root := [32]byte{}
 
 	okIdx := uint64(fieldparams.MaxBlobsPerBlock - 1)
-	writeFakeSSZ(t, fs, root, okIdx)
+	writeFakeSSZ(t, fs, root, 0, okIdx)
 	indices, err := bs.Indices(root)
 	require.NoError(t, err)
 	var expected [fieldparams.MaxBlobsPerBlock]bool
@@ -143,13 +143,13 @@ func TestBlobIndicesBounds(t *testing.T) {
 	}
 
 	oobIdx := uint64(fieldparams.MaxBlobsPerBlock)
-	writeFakeSSZ(t, fs, root, oobIdx)
+	writeFakeSSZ(t, fs, root, 0, oobIdx)
 	_, err = bs.Indices(root)
 	require.ErrorIs(t, err, errIndexOutOfBounds)
 }
 
-func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, idx uint64) {
-	namer := blobNamer{root: root, index: idx}
+func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, slot primitives.Slot, idx uint64) {
+	namer := blobNamer{root: root, slot: slot, index: idx}
 	require.NoError(t, fs.MkdirAll(namer.dir(), 0700))
 	fh, err := fs.Create(namer.path())
 	require.NoError(t, err)

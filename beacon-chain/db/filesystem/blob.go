@@ -316,6 +316,7 @@ func (bs *BlobStorage) WithinRetentionPeriod(requested, current primitives.Epoch
 
 type blobNamer struct {
 	root  [32]byte
+	slot  primitives.Slot
 	index uint64
 }
 
