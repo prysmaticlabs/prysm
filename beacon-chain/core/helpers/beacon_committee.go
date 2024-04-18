@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	committeeCache       = cache.NewCommitteesCache()
+	committeeCache       = cache.InitializeCommitteeCacheOrPanic()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
 )
 
@@ -302,7 +302,7 @@ func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, 
 	if err != nil {
 		return err
 	}
-	if committeeCache.HasEntry(string(seed[:])) {
+	if committeeCache.HasEntry(seed) {
 		return nil
 	}
 	shuffledIndices, err := ShuffledIndices(state, e)
@@ -321,15 +321,12 @@ func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, 
 		return sortedIndices[i] < sortedIndices[j]
 	})
 
-	if err := committeeCache.AddCommitteeShuffledList(ctx, &cache.Committees{
+	return committeeCache.AddCommitteeShuffledList(ctx, &cache.Committees{
 		ShuffledIndices: shuffledIndices,
 		CommitteeCount:  uint64(params.BeaconConfig().SlotsPerEpoch.Mul(count)),
 		Seed:            seed,
 		SortedIndices:   sortedIndices,
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
 }
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.

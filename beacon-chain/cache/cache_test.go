@@ -1,9 +1,352 @@
 package cache
 
 import (
+	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/stretchr/testify/assert"
+	"sync"
 	"testing"
+
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
-func TestMain(m *testing.M) {
-	m.Run()
+// generics
+type Key = primitives.Epoch
+type Value = []byte
+
+var (
+	// case setup
+	myCache     lruCache[Key, Value]
+	myCacheOnce sync.Once
+	cacheSetup  = func(t *testing.T) {
+		myCacheOnce.Do(func() {
+			var err error
+			myCache, err = NewTestCache[Key, Value]()
+			if err != nil {
+				t.Fatalf("Error creating cache: %v", err)
+			}
+		})
+		myCache.Clear()
+	}
+
+	// case metrics
+	reg = prometheus.NewPedanticRegistry()
+
+	// case values
+	key   = primitives.Epoch(1)
+	value = []byte("0xaaa")
+)
+
+func TestCache_LRU(t *testing.T) {
+	tests := []struct {
+		name                     string
+		cacheSetup               func(t *testing.T)
+		key                      Key
+		value                    Value
+		expectedValue            Value
+		expectedError            error
+		expectedHitCacheMetrics  float64
+		expectedMissCacheMetrics float64
+	}{
+		{
+			name: "Test adding value returns value",
+			cacheSetup: func(t *testing.T) {
+				cacheSetup(t)
+			},
+			key:                      key,
+			value:                    value,
+			expectedValue:            value,
+			expectedError:            nil,
+			expectedHitCacheMetrics:  1,
+			expectedMissCacheMetrics: 0,
+		},
+		{
+			name: "Test adding nil value returns error",
+			cacheSetup: func(t *testing.T) {
+				cacheSetup(t)
+			},
+			key:                      key,
+			value:                    nil,
+			expectedValue:            nil,
+			expectedError:            ErrNilValueProvided,
+			expectedHitCacheMetrics:  1,
+			expectedMissCacheMetrics: 1,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// test setup
+			test.cacheSetup(t)
+
+			// test values
+			err := add(myCache, test.key, test.value)
+			if !errors.Is(err, test.expectedError) {
+				t.Errorf("Expected error %v, got %v", test.expectedError, err)
+			}
+
+			var item Value
+			item, err = get(myCache, test.key)
+			if item == nil {
+				if !errors.Is(err, ErrNotFound) {
+					t.Errorf("Expected error %v, got %v", ErrNotFound, err)
+				}
+			}
+			require.DeepEqual(t, item, test.expectedValue)
+
+			// test metrics
+			var metrics []*dto.MetricFamily
+			if metrics, err = reg.Gather(); err != nil {
+				t.Error("Gathering failed:", err)
+			}
+			assert.Equal(t, dto.MetricType_COUNTER, metrics[0].GetType())
+			assert.Equal(t, "total_test_cache_hit", metrics[0].GetName())
+			assert.Equal(t, "The number of get requests that are present in the cache.", metrics[0].GetHelp())
+			assert.Equal(t, test.expectedHitCacheMetrics, *metrics[0].GetMetric()[0].Counter.Value)
+
+			assert.Equal(t, dto.MetricType_COUNTER, metrics[1].GetType())
+			assert.Equal(t, "total_test_cache_miss", metrics[1].GetName())
+			assert.Equal(t, "The number of get requests that aren't present in the cache.", metrics[1].GetHelp())
+			assert.Equal(t, test.expectedMissCacheMetrics, *metrics[1].GetMetric()[0].Counter.Value)
+		})
+	}
+}
+
+const (
+	maxTestCacheSize = int(4)
+)
+
+var (
+	testPromCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_test_cache_hit",
+		Help: "The number of get requests that are present in the cache.",
+	})
+	testPromCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_test_cache_miss",
+		Help: "The number of get requests that aren't present in the cache.",
+	})
+)
+
+type TestCache[K Key, V Value] struct {
+	lru                         *lru.Cache[K, V]
+	promCacheMiss, promCacheHit prometheus.Counter
+}
+
+func NewTestCache[K Key, V Value]() (*TestCache[K, V], error) {
+	cache, err := lru.New[K, V](maxTestCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
+	if testPromCacheHit == nil || testPromCacheMiss == nil {
+		return nil, err
+	}
+
+	reg.MustRegister(testPromCacheMiss)
+	reg.MustRegister(testPromCacheHit)
+
+	return &TestCache[K, V]{
+		lru:           cache,
+		promCacheMiss: testPromCacheMiss,
+		promCacheHit:  testPromCacheHit,
+	}, nil
+}
+
+func (c *TestCache[K, V]) get() *lru.Cache[K, V] {
+	return c.lru
+}
+
+func (c *TestCache[K, V]) hitCache() {
+	c.promCacheHit.Inc()
+}
+
+func (c *TestCache[K, V]) missCache() {
+	c.promCacheMiss.Inc()
+}
+
+func (c *TestCache[K, V]) Clear() {
+	purge[K, V](c)
+}
+
+// --------------------------------------------------------------------------------- //
+
+const (
+	maxTestBeaconCacheSize = int(4)
+)
+
+var (
+	testPromBeaconCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_beacon_test_cache_hit",
+		Help: "The number of get requests that are present in the cache.",
+	})
+	testPromBeaconCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_beacon_test_cache_miss",
+		Help: "The number of get requests that aren't present in the cache.",
+	})
+)
+
+type TestBeaconCache[K string, V state.BeaconState] struct {
+	lru                         *lru.Cache[K, V]
+	promCacheMiss, promCacheHit prometheus.Counter
+}
+
+func (c *TestBeaconCache[K, V]) get() *lru.Cache[K, V] {
+	return c.lru
+}
+
+func (c *TestBeaconCache[K, V]) hitCache() {
+	c.promCacheHit.Inc()
+}
+
+func (c *TestBeaconCache[K, V]) missCache() {
+	c.promCacheMiss.Inc()
+}
+
+func (c *TestBeaconCache[K, V]) Clear() {
+	purge[K, V](c)
+}
+
+func NewTestBeaconCache[K string, V state.BeaconState]() (*TestBeaconCache[K, V], error) {
+	cache, err := lru.New[K, V](maxTestBeaconCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
+	if testPromCacheHit == nil || testPromCacheMiss == nil {
+		return nil, err
+	}
+
+	reg.MustRegister(testPromBeaconCacheMiss)
+	reg.MustRegister(testPromBeaconCacheHit)
+
+	return &TestBeaconCache[K, V]{
+		lru:           cache,
+		promCacheMiss: testPromBeaconCacheMiss,
+		promCacheHit:  testPromBeaconCacheHit,
+	}, nil
+}
+
+func (c *TestBeaconCache[K, V]) putIsNil(k K, v V) error {
+	return add[K, V](c, k, v)
+}
+
+func (c *TestBeaconCache[K, V]) putIsNilPtr(k K, v *V) error {
+	return add[K, V](c, k, *v)
+}
+
+// --------------------------------------------------------------------------------- //
+
+const (
+	maxTestPrimitiveCacheSize = int(4)
+)
+
+var (
+	testPromPrimitiveCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_primitive_test_cache_hit",
+		Help: "The number of get requests that are present in the cache.",
+	})
+	testPromPrimitiveCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_primitive_test_cache_miss",
+		Help: "The number of get requests that aren't present in the cache.",
+	})
+)
+
+type TestPrimitiveCache[K string, V int] struct {
+	lru                         *lru.Cache[K, V]
+	promCacheMiss, promCacheHit prometheus.Counter
+}
+
+func (c *TestPrimitiveCache[K, V]) get() *lru.Cache[K, V] {
+	return c.lru
+}
+
+func (c *TestPrimitiveCache[K, V]) hitCache() {
+	c.promCacheHit.Inc()
+}
+
+func (c *TestPrimitiveCache[K, V]) missCache() {
+	c.promCacheMiss.Inc()
+}
+
+func (c *TestPrimitiveCache[K, V]) Clear() {
+	purge[K, V](c)
+}
+
+func NewTestPrimitiveCache[K string, V int]() (*TestPrimitiveCache[K, V], error) {
+	cache, err := lru.New[K, V](maxTestPrimitiveCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
+	if testPromCacheHit == nil || testPromCacheMiss == nil {
+		return nil, err
+	}
+
+	reg.MustRegister(testPromPrimitiveCacheMiss)
+	reg.MustRegister(testPromPrimitiveCacheHit)
+
+	return &TestPrimitiveCache[K, V]{
+		lru:           cache,
+		promCacheMiss: testPromPrimitiveCacheMiss,
+		promCacheHit:  testPromPrimitiveCacheHit,
+	}, nil
+}
+
+func (c *TestPrimitiveCache[K, V]) putIsNil(k K, v V) error {
+	return add[K, V](c, k, v)
+}
+
+func (c *TestPrimitiveCache[K, V]) putIsNilPtr(k K, v *V) error {
+	return add[K, V](c, k, *v)
+}
+
+func Test_isNil(t *testing.T) {
+	c, err := NewTestBeaconCache[string, state.BeaconState]()
+	require.NoError(t, err)
+
+	type put struct {
+		key   string
+		state state.BeaconState
+	}
+
+	putObj := put{}
+	targetErr := ErrNilValueProvided
+	require.Equal(t, true, putObj.state == nil)
+	require.ErrorIs(t, c.putIsNil(putObj.key, putObj.state), targetErr)
+	require.ErrorIs(t, c.putIsNilPtr(putObj.key, &putObj.state), targetErr)
+	putObjPtr := &put{}
+	require.ErrorIs(t, c.putIsNil(putObj.key, putObjPtr.state), targetErr)
+	require.ErrorIs(t, c.putIsNilPtr(putObj.key, &putObjPtr.state), targetErr)
+	var b state.BeaconState
+	putObjWithNilState := put{state: b}
+	require.ErrorIs(t, c.putIsNil(putObj.key, putObjWithNilState.state), targetErr)
+	require.ErrorIs(t, c.putIsNilPtr(putObj.key, &putObjWithNilState.state), targetErr)
+
+	// As generics doesn't differentiate primitives from custom objects,
+	// we need to verify that it also works with primitives as they have default values
+
+	cp, err := NewTestPrimitiveCache[string, int]()
+	require.NoError(t, err)
+
+	type putp struct {
+		key   string
+		state int
+	}
+
+	putpObj := putp{}
+	targetErr = nil
+	require.ErrorIs(t, cp.putIsNil(putpObj.key, putpObj.state), targetErr)
+	require.ErrorIs(t, cp.putIsNilPtr(putpObj.key, &putpObj.state), targetErr)
+	putpObjPtr := &putp{}
+	require.ErrorIs(t, cp.putIsNil(putpObjPtr.key, putpObjPtr.state), targetErr)
+	require.ErrorIs(t, cp.putIsNilPtr(putpObjPtr.key, &putpObjPtr.state), targetErr)
+	var p int
+	putpObjWithNilState := putp{state: p}
+	require.ErrorIs(t, cp.putIsNil(putpObj.key, putpObjWithNilState.state), targetErr)
+	require.ErrorIs(t, cp.putIsNilPtr(putpObj.key, &putpObjWithNilState.state), targetErr)
 }
