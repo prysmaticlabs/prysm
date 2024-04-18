@@ -175,8 +175,6 @@ func formatBeaconChaURL(key []byte) string {
 	keyWithout0x := hexutil.Encode(key)[2:]
 
 	switch env := params.BeaconConfig().ConfigName; env {
-	case params.PraterName, params.GoerliName:
-		return fmt.Sprintf(baseURL, "prater.", keyWithout0x)
 	case params.HoleskyName:
 		return fmt.Sprintf(baseURL, "holesky.", keyWithout0x)
 	case params.SepoliaName:

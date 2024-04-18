@@ -51,8 +51,7 @@ func TestTryPruneDir_CachedExpired(t *testing.T) {
 		require.Equal(t, 0, pruned)
 	})
 	t.Run("blobs to delete", func(t *testing.T) {
-		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-		require.NoError(t, err)
+		fs, bs := NewEphemeralBlobStorageWithFs(t)
 		var slot primitives.Slot = 0
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, 2)
 		scs, err := verification.BlobSidecarSliceNoop(sidecars)
@@ -83,8 +82,7 @@ func TestTryPruneDir_CachedExpired(t *testing.T) {
 
 func TestTryPruneDir_SlotFromFile(t *testing.T) {
 	t.Run("expired blobs deleted", func(t *testing.T) {
-		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-		require.NoError(t, err)
+		fs, bs := NewEphemeralBlobStorageWithFs(t)
 		var slot primitives.Slot = 0
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, 2)
 		scs, err := verification.BlobSidecarSliceNoop(sidecars)
@@ -116,8 +114,7 @@ func TestTryPruneDir_SlotFromFile(t *testing.T) {
 		require.Equal(t, 0, len(files))
 	})
 	t.Run("not expired, intact", func(t *testing.T) {
-		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-		require.NoError(t, err)
+		fs, bs := NewEphemeralBlobStorageWithFs(t)
 		// Set slot equal to the window size, so it should be retained.
 		slot := bs.pruner.windowSize
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, 2)
@@ -184,8 +181,7 @@ func TestSlotFromFile(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("slot %d", c.slot), func(t *testing.T) {
-			fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-			require.NoError(t, err)
+			fs, bs := NewEphemeralBlobStorageWithFs(t)
 			_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, c.slot, 1)
 			sc, err := verification.BlobSidecarNoop(sidecars[0])
 			require.NoError(t, err)
