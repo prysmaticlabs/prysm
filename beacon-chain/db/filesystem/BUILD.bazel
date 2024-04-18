@@ -5,10 +5,12 @@ go_library(
     srcs = [
         "blob.go",
         "cache.go",
+        "layout.go",
         "log.go",
         "metrics.go",
         "migration.go",
         "mock.go",
+        "namer.go",
         "pruner.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem",

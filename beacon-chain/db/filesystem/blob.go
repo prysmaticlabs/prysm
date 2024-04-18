@@ -6,18 +6,15 @@ import (
 	"math"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/logging"
@@ -30,16 +27,9 @@ var (
 	errEmptyBlobWritten    = errors.New("zero bytes written to disk when saving blob sidecar")
 	errSidecarEmptySSZData = errors.New("sidecar marshalled to an empty ssz byte slice")
 	errNoBasePath          = errors.New("BlobStorage base path not specified in init")
-	errInvalidRootString   = errors.New("Could not parse hex string as a [32]byte")
 )
 
-const (
-	sszExt  = "ssz"
-	partExt = "part"
-
-	directoryPermissions = 0700
-	rootPrefixLen        = 4
-)
+const directoryPermissions = 0700
 
 // BlobStorageOption is a functional option for configuring a BlobStorage.
 type BlobStorageOption func(*BlobStorage) error
@@ -86,7 +76,8 @@ func NewBlobStorage(opts ...BlobStorageOption) (*BlobStorage, error) {
 		return nil, errors.Wrapf(err, "failed to create blob storage at %s", b.base)
 	}
 	b.fs = afero.NewBasePathFs(afero.NewOsFs(), b.base)
-	pruner, err := newBlobPruner(b.fs, b.retentionEpochs)
+	b.cache = newBlobStorageCache()
+	pruner, err := newBlobPruner(b.fs, b.retentionEpochs, b.cache)
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +92,7 @@ type BlobStorage struct {
 	fsync           bool
 	fs              afero.Fs
 	pruner          *blobPruner
+	cache           *blobStorageCache
 }
 
 // WarmCache runs the prune routine with an expiration of slot of 0, so nothing will be pruned, but the pruner's cache
@@ -127,10 +119,13 @@ var ErrBlobStorageSummarizerUnavailable = errors.New("BlobStorage not initialize
 // BlobStorageSummarizer is not ready immediately on node startup because it needs to sample the blob filesystem to
 // determine which blobs are available.
 func (bs *BlobStorage) WaitForSummarizer(ctx context.Context) (BlobStorageSummarizer, error) {
-	if bs == nil || bs.pruner == nil {
+	if bs == nil || bs.cache == nil {
 		return nil, ErrBlobStorageSummarizerUnavailable
 	}
-	return bs.pruner.waitForCache(ctx)
+	if err := bs.cache.waitForReady(ctx); err != nil {
+		return nil, err
+	}
+	return bs.cache, nil
 }
 
 // Save saves blobs given a list of sidecars.
@@ -312,48 +307,4 @@ func (bs *BlobStorage) WithinRetentionPeriod(requested, current primitives.Epoch
 		return true
 	}
 	return requested+bs.retentionEpochs >= current
-}
-
-type blobNamer struct {
-	root  [32]byte
-	slot  primitives.Slot
-	index uint64
-}
-
-func namerForSidecar(sc blocks.VerifiedROBlob) blobNamer {
-	return blobNamer{root: sc.BlockRoot(), index: sc.Index}
-}
-
-func (p blobNamer) groupDir() string {
-	return oneBytePrefix(rootString(p.root))
-}
-
-func (p blobNamer) dir() string {
-	rs := rootString(p.root)
-	parentDir := oneBytePrefix(rs)
-	return filepath.Join(parentDir, rs)
-}
-
-func (p blobNamer) partPath(entropy string) string {
-	return path.Join(p.dir(), fmt.Sprintf("%s-%d.%s", entropy, p.index, partExt))
-}
-
-func (p blobNamer) path() string {
-	return path.Join(p.dir(), fmt.Sprintf("%d.%s", p.index, sszExt))
-}
-
-func rootString(root [32]byte) string {
-	return fmt.Sprintf("%#x", root)
-}
-
-func stringToRoot(str string) ([32]byte, error) {
-	slice, err := hexutil.Decode(str)
-	if err != nil {
-		return [32]byte{}, errors.Wrapf(errInvalidRootString, "input=%s", str)
-	}
-	return bytesutil.ToBytes32(slice), nil
-}
-func oneBytePrefix(p string) string {
-	// returns eg 0x00 from 0x0002fb4db510b8618b04dc82d023793739c26346a8b02eb73482e24b0fec0555
-	return p[0:rootPrefixLen]
 }

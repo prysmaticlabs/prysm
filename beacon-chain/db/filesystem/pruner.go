@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"context"
 	"encoding/binary"
 	"io"
 	"path"
@@ -30,7 +29,7 @@ var (
 
 // Full root in directory will be 66 chars, eg:
 // >>> len('0x0002fb4db510b8618b04dc82d023793739c26346a8b02eb73482e24b0fec0555') == 66
-const legacyRootLen = 66
+const rootStringLen = 66
 
 type blobPruner struct {
 	sync.Mutex
@@ -50,13 +49,13 @@ func withWarmedCache() prunerOpt {
 	}
 }
 
-func newBlobPruner(fs afero.Fs, retain primitives.Epoch, opts ...prunerOpt) (*blobPruner, error) {
+func newBlobPruner(fs afero.Fs, retain primitives.Epoch, cache *blobStorageCache, opts ...prunerOpt) (*blobPruner, error) {
 	r, err := slots.EpochStart(retain + retentionBuffer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set retentionSlots")
 	}
 	cw := make(chan struct{})
-	p := &blobPruner{fs: fs, windowSize: r, cache: newBlobStorageCache(), cacheReady: cw}
+	p := &blobPruner{fs: fs, windowSize: r, cache: cache, cacheReady: cw}
 	for _, o := range opts {
 		if err := o(p); err != nil {
 			return nil, err
@@ -105,15 +104,6 @@ func (p *blobPruner) warmCache() error {
 		close(p.cacheReady)
 	}
 	return nil
-}
-
-func (p *blobPruner) waitForCache(ctx context.Context) (*blobStorageCache, error) {
-	select {
-	case <-p.cacheReady:
-		return p.cache, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
 }
 
 // Prune prunes blobs in the base directory based on the retention epoch.
@@ -344,7 +334,7 @@ func filterRoot(s string) bool {
 }
 
 func filterLegacy(s string) bool {
-	return filterRoot(s) && len(s) == legacyRootLen
+	return filterRoot(s) && len(s) == rootStringLen
 }
 
 func filterRootGroupDir(s string) bool {

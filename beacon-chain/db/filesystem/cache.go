@@ -1,11 +1,14 @@
 package filesystem
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/spf13/afero"
 )
 
 // blobIndexMask is a bitmask representing the set of blob indices that are currently set.
@@ -46,16 +49,20 @@ type BlobStorageSummarizer interface {
 }
 
 type blobStorageCache struct {
-	mu     sync.RWMutex
-	nBlobs float64
-	cache  map[[32]byte]BlobStorageSummary
+	mu       sync.RWMutex
+	nBlobs   float64
+	cache    map[[32]byte]BlobStorageSummary
+	ready    chan struct{}
+	warmDone bool
+	warmer   *cacheWarmer
 }
 
 var _ BlobStorageSummarizer = &blobStorageCache{}
 
 func newBlobStorageCache() *blobStorageCache {
 	return &blobStorageCache{
-		cache: make(map[[32]byte]BlobStorageSummary, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest*fieldparams.SlotsPerEpoch),
+		cache:  make(map[[32]byte]BlobStorageSummary, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest*fieldparams.SlotsPerEpoch),
+		warmer: &cacheWarmer{ready: make(chan struct{})},
 	}
 }
 
@@ -115,4 +122,57 @@ func (s *blobStorageCache) updateMetrics(delta float64) {
 	s.nBlobs += delta
 	blobDiskCount.Set(s.nBlobs)
 	blobDiskSize.Set(s.nBlobs * bytesPerSidecar)
+}
+
+func (p *blobStorageCache) waitForReady(ctx context.Context) error {
+	select {
+	case <-p.ready:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (c *blobStorageCache) warm(fs afero.Fs) error {
+	return c.warmer.warm(c, fs)
+}
+
+func (w *cacheWarmer) warm(cache *blobStorageCache, fs afero.Fs) error {
+	w.mu.Lock()
+	start := time.Now()
+	defer func() {
+		w.mu.Unlock()
+		log.WithField("duration", time.Since(start).String()).Debug("Warmed up pruner cache")
+	}()
+	if w.warmed {
+		return nil
+	}
+
+	layout, err := detectLayout(fs)
+	if err != nil {
+		return err
+	}
+
+	/*
+		entries, err := walkAndMigrateBasedir(fs, m)
+		if err != nil {
+			return errors.Wrap(err, "unable to list root blobs directory")
+		}
+
+	*/
+	for namer := range layout.IterateNamers(fs) {
+		if err := cache.ensure(namer.root, namer.slot, namer.index); err != nil {
+			log.WithError(err).WithField("path", namer.path()).Error("Unable to cache blob metadata.")
+		}
+	}
+
+	w.warmed = true
+	close(w.ready)
+	return nil
+}
+
+type cacheWarmer struct {
+	mu     sync.Mutex
+	warmed bool
+	ready  chan struct{}
 }
