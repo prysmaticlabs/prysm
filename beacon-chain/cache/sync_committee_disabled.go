@@ -16,12 +16,12 @@ func NewSyncCommittee() *FakeSyncCommitteeCache {
 	return &FakeSyncCommitteeCache{}
 }
 
-// CurrentEpochIndexPosition -- fake.
+// CurrentPeriodIndexPosition -- fake.
 func (s *FakeSyncCommitteeCache) CurrentPeriodIndexPosition(root [32]byte, valIdx primitives.ValidatorIndex) ([]primitives.CommitteeIndex, error) {
 	return nil, nil
 }
 
-// NextEpochIndexPosition -- fake.
+// NextPeriodIndexPosition -- fake.
 func (s *FakeSyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx primitives.ValidatorIndex) ([]primitives.CommitteeIndex, error) {
 	return nil, nil
 }

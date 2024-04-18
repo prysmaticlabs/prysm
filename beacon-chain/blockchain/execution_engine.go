@@ -253,7 +253,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 	}
 }
 
-// reportInvalidBlock deals with the event that an invalid block was detected by the execution layer
+// pruneInvalidBlock deals with the event that an invalid block was detected by the execution layer
 func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
 	newPayloadInvalidNodeCount.Inc()
 	invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
@@ -274,7 +274,7 @@ func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [
 	}
 }
 
-// getPayloadAttributes returns the payload attributes for the given state and slot.
+// getPayloadAttribute returns the payload attributes for the given state and slot.
 // The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
 func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot, headRoot []byte) payloadattribute.Attributer {
 	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
