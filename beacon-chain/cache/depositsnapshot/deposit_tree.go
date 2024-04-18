@@ -102,7 +102,11 @@ func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 	finalizedDeposits, _ := d.tree.GetFinalized([][32]byte{})
 	finalizedIdx := -1
 	if finalizedDeposits != 0 {
-		finalizedIdx = int(finalizedDeposits) - 1
+		fd, err := math.Int(finalizedDeposits)
+		if err != nil {
+			return [32]byte{}, nil, err
+		}
+		finalizedIdx = fd - 1
 	}
 	i, err := math.Int(index)
 	if err != nil {
