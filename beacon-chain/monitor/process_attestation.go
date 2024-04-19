@@ -34,11 +34,26 @@ func (s *Service) canUpdateAttestedValidator(idx primitives.ValidatorIndex, slot
 
 // attestingIndices returns the indices of validators that participated in the given aggregated attestation.
 func attestingIndices(ctx context.Context, state state.BeaconState, att interfaces.Attestation) ([]uint64, error) {
-	committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
-	if err != nil {
-		return nil, err
+	var committees [][]primitives.ValidatorIndex
+	if att.Version() < version.Electra {
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
+		if err != nil {
+			return nil, err
+		}
+		committees = [][]primitives.ValidatorIndex{committee}
+	} else {
+		committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBits())
+		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
+		var err error
+		for i, ci := range committeeIndices {
+			committees[i], err = helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, ci)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
-	return attestation.AttestingIndices(att.GetAggregationBits(), committee)
+
+	return attestation.AttestingIndices(att, committees)
 }
 
 // logMessageTimelyFlagsForIndex returns the log message with performance info for the attestation (head, source, target)

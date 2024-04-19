@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
@@ -36,7 +37,10 @@ func ValidateNilAttestation(attestation interfaces.Attestation) error {
 		return errors.New("attestation's target can't be nil")
 	}
 	if attestation.GetAggregationBits() == nil {
-		return errors.New("attestation's bitfield can't be nil")
+		return errors.New("attestation's aggregation bitfield can't be nil")
+	}
+	if attestation.Version() > version.Deneb && attestation.GetCommitteeBits() == nil {
+		return errors.New("attestation's committee bitfield can't be nil")
 	}
 	return nil
 }

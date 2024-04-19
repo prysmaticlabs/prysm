@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -102,13 +103,30 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 				tracing.AnnotateError(span, err)
 				return
 			}
-			committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.Data.Slot, att.Data.CommitteeIndex)
-			if err != nil {
-				log.WithError(err).Error("Could not get attestation committee")
-				tracing.AnnotateError(span, err)
-				return
+
+			var committees [][]primitives.ValidatorIndex
+			if att.Version() < version.Electra {
+				committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.GetData().Slot, att.GetData().CommitteeIndex)
+				if err != nil {
+					log.WithError(err).Error("Could not get attestation committee")
+					tracing.AnnotateError(span, err)
+					return
+				}
+				committees = [][]primitives.ValidatorIndex{committee}
+			} else {
+				committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBits())
+				committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
+				for i, ci := range committeeIndices {
+					committees[i], err = helpers.BeaconCommitteeFromState(ctx, preState, att.GetData().Slot, ci)
+					if err != nil {
+						log.WithError(err).Error("Could not get attestation committee")
+						tracing.AnnotateError(span, err)
+						return
+					}
+				}
 			}
-			indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
+
+			indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees)
 			if err != nil {
 				log.WithError(err).Error("Could not convert to indexed attestation")
 				tracing.AnnotateError(span, err)
@@ -234,6 +252,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a interf
 	return s.validateWithBatchVerifier(ctx, "attestation", set)
 }
 
+// TODO: Extend to Electra. Is it even possible to validate this in Electra?
 func (s *Service) validateBitLength(ctx context.Context, a interfaces.Attestation, bs state.ReadOnlyBeaconState) ([]primitives.ValidatorIndex, pubsub.ValidationResult, error) {
 	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, a.GetData().Slot, a.GetData().CommitteeIndex)
 	if err != nil {

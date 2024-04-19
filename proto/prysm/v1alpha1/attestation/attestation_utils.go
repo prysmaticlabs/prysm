@@ -9,13 +9,13 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -38,8 +38,8 @@ import (
 //	     data=attestation.data,
 //	     signature=attestation.signature,
 //	 )
-func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committee []primitives.ValidatorIndex) (*ethpb.IndexedAttestation, error) {
-	attIndices, err := AttestingIndices(attestation.GetAggregationBits(), committee)
+func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committees [][]primitives.ValidatorIndex) (*ethpb.IndexedAttestation, error) {
+	attIndices, err := AttestingIndices(attestation, committees)
 	if err != nil {
 		return nil, err
 	}
@@ -69,18 +69,42 @@ func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, c
 //	 """
 //	 committee = get_beacon_committee(state, data.slot, data.index)
 //	 return set(index for i, index in enumerate(committee) if bits[i])
-func AttestingIndices(bf bitfield.Bitfield, committee []primitives.ValidatorIndex) ([]uint64, error) {
-	if bf.Len() != uint64(len(committee)) {
-		return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", bf.Len(), len(committee))
+func AttestingIndices(att interfaces.Attestation, committees [][]primitives.ValidatorIndex) ([]uint64, error) {
+	if len(committees) == 0 {
+		return []uint64{}, nil
 	}
-	indices := make([]uint64, 0, bf.Count())
-	p := bf.BitIndices()
-	for _, idx := range p {
-		if idx < len(committee) {
-			indices = append(indices, uint64(committee[idx]))
+
+	aggBits := att.GetAggregationBits()
+
+	if att.Version() < version.Electra {
+		committee := committees[0]
+		if aggBits.Len() != uint64(len(committee)) {
+			return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", aggBits.Len(), len(committee))
 		}
+		indices := make([]uint64, 0, aggBits.Count())
+		p := aggBits.BitIndices()
+		for _, idx := range p {
+			if idx < len(committee) {
+				indices = append(indices, uint64(committee[idx]))
+			}
+		}
+		return indices, nil
 	}
-	return indices, nil
+
+	attesters := make([]uint64, 0, len(aggBits))
+	committeeOffset := 0
+	for _, c := range committees {
+		committeeAttesters := make([]uint64, 0, len(c))
+		for i, vi := range c {
+			if aggBits[committeeOffset+i] == 1 {
+				committeeAttesters = append(committeeAttesters, uint64(c[vi]))
+			}
+		}
+		attesters = append(attesters, committeeAttesters...)
+		committeeOffset += len(c)
+	}
+
+	return attesters, nil
 }
 
 // VerifyIndexedAttestationSig this helper function performs the last part of the
@@ -154,8 +178,9 @@ func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.In
 	if len(indices) == 0 {
 		return errors.New("expected non-empty attesting indices")
 	}
-	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
-		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
+	maxLength := params.BeaconConfig().MaxValidatorsPerCommittee * params.BeaconConfig().MaxCommitteesPerSlot
+	if uint64(len(indices)) > maxLength {
+		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT, %d > %d", len(indices), maxLength)
 	}
 	for i := 1; i < len(indices); i++ {
 		if indices[i-1] >= indices[i] {
