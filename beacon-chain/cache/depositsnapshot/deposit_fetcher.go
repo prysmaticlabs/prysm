@@ -10,7 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"github.com/wealdtech/go-bytesutil"
@@ -308,43 +307,4 @@ func (c *Cache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*eth
 	span.AddAttributes(trace.Int64Attribute("count", int64(len(depositCntrs))))
 
 	return depositCntrs
-}
-
-// RemovePendingDeposit from the database. The deposit is indexed by the
-// Index. This method does nothing if deposit ptr is nil.
-func (c *Cache) RemovePendingDeposit(ctx context.Context, d *ethpb.Deposit) {
-	_, span := trace.StartSpan(ctx, "DepositsCache.RemovePendingDeposit")
-	defer span.End()
-
-	if d == nil {
-		log.Debug("Ignoring nil deposit removal")
-		return
-	}
-
-	depRoot, err := hash.Proto(d)
-	if err != nil {
-		log.WithError(err).Error("Could not remove deposit")
-		return
-	}
-
-	c.depositsLock.Lock()
-	defer c.depositsLock.Unlock()
-
-	idx := -1
-	for i, ctnr := range c.pendingDeposits {
-		h, err := hash.Proto(ctnr.Deposit)
-		if err != nil {
-			log.WithError(err).Error("Could not hash deposit")
-			continue
-		}
-		if h == depRoot {
-			idx = i
-			break
-		}
-	}
-
-	if idx >= 0 {
-		c.pendingDeposits = append(c.pendingDeposits[:idx], c.pendingDeposits[idx+1:]...)
-		pendingDepositsCount.Dec()
-	}
 }
