@@ -37,6 +37,7 @@ go_library(
         "subscriber_beacon_blocks.go",
         "subscriber_blob_sidecar.go",
         "subscriber_bls_to_execution_change.go",
+        "subscriber_data_column_sidecar.go",
         "subscriber_handlers.go",
         "subscriber_sync_committee_message.go",
         "subscriber_sync_contribution_proof.go",
