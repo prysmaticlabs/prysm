@@ -57,6 +57,5 @@ go_test(
         "@com_github_pkg_errors//:go_default_library",
         "@in_gopkg_yaml_v3//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
-        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
