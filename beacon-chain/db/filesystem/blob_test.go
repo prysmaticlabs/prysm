@@ -176,7 +176,7 @@ func TestBlobStoragePrune(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, len(beforeFolders))
 
-		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize, nil))
+		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
 
 		remainingFolders, err := afero.ReadDir(fs, namer.groupDir())
 		require.NoError(t, err)
@@ -192,7 +192,7 @@ func TestBlobStoragePrune(t *testing.T) {
 			require.NoError(t, bs.Save(sidecar))
 		}
 
-		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize, nil))
+		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
 
 		remainingFolders, err := afero.ReadDir(fs, namer.groupDir())
 		require.NoError(t, err)
@@ -217,7 +217,7 @@ func TestBlobStoragePrune(t *testing.T) {
 			namers[i] = namerForSidecar(testSidecars[0])
 		}
 
-		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize, nil))
+		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
 
 		// first 2 subdirs should be removed
 		for _, nmr := range namers[0:2] {
@@ -254,7 +254,7 @@ func BenchmarkPruning(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := bs.pruner.prune(currentSlot, nil)
+		err := bs.pruner.prune(currentSlot)
 		require.NoError(b, err)
 	}
 }

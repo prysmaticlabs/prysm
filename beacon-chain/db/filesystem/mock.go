@@ -14,11 +14,13 @@ import (
 func NewEphemeralBlobStorage(t testing.TB) *BlobStorage {
 	fs := afero.NewMemMapFs()
 	cache := newBlobStorageCache()
-	pruner, err := newBlobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest, cache, withWarmedCache())
+	pruner, err := newBlobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest, cache)
 	if err != nil {
 		t.Fatal("test setup issue", err)
 	}
-	return &BlobStorage{fs: fs, cache: cache, pruner: pruner}
+	bs := &BlobStorage{fs: fs, cache: cache, pruner: pruner}
+	bs.WarmCache()
+	return bs
 }
 
 // NewEphemeralBlobStorageWithFs can be used by tests that want access to the virtual filesystem
@@ -26,11 +28,13 @@ func NewEphemeralBlobStorage(t testing.TB) *BlobStorage {
 func NewEphemeralBlobStorageWithFs(t testing.TB) (afero.Fs, *BlobStorage) {
 	fs := afero.NewMemMapFs()
 	cache := newBlobStorageCache()
-	pruner, err := newBlobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest, cache, withWarmedCache())
+	pruner, err := newBlobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest, cache)
 	if err != nil {
 		t.Fatal("test setup issue", err)
 	}
-	return fs, &BlobStorage{fs: fs, cache: cache, pruner: pruner}
+	bs := &BlobStorage{fs: fs, cache: cache, pruner: pruner}
+	bs.WarmCache()
+	return fs, bs
 }
 
 type BlobMocker struct {

@@ -35,39 +35,24 @@ type blobPruner struct {
 	sync.Mutex
 	prunedBefore atomic.Uint64
 	windowSize   primitives.Slot
-	cache        *blobStorageCache
-	cacheReady   chan struct{}
-	warmed       bool
-	fs           afero.Fs
+	//cache        *blobStorageCache
+	cacheReady chan struct{}
+	warmed     bool
+	fs         afero.Fs
 }
 
-type prunerOpt func(*blobPruner) error
-
-func withWarmedCache() prunerOpt {
-	return func(p *blobPruner) error {
-		return p.warmCache()
-	}
-}
-
-func newBlobPruner(fs afero.Fs, retain primitives.Epoch, cache *blobStorageCache, opts ...prunerOpt) (*blobPruner, error) {
+func newBlobPruner(fs afero.Fs, retain primitives.Epoch, layout fsLayout) (*blobPruner, error) {
 	r, err := slots.EpochStart(retain + retentionBuffer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set retentionSlots")
 	}
 	cw := make(chan struct{})
 	p := &blobPruner{fs: fs, windowSize: r, cache: cache, cacheReady: cw}
-	for _, o := range opts {
-		if err := o(p); err != nil {
-			return nil, err
-		}
-	}
 	return p, nil
 }
 
-// notify updates the pruner's view of root->blob mappings. This allows the pruner to build a cache
-// of root->slot mappings and decide when to evict old blobs based on the age of present blobs.
-func (p *blobPruner) notify(root [32]byte, latest primitives.Slot, idx uint64) error {
-	if err := p.cache.ensure(root, latest, idx); err != nil {
+func (p *blobPruner) notify(latest primitives.Epoch) error {
+	if err := p.cache.ensure(root, slots.ToEpoch(latest), idx); err != nil {
 		return err
 	}
 	pruned := uint64(windowMin(latest, p.windowSize))
@@ -77,7 +62,7 @@ func (p *blobPruner) notify(root [32]byte, latest primitives.Slot, idx uint64) e
 	go func() {
 		p.Lock()
 		defer p.Unlock()
-		if err := p.prune(primitives.Slot(pruned), nil); err != nil {
+		if err := p.prune(primitives.Slot(pruned)); err != nil {
 			log.WithError(err).Errorf("Failed to prune blobs from slot %d", latest)
 		}
 	}()
@@ -96,7 +81,7 @@ func windowMin(latest, offset primitives.Slot) primitives.Slot {
 func (p *blobPruner) warmCache() error {
 	p.Lock()
 	defer p.Unlock()
-	if err := p.prune(0, &oneBytePrefixMigrator{}); err != nil {
+	if err := p.prune(0); err != nil {
 		return err
 	}
 	if !p.warmed {
@@ -109,9 +94,10 @@ func (p *blobPruner) warmCache() error {
 // Prune prunes blobs in the base directory based on the retention epoch.
 // It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
-func (p *blobPruner) prune(pruneBefore primitives.Slot, m directoryMigrator) error {
+func (p *blobPruner) prune(pruneBefore primitives.Slot) error {
 	start := time.Now()
-	totalPruned, totalErr := 0, 0
+	//totalPruned, totalErr := 0, 0
+	totalPruned := 0
 	// Customize logging/metrics behavior for the initial cache warmup when slot=0.
 	// We'll never see a prune request for slot 0, unless this is the initial call to warm up the cache.
 	if pruneBefore == 0 {
@@ -129,22 +115,27 @@ func (p *blobPruner) prune(pruneBefore primitives.Slot, m directoryMigrator) err
 		}()
 	}
 
-	entries, err := walkAndMigrateBasedir(p.fs, m)
-	if err != nil {
-		return errors.Wrap(err, "unable to list root blobs directory")
-	}
-	for _, dir := range entries {
-		pruned, err := p.tryPruneDir(dir, pruneBefore)
+	/*
+			entries, err := walkAndMigrateBasedir(p.fs, m)
 		if err != nil {
-			totalErr += 1
-			log.WithError(err).WithField("directory", dir).Error("Unable to prune directory")
+			return errors.Wrap(err, "unable to list root blobs directory")
 		}
-		totalPruned += pruned
-	}
+		for _, dir := range entries {
+			pruned, err := p.tryPruneDir(dir, pruneBefore)
+			if err != nil {
+				totalErr += 1
+				log.WithError(err).WithField("directory", dir).Error("Unable to prune directory")
+			}
+			totalPruned += pruned
+		}
+	*/
 
-	if totalErr > 0 {
-		return errors.Wrapf(errPruningFailures, "pruning failed for %d root directories", totalErr)
-	}
+	/*
+		if totalErr > 0 {
+			return errors.Wrapf(errPruningFailures, "pruning failed for %d root directories", totalErr)
+		}
+
+	*/
 	return nil
 }
 
@@ -152,12 +143,13 @@ func shouldRetain(slot, pruneBefore primitives.Slot) bool {
 	return slot >= pruneBefore
 }
 
+/*
 func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, error) {
 	root, err := rootFromDir(dir)
 	if err != nil {
 		return 0, errors.Wrapf(err, "invalid directory, could not parse subdir as root %s", dir)
 	}
-	slot, slotCached := p.cache.slot(root)
+	epoch, slotCached := p.cache.epoch(root)
 	// Return early if the slot is cached and doesn't need pruning.
 	if slotCached && shouldRetain(slot, pruneBefore) {
 		return 0, nil
@@ -218,6 +210,8 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 	return len(scFiles), nil
 }
 
+*/
+
 func idxFromPath(fname string) (uint64, error) {
 	fname = path.Base(fname)
 
@@ -238,6 +232,16 @@ func rootFromDir(dir string) ([32]byte, error) {
 		return root, errors.Wrapf(err, "invalid directory, could not parse subdir as root %s", dir)
 	}
 	return root, nil
+}
+
+func epochFromDir(dir string) (primitives.Epoch, error) {
+	subdir := filepath.Base(dir)
+	epoch, err := strconv.ParseUint(subdir, 10, 64)
+	if err != nil {
+		return 0, errors.Wrapf(errInvalidDirectoryLayout,
+			"failed to decode epoch as uint, err=%s, dir=%s", err.Error(), dir)
+	}
+	return primitives.Epoch(epoch), nil
 }
 
 // Read slot from marshaled BlobSidecar data in the given file. See slotFromBlob for details.

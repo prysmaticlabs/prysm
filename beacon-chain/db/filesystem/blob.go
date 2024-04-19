@@ -76,12 +76,15 @@ func NewBlobStorage(opts ...BlobStorageOption) (*BlobStorage, error) {
 		return nil, errors.Wrapf(err, "failed to create blob storage at %s", b.base)
 	}
 	b.fs = afero.NewBasePathFs(afero.NewOsFs(), b.base)
-	b.cache = newBlobStorageCache()
-	pruner, err := newBlobPruner(b.fs, b.retentionEpochs, b.cache)
-	if err != nil {
-		return nil, err
-	}
-	b.pruner = pruner
+	b.layout = newPeriodicEpochLayout()
+	//b.cache = newBlobStorageCache()
+	//pruner, err := newBlobPruner(b.fs, b.retentionEpochs, b.cache)
+	/*
+		if err != nil {
+			return nil, err
+		}
+		b.pruner = pruner
+	*/
 	return b, nil
 }
 
@@ -93,18 +96,19 @@ type BlobStorage struct {
 	fs              afero.Fs
 	pruner          *blobPruner
 	cache           *blobStorageCache
+	layout          fsLayout
 }
 
 // WarmCache runs the prune routine with an expiration of slot of 0, so nothing will be pruned, but the pruner's cache
 // will be populated at node startup, avoiding a costly cold prune (~4s in syscalls) during syncing.
 func (bs *BlobStorage) WarmCache() {
-	if bs.pruner == nil {
+	if bs.cache == nil {
 		return
 	}
 	go func() {
 		start := time.Now()
-		if err := bs.pruner.warmCache(); err != nil {
-			log.WithError(err).Error("Error encountered while warming up blob pruner cache")
+		if err := bs.cache.warm(bs.fs); err != nil {
+			log.WithError(err).Error("Error encountered while warming up blob filesystem cache.")
 		}
 		log.WithField("elapsed", time.Since(start)).Info("Blob filesystem cache warm-up complete.")
 	}()
@@ -141,10 +145,9 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		log.WithFields(logging.BlobFields(sidecar.ROBlob)).Debug("Ignoring a duplicate blob sidecar save attempt")
 		return nil
 	}
-	if bs.pruner != nil {
-		if err := bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot(), sidecar.Index); err != nil {
-			return errors.Wrapf(err, "problem maintaining pruning cache/metrics for sidecar with root=%#x", sidecar.BlockRoot())
-		}
+
+	if err := bs.layout.Notify(sidecar); err != nil {
+		return errors.Wrapf(err, "problem maintaining pruning cache/metrics for sidecar with root=%#x", sidecar.BlockRoot())
 	}
 
 	// Serialize the ethpb.BlobSidecar to binary data using SSZ.

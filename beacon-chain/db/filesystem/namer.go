@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -35,20 +34,24 @@ type blobNamer struct {
 	slot    primitives.Slot
 	epoch   primitives.Epoch
 	index   uint64
+	err     error
 }
 
 func namerForSidecar(sc blocks.VerifiedROBlob) blobNamer {
-	slot := sc.Slot()
-	epoch := slots.ToEpoch(slot)
-	period := epoch / params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
+	//period := epoch / params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
+	/*
+		return blobNamer{version: periodicEpochBaseDir,
+			root:   sc.BlockRoot(),
+			epoch:  epoch,
+			period: period,
+			index:  sc.Index,
+		}
+	*/
+	return newBlobNamer(sc.BlockRoot(), slots.ToEpoch(sc.Slot()), sc.Index)
+}
 
-	return blobNamer{version: periodicEpochBaseDir,
-		root:   sc.BlockRoot(),
-		slot:   slot,
-		epoch:  epoch,
-		period: period,
-		index:  sc.Index,
-	}
+func newBlobNamer(root [32]byte, epoch primitives.Epoch, index uint64) blobNamer {
+	return blobNamer{root: root, epoch: epoch, index: index}
 }
 
 func (p blobNamer) groupDir() string {

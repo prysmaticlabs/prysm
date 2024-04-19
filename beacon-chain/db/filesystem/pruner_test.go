@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/spf13/afero"
 )
 
@@ -66,9 +67,9 @@ func TestTryPruneDir_CachedExpired(t *testing.T) {
 		root := scs[0].BlockRoot()
 		namer := namerForSidecar(scs[0])
 		dir := namer.dir()
-		cs, cok := bs.pruner.cache.slot(root)
+		cs, cok := bs.pruner.cache.epoch(root)
 		require.Equal(t, true, cok)
-		require.Equal(t, slot, cs)
+		require.Equal(t, slots.ToEpoch(slot), cs)
 
 		// ensure that we see the saved files in the filesystem
 		files, err := listDir(fs, dir)
@@ -99,12 +100,12 @@ func TestTryPruneDir_SlotFromFile(t *testing.T) {
 		root := scs[0].BlockRoot()
 		namer := namerForSidecar(scs[0])
 		dir := namer.dir()
-		cs, ok := bs.pruner.cache.slot(root)
+		cs, ok := bs.pruner.cache.epoch(root)
 		require.Equal(t, true, ok)
-		require.Equal(t, slot, cs)
+		require.Equal(t, slots.ToEpoch(slot), cs)
 		// evict it from the cache so that we trigger the file read path
 		bs.pruner.cache.evict(root)
-		_, ok = bs.pruner.cache.slot(root)
+		_, ok = bs.pruner.cache.epoch(root)
 		require.Equal(t, false, ok)
 
 		// ensure that we see the saved files in the filesystem
@@ -136,7 +137,7 @@ func TestTryPruneDir_SlotFromFile(t *testing.T) {
 		namer := namerForSidecar(scs[0])
 		dir := namer.dir()
 		bs.pruner.cache.evict(root)
-		_, ok := bs.pruner.cache.slot(root)
+		_, ok := bs.pruner.cache.epoch(root)
 		require.Equal(t, false, ok)
 
 		// Ensure that we see the saved files in the filesystem.

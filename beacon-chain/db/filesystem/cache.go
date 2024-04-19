@@ -6,7 +6,6 @@ import (
 	"time"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/spf13/afero"
 )
@@ -16,8 +15,8 @@ type blobIndexMask [fieldparams.MaxBlobsPerBlock]bool
 
 // BlobStorageSummary represents cached information about the BlobSidecars on disk for each root the cache knows about.
 type BlobStorageSummary struct {
-	slot primitives.Slot
-	mask blobIndexMask
+	epoch primitives.Epoch
+	mask  blobIndexMask
 }
 
 // HasIndex returns true if the BlobSidecar at the given index is available in the filesystem.
@@ -61,7 +60,7 @@ var _ BlobStorageSummarizer = &blobStorageCache{}
 
 func newBlobStorageCache() *blobStorageCache {
 	return &blobStorageCache{
-		cache:  make(map[[32]byte]BlobStorageSummary, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest*fieldparams.SlotsPerEpoch),
+		cache:  make(map[[32]byte]BlobStorageSummary),
 		warmer: &cacheWarmer{ready: make(chan struct{})},
 	}
 }
@@ -74,14 +73,14 @@ func (s *blobStorageCache) Summary(root [32]byte) BlobStorageSummary {
 	return s.cache[root]
 }
 
-func (s *blobStorageCache) ensure(key [32]byte, slot primitives.Slot, idx uint64) error {
+func (s *blobStorageCache) ensure(key [32]byte, epoch primitives.Epoch, idx uint64) error {
 	if idx >= fieldparams.MaxBlobsPerBlock {
 		return errIndexOutOfBounds
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	v := s.cache[key]
-	v.slot = slot
+	v.epoch = epoch
 	if !v.mask[idx] {
 		s.updateMetrics(1)
 	}
@@ -90,18 +89,18 @@ func (s *blobStorageCache) ensure(key [32]byte, slot primitives.Slot, idx uint64
 	return nil
 }
 
-func (s *blobStorageCache) slot(key [32]byte) (primitives.Slot, bool) {
+func (s *blobStorageCache) epoch(key [32]byte) (primitives.Epoch, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	v, ok := s.cache[key]
 	if !ok {
 		return 0, false
 	}
-	return v.slot, ok
+	return v.epoch, ok
 }
 
-func (s *blobStorageCache) evict(key [32]byte) {
-	var deleted float64
+func (s *blobStorageCache) evict(key [32]byte) int {
+	deleted := 0
 	s.mu.Lock()
 	v, ok := s.cache[key]
 	if ok {
@@ -114,8 +113,9 @@ func (s *blobStorageCache) evict(key [32]byte) {
 	delete(s.cache, key)
 	s.mu.Unlock()
 	if deleted > 0 {
-		s.updateMetrics(-deleted)
+		s.updateMetrics(-float64(deleted))
 	}
+	return deleted
 }
 
 func (s *blobStorageCache) updateMetrics(delta float64) {
@@ -153,13 +153,6 @@ func (w *cacheWarmer) warm(cache *blobStorageCache, fs afero.Fs) error {
 		return err
 	}
 
-	/*
-		entries, err := walkAndMigrateBasedir(fs, m)
-		if err != nil {
-			return errors.Wrap(err, "unable to list root blobs directory")
-		}
-
-	*/
 	for namer := range layout.IterateNamers(fs) {
 		if err := cache.ensure(namer.root, namer.slot, namer.index); err != nil {
 			log.WithError(err).WithField("path", namer.path()).Error("Unable to cache blob metadata.")
