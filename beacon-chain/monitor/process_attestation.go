@@ -34,11 +34,36 @@ func (s *Service) canUpdateAttestedValidator(idx primitives.ValidatorIndex, slot
 
 // attestingIndices returns the indices of validators that participated in the given aggregated attestation.
 func attestingIndices(ctx context.Context, state state.BeaconState, att interfaces.Attestation) ([]uint64, error) {
-	committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
-	if err != nil {
-		return nil, err
+	aggBits := att.GetAggregationBits()
+
+	if att.Version() < version.Electra {
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
+		if err != nil {
+			return nil, err
+		}
+		return attestation.AttestingIndices(aggBits, committee)
 	}
-	return attestation.AttestingIndices(att.GetAggregationBits(), committee)
+
+	attesters := make([]uint64, 0, len(att.GetAggregationBits()))
+	committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBits())
+	committeeOffset := 0
+	for _, ci := range committeeIndices {
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, ci)
+		if err != nil {
+			return nil, err
+		}
+		committeeAttesters := make([]uint64, 0, len(committee))
+		for i, vi := range committee {
+			if aggBits[committeeOffset+i] == 1 {
+				committeeAttesters = append(committeeAttesters, uint64(committee[vi]))
+			}
+		}
+		attesters = append(attesters, committeeAttesters...)
+
+		committeeOffset += len(committee)
+	}
+
+	return attesters, nil
 }
 
 // logMessageTimelyFlagsForIndex returns the log message with performance info for the attestation (head, source, target)

@@ -142,6 +142,7 @@ type Attestation interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
+	Version() int
 	GetAggregationBits() bitfield.Bitlist
 	SetAggregationBits(bits bitfield.Bitlist)
 	GetData() *ethpb.AttestationData
