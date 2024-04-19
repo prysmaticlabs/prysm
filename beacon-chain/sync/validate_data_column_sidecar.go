@@ -9,10 +9,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
@@ -89,6 +93,29 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 
 	// TODO Verify KZG proofs of column sidecar
 
+	parentState, err := s.cfg.stateGen.StateByRoot(ctx, [32]byte(ds.SignedBlockHeader.Header.ParentRoot))
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+
+	if err := blocks.VerifyBlockHeaderSignatureUsingCurrentFork(parentState, ds.SignedBlockHeader); err != nil {
+		return pubsub.ValidationReject, err
+	}
+	// In the event the block is more than an epoch ahead from its
+	// parent state, we have to advance the state forward.
+	parentRoot := ds.SignedBlockHeader.Header.ParentRoot
+	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot, ds.SignedBlockHeader.Header.Slot)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	idx, err := helpers.BeaconProposerIndex(ctx, parentState)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	if ds.SignedBlockHeader.Header.ProposerIndex != idx {
+		return pubsub.ValidationReject, errors.New("incorrect proposer index")
+	}
+
 	startTime, err := slots.ToTime(uint64(s.cfg.chain.GenesisTime().Unix()), ds.SignedBlockHeader.Header.Slot)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
@@ -96,12 +123,13 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 
 	sinceSlotStartTime := receivedTime.Sub(startTime)
 	validationTime := s.cfg.clock.Now().Sub(receivedTime)
-	fields["sinceSlotStartTime"] = sinceSlotStartTime
-	fields["validationTime"] = validationTime
-	log.WithFields(fields).Debug("Received blob sidecar gossip")
 
-	msg.ValidatorData = vBlobData
+	log.WithFields(logrus.Fields{
+		"sinceSlotStartTime": sinceSlotStartTime,
+		"validationTime":     validationTime,
+	}).Debug("Received data column sidecar")
 
+	msg.ValidatorData = ds
 	return pubsub.ValidationAccept, nil
 }
 
