@@ -480,7 +480,7 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 	ctx := context.TODO()
 	for _, att := range signed.Block().Body().Attestations() {
 		var committees [][]primitives.ValidatorIndex
-		if a.Version() < version.Electra {
+		if att.Version() < version.Electra {
 			committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.GetData().Slot, att.GetData().CommitteeIndex)
 			if err != nil {
 				log.WithError(err).Error("Could not get attestation committee")

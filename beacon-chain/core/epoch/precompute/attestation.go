@@ -54,25 +54,16 @@ func ProcessAttestations(
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
 		}
 
-		var committees [][]primitives.ValidatorIndex
-		if a.Version() < version.Electra {
-			committee, err := helpers.BeaconCommitteeFromState(ctx, state, a.GetData().Slot, a.GetData().CommitteeIndex)
-			if err != nil {
-				return nil, nil, err
-			}
-			committees = [][]primitives.ValidatorIndex{committee}
-		} else {
-			committeeIndices := helpers.CommitteeIndices(a.GetCommitteeBits())
-			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-			for i, ci := range committeeIndices {
-				committees[i], err = helpers.BeaconCommitteeFromState(ctx, state, a.GetData().Slot, ci)
-				if err != nil {
-					return nil, nil, err
-				}
-			}
+		if a.Version() >= version.Electra {
+			return nil, nil, errors.New("electra attestation not supported")
 		}
 
-		indices, err := attestation.AttestingIndices(a, committees)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, a.GetData().Slot, a.GetData().CommitteeIndex)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		indices, err := attestation.AttestingIndices(a, [][]primitives.ValidatorIndex{committee})
 		if err != nil {
 			return nil, nil, err
 		}

@@ -29,6 +29,34 @@ func (a *Attestation) SetSignature(sig []byte) {
 	a.Signature = sig
 }
 
+func (a *PendingAttestation) Version() int {
+	return version.Phase0
+}
+
+func (a *PendingAttestation) GetCommitteeBits() bitfield.Bitlist {
+	return nil
+}
+
+func (a *PendingAttestation) SetAggregationBits(bits bitfield.Bitlist) {
+	a.AggregationBits = bits
+}
+
+func (a *PendingAttestation) SetData(data *AttestationData) {
+	a.Data = data
+}
+
+func (a *PendingAttestation) SetCommitteeBits(bits bitfield.Bitlist) {
+	return
+}
+
+func (a *PendingAttestation) SetSignature(sig []byte) {
+	return
+}
+
+func (a *PendingAttestation) GetSignature() []byte {
+	return nil
+}
+
 func (a *AttestationElectra) Version() int {
 	return version.Electra
 }
