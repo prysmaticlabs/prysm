@@ -48,7 +48,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject, err
 	}
-	m, ok := raw.(*ethpb.SignedAggregateAttestationAndProof)
+	m, ok := raw.(interfaces.SignedAggregateAttestationAndProof)
 	if !ok {
 		return pubsub.ValidationReject, errors.Errorf("invalid message type: %T", raw)
 	}
@@ -126,7 +126,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.SignedAggregateAttestationAndProof) (pubsub.ValidationResult, error) {
+func (s *Service) validateAggregatedAtt(ctx context.Context, signed interfaces.SignedAggregateAttestationAndProof) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateAggregatedAtt")
 	defer span.End()
 
@@ -189,7 +189,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	return s.validateWithBatchVerifier(ctx, "aggregate", set)
 }
 
-func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.SignedAggregateAttestationAndProof) bool {
+func (s *Service) validateBlockInAttestation(ctx context.Context, satt interfaces.SignedAggregateAttestationAndProof) bool {
 	a := satt.Message
 	// Verify the block being voted and the processed state is in beaconDB. The block should have passed validation if it's in the beaconDB.
 	blockRoot := bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)

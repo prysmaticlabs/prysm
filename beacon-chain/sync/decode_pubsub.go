@@ -56,6 +56,21 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 			return nil, err
 		}
 	}
+
+	if topic == p2p.AttestationSubnetTopicFormat {
+		m, err = extractAttestationType(fDigest[:], s.cfg.clock)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if topic == p2p.AggregateAndProofSubnetTopicFormat {
+		m, err = extractAggregateAndProofType(fDigest[:], s.cfg.clock)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if err := s.cfg.p2p.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
 	}

@@ -57,8 +57,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject, err
 	}
 
-	// TODO: should this be an interface? if yes, how to do this? will casting "just work"?
-	att, ok := m.(*eth.Attestation)
+	att, ok := m.(interfaces.Attestation)
 	if !ok {
 		return pubsub.ValidationReject, errWrongMessage
 	}
@@ -67,7 +66,9 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject, err
 	}
 	// Do not process slot 0 attestations.
-	if att.Data.Slot == 0 {
+	aData := att.GetData()
+	aSlot := aData.Slot
+	if aSlot == 0 {
 		return pubsub.ValidationIgnore, nil
 	}
 	// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
@@ -81,12 +82,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE and early attestation
 	// processing tolerance.
-	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.cfg.clock.GenesisTime(),
+	if err := helpers.ValidateAttestationTime(aSlot, s.cfg.clock.GenesisTime(),
 		earlyAttestationProcessingTolerance); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
 	}
-	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
+	if err := helpers.ValidateSlotTargetEpoch(aData); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
@@ -97,7 +98,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 			// Using a different context to prevent timeouts as this operation can be expensive
 			// and we want to avoid affecting the critical code path.
 			ctx := context.TODO()
-			preState, err := s.cfg.chain.AttestationTargetState(ctx, att.Data.Target)
+			preState, err := s.cfg.chain.AttestationTargetState(ctx, aData.Target)
 			if err != nil {
 				log.WithError(err).Error("Could not retrieve pre state")
 				tracing.AnnotateError(span, err)
@@ -137,27 +138,27 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// Verify this the first attestation received for the participating validator for the slot.
-	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
+	if s.hasSeenCommitteeIndicesSlot(aData.Slot, aData.CommitteeIndex, att.GetAggregationBits()) {
 		return pubsub.ValidationIgnore, nil
 	}
 
 	// Reject an attestation if it references an invalid block.
-	if s.hasBadBlock(bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Target.Root)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Source.Root)) {
+	if s.hasBadBlock(bytesutil.ToBytes32(aData.BeaconBlockRoot)) ||
+		s.hasBadBlock(bytesutil.ToBytes32(aData.Target.Root)) ||
+		s.hasBadBlock(bytesutil.ToBytes32(aData.Source.Root)) {
 		attBadBlockCount.Inc()
 		return pubsub.ValidationReject, errors.New("attestation data references bad block root")
 	}
 
 	// Verify the block being voted and the processed state is in beaconDB and the block has passed validation if it's in the beaconDB.
-	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
+	blockRoot := bytesutil.ToBytes32(aData.BeaconBlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
-		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
+		// TODO: saving pending attestations to a queue.
 		return pubsub.ValidationIgnore, nil
 	}
 
-	if !s.cfg.chain.InForkchoice(bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
+	if !s.cfg.chain.InForkchoice(bytesutil.ToBytes32(aData.BeaconBlockRoot)) {
 		tracing.AnnotateError(span, blockchain.ErrNotDescendantOfFinalized)
 		return pubsub.ValidationIgnore, blockchain.ErrNotDescendantOfFinalized
 	}
@@ -167,7 +168,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject, err
 	}
 
-	preState, err := s.cfg.chain.AttestationTargetState(ctx, att.Data.Target)
+	preState, err := s.cfg.chain.AttestationTargetState(ctx, aData.Target)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
@@ -183,7 +184,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return validationRes, err
 	}
 
-	s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)
+	s.setSeenCommitteeIndicesSlot(aSlot, aData.CommitteeIndex, att.GetAggregationBits())
 
 	msg.ValidatorData = att
 

@@ -76,3 +76,11 @@ func (a *AttestationElectra) SetCommitteeBits(bits bitfield.Bitlist) {
 func (a *AttestationElectra) SetSignature(sig []byte) {
 	a.Signature = sig
 }
+
+func (a *SignedAggregateAttestationAndProof) SetSignature(sig []byte) {
+	a.Signature = sig
+}
+
+func (a *SignedAggregateAttestationAndProofElectra) SetSignature(sig []byte) {
+	a.Signature = sig
+}
