@@ -91,11 +91,17 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.CapellaForkEpoch = math.MaxUint64
 	minimalConfig.DenebForkVersion = []byte{4, 0, 0, 1}
 	minimalConfig.DenebForkEpoch = math.MaxUint64
+	minimalConfig.ElectraForkVersion = []byte{5, 0, 0, 1}
+	minimalConfig.AltairForkEpoch = math.MaxUint64
 
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8
 	minimalConfig.MinEpochsForBlockRequests = 272
+
+	// New Electra params
+	minimalConfig.MinPerEpochChurnLimitElectra = 64000000000
+	minimalConfig.MaxPerEpochActivationExitChurnLimit = 128000000000
 
 	// Ethereum PoW parameters.
 	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.

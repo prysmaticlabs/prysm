@@ -157,6 +157,8 @@ type BeaconChainConfig struct {
 	CapellaForkEpoch     primitives.Epoch `yaml:"CAPELLA_FORK_EPOCH" spec:"true"`     // CapellaForkEpoch is used to represent the assigned fork epoch for capella.
 	DenebForkVersion     []byte           `yaml:"DENEB_FORK_VERSION" spec:"true"`     // DenebForkVersion is used to represent the fork version for deneb.
 	DenebForkEpoch       primitives.Epoch `yaml:"DENEB_FORK_EPOCH" spec:"true"`       // DenebForkEpoch is used to represent the assigned fork epoch for deneb.
+	ElectraForkVersion   []byte           `yaml:"ELECTRA_FORK_VERSION" spec:"true"`   // ElectraForkVersion is used to represent the fork version for deneb.
+	ElectraForkEpoch     primitives.Epoch `yaml:"ELECTRA_FORK_EPOCH" spec:"true"`     // ElectraForkEpoch is used to represent the assigned fork epoch for deneb.
 
 	ForkVersionSchedule map[[fieldparams.VersionLength]byte]primitives.Epoch // Schedule of fork epochs by version.
 	ForkVersionNames    map[[fieldparams.VersionLength]byte]string           // Human-readable names of fork versions.
@@ -225,6 +227,14 @@ type BeaconChainConfig struct {
 	MinEpochsForBlobsSidecarsRequest primitives.Epoch `yaml:"MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS" spec:"true"` // MinEpochsForBlobsSidecarsRequest is the minimum number of epochs the node will keep the blobs for.
 	MaxRequestBlobSidecars           uint64           `yaml:"MAX_REQUEST_BLOB_SIDECARS" spec:"true"`             // MaxRequestBlobSidecars is the maximum number of blobs to request in a single request.
 	MaxRequestBlocksDeneb            uint64           `yaml:"MAX_REQUEST_BLOCKS_DENEB" spec:"true"`              // MaxRequestBlocksDeneb is the maximum number of blocks in a single request after the deneb epoch.
+
+	// Values introduce in Electra upgrade
+	// TODO: Godoc comments
+	NumberOfColumns                     uint64 `yaml:"NUMBER_OF_COLUMNS" spec:"true"`
+	DataColumnSidecarSubnetCount        uint64 `yaml:"DATA_COLUMN_SIDECAR_SUBNET_COUNT" spec:"true"`
+	MaxPerEpochActivationExitChurnLimit uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT" spec:"true"`
+	MinPerEpochChurnLimitElectra        uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA" spec:"true"`
+	MaxRequestDataColumnSidecars        uint64 `yaml:"MAX_REQUEST_DATA_COLUMN_SIDECARS" spec:"true"`
 
 	// Networking Specific Parameters
 	GossipMaxSize                   uint64          `yaml:"GOSSIP_MAX_SIZE" spec:"true"`                    // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.

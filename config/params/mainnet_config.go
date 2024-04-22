@@ -27,6 +27,8 @@ const (
 	mainnetCapellaForkEpoch = 194048 // April 12, 2023, 22:27:35 UTC
 	// Deneb Fork Epoch for mainnet config.
 	mainnetDenebForkEpoch = 269568 // March 13, 2024, 13:55:35 UTC
+	// Electra Fork Epoch for mainnet config
+	mainnetElectraForkEpoch = math.MaxUint64 // Far future / to be defined
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -207,6 +209,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	CapellaForkEpoch:     mainnetCapellaForkEpoch,
 	DenebForkVersion:     []byte{4, 0, 0, 0},
 	DenebForkEpoch:       mainnetDenebForkEpoch,
+	ElectraForkVersion:   []byte{5, 0, 0 , 0},
+	ElectraForkEpoch:     mainnetElectraForkEpoch,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
@@ -264,6 +268,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsForBlobsSidecarsRequest: 4096,
 	MaxRequestBlobSidecars:           768,
 	MaxRequestBlocksDeneb:            128,
+
+	// Values related to electra
+	NumberOfColumns: 128,
+	MaxRequestDataColumnSidecars: 16384,
+	DataColumnSidecarSubnetCount: 32,
+	MinPerEpochChurnLimitElectra: 128000000000,
+	MaxPerEpochActivationExitChurnLimit: 256000000000,
 
 	// Values related to networking parameters.
 	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
