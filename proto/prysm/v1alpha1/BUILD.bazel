@@ -18,6 +18,7 @@ proto_library(
     srcs = [
         "beacon_chain.proto",
         "debug.proto",
+        "eip_7251.proto",
         "finalized_block_root_container.proto",
         "health.proto",
         "node.proto",
@@ -134,6 +135,12 @@ ssz_gen_marshal(
         "BlobSidecars",
         "BlobIdentifier",
         "DepositSnapshot",
+        "PendingBalanceDeposit",
+        "PartialWithdrawal",
+        "ExecutionLayerWithdrawalRequest",
+        "Consolidation",
+        "SignedConsolidation",
+        "PendingConsolidation",
     ],
 )
 

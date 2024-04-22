@@ -19,6 +19,7 @@ import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
+import "proto/prysm/v1alpha1/eip_7251.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
 option go_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1;eth";
@@ -806,6 +807,8 @@ message BeaconBlockBodyElectra {
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
     repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
+
+    repeated Consolidation consolidations = 13 [(ethereum.eth.ext.ssz_max) = "1"]; // New in EIP-7251.
 }
 
 message SignedBlindedBeaconBlockElectra {

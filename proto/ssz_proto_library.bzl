@@ -28,6 +28,9 @@ mainnet = {
     "kzg_commitment_inclusion_proof_depth.size": "17",
     "max_attesting_indices.size": "131072",
     "max_committees_per_slot.size": "64",
+    "pending_balance_deposits_limit": "134217728",
+    "pending_partial_withdrawals_limit": "134217728",
+    "pending_consolidations_limit": "262144",
 }
 
 minimal = {
@@ -52,6 +55,9 @@ minimal = {
     "kzg_commitment_inclusion_proof_depth.size": "9",
     "max_attestation_electra_aggregation_bits.size": "8192",
     "max_committees_per_slot.size": "4",
+    "pending_balance_deposits_limit": "134217728",
+    "pending_partial_withdrawals_limit": "64",
+    "pending_consolidations_limit": "64",
 }
 
 ###### Rules definitions #######
