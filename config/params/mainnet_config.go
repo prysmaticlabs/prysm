@@ -209,7 +209,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	CapellaForkEpoch:     mainnetCapellaForkEpoch,
 	DenebForkVersion:     []byte{4, 0, 0, 0},
 	DenebForkEpoch:       mainnetDenebForkEpoch,
-	ElectraForkVersion:   []byte{5, 0, 0 , 0},
+	ElectraForkVersion:   []byte{5, 0, 0, 0},
 	ElectraForkEpoch:     mainnetElectraForkEpoch,
 
 	// New values introduced in Altair hard fork 1.
@@ -270,10 +270,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxRequestBlocksDeneb:            128,
 
 	// Values related to electra
-	NumberOfColumns: 128,
-	MaxRequestDataColumnSidecars: 16384,
-	DataColumnSidecarSubnetCount: 32,
-	MinPerEpochChurnLimitElectra: 128000000000,
+	NumberOfColumns:                     128,
+	MaxRequestDataColumnSidecars:        16384,
+	DataColumnSidecarSubnetCount:        32,
+	MinPerEpochChurnLimitElectra:        128000000000,
 	MaxPerEpochActivationExitChurnLimit: 256000000000,
 
 	// Values related to networking parameters.
