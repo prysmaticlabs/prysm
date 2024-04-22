@@ -16,7 +16,6 @@ func RunSSZStaticTests(t *testing.T, config string) {
 }
 
 func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
-
 	// TODO: Replace BeaconStateDeneb with BeaconStateElectra below and uncomment the code
 
 	//_, ok := object.(*ethpb.BeaconStateDeneb)
@@ -36,19 +35,17 @@ func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR
 func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
 	var obj interface{}
 	switch folderName {
-
 	// TODO: replace execution payload with execution payload electra below and uncomment the code
 	//case "ExecutionPayload":
 	//	obj = &enginev1.ExecutionPayloadDeneb{}
 	//case "ExecutionPayloadHeader":
 	//	obj = &enginev1.ExecutionPayloadHeaderDeneb{}
-
 	case "Attestation":
 		obj = &ethpb.AttestationElectra{}
 	case "AttestationData":
 		obj = &ethpb.AttestationData{}
 	case "AttesterSlashing":
-		obj = &ethpb.AttesterSlashing{}
+		obj = &ethpb.AttesterSlashingElectra{}
 	case "AggregateAndProof":
 		obj = &ethpb.AggregateAttestationAndProofElectra{}
 	case "BeaconBlock":
@@ -57,11 +54,9 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.BeaconBlockBodyElectra{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
-
 	// TODO: replace BeaconState with BeaconStateElectra below and uncomment the code
 	//case "BeaconState":
 	//	obj = &ethpb.BeaconStateDeneb{}
-
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
 	case "Deposit":
@@ -82,7 +77,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "HistoricalBatch":
 		obj = &ethpb.HistoricalBatch{}
 	case "IndexedAttestation":
-		obj = &ethpb.IndexedAttestation{}
+		obj = &ethpb.IndexedAttestationElectra{}
 	case "PendingAttestation":
 		obj = &ethpb.PendingAttestation{}
 	case "ProposerSlashing":
