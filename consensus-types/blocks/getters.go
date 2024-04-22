@@ -81,6 +81,12 @@ func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 		}
 		cp := eth.CopySignedBeaconBlockDeneb(pb.(*eth.SignedBeaconBlockDeneb))
 		return initSignedBlockFromProtoDeneb(cp)
+	case version.EPBS:
+		if b.IsBlinded() {
+			return nil, consensus_types.ErrNotSupported("Copy", b.version)
+		}
+		cp := eth.CopySignedBeaconBlockEPBS(pb.(*eth.SignedBeaconBlockePBS))
+		return initSignedBlockFromProtoEPBS(cp)
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -127,6 +133,13 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 		}
 		return &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: pb.(*eth.SignedBeaconBlockContentsDeneb)},
+		}, nil
+	case version.EPBS:
+		if b.IsBlinded() {
+			return nil, consensus_types.ErrNotSupported("PbGenericBlock", b.version)
+		}
+		return &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Epbs{Epbs: pb.(*eth.SignedBeaconBlockePBS)},
 		}, nil
 	default:
 		return nil, errIncorrectBlockVersion
@@ -229,9 +242,20 @@ func (b *SignedBeaconBlock) PbBlindedDenebBlock() (*eth.SignedBlindedBeaconBlock
 	return pb.(*eth.SignedBlindedBeaconBlockDeneb), nil
 }
 
+func (b *SignedBeaconBlock) PbEPBSBlock() (*eth.SignedBeaconBlockePBS, error) {
+	if b.version != version.EPBS || b.IsBlinded() {
+		return nil, consensus_types.ErrNotSupported("PbEPBSBlock", b.version)
+	}
+	pb, err := b.Proto()
+	if err != nil {
+		return nil, err
+	}
+	return pb.(*eth.SignedBeaconBlockePBS), nil
+}
+
 // ToBlinded converts a non-blinded block to its blinded equivalent.
 func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, error) {
-	if b.version < version.Bellatrix {
+	if b.version < version.Bellatrix || b.version >= version.EPBS {
 		return nil, ErrUnsupportedVersion
 	}
 	if b.IsBlinded() {
@@ -336,6 +360,9 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 }
 
 func (b *SignedBeaconBlock) Unblind(e interfaces.ExecutionData) error {
+	if b.version >= version.EPBS {
+		return consensus_types.ErrNotSupported("Unblind", b.version)
+	}
 	if e.IsNil() {
 		return errors.New("cannot unblind with nil execution data")
 	}
@@ -370,7 +397,8 @@ func (b *SignedBeaconBlock) Version() int {
 
 // IsBlinded metadata on whether a block is blinded
 func (b *SignedBeaconBlock) IsBlinded() bool {
-	return b.version >= version.Bellatrix && b.block.body.executionPayload == nil
+	preEPBS := b.version < version.EPBS
+	return b.version >= version.Bellatrix && b.block.body.executionPayload == nil && preEPBS
 }
 
 // ValueInWei metadata on the payload value returned by the builder.
@@ -459,6 +487,11 @@ func (b *SignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 			return pb.(*eth.SignedBlindedBeaconBlockDeneb).MarshalSSZ()
 		}
 		return pb.(*eth.SignedBeaconBlockDeneb).MarshalSSZ()
+	case version.EPBS:
+		if b.IsBlinded() {
+			return []byte{}, consensus_types.ErrNotSupported("MarshalSSZ", b.version)
+		}
+		return pb.(*eth.SignedBeaconBlockePBS).MarshalSSZ()
 	default:
 		return []byte{}, errIncorrectBlockVersion
 	}
@@ -491,6 +524,11 @@ func (b *SignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 			return pb.(*eth.SignedBlindedBeaconBlockDeneb).MarshalSSZTo(dst)
 		}
 		return pb.(*eth.SignedBeaconBlockDeneb).MarshalSSZTo(dst)
+	case version.EPBS:
+		if b.IsBlinded() {
+			return []byte{}, consensus_types.ErrNotSupported("MarshalSSZTo", b.version)
+		}
+		return pb.(*eth.SignedBeaconBlockePBS).MarshalSSZTo(dst)
 	default:
 		return []byte{}, errIncorrectBlockVersion
 	}
@@ -527,6 +565,8 @@ func (b *SignedBeaconBlock) SizeSSZ() int {
 			return pb.(*eth.SignedBlindedBeaconBlockDeneb).SizeSSZ()
 		}
 		return pb.(*eth.SignedBeaconBlockDeneb).SizeSSZ()
+	case version.EPBS:
+		return pb.(*eth.SignedBeaconBlockePBS).SizeSSZ()
 	default:
 		panic(incorrectBlockVersion)
 	}
@@ -622,6 +662,19 @@ func (b *SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 				return err
 			}
 		}
+	case version.EPBS:
+		if b.IsBlinded() {
+			return consensus_types.ErrNotSupported("UnmarshalSSZ", b.version)
+		}
+		pb := &eth.SignedBeaconBlockePBS{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		var err error
+		newBlock, err = initSignedBlockFromProtoEPBS(pb)
+		if err != nil {
+			return err
+		}
 	default:
 		return errIncorrectBlockVersion
 	}
@@ -661,7 +714,8 @@ func (b *BeaconBlock) IsNil() bool {
 
 // IsBlinded checks if the beacon block is a blinded block.
 func (b *BeaconBlock) IsBlinded() bool {
-	return b.version >= version.Bellatrix && b.body.executionPayload == nil
+	preEPBS := b.version < version.EPBS
+	return b.version >= version.Bellatrix && b.body.executionPayload == nil && preEPBS
 }
 
 // Version of the underlying protobuf object.
@@ -695,6 +749,11 @@ func (b *BeaconBlock) HashTreeRoot() ([field_params.RootLength]byte, error) {
 			return pb.(*eth.BlindedBeaconBlockDeneb).HashTreeRoot()
 		}
 		return pb.(*eth.BeaconBlockDeneb).HashTreeRoot()
+	case version.EPBS:
+		if b.IsBlinded() {
+			return [field_params.RootLength]byte{}, consensus_types.ErrNotSupported("HashTreeRoot", b.version)
+		}
+		return pb.(*eth.BeaconBlockePBS).HashTreeRoot()
 	default:
 		return [field_params.RootLength]byte{}, errIncorrectBlockVersion
 	}
@@ -726,6 +785,11 @@ func (b *BeaconBlock) HashTreeRootWith(h *ssz.Hasher) error {
 			return pb.(*eth.BlindedBeaconBlockDeneb).HashTreeRootWith(h)
 		}
 		return pb.(*eth.BeaconBlockDeneb).HashTreeRootWith(h)
+	case version.EPBS:
+		if b.IsBlinded() {
+			return consensus_types.ErrNotSupported("HashTreeRootWith", b.version)
+		}
+		return pb.(*eth.BeaconBlockePBS).HashTreeRootWith(h)
 	default:
 		return errIncorrectBlockVersion
 	}
@@ -758,6 +822,11 @@ func (b *BeaconBlock) MarshalSSZ() ([]byte, error) {
 			return pb.(*eth.BlindedBeaconBlockDeneb).MarshalSSZ()
 		}
 		return pb.(*eth.BeaconBlockDeneb).MarshalSSZ()
+	case version.EPBS:
+		if b.IsBlinded() {
+			return []byte{}, consensus_types.ErrNotSupported("MarshalSSZ", b.version)
+		}
+		return pb.(*eth.BeaconBlockePBS).MarshalSSZ()
 	default:
 		return []byte{}, errIncorrectBlockVersion
 	}
@@ -790,6 +859,11 @@ func (b *BeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 			return pb.(*eth.BlindedBeaconBlockDeneb).MarshalSSZTo(dst)
 		}
 		return pb.(*eth.BeaconBlockDeneb).MarshalSSZTo(dst)
+	case version.EPBS:
+		if b.IsBlinded() {
+			return []byte{}, consensus_types.ErrNotSupported("MarshalSSZTo", b.version)
+		}
+		return pb.(*eth.BeaconBlockePBS).MarshalSSZTo(dst)
 	default:
 		return []byte{}, errIncorrectBlockVersion
 	}
@@ -826,6 +900,8 @@ func (b *BeaconBlock) SizeSSZ() int {
 			return pb.(*eth.BlindedBeaconBlockDeneb).SizeSSZ()
 		}
 		return pb.(*eth.BeaconBlockDeneb).SizeSSZ()
+	case version.EPBS:
+		return pb.(*eth.BeaconBlockePBS).SizeSSZ()
 	default:
 		panic(incorrectBodyVersion)
 	}
@@ -921,6 +997,19 @@ func (b *BeaconBlock) UnmarshalSSZ(buf []byte) error {
 				return err
 			}
 		}
+	case version.EPBS:
+		if b.IsBlinded() {
+			return consensus_types.ErrNotSupported("UnmarshalSSZ", b.version)
+		}
+		pb := &eth.BeaconBlockePBS{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		var err error
+		newBlock, err = initBlockFromProtoePBS(pb)
+		if err != nil {
+			return err
+		}
 	default:
 		return errIncorrectBlockVersion
 	}
@@ -954,6 +1043,11 @@ func (b *BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, erro
 			return &validatorpb.SignRequest_BlindedBlockDeneb{BlindedBlockDeneb: pb.(*eth.BlindedBeaconBlockDeneb)}, nil
 		}
 		return &validatorpb.SignRequest_BlockDeneb{BlockDeneb: pb.(*eth.BeaconBlockDeneb)}, nil
+	case version.EPBS:
+		if b.IsBlinded() {
+			return nil, consensus_types.ErrNotSupported("AsSignRequestObject", b.version)
+		}
+		return &validatorpb.SignRequest_BlockEpbs{BlockEpbs: pb.(*eth.BeaconBlockePBS)}, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -996,6 +1090,12 @@ func (b *BeaconBlock) Copy() (interfaces.ReadOnlyBeaconBlock, error) {
 		}
 		cp := eth.CopyBeaconBlockDeneb(pb.(*eth.BeaconBlockDeneb))
 		return initBlockFromProtoDeneb(cp)
+	case version.EPBS:
+		if b.IsBlinded() {
+			return nil, consensus_types.ErrNotSupported("Copy", b.version)
+		}
+		cp := eth.CopyBeaconBlockEPBS(pb.(*eth.BeaconBlockePBS))
+		return initBlockFromProtoePBS(cp)
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -1059,6 +1159,8 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	switch b.version {
 	case version.Phase0, version.Altair:
 		return nil, consensus_types.ErrNotSupported("Execution", b.version)
+	case version.EPBS:
+		return b.signedExecutionPayloadHeader, nil
 	default:
 		if b.IsBlinded() {
 			return b.executionPayloadHeader, nil
@@ -1081,6 +1183,18 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 		return nil, consensus_types.ErrNotSupported("BlobKzgCommitments", b.version)
 	case version.Deneb:
 		return b.blobKzgCommitments, nil
+	default:
+		return nil, errIncorrectBlockVersion
+	}
+}
+
+// PayloadAttestations returns the payload attestations in the block.
+func (b *BeaconBlockBody) PayloadAttestations() ([]*eth.PayloadAttestation, error) {
+	switch b.version {
+	case version.Phase0, version.Altair, version.Bellatrix, version.Capella, version.Deneb:
+		return nil, consensus_types.ErrNotSupported("PayloadAttestations", b.version)
+	case version.EPBS:
+		return b.payloadAttestations, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -1117,6 +1231,11 @@ func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) 
 			return pb.(*eth.BlindedBeaconBlockBodyDeneb).HashTreeRoot()
 		}
 		return pb.(*eth.BeaconBlockBodyDeneb).HashTreeRoot()
+	case version.EPBS:
+		if b.IsBlinded() {
+			return [field_params.RootLength]byte{}, consensus_types.ErrNotSupported("HashTreeRoot", b.version)
+		}
+		return pb.(*eth.BeaconBlockBodyePBS).HashTreeRoot()
 	default:
 		return [field_params.RootLength]byte{}, errIncorrectBodyVersion
 	}
@@ -1124,5 +1243,6 @@ func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) 
 
 // IsBlinded checks if the beacon block body is a blinded block body.
 func (b *BeaconBlockBody) IsBlinded() bool {
-	return b.version >= version.Bellatrix && b.executionPayload == nil
+	preEPBS := b.version < version.EPBS
+	return b.version >= version.Bellatrix && b.executionPayload == nil && preEPBS
 }

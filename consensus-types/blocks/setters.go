@@ -102,6 +102,10 @@ func (b *SignedBeaconBlock) SetExecution(e interfaces.ExecutionData) error {
 	if b.version == version.Phase0 || b.version == version.Altair {
 		return consensus_types.ErrNotSupported("Execution", b.version)
 	}
+	if b.version == version.EPBS {
+		b.block.body.signedExecutionPayloadHeader = e
+		return nil
+	}
 	if e.IsBlinded() {
 		b.block.body.executionPayloadHeader = e
 		return nil
@@ -131,4 +135,22 @@ func (b *SignedBeaconBlock) SetBlobKzgCommitments(c [][]byte) error {
 	default:
 		return errIncorrectBlockVersion
 	}
+}
+
+// SetExecutionPayloadHeader sets the execution payload header of the block body.
+func (b *SignedBeaconBlock) SetExecutionPayloadHeader(e interfaces.ExecutionData) error {
+	if b.version < version.EPBS {
+		return consensus_types.ErrNotSupported("SignedExecutionPayloadHeader", b.version)
+	}
+	b.block.body.signedExecutionPayloadHeader = e
+	return nil
+}
+
+// SetPayloadAttestations sets the payload attestations in the block.
+func (b *SignedBeaconBlock) SetPayloadAttestations(p []*eth.PayloadAttestation) error {
+	if b.version < version.EPBS {
+		return consensus_types.ErrNotSupported("PayloadAttestations", b.version)
+	}
+	b.block.body.payloadAttestations = p
+	return nil
 }

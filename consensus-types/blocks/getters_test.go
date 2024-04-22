@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -234,6 +235,51 @@ func Test_BeaconBlock_Copy(t *testing.T) {
 	require.DeepEqual(t, gas, uint64(123))
 }
 
+func Test_BeaconBlock_CanCopyEPBSFields(t *testing.T) {
+	signedHeader := &pb.SignedExecutionPayloadHeader{
+		Message: &pb.ExecutionPayloadHeaderEPBS{
+			ParentBlockHash:        bytesutil.PadTo([]byte("parentblockhash"), fieldparams.RootLength),
+			ParentBlockRoot:        bytesutil.PadTo([]byte("parentblockroot"), fieldparams.RootLength),
+			BlockHash:              bytesutil.PadTo([]byte("blockhash"), fieldparams.RootLength),
+			BuilderIndex:           1,
+			Slot:                   2,
+			Value:                  3,
+			BlobKzgCommitmentsRoot: bytesutil.PadTo([]byte("blobkzgcommitmentsroot"), fieldparams.RootLength),
+		},
+		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
+	}
+	payloadAtts := []*eth.PayloadAttestation{
+		{
+			AggregationBits: bitfield.NewBitvector512(),
+			Data: &eth.PayloadAttestationData{
+				BeaconBlockRoot: []byte("beaconblockroot"),
+				Slot:            1,
+				PayloadStatus:   2,
+			},
+			Signature: []byte("signature"),
+		},
+	}
+	epbsBlockProto := &eth.BeaconBlockePBS{
+		Body: &eth.BeaconBlockBodyePBS{
+			SignedExecutionPayloadHeader: signedHeader,
+			PayloadAttestations:          payloadAtts,
+		},
+	}
+	epbsBlock, err := NewBeaconBlock(epbsBlockProto)
+	require.NoError(t, err)
+	copiedePBSBlock, err := epbsBlock.Copy()
+	require.NoError(t, err)
+	copiedExecutionData, err := copiedePBSBlock.Body().Execution()
+	require.NoError(t, err)
+	copiedHeader, err := copiedExecutionData.PbSignedExecutionPayloadHeader()
+	require.NoError(t, err)
+	require.DeepEqual(t, copiedHeader, signedHeader)
+
+	copiedPayloadAtts, err := copiedePBSBlock.Body().PayloadAttestations()
+	require.NoError(t, err)
+	require.DeepEqual(t, copiedPayloadAtts, payloadAtts)
+}
+
 func Test_BeaconBlock_IsNil(t *testing.T) {
 	t.Run("nil block", func(t *testing.T) {
 		var b *BeaconBlock
@@ -452,6 +498,25 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	gas, err = eDenebHeader.ExcessBlobGas()
 	require.NoError(t, err)
 	require.DeepEqual(t, gas, uint64(223))
+
+	signedHeader, err := WrappedSignedExecutionPayloadHeader(&pb.SignedExecutionPayloadHeader{
+		Message: &pb.ExecutionPayloadHeaderEPBS{
+			ParentBlockHash:        bytesutil.PadTo([]byte("parentblockhash"), fieldparams.RootLength),
+			ParentBlockRoot:        bytesutil.PadTo([]byte("parentblockroot"), fieldparams.RootLength),
+			BlockHash:              bytesutil.PadTo([]byte("blockhash"), fieldparams.RootLength),
+			BuilderIndex:           1,
+			Slot:                   2,
+			Value:                  3,
+			BlobKzgCommitmentsRoot: bytesutil.PadTo([]byte("blobkzgcommitmentsroot"), fieldparams.RootLength),
+		},
+		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
+	})
+	require.NoError(t, err)
+	bb = &SignedBeaconBlock{version: version.EPBS, block: &BeaconBlock{version: version.EPBS, body: &BeaconBlockBody{version: version.EPBS}}}
+	require.NoError(t, bb.SetExecution(signedHeader))
+	result, err = bb.Block().Body().Execution()
+	require.NoError(t, err)
+	assert.DeepEqual(t, signedHeader, result)
 }
 
 func Test_BeaconBlockBody_HashTreeRoot(t *testing.T) {

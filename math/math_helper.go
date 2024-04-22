@@ -231,6 +231,13 @@ func WeiToGwei(v Wei) Gwei {
 	return Gwei(copied.Uint64())
 }
 
+func GweiToWei(v Gwei) Wei {
+	gweiBigInt := new(big.Int).SetUint64(uint64(v))
+	weiPerGwei := big.NewInt(1e9)
+	wei := new(big.Int).Mul(gweiBigInt, weiPerGwei)
+	return wei
+}
+
 // IsValidUint256 given a bigint checks if the value is a valid Uint256
 func IsValidUint256(bi *big.Int) bool {
 	return bi.Cmp(big.NewInt(0)) >= 0 && bi.BitLen() <= 256

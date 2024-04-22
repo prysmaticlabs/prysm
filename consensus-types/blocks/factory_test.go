@@ -162,6 +162,26 @@ func Test_NewSignedBeaconBlock(t *testing.T) {
 		assert.Equal(t, version.Deneb, b.Version())
 		assert.Equal(t, true, b.IsBlinded())
 	})
+	t.Run("GenericSignedBeaconBlock_ePBS", func(t *testing.T) {
+		pb := &eth.GenericSignedBeaconBlock_Epbs{
+			Epbs: &eth.SignedBeaconBlockePBS{
+				Block: &eth.BeaconBlockePBS{
+					Body: &eth.BeaconBlockBodyePBS{},
+				},
+			},
+		}
+		b, err := NewSignedBeaconBlock(pb)
+		require.NoError(t, err)
+		assert.Equal(t, version.EPBS, b.Version())
+	})
+	t.Run("SignedBeaconBlockePBS", func(t *testing.T) {
+		pb := &eth.SignedBeaconBlockePBS{
+			Block: &eth.BeaconBlockePBS{
+				Body: &eth.BeaconBlockBodyePBS{}}}
+		b, err := NewSignedBeaconBlock(pb)
+		require.NoError(t, err)
+		assert.Equal(t, version.EPBS, b.Version())
+	})
 	t.Run("nil", func(t *testing.T) {
 		_, err := NewSignedBeaconBlock(nil)
 		assert.ErrorContains(t, "received nil object", err)
@@ -277,6 +297,18 @@ func Test_NewBeaconBlock(t *testing.T) {
 		assert.Equal(t, version.Deneb, b.Version())
 		assert.Equal(t, true, b.IsBlinded())
 	})
+	t.Run("GenericBeaconBlock_ePBS", func(t *testing.T) {
+		pb := &eth.GenericBeaconBlock_Epbs{Epbs: &eth.BeaconBlockePBS{Body: &eth.BeaconBlockBodyePBS{}}}
+		b, err := NewBeaconBlock(pb)
+		require.NoError(t, err)
+		assert.Equal(t, version.EPBS, b.Version())
+	})
+	t.Run("BeaconBlockePBS", func(t *testing.T) {
+		pb := &eth.BeaconBlockePBS{Body: &eth.BeaconBlockBodyePBS{}}
+		b, err := NewBeaconBlock(pb)
+		require.NoError(t, err)
+		assert.Equal(t, version.EPBS, b.Version())
+	})
 	t.Run("nil", func(t *testing.T) {
 		_, err := NewBeaconBlock(nil)
 		assert.ErrorContains(t, "received nil object", err)
@@ -355,6 +387,14 @@ func Test_NewBeaconBlockBody(t *testing.T) {
 		assert.Equal(t, version.Deneb, b.version)
 		assert.Equal(t, true, b.IsBlinded())
 	})
+	t.Run("BeaconBlockBodyePBS", func(t *testing.T) {
+		pb := &eth.BeaconBlockBodyePBS{}
+		i, err := NewBeaconBlockBody(pb)
+		require.NoError(t, err)
+		b, ok := i.(*BeaconBlockBody)
+		require.Equal(t, true, ok)
+		assert.Equal(t, version.EPBS, b.version)
+	})
 	t.Run("nil", func(t *testing.T) {
 		_, err := NewBeaconBlockBody(nil)
 		assert.ErrorContains(t, "received nil object", err)
@@ -425,6 +465,13 @@ func Test_BuildSignedBeaconBlock(t *testing.T) {
 		assert.DeepEqual(t, sig, sb.Signature())
 		assert.Equal(t, version.Deneb, sb.Version())
 		assert.Equal(t, true, sb.IsBlinded())
+	})
+	t.Run("ePBS", func(t *testing.T) {
+		b := &BeaconBlock{version: version.EPBS, body: &BeaconBlockBody{version: version.EPBS}}
+		sb, err := BuildSignedBeaconBlock(b, sig[:])
+		require.NoError(t, err)
+		assert.DeepEqual(t, sig, sb.Signature())
+		assert.Equal(t, version.EPBS, sb.Version())
 	})
 }
 

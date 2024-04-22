@@ -187,6 +187,16 @@ func (executionPayload) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
+// PbSignedExecutionPayloadHeader --
+func (executionPayload) PbSignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbSignedExecutionPayloadEnvelope --
+func (executionPayload) PbSignedExecutionPayloadEnvelope() (*enginev1.SignedExecutionPayloadEnvelope, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // ValueInWei --
 func (executionPayload) ValueInWei() (math.Wei, error) {
 	return nil, consensus_types.ErrUnsupportedField
@@ -365,6 +375,16 @@ func (executionPayloadHeader) PbCapella() (*enginev1.ExecutionPayloadCapella, er
 
 // PbBellatrix --
 func (executionPayloadHeader) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbSignedExecutionPayloadHeader --
+func (executionPayloadHeader) PbSignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbSignedExecutionPayloadEnvelope --
+func (executionPayloadHeader) PbSignedExecutionPayloadEnvelope() (*enginev1.SignedExecutionPayloadEnvelope, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
@@ -579,6 +599,16 @@ func (executionPayloadCapella) PbBellatrix() (*enginev1.ExecutionPayload, error)
 	return nil, consensus_types.ErrUnsupportedField
 }
 
+// PbSignedExecutionPayloadHeader --
+func (executionPayloadCapella) PbSignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbSignedExecutionPayloadEnvelope --
+func (executionPayloadCapella) PbSignedExecutionPayloadEnvelope() (*enginev1.SignedExecutionPayloadEnvelope, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // ValueInWei --
 func (e executionPayloadCapella) ValueInWei() (math.Wei, error) {
 	return e.weiValue, nil
@@ -759,6 +789,16 @@ func (executionPayloadHeaderCapella) PbCapella() (*enginev1.ExecutionPayloadCape
 
 // PbBellatrix --
 func (executionPayloadHeaderCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbSignedExecutionPayloadHeader --
+func (executionPayloadHeaderCapella) PbSignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbSignedExecutionPayloadEnvelope --
+func (executionPayloadHeaderCapella) PbSignedExecutionPayloadEnvelope() (*enginev1.SignedExecutionPayloadEnvelope, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
@@ -1086,6 +1126,16 @@ func (executionPayloadHeaderDeneb) PbCapella() (*enginev1.ExecutionPayloadCapell
 	return nil, consensus_types.ErrUnsupportedField
 }
 
+// PbSignedExecutionPayloadHeader --
+func (executionPayloadHeaderDeneb) PbSignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbSignedExecutionPayloadEnvelope --
+func (executionPayloadHeaderDeneb) PbSignedExecutionPayloadEnvelope() (*enginev1.SignedExecutionPayloadEnvelope, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // ValueInWei --
 func (e executionPayloadHeaderDeneb) ValueInWei() (math.Wei, error) {
 	return e.weiValue, nil
@@ -1267,6 +1317,16 @@ func (e executionPayloadDeneb) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error
 	return e.p, nil
 }
 
+// PbSignedExecutionPayloadHeader --
+func (executionPayloadDeneb) PbSignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbSignedExecutionPayloadEnvelope --
+func (executionPayloadDeneb) PbSignedExecutionPayloadEnvelope() (*enginev1.SignedExecutionPayloadEnvelope, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // ValueInWei --
 func (e executionPayloadDeneb) ValueInWei() (math.Wei, error) {
 	return e.weiValue, nil
@@ -1293,4 +1353,375 @@ func PayloadValueToGwei(value []byte) math.Gwei {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
 	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
 	return math.WeiToGwei(v)
+}
+
+// signedExecutionPayloadHeader is a convenience wrapper around a beacon block body's signed execution payload header data structure.
+type signedExecutionPayloadHeader struct {
+	p *enginev1.SignedExecutionPayloadHeader
+}
+
+// WrappedSignedExecutionPayloadHeader is a constructor which wraps a protobuf signed execution payload header into an interface.
+func WrappedSignedExecutionPayloadHeader(p *enginev1.SignedExecutionPayloadHeader) (interfaces.ExecutionData, error) {
+	w := signedExecutionPayloadHeader{p: p}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// IsNil checks if the underlying data is nil.
+func (e signedExecutionPayloadHeader) IsNil() bool {
+	return e.p == nil
+}
+
+// MarshalSSZ --
+func (e signedExecutionPayloadHeader) MarshalSSZ() ([]byte, error) {
+	return e.p.MarshalSSZ()
+}
+
+// MarshalSSZTo --
+func (e signedExecutionPayloadHeader) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return e.p.MarshalSSZTo(dst)
+}
+
+// SizeSSZ --
+func (e signedExecutionPayloadHeader) SizeSSZ() int {
+	return e.p.SizeSSZ()
+}
+
+// UnmarshalSSZ --
+func (e signedExecutionPayloadHeader) UnmarshalSSZ(buf []byte) error {
+	return e.p.UnmarshalSSZ(buf)
+}
+
+// HashTreeRoot --
+func (e signedExecutionPayloadHeader) HashTreeRoot() ([32]byte, error) {
+	return e.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (e signedExecutionPayloadHeader) HashTreeRootWith(hh *fastssz.Hasher) error {
+	return e.p.HashTreeRootWith(hh)
+}
+
+// Proto --
+func (e signedExecutionPayloadHeader) Proto() proto.Message {
+	return e.p
+}
+
+// ParentHash --
+func (e signedExecutionPayloadHeader) ParentHash() []byte {
+	return e.p.Message.ParentBlockHash
+}
+
+// FeeRecipient --
+func (e signedExecutionPayloadHeader) FeeRecipient() []byte {
+	return []byte{}
+}
+
+// StateRoot --
+func (e signedExecutionPayloadHeader) StateRoot() []byte {
+	return []byte{}
+}
+
+// ReceiptsRoot --
+func (e signedExecutionPayloadHeader) ReceiptsRoot() []byte {
+	return []byte{}
+}
+
+// LogsBloom --
+func (e signedExecutionPayloadHeader) LogsBloom() []byte {
+	return []byte{}
+}
+
+// PrevRandao --
+func (e signedExecutionPayloadHeader) PrevRandao() []byte {
+	return []byte{}
+}
+
+// BlockNumber --
+func (e signedExecutionPayloadHeader) BlockNumber() uint64 {
+	return 0
+}
+
+// GasLimit --
+func (e signedExecutionPayloadHeader) GasLimit() uint64 {
+	return 0
+}
+
+// GasUsed --
+func (e signedExecutionPayloadHeader) GasUsed() uint64 {
+	return 0
+}
+
+// Timestamp --
+func (e signedExecutionPayloadHeader) Timestamp() uint64 {
+	return 0
+}
+
+// ExtraData --
+func (e signedExecutionPayloadHeader) ExtraData() []byte {
+	return []byte{}
+}
+
+// BaseFeePerGas --
+func (e signedExecutionPayloadHeader) BaseFeePerGas() []byte {
+	return []byte{}
+}
+
+// BlockHash --
+func (e signedExecutionPayloadHeader) BlockHash() []byte {
+	return e.p.Message.BlockHash
+}
+
+// Transactions --
+func (e signedExecutionPayloadHeader) Transactions() ([][]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// TransactionsRoot --
+func (e signedExecutionPayloadHeader) TransactionsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// Withdrawals --
+func (e signedExecutionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalsRoot --
+func (e signedExecutionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+func (e signedExecutionPayloadHeader) BlobGasUsed() (uint64, error) {
+	return 0, consensus_types.ErrUnsupportedField
+}
+
+func (e signedExecutionPayloadHeader) ExcessBlobGas() (uint64, error) {
+	return 0, consensus_types.ErrUnsupportedField
+}
+
+// PbBellatrix --
+func (e signedExecutionPayloadHeader) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbCapella --
+func (e signedExecutionPayloadHeader) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbDeneb --
+func (e signedExecutionPayloadHeader) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// ValueInWei --
+func (e signedExecutionPayloadHeader) ValueInWei() (math.Wei, error) {
+	return math.GweiToWei(math.Gwei(e.p.Message.Value)), nil
+}
+
+// ValueInGwei --
+func (e signedExecutionPayloadHeader) ValueInGwei() (uint64, error) {
+	return e.p.Message.Value, nil
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e signedExecutionPayloadHeader) IsBlinded() bool {
+	return true
+}
+
+func (e signedExecutionPayloadHeader) PbSignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error) {
+	return e.p, nil
+}
+
+// PbSignedExecutionPayloadEnvelope --
+func (signedExecutionPayloadHeader) PbSignedExecutionPayloadEnvelope() (*enginev1.SignedExecutionPayloadEnvelope, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// signedExecutionPayloadEnvelope is a convenience wrapper around a SignedExecutionPayloadEnvelope data structure.
+type signedExecutionPayloadEnvelope struct {
+	p *enginev1.SignedExecutionPayloadEnvelope
+}
+
+// WrappedSignedExecutionPayloadEnvelope is a constructor which wraps a protobuf signed execution payload envelope into an interface.
+func WrappedSignedExecutionPayloadEnvelope(p *enginev1.SignedExecutionPayloadEnvelope) (interfaces.ExecutionData, error) {
+	w := signedExecutionPayloadEnvelope{p: p}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// IsNil checks if the underlying data is nil.
+func (e signedExecutionPayloadEnvelope) IsNil() bool {
+	return e.p == nil
+}
+
+// MarshalSSZ --
+func (e signedExecutionPayloadEnvelope) MarshalSSZ() ([]byte, error) {
+	return e.p.MarshalSSZ()
+}
+
+// MarshalSSZTo --
+func (e signedExecutionPayloadEnvelope) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return e.p.MarshalSSZTo(dst)
+}
+
+// SizeSSZ --
+func (e signedExecutionPayloadEnvelope) SizeSSZ() int {
+	return e.p.SizeSSZ()
+}
+
+// UnmarshalSSZ --
+func (e signedExecutionPayloadEnvelope) UnmarshalSSZ(buf []byte) error {
+	return e.p.UnmarshalSSZ(buf)
+}
+
+// HashTreeRoot --
+func (e signedExecutionPayloadEnvelope) HashTreeRoot() ([32]byte, error) {
+	return e.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (e signedExecutionPayloadEnvelope) HashTreeRootWith(hh *fastssz.Hasher) error {
+	return e.p.HashTreeRootWith(hh)
+}
+
+// Proto --
+func (e signedExecutionPayloadEnvelope) Proto() proto.Message {
+	return e.p
+}
+
+// ParentHash --
+func (e signedExecutionPayloadEnvelope) ParentHash() []byte {
+	return e.p.Message.Payload.ParentHash
+}
+
+// FeeRecipient --
+func (e signedExecutionPayloadEnvelope) FeeRecipient() []byte {
+	return e.p.Message.Payload.FeeRecipient
+}
+
+// StateRoot --
+func (e signedExecutionPayloadEnvelope) StateRoot() []byte {
+	return e.p.Message.Payload.StateRoot
+}
+
+// ReceiptsRoot --
+func (e signedExecutionPayloadEnvelope) ReceiptsRoot() []byte {
+	return e.p.Message.Payload.ReceiptsRoot
+}
+
+// LogsBloom --
+func (e signedExecutionPayloadEnvelope) LogsBloom() []byte {
+	return e.p.Message.Payload.LogsBloom
+}
+
+// PrevRandao --
+func (e signedExecutionPayloadEnvelope) PrevRandao() []byte {
+	return e.p.Message.Payload.PrevRandao
+}
+
+// BlockNumber --
+func (e signedExecutionPayloadEnvelope) BlockNumber() uint64 {
+	return e.p.Message.Payload.BlockNumber
+}
+
+// GasLimit --
+func (e signedExecutionPayloadEnvelope) GasLimit() uint64 {
+	return e.p.Message.Payload.GasLimit
+}
+
+// GasUsed --
+func (e signedExecutionPayloadEnvelope) GasUsed() uint64 {
+	return e.p.Message.Payload.GasUsed
+}
+
+// Timestamp --
+func (e signedExecutionPayloadEnvelope) Timestamp() uint64 {
+	return e.p.Message.Payload.Timestamp
+}
+
+// ExtraData --
+func (e signedExecutionPayloadEnvelope) ExtraData() []byte {
+	return e.p.Message.Payload.ExtraData
+}
+
+// BaseFeePerGas --
+func (e signedExecutionPayloadEnvelope) BaseFeePerGas() []byte {
+	return e.p.Message.Payload.BaseFeePerGas
+}
+
+// BlockHash --
+func (e signedExecutionPayloadEnvelope) BlockHash() []byte {
+	return e.p.Message.Payload.BlockHash
+}
+
+// Transactions --
+func (e signedExecutionPayloadEnvelope) Transactions() ([][]byte, error) {
+	return e.p.Message.Payload.Transactions, nil
+}
+
+// TransactionsRoot --
+func (e signedExecutionPayloadEnvelope) TransactionsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// Withdrawals --
+func (e signedExecutionPayloadEnvelope) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return e.p.Message.Payload.Withdrawals, nil
+}
+
+// WithdrawalsRoot --
+func (e signedExecutionPayloadEnvelope) WithdrawalsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+func (e signedExecutionPayloadEnvelope) BlobGasUsed() (uint64, error) {
+	return e.p.Message.Payload.BlobGasUsed, nil
+}
+
+func (e signedExecutionPayloadEnvelope) ExcessBlobGas() (uint64, error) {
+	return e.p.Message.Payload.ExcessBlobGas, nil
+}
+
+// PbBellatrix --
+func (e signedExecutionPayloadEnvelope) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbCapella --
+func (e signedExecutionPayloadEnvelope) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbDeneb --
+func (e signedExecutionPayloadEnvelope) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// ValueInWei --
+func (e signedExecutionPayloadEnvelope) ValueInWei() (math.Wei, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// ValueInGwei --
+func (e signedExecutionPayloadEnvelope) ValueInGwei() (uint64, error) {
+	return 0, consensus_types.ErrUnsupportedField
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e signedExecutionPayloadEnvelope) IsBlinded() bool {
+	return false
+}
+
+func (e signedExecutionPayloadEnvelope) PbSignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+func (e signedExecutionPayloadEnvelope) PbSignedExecutionPayloadEnvelope() (*enginev1.SignedExecutionPayloadEnvelope, error) {
+	return e.p, nil
 }

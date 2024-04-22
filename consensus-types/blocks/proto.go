@@ -131,6 +131,16 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			Block:     block,
 			Signature: b.signature[:],
 		}, nil
+	case version.EPBS:
+		block, ok := blockMessage.(*eth.BeaconBlockePBS)
+		if !ok {
+			return nil, errIncorrectBlockVersion
+		}
+
+		return &eth.SignedBeaconBlockePBS{
+			Block:     block,
+			Signature: b.signature[:],
+		}, nil
 	default:
 		return nil, errors.New("unsupported signed beacon block version")
 	}
@@ -279,6 +289,19 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			StateRoot:     b.stateRoot[:],
 			Body:          body,
 		}, nil
+	case version.EPBS:
+		body, ok := bodyMessage.(*eth.BeaconBlockBodyePBS)
+		if !ok {
+			return nil, errIncorrectBodyVersion
+		}
+		return &eth.BeaconBlockePBS{
+			Slot:          b.slot,
+			ProposerIndex: b.proposerIndex,
+			ParentRoot:    b.parentRoot[:],
+			StateRoot:     b.stateRoot[:],
+			Body:          body,
+		}, nil
+
 	default:
 		return nil, errors.New("unsupported beacon block version")
 	}
@@ -449,6 +472,29 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			BlsToExecutionChanges: b.blsToExecutionChanges,
 			BlobKzgCommitments:    b.blobKzgCommitments,
 		}, nil
+	case version.EPBS:
+		var p *enginev1.SignedExecutionPayloadHeader
+		var ok bool
+		if b.signedExecutionPayloadHeader != nil {
+			p, ok = b.signedExecutionPayloadHeader.Proto().(*enginev1.SignedExecutionPayloadHeader)
+			if !ok {
+				return nil, errPayloadWrongType
+			}
+		}
+		return &eth.BeaconBlockBodyePBS{
+			RandaoReveal:                 b.randaoReveal[:],
+			Eth1Data:                     b.eth1Data,
+			Graffiti:                     b.graffiti[:],
+			ProposerSlashings:            b.proposerSlashings,
+			AttesterSlashings:            b.attesterSlashings,
+			Attestations:                 b.attestations,
+			Deposits:                     b.deposits,
+			VoluntaryExits:               b.voluntaryExits,
+			SyncAggregate:                b.syncAggregate,
+			BlsToExecutionChanges:        b.blsToExecutionChanges,
+			SignedExecutionPayloadHeader: p,
+			PayloadAttestations:          b.payloadAttestations,
+		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block body version")
 	}
@@ -533,6 +579,23 @@ func initSignedBlockFromProtoDeneb(pb *eth.SignedBeaconBlockDeneb) (*SignedBeaco
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Deneb,
+		block:     block,
+		signature: bytesutil.ToBytes96(pb.Signature),
+	}
+	return b, nil
+}
+
+func initSignedBlockFromProtoEPBS(pb *eth.SignedBeaconBlockePBS) (*SignedBeaconBlock, error) {
+	if pb == nil {
+		return nil, errNilBlock
+	}
+
+	block, err := initBlockFromProtoePBS(pb.Block)
+	if err != nil {
+		return nil, err
+	}
+	b := &SignedBeaconBlock{
+		version:   version.EPBS,
 		block:     block,
 		signature: bytesutil.ToBytes96(pb.Signature),
 	}
@@ -701,6 +764,26 @@ func initBlockFromProtoDeneb(pb *eth.BeaconBlockDeneb) (*BeaconBlock, error) {
 	}
 	b := &BeaconBlock{
 		version:       version.Deneb,
+		slot:          pb.Slot,
+		proposerIndex: pb.ProposerIndex,
+		parentRoot:    bytesutil.ToBytes32(pb.ParentRoot),
+		stateRoot:     bytesutil.ToBytes32(pb.StateRoot),
+		body:          body,
+	}
+	return b, nil
+}
+
+func initBlockFromProtoePBS(pb *eth.BeaconBlockePBS) (*BeaconBlock, error) {
+	if pb == nil {
+		return nil, errNilBlock
+	}
+
+	body, err := initBlockBodyFromProtoePBS(pb.Body)
+	if err != nil {
+		return nil, err
+	}
+	b := &BeaconBlock{
+		version:       version.EPBS,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    bytesutil.ToBytes32(pb.ParentRoot),
@@ -919,6 +1002,34 @@ func initBlockBodyFromProtoDeneb(pb *eth.BeaconBlockBodyDeneb) (*BeaconBlockBody
 		executionPayload:      p,
 		blsToExecutionChanges: pb.BlsToExecutionChanges,
 		blobKzgCommitments:    pb.BlobKzgCommitments,
+	}
+	return b, nil
+}
+
+func initBlockBodyFromProtoePBS(pb *eth.BeaconBlockBodyePBS) (*BeaconBlockBody, error) {
+	if pb == nil {
+		return nil, errNilBlockBody
+	}
+
+	p, err := WrappedSignedExecutionPayloadHeader(pb.SignedExecutionPayloadHeader)
+	// We allow the payload to be nil
+	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
+		return nil, err
+	}
+	b := &BeaconBlockBody{
+		version:                      version.EPBS,
+		randaoReveal:                 bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:                     pb.Eth1Data,
+		graffiti:                     bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings:            pb.ProposerSlashings,
+		attesterSlashings:            pb.AttesterSlashings,
+		attestations:                 pb.Attestations,
+		deposits:                     pb.Deposits,
+		voluntaryExits:               pb.VoluntaryExits,
+		syncAggregate:                pb.SyncAggregate,
+		blsToExecutionChanges:        pb.BlsToExecutionChanges,
+		payloadAttestations:          pb.PayloadAttestations,
+		signedExecutionPayloadHeader: p,
 	}
 	return b, nil
 }
