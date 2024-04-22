@@ -15,7 +15,6 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
-	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
@@ -199,14 +198,10 @@ func (v *ValidatorService) Start() {
 	hosts := strings.Split(u, ",")
 	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
 		http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
-		func() string {
-			return hosts[0]
-		},
+		hosts[0],
 	)
 
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
-	if len(hosts) > 1 && features.Get().EnableBeaconRESTApi {
-	}
 
 	valStruct := &validator{
 		validatorClient:                validatorClient,

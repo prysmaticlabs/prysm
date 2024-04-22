@@ -23,11 +23,11 @@ type JsonRestHandler interface {
 
 type BeaconApiJsonRestHandler struct {
 	client http.Client
-	host   func() string
+	host   string
 }
 
 // NewBeaconApiJsonRestHandler returns a JsonRestHandler
-func NewBeaconApiJsonRestHandler(client http.Client, host func() string) JsonRestHandler {
+func NewBeaconApiJsonRestHandler(client http.Client, host string) JsonRestHandler {
 	return &BeaconApiJsonRestHandler{
 		client: client,
 		host:   host,
@@ -41,13 +41,13 @@ func (c *BeaconApiJsonRestHandler) HttpClient() *http.Client {
 
 // Host returns the underlying HTTP host
 func (c *BeaconApiJsonRestHandler) Host() string {
-	return c.host()
+	return c.host
 }
 
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
 func (c *BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) error {
-	url := c.host() + endpoint
+	url := c.host + endpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create request for endpoint %s", url)
@@ -79,7 +79,7 @@ func (c *BeaconApiJsonRestHandler) Post(
 		return errors.New("data is nil")
 	}
 
-	url := c.host() + apiEndpoint
+	url := c.host + apiEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, data)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create request for endpoint %s", url)
@@ -137,7 +137,5 @@ func decodeResp(httpResp *http.Response, resp interface{}) error {
 }
 
 func (c *BeaconApiJsonRestHandler) ChangeHost(newHost string) {
-	c.host = func() string {
-		return newHost
-	}
+	c.host = newHost
 }
