@@ -33,6 +33,9 @@ const (
 
 	// AttesterSlashingReceived is sent after an attester slashing is received from gossip or rpc
 	AttesterSlashingReceived = 8
+
+	// DataColumnSidecarReceived is sent after a data column sidecar is received from gossip or rpc.
+	DataColumnSidecarReceived = 9
 )
 
 // UnAggregatedAttReceivedData is the data sent with UnaggregatedAttReceived events.
@@ -77,4 +80,8 @@ type ProposerSlashingReceivedData struct {
 // AttesterSlashingReceivedData is the data sent with AttesterSlashingReceived events.
 type AttesterSlashingReceivedData struct {
 	AttesterSlashing interfaces.AttesterSlashing
+}
+
+type DataColumnSidecarReceivedData struct {
+	DataColumn *ethpb.DataColumnSidecar
 }
