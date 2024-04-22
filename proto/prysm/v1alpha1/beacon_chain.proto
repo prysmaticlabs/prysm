@@ -47,18 +47,6 @@ service BeaconChain {
         };
     }
 
-    // Retrieve attestations by block root, slot, or epoch.
-    //
-    // The server may return an empty list when no attestations match the given
-    // filter criteria. This RPC should not return NOT_FOUND. Only one filter
-    // criteria should be used. This endpoint allows for retrieval of genesis
-    // information via a boolean query filter.
-    rpc ListAttestationsElectra(ListAttestationsRequest) returns (ListAttestationsResponseElectra) {
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations_electra"
-        };
-    }
-
     // Retrieve indexed attestations by block root, slot, or epoch.
     //
     // The server may return an empty list when no indexed attestations match the given
@@ -83,21 +71,6 @@ service BeaconChain {
     rpc AttestationPool(AttestationPoolRequest) returns (AttestationPoolResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/attestations/pool"
-        };
-    }
-
-    // Retrieve attestations from pool.
-    //
-    // The server returns a list of attestations that have been seen but not
-    // yet processed. Pool attestations eventually expire as the slot
-    // advances, so an attestation missing from this request does not imply
-    // that it was included in a block. The attestation may have expired.
-    // Refer to the Ethereum Beacon Chain specification for more details on how
-    // attestations are processed and when they are no longer valid.
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
-    rpc AttestationPoolElectra(AttestationPoolRequest) returns (AttestationPoolResponseElectra) {
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations/pool_electra"
         };
     }
 
@@ -301,18 +274,6 @@ message ListAttestationsResponse {
     int32 total_size = 3;
 }
 
-message ListAttestationsResponseElectra {
-    repeated AttestationElectra attestations = 1;
-
-    // A pagination token returned from a previous call to `ListAttestations`
-    // that indicates from where listing should continue.
-    // This field is optional.
-    string next_page_token = 2;
-
-    // Total count of Attestations matching the request filter.
-    int32 total_size = 3;
-}
-
 message ListIndexedAttestationsResponse {
     repeated IndexedAttestation indexed_attestations = 1;
 
@@ -377,35 +338,27 @@ message BeaconBlockContainer {
 
     // The desired block to be returned.
     oneof block {
-        // Representing a Phase0 block.
+        // Representing a phase 0 block.
         SignedBeaconBlock phase0_block = 3;
 
-        // Representing an Altair block.
+        // Representing an altair block.
         SignedBeaconBlockAltair altair_block = 4;
 
-        // Representing a Bellatrix block.
+        // Representing a bellatrix block.
         SignedBeaconBlockBellatrix bellatrix_block = 5;
 
-        // Representing a blinded Bellatrix block.
+        // Representing a blinded bellatrix block.
         SignedBlindedBeaconBlockBellatrix blinded_bellatrix_block = 6;
 
-        // Representing a Capella block.
+        // Representing a capella block.
         SignedBeaconBlockCapella capella_block = 7;
 
-        // Representing a blinded Capella block.
+        // Representing a blinded capella block.
         SignedBlindedBeaconBlockCapella blinded_capella_block = 8;
 
-        // Representing a Deneb block.
         SignedBeaconBlockDeneb deneb_block = 9;
 
-        // Representing a blinded Deneb block.
         SignedBlindedBeaconBlockDeneb blinded_deneb_block = 10;
-
-        // Representing an Electra block.
-        SignedBeaconBlockElectra electra_block = 11;
-
-        // Representing a blinded Electra block.
-        SignedBlindedBeaconBlockElectra blinded_electra_block = 12;
     }
 }
 
@@ -809,19 +762,6 @@ message AttestationPoolRequest {
 message AttestationPoolResponse {
     // List of attestations currently in the pool of the beacon chain.
     repeated Attestation attestations = 1;
-
-    // A pagination token returned from a previous call
-    // that indicates where this listing should continue from.
-    // This field is optional.
-    string next_page_token = 2;
-
-    // Total count of objects matching the request filter.
-    int32 total_size = 3;
-}
-
-message AttestationPoolResponseElectra {
-    // List of attestations currently in the pool of the beacon chain.
-    repeated AttestationElectra attestations = 1;
 
     // A pagination token returned from a previous call
     // that indicates where this listing should continue from.
