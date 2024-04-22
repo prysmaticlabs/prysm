@@ -41,7 +41,7 @@ func (v *validator) signPayloadAttestation(ctx context.Context, p *ethpb.Payload
 	// Sign the payload attestation data
 	sig, err := v.keyManager.Sign(ctx, signReq)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not sign block proposal")
+		return nil, errors.Wrap(err, "could not sign payload attestation")
 	}
 
 	// Marshal the signature into bytes
