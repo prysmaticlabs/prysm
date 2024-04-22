@@ -134,33 +134,33 @@ var ExpectedExecEngineTxsThreshold = 0.5
 const (
 	portSpan = 50
 
-	BootNodePort        = 2150
-	BootNodeMetricsPort = BootNodePort + portSpan
+	bootNodePort        = 2150
+	bootNodeMetricsPort = bootNodePort + portSpan
 
-	Eth1Port        = 3150
-	Eth1RPCPort     = Eth1Port + portSpan
-	Eth1WSPort      = Eth1Port + 2*portSpan
-	Eth1AuthRPCPort = Eth1Port + 3*portSpan
-	Eth1ProxyPort   = Eth1Port + 4*portSpan
+	eth1Port        = 3150
+	eth1RPCPort     = eth1Port + portSpan
+	eth1WSPort      = eth1Port + 2*portSpan
+	eth1AuthRPCPort = eth1Port + 3*portSpan
+	eth1ProxyPort   = eth1Port + 4*portSpan
 
-	PrysmBeaconNodeRPCPort     = 4150
-	PrysmBeaconNodeUDPPort     = PrysmBeaconNodeRPCPort + portSpan
-	PrysmBeaconNodeQUICPort    = PrysmBeaconNodeRPCPort + 2*portSpan
-	PrysmBeaconNodeTCPPort     = PrysmBeaconNodeRPCPort + 3*portSpan
-	PrysmBeaconNodeGatewayPort = PrysmBeaconNodeRPCPort + 4*portSpan
-	PrysmBeaconNodeMetricsPort = PrysmBeaconNodeRPCPort + 5*portSpan
-	PrysmBeaconNodePprofPort   = PrysmBeaconNodeRPCPort + 6*portSpan
+	prysmBeaconNodeRPCPort     = 4150
+	prysmBeaconNodeUDPPort     = prysmBeaconNodeRPCPort + portSpan
+	prysmBeaconNodeQUICPort    = prysmBeaconNodeRPCPort + 2*portSpan
+	prysmBeaconNodeTCPPort     = prysmBeaconNodeRPCPort + 3*portSpan
+	prysmBeaconNodeGatewayPort = prysmBeaconNodeRPCPort + 4*portSpan
+	prysmBeaconNodeMetricsPort = prysmBeaconNodeRPCPort + 5*portSpan
+	prysmBeaconNodePprofPort   = prysmBeaconNodeRPCPort + 6*portSpan
 
-	LighthouseBeaconNodeP2PPort     = 5150
-	LighthouseBeaconNodeHTTPPort    = LighthouseBeaconNodeP2PPort + portSpan
-	LighthouseBeaconNodeMetricsPort = LighthouseBeaconNodeP2PPort + 2*portSpan
+	lighthouseBeaconNodeP2PPort     = 5150
+	lighthouseBeaconNodeHTTPPort    = lighthouseBeaconNodeP2PPort + portSpan
+	lighthouseBeaconNodeMetricsPort = lighthouseBeaconNodeP2PPort + 2*portSpan
 
-	ValidatorGatewayPort = 6150
-	ValidatorMetricsPort = ValidatorGatewayPort + portSpan
+	validatorGatewayPort = 6150
+	validatorMetricsPort = validatorGatewayPort + portSpan
 
-	JaegerTracingPort = 9150
+	jaegerTracingPort = 9150
 
-	StartupBufferSecs = 15
+	startupBufferSecs = 15
 )
 
 func logDir() string {
@@ -210,7 +210,7 @@ func Init(t *testing.T, beaconNodeCount int) error {
 		return err
 	}
 
-	genTime := uint64(time.Now().Unix()) + StartupBufferSecs
+	genTime := uint64(time.Now().Unix()) + startupBufferSecs
 	TestParams = &params{
 		TestPath:               filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:                logPath,
@@ -263,7 +263,7 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		return err
 	}
 
-	genTime := uint64(time.Now().Unix()) + StartupBufferSecs
+	genTime := uint64(time.Now().Unix()) + startupBufferSecs
 	TestParams = &params{
 		TestPath:                  filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:                   logPath,
@@ -296,71 +296,71 @@ func port(seed, shardCount, shardIndex int, existingRegistrations *[]int) (int, 
 }
 
 func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingRegistrations *[]int) error {
-	bootnodePort, err := port(BootNodePort, shardCount, shardIndex, existingRegistrations)
+	bootnodePort, err := port(bootNodePort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	bootnodeMetricsPort, err := port(BootNodeMetricsPort, shardCount, shardIndex, existingRegistrations)
+	bootnodeMetricsPort, err := port(bootNodeMetricsPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	eth1Port, err := port(Eth1Port, shardCount, shardIndex, existingRegistrations)
+	eth1Port, err := port(eth1Port, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	eth1RPCPort, err := port(Eth1RPCPort, shardCount, shardIndex, existingRegistrations)
+	eth1RPCPort, err := port(eth1RPCPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	eth1WSPort, err := port(Eth1WSPort, shardCount, shardIndex, existingRegistrations)
+	eth1WSPort, err := port(eth1WSPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	eth1AuthPort, err := port(Eth1AuthRPCPort, shardCount, shardIndex, existingRegistrations)
+	eth1AuthPort, err := port(eth1AuthRPCPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	eth1ProxyPort, err := port(Eth1ProxyPort, shardCount, shardIndex, existingRegistrations)
+	eth1ProxyPort, err := port(eth1ProxyPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeRPCPort, err := port(PrysmBeaconNodeRPCPort, shardCount, shardIndex, existingRegistrations)
+	beaconNodeRPCPort, err := port(prysmBeaconNodeRPCPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeUDPPort, err := port(PrysmBeaconNodeUDPPort, shardCount, shardIndex, existingRegistrations)
+	beaconNodeUDPPort, err := port(prysmBeaconNodeUDPPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeQUICPort, err := port(PrysmBeaconNodeQUICPort, shardCount, shardIndex, existingRegistrations)
+	beaconNodeQUICPort, err := port(prysmBeaconNodeQUICPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeTCPPort, err := port(PrysmBeaconNodeTCPPort, shardCount, shardIndex, existingRegistrations)
+	beaconNodeTCPPort, err := port(prysmBeaconNodeTCPPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeGatewayPort, err := port(PrysmBeaconNodeGatewayPort, shardCount, shardIndex, existingRegistrations)
+	beaconNodeGatewayPort, err := port(prysmBeaconNodeGatewayPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeMetricsPort, err := port(PrysmBeaconNodeMetricsPort, shardCount, shardIndex, existingRegistrations)
+	beaconNodeMetricsPort, err := port(prysmBeaconNodeMetricsPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodePprofPort, err := port(PrysmBeaconNodePprofPort, shardCount, shardIndex, existingRegistrations)
+	beaconNodePprofPort, err := port(prysmBeaconNodePprofPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	validatorGatewayPort, err := port(ValidatorGatewayPort, shardCount, shardIndex, existingRegistrations)
+	validatorGatewayPort, err := port(validatorGatewayPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	validatorMetricsPort, err := port(ValidatorMetricsPort, shardCount, shardIndex, existingRegistrations)
+	validatorMetricsPort, err := port(validatorMetricsPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	jaegerTracingPort, err := port(JaegerTracingPort, shardCount, shardIndex, existingRegistrations)
+	jaegerTracingPort, err := port(jaegerTracingPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
@@ -385,15 +385,15 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 }
 
 func initializeMulticlientPorts(shardCount, shardIndex int, ports *ports, existingRegistrations *[]int) error {
-	lighthouseBeaconNodeP2PPort, err := port(LighthouseBeaconNodeP2PPort, shardCount, shardIndex, existingRegistrations)
+	lighthouseBeaconNodeP2PPort, err := port(lighthouseBeaconNodeP2PPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	lighthouseBeaconNodeHTTPPort, err := port(LighthouseBeaconNodeHTTPPort, shardCount, shardIndex, existingRegistrations)
+	lighthouseBeaconNodeHTTPPort, err := port(lighthouseBeaconNodeHTTPPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	lighthouseBeaconNodeMetricsPort, err := port(LighthouseBeaconNodeMetricsPort, shardCount, shardIndex, existingRegistrations)
+	lighthouseBeaconNodeMetricsPort, err := port(lighthouseBeaconNodeMetricsPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
