@@ -181,7 +181,7 @@ func postEvaluation(nodeIdx int, requests map[string]endpoint, epoch primitives.
 	}
 
 	// perform a health check
-	basePath := fmt.Sprintf(v1PathTemplate, params2.PrysmBeaconNodeGatewayPort+nodeIdx)
+	basePath := fmt.Sprintf(v1PathTemplate, params2.TestParams.Ports.PrysmBeaconNodeGatewayPort+nodeIdx)
 	resp, err := http.Get(basePath + "/node/health")
 	if err != nil {
 		return errors.Wrap(err, "could not perform a health check")
