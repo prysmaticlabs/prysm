@@ -133,6 +133,9 @@ ssz_gen_marshal(
         "BlobSidecars",
         "BlobIdentifier",
         "DepositSnapshot",
+        "PayloadAttestationData",
+        "PayloadAttestation",
+        "PayloadAttestationMessage",
     ],
 )
 
@@ -231,6 +234,7 @@ ssz_proto_files(
         "beacon_block.proto",
         "beacon_state.proto",
         "blobs.proto",
+        "payload_attestation.proto",
         "sync_committee.proto",
         "withdrawals.proto",
     ],
