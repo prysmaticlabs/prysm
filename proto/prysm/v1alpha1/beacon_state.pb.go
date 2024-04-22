@@ -1873,7 +1873,7 @@ type BeaconStateElectra struct {
 	ConsolidationBalanceToConsume uint64                                                                      `protobuf:"varint,12004,opt,name=consolidation_balance_to_consume,json=consolidationBalanceToConsume,proto3" json:"consolidation_balance_to_consume,omitempty"`
 	EarliestConsolidationEpoch    github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Epoch          `protobuf:"varint,12005,opt,name=earliest_consolidation_epoch,json=earliestConsolidationEpoch,proto3" json:"earliest_consolidation_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"`
 	PendingBalanceDeposits        []*PendingBalanceDeposit                                                    `protobuf:"bytes,12006,rep,name=pending_balance_deposits,json=pendingBalanceDeposits,proto3" json:"pending_balance_deposits,omitempty" ssz-max:"134217728"`
-	PendingPartialWithdrawals     []*PartialWithdrawal                                                        `protobuf:"bytes,12007,rep,name=pending_partial_withdrawals,json=pendingPartialWithdrawals,proto3" json:"pending_partial_withdrawals,omitempty" ssz-max:"134217728"`
+	PendingPendingPartialWithdrawals     []*PendingPartialWithdrawal                                                        `protobuf:"bytes,12007,rep,name=pending_partial_withdrawals,json=pendingPendingPartialWithdrawals,proto3" json:"pending_partial_withdrawals,omitempty" ssz-max:"134217728"`
 	PendingConsolidations         []*PendingConsolidation                                                     `protobuf:"bytes,12008,rep,name=pending_consolidations,json=pendingConsolidations,proto3" json:"pending_consolidations,omitempty" ssz-max:"262144"`
 }
 
@@ -2147,9 +2147,9 @@ func (x *BeaconStateElectra) GetPendingBalanceDeposits() []*PendingBalanceDeposi
 	return nil
 }
 
-func (x *BeaconStateElectra) GetPendingPartialWithdrawals() []*PartialWithdrawal {
+func (x *BeaconStateElectra) GetPendingPendingPartialWithdrawals() []*PendingPartialWithdrawal {
 	if x != nil {
-		return x.PendingPartialWithdrawals
+		return x.PendingPendingPartialWithdrawals
 	}
 	return nil
 }
@@ -3260,7 +3260,7 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_goTypes = []interface{}{
 	(*v1.ExecutionPayloadHeaderCapella)(nil), // 24: ethereum.engine.v1.ExecutionPayloadHeaderCapella
 	(*v1.ExecutionPayloadHeaderDeneb)(nil),   // 25: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
 	(*PendingBalanceDeposit)(nil),            // 26: ethereum.eth.v1alpha1.PendingBalanceDeposit
-	(*PartialWithdrawal)(nil),                // 27: ethereum.eth.v1alpha1.PartialWithdrawal
+	(*PendingPartialWithdrawal)(nil),                // 27: ethereum.eth.v1alpha1.PendingPartialWithdrawal
 	(*PendingConsolidation)(nil),             // 28: ethereum.eth.v1alpha1.PendingConsolidation
 }
 var file_proto_prysm_v1alpha1_beacon_state_proto_depIdxs = []int32{
@@ -3334,7 +3334,7 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_depIdxs = []int32{
 	25, // 67: ethereum.eth.v1alpha1.BeaconStateElectra.latest_execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderDeneb
 	17, // 68: ethereum.eth.v1alpha1.BeaconStateElectra.historical_summaries:type_name -> ethereum.eth.v1alpha1.HistoricalSummary
 	26, // 69: ethereum.eth.v1alpha1.BeaconStateElectra.pending_balance_deposits:type_name -> ethereum.eth.v1alpha1.PendingBalanceDeposit
-	27, // 70: ethereum.eth.v1alpha1.BeaconStateElectra.pending_partial_withdrawals:type_name -> ethereum.eth.v1alpha1.PartialWithdrawal
+	27, // 70: ethereum.eth.v1alpha1.BeaconStateElectra.pending_partial_withdrawals:type_name -> ethereum.eth.v1alpha1.PendingPartialWithdrawal
 	28, // 71: ethereum.eth.v1alpha1.BeaconStateElectra.pending_consolidations:type_name -> ethereum.eth.v1alpha1.PendingConsolidation
 	72, // [72:72] is the sub-list for method output_type
 	72, // [72:72] is the sub-list for method input_type

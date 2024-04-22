@@ -138,7 +138,7 @@ ssz_gen_marshal(
         "BlobIdentifier",
         "DepositSnapshot",
         "PendingBalanceDeposit",
-        "PartialWithdrawal",
+        "PendingPartialWithdrawal",
         "ExecutionLayerWithdrawalRequest",
         "Consolidation",
         "SignedConsolidation",

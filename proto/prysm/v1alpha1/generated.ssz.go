@@ -15855,13 +15855,13 @@ func (p *PendingBalanceDeposit) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the PartialWithdrawal object
-func (p *PartialWithdrawal) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the PendingPartialWithdrawal object
+func (p *PendingPartialWithdrawal) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(p)
 }
 
-// MarshalSSZTo ssz marshals the PartialWithdrawal object to a target array
-func (p *PartialWithdrawal) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the PendingPartialWithdrawal object to a target array
+func (p *PendingPartialWithdrawal) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'Index'
@@ -15876,8 +15876,8 @@ func (p *PartialWithdrawal) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the PartialWithdrawal object
-func (p *PartialWithdrawal) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the PendingPartialWithdrawal object
+func (p *PendingPartialWithdrawal) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 24 {
@@ -15896,19 +15896,19 @@ func (p *PartialWithdrawal) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the PartialWithdrawal object
-func (p *PartialWithdrawal) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the PendingPartialWithdrawal object
+func (p *PendingPartialWithdrawal) SizeSSZ() (size int) {
 	size = 24
 	return
 }
 
-// HashTreeRoot ssz hashes the PartialWithdrawal object
-func (p *PartialWithdrawal) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the PendingPartialWithdrawal object
+func (p *PendingPartialWithdrawal) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(p)
 }
 
-// HashTreeRootWith ssz hashes the PartialWithdrawal object with a hasher
-func (p *PartialWithdrawal) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the PendingPartialWithdrawal object with a hasher
+func (p *PendingPartialWithdrawal) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Index'

@@ -78,7 +78,7 @@ func (x *PendingBalanceDeposit) GetAmount() uint64 {
 	return 0
 }
 
-type PartialWithdrawal struct {
+type PendingPartialWithdrawal struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -88,8 +88,8 @@ type PartialWithdrawal struct {
 	WithdrawableEpoch uint64                                                                      `protobuf:"varint,3,opt,name=withdrawable_epoch,json=withdrawableEpoch,proto3" json:"withdrawable_epoch,omitempty"`
 }
 
-func (x *PartialWithdrawal) Reset() {
-	*x = PartialWithdrawal{}
+func (x *PendingPartialWithdrawal) Reset() {
+	*x = PendingPartialWithdrawal{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_prysm_v1alpha1_eip_7251_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -97,13 +97,13 @@ func (x *PartialWithdrawal) Reset() {
 	}
 }
 
-func (x *PartialWithdrawal) String() string {
+func (x *PendingPartialWithdrawal) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PartialWithdrawal) ProtoMessage() {}
+func (*PendingPartialWithdrawal) ProtoMessage() {}
 
-func (x *PartialWithdrawal) ProtoReflect() protoreflect.Message {
+func (x *PendingPartialWithdrawal) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_prysm_v1alpha1_eip_7251_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -115,26 +115,26 @@ func (x *PartialWithdrawal) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PartialWithdrawal.ProtoReflect.Descriptor instead.
-func (*PartialWithdrawal) Descriptor() ([]byte, []int) {
+// Deprecated: Use PendingPartialWithdrawal.ProtoReflect.Descriptor instead.
+func (*PendingPartialWithdrawal) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_eip_7251_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *PartialWithdrawal) GetIndex() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex {
+func (x *PendingPartialWithdrawal) GetIndex() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex {
 	if x != nil {
 		return x.Index
 	}
 	return github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex(0)
 }
 
-func (x *PartialWithdrawal) GetAmount() uint64 {
+func (x *PendingPartialWithdrawal) GetAmount() uint64 {
 	if x != nil {
 		return x.Amount
 	}
 	return 0
 }
 
-func (x *PartialWithdrawal) GetWithdrawableEpoch() uint64 {
+func (x *PendingPartialWithdrawal) GetWithdrawableEpoch() uint64 {
 	if x != nil {
 		return x.WithdrawableEpoch
 	}
@@ -490,7 +490,7 @@ func file_proto_prysm_v1alpha1_eip_7251_proto_rawDescGZIP() []byte {
 var file_proto_prysm_v1alpha1_eip_7251_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_prysm_v1alpha1_eip_7251_proto_goTypes = []interface{}{
 	(*PendingBalanceDeposit)(nil),           // 0: ethereum.eth.v1alpha1.PendingBalanceDeposit
-	(*PartialWithdrawal)(nil),               // 1: ethereum.eth.v1alpha1.PartialWithdrawal
+	(*PendingPartialWithdrawal)(nil),               // 1: ethereum.eth.v1alpha1.PendingPartialWithdrawal
 	(*ExecutionLayerWithdrawalRequest)(nil), // 2: ethereum.eth.v1alpha1.ExecutionLayerWithdrawalRequest
 	(*Consolidation)(nil),                   // 3: ethereum.eth.v1alpha1.Consolidation
 	(*SignedConsolidation)(nil),             // 4: ethereum.eth.v1alpha1.SignedConsolidation
@@ -524,7 +524,7 @@ func file_proto_prysm_v1alpha1_eip_7251_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_eip_7251_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PartialWithdrawal); i {
+			switch v := v.(*PendingPartialWithdrawal); i {
 			case 0:
 				return &v.state
 			case 1:
