@@ -229,12 +229,11 @@ type BeaconChainConfig struct {
 	MaxRequestBlocksDeneb            uint64           `yaml:"MAX_REQUEST_BLOCKS_DENEB" spec:"true"`              // MaxRequestBlocksDeneb is the maximum number of blocks in a single request after the deneb epoch.
 
 	// Values introduce in Electra upgrade
-	// TODO: Godoc comments
-	NumberOfColumns                     uint64 `yaml:"NUMBER_OF_COLUMNS" spec:"true"`
-	DataColumnSidecarSubnetCount        uint64 `yaml:"DATA_COLUMN_SIDECAR_SUBNET_COUNT" spec:"true"`
-	MaxPerEpochActivationExitChurnLimit uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT" spec:"true"`
-	MinPerEpochChurnLimitElectra        uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA" spec:"true"`
-	MaxRequestDataColumnSidecars        uint64 `yaml:"MAX_REQUEST_DATA_COLUMN_SIDECARS" spec:"true"`
+	NumberOfColumns                     uint64 `yaml:"NUMBER_OF_COLUMNS" spec:"true"`                         // NumberOfColumns in the extended data matrix.
+	DataColumnSidecarSubnetCount        uint64 `yaml:"DATA_COLUMN_SIDECAR_SUBNET_COUNT" spec:"true"`          // DataColumnSidecarSubnetCount is the number of data column sidecar subnets used in the gossipsub protocol
+	MaxPerEpochActivationExitChurnLimit uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT" spec:"true"` // MaxPerEpochActivationExitChurnLimit represents the maximum combined activation and exit churn.
+	MinPerEpochChurnLimitElectra        uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA" spec:"true"`         // MinPerEpochChurnLimitElectra is the minimum amount of churn allotted for validator rotations for electra.
+	MaxRequestDataColumnSidecars        uint64 `yaml:"MAX_REQUEST_DATA_COLUMN_SIDECARS" spec:"true"`          // MaxRequestDataColumnSidecars is the maximum number of data column sidecars in a single request
 
 	// Networking Specific Parameters
 	GossipMaxSize                   uint64          `yaml:"GOSSIP_MAX_SIZE" spec:"true"`                    // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.
