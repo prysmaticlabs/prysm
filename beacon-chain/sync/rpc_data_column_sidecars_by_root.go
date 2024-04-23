@@ -9,6 +9,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
@@ -72,19 +73,14 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		}
 		s.rateLimiter.add(stream, 1)
 		root, idx := bytesutil.ToBytes32(columnIdents[i].BlockRoot), columnIdents[i].Index
-		custodiedColumns, err := p2p.ComputeCustodyColumns(s.cfg.p2p.NodeID())
+		custodiedColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), params.BeaconConfig().CustodyRequirement)
 		if err != nil {
 			log.WithError(err).Errorf("unexpected error retrieving the node id")
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 			return err
 		}
-		isCustodied := false
-		for _, col := range custodiedColumns {
-			if col == idx {
-				isCustodied = true
-				break
-			}
-		}
+
+		isCustodied := custodiedColumns[idx]
 		if !isCustodied {
 			s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, types.ErrInvalidColumnIndex.Error(), stream)
