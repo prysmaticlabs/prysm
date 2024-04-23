@@ -388,7 +388,7 @@ message BeaconStateElectra {
   SyncCommittee next_sync_committee = 9003;
 
   // Fields introduced in Bellatrix fork [10001-11000]
-  ethereum.engine.v1.ExecutionPayloadHeaderDeneb latest_execution_payload_header = 10001; // [New in Deneb]
+  ethereum.engine.v1.ExecutionPayloadHeaderElectra latest_execution_payload_header = 10001; // [New in Electra]
 
   // Fields introduced in Capella fork [11001-12000]
   uint64 next_withdrawal_index = 11001;
