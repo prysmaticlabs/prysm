@@ -638,9 +638,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		if err := b.BlobStorage.Clear(); err != nil {
-			return errors.Wrap(err, "could not clear blob storage")
-		}
+
 		d, err = slasherkv.NewKVStore(b.ctx, dbPath)
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")

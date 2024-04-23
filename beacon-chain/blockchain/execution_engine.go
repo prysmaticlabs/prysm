@@ -256,7 +256,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 // reportInvalidBlock deals with the event that an invalid block was detected by the execution layer
 func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
 	newPayloadInvalidNodeCount.Inc()
-	invalidRoots, err := s.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
+	invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
 	if err != nil {
 		return err
 	}
