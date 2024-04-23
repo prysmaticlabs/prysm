@@ -49,3 +49,8 @@ func NewBlindedBeaconBlockDeneb() *ethpb.SignedBlindedBeaconBlockDeneb {
 func NewBlindedBeaconBlockCapellaV2() *v2.SignedBlindedBeaconBlockCapella {
 	return HydrateV2SignedBlindedBeaconBlockCapella(&v2.SignedBlindedBeaconBlockCapella{})
 }
+
+// NewBeaconBlockElectra creates a beacon block with minimum marshalable fields.
+func NewBeaconBlockElectra() *ethpb.SignedBeaconBlockElectra {
+	return HydrateSignedBeaconBlockElectra(&ethpb.SignedBeaconBlockElectra{})
+}

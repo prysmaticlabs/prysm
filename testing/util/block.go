@@ -1408,3 +1408,76 @@ func HydrateV2BlindedBeaconBlockBodyDeneb(b *v2.BlindedBeaconBlockBodyDeneb) *v2
 	}
 	return b
 }
+
+// HydrateSignedBeaconBlockElectra hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockElectra(b *ethpb.SignedBeaconBlockElectra) *ethpb.SignedBeaconBlockElectra {
+	if b == nil {
+		b = &ethpb.SignedBeaconBlockElectra{}
+	}
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Block = HydrateBeaconBlockElectra(b.Block)
+	return b
+}
+
+// HydrateBeaconBlockElectra hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockElectra(b *ethpb.BeaconBlockElectra) *ethpb.BeaconBlockElectra {
+	if b == nil {
+		b = &ethpb.BeaconBlockElectra{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, fieldparams.RootLength)
+	}
+	b.Body = HydrateBeaconBlockBodyElectra(b.Body)
+	return b
+}
+
+// HydrateBeaconBlockBodyElectra hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockBodyElectra(b *ethpb.BeaconBlockBodyElectra) *ethpb.BeaconBlockBodyElectra {
+	if b == nil {
+		b = &ethpb.BeaconBlockBodyElectra{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, fieldparams.RootLength)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	if b.ExecutionPayload == nil {
+		b.ExecutionPayload = &enginev1.ExecutionPayloadElectra{
+			ParentHash:         make([]byte, fieldparams.RootLength),
+			FeeRecipient:       make([]byte, 20),
+			StateRoot:          make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:       make([]byte, fieldparams.RootLength),
+			LogsBloom:          make([]byte, 256),
+			PrevRandao:         make([]byte, fieldparams.RootLength),
+			ExtraData:          make([]byte, 0),
+			BaseFeePerGas:      make([]byte, fieldparams.RootLength),
+			BlockHash:          make([]byte, fieldparams.RootLength),
+			Transactions:       make([][]byte, 0),
+			Withdrawals:        make([]*enginev1.Withdrawal, 0),
+			DepositReceipts:    make([]*enginev1.DepositReceipt, 0),
+			WithdrawalRequests: make([]*enginev1.ExecutionLayerWithdrawalRequest, 0),
+		}
+	}
+	return b
+}

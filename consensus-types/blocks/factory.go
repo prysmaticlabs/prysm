@@ -67,6 +67,8 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 		return initBlindedSignedBlockFromProtoDeneb(b)
 	case *eth.GenericSignedBeaconBlock_BlindedDeneb:
 		return initBlindedSignedBlockFromProtoDeneb(b.BlindedDeneb)
+	case *eth.SignedBeaconBlockElectra:
+		return initSignedBlockFromProtoElectra(b)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", i)
 	}

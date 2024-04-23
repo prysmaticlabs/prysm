@@ -131,6 +131,11 @@ func InitializeFromProtoDeneb(st *ethpb.BeaconStateDeneb) (state.BeaconState, er
 	return InitializeFromProtoUnsafeDeneb(proto.Clone(st).(*ethpb.BeaconStateDeneb))
 }
 
+// InitializeFromProtoElectra the beacon state from a protobuf representation.
+func InitializeFromProtoElectra(st *ethpb.BeaconStateElectra) (state.BeaconState, error) {
+	return InitializeFromProtoUnsafeElectra(proto.Clone(st).(*ethpb.BeaconStateElectra))
+}
+
 // InitializeFromProtoUnsafePhase0 directly uses the beacon state protobuf fields
 // and sets them as fields of the BeaconState type.
 func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, error) {

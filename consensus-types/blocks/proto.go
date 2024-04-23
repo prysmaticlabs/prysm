@@ -539,6 +539,23 @@ func initSignedBlockFromProtoDeneb(pb *eth.SignedBeaconBlockDeneb) (*SignedBeaco
 	return b, nil
 }
 
+func initSignedBlockFromProtoElectra(pb *eth.SignedBeaconBlockElectra) (*SignedBeaconBlock, error) {
+	if pb == nil {
+		return nil, errNilBlock
+	}
+
+	block, err := initBlockFromProtoElectra(pb.Block)
+	if err != nil {
+		return nil, err
+	}
+	b := &SignedBeaconBlock{
+		version:   version.Electra,
+		block:     block,
+		signature: bytesutil.ToBytes96(pb.Signature),
+	}
+	return b, nil
+}
+
 func initBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBellatrix) (*SignedBeaconBlock, error) {
 	if pb == nil {
 		return nil, errNilBlock
@@ -701,6 +718,26 @@ func initBlockFromProtoDeneb(pb *eth.BeaconBlockDeneb) (*BeaconBlock, error) {
 	}
 	b := &BeaconBlock{
 		version:       version.Deneb,
+		slot:          pb.Slot,
+		proposerIndex: pb.ProposerIndex,
+		parentRoot:    bytesutil.ToBytes32(pb.ParentRoot),
+		stateRoot:     bytesutil.ToBytes32(pb.StateRoot),
+		body:          body,
+	}
+	return b, nil
+}
+
+func initBlockFromProtoElectra(pb *eth.BeaconBlockElectra) (*BeaconBlock, error) {
+	if pb == nil {
+		return nil, errNilBlock
+	}
+
+	body, err := initBlockBodyFromProtoElectra(pb.Body)
+	if err != nil {
+		return nil, err
+	}
+	b := &BeaconBlock{
+		version:       version.Electra,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    bytesutil.ToBytes32(pb.ParentRoot),
@@ -947,6 +984,34 @@ func initBlindedBlockBodyFromProtoDeneb(pb *eth.BlindedBeaconBlockBodyDeneb) (*B
 		executionPayloadHeader: ph,
 		blsToExecutionChanges:  pb.BlsToExecutionChanges,
 		blobKzgCommitments:     pb.BlobKzgCommitments,
+	}
+	return b, nil
+}
+
+func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlockBody, error) {
+	if pb == nil {
+		return nil, errNilBlockBody
+	}
+
+	p, err := WrappedExecutionPayloadElectra(pb.ExecutionPayload, big.NewInt(0))
+	// We allow the payload to be nil
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
+		return nil, err
+	}
+	b := &BeaconBlockBody{
+		version:               version.Electra,
+		randaoReveal:          bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:              pb.Eth1Data,
+		graffiti:              bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings:     pb.ProposerSlashings,
+		attesterSlashings:     pb.AttesterSlashings,
+		attestations:          pb.Attestations,
+		deposits:              pb.Deposits,
+		voluntaryExits:        pb.VoluntaryExits,
+		syncAggregate:         pb.SyncAggregate,
+		executionPayload:      p,
+		blsToExecutionChanges: pb.BlsToExecutionChanges,
+		blobKzgCommitments:    pb.BlobKzgCommitments,
 	}
 	return b, nil
 }
