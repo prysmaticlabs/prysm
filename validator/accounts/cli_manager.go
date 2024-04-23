@@ -89,9 +89,7 @@ func (acm *CLIManager) prepareBeaconClients(ctx context.Context) (*iface.Validat
 
 	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
 		http.Client{Timeout: acm.beaconApiTimeout},
-		func() string {
-			return acm.beaconApiEndpoint
-		},
+		acm.beaconApiEndpoint,
 	)
 	validatorClient := validatorClientFactory.NewValidatorClient(conn, restHandler)
 	nodeClient := nodeClientFactory.NewNodeClient(conn, restHandler)
