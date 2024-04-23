@@ -49,6 +49,11 @@ func (m *oneBytePrefixMigrator) renameByGroup(fs afero.Fs, groups map[string][]s
 	return nil
 }
 
+func oneBytePrefix(p string) string {
+	// returns eg 0x00 from 0x0002fb4db510b8618b04dc82d023793739c26346a8b02eb73482e24b0fec0555
+	return p[0:rootPrefixLen]
+}
+
 func groupDirsByPrefix(dirs []string) map[string][]string {
 	groups := make(map[string][]string)
 	for _, dir := range dirs {

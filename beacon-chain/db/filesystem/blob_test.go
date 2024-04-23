@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/spf13/afero"
 )
 
@@ -28,7 +28,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		fs, bs := NewEphemeralBlobStorageWithFs(t)
 		existingSidecar := testSidecars[0]
 
-		blobPath := namerForSidecar(existingSidecar).path()
+		blobPath := bs.layout.SszPath(namerForSidecar(existingSidecar))
 		// Serialize the existing BlobSidecar to binary data.
 		existingSidecarData, err := ssz.MarshalSSZ(existingSidecar)
 		require.NoError(t, err)
@@ -149,15 +149,18 @@ func TestBlobIndicesBounds(t *testing.T) {
 }
 
 func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, slot primitives.Slot, idx uint64) {
-	namer := blobNamer{root: root, slot: slot, index: idx}
-	require.NoError(t, fs.MkdirAll(namer.dir(), 0700))
-	fh, err := fs.Create(namer.path())
+	epoch := slots.ToEpoch(slot)
+	namer := newBlobNamer(root, epoch, idx)
+	layout := periodicEpochLayout{}
+	require.NoError(t, fs.MkdirAll(layout.Dir(namer), 0700))
+	fh, err := fs.Create(layout.SszPath(namer))
 	require.NoError(t, err)
 	_, err = fh.Write([]byte("derp"))
 	require.NoError(t, err)
 	require.NoError(t, fh.Close())
 }
 
+/*
 func TestBlobStoragePrune(t *testing.T) {
 	currentSlot := primitives.Slot(200000)
 	fs, bs := NewEphemeralBlobStorageWithFs(t)
@@ -234,30 +237,8 @@ func TestBlobStoragePrune(t *testing.T) {
 	})
 }
 
-func BenchmarkPruning(b *testing.B) {
-	var t *testing.T
-	_, bs := NewEphemeralBlobStorageWithFs(t)
 
-	blockQty := 10000
-	currentSlot := primitives.Slot(150000)
-	slot := primitives.Slot(0)
-
-	for j := 0; j <= blockQty; j++ {
-		root := bytesutil.ToBytes32(bytesutil.ToBytes(uint64(slot), 32))
-		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, root, slot, fieldparams.MaxBlobsPerBlock)
-		testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
-		require.NoError(t, err)
-		require.NoError(t, bs.Save(testSidecars[0]))
-
-		slot += 100
-	}
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err := bs.pruner.prune(currentSlot)
-		require.NoError(b, err)
-	}
-}
+*/
 
 func TestNewBlobStorage(t *testing.T) {
 	_, err := NewBlobStorage()

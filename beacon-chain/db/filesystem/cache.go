@@ -3,12 +3,13 @@ package filesystem
 import (
 	"context"
 	"sync"
-	"time"
 
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/spf13/afero"
 )
+
+const bytesPerSidecar = 131928
 
 // blobIndexMask is a bitmask representing the set of blob indices that are currently set.
 type blobIndexMask [fieldparams.MaxBlobsPerBlock]bool
@@ -48,12 +49,10 @@ type BlobStorageSummarizer interface {
 }
 
 type blobStorageCache struct {
-	mu       sync.RWMutex
-	nBlobs   float64
-	cache    map[[32]byte]BlobStorageSummary
-	ready    chan struct{}
-	warmDone bool
-	warmer   *cacheWarmer
+	mu     sync.RWMutex
+	nBlobs float64
+	cache  map[[32]byte]BlobStorageSummary
+	warmer *cacheWarmer
 }
 
 var _ BlobStorageSummarizer = &blobStorageCache{}
@@ -99,6 +98,36 @@ func (s *blobStorageCache) epoch(key [32]byte) (primitives.Epoch, bool) {
 	return v.epoch, ok
 }
 
+func (s *blobStorageCache) get(key [32]byte) (BlobStorageSummary, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	v, ok := s.cache[key]
+	return v, ok
+}
+
+func (s *blobStorageCache) namerForIdx(key [32]byte, idx uint64) (blobNamer, error) {
+	v, ok := s.get(key)
+	if !ok || !v.HasIndex(idx) {
+		return blobNamer{}, db.ErrNotFound
+	}
+	return blobNamer{
+		root:  key,
+		index: idx,
+		epoch: v.epoch,
+	}, nil
+}
+
+func (s *blobStorageCache) namerForRoot(key [32]byte) (blobNamer, error) {
+	v, ok := s.get(key)
+	if !ok {
+		return blobNamer{}, db.ErrNotFound
+	}
+	return blobNamer{
+		root:  key,
+		epoch: v.epoch,
+	}, nil
+}
+
 func (s *blobStorageCache) evict(key [32]byte) int {
 	deleted := 0
 	s.mu.Lock()
@@ -124,48 +153,27 @@ func (s *blobStorageCache) updateMetrics(delta float64) {
 	blobDiskSize.Set(s.nBlobs * bytesPerSidecar)
 }
 
-func (p *blobStorageCache) waitForReady(ctx context.Context) error {
+type cacheWarmer struct {
+	mu     sync.Mutex
+	warmed bool
+	ready  chan struct{}
+}
+
+func (w *blobStorageCache) waitForReady(ctx context.Context) error {
 	select {
-	case <-p.ready:
+	case <-w.warmer.ready:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 }
 
-func (c *blobStorageCache) warm(fs afero.Fs) error {
-	return c.warmer.warm(c, fs)
-}
-
-func (w *cacheWarmer) warm(cache *blobStorageCache, fs afero.Fs) error {
-	w.mu.Lock()
-	start := time.Now()
-	defer func() {
-		w.mu.Unlock()
-		log.WithField("duration", time.Since(start).String()).Debug("Warmed up pruner cache")
-	}()
-	if w.warmed {
-		return nil
+func (w *blobStorageCache) warmComplete() {
+	w.warmer.mu.Lock()
+	defer w.warmer.mu.Unlock()
+	if !w.warmer.warmed {
+		w.warmer.warmed = true
+		close(w.warmer.ready)
 	}
-
-	layout, err := detectLayout(fs)
-	if err != nil {
-		return err
-	}
-
-	for namer := range layout.IterateNamers(fs) {
-		if err := cache.ensure(namer.root, namer.slot, namer.index); err != nil {
-			log.WithError(err).WithField("path", namer.path()).Error("Unable to cache blob metadata.")
-		}
-	}
-
-	w.warmed = true
-	close(w.ready)
-	return nil
-}
-
-type cacheWarmer struct {
-	mu     sync.Mutex
-	warmed bool
-	ready  chan struct{}
+	return
 }

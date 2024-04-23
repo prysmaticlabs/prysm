@@ -1,146 +1,61 @@
 package filesystem
 
 import (
-	"encoding/binary"
-	"io"
-	"path"
-	"path/filepath"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 )
 
 const retentionBuffer primitives.Epoch = 2
-const bytesPerSidecar = 131928
 
 var (
 	errPruningFailures = errors.New("blobs could not be pruned for some roots")
 	errNotBlobSSZ      = errors.New("not a blob ssz file")
 )
 
-// Full root in directory will be 66 chars, eg:
-// >>> len('0x0002fb4db510b8618b04dc82d023793739c26346a8b02eb73482e24b0fec0555') == 66
-const rootStringLen = 66
-
 type blobPruner struct {
-	sync.Mutex
-	prunedBefore atomic.Uint64
-	windowSize   primitives.Slot
-	//cache        *blobStorageCache
-	cacheReady chan struct{}
-	warmed     bool
-	fs         afero.Fs
+	mu              sync.Mutex
+	prunedBefore    atomic.Uint64
+	retentionPeriod primitives.Epoch
 }
 
-func newBlobPruner(fs afero.Fs, retain primitives.Epoch, layout fsLayout) (*blobPruner, error) {
-	r, err := slots.EpochStart(retain + retentionBuffer)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not set retentionSlots")
-	}
-	cw := make(chan struct{})
-	p := &blobPruner{fs: fs, windowSize: r, cache: cache, cacheReady: cw}
-	return p, nil
+func newBlobPruner(retain primitives.Epoch) *blobPruner {
+	p := &blobPruner{retentionPeriod: retain + retentionBuffer}
+	return p
 }
 
-func (p *blobPruner) notify(latest primitives.Epoch) error {
-	if err := p.cache.ensure(root, slots.ToEpoch(latest), idx); err != nil {
-		return err
-	}
-	pruned := uint64(windowMin(latest, p.windowSize))
-	if p.prunedBefore.Swap(pruned) == pruned {
-		return nil
+func (p *blobPruner) notify(latest primitives.Epoch, layout fsLayout) {
+	floor := periodFloor(latest, p.retentionPeriod)
+	if primitives.Epoch(p.prunedBefore.Swap(uint64(floor))) == floor {
+		// Only trigger pruning if the atomic swap changed the previous value of prunedBefore.
+		return
 	}
 	go func() {
-		p.Lock()
-		defer p.Unlock()
-		if err := p.prune(primitives.Slot(pruned)); err != nil {
-			log.WithError(err).Errorf("Failed to prune blobs from slot %d", latest)
+		p.mu.Lock()
+		start := time.Now()
+		defer p.mu.Unlock()
+		sum, err := layout.PruneBefore(floor)
+		if err != nil {
+			log.WithError(err).WithFields(sum.LogFields()).Warn("Encountered errors during blob pruning.")
 		}
+		log.WithFields(logrus.Fields{
+			"upToEpoch":    floor,
+			"duration":     time.Since(start).String(),
+			"filesRemoved": sum.blobsPruned,
+		}).Debug("Pruned old blobs")
+		blobsPrunedCounter.Add(float64(sum.blobsPruned))
 	}()
-	return nil
 }
 
-func windowMin(latest, offset primitives.Slot) primitives.Slot {
-	// Safely compute the first slot in the epoch for the latest slot
-	latest = latest - latest%params.BeaconConfig().SlotsPerEpoch
-	if latest < offset {
+func periodFloor(latest, period primitives.Epoch) primitives.Epoch {
+	if latest < period {
 		return 0
 	}
-	return latest - offset
-}
-
-func (p *blobPruner) warmCache() error {
-	p.Lock()
-	defer p.Unlock()
-	if err := p.prune(0); err != nil {
-		return err
-	}
-	if !p.warmed {
-		p.warmed = true
-		close(p.cacheReady)
-	}
-	return nil
-}
-
-// Prune prunes blobs in the base directory based on the retention epoch.
-// It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
-// This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
-func (p *blobPruner) prune(pruneBefore primitives.Slot) error {
-	start := time.Now()
-	//totalPruned, totalErr := 0, 0
-	totalPruned := 0
-	// Customize logging/metrics behavior for the initial cache warmup when slot=0.
-	// We'll never see a prune request for slot 0, unless this is the initial call to warm up the cache.
-	if pruneBefore == 0 {
-		defer func() {
-			log.WithField("duration", time.Since(start).String()).Debug("Warmed up pruner cache")
-		}()
-	} else {
-		defer func() {
-			log.WithFields(logrus.Fields{
-				"upToEpoch":    slots.ToEpoch(pruneBefore),
-				"duration":     time.Since(start).String(),
-				"filesRemoved": totalPruned,
-			}).Debug("Pruned old blobs")
-			blobsPrunedCounter.Add(float64(totalPruned))
-		}()
-	}
-
-	/*
-			entries, err := walkAndMigrateBasedir(p.fs, m)
-		if err != nil {
-			return errors.Wrap(err, "unable to list root blobs directory")
-		}
-		for _, dir := range entries {
-			pruned, err := p.tryPruneDir(dir, pruneBefore)
-			if err != nil {
-				totalErr += 1
-				log.WithError(err).WithField("directory", dir).Error("Unable to prune directory")
-			}
-			totalPruned += pruned
-		}
-	*/
-
-	/*
-		if totalErr > 0 {
-			return errors.Wrapf(errPruningFailures, "pruning failed for %d root directories", totalErr)
-		}
-
-	*/
-	return nil
-}
-
-func shouldRetain(slot, pruneBefore primitives.Slot) bool {
-	return slot >= pruneBefore
+	return latest - period
 }
 
 /*
@@ -211,147 +126,3 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 }
 
 */
-
-func idxFromPath(fname string) (uint64, error) {
-	fname = path.Base(fname)
-
-	if filepath.Ext(fname) != dotSszExt {
-		return 0, errors.Wrap(errNotBlobSSZ, "does not have .ssz extension")
-	}
-	parts := strings.Split(fname, ".")
-	if len(parts) != 2 {
-		return 0, errors.Wrap(errNotBlobSSZ, "unexpected filename structure (want <index>.ssz)")
-	}
-	return strconv.ParseUint(parts[0], 10, 64)
-}
-
-func rootFromDir(dir string) ([32]byte, error) {
-	subdir := filepath.Base(dir) // end of the path should be the blob directory, named by hex encoding of root
-	root, err := stringToRoot(subdir)
-	if err != nil {
-		return root, errors.Wrapf(err, "invalid directory, could not parse subdir as root %s", dir)
-	}
-	return root, nil
-}
-
-func epochFromDir(dir string) (primitives.Epoch, error) {
-	subdir := filepath.Base(dir)
-	epoch, err := strconv.ParseUint(subdir, 10, 64)
-	if err != nil {
-		return 0, errors.Wrapf(errInvalidDirectoryLayout,
-			"failed to decode epoch as uint, err=%s, dir=%s", err.Error(), dir)
-	}
-	return primitives.Epoch(epoch), nil
-}
-
-// Read slot from marshaled BlobSidecar data in the given file. See slotFromBlob for details.
-func slotFromFile(file string, fs afero.Fs) (primitives.Slot, error) {
-	f, err := fs.Open(file)
-	if err != nil {
-		return 0, err
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.WithError(err).Errorf("Could not close blob file")
-		}
-	}()
-	return slotFromBlob(f)
-}
-
-// slotFromBlob reads the ssz data of a file at the specified offset (8 + 131072 + 48 + 48 = 131176 bytes),
-// which is calculated based on the size of the BlobSidecar struct and is based on the size of the fields
-// preceding the slot information within SignedBeaconBlockHeader.
-func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
-	b := make([]byte, 8)
-	_, err := at.ReadAt(b, 131176)
-	if err != nil {
-		return 0, err
-	}
-	rawSlot := binary.LittleEndian.Uint64(b)
-	return primitives.Slot(rawSlot), nil
-}
-
-// walkAndMigrateBasedir manages executing any needed directory migrations while also returning a list of every
-// individual root directory containing blob files.
-func walkAndMigrateBasedir(fs afero.Fs, m directoryMigrator) ([]string, error) {
-	listing := make([]string, 0)
-	topDirs, err := listDir(fs, ".")
-	if err != nil {
-		return nil, err
-	}
-	if m != nil {
-		if err := m.migrate(fs, topDirs); err != nil {
-			return nil, err
-		}
-	}
-	// list all the subdirs to get the full listing.
-	for i := range topDirs {
-		dir := topDirs[i]
-		// We're not worried about any dangling legacy format paths because migrator should have already done its job.
-		if !filterRootGroupDir(dir) {
-			continue
-		}
-		subdirs, err := listDir(fs, dir)
-		if err != nil {
-			return nil, err
-		}
-		for _, sd := range subdirs {
-			if !filterRoot(sd) {
-				continue
-			}
-			listing = append(listing, filepath.Join(dir, sd))
-		}
-	}
-	return listing, nil
-}
-
-func listDir(fs afero.Fs, dir string) ([]string, error) {
-	top, err := fs.Open(dir)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open directory descriptor")
-	}
-	defer func() {
-		if err := top.Close(); err != nil {
-			log.WithError(err).Errorf("Could not close file %s", dir)
-		}
-	}()
-	// re the -1 param: "If n <= 0, Readdirnames returns all the names from the directory in a single slice"
-	dirs, err := top.Readdirnames(-1)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read directory listing")
-	}
-	return dirs, nil
-}
-
-func filter(entries []string, filt func(string) bool) []string {
-	filtered := make([]string, 0, len(entries))
-	for i := range entries {
-		if filt(entries[i]) {
-			filtered = append(filtered, entries[i])
-		}
-	}
-	return filtered
-}
-
-func filterRoot(s string) bool {
-	return strings.HasPrefix(s, "0x")
-}
-
-func filterLegacy(s string) bool {
-	return filterRoot(s) && len(s) == rootStringLen
-}
-
-func filterRootGroupDir(s string) bool {
-	return filterRoot(s) && len(filepath.Base(s)) == rootPrefixLen
-}
-
-var dotSszExt = "." + sszExt
-var dotPartExt = "." + partExt
-
-func filterSsz(s string) bool {
-	return filepath.Ext(s) == dotSszExt
-}
-
-func filterPart(s string) bool {
-	return filepath.Ext(s) == dotPartExt
-}
