@@ -50,6 +50,8 @@ go_test(
         "attestation_test.go",
         "beacon_committee_test.go",
         "block_test.go",
+        "private_access_fuzz_noop_test.go",  # keep
+        "private_access_test.go",
         "randao_test.go",
         "rewards_penalties_test.go",
         "shuffle_test.go",

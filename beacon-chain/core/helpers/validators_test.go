@@ -1,4 +1,4 @@
-package helpers
+package helpers_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
@@ -32,7 +33,7 @@ func TestIsActiveValidator_OK(t *testing.T) {
 	}
 	for _, test := range tests {
 		validator := &ethpb.Validator{ActivationEpoch: 10, ExitEpoch: 100}
-		assert.Equal(t, test.b, IsActiveValidator(validator, test.a), "IsActiveValidator(%d)", test.a)
+		assert.Equal(t, test.b, helpers.IsActiveValidator(validator, test.a), "IsActiveValidator(%d)", test.a)
 	}
 }
 
@@ -53,7 +54,7 @@ func TestIsActiveValidatorUsingTrie_OK(t *testing.T) {
 	for _, test := range tests {
 		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
 		require.NoError(t, err)
-		assert.Equal(t, test.b, IsActiveValidatorUsingTrie(readOnlyVal, test.a), "IsActiveValidatorUsingTrie(%d)", test.a)
+		assert.Equal(t, test.b, helpers.IsActiveValidatorUsingTrie(readOnlyVal, test.a), "IsActiveValidatorUsingTrie(%d)", test.a)
 	}
 }
 
@@ -81,7 +82,7 @@ func TestIsActiveNonSlashedValidatorUsingTrie_OK(t *testing.T) {
 		require.NoError(t, err)
 		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
 		require.NoError(t, err)
-		assert.Equal(t, test.b, IsActiveNonSlashedValidatorUsingTrie(readOnlyVal, test.a), "IsActiveNonSlashedValidatorUsingTrie(%d)", test.a)
+		assert.Equal(t, test.b, helpers.IsActiveNonSlashedValidatorUsingTrie(readOnlyVal, test.a), "IsActiveNonSlashedValidatorUsingTrie(%d)", test.a)
 	}
 }
 
@@ -161,7 +162,7 @@ func TestIsSlashableValidator_OK(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Run("without trie", func(t *testing.T) {
-				slashableValidator := IsSlashableValidator(test.validator.ActivationEpoch,
+				slashableValidator := helpers.IsSlashableValidator(test.validator.ActivationEpoch,
 					test.validator.WithdrawableEpoch, test.validator.Slashed, test.epoch)
 				assert.Equal(t, test.slashable, slashableValidator, "Expected active validator slashable to be %t", test.slashable)
 			})
@@ -170,7 +171,7 @@ func TestIsSlashableValidator_OK(t *testing.T) {
 				require.NoError(t, err)
 				readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
 				require.NoError(t, err)
-				slashableValidator := IsSlashableValidatorUsingTrie(readOnlyVal, test.epoch)
+				slashableValidator := helpers.IsSlashableValidatorUsingTrie(readOnlyVal, test.epoch)
 				assert.Equal(t, test.slashable, slashableValidator, "Expected active validator slashable to be %t", test.slashable)
 			})
 		})
@@ -223,17 +224,17 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ClearCache()
+		helpers.ClearCache()
 
 		require.NoError(t, state.SetSlot(tt.slot))
-		result, err := BeaconProposerIndex(context.Background(), state)
+		result, err := helpers.BeaconProposerIndex(context.Background(), state)
 		require.NoError(t, err, "Failed to get shard and committees at slot")
 		assert.Equal(t, tt.index, result, "Result index was an unexpected value")
 	}
 }
 
 func TestBeaconProposerIndex_BadState(t *testing.T) {
-	ClearCache()
+	helpers.ClearCache()
 
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig()
@@ -261,12 +262,12 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 	// Set a very high slot, so that retrieved block root will be
 	// non existent for the proposer cache.
 	require.NoError(t, state.SetSlot(100))
-	_, err = BeaconProposerIndex(context.Background(), state)
+	_, err = helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 }
 
 func TestComputeProposerIndex_Compatibility(t *testing.T) {
-	ClearCache()
+	helpers.ClearCache()
 
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
@@ -281,22 +282,22 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	indices, err := ActiveValidatorIndices(context.Background(), state, 0)
+	indices, err := helpers.ActiveValidatorIndices(context.Background(), state, 0)
 	require.NoError(t, err)
 
 	var proposerIndices []primitives.ValidatorIndex
-	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
+	seed, err := helpers.Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
 		seedWithSlotHash := hash.Hash(seedWithSlot)
-		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
+		index, err := helpers.ComputeProposerIndex(state, indices, seedWithSlotHash)
 		require.NoError(t, err)
 		proposerIndices = append(proposerIndices, index)
 	}
 
 	var wantedProposerIndices []primitives.ValidatorIndex
-	seed, err = Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
+	seed, err = helpers.Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
@@ -309,15 +310,15 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 }
 
 func TestDelayedActivationExitEpoch_OK(t *testing.T) {
-	ClearCache()
+	helpers.ClearCache()
 
 	epoch := primitives.Epoch(9999)
 	wanted := epoch + 1 + params.BeaconConfig().MaxSeedLookahead
-	assert.Equal(t, wanted, ActivationExitEpoch(epoch))
+	assert.Equal(t, wanted, helpers.ActivationExitEpoch(epoch))
 }
 
 func TestActiveValidatorCount_Genesis(t *testing.T) {
-	ClearCache()
+	helpers.ClearCache()
 
 	c := 1000
 	validators := make([]*ethpb.Validator, c)
@@ -334,10 +335,10 @@ func TestActiveValidatorCount_Genesis(t *testing.T) {
 	require.NoError(t, err)
 
 	// Preset cache to a bad count.
-	seed, err := Seed(beaconState, 0, params.BeaconConfig().DomainBeaconAttester)
+	seed, err := helpers.Seed(beaconState, 0, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	require.NoError(t, committeeCache.AddCommitteeShuffledList(context.Background(), &cache.Committees{Seed: seed, ShuffledIndices: []primitives.ValidatorIndex{1, 2, 3}}))
-	validatorCount, err := ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
+	require.NoError(t, helpers.CommitteeCache().AddCommitteeShuffledList(context.Background(), &cache.Committees{Seed: seed, ShuffledIndices: []primitives.ValidatorIndex{1, 2, 3}}))
+	validatorCount, err := helpers.ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
 	require.NoError(t, err)
 	assert.Equal(t, uint64(c), validatorCount, "Did not get the correct validator count")
 }
@@ -353,7 +354,7 @@ func TestChurnLimit_OK(t *testing.T) {
 		{validatorCount: 2000000, wantedChurn: 30 /* validatorCount/churnLimitQuotient */},
 	}
 	for _, test := range tests {
-		ClearCache()
+		helpers.ClearCache()
 
 		validators := make([]*ethpb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
@@ -368,9 +369,9 @@ func TestChurnLimit_OK(t *testing.T) {
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
 		require.NoError(t, err)
-		validatorCount, err := ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
+		validatorCount, err := helpers.ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
 		require.NoError(t, err)
-		resultChurn := ValidatorActivationChurnLimit(validatorCount)
+		resultChurn := helpers.ValidatorActivationChurnLimit(validatorCount)
 		assert.Equal(t, test.wantedChurn, resultChurn, "ValidatorActivationChurnLimit(%d)", test.validatorCount)
 	}
 }
@@ -386,7 +387,7 @@ func TestChurnLimitDeneb_OK(t *testing.T) {
 		{2000000, params.BeaconConfig().MaxPerEpochActivationChurnLimit},
 	}
 	for _, test := range tests {
-		ClearCache()
+		helpers.ClearCache()
 
 		// Create validators
 		validators := make([]*ethpb.Validator, test.validatorCount)
@@ -405,11 +406,11 @@ func TestChurnLimitDeneb_OK(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get active validator count
-		validatorCount, err := ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
+		validatorCount, err := helpers.ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
 		require.NoError(t, err)
 
 		// Test churn limit calculation
-		resultChurn := ValidatorActivationChurnLimitDeneb(validatorCount)
+		resultChurn := helpers.ValidatorActivationChurnLimitDeneb(validatorCount)
 		assert.Equal(t, test.wantedChurn, resultChurn)
 	}
 }
@@ -574,11 +575,11 @@ func TestActiveValidatorIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ClearCache()
+			helpers.ClearCache()
 
 			s, err := state_native.InitializeFromProtoPhase0(tt.args.state)
 			require.NoError(t, err)
-			got, err := ActiveValidatorIndices(context.Background(), s, tt.args.epoch)
+			got, err := helpers.ActiveValidatorIndices(context.Background(), s, tt.args.epoch)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 				return
@@ -684,12 +685,12 @@ func TestComputeProposerIndex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ClearCache()
+			helpers.ClearCache()
 
 			bState := &ethpb.BeaconState{Validators: tt.args.validators}
 			stTrie, err := state_native.InitializeFromProtoUnsafePhase0(bState)
 			require.NoError(t, err)
-			got, err := ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
+			got, err := helpers.ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 				return
@@ -718,9 +719,9 @@ func TestIsEligibleForActivationQueue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ClearCache()
+			helpers.ClearCache()
 
-			assert.Equal(t, tt.want, IsEligibleForActivationQueue(tt.validator), "IsEligibleForActivationQueue()")
+			assert.Equal(t, tt.want, helpers.IsEligibleForActivationQueue(tt.validator), "IsEligibleForActivationQueue()")
 		})
 	}
 }
@@ -747,11 +748,11 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ClearCache()
+			helpers.ClearCache()
 
 			s, err := state_native.InitializeFromProtoPhase0(tt.state)
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, IsEligibleForActivation(s, tt.validator), "IsEligibleForActivation()")
+			assert.Equal(t, tt.want, helpers.IsEligibleForActivation(s, tt.validator), "IsEligibleForActivation()")
 		})
 	}
 }
@@ -765,7 +766,7 @@ func computeProposerIndexWithValidators(validators []*ethpb.Validator, activeInd
 	hashFunc := hash.CustomSHA256Hasher()
 
 	for i := uint64(0); ; i++ {
-		candidateIndex, err := ComputeShuffledIndex(primitives.ValidatorIndex(i%length), length, seed, true /* shuffle */)
+		candidateIndex, err := helpers.ComputeShuffledIndex(primitives.ValidatorIndex(i%length), length, seed, true /* shuffle */)
 		if err != nil {
 			return 0, err
 		}
@@ -787,7 +788,7 @@ func computeProposerIndexWithValidators(validators []*ethpb.Validator, activeInd
 }
 
 func TestLastActivatedValidatorIndex_OK(t *testing.T) {
-	ClearCache()
+	helpers.ClearCache()
 
 	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
@@ -806,13 +807,13 @@ func TestLastActivatedValidatorIndex_OK(t *testing.T) {
 	require.NoError(t, beaconState.SetValidators(validators))
 	require.NoError(t, beaconState.SetBalances(balances))
 
-	index, err := LastActivatedValidatorIndex(context.Background(), beaconState)
+	index, err := helpers.LastActivatedValidatorIndex(context.Background(), beaconState)
 	require.NoError(t, err)
 	require.Equal(t, index, primitives.ValidatorIndex(3))
 }
 
 func TestProposerIndexFromCheckpoint(t *testing.T) {
-	ClearCache()
+	helpers.ClearCache()
 
 	e := primitives.Epoch(2)
 	r := [32]byte{'a'}
@@ -820,10 +821,10 @@ func TestProposerIndexFromCheckpoint(t *testing.T) {
 	ids := [32]primitives.ValidatorIndex{}
 	slot := primitives.Slot(69) // slot 5 in the Epoch
 	ids[5] = primitives.ValidatorIndex(19)
-	proposerIndicesCache.Set(e, r, ids)
+	helpers.ProposerIndicesCache().Set(e, r, ids)
 	c := &forkchoicetypes.Checkpoint{Root: root, Epoch: e - 1}
-	proposerIndicesCache.SetCheckpoint(*c, r)
-	id, err := ProposerIndexAtSlotFromCheckpoint(c, slot)
+	helpers.ProposerIndicesCache().SetCheckpoint(*c, r)
+	id, err := helpers.ProposerIndexAtSlotFromCheckpoint(c, slot)
 	require.NoError(t, err)
 	require.Equal(t, ids[5], id)
 }
