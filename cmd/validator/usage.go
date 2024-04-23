@@ -124,6 +124,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.BuilderGasLimitFlag,
 			flags.ValidatorsRegistrationBatchSizeFlag,
 			flags.EnableDistributed,
+			flags.AuthTokenPathFlag,
 		},
 	},
 	{
