@@ -104,6 +104,7 @@ func (s *Service) registerRPCHandlersDeneb() {
 			p2p.RPCDataColumnSidecarsByRootTopicV1,
 			s.dataColumnSidecarByRootRPCHandler,
 		)
+		return
 	}
 	s.registerRPC(
 		p2p.RPCBlobSidecarsByRangeTopicV1,
