@@ -683,6 +683,119 @@ func InitializeFromProtoUnsafeDeneb(st *ethpb.BeaconStateDeneb) (state.BeaconSta
 	return b, nil
 }
 
+// InitializeFromProtoUnsafeElectra directly uses the beacon state protobuf fields
+// and sets them as fields of the BeaconState type.
+func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.BeaconState, error) {
+	if st == nil {
+		return nil, errors.New("received nil state")
+	}
+
+	hRoots := customtypes.HistoricalRoots(make([][32]byte, len(st.HistoricalRoots)))
+	for i, r := range st.HistoricalRoots {
+		hRoots[i] = bytesutil.ToBytes32(r)
+	}
+
+	fieldCount := params.BeaconConfig().BeaconStateDenebFieldCount
+	b := &BeaconState{
+		version:                             version.Deneb,
+		genesisTime:                         st.GenesisTime,
+		genesisValidatorsRoot:               bytesutil.ToBytes32(st.GenesisValidatorsRoot),
+		slot:                                st.Slot,
+		fork:                                st.Fork,
+		latestBlockHeader:                   st.LatestBlockHeader,
+		historicalRoots:                     hRoots,
+		eth1Data:                            st.Eth1Data,
+		eth1DataVotes:                       st.Eth1DataVotes,
+		eth1DepositIndex:                    st.Eth1DepositIndex,
+		slashings:                           st.Slashings,
+		previousEpochParticipation:          st.PreviousEpochParticipation,
+		currentEpochParticipation:           st.CurrentEpochParticipation,
+		justificationBits:                   st.JustificationBits,
+		previousJustifiedCheckpoint:         st.PreviousJustifiedCheckpoint,
+		currentJustifiedCheckpoint:          st.CurrentJustifiedCheckpoint,
+		finalizedCheckpoint:                 st.FinalizedCheckpoint,
+		currentSyncCommittee:                st.CurrentSyncCommittee,
+		nextSyncCommittee:                   st.NextSyncCommittee,
+		latestExecutionPayloadHeaderElectra: st.LatestExecutionPayloadHeader,
+		nextWithdrawalIndex:                 st.NextWithdrawalIndex,
+		nextWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
+		historicalSummaries:                 st.HistoricalSummaries,
+
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
+	}
+
+	if features.Get().EnableExperimentalState {
+		b.blockRootsMultiValue = NewMultiValueBlockRoots(st.BlockRoots)
+		b.stateRootsMultiValue = NewMultiValueStateRoots(st.StateRoots)
+		b.randaoMixesMultiValue = NewMultiValueRandaoMixes(st.RandaoMixes)
+		b.balancesMultiValue = NewMultiValueBalances(st.Balances)
+		b.validatorsMultiValue = NewMultiValueValidators(st.Validators)
+		b.inactivityScoresMultiValue = NewMultiValueInactivityScores(st.InactivityScores)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStateDenebSharedFieldRefCount)
+	} else {
+		bRoots := make([][32]byte, fieldparams.BlockRootsLength)
+		for i, r := range st.BlockRoots {
+			bRoots[i] = bytesutil.ToBytes32(r)
+		}
+		b.blockRoots = bRoots
+
+		sRoots := make([][32]byte, fieldparams.StateRootsLength)
+		for i, r := range st.StateRoots {
+			sRoots[i] = bytesutil.ToBytes32(r)
+		}
+		b.stateRoots = sRoots
+
+		mixes := make([][32]byte, fieldparams.RandaoMixesLength)
+		for i, m := range st.RandaoMixes {
+			mixes[i] = bytesutil.ToBytes32(m)
+		}
+		b.randaoMixes = mixes
+
+		b.balances = st.Balances
+		b.validators = st.Validators
+		b.inactivityScores = st.InactivityScores
+
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, denebSharedFieldRefCount)
+	}
+
+	for _, f := range denebFields {
+		b.dirtyFields[f] = true
+		b.rebuildTrie[f] = true
+		b.dirtyIndices[f] = []uint64{}
+		trie, err := fieldtrie.NewFieldTrie(f, types.BasicArray, nil, 0)
+		if err != nil {
+			return nil, err
+		}
+		b.stateFieldLeaves[f] = trie
+	}
+
+	// Initialize field reference tracking for shared data.
+	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.LatestExecutionPayloadHeaderDeneb] = stateutil.NewRef(1) // New in Deneb.
+	b.sharedFieldReferences[types.HistoricalSummaries] = stateutil.NewRef(1)               // New in Capella.
+	if !features.Get().EnableExperimentalState {
+		b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+		b.sharedFieldReferences[types.StateRoots] = stateutil.NewRef(1)
+		b.sharedFieldReferences[types.RandaoMixes] = stateutil.NewRef(1)
+		b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
+		b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
+		b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
+	}
+
+	state.Count.Inc()
+	// Finalizer runs when dst is being destroyed in garbage collection.
+	runtime.SetFinalizer(b, finalizerCleanup)
+	return b, nil
+}
+
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() state.BeaconState {
 	b.lock.RLock()
@@ -750,6 +863,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		latestExecutionPayloadHeader:        b.latestExecutionPayloadHeaderVal(),
 		latestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapellaVal(),
 		latestExecutionPayloadHeaderDeneb:   b.latestExecutionPayloadHeaderDenebVal(),
+		latestExecutionPayloadHeaderElectra: b.latestExecutionPayloadHeaderElectraVal(),
 
 		id: types.Enumerator.Inc(),
 

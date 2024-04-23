@@ -848,6 +848,34 @@ func CopyExecutionPayloadDeneb(payload *enginev1.ExecutionPayloadDeneb) *enginev
 	}
 }
 
+// CopyExecutionPayloadHeaderElectra copies the provided execution payload object.
+func CopyExecutionPayloadHeaderElectra(payload *enginev1.ExecutionPayloadHeaderElectra) *enginev1.ExecutionPayloadHeaderElectra {
+	if payload == nil {
+		return nil
+	}
+	return &enginev1.ExecutionPayloadHeaderElectra{
+		ParentHash:             bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:           bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:              bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:           bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:              bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:             bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:            payload.BlockNumber,
+		GasLimit:               payload.GasLimit,
+		GasUsed:                payload.GasUsed,
+		Timestamp:              payload.Timestamp,
+		ExtraData:              bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:          bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:              bytesutil.SafeCopyBytes(payload.BlockHash),
+		TransactionsRoot:       bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+		WithdrawalsRoot:        bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
+		BlobGasUsed:            payload.BlobGasUsed,
+		ExcessBlobGas:          payload.ExcessBlobGas,
+		DepositReceiptsRoot:    bytesutil.SafeCopyBytes(payload.DepositReceiptsRoot),    // new in electra eip 6110
+		WithdrawalRequestsRoot: bytesutil.SafeCopyBytes(payload.WithdrawalRequestsRoot), // new in electra eip7521,7002
+	}
+}
+
 // CopyHistoricalSummaries copies the historical summaries.
 func CopyHistoricalSummaries(summaries []*HistoricalSummary) []*HistoricalSummary {
 	if summaries == nil {

@@ -56,6 +56,10 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 		b.latestExecutionPayloadHeaderDeneb = header
 		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderDeneb)
 		return nil
+	case *enginev1.ExecutionPayloadHeaderElectra:
+		b.latestExecutionPayloadHeaderElectra = header
+		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderElectra)
+		return nil
 	default:
 		return errors.New("value must be an execution payload header")
 	}

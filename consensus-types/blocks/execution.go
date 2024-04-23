@@ -172,6 +172,26 @@ func (e executionPayload) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
+// DepositReceipts --
+func (executionPayload) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// DepositReceiptsRoot --
+func (executionPayload) DepositReceiptsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequests --
+func (executionPayload) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequestsRoot --
+func (executionPayload) WithdrawalRequestsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // PbBellatrix --
 func (e executionPayload) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return e.p, nil
@@ -184,6 +204,11 @@ func (executionPayload) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 
 // PbDeneb --
 func (executionPayload) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbElectra --
+func (executionPayload) PbElectra() (*enginev1.ExecutionPayloadElectra, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
@@ -351,6 +376,31 @@ func (e executionPayloadHeader) BlobGasUsed() (uint64, error) {
 // ExcessBlobGas --
 func (e executionPayloadHeader) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
+}
+
+// DepositReceipts --
+func (executionPayloadHeader) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// DepositReceiptsRoot --
+func (executionPayloadHeader) DepositReceiptsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequests --
+func (executionPayloadHeader) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequestsRoot --
+func (executionPayloadHeader) WithdrawalRequestsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbElectra --
+func (executionPayloadHeader) PbElectra() (*enginev1.ExecutionPayloadElectra, error) {
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // PbDeneb --
@@ -564,6 +614,31 @@ func (e executionPayloadCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
+// DepositReceipts --
+func (executionPayloadCapella) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// DepositReceiptsRoot --
+func (executionPayloadCapella) DepositReceiptsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequests --
+func (executionPayloadCapella) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequestsRoot --
+func (executionPayloadCapella) WithdrawalRequestsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbElectra --
+func (executionPayloadCapella) PbElectra() (*enginev1.ExecutionPayloadElectra, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // PbDeneb --
 func (executionPayloadCapella) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
 	return nil, consensus_types.ErrUnsupportedField
@@ -745,6 +820,31 @@ func (e executionPayloadHeaderCapella) BlobGasUsed() (uint64, error) {
 // ExcessBlobGas --
 func (e executionPayloadHeaderCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
+}
+
+// DepositReceipts --
+func (executionPayloadHeaderCapella) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// DepositReceiptsRoot --
+func (executionPayloadHeaderCapella) DepositReceiptsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequests --
+func (executionPayloadHeaderCapella) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequestsRoot --
+func (executionPayloadHeaderCapella) WithdrawalRequestsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbElectra --
+func (executionPayloadHeaderCapella) PbElectra() (*enginev1.ExecutionPayloadElectra, error) {
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // PbDeneb --
@@ -1071,6 +1171,31 @@ func (e executionPayloadHeaderDeneb) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
+// DepositReceipts --
+func (executionPayloadHeaderDeneb) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// DepositReceiptsRoot --
+func (executionPayloadHeaderDeneb) DepositReceiptsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequests --
+func (executionPayloadHeaderDeneb) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequestsRoot --
+func (executionPayloadHeaderDeneb) WithdrawalRequestsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbElectra --
+func (executionPayloadHeaderDeneb) PbElectra() (*enginev1.ExecutionPayloadElectra, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // PbDeneb --
 func (executionPayloadHeaderDeneb) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
 	return nil, consensus_types.ErrUnsupportedField
@@ -1252,6 +1377,31 @@ func (e executionPayloadDeneb) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
+// DepositReceipts --
+func (executionPayloadDeneb) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// DepositReceiptsRoot --
+func (executionPayloadDeneb) DepositReceiptsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequests --
+func (executionPayloadDeneb) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequestsRoot --
+func (executionPayloadDeneb) WithdrawalRequestsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbElectra --
+func (executionPayloadDeneb) PbElectra() (*enginev1.ExecutionPayloadElectra, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // PbBellatrix --
 func (e executionPayloadDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, consensus_types.ErrUnsupportedField
@@ -1293,4 +1443,416 @@ func PayloadValueToGwei(value []byte) math.Gwei {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
 	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
 	return math.WeiToGwei(v)
+}
+
+// executionPayloadElectra is a convenience wrapper around a beacon block body's execution payload data structure
+// This wrapper allows us to conform to a common interface so that beacon
+// blocks for future forks can also be applied across Prysm without issues.
+type executionPayloadElectra struct {
+	p         *enginev1.ExecutionPayloadElectra
+	weiValue  math.Wei
+	gweiValue uint64
+}
+
+// WrappedExecutionPayloadElectra is a constructor which wraps a protobuf execution payload into an interface.
+func WrappedExecutionPayloadElectra(p *enginev1.ExecutionPayloadElectra, value math.Wei) (interfaces.ExecutionData, error) {
+	w := executionPayloadElectra{p: p, weiValue: value, gweiValue: uint64(math.WeiToGwei(value))}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// IsNil checks if the underlying data is nil.
+func (e executionPayloadElectra) IsNil() bool {
+	return e.p == nil
+}
+
+// MarshalSSZ --
+func (e executionPayloadElectra) MarshalSSZ() ([]byte, error) {
+	return e.p.MarshalSSZ()
+}
+
+// MarshalSSZTo --
+func (e executionPayloadElectra) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return e.p.MarshalSSZTo(dst)
+}
+
+// SizeSSZ --
+func (e executionPayloadElectra) SizeSSZ() int {
+	return e.p.SizeSSZ()
+}
+
+// UnmarshalSSZ --
+func (e executionPayloadElectra) UnmarshalSSZ(buf []byte) error {
+	return e.p.UnmarshalSSZ(buf)
+}
+
+// HashTreeRoot --
+func (e executionPayloadElectra) HashTreeRoot() ([32]byte, error) {
+	return e.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (e executionPayloadElectra) HashTreeRootWith(hh *fastssz.Hasher) error {
+	return e.p.HashTreeRootWith(hh)
+}
+
+// Proto --
+func (e executionPayloadElectra) Proto() proto.Message {
+	return e.p
+}
+
+// ParentHash --
+func (e executionPayloadElectra) ParentHash() []byte {
+	return e.p.ParentHash
+}
+
+// FeeRecipient --
+func (e executionPayloadElectra) FeeRecipient() []byte {
+	return e.p.FeeRecipient
+}
+
+// StateRoot --
+func (e executionPayloadElectra) StateRoot() []byte {
+	return e.p.StateRoot
+}
+
+// ReceiptsRoot --
+func (e executionPayloadElectra) ReceiptsRoot() []byte {
+	return e.p.ReceiptsRoot
+}
+
+// LogsBloom --
+func (e executionPayloadElectra) LogsBloom() []byte {
+	return e.p.LogsBloom
+}
+
+// PrevRandao --
+func (e executionPayloadElectra) PrevRandao() []byte {
+	return e.p.PrevRandao
+}
+
+// BlockNumber --
+func (e executionPayloadElectra) BlockNumber() uint64 {
+	return e.p.BlockNumber
+}
+
+// GasLimit --
+func (e executionPayloadElectra) GasLimit() uint64 {
+	return e.p.GasLimit
+}
+
+// GasUsed --
+func (e executionPayloadElectra) GasUsed() uint64 {
+	return e.p.GasUsed
+}
+
+// Timestamp --
+func (e executionPayloadElectra) Timestamp() uint64 {
+	return e.p.Timestamp
+}
+
+// ExtraData --
+func (e executionPayloadElectra) ExtraData() []byte {
+	return e.p.ExtraData
+}
+
+// BaseFeePerGas --
+func (e executionPayloadElectra) BaseFeePerGas() []byte {
+	return e.p.BaseFeePerGas
+}
+
+// BlockHash --
+func (e executionPayloadElectra) BlockHash() []byte {
+	return e.p.BlockHash
+}
+
+// Transactions --
+func (e executionPayloadElectra) Transactions() ([][]byte, error) {
+	return e.p.Transactions, nil
+}
+
+// TransactionsRoot --
+func (e executionPayloadElectra) TransactionsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// Withdrawals --
+func (e executionPayloadElectra) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return e.p.Withdrawals, nil
+}
+
+// WithdrawalsRoot --
+func (e executionPayloadElectra) WithdrawalsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+func (e executionPayloadElectra) BlobGasUsed() (uint64, error) {
+	return e.p.BlobGasUsed, nil
+}
+
+func (e executionPayloadElectra) ExcessBlobGas() (uint64, error) {
+	return e.p.ExcessBlobGas, nil
+}
+
+// DepositReceipts --
+func (e executionPayloadElectra) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
+	return e.p.DepositReceipts, nil
+}
+
+// DepositReceiptsRoot --
+func (executionPayloadElectra) DepositReceiptsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequests --
+func (e executionPayloadElectra) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequestsRoot --
+func (executionPayloadElectra) WithdrawalRequestsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbElectra --
+func (e executionPayloadElectra) PbElectra() (*enginev1.ExecutionPayloadElectra, error) {
+	return e.p, nil
+}
+
+// PbBellatrix --
+func (e executionPayloadElectra) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbCapella --
+func (e executionPayloadElectra) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbDeneb --
+func (e executionPayloadElectra) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// ValueInWei --
+func (e executionPayloadElectra) ValueInWei() (math.Wei, error) {
+	return e.weiValue, nil
+}
+
+// ValueInGwei --
+func (e executionPayloadElectra) ValueInGwei() (uint64, error) {
+	return e.gweiValue, nil
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadElectra) IsBlinded() bool {
+	return false
+}
+
+// executionPayloadHeaderElectra is a convenience wrapper around a blinded beacon block body's execution header data structure.
+// This wrapper allows us to conform to a common interface so that beacon
+// blocks for future forks can also be applied across Prysm without issues.
+type executionPayloadHeaderElectra struct {
+	p         *enginev1.ExecutionPayloadHeaderElectra
+	weiValue  math.Wei
+	gweiValue uint64
+}
+
+// WrappedExecutionPayloadHeaderElectra is a constructor which wraps a protobuf execution header into an interface.
+func WrappedExecutionPayloadHeaderElectra(p *enginev1.ExecutionPayloadHeaderElectra, value math.Wei) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderElectra{p: p, weiValue: value, gweiValue: uint64(math.WeiToGwei(value))}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// IsNil checks if the underlying data is nil.
+func (e executionPayloadHeaderElectra) IsNil() bool {
+	return e.p == nil
+}
+
+// MarshalSSZ --
+func (e executionPayloadHeaderElectra) MarshalSSZ() ([]byte, error) {
+	return e.p.MarshalSSZ()
+}
+
+// MarshalSSZTo --
+func (e executionPayloadHeaderElectra) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return e.p.MarshalSSZTo(dst)
+}
+
+// SizeSSZ --
+func (e executionPayloadHeaderElectra) SizeSSZ() int {
+	return e.p.SizeSSZ()
+}
+
+// UnmarshalSSZ --
+func (e executionPayloadHeaderElectra) UnmarshalSSZ(buf []byte) error {
+	return e.p.UnmarshalSSZ(buf)
+}
+
+// HashTreeRoot --
+func (e executionPayloadHeaderElectra) HashTreeRoot() ([32]byte, error) {
+	return e.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (e executionPayloadHeaderElectra) HashTreeRootWith(hh *fastssz.Hasher) error {
+	return e.p.HashTreeRootWith(hh)
+}
+
+// Proto --
+func (e executionPayloadHeaderElectra) Proto() proto.Message {
+	return e.p
+}
+
+// ParentHash --
+func (e executionPayloadHeaderElectra) ParentHash() []byte {
+	return e.p.ParentHash
+}
+
+// FeeRecipient --
+func (e executionPayloadHeaderElectra) FeeRecipient() []byte {
+	return e.p.FeeRecipient
+}
+
+// StateRoot --
+func (e executionPayloadHeaderElectra) StateRoot() []byte {
+	return e.p.StateRoot
+}
+
+// ReceiptsRoot --
+func (e executionPayloadHeaderElectra) ReceiptsRoot() []byte {
+	return e.p.ReceiptsRoot
+}
+
+// LogsBloom --
+func (e executionPayloadHeaderElectra) LogsBloom() []byte {
+	return e.p.LogsBloom
+}
+
+// PrevRandao --
+func (e executionPayloadHeaderElectra) PrevRandao() []byte {
+	return e.p.PrevRandao
+}
+
+// BlockNumber --
+func (e executionPayloadHeaderElectra) BlockNumber() uint64 {
+	return e.p.BlockNumber
+}
+
+// GasLimit --
+func (e executionPayloadHeaderElectra) GasLimit() uint64 {
+	return e.p.GasLimit
+}
+
+// GasUsed --
+func (e executionPayloadHeaderElectra) GasUsed() uint64 {
+	return e.p.GasUsed
+}
+
+// Timestamp --
+func (e executionPayloadHeaderElectra) Timestamp() uint64 {
+	return e.p.Timestamp
+}
+
+// ExtraData --
+func (e executionPayloadHeaderElectra) ExtraData() []byte {
+	return e.p.ExtraData
+}
+
+// BaseFeePerGas --
+func (e executionPayloadHeaderElectra) BaseFeePerGas() []byte {
+	return e.p.BaseFeePerGas
+}
+
+// BlockHash --
+func (e executionPayloadHeaderElectra) BlockHash() []byte {
+	return e.p.BlockHash
+}
+
+// Transactions --
+func (e executionPayloadHeaderElectra) Transactions() ([][]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// TransactionsRoot --
+func (e executionPayloadHeaderElectra) TransactionsRoot() ([]byte, error) {
+	return e.p.TransactionsRoot, nil
+}
+
+// Withdrawals --
+func (e executionPayloadHeaderElectra) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalsRoot --
+func (e executionPayloadHeaderElectra) WithdrawalsRoot() ([]byte, error) {
+	return e.p.WithdrawalsRoot, nil
+}
+
+func (e executionPayloadHeaderElectra) BlobGasUsed() (uint64, error) {
+	return e.p.BlobGasUsed, nil
+}
+
+func (e executionPayloadHeaderElectra) ExcessBlobGas() (uint64, error) {
+	return e.p.ExcessBlobGas, nil
+}
+
+// DepositReceipts --
+func (executionPayloadHeaderElectra) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// DepositReceiptsRoot --
+func (e executionPayloadHeaderElectra) DepositReceiptsRoot() ([]byte, error) {
+	return e.p.ReceiptsRoot, nil
+}
+
+// WithdrawalRequests --
+func (executionPayloadHeaderElectra) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequestsRoot --
+func (e executionPayloadHeaderElectra) WithdrawalRequestsRoot() ([]byte, error) {
+	return e.p.WithdrawalRequestsRoot, nil
+}
+
+// PbBellatrix --
+func (e executionPayloadHeaderElectra) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbCapella --
+func (e executionPayloadHeaderElectra) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbDeneb --
+func (e executionPayloadHeaderElectra) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// PbElectra --
+func (e executionPayloadHeaderElectra) PbElectra() (*enginev1.ExecutionPayloadElectra, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// ValueInWei --
+func (e executionPayloadHeaderElectra) ValueInWei() (math.Wei, error) {
+	return e.weiValue, nil
+}
+
+// ValueInGwei --
+func (e executionPayloadHeaderElectra) ValueInGwei() (uint64, error) {
+	return e.gweiValue, nil
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadHeaderElectra) IsBlinded() bool {
+	return true
 }
