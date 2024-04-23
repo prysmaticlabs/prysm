@@ -306,32 +306,28 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 				return
 			}
 			isHealthy := tracker.CheckHealth(ctx)
-			if len(hosts) > 1 && features.Get().EnableBeaconRESTApi {
-				for !isHealthy {
-					cSlot, err := v.CanonicalHeadSlot(ctx)
-					if err != nil {
-						log.WithError(err).Error("Could not get canonical head slot")
-					}
-					nSlot := <-v.NextSlot()
-					for {
-						if cSlot == nSlot {
-							for i, url := range hosts {
-								if url == v.RetrieveHost() {
-									next := (i + 1) % len(hosts)
-									log.Infof("Beacon node at %s is not responding, switching to %s", url, hosts[next])
-									v.UpdateHost(hosts[next])
-									v.ProposerSettings()
-								}
-							}
-							break
+			if !isHealthy && len(hosts) > 1 && features.Get().EnableBeaconRESTApi {
+				for i, url := range hosts {
+					if url == v.RetrieveHost() {
+						next := (i + 1) % len(hosts)
+						log.Infof("Beacon node at %s is not responding, switching to %s", url, hosts[next])
+						v.UpdateHost(hosts[next])
+						km, err := v.Keymanager()
+						if err != nil {
+							log.WithError(err).Fatal("Could not get keymanager")
+							return
 						}
-						time.Sleep(time.Second)
-						cSlot, err = v.CanonicalHeadSlot(ctx)
+						slot, err := v.CanonicalHeadSlot(ctx)
 						if err != nil {
 							log.WithError(err).Error("Could not get canonical head slot")
+							return
+						}
+						err = v.PushProposerSettings(ctx, km, slot, time.Now().Add(5*time.Minute))
+						if err != nil {
+							log.WithError(err).Error("Could not push proposer settings")
+							return
 						}
 					}
-					isHealthy = v.HealthTracker().CheckHealth(ctx)
 				}
 			}
 
