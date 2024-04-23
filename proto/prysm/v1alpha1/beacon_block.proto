@@ -818,7 +818,7 @@ message BeaconBlockBodyElectra {
     SyncAggregate sync_aggregate = 9;
 
     // Execution payload from the execution chain. New in Bellatrix network upgrade.
-    ethereum.engine.v1.ExecutionPayloadDeneb execution_payload = 10;
+    ethereum.engine.v1.ExecutionPayloadElectra execution_payload = 10;
 
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
@@ -883,7 +883,7 @@ message BlindedBeaconBlockBodyElectra {
     SyncAggregate sync_aggregate = 9;
 
     // Execution payload header from the execution chain. New in Bellatrix network upgrade to accommodate MEV interaction.
-    ethereum.engine.v1.ExecutionPayloadHeaderDeneb execution_payload_header = 10;
+    ethereum.engine.v1.ExecutionPayloadHeaderElectra execution_payload_header = 10;
 
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];

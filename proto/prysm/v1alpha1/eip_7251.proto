@@ -43,16 +43,7 @@ message PendingPartialWithdrawal {
     uint64 withdrawable_epoch = 3;
 }
 
-message ExecutionLayerWithdrawalRequest {
-    // Ethereum address (20 byte address).
-    bytes source_address = 1 [(ethereum.eth.ext.ssz_size) = "20"];
-
-    // 48 byte BLS public key of the validator.
-    bytes validator_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
-
-    // The amount of the withdraw request (gwei).
-    uint64 amount = 3;
-}
+// ExecutionLayerWithdrawalRequest is in proto/engine/execution_engine.proto
 
 message Consolidation {
     // Validator from which the funds will be moved.

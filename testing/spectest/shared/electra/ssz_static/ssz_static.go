@@ -153,7 +153,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "PendingConsolidation":
 		obj = &ethpb.PendingConsolidation{}
 	case "ExecutionLayerWithdrawalRequest":
-		obj = &ethpb.ExecutionLayerWithdrawalRequest{}
+		obj = &enginev1.ExecutionLayerWithdrawalRequest{}
 	default:
 		return nil, errors.New("type not found")
 	}
