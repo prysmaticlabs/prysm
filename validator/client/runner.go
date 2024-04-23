@@ -312,21 +312,23 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 						next := (i + 1) % len(hosts)
 						log.Infof("Beacon node at %s is not responding, switching to %s", url, hosts[next])
 						v.UpdateHost(hosts[next])
+
 						km, err := v.Keymanager()
 						if err != nil {
 							log.WithError(err).Fatal("Could not get keymanager")
-							return
 						}
 						slot, err := v.CanonicalHeadSlot(ctx)
 						if err != nil {
 							log.WithError(err).Error("Could not get canonical head slot")
 							return
 						}
-						err = v.PushProposerSettings(ctx, km, slot, time.Now().Add(5*time.Minute))
-						if err != nil {
-							log.WithError(err).Error("Could not push proposer settings")
-							return
-						}
+						go func() {
+							// deadline set for 1 epoch from call to not overlap.
+							epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
+							if err := v.PushProposerSettings(ctx, km, slot, epochDeadline); err != nil {
+								log.WithError(err).Warn("Failed to update proposer settings")
+							}
+						}()
 					}
 				}
 			}
