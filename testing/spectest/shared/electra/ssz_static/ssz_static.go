@@ -36,10 +36,10 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	var obj interface{}
 	switch folderName {
 	// TODO: replace execution payload with execution payload electra below and uncomment the code
-	//case "ExecutionPayload":
-	//	obj = &enginev1.ExecutionPayloadDeneb{}
-	//case "ExecutionPayloadHeader":
-	//	obj = &enginev1.ExecutionPayloadHeaderDeneb{}
+	case "ExecutionPayload":
+		obj = &enginev1.ExecutionPayloadElectra{}
+	case "ExecutionPayloadHeader":
+		obj = &enginev1.ExecutionPayloadHeaderElectra{}
 	case "Attestation":
 		obj = &ethpb.AttestationElectra{}
 	case "AttestationData":
@@ -54,9 +54,8 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.BeaconBlockBodyElectra{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
-	// TODO: replace BeaconState with BeaconStateElectra below and uncomment the code
-	//case "BeaconState":
-	//	obj = &ethpb.BeaconStateDeneb{}
+	case "BeaconState":
+		obj = &ethpb.BeaconStateElectra{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
 	case "Deposit":
@@ -154,6 +153,8 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.PendingConsolidation{}
 	case "ExecutionLayerWithdrawalRequest":
 		obj = &enginev1.ExecutionLayerWithdrawalRequest{}
+	case "DepositReceipt":
+		obj = &enginev1.DepositReceipt{}
 	default:
 		return nil, errors.New("type not found")
 	}

@@ -46,7 +46,8 @@ ssz_gen_marshal(
         "BlindedBlobsBundle",
         "BlobsBundle",
         "Withdrawal",
-        "ExecutionLayerWithdrawalRequest"
+        "ExecutionLayerWithdrawalRequest",
+        "DepositReceipt",
     ],
 )
 

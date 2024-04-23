@@ -105,7 +105,8 @@ message ExecutionPayloadElectra {
 	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"];
 	uint64 blob_gas_used  = 16;
 	uint64 excess_blob_gas  = 17;
-	repeated ExecutionLayerWithdrawalRequest	withdrawal_requests = 18 [(ethereum.eth.ext.ssz_max) = "max_withdrawal_requests_per_payload.size"]; // new in electra, eip7002, eip7251
+	repeated DepositReceipt deposit_receipts = 18 [(ethereum.eth.ext.ssz_max) = "max_deposit_receipts"]; // new in electra, eip6110
+	repeated ExecutionLayerWithdrawalRequest	withdrawal_requests = 19 [(ethereum.eth.ext.ssz_max) = "max_withdrawal_requests_per_payload.size"]; // new in electra, eip7002, eip7251
 }
 
 message ExecutionPayloadCapellaWithValue {
@@ -194,7 +195,8 @@ message ExecutionPayloadHeaderElectra {
 	bytes withdrawals_root  = 15 [(ethereum.eth.ext.ssz_size) = "32"];
 	uint64 blob_gas_used  = 16;
 	uint64 excess_blob_gas  = 17;
-	bytes	withdrawal_requests_root = 18 [(ethereum.eth.ext.ssz_size) = "32"]; // new in electra, eip7002, eip7251
+	bytes	deposit_receipts_root  = 18 [(ethereum.eth.ext.ssz_size) = "32"]; // new in electra, eip6110
+	bytes	withdrawal_requests_root = 19 [(ethereum.eth.ext.ssz_size) = "32"]; // new in electra, eip7002, eip7251
 }
 
 message PayloadAttributes {
@@ -289,3 +291,12 @@ message ExecutionLayerWithdrawalRequest {
 	uint64 amount = 3;
 }
 
+// DepositReceipt is the message from the execution layer to trigger the deposit of a validator's balance to its balance
+// new in Electra
+message DepositReceipt {
+	bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+	bytes withdrawal_credentials = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+	uint64 amount = 3;
+	bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96", (ethereum.eth.ext.spec_name) = "signature"];
+	uint64 index = 5;
+}
