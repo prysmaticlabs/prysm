@@ -69,7 +69,7 @@ const (
 	// /eth2/beacon_chain/req/blob_sidecars_by_root/1/
 	RPCBlobSidecarsByRootTopicV1 = protocolPrefix + BlobSidecarsByRootName + SchemaVersionV1
 	// RPCDataColumnSidecarsByRootTopicV1 is a topic for requesting data column sidecars by their block root. New in PeerDAS.
-	// /eth2/beacon_chain/req/data_column_sidecars_by_root/1/
+	// /eth2/beacon_chain/req/data_column_sidecars_by_root/1
 	RPCDataColumnSidecarsByRootTopicV1 = protocolPrefix + DataColumnSidecarsByRootName + SchemaVersionV1
 
 	// V2 RPC Topics
