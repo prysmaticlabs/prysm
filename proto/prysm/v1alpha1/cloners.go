@@ -890,3 +890,16 @@ func CopyHistoricalSummaries(summaries []*HistoricalSummary) []*HistoricalSummar
 	}
 	return newSummaries
 }
+
+// CopyAttestationElectra copies the provided attestation object.
+func CopyAttestationElectra(att *AttestationElectra) *AttestationElectra {
+	if att == nil {
+		return nil
+	}
+	return &AttestationElectra{
+		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
+		Data:            CopyAttestationData(att.Data),
+		CommitteeBits:   bytesutil.SafeCopyBytes(att.CommitteeBits),
+		Signature:       bytesutil.SafeCopyBytes(att.Signature),
+	}
+}

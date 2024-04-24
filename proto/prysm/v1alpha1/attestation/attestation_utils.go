@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -37,8 +38,8 @@ import (
 //	     data=attestation.data,
 //	     signature=attestation.signature,
 //	 )
-func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []primitives.ValidatorIndex) (*ethpb.IndexedAttestation, error) {
-	attIndices, err := AttestingIndices(attestation.AggregationBits, committee)
+func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committee []primitives.ValidatorIndex) (*ethpb.IndexedAttestation, error) {
+	attIndices, err := AttestingIndices(attestation.GetAggregationBits(), committee)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +48,8 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 		return attIndices[i] < attIndices[j]
 	})
 	inAtt := &ethpb.IndexedAttestation{
-		Data:             attestation.Data,
-		Signature:        attestation.Signature,
+		Data:             attestation.GetData(),
+		Signature:        attestation.GetSignature(),
 		AttestingIndices: attIndices,
 	}
 	return inAtt, err

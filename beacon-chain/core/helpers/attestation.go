@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -21,20 +22,20 @@ var (
 // ValidateNilAttestation checks if any composite field of input attestation is nil.
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
-func ValidateNilAttestation(attestation *ethpb.Attestation) error {
+func ValidateNilAttestation(attestation interfaces.Attestation) error {
 	if attestation == nil {
 		return errors.New("attestation can't be nil")
 	}
-	if attestation.Data == nil {
+	if attestation.GetData() == nil {
 		return errors.New("attestation's data can't be nil")
 	}
-	if attestation.Data.Source == nil {
+	if attestation.GetData().Source == nil {
 		return errors.New("attestation's source can't be nil")
 	}
-	if attestation.Data.Target == nil {
+	if attestation.GetData().Target == nil {
 		return errors.New("attestation's target can't be nil")
 	}
-	if attestation.AggregationBits == nil {
+	if attestation.GetAggregationBits() == nil {
 		return errors.New("attestation's bitfield can't be nil")
 	}
 	return nil
@@ -71,8 +72,8 @@ func IsAggregator(committeeCount uint64, slotSig []byte) (bool, error) {
 
 // IsAggregated returns true if the attestation is an aggregated attestation,
 // false otherwise.
-func IsAggregated(attestation *ethpb.Attestation) bool {
-	return attestation.AggregationBits.Count() > 1
+func IsAggregated(attestation interfaces.Attestation) bool {
+	return attestation.GetAggregationBits().Count() > 1
 }
 
 // ComputeSubnetForAttestation returns the subnet for which the provided attestation will be broadcasted to.

@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/go-bitfield"
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/math"
@@ -67,7 +68,7 @@ type ReadOnlyBeaconBlockBody interface {
 	Graffiti() [field_params.RootLength]byte
 	ProposerSlashings() []*ethpb.ProposerSlashing
 	AttesterSlashings() []*ethpb.AttesterSlashing
-	Attestations() []*ethpb.Attestation
+	Attestations() []Attestation
 	Deposits() []*ethpb.Deposit
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
 	SyncAggregate() (*ethpb.SyncAggregate, error)
@@ -87,7 +88,7 @@ type SignedBeaconBlock interface {
 	SetSyncAggregate(*ethpb.SyncAggregate) error
 	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SetDeposits([]*ethpb.Deposit)
-	SetAttestations([]*ethpb.Attestation)
+	SetAttestations([]Attestation)
 	SetAttesterSlashings([]*ethpb.AttesterSlashing)
 	SetProposerSlashings([]*ethpb.ProposerSlashing)
 	SetGraffiti([]byte)
@@ -134,4 +135,58 @@ type ExecutionData interface {
 	PbDeneb() (*enginev1.ExecutionPayloadDeneb, error)
 	ValueInWei() (math.Wei, error)
 	ValueInGwei() (uint64, error)
+}
+
+type Attestation interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	GetAggregationBits() bitfield.Bitlist
+	SetAggregationBits(bits bitfield.Bitlist)
+	GetData() *ethpb.AttestationData
+	SetData(data *ethpb.AttestationData)
+	GetCommitteeBitsVal() bitfield.Bitfield
+	SetCommitteeBitsVal(bits bitfield.Bitfield)
+	GetSignature() []byte
+	SetSignature(sig []byte)
+}
+
+type AggregateAttestationAndProof interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	GetAggregatorIndex() primitives.ValidatorIndex
+	SetAggregatorIndex(index primitives.ValidatorIndex)
+	GetAttestation() Attestation
+	SetAttestation(att Attestation)
+	GetSelectionProof() []byte
+	SetSelectionProof(proof []byte)
+}
+
+type SignedAggregateAttestationAndProof interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	GetAggregateAttestationAndProof() AggregateAttestationAndProof
+	SetAggregateAttestationAndProof(agg AggregateAttestationAndProof)
+	GetSignature() []byte
+	SetSignature(sig []byte)
+}
+
+// TODO: this is ugly. The proper way to do this is to create a Copy() function on the interface and implement it. But this results in a circular dependency.
+// CopyAttestation copies the provided attestation object.
+func CopyAttestation(att Attestation) Attestation {
+	a, ok := att.(*ethpb.Attestation)
+	if ok {
+		return ethpb.CopyAttestation(a)
+	}
+	ae, ok := att.(*ethpb.AttestationElectra)
+	if ok {
+		return ethpb.CopyAttestationElectra(ae)
+	}
+	return nil
 }

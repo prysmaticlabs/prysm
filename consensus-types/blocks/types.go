@@ -44,7 +44,7 @@ type BeaconBlockBody struct {
 	graffiti               [field_params.RootLength]byte
 	proposerSlashings      []*eth.ProposerSlashing
 	attesterSlashings      []*eth.AttesterSlashing
-	attestations           []*eth.Attestation
+	attestations           []interfaces.Attestation
 	deposits               []*eth.Deposit
 	voluntaryExits         []*eth.SignedVoluntaryExit
 	syncAggregate          *eth.SyncAggregate

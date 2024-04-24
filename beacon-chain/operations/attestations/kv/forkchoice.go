@@ -2,6 +2,7 @@ package kv
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
@@ -35,13 +36,13 @@ func (c *AttCaches) SaveForkchoiceAttestations(atts []*ethpb.Attestation) error 
 }
 
 // ForkchoiceAttestations returns the forkchoice attestations in cache.
-func (c *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
+func (c *AttCaches) ForkchoiceAttestations() []interfaces.Attestation {
 	c.forkchoiceAttLock.RLock()
 	defer c.forkchoiceAttLock.RUnlock()
 
-	atts := make([]*ethpb.Attestation, 0, len(c.forkchoiceAtt))
+	atts := make([]interfaces.Attestation, 0, len(c.forkchoiceAtt))
 	for _, att := range c.forkchoiceAtt {
-		atts = append(atts, ethpb.CopyAttestation(att) /* Copied */)
+		atts = append(atts, interfaces.CopyAttestation(att) /* Copied */)
 	}
 
 	return atts

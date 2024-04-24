@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
@@ -14,7 +15,7 @@ import (
 // Aggregation occurs in many rounds, up until no more aggregation is possible (all attestations
 // are overlapping).
 // See https://hackmd.io/@farazdagi/in-place-attagg for design and rationale.
-func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func MaxCoverAttestationAggregation(atts []interfaces.Attestation) ([]interfaces.Attestation, error) {
 	if len(atts) < 2 {
 		return atts, nil
 	}
@@ -28,7 +29,7 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 	candidates := make([]*bitfield.Bitlist64, len(atts))
 	for i := 0; i < len(atts); i++ {
 		var err error
-		candidates[i], err = atts[i].AggregationBits.ToBitlist64()
+		candidates[i], err = atts[i].GetAggregationBits().ToBitlist64()
 		if err != nil {
 			return nil, err
 		}
@@ -119,6 +120,7 @@ func NewMaxCover(atts []*ethpb.Attestation) *aggregation.MaxCoverProblem {
 	return &aggregation.MaxCoverProblem{Candidates: candidates}
 }
 
+// TODO: review if this needs to be updated
 // aggregate returns list as an aggregated attestation.
 func (al attList) aggregate(coverage bitfield.Bitlist) (*ethpb.Attestation, error) {
 	if len(al) < 2 {
@@ -126,7 +128,7 @@ func (al attList) aggregate(coverage bitfield.Bitlist) (*ethpb.Attestation, erro
 	}
 	signs := make([]bls.Signature, len(al))
 	for i := 0; i < len(al); i++ {
-		sig, err := signatureFromBytes(al[i].Signature)
+		sig, err := signatureFromBytes(al[i].GetSignature())
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +136,7 @@ func (al attList) aggregate(coverage bitfield.Bitlist) (*ethpb.Attestation, erro
 	}
 	return &ethpb.Attestation{
 		AggregationBits: coverage,
-		Data:            ethpb.CopyAttestationData(al[0].Data),
+		Data:            ethpb.CopyAttestationData(al[0].GetData()),
 		Signature:       aggregateSignatures(signs).Marshal(),
 	}, nil
 }
@@ -149,7 +151,7 @@ func padSelectedKeys(keys []int, pad int) []int {
 
 // aggregateAttestations combines signatures of selected attestations into a single aggregate attestation, and
 // pushes that aggregated attestation into the position of the first of selected attestations.
-func aggregateAttestations(atts []*ethpb.Attestation, keys []int, coverage *bitfield.Bitlist64) (targetIdx int, err error) {
+func aggregateAttestations(atts []interfaces.Attestation, keys []int, coverage *bitfield.Bitlist64) (targetIdx int, err error) {
 	if len(keys) < 2 || atts == nil || len(atts) < 2 {
 		return targetIdx, errors.Wrap(ErrInvalidAttestationCount, "cannot aggregate")
 	}
@@ -160,13 +162,13 @@ func aggregateAttestations(atts []*ethpb.Attestation, keys []int, coverage *bitf
 	var data *ethpb.AttestationData
 	signs := make([]bls.Signature, 0, len(keys))
 	for i, idx := range keys {
-		sig, err := signatureFromBytes(atts[idx].Signature)
+		sig, err := signatureFromBytes(atts[idx].GetSignature())
 		if err != nil {
 			return targetIdx, err
 		}
 		signs = append(signs, sig)
 		if i == 0 {
-			data = ethpb.CopyAttestationData(atts[idx].Data)
+			data = ethpb.CopyAttestationData(atts[idx].GetData())
 			targetIdx = idx
 		}
 	}
@@ -183,7 +185,7 @@ func aggregateAttestations(atts []*ethpb.Attestation, keys []int, coverage *bitf
 // rearrangeProcessedAttestations pushes processed attestations to the end of the slice, returning
 // the number of items re-arranged (so that caller can cut the slice, and allow processed items to be
 // garbage collected).
-func rearrangeProcessedAttestations(atts []*ethpb.Attestation, candidates []*bitfield.Bitlist64, processedKeys []int) {
+func rearrangeProcessedAttestations(atts []interfaces.Attestation, candidates []*bitfield.Bitlist64, processedKeys []int) {
 	if atts == nil || candidates == nil || processedKeys == nil {
 		return
 	}
@@ -215,7 +217,7 @@ func (al attList) merge(al1 attList) attList {
 
 // selectUsingKeys returns only items with specified keys.
 func (al attList) selectUsingKeys(keys []int) attList {
-	filtered := make([]*ethpb.Attestation, len(keys))
+	filtered := make([]interfaces.Attestation, len(keys))
 	for i, key := range keys {
 		filtered[i] = al[key]
 	}
@@ -246,7 +248,7 @@ func (al attList) selectComplementUsingKeys(keys []int) attList {
 // hasCoverage returns true if a given coverage is found in attestations list.
 func (al attList) hasCoverage(coverage bitfield.Bitlist) (bool, error) {
 	for _, att := range al {
-		x, err := att.AggregationBits.Xor(coverage)
+		x, err := att.GetAggregationBits().Xor(coverage)
 		if err != nil {
 			return false, err
 		}
@@ -263,12 +265,12 @@ func (al attList) filterContained() (attList, error) {
 		return al, nil
 	}
 	sort.Slice(al, func(i, j int) bool {
-		return al[i].AggregationBits.Count() > al[j].AggregationBits.Count()
+		return al[i].GetAggregationBits().Count() > al[j].GetAggregationBits().Count()
 	})
 	filtered := al[:0]
 	filtered = append(filtered, al[0])
 	for i := 1; i < len(al); i++ {
-		c, err := filtered[len(filtered)-1].AggregationBits.Contains(al[i].AggregationBits)
+		c, err := filtered[len(filtered)-1].GetAggregationBits().Contains(al[i].GetAggregationBits())
 		if err != nil {
 			return nil, err
 		}
@@ -288,11 +290,11 @@ func (al attList) validate() error {
 	if len(al) == 0 {
 		return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "empty list")
 	}
-	if al[0].AggregationBits == nil || al[0].AggregationBits.Len() == 0 {
+	if al[0].GetAggregationBits() == nil || al[0].GetAggregationBits().Len() == 0 {
 		return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
 	}
 	for i := 1; i < len(al); i++ {
-		if al[i].AggregationBits == nil || al[i].AggregationBits.Len() == 0 {
+		if al[i].GetAggregationBits() == nil || al[i].GetAggregationBits().Len() == 0 {
 			return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
 		}
 	}

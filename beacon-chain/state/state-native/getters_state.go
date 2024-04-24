@@ -172,6 +172,46 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 			HistoricalSummaries:          b.historicalSummaries,
 		}
+	case version.Electra:
+		return &ethpb.BeaconStateElectra{
+			GenesisTime:                  b.genesisTime,
+			GenesisValidatorsRoot:        gvrCopy[:],
+			Slot:                         b.slot,
+			Fork:                         b.fork,
+			LatestBlockHeader:            b.latestBlockHeader,
+			BlockRoots:                   br,
+			StateRoots:                   sr,
+			HistoricalRoots:              b.historicalRoots.Slice(),
+			Eth1Data:                     b.eth1Data,
+			Eth1DataVotes:                b.eth1DataVotes,
+			Eth1DepositIndex:             b.eth1DepositIndex,
+			Validators:                   vals,
+			Balances:                     bals,
+			RandaoMixes:                  rm,
+			Slashings:                    b.slashings,
+			PreviousEpochParticipation:   b.previousEpochParticipation,
+			CurrentEpochParticipation:    b.currentEpochParticipation,
+			JustificationBits:            b.justificationBits,
+			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint,
+			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint,
+			FinalizedCheckpoint:          b.finalizedCheckpoint,
+			InactivityScores:             b.inactivityScoresVal(),
+			CurrentSyncCommittee:         b.currentSyncCommittee,
+			NextSyncCommittee:            b.nextSyncCommittee,
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderElectra,
+			NextWithdrawalIndex:          b.nextWithdrawalIndex,
+			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
+			HistoricalSummaries:          b.historicalSummaries,
+			// DepositReceiptsStartIndex:
+			// DepositBalanceToConsume:
+			// ExitBalanceToConsume:
+			// EarliestExitEpoch:
+			// ConsolidationBalanceToConsume:
+			// EarliestConsolidationEpoch:
+			// PendingBalanceDeposits:
+			// PendingPartialWithdrawals:
+			// PendingConsolidations:
+		}
 	default:
 		return nil
 	}
