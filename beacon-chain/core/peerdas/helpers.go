@@ -81,9 +81,8 @@ func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) (map[uint6
 
 	// First, compute the subnet IDs that the node should participate in.
 	subnetIds := make(map[uint64]bool, custodySubnetCount)
-	i := uint64(0)
 
-	for uint64(len(subnetIds)) < custodySubnetCount {
+	for i := uint64(0); uint64(len(subnetIds)) < custodySubnetCount; i++ {
 		nodeIdUInt256, nextNodeIdUInt256 := new(uint256.Int), new(uint256.Int)
 		nodeIdUInt256.SetBytes(nodeId.Bytes())
 		nextNodeIdUInt256.Add(nodeIdUInt256, uint256.NewInt(i))
@@ -96,8 +95,6 @@ func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) (map[uint6
 		if _, exists := subnetIds[subnetId]; !exists {
 			subnetIds[subnetId] = true
 		}
-
-		i++
 	}
 
 	return subnetIds, nil
