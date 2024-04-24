@@ -1,82 +1,32 @@
-package depositcache
+package depositsnapshot
 
 import (
 	"context"
 	"math/big"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
-	"google.golang.org/protobuf/proto"
 )
 
-var _ PendingDepositsFetcher = (*DepositCache)(nil)
+var _ PendingDepositsFetcher = (*Cache)(nil)
 
 func TestInsertPendingDeposit_OK(t *testing.T) {
-	dc := DepositCache{}
+	dc := Cache{}
 	dc.InsertPendingDeposit(context.Background(), &ethpb.Deposit{}, 111, 100, [32]byte{})
 
 	assert.Equal(t, 1, len(dc.pendingDeposits), "deposit not inserted")
 }
 
 func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
-	dc := DepositCache{}
+	dc := Cache{}
 	dc.InsertPendingDeposit(context.Background(), nil /*deposit*/, 0 /*blockNum*/, 0, [32]byte{})
 
 	assert.Equal(t, 0, len(dc.pendingDeposits))
 }
 
-func TestRemovePendingDeposit_OK(t *testing.T) {
-	db := DepositCache{}
-	proof1 := makeDepositProof()
-	proof1[0] = bytesutil.PadTo([]byte{'A'}, 32)
-	proof2 := makeDepositProof()
-	proof2[0] = bytesutil.PadTo([]byte{'A'}, 32)
-	data := &ethpb.Deposit_Data{
-		PublicKey:             make([]byte, 48),
-		WithdrawalCredentials: make([]byte, 32),
-		Amount:                0,
-		Signature:             make([]byte, 96),
-	}
-	depToRemove := &ethpb.Deposit{Proof: proof1, Data: data}
-	otherDep := &ethpb.Deposit{Proof: proof2, Data: data}
-	db.pendingDeposits = []*ethpb.DepositContainer{
-		{Deposit: depToRemove, Index: 1},
-		{Deposit: otherDep, Index: 5},
-	}
-	db.RemovePendingDeposit(context.Background(), depToRemove)
-
-	if len(db.pendingDeposits) != 1 || !proto.Equal(db.pendingDeposits[0].Deposit, otherDep) {
-		t.Error("Failed to remove deposit")
-	}
-}
-
-func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
-	dc := DepositCache{}
-	dc.pendingDeposits = []*ethpb.DepositContainer{{Deposit: &ethpb.Deposit{}}}
-	dc.RemovePendingDeposit(context.Background(), nil /*deposit*/)
-	assert.Equal(t, 1, len(dc.pendingDeposits), "deposit unexpectedly removed")
-}
-
-func TestPendingDeposit_RoundTrip(t *testing.T) {
-	dc := DepositCache{}
-	proof := makeDepositProof()
-	proof[0] = bytesutil.PadTo([]byte{'A'}, 32)
-	data := &ethpb.Deposit_Data{
-		PublicKey:             make([]byte, 48),
-		WithdrawalCredentials: make([]byte, 32),
-		Amount:                0,
-		Signature:             make([]byte, 96),
-	}
-	dep := &ethpb.Deposit{Proof: proof, Data: data}
-	dc.InsertPendingDeposit(context.Background(), dep, 111, 100, [32]byte{})
-	dc.RemovePendingDeposit(context.Background(), dep)
-	assert.Equal(t, 0, len(dc.pendingDeposits), "Failed to insert & delete a pending deposit")
-}
-
 func TestPendingDeposits_OK(t *testing.T) {
-	dc := DepositCache{}
+	dc := Cache{}
 
 	dc.pendingDeposits = []*ethpb.DepositContainer{
 		{Eth1BlockHeight: 2, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("A")}}},
@@ -96,7 +46,7 @@ func TestPendingDeposits_OK(t *testing.T) {
 }
 
 func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
-	dc := DepositCache{}
+	dc := Cache{}
 
 	dc.pendingDeposits = []*ethpb.DepositContainer{
 		{Eth1BlockHeight: 2, Index: 2},
@@ -120,7 +70,7 @@ func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 }
 
 func TestPrunePendingDeposits_OK(t *testing.T) {
-	dc := DepositCache{}
+	dc := Cache{}
 
 	dc.pendingDeposits = []*ethpb.DepositContainer{
 		{Eth1BlockHeight: 2, Index: 2},

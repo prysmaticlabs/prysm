@@ -262,6 +262,12 @@ func toFinalizedDepositsContainer(deposits *DepositTree, index int64) finalizedD
 	}
 }
 
+// PendingDepositsFetcher specifically outlines a struct that can retrieve deposits
+// which have not yet been included in the chain.
+type PendingDepositsFetcher interface {
+	PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer
+}
+
 // PendingDeposits returns a list of deposits until the given block number
 // (inclusive). If no block is specified then this method returns all pending
 // deposits.

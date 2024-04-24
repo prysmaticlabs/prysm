@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
@@ -348,7 +348,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 		cfg:             &config{beaconDB: beaconDB},
 	}
 	var err error
-	s.cfg.depositCache, err = depositcache.New()
+	s.cfg.depositCache, err = depositsnapshot.New()
 	require.NoError(t, err)
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
 
@@ -409,7 +409,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 		cfg:             &config{beaconDB: beaconDB},
 	}
 	var err error
-	s.cfg.depositCache, err = depositcache.New()
+	s.cfg.depositCache, err = depositsnapshot.New()
 	require.NoError(t, err)
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
 
@@ -553,7 +553,7 @@ func Test_batchRequestHeaders_UnderflowChecks(t *testing.T) {
 
 func TestService_EnsureConsistentPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	cache, err := depositcache.New()
+	cache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	srv, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
@@ -583,7 +583,7 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 
 func TestService_InitializeCorrectly(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	cache, err := depositcache.New()
+	cache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	srv, endpoint, err := mockExecution.SetupRPCServer()
@@ -614,7 +614,7 @@ func TestService_InitializeCorrectly(t *testing.T) {
 
 func TestService_EnsureValidPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	cache, err := depositcache.New()
+	cache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	srv, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
@@ -809,7 +809,7 @@ func (s *slowRPCClient) CallContext(_ context.Context, _ interface{}, _ string, 
 
 func TestService_migrateOldDepositTree(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	cache, err := depositcache.New()
+	cache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	srv, endpoint, err := mockExecution.SetupRPCServer()
