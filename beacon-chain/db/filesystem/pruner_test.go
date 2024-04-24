@@ -1,7 +1,7 @@
 package filesystem
 
 /*
-	func TestTryPruneDir_CachedNotExpired(t *testing.T) {
+func TestTryPruneDir_CachedNotExpired(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		pr := newBlobPruner(0)
 		epoch := pr.retentionPeriod

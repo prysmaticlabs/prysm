@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -84,7 +85,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 
 		require.NoError(t, bs.Remove(expected.BlockRoot()))
 		_, err = bs.Get(expected.BlockRoot(), expected.Index)
-		require.ErrorContains(t, "file does not exist", err)
+		require.Equal(t, true, db.IsNotFound(err))
 	})
 
 	t.Run("clear", func(t *testing.T) {

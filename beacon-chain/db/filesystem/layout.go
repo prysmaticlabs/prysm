@@ -58,8 +58,15 @@ func warmCache(l fsLayout, cache *blobStorageCache) error {
 		return errors.Wrap(errCacheWarmFailed, err.Error())
 	}
 	for ident, err := iter.next(); err != io.EOF; ident, err = iter.next() {
+		if errors.Is(err, errIdentFailure) {
+			idf := &identificationError{}
+			if errors.As(err, &idf) {
+				log.WithFields(idf.LogFields()).WithError(err).Error("Failed to cache blob data for path")
+			}
+			continue
+		}
 		if err != nil {
-			return errors.Wrapf(errCacheWarmFailed, "failed to iterate legacy structure while migrating blobs, err=%s", err.Error())
+			return errors.Wrapf(errCacheWarmFailed, "failed to populate blob data cache err=%s", err.Error())
 		}
 		if err := cache.ensure(ident.root, ident.epoch, ident.index); err != nil {
 			return errors.Wrapf(errCacheWarmFailed, "failed to write cache entry for %s, err=%s", l.sszPath(ident), err.Error())
@@ -79,6 +86,13 @@ func migrateLayout(fs afero.Fs, from, to migratableLayout, cache *blobStorageCac
 	moved := 0
 	for ident, err := iter.next(); err != io.EOF; ident, err = iter.next() {
 		if err != nil {
+			if errors.Is(err, errIdentFailure) {
+				idf := &identificationError{}
+				if errors.As(err, &idf) {
+					log.WithFields(idf.LogFields()).WithError(err).Error("Failed to migrate blob path")
+				}
+				continue
+			}
 			return errors.Wrapf(errMigrationFailure, "failed to iterate legacy structure while migrating blobs, err=%s", err.Error())
 		}
 		src := from.dir(ident)
@@ -128,6 +142,14 @@ func (n blobIdent) sszFname() string {
 
 func (n blobIdent) partFname(entropy string) string {
 	return fmt.Sprintf("%s-%d.%s", entropy, n.index, partExt)
+}
+
+func (n blobIdent) logFields() logrus.Fields {
+	return logrus.Fields{
+		"root":  fmt.Sprintf("%#x", n.root),
+		"epoch": n.epoch,
+		"index": n.index,
+	}
 }
 
 type pruneSummary struct {
@@ -226,9 +248,17 @@ func (l *periodicEpochLayout) pruneBefore(before primitives.Epoch) (*pruneSummar
 	sums := make(map[primitives.Epoch]*pruneSummary)
 	iter, err := l.iterateIdents(before)
 
+	rollup := &pruneSummary{}
 	for ident, err := iter.next(); err != io.EOF; ident, err = iter.next() {
 		if err != nil {
-			log.WithError(err).Error("encountered error during pruning")
+			if errors.Is(err, errIdentFailure) {
+				idf := &identificationError{}
+				if errors.As(err, &idf) {
+					log.WithFields(idf.LogFields()).WithError(err).Error("Failed to prune blob path due to identification errors")
+				}
+				continue
+			}
+			log.WithError(err).Error("encountered unhandled error during pruning")
 			return nil, errors.Wrap(errPruneFailed, err.Error())
 		}
 		_, ok := sums[ident.epoch]
@@ -239,23 +269,22 @@ func (l *periodicEpochLayout) pruneBefore(before primitives.Epoch) (*pruneSummar
 		removed, err := l.remove(ident)
 		if err != nil {
 			s.failedRemovals = append(s.failedRemovals, l.dir(ident))
-			log.WithField("root", fmt.Sprintf("%#x", ident.root)).Error("Failed to delete root directory")
+			log.WithField("root", fmt.Sprintf("%#x", ident.root)).Error("Failed to delete blob directory for root")
 		}
 		s.blobsPruned += removed
 	}
 
 	// Roll up summaries and clean up per-epoch directories.
-	rollup := &pruneSummary{}
 	for epoch, sum := range sums {
 		rollup.blobsPruned += sum.blobsPruned
 		rollup.failedRemovals = append(rollup.failedRemovals, sum.failedRemovals...)
 		rmdir := l.epochDir(epoch)
 		if len(sum.failedRemovals) == 0 {
-			if err := l.fs.RemoveAll(rmdir); err != nil {
+			if err := l.fs.Remove(rmdir); err != nil {
 				log.WithField("dir", rmdir).WithError(err).Error("Failed to remove epoch directory while pruning")
 			}
 		} else {
-			log.WithField("dir", rmdir).WithField("numFailed", len(sum.failedRemovals)).WithError(err).Error("Unable to remove epoch directory due to root pruning failures")
+			log.WithField("dir", rmdir).WithField("numFailed", len(sum.failedRemovals)).WithError(err).Error("Unable to remove epoch directory due to pruning failures")
 		}
 	}
 

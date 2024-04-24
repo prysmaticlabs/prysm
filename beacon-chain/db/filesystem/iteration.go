@@ -11,12 +11,44 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
+
+var errIdentFailure = errors.New("failed to determine blob metadata, ignoring all sub-path.")
+
+type identificationError struct {
+	err   error
+	path  string
+	ident blobIdent
+}
+
+func (ide *identificationError) Error() string {
+	return fmt.Sprintf("%s path=%s, err=%s", errIdentFailure.Error(), ide.path, ide.err.Error())
+}
+
+func (ide *identificationError) Unwrap() error {
+	return ide.err
+}
+
+func (ide *identificationError) Is(err error) bool {
+	return err == errIdentFailure
+}
+
+func (ide *identificationError) LogFields() logrus.Fields {
+	fields := ide.ident.logFields()
+	fields["path"] = ide.path
+	return fields
+}
+
+func newIdentificationError(path string, ident blobIdent, err error) *identificationError {
+	return &identificationError{path: path, ident: ident, err: err}
+}
 
 func listDir(fs afero.Fs, dir string) ([]string, error) {
 	top, err := fs.Open(dir)
@@ -67,6 +99,9 @@ func (iter *identIterator) next() (blobIdent, error) {
 }
 
 func (iter *identIterator) advanceChild() (blobIdent, error) {
+	defer func() {
+		iter.offset += 1
+	}()
 	for i := iter.offset; i < len(iter.entries); i++ {
 		iter.offset = i
 		nextPath := filepath.Join(iter.path, iter.entries[iter.offset])
@@ -76,11 +111,10 @@ func (iter *identIterator) advanceChild() (blobIdent, error) {
 		}
 		ident, err := nextLevel.populateIdent(iter.ident, nextPath)
 		if err != nil {
-			return ident, err
+			return ident, newIdentificationError(nextPath, ident, err)
 		}
 		// if we're at the leaf level, we can return the updated ident.
 		if len(iter.levels) == 1 {
-			iter.offset += 1
 			return ident, nil
 		}
 
@@ -89,7 +123,7 @@ func (iter *identIterator) advanceChild() (blobIdent, error) {
 			return blobIdent{}, err
 		}
 		if len(entries) == 0 {
-			return blobIdent{}, io.EOF
+			continue
 		}
 		iter.child = &identIterator{
 			fs:      iter.fs,
@@ -98,7 +132,6 @@ func (iter *identIterator) advanceChild() (blobIdent, error) {
 			levels:  iter.levels[1:],
 			entries: entries,
 		}
-		iter.offset += 1
 		return iter.child.next()
 	}
 
@@ -198,7 +231,14 @@ func idxFromPath(p string) (uint64, error) {
 	if len(parts) != 2 {
 		return 0, errors.Wrap(errNotBlobSSZ, "unexpected filename structure (want <index>.ssz)")
 	}
-	return strconv.ParseUint(parts[0], 10, 64)
+	idx, err := strconv.ParseUint(parts[0], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	if idx >= fieldparams.MaxBlobsPerBlock {
+		return 0, errors.Wrapf(errIndexOutOfBounds, "index=%d", idx)
+	}
+	return idx, nil
 }
 
 // Read slot from marshaled BlobSidecar data in the given file. See slotFromBlob for details.
