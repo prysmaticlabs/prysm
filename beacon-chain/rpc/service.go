@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -127,7 +127,7 @@ type Config struct {
 	PeerManager                   p2p.PeerManager
 	MetadataProvider              p2p.MetadataProvider
 	DepositFetcher                cache.DepositFetcher
-	PendingDepositFetcher         depositcache.PendingDepositsFetcher
+	PendingDepositFetcher         depositsnapshot.PendingDepositsFetcher
 	StateNotifier                 statefeed.Notifier
 	BlockNotifier                 blockfeed.Notifier
 	OperationNotifier             opfeed.Notifier
