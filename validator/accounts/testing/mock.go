@@ -250,10 +250,10 @@ func (*Validator) HealthTracker() *beacon.NodeHealthTracker {
 	panic("implement me")
 }
 
-func (*Validator) RetrieveHost() string {
+func (*Validator) Host() string {
 	panic("implement me")
 }
 
-func (*Validator) UpdateHost(_ string) {
+func (*Validator) ChangeHost(_ string) {
 	panic("implement me")
 }

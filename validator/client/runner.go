@@ -308,10 +308,10 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 			isHealthy := tracker.CheckHealth(ctx)
 			if !isHealthy && len(hosts) > 1 && features.Get().EnableBeaconRESTApi {
 				for i, url := range hosts {
-					if url == v.RetrieveHost() {
+					if url == v.Host() {
 						next := (i + 1) % len(hosts)
 						log.Infof("Beacon node at %s is not responding, switching to %s", url, hosts[next])
-						v.UpdateHost(hosts[next])
+						v.ChangeHost(hosts[next])
 
 						km, err := v.Keymanager()
 						if err != nil {

@@ -314,8 +314,8 @@ func (fv *FakeValidator) HealthTracker() *beacon.NodeHealthTracker {
 	return fv.Tracker
 }
 
-func (*FakeValidator) RetrieveHost() string {
+func (*FakeValidator) Host() string {
 	return "127.0.0.1:0"
 }
 
-func (*FakeValidator) UpdateHost(_ string) {}
+func (*FakeValidator) ChangeHost(_ string) {}

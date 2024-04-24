@@ -246,11 +246,11 @@ func (c *grpcValidatorClient) EventStreamIsRunning() bool {
 	return c.isEventStreamRunning
 }
 
-func (*grpcValidatorClient) RetrieveHost() string {
+func (*grpcValidatorClient) Host() string {
 	log.Warn(iface.ErrNotSupported)
 	return ""
 }
 
-func (*grpcValidatorClient) UpdateHost(_ string) {
+func (*grpcValidatorClient) ChangeHost(_ string) {
 	log.Warn(iface.ErrNotSupported)
 }

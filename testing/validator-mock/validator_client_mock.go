@@ -44,6 +44,18 @@ func (m *MockValidatorClient) EXPECT() *MockValidatorClientMockRecorder {
 	return m.recorder
 }
 
+// ChangeHost mocks base method.
+func (m *MockValidatorClient) ChangeHost(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ChangeHost", arg0)
+}
+
+// ChangeHost indicates an expected call of ChangeHost.
+func (mr *MockValidatorClientMockRecorder) ChangeHost(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeHost", reflect.TypeOf((*MockValidatorClient)(nil).ChangeHost), arg0)
+}
+
 // CheckDoppelGanger mocks base method.
 func (m *MockValidatorClient) CheckDoppelGanger(arg0 context.Context, arg1 *eth.DoppelGangerRequest) (*eth.DoppelGangerResponse, error) {
 	m.ctrl.T.Helper()
@@ -223,6 +235,20 @@ func (mr *MockValidatorClientMockRecorder) GetSyncSubcommitteeIndex(arg0, arg1 a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncSubcommitteeIndex", reflect.TypeOf((*MockValidatorClient)(nil).GetSyncSubcommitteeIndex), arg0, arg1)
 }
 
+// Host mocks base method.
+func (m *MockValidatorClient) Host() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Host")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Host indicates an expected call of Host.
+func (mr *MockValidatorClientMockRecorder) Host() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Host", reflect.TypeOf((*MockValidatorClient)(nil).Host))
+}
+
 // MultipleValidatorStatus mocks base method.
 func (m *MockValidatorClient) MultipleValidatorStatus(arg0 context.Context, arg1 *eth.MultipleValidatorStatusRequest) (*eth.MultipleValidatorStatusResponse, error) {
 	m.ctrl.T.Helper()
@@ -296,20 +322,6 @@ func (m *MockValidatorClient) ProposeExit(arg0 context.Context, arg1 *eth.Signed
 func (mr *MockValidatorClientMockRecorder) ProposeExit(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeExit", reflect.TypeOf((*MockValidatorClient)(nil).ProposeExit), arg0, arg1)
-}
-
-// RetrieveHost mocks base method.
-func (m *MockValidatorClient) RetrieveHost() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RetrieveHost")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// RetrieveHost indicates an expected call of RetrieveHost.
-func (mr *MockValidatorClientMockRecorder) RetrieveHost() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetrieveHost", reflect.TypeOf((*MockValidatorClient)(nil).RetrieveHost))
 }
 
 // StartEventStream mocks base method.
@@ -412,18 +424,6 @@ func (m *MockValidatorClient) SubscribeCommitteeSubnets(arg0 context.Context, ar
 func (mr *MockValidatorClientMockRecorder) SubscribeCommitteeSubnets(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeCommitteeSubnets", reflect.TypeOf((*MockValidatorClient)(nil).SubscribeCommitteeSubnets), arg0, arg1, arg2)
-}
-
-// UpdateHost mocks base method.
-func (m *MockValidatorClient) UpdateHost(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateHost", arg0)
-}
-
-// UpdateHost indicates an expected call of UpdateHost.
-func (mr *MockValidatorClientMockRecorder) UpdateHost(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHost", reflect.TypeOf((*MockValidatorClient)(nil).UpdateHost), arg0)
 }
 
 // ValidatorIndex mocks base method.

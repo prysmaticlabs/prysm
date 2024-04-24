@@ -2603,14 +2603,14 @@ func TestValidator_Host(t *testing.T) {
 	client.EXPECT().UpdateHost(hosts[0]).Times(1)
 	client.EXPECT().RetrieveHost().Return(hosts[0]).Times(1)
 
-	v.validatorClient.UpdateHost(hosts[0])
-	host := v.validatorClient.RetrieveHost()
+	v.validatorClient.ChangeHost(hosts[0])
+	host := v.validatorClient.Host()
 	require.Equal(t, hosts[0], host)
 
 	client.EXPECT().UpdateHost(hosts[1]).Times(1)
 	client.EXPECT().RetrieveHost().Return(hosts[1]).Times(1)
 
-	v.validatorClient.UpdateHost(hosts[1])
-	host = v.validatorClient.RetrieveHost()
+	v.validatorClient.ChangeHost(hosts[1])
+	host = v.validatorClient.Host()
 	require.Equal(t, hosts[1], host)
 }

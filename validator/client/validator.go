@@ -1107,12 +1107,12 @@ func (v *validator) HealthTracker() *beacon.NodeHealthTracker {
 	return v.nodeClient.HealthTracker()
 }
 
-func (v *validator) RetrieveHost() string {
-	return v.validatorClient.RetrieveHost()
+func (v *validator) Host() string {
+	return v.validatorClient.Host()
 }
 
-func (v *validator) UpdateHost(host string) {
-	v.validatorClient.UpdateHost(host)
+func (v *validator) ChangeHost(host string) {
+	v.validatorClient.ChangeHost(host)
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {

@@ -231,10 +231,10 @@ func wrapInMetrics[Resp any](action string, f func() (Resp, error)) (Resp, error
 	return resp, err
 }
 
-func (c *beaconApiValidatorClient) RetrieveHost() string {
+func (c *beaconApiValidatorClient) Host() string {
 	return c.jsonRestHandler.Host()
 }
 
-func (c *beaconApiValidatorClient) UpdateHost(host string) {
+func (c *beaconApiValidatorClient) ChangeHost(host string) {
 	c.jsonRestHandler.ChangeHost(host)
 }
