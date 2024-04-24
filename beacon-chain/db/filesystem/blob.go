@@ -136,7 +136,7 @@ func (bs *BlobStorage) WaitForSummarizer(ctx context.Context) (BlobStorageSummar
 // Save saves blobs given a list of sidecars.
 func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	startTime := time.Now()
-	namer := namerForSidecar(sidecar)
+	namer := identForSidecar(sidecar)
 	sszPath := bs.layout.sszPath(namer)
 	exists, err := afero.Exists(bs.fs, sszPath)
 	if err != nil {
@@ -227,7 +227,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 // value is always a VerifiedROBlob.
 func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, error) {
 	startTime := time.Now()
-	expected, err := bs.layout.namer(root, idx)
+	expected, err := bs.layout.ident(root, idx)
 	if err != nil {
 		return verification.VerifiedROBlobError(err)
 	}
@@ -239,7 +239,7 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 
 // Remove removes all blobs for a given root.
 func (bs *BlobStorage) Remove(root [32]byte) error {
-	expected, err := bs.layout.dirNamer(root)
+	expected, err := bs.layout.dirIdent(root)
 	if err != nil {
 		return err
 	}

@@ -36,36 +36,36 @@ func listDir(fs afero.Fs, dir string) ([]string, error) {
 }
 
 type layoutLevel struct {
-	namerUpdater namerUpdater
-	filter       func(string) bool
+	populateIdent identPopulator
+	filter        func(string) bool
 }
 
-type namerUpdater func(blobNamer, string) (blobNamer, error)
+type identPopulator func(blobIdent, string) (blobIdent, error)
 
-type namerIterator struct {
+type identIterator struct {
 	fs      afero.Fs
 	path    string
-	child   *namerIterator
-	namer   blobNamer
+	child   *identIterator
+	ident   blobIdent
 	levels  []layoutLevel
 	entries []string
 	offset  int
 }
 
-func (iter *namerIterator) next() (blobNamer, error) {
+func (iter *identIterator) next() (blobIdent, error) {
 	if iter.child != nil {
 		next, err := iter.child.next()
 		if err == nil {
 			return next, nil
 		}
 		if err != io.EOF {
-			return blobNamer{}, err
+			return blobIdent{}, err
 		}
 	}
 	return iter.advanceChild()
 }
 
-func (iter *namerIterator) advanceChild() (blobNamer, error) {
+func (iter *identIterator) advanceChild() (blobIdent, error) {
 	for i := iter.offset; i < len(iter.entries); i++ {
 		iter.offset = i
 		nextPath := filepath.Join(iter.path, iter.entries[iter.offset])
@@ -73,27 +73,27 @@ func (iter *namerIterator) advanceChild() (blobNamer, error) {
 		if !nextLevel.filter(nextPath) {
 			continue
 		}
-		namer, err := nextLevel.namerUpdater(iter.namer, nextPath)
+		ident, err := nextLevel.populateIdent(iter.ident, nextPath)
 		if err != nil {
-			return namer, err
+			return ident, err
 		}
-		// if we're at the leaf level, we can return the updated namer.
+		// if we're at the leaf level, we can return the updated ident.
 		if len(iter.levels) == 1 {
 			iter.offset += 1
-			return namer, nil
+			return ident, nil
 		}
 
 		entries, err := listDir(iter.fs, nextPath)
 		if err != nil {
-			return blobNamer{}, err
+			return blobIdent{}, err
 		}
 		if len(entries) == 0 {
-			return blobNamer{}, io.EOF
+			return blobIdent{}, io.EOF
 		}
-		iter.child = &namerIterator{
+		iter.child = &identIterator{
 			fs:      iter.fs,
 			path:    nextPath,
-			namer:   namer,
+			ident:   ident,
 			levels:  iter.levels[1:],
 			entries: entries,
 		}
@@ -101,14 +101,14 @@ func (iter *namerIterator) advanceChild() (blobNamer, error) {
 		return iter.child.next()
 	}
 
-	return blobNamer{}, io.EOF
+	return blobIdent{}, io.EOF
 }
 
-func noopNamerUpdater(namer blobNamer, dir string) (blobNamer, error) {
+func populateNoop(namer blobIdent, dir string) (blobIdent, error) {
 	return namer, nil
 }
 
-func epochNamerUpdater(namer blobNamer, dir string) (blobNamer, error) {
+func populateEpoch(namer blobIdent, dir string) (blobIdent, error) {
 	epoch, err := epochFromPath(dir)
 	if err != nil {
 		return namer, err
@@ -117,7 +117,7 @@ func epochNamerUpdater(namer blobNamer, dir string) (blobNamer, error) {
 	return namer, nil
 }
 
-func rootNamerUpdater(namer blobNamer, dir string) (blobNamer, error) {
+func populateRoot(namer blobIdent, dir string) (blobIdent, error) {
 	root, err := rootFromPath(dir)
 	if err != nil {
 		return namer, err
@@ -126,7 +126,7 @@ func rootNamerUpdater(namer blobNamer, dir string) (blobNamer, error) {
 	return namer, nil
 }
 
-func indexNamerUpdater(namer blobNamer, fname string) (blobNamer, error) {
+func populateIndex(namer blobIdent, fname string) (blobIdent, error) {
 	idx, err := idxFromPath(fname)
 	if err != nil {
 		return namer, err
@@ -141,21 +141,21 @@ type readSlotOncePerRoot struct {
 	epoch    primitives.Epoch
 }
 
-func (l *readSlotOncePerRoot) namerUpdater(namer blobNamer, fname string) (blobNamer, error) {
-	namer, err := indexNamerUpdater(namer, fname)
+func (l *readSlotOncePerRoot) populateIdent(ident blobIdent, fname string) (blobIdent, error) {
+	ident, err := populateIndex(ident, fname)
 	if err != nil {
-		return namer, err
+		return ident, err
 	}
-	if namer.root != l.lastRoot {
+	if ident.root != l.lastRoot {
 		slot, err := slotFromFile(fname, l.fs)
 		if err != nil {
-			return namer, err
+			return ident, err
 		}
-		l.lastRoot = namer.root
+		l.lastRoot = ident.root
 		l.epoch = slots.ToEpoch(slot)
 	}
-	namer.epoch = l.epoch
-	return namer, nil
+	ident.epoch = l.epoch
+	return ident, nil
 }
 
 func epochFromPath(p string) (primitives.Epoch, error) {

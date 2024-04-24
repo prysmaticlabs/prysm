@@ -105,24 +105,24 @@ func (s *blobStorageCache) get(key [32]byte) (BlobStorageSummary, bool) {
 	return v, ok
 }
 
-func (s *blobStorageCache) namerForIdx(key [32]byte, idx uint64) (blobNamer, error) {
+func (s *blobStorageCache) identForIdx(key [32]byte, idx uint64) (blobIdent, error) {
 	v, ok := s.get(key)
 	if !ok || !v.HasIndex(idx) {
-		return blobNamer{}, db.ErrNotFound
+		return blobIdent{}, db.ErrNotFound
 	}
-	return blobNamer{
+	return blobIdent{
 		root:  key,
 		index: idx,
 		epoch: v.epoch,
 	}, nil
 }
 
-func (s *blobStorageCache) namerForRoot(key [32]byte) (blobNamer, error) {
+func (s *blobStorageCache) identForRoot(key [32]byte) (blobIdent, error) {
 	v, ok := s.get(key)
 	if !ok {
-		return blobNamer{}, db.ErrNotFound
+		return blobIdent{}, db.ErrNotFound
 	}
-	return blobNamer{
+	return blobIdent{
 		root:  key,
 		epoch: v.epoch,
 	}, nil

@@ -42,7 +42,7 @@ func testAssertNewPaths(t *testing.T, fs afero.Fs, bs *BlobStorage, paths []migr
 		require.NoError(t, err)
 		root, err := stringToRoot(ba.root)
 		require.NoError(t, err)
-		namer, err := bs.layout.namer(root, ba.index)
+		namer, err := bs.layout.ident(root, ba.index)
 		require.NoError(t, err)
 		path := bs.layout.sszPath(namer)
 		require.Equal(t, ba.after, path)

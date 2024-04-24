@@ -28,7 +28,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		fs, bs := NewEphemeralBlobStorageAndFs(t)
 		existingSidecar := testSidecars[0]
 
-		blobPath := bs.layout.sszPath(namerForSidecar(existingSidecar))
+		blobPath := bs.layout.sszPath(identForSidecar(existingSidecar))
 		// Serialize the existing BlobSidecar to binary data.
 		existingSidecarData, err := ssz.MarshalSSZ(existingSidecar)
 		require.NoError(t, err)
@@ -149,7 +149,7 @@ func TestBlobIndicesBounds(t *testing.T) {
 
 func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, slot primitives.Slot, idx uint64) {
 	epoch := slots.ToEpoch(slot)
-	namer := newBlobNamer(root, epoch, idx)
+	namer := newBlobIdent(root, epoch, idx)
 	layout := periodicEpochLayout{}
 	require.NoError(t, fs.MkdirAll(layout.dir(namer), 0700))
 	fh, err := fs.Create(layout.sszPath(namer))
@@ -172,15 +172,15 @@ func TestBlobStoragePrune(t *testing.T) {
 		for _, sidecar := range testSidecars {
 			require.NoError(t, bs.Save(sidecar))
 		}
-		namer := namerForSidecar(testSidecars[0])
+		ident := identForSidecar(testSidecars[0])
 
-		beforeFolders, err := afero.ReadDir(fs, namer.groupDir())
+		beforeFolders, err := afero.ReadDir(fs, ident.groupDir())
 		require.NoError(t, err)
 		require.Equal(t, 1, len(beforeFolders))
 
 		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
 
-		remainingFolders, err := afero.ReadDir(fs, namer.groupDir())
+		remainingFolders, err := afero.ReadDir(fs, ident.groupDir())
 		require.NoError(t, err)
 		require.Equal(t, 0, len(remainingFolders))
 	})
@@ -188,7 +188,7 @@ func TestBlobStoragePrune(t *testing.T) {
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 299, fieldparams.MaxBlobsPerBlock)
 		testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
 		require.NoError(t, err)
-		namer := namerForSidecar(testSidecars[0])
+		ident := identForSidecar(testSidecars[0])
 
 		for _, sidecar := range testSidecars[4:] {
 			require.NoError(t, bs.Save(sidecar))
@@ -196,7 +196,7 @@ func TestBlobStoragePrune(t *testing.T) {
 
 		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))
 
-		remainingFolders, err := afero.ReadDir(fs, namer.groupDir())
+		remainingFolders, err := afero.ReadDir(fs, ident.groupDir())
 		require.NoError(t, err)
 		require.Equal(t, 0, len(remainingFolders))
 	})
@@ -210,13 +210,13 @@ func TestBlobStoragePrune(t *testing.T) {
 			pruneBefore + increment,
 			pruneBefore + (2 * increment),
 		}
-		namers := make([]blobNamer, len(slots))
+		namers := make([]blobIdent, len(slots))
 		for i, s := range slots {
 			_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, s, 1)
 			testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
 			require.NoError(t, err)
 			require.NoError(t, bs.Save(testSidecars[0]))
-			namers[i] = namerForSidecar(testSidecars[0])
+			namers[i] = identForSidecar(testSidecars[0])
 		}
 
 		require.NoError(t, bs.pruner.prune(currentSlot-bs.pruner.windowSize))

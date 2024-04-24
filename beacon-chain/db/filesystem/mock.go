@@ -53,7 +53,7 @@ func (bm *BlobMocker) CreateFakeIndices(root [32]byte, slot primitives.Slot, ind
 	epoch := slots.ToEpoch(slot)
 	layout := bm.bs.layout
 	for i := range indices {
-		n := newBlobNamer(root, epoch, indices[i])
+		n := newBlobIdent(root, epoch, indices[i])
 		if err := bm.fs.MkdirAll(layout.dir(n), directoryPermissions); err != nil {
 			return err
 		}

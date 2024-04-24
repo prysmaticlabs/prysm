@@ -74,7 +74,7 @@ func TestSlotFromFile(t *testing.T) {
 			sc, err := verification.BlobSidecarNoop(sidecars[0])
 			require.NoError(t, err)
 			require.NoError(t, bs.Save(sc))
-			namer := namerForSidecar(sc)
+			namer := identForSidecar(sc)
 			sszPath := bs.layout.sszPath(namer)
 			slot, err := slotFromFile(sszPath, fs)
 			require.NoError(t, err)

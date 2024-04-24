@@ -10,8 +10,8 @@ package filesystem
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, fieldparams.MaxBlobsPerBlock)
 		sc, err := verification.BlobSidecarNoop(sidecars[0])
 		require.NoError(t, err)
-		namer := namerForSidecar(sc)
-		dir := namer.dir()
+		ident := identForSidecar(sc)
+		dir := ident.dir()
 		// This slot is right on the edge of what would need to be pruned, so by adding it to the cache and
 		// skipping any other test setup, we can be certain the hot cache path never touches the filesystem.
 		require.NoError(t, pr.cache.ensure(sc.BlockRoot(), sc.Slot(), 0))
@@ -28,8 +28,8 @@ package filesystem
 			_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, 1)
 			sc, err := verification.BlobSidecarNoop(sidecars[0])
 			require.NoError(t, err)
-			namer := namerForSidecar(sc)
-			dir := namer.dir()
+			ident := identForSidecar(sc)
+			dir := ident.dir()
 			require.NoError(t, fs.Mkdir(dir, directoryPermissions)) // make empty directory
 			require.NoError(t, pr.cache.ensure(sc.BlockRoot(), sc.Slot(), 0))
 			pruned, err := pr.tryPruneDir(dir, slot+1)
@@ -48,8 +48,8 @@ package filesystem
 
 			// check that the root->slot is cached
 			root := scs[0].BlockRoot()
-			namer := namerForSidecar(scs[0])
-			dir := namer.dir()
+			ident := identForSidecar(scs[0])
+			dir := ident.dir()
 			cs, cok := bs.pruner.cache.epoch(root)
 			require.Equal(t, true, cok)
 			require.Equal(t, slots.ToEpoch(slot), cs)
@@ -80,8 +80,8 @@ func TestTryPruneDir_SlotFromFile(t *testing.T) {
 
 		// check that the root->slot is cached
 		root := scs[0].BlockRoot()
-		namer := namerForSidecar(scs[0])
-		dir := namer.dir()
+		ident := identForSidecar(scs[0])
+		dir := ident.dir()
 		cs, ok := bs.pruner.cache.epoch(root)
 		require.Equal(t, true, ok)
 		require.Equal(t, slots.ToEpoch(slot), cs)
@@ -116,8 +116,8 @@ func TestTryPruneDir_SlotFromFile(t *testing.T) {
 
 		// Evict slot mapping from the cache so that we trigger the file read path.
 		root := scs[0].BlockRoot()
-		namer := namerForSidecar(scs[0])
-		dir := namer.dir()
+		ident := identForSidecar(scs[0])
+		dir := ident.dir()
 		bs.pruner.cache.evict(root)
 		_, ok := bs.pruner.cache.epoch(root)
 		require.Equal(t, false, ok)
