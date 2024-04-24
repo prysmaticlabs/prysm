@@ -251,7 +251,7 @@ func (bs *BlobStorage) GetColumn(root [32]byte, idx uint64) (*ethpb.DataColumnSi
 	}
 	s := &ethpb.DataColumnSidecar{}
 	if err := s.UnmarshalSSZ(encoded); err != nil {
-		return v, err
+		return nil, err
 	}
 	return s, nil
 }
