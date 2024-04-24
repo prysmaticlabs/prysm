@@ -35,9 +35,7 @@ func UnmarshalYaml(y []byte, dest interface{}) error {
 func TestFolders(t testing.TB, config, forkOrPhase, folderPath string) ([]os.DirEntry, string) {
 	testsFolderPath := path.Join("tests", config, forkOrPhase, folderPath)
 	filepath, err := bazel.Runfile(testsFolderPath)
-	if err != nil {
-		return nil, ""
-	}
+	require.NoError(t, err)
 	testFolders, err := os.ReadDir(filepath)
 	require.NoError(t, err)
 
