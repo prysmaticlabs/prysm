@@ -39,19 +39,17 @@ message PendingPartialWithdrawal {
     // The amount of the withdrawal (gwei).
     uint64 amount = 2;
 
-    // TODO: document this field
+    // A partial withdrawal is valid at this epoch or later.
     uint64 withdrawable_epoch = 3;
 }
 
-// ExecutionLayerWithdrawalRequest is in proto/engine/execution_engine.proto
 
 message Consolidation {
     // Validator from which the funds will be moved.
     uint64 source_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
     // Validator to which the funds will be moved.
     uint64 target_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
-    // TODO: document this field.
-    // TODO: Is this the target epoch? Minimum epoch? Why does it exist?
+    // A consolidation is valid at this epoch or later.
     uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 }
 
