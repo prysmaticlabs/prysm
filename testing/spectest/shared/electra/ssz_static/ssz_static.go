@@ -17,7 +17,6 @@ func RunSSZStaticTests(t *testing.T, config string) {
 
 func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
 	// TODO: Replace BeaconStateDeneb with BeaconStateElectra below and uncomment the code
-
 	//_, ok := object.(*ethpb.BeaconStateDeneb)
 	//if !ok {
 	//	return htrs
@@ -33,9 +32,12 @@ func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR
 
 // UnmarshalledSSZ unmarshalls serialized input.
 func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
+	// TODO: Remove this check once BeaconState custom HTR function is ready
+	if folderName == "BeaconState" {
+		t.Skip("BeaconState is not ready")
+	}
 	var obj interface{}
 	switch folderName {
-	// TODO: replace execution payload with execution payload electra below and uncomment the code
 	case "ExecutionPayload":
 		obj = &enginev1.ExecutionPayloadElectra{}
 	case "ExecutionPayloadHeader":

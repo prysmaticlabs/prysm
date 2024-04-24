@@ -57,7 +57,7 @@ minimal = {
     "max_blobs_per_block.size": "6",
     "max_blob_commitments.size": "16",
     "kzg_commitment_inclusion_proof_depth.size": "9",
-    "max_withdrawal_requests_per_payload.size":"4",
+    "max_withdrawal_requests_per_payload.size":"2",
     "max_deposit_receipts": "4",
     "max_attesting_indices.size": "8192",
     "max_committees_per_slot.size": "4",
