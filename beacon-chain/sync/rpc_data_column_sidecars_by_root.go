@@ -61,6 +61,14 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		return errors.Wrapf(err, "unexpected error computing min valid blob request slot, current_slot=%d", cs)
 	}
 
+	// Compute all custodied columns.
+	custodiedColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), params.BeaconConfig().CustodyRequirement)
+	if err != nil {
+		log.WithError(err).Errorf("unexpected error retrieving the node id")
+		s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
+		return err
+	}
+
 	for i := range columnIdents {
 		if err := ctx.Err(); err != nil {
 			closeStream(stream, log)
@@ -73,12 +81,6 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		}
 		s.rateLimiter.add(stream, 1)
 		root, idx := bytesutil.ToBytes32(columnIdents[i].BlockRoot), columnIdents[i].Index
-		custodiedColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), params.BeaconConfig().CustodyRequirement)
-		if err != nil {
-			log.WithError(err).Errorf("unexpected error retrieving the node id")
-			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
-			return err
-		}
 
 		isCustodied := custodiedColumns[idx]
 		if !isCustodied {
