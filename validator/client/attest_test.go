@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/d4l3k/messagediff"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
@@ -26,10 +27,39 @@ import (
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"go.uber.org/mock/gomock"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
+func TestGetAttestationData(t *testing.T) {
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
+			defer finish()
+			validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
+				{
+					PublicKey:      validatorKey.PublicKey().Marshal(),
+					CommitteeIndex: 5,
+					Committee:      make([]primitives.ValidatorIndex, 111),
+					ValidatorIndex: 0,
+				}}}
+			expectedData := &ethpb.AttestationData{
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				Target:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+				Source:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+			}
+			m.validatorClient.EXPECT().GetAttestationData(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
+			).Return(expectedData, nil)
+
+			var pubKey [fieldparams.BLSPubkeyLength]byte
+			copy(pubKey[:], validatorKey.PublicKey().Marshal())
+			data := validator.GetAttestationData(context.Background(), 30, pubKey)
+			assert.Equal(t, expectedData, data)
+		})
+	}
+}
+
+func TestGetAttestationData_ValidatorDutiesRequestFailure(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
 		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
 			hook := logTest.NewGlobal()
@@ -39,13 +69,14 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
-			validator.SubmitAttestation(context.Background(), 30, pubKey)
-			require.LogsContain(t, hook, "Could not fetch validator assignment")
+			data := validator.GetAttestationData(context.Background(), 30, pubKey)
+			assert.Equal(t, true, data == nil)
+			assert.LogsContain(t, hook, "Could not fetch validator duty")
 		})
 	}
 }
 
-func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
+func TestGetAttestationData_EmptyCommittee(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
 		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
 			hook := logTest.NewGlobal()
@@ -61,13 +92,14 @@ func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
 					Committee:      make([]primitives.ValidatorIndex, 0),
 					ValidatorIndex: 0,
 				}}}
-			validator.SubmitAttestation(context.Background(), 0, pubKey)
-			require.LogsContain(t, hook, "Empty committee")
+			data := validator.GetAttestationData(context.Background(), 0, pubKey)
+			assert.Equal(t, true, data == nil)
+			assert.LogsContain(t, hook, "Empty committee")
 		})
 	}
 }
 
-func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
+func TestGetAttestationData_GetAttestationDataRequestFailure(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
 		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
 			hook := logTest.NewGlobal()
@@ -84,29 +116,44 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 			m.validatorClient.EXPECT().GetAttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Return(&ethpb.AttestationData{
-				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
-				Target:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-				Source:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-			}, nil)
-			m.validatorClient.EXPECT().DomainData(
-				gomock.Any(), // ctx
-				gomock.Any(), // epoch2
-			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-			m.validatorClient.EXPECT().ProposeAttestation(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-			).Return(nil, errors.New("something went wrong"))
+			).Return(nil, errors.New("foo"))
 
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
-			validator.SubmitAttestation(context.Background(), 30, pubKey)
-			require.LogsContain(t, hook, "Could not submit attestation to beacon node")
+			data := validator.GetAttestationData(context.Background(), 30, pubKey)
+			assert.Equal(t, true, data == nil)
+			assert.LogsContain(t, hook, "Could not get attestation data")
 		})
 	}
 }
 
-func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
+func TestGetAttestationData_DoesNotGetDataBeforeDelay(t *testing.T) {
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
+			defer finish()
+
+			var pubKey [fieldparams.BLSPubkeyLength]byte
+			copy(pubKey[:], validatorKey.PublicKey().Marshal())
+			validator.genesisTime = uint64(prysmTime.Now().Unix())
+			m.validatorClient.EXPECT().GetDuties(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.DutiesRequest{}),
+			).Times(0)
+
+			m.validatorClient.EXPECT().GetAttestationData(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
+			).Times(0)
+
+			timer := time.NewTimer(1 * time.Second)
+			go validator.GetAttestationData(context.Background(), 0, pubKey)
+			<-timer.C
+		})
+	}
+}
+
+func TestSubmitAttestations(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
 		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
 			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
@@ -125,41 +172,33 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 				},
 			}}
 
-			beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
-			targetRoot := bytesutil.ToBytes32([]byte("B"))
-			sourceRoot := bytesutil.ToBytes32([]byte("C"))
-			m.validatorClient.EXPECT().GetAttestationData(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Return(&ethpb.AttestationData{
-				BeaconBlockRoot: beaconBlockRoot[:],
-				Target:          &ethpb.Checkpoint{Root: targetRoot[:]},
-				Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
-			}, nil)
-
 			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
-			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
 			var generatedAttestation *ethpb.Attestation
-			m.validatorClient.EXPECT().ProposeAttestation(
+			m.validatorClient.EXPECT().SubmitAttestations(
 				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-			).Do(func(_ context.Context, att *ethpb.Attestation) {
-				generatedAttestation = att
-			}).Return(&ethpb.AttestResponse{}, nil /* error */)
+				gomock.AssignableToTypeOf([]*ethpb.Attestation{}),
+			).Do(func(_ context.Context, atts []*ethpb.Attestation) {
+				generatedAttestation = atts[0]
+			}).Return([]*ethpb.AttestResponse{{}}, nil)
 
-			validator.SubmitAttestation(context.Background(), 30, pubKey)
+			beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
+			targetRoot := bytesutil.ToBytes32([]byte("B"))
+			sourceRoot := bytesutil.ToBytes32([]byte("C"))
+			data := &ethpb.AttestationData{
+				BeaconBlockRoot: beaconBlockRoot[:],
+				Target:          &ethpb.Checkpoint{Root: targetRoot[:]},
+				Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
+			}
+			validator.SubmitAttestations(context.Background(), 30, [][fieldparams.BLSPubkeyLength]byte{pubKey}, []*ethpb.AttestationData{data})
 
 			aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
 			aggregationBitfield.SetBitAt(4, true)
 			expectedAttestation := &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: beaconBlockRoot[:],
-					Target:          &ethpb.Checkpoint{Root: targetRoot[:]},
-					Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
-				},
+				Data:            data,
 				AggregationBits: aggregationBitfield,
 				Signature:       make([]byte, 96),
 			}
@@ -178,7 +217,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 				diff, _ := messagediff.PrettyDiff(expectedAttestation, generatedAttestation)
 				t.Log(diff)
 			}
-			require.LogsDoNotContain(t, hook, "Could not")
+			assert.LogsAreEmpty(t, hook)
 		})
 	}
 }
@@ -205,41 +244,33 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 			targetRoot := bytesutil.ToBytes32([]byte("B"))
 			sourceRoot := bytesutil.ToBytes32([]byte("C"))
 			beaconBlockRoot2 := bytesutil.ToBytes32([]byte("D"))
-
-			m.validatorClient.EXPECT().GetAttestationData(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Return(&ethpb.AttestationData{
+			data1 := &ethpb.AttestationData{
 				BeaconBlockRoot: beaconBlockRoot[:],
 				Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 4},
 				Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
-			}, nil)
-			m.validatorClient.EXPECT().GetAttestationData(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Return(&ethpb.AttestationData{
+			}
+			data2 := &ethpb.AttestationData{
 				BeaconBlockRoot: beaconBlockRoot2[:],
 				Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 4},
 				Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
-			}, nil)
+			}
 			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
-			).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+			).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-			m.validatorClient.EXPECT().ProposeAttestation(
+			m.validatorClient.EXPECT().SubmitAttestations(
 				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-			).Return(&ethpb.AttestResponse{AttestationDataRoot: make([]byte, 32)}, nil /* error */)
+				gomock.AssignableToTypeOf([]*ethpb.Attestation{}),
+			).Return([]*ethpb.AttestResponse{{AttestationDataRoot: make([]byte, 32)}, {AttestationDataRoot: make([]byte, 32)}}, nil)
 
-			validator.SubmitAttestation(context.Background(), 30, pubKey)
-			validator.SubmitAttestation(context.Background(), 30, pubKey)
+			validator.SubmitAttestations(context.Background(), 30, [][fieldparams.BLSPubkeyLength]byte{pubKey, pubKey}, []*ethpb.AttestationData{data1, data2})
 			require.LogsContain(t, hook, "Failed attestation slashing protection")
 		})
 	}
 }
 
-func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
+func TestAttestToBlockHead_BlocksSurroundingAtt(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
 		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
 			hook := logTest.NewGlobal()
@@ -260,36 +291,28 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 			beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
 			targetRoot := bytesutil.ToBytes32([]byte("B"))
 			sourceRoot := bytesutil.ToBytes32([]byte("C"))
-
-			m.validatorClient.EXPECT().GetAttestationData(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Return(&ethpb.AttestationData{
+			data1 := &ethpb.AttestationData{
 				BeaconBlockRoot: beaconBlockRoot[:],
 				Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 2},
 				Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 1},
-			}, nil)
-			m.validatorClient.EXPECT().GetAttestationData(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Return(&ethpb.AttestationData{
+			}
+			data2 := &ethpb.AttestationData{
 				BeaconBlockRoot: beaconBlockRoot[:],
 				Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 3},
 				Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 0},
-			}, nil)
+			}
 
 			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
-			).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+			).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-			m.validatorClient.EXPECT().ProposeAttestation(
+			m.validatorClient.EXPECT().SubmitAttestations(
 				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-			).Return(&ethpb.AttestResponse{}, nil /* error */)
+				gomock.AssignableToTypeOf([]*ethpb.Attestation{}),
+			).Return([]*ethpb.AttestResponse{{}, {}}, nil)
 
-			validator.SubmitAttestation(context.Background(), 30, pubKey)
-			validator.SubmitAttestation(context.Background(), 30, pubKey)
+			validator.SubmitAttestations(context.Background(), 30, [][fieldparams.BLSPubkeyLength]byte{pubKey, pubKey}, []*ethpb.AttestationData{data1, data2})
 			require.LogsContain(t, hook, "Failed attestation slashing protection")
 		})
 	}
@@ -316,120 +339,29 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 			beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
 			targetRoot := bytesutil.ToBytes32([]byte("B"))
 			sourceRoot := bytesutil.ToBytes32([]byte("C"))
-
-			m.validatorClient.EXPECT().GetAttestationData(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Return(&ethpb.AttestationData{
+			data1 := &ethpb.AttestationData{
 				BeaconBlockRoot: beaconBlockRoot[:],
 				Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 3},
 				Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 0},
-			}, nil)
-
-			m.validatorClient.EXPECT().DomainData(
-				gomock.Any(), // ctx
-				gomock.Any(), // epoch
-			).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
-			m.validatorClient.EXPECT().ProposeAttestation(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-			).Return(&ethpb.AttestResponse{}, nil /* error */)
-
-			validator.SubmitAttestation(context.Background(), 30, pubKey)
-			require.LogsDoNotContain(t, hook, failedAttLocalProtectionErr)
-
-			m.validatorClient.EXPECT().GetAttestationData(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Return(&ethpb.AttestationData{
+			}
+			data2 := &ethpb.AttestationData{
 				BeaconBlockRoot: bytesutil.PadTo([]byte("A"), 32),
 				Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32), Epoch: 2},
 				Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 1},
-			}, nil)
-
-			validator.SubmitAttestation(context.Background(), 30, pubKey)
-			require.LogsContain(t, hook, "Failed attestation slashing protection")
-		})
-	}
-}
-
-func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
-	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
-			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
-			defer finish()
-
-			var pubKey [fieldparams.BLSPubkeyLength]byte
-			copy(pubKey[:], validatorKey.PublicKey().Marshal())
-			validator.genesisTime = uint64(prysmTime.Now().Unix())
-			m.validatorClient.EXPECT().GetDuties(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.DutiesRequest{}),
-			).Times(0)
-
-			m.validatorClient.EXPECT().GetAttestationData(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Times(0)
-
-			m.validatorClient.EXPECT().ProposeAttestation(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-			).Return(&ethpb.AttestResponse{}, nil /* error */).Times(0)
-
-			timer := time.NewTimer(1 * time.Second)
-			go validator.SubmitAttestation(context.Background(), 0, pubKey)
-			<-timer.C
-		})
-	}
-}
-
-func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
-	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
-			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
-			defer finish()
-
-			var wg sync.WaitGroup
-			wg.Add(1)
-			defer wg.Wait()
-
-			validator.genesisTime = uint64(prysmTime.Now().Unix())
-			validatorIndex := primitives.ValidatorIndex(5)
-			committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-			var pubKey [fieldparams.BLSPubkeyLength]byte
-			copy(pubKey[:], validatorKey.PublicKey().Marshal())
-			validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
-				{
-					PublicKey:      validatorKey.PublicKey().Marshal(),
-					CommitteeIndex: 5,
-					Committee:      committee,
-					ValidatorIndex: validatorIndex,
-				}}}
-
-			m.validatorClient.EXPECT().GetAttestationData(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Return(&ethpb.AttestationData{
-				BeaconBlockRoot: bytesutil.PadTo([]byte("A"), 32),
-				Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
-				Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
-			}, nil).Do(func(arg0, arg1 interface{}) {
-				wg.Done()
-			})
+			}
 
 			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
-			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+			).Times(4).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-			m.validatorClient.EXPECT().ProposeAttestation(
+			m.validatorClient.EXPECT().SubmitAttestations(
 				gomock.Any(), // ctx
-				gomock.Any(),
-			).Return(&ethpb.AttestResponse{}, nil).Times(1)
+				gomock.AssignableToTypeOf([]*ethpb.Attestation{}),
+			).Return([]*ethpb.AttestResponse{{}, {}}, nil)
 
-			validator.SubmitAttestation(context.Background(), 0, pubKey)
+			validator.SubmitAttestations(context.Background(), 30, [][fieldparams.BLSPubkeyLength]byte{pubKey, pubKey}, []*ethpb.AttestationData{data1, data2})
+			require.LogsContain(t, hook, "Failed attestation slashing protection")
 		})
 	}
 }
@@ -450,30 +382,26 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 					Committee:      committee,
 					ValidatorIndex: validatorIndex,
 				}}}
-			m.validatorClient.EXPECT().GetAttestationData(
-				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-			).Return(&ethpb.AttestationData{
-				Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
-				Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
-				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
-			}, nil)
 
 			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
 				gomock.Any(), // epoch
-			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
 			var generatedAttestation *ethpb.Attestation
-			m.validatorClient.EXPECT().ProposeAttestation(
+			m.validatorClient.EXPECT().SubmitAttestations(
 				gomock.Any(), // ctx
-				gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-			).Do(func(_ context.Context, att *ethpb.Attestation) {
-				generatedAttestation = att
-			}).Return(&ethpb.AttestResponse{}, nil /* error */)
+				gomock.AssignableToTypeOf([]*ethpb.Attestation{}),
+			).Do(func(_ context.Context, atts []*ethpb.Attestation) {
+				generatedAttestation = atts[0]
+			}).Return([]*ethpb.AttestResponse{{}}, nil)
 
-			validator.SubmitAttestation(context.Background(), 30, pubKey)
-
+			data := &ethpb.AttestationData{
+				Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
+				Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+			}
+			validator.SubmitAttestations(context.Background(), 30, [][fieldparams.BLSPubkeyLength]byte{pubKey}, []*ethpb.AttestationData{data})
 			assert.Equal(t, 2, len(generatedAttestation.AggregationBits))
 		})
 	}

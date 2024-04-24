@@ -76,6 +76,11 @@ func LogsDoNotContain(tb assertions.AssertionTestingTB, hook *test.Hook, want st
 	assertions.LogsContain(tb.Errorf, hook, want, false, msg...)
 }
 
+// LogsAreEmpty checks whether there are no logs in the output.
+func LogsAreEmpty(tb assertions.AssertionTestingTB, hook *test.Hook, msg ...interface{}) {
+	assertions.LogsDontHaveErrors(tb.Errorf, hook, msg...)
+}
+
 // NotEmpty checks that the object fields are not empty. This method also checks all of the
 // pointer fields to ensure none of those fields are empty.
 func NotEmpty(tb assertions.AssertionTestingTB, obj interface{}, msg ...interface{}) {

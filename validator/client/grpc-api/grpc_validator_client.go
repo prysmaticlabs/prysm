@@ -67,8 +67,16 @@ func (c *grpcValidatorClient) PrepareBeaconProposer(ctx context.Context, in *eth
 	return c.beaconNodeValidatorClient.PrepareBeaconProposer(ctx, in)
 }
 
-func (c *grpcValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
-	return c.beaconNodeValidatorClient.ProposeAttestation(ctx, in)
+func (c *grpcValidatorClient) SubmitAttestations(ctx context.Context, in []*ethpb.Attestation) ([]*ethpb.AttestResponse, error) {
+	resp := make([]*ethpb.AttestResponse, len(in))
+	var err error
+	for i, a := range in {
+		resp[i], err = c.beaconNodeValidatorClient.ProposeAttestation(ctx, a)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return resp, nil
 }
 
 func (c *grpcValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {

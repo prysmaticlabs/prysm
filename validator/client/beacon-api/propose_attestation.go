@@ -9,12 +9,14 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-func (c beaconApiValidatorClient) proposeAttestation(ctx context.Context, attestation *ethpb.Attestation) (*ethpb.AttestResponse, error) {
-	if err := checkNilAttestation(attestation); err != nil {
-		return nil, err
+func (c beaconApiValidatorClient) submitAttestations(ctx context.Context, attestations []*ethpb.Attestation) ([]*ethpb.AttestResponse, error) {
+	for _, a := range attestations {
+		if err := checkNilAttestation(a); err != nil {
+			return nil, err
+		}
 	}
 
-	marshalledAttestation, err := json.Marshal(jsonifyAttestations([]*ethpb.Attestation{attestation}))
+	marshalledAttestation, err := json.Marshal(jsonifyAttestations(attestations))
 	if err != nil {
 		return nil, err
 	}
@@ -29,12 +31,15 @@ func (c beaconApiValidatorClient) proposeAttestation(ctx context.Context, attest
 		return nil, err
 	}
 
-	attestationDataRoot, err := attestation.Data.HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to compute attestation data root")
+	resp := make([]*ethpb.AttestResponse, len(attestations))
+	for i, a := range attestations {
+		attestationDataRoot, err := a.Data.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to compute attestation data root")
+		}
+		resp[i] = &ethpb.AttestResponse{AttestationDataRoot: attestationDataRoot[:]}
 	}
-
-	return &ethpb.AttestResponse{AttestationDataRoot: attestationDataRoot[:]}, nil
+	return resp, nil
 }
 
 // checkNilAttestation returns error if attestation or any field of attestation is nil.

@@ -138,7 +138,11 @@ func (_ *Validator) RolesAt(_ context.Context, _ primitives.Slot) (map[[48]byte]
 	panic("implement me")
 }
 
-func (_ *Validator) SubmitAttestation(_ context.Context, _ primitives.Slot, _ [48]byte) {
+func (_ *Validator) GetAttestationData(_ context.Context, _ primitives.Slot, _ [48]byte) *ethpb.AttestationData {
+	panic("implement me")
+}
+
+func (_ *Validator) SubmitAttestations(_ context.Context, _ primitives.Slot, _ [][48]byte, _ []*ethpb.AttestationData) {
 	panic("implement me")
 }
 

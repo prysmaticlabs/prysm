@@ -253,21 +253,6 @@ func (mr *MockValidatorClientMockRecorder) PrepareBeaconProposer(arg0, arg1 any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareBeaconProposer", reflect.TypeOf((*MockValidatorClient)(nil).PrepareBeaconProposer), arg0, arg1)
 }
 
-// ProposeAttestation mocks base method.
-func (m *MockValidatorClient) ProposeAttestation(arg0 context.Context, arg1 *eth.Attestation) (*eth.AttestResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProposeAttestation", arg0, arg1)
-	ret0, _ := ret[0].(*eth.AttestResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ProposeAttestation indicates an expected call of ProposeAttestation.
-func (mr *MockValidatorClientMockRecorder) ProposeAttestation(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeAttestation", reflect.TypeOf((*MockValidatorClient)(nil).ProposeAttestation), arg0, arg1)
-}
-
 // ProposeBeaconBlock mocks base method.
 func (m *MockValidatorClient) ProposeBeaconBlock(arg0 context.Context, arg1 *eth.GenericSignedBeaconBlock) (*eth.ProposeResponse, error) {
 	m.ctrl.T.Helper()
@@ -323,6 +308,21 @@ func (m *MockValidatorClient) SubmitAggregateSelectionProof(arg0 context.Context
 func (mr *MockValidatorClientMockRecorder) SubmitAggregateSelectionProof(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAggregateSelectionProof", reflect.TypeOf((*MockValidatorClient)(nil).SubmitAggregateSelectionProof), arg0, arg1, arg2, arg3)
+}
+
+// SubmitAttestations mocks base method.
+func (m *MockValidatorClient) SubmitAttestations(arg0 context.Context, arg1 []*eth.Attestation) ([]*eth.AttestResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubmitAttestations", arg0, arg1)
+	ret0, _ := ret[0].([]*eth.AttestResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitAttestations indicates an expected call of SubmitAttestations.
+func (mr *MockValidatorClientMockRecorder) SubmitAttestations(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAttestations", reflect.TypeOf((*MockValidatorClient)(nil).SubmitAttestations), arg0, arg1)
 }
 
 // SubmitSignedAggregateSelectionProof mocks base method.
