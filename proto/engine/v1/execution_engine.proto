@@ -285,7 +285,7 @@ message ExecutionLayerWithdrawalRequest {
 	bytes source_address = 1 [(ethereum.eth.ext.ssz_size) = "20"];
 
 	// 48 byte BLS public key of the validator.
-	bytes validator_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+	bytes validator_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
 
 	// Deposit amount in gwei.
 	uint64 amount = 3;
@@ -294,9 +294,9 @@ message ExecutionLayerWithdrawalRequest {
 // DepositReceipt is the message from the execution layer to trigger the deposit of a validator's balance to its balance
 // new in Electra
 message DepositReceipt {
-	bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+	bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48"];
 	bytes withdrawal_credentials = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 	uint64 amount = 3;
-	bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96", (ethereum.eth.ext.spec_name) = "signature"];
+	bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
 	uint64 index = 5;
 }
