@@ -34,7 +34,7 @@ var backOffPeriod = 10 * time.Second
 // 4 - Update assignments
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
-func run(ctx context.Context, v iface.Validator, hosts []string) {
+func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
 
@@ -47,7 +47,7 @@ func run(ctx context.Context, v iface.Validator, hosts []string) {
 	}
 	eventsChan := make(chan *event.Event, 1)
 	healthTracker := v.HealthTracker()
-	runHealthCheckRoutine(ctx, v, eventsChan, hosts)
+	runHealthCheckRoutine(ctx, v, eventsChan)
 
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	km, err := v.Keymanager()
@@ -294,7 +294,7 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 	}
 }
 
-func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan chan<- *event.Event, hosts []string) {
+func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan chan<- *event.Event) {
 	log.Info("Starting health check routine for beacon node apis")
 	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	tracker := v.HealthTracker()
@@ -306,6 +306,7 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 				return
 			}
 			isHealthy := tracker.CheckHealth(ctx)
+			hosts := v.AvailableHosts()
 			if !isHealthy && len(hosts) > 1 && features.Get().EnableBeaconRESTApi {
 				for i, url := range hosts {
 					if url == v.Host() {
@@ -315,20 +316,18 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 
 						km, err := v.Keymanager()
 						if err != nil {
-							log.WithError(err).Fatal("Could not get keymanager")
+							log.WithError(err).Error("Could not get keymanager")
+							return
 						}
 						slot, err := v.CanonicalHeadSlot(ctx)
 						if err != nil {
 							log.WithError(err).Error("Could not get canonical head slot")
 							return
 						}
-						go func() {
-							// deadline set for 1 epoch from call to not overlap.
-							epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
-							if err := v.PushProposerSettings(ctx, km, slot, epochDeadline); err != nil {
-								log.WithError(err).Warn("Failed to update proposer settings")
-							}
-						}()
+						deadline := time.Now().Add(5 * time.Minute)
+						if err := v.PushProposerSettings(ctx, km, slot, deadline); err != nil {
+							log.WithError(err).Warn("Failed to update proposer settings")
+						}
 					}
 				}
 			}

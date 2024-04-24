@@ -114,6 +114,7 @@ type validator struct {
 	proposerSettings                   *proposer.Settings
 	walletInitializedChannel           chan *wallet.Wallet
 	validatorsRegBatchSize             int
+	beaconNodeHosts                    []string
 }
 
 type validatorStatus struct {
@@ -1113,6 +1114,10 @@ func (v *validator) Host() string {
 
 func (v *validator) ChangeHost(host string) {
 	v.validatorClient.ChangeHost(host)
+}
+
+func (v *validator) AvailableHosts() []string {
+	return v.beaconNodeHosts
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {

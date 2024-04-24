@@ -319,3 +319,7 @@ func (*FakeValidator) Host() string {
 }
 
 func (*FakeValidator) ChangeHost(_ string) {}
+
+func (*FakeValidator) AvailableHosts() []string {
+	return []string{"127.0.0.1:0", "127.0.0.1:1"}
+}

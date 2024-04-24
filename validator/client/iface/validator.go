@@ -70,6 +70,7 @@ type Validator interface {
 	HealthTracker() *beacon.NodeHealthTracker
 	Host() string
 	ChangeHost(host string)
+	AvailableHosts() []string
 }
 
 // SigningFunc interface defines a type for the a function that signs a message

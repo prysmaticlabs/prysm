@@ -38,7 +38,7 @@ func TestCancelledContext_CleansUpValidator(t *testing.T) {
 		Km:      &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 		Tracker: tracker,
 	}
-	run(cancelledContext(), v, []string{"http://localhost:8081"})
+	run(cancelledContext(), v)
 	assert.Equal(t, true, v.DoneCalled, "Expected Done() to be called")
 }
 
@@ -51,7 +51,7 @@ func TestCancelledContext_WaitsForChainStart(t *testing.T) {
 		Km:      &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 		Tracker: tracker,
 	}
-	run(cancelledContext(), v, []string{"http://localhost:8081"})
+	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 }
 
@@ -69,7 +69,7 @@ func TestRetry_On_ConnectionError(t *testing.T) {
 	}
 	backOffPeriod = 10 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
-	go run(ctx, v, []string{"http://localhost:8081"})
+	go run(ctx, v)
 	// each step will fail (retry times)=10 this sleep times will wait more then
 	// the time it takes for all steps to succeed before main loop.
 	time.Sleep(time.Duration(retry*6) * backOffPeriod)
@@ -90,7 +90,7 @@ func TestCancelledContext_WaitsForActivation(t *testing.T) {
 		Km:      &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 		Tracker: tracker,
 	}
-	run(cancelledContext(), v, []string{"http://localhost:8081"})
+	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
 }
 
@@ -114,7 +114,7 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 		cancel()
 	}()
 
-	run(ctx, v, []string{"http://localhost:8081"})
+	run(ctx, v)
 
 	require.Equal(t, true, v.UpdateDutiesCalled, "Expected UpdateAssignments(%d) to be called", slot)
 	assert.Equal(t, uint64(slot), v.UpdateDutiesArg1, "UpdateAssignments was called with wrong argument")
@@ -142,7 +142,7 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 	}()
 	v.UpdateDutiesRet = errors.New("bad")
 
-	run(ctx, v, []string{"http://localhost:8081"})
+	run(ctx, v)
 
 	require.LogsContain(t, hook, "Failed to update assignments")
 }
@@ -167,7 +167,7 @@ func TestRoleAt_NextSlot(t *testing.T) {
 		cancel()
 	}()
 
-	run(ctx, v, []string{"http://localhost:8081"})
+	run(ctx, v)
 
 	require.Equal(t, true, v.RoleAtCalled, "Expected RoleAt(%d) to be called", slot)
 	assert.Equal(t, uint64(slot), v.RoleAtArg1, "RoleAt called with the wrong arg")
@@ -194,7 +194,7 @@ func TestAttests_NextSlot(t *testing.T) {
 		cancel()
 	}()
 	timer := time.NewTimer(200 * time.Millisecond)
-	run(ctx, v, []string{"http://localhost:8081"})
+	run(ctx, v)
 	<-timer.C
 	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
 	assert.Equal(t, uint64(slot), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
@@ -221,7 +221,7 @@ func TestProposes_NextSlot(t *testing.T) {
 		cancel()
 	}()
 	timer := time.NewTimer(200 * time.Millisecond)
-	run(ctx, v, []string{"http://localhost:8081"})
+	run(ctx, v)
 	<-timer.C
 	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)
 	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
@@ -248,7 +248,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 		cancel()
 	}()
 	timer := time.NewTimer(200 * time.Millisecond)
-	run(ctx, v, []string{"http://localhost:8081"})
+	run(ctx, v)
 	<-timer.C
 	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
 	assert.Equal(t, uint64(slot), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
@@ -330,7 +330,7 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 		cancel()
 	}()
 
-	run(ctx, v, []string{"http://localhost:8081"})
+	run(ctx, v)
 	assert.LogsContain(t, hook, "updated proposer settings")
 }
 
@@ -363,7 +363,7 @@ func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 		cancel()
 	}()
 
-	run(ctx, v, []string{"http://localhost:8081"})
+	run(ctx, v)
 	// can't test "Failed to update proposer settings" because of log.fatal
 	assert.LogsContain(t, hook, "Mock updated proposer settings")
 }
@@ -398,6 +398,6 @@ func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *test
 
 		cancel()
 	}()
-	run(ctx, v, []string{"http://localhost:8081"})
+	run(ctx, v)
 	assert.LogsContain(t, hook, ErrBuilderValidatorRegistration.Error())
 }

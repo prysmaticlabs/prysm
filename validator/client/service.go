@@ -240,10 +240,11 @@ func (v *ValidatorService) Start() {
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
 		distributed:                    v.distributed,
 		attSelections:                  make(map[attSelectionKey]iface.BeaconCommitteeSelection),
+		beaconNodeHosts:                hosts,
 	}
 
 	v.validator = valStruct
-	go run(v.ctx, v.validator, hosts)
+	go run(v.ctx, v.validator)
 }
 
 // Stop the validator service.
