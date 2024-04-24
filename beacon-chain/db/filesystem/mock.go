@@ -14,14 +14,18 @@ import (
 // The instance of BlobStorage returned is backed by an in-memory virtual filesystem,
 // improving test performance and simplifying cleanup.
 func NewEphemeralBlobStorage(t testing.TB) *BlobStorage {
-	_, bs := NewEphemeralBlobStorageWithFs(t)
-	return bs
+	return NewEphemeralBlobStorageUsingFs(t, afero.NewMemMapFs())
 }
 
-// NewEphemeralBlobStorageWithFs can be used by tests that want access to the virtual filesystem
+// NewEphemeralBlobStorageAndFs can be used by tests that want access to the virtual filesystem
 // in order to interact with it outside the parameters of the BlobStorage api.
-func NewEphemeralBlobStorageWithFs(t testing.TB) (afero.Fs, *BlobStorage) {
+func NewEphemeralBlobStorageAndFs(t testing.TB) (afero.Fs, *BlobStorage) {
 	fs := afero.NewMemMapFs()
+	bs := NewEphemeralBlobStorageUsingFs(t, fs)
+	return fs, bs
+}
+
+func NewEphemeralBlobStorageUsingFs(t testing.TB, fs afero.Fs) *BlobStorage {
 	opts := []BlobStorageOption{
 		WithBlobRetentionEpochs(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest),
 		WithFs(fs),
@@ -30,12 +34,12 @@ func NewEphemeralBlobStorageWithFs(t testing.TB) (afero.Fs, *BlobStorage) {
 	if err != nil {
 		t.Fatalf("error initializing test BlobStorage, err=%s", err.Error())
 	}
-	bs.WarmCache(context.Background())
+	bs.WarmCache()
 	_, err = bs.WaitForSummarizer(context.Background())
 	if err != nil {
 		t.Fatalf("problem with test cache warmup, err=%s", err.Error())
 	}
-	return fs, bs
+	return bs
 }
 
 type BlobMocker struct {
@@ -50,10 +54,10 @@ func (bm *BlobMocker) CreateFakeIndices(root [32]byte, slot primitives.Slot, ind
 	layout := bm.bs.layout
 	for i := range indices {
 		n := newBlobNamer(root, epoch, indices[i])
-		if err := bm.fs.MkdirAll(layout.Dir(n), directoryPermissions); err != nil {
+		if err := bm.fs.MkdirAll(layout.dir(n), directoryPermissions); err != nil {
 			return err
 		}
-		f, err := bm.fs.Create(layout.SszPath(n))
+		f, err := bm.fs.Create(layout.sszPath(n))
 		if err != nil {
 			return err
 		}
@@ -67,7 +71,7 @@ func (bm *BlobMocker) CreateFakeIndices(root [32]byte, slot primitives.Slot, ind
 // NewEphemeralBlobStorageWithMocker returns a *BlobMocker value in addition to the BlobStorage value.
 // BlockMocker encapsulates things blob path construction to avoid leaking implementation details.
 func NewEphemeralBlobStorageWithMocker(t testing.TB) (*BlobMocker, *BlobStorage) {
-	fs, bs := NewEphemeralBlobStorageWithFs(t)
+	fs, bs := NewEphemeralBlobStorageAndFs(t)
 	return &BlobMocker{fs: fs, bs: bs}, bs
 }
 

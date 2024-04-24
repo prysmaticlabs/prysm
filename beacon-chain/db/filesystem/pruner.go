@@ -38,7 +38,7 @@ func (p *blobPruner) notify(latest primitives.Epoch, layout fsLayout) {
 		p.mu.Lock()
 		start := time.Now()
 		defer p.mu.Unlock()
-		sum, err := layout.PruneBefore(floor)
+		sum, err := layout.pruneBefore(floor)
 		if err != nil {
 			log.WithError(err).WithFields(sum.LogFields()).Warn("Encountered errors during blob pruning.")
 		}
@@ -60,7 +60,7 @@ func periodFloor(latest, period primitives.Epoch) primitives.Epoch {
 
 /*
 func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, error) {
-	root, err := rootFromDir(dir)
+	root, err := rootFromPath(dir)
 	if err != nil {
 		return 0, errors.Wrapf(err, "invalid directory, could not parse subdir as root %s", dir)
 	}
@@ -78,7 +78,7 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 	}
 	// scFiles filters the dir listing down to the ssz encoded BlobSidecar files. This allows us to peek
 	// at the first one in the list to figure out the slot.
-	scFiles := filter(entries, filterSsz)
+	scFiles := filter(entries, isSszFile)
 	if len(scFiles) == 0 {
 		log.WithField("dir", dir).Warn("Pruner ignoring directory with no blob files")
 		return 0, nil
@@ -109,7 +109,7 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 			return removed, errors.Wrapf(err, "unable to remove %s", fullName)
 		}
 		// Don't count other files that happen to be in the dir, like dangling .part files.
-		if filterSsz(fname) {
+		if isSszFile(fname) {
 			removed += 1
 		}
 		// Log a warning whenever we clean up a .part file

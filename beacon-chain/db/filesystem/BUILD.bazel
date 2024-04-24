@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "blob.go",
         "cache.go",
+        "iteration.go",
         "layout.go",
         "log.go",
         "metrics.go",
@@ -38,7 +39,7 @@ go_test(
     srcs = [
         "blob_test.go",
         "cache_test.go",
-        "layout_test.go",
+        "iteration_test.go",
         "migration_test.go",
         "pruner_test.go",
     ],

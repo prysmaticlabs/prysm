@@ -82,9 +82,9 @@ func NewBlobStorage(opts ...BlobStorageOption) (*BlobStorage, error) {
 		}
 		b.fs = afero.NewBasePathFs(afero.NewOsFs(), b.base)
 	}
-	cache := newBlobStorageCache()
+	b.cache = newBlobStorageCache()
 	pruner := newBlobPruner(b.retentionEpochs)
-	layout, err := newPeriodicEpochLayout(b.fs, cache, pruner)
+	layout, err := newPeriodicEpochLayout(b.fs, b.cache, pruner)
 	if err != nil {
 		return nil, err
 	}
@@ -100,18 +100,22 @@ type BlobStorage struct {
 	fs              afero.Fs
 	pruner          *blobPruner
 	layout          fsLayout
+	cache           *blobStorageCache
 }
 
 // WarmCache runs the prune routine with an expiration of slot of 0, so nothing will be pruned, but the pruner's cache
 // will be populated at node startup, avoiding a costly cold prune (~4s in syscalls) during syncing.
-func (bs *BlobStorage) WarmCache(ctx context.Context) {
-	go func() {
-		start := time.Now()
-		if err := bs.layout.WarmCache(ctx); err != nil {
-			log.WithError(err).Error("Error encountered while warming up blob filesystem cache.")
-		}
-		log.WithField("elapsed", time.Since(start)).Info("Blob filesystem cache warm-up complete.")
-	}()
+func (bs *BlobStorage) WarmCache() {
+	start := time.Now()
+	if err := warmCache(bs.layout, bs.cache); err != nil {
+		log.WithError(err).Error("Error encountered while warming up blob filesystem cache.")
+	}
+	log.WithField("elapsed", time.Since(start)).Info("Blob filesystem cache warm-up complete.")
+	from := &flatRootLayout{fs: bs.fs}
+	if err := migrateLayout(bs.fs, from, bs.layout, bs.cache); err != nil {
+		log.WithError(err).Error("Error encountered while migrating legacy blob storage scheme.")
+	}
+	bs.cache.warmComplete()
 }
 
 // ErrBlobStorageSummarizerUnavailable is a sentinel error returned when there is no pruner/cache available.
@@ -126,14 +130,14 @@ func (bs *BlobStorage) WaitForSummarizer(ctx context.Context) (BlobStorageSummar
 	if bs == nil || bs.layout == nil {
 		return nil, ErrBlobStorageSummarizerUnavailable
 	}
-	return bs.layout.WaitForSummarizer(ctx)
+	return bs.layout.waitForSummarizer(ctx)
 }
 
 // Save saves blobs given a list of sidecars.
 func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	startTime := time.Now()
 	namer := namerForSidecar(sidecar)
-	sszPath := bs.layout.SszPath(namer)
+	sszPath := bs.layout.sszPath(namer)
 	exists, err := afero.Exists(bs.fs, sszPath)
 	if err != nil {
 		return err
@@ -143,7 +147,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return nil
 	}
 
-	if err := bs.layout.Notify(sidecar); err != nil {
+	if err := bs.layout.notify(sidecar); err != nil {
 		return errors.Wrapf(err, "problem maintaining pruning cache/metrics for sidecar with root=%#x", sidecar.BlockRoot())
 	}
 
@@ -155,10 +159,10 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return errSidecarEmptySSZData
 	}
 
-	if err := bs.fs.MkdirAll(bs.layout.Dir(namer), directoryPermissions); err != nil {
+	if err := bs.fs.MkdirAll(bs.layout.dir(namer), directoryPermissions); err != nil {
 		return err
 	}
-	partPath := bs.layout.PartPath(namer, fmt.Sprintf("%p", sidecarData))
+	partPath := bs.layout.partPath(namer, fmt.Sprintf("%p", sidecarData))
 
 	partialMoved := false
 	// Ensure the partial file is deleted.
@@ -223,30 +227,30 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 // value is always a VerifiedROBlob.
 func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, error) {
 	startTime := time.Now()
-	expected, err := bs.layout.Namer(root, idx)
+	expected, err := bs.layout.namer(root, idx)
 	if err != nil {
 		return verification.VerifiedROBlobError(err)
 	}
 	defer func() {
 		blobFetchLatency.Observe(float64(time.Since(startTime).Milliseconds()))
 	}()
-	return verification.VerifiedROBlobFromDisk(bs.fs, root, bs.layout.SszPath(expected))
+	return verification.VerifiedROBlobFromDisk(bs.fs, root, bs.layout.sszPath(expected))
 }
 
 // Remove removes all blobs for a given root.
 func (bs *BlobStorage) Remove(root [32]byte) error {
-	expected, err := bs.layout.DirNamer(root)
+	expected, err := bs.layout.dirNamer(root)
 	if err != nil {
 		return err
 	}
-	return bs.fs.RemoveAll(bs.layout.Dir(expected))
+	return bs.fs.RemoveAll(bs.layout.dir(expected))
 }
 
 // Indices generates a bitmap representing which BlobSidecar.Index values are present on disk for a given root.
 // This value can be compared to the commitments observed in a block to determine which indices need to be found
 // on the network to confirm data availability.
 func (bs *BlobStorage) Indices(root [32]byte) ([fieldparams.MaxBlobsPerBlock]bool, error) {
-	return bs.layout.Summary(root).mask, nil
+	return bs.layout.summary(root).mask, nil
 }
 
 // Clear deletes all files on the filesystem.

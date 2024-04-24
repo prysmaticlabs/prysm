@@ -25,10 +25,10 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("no error for duplicate", func(t *testing.T) {
-		fs, bs := NewEphemeralBlobStorageWithFs(t)
+		fs, bs := NewEphemeralBlobStorageAndFs(t)
 		existingSidecar := testSidecars[0]
 
-		blobPath := bs.layout.SszPath(namerForSidecar(existingSidecar))
+		blobPath := bs.layout.sszPath(namerForSidecar(existingSidecar))
 		// Serialize the existing BlobSidecar to binary data.
 		existingSidecarData, err := ssz.MarshalSSZ(existingSidecar)
 		require.NoError(t, err)
@@ -126,14 +126,13 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	})
 }
 
-// pollUntil polls a condition function until it returns true or a timeout is reached.
-
 func TestBlobIndicesBounds(t *testing.T) {
-	fs, bs := NewEphemeralBlobStorageWithFs(t)
+	fs := afero.NewMemMapFs()
 	root := [32]byte{}
 
 	okIdx := uint64(fieldparams.MaxBlobsPerBlock - 1)
 	writeFakeSSZ(t, fs, root, 0, okIdx)
+	bs := NewEphemeralBlobStorageUsingFs(t, fs)
 	indices, err := bs.Indices(root)
 	require.NoError(t, err)
 	var expected [fieldparams.MaxBlobsPerBlock]bool
@@ -144,16 +143,16 @@ func TestBlobIndicesBounds(t *testing.T) {
 
 	oobIdx := uint64(fieldparams.MaxBlobsPerBlock)
 	writeFakeSSZ(t, fs, root, 0, oobIdx)
-	_, err = bs.Indices(root)
-	require.ErrorIs(t, err, errIndexOutOfBounds)
+	// This now fails at cache warmup time.
+	require.ErrorIs(t, err, warmCache(bs.layout, bs.cache))
 }
 
 func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, slot primitives.Slot, idx uint64) {
 	epoch := slots.ToEpoch(slot)
 	namer := newBlobNamer(root, epoch, idx)
 	layout := periodicEpochLayout{}
-	require.NoError(t, fs.MkdirAll(layout.Dir(namer), 0700))
-	fh, err := fs.Create(layout.SszPath(namer))
+	require.NoError(t, fs.MkdirAll(layout.dir(namer), 0700))
+	fh, err := fs.Create(layout.sszPath(namer))
 	require.NoError(t, err)
 	_, err = fh.Write([]byte("derp"))
 	require.NoError(t, err)
@@ -163,7 +162,7 @@ func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, slot primitives.Slot
 /*
 func TestBlobStoragePrune(t *testing.T) {
 	currentSlot := primitives.Slot(200000)
-	fs, bs := NewEphemeralBlobStorageWithFs(t)
+	fs, bs := NewEphemeralBlobStorageAndFs(t)
 
 	t.Run("PruneOne", func(t *testing.T) {
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 300, fieldparams.MaxBlobsPerBlock)
@@ -236,8 +235,6 @@ func TestBlobStoragePrune(t *testing.T) {
 		}
 	})
 }
-
-
 */
 
 func TestNewBlobStorage(t *testing.T) {
