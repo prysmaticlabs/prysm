@@ -242,7 +242,7 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 	return verification.BlobSidecarNoop(ro)
 }
 
-// GetColumn retrieves a single BlobSidecar by its root and index.
+// GetColumn retrieves a single DataColumnSidecar by its root and index.
 func (bs *BlobStorage) GetColumn(root [32]byte, idx uint64) (*ethpb.DataColumnSidecar, error) {
 	expected := blobNamer{root: root, index: idx}
 	encoded, err := afero.ReadFile(bs.fs, expected.path())
