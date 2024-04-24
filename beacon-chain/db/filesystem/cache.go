@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"context"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
@@ -52,15 +51,13 @@ type blobStorageCache struct {
 	mu     sync.RWMutex
 	nBlobs float64
 	cache  map[[32]byte]BlobStorageSummary
-	warmer *cacheWarmer
 }
 
 var _ BlobStorageSummarizer = &blobStorageCache{}
 
 func newBlobStorageCache() *blobStorageCache {
 	return &blobStorageCache{
-		cache:  make(map[[32]byte]BlobStorageSummary),
-		warmer: &cacheWarmer{ready: make(chan struct{})},
+		cache: make(map[[32]byte]BlobStorageSummary),
 	}
 }
 
@@ -151,29 +148,4 @@ func (s *blobStorageCache) updateMetrics(delta float64) {
 	s.nBlobs += delta
 	blobDiskCount.Set(s.nBlobs)
 	blobDiskSize.Set(s.nBlobs * bytesPerSidecar)
-}
-
-type cacheWarmer struct {
-	mu     sync.Mutex
-	warmed bool
-	ready  chan struct{}
-}
-
-func (w *blobStorageCache) waitForReady(ctx context.Context) error {
-	select {
-	case <-w.warmer.ready:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-func (w *blobStorageCache) warmComplete() {
-	w.warmer.mu.Lock()
-	defer w.warmer.mu.Unlock()
-	if !w.warmer.warmed {
-		w.warmer.warmed = true
-		close(w.warmer.ready)
-	}
-	return
 }

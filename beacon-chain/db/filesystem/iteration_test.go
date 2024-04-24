@@ -71,8 +71,7 @@ func TestSlotFromFile(t *testing.T) {
 		t.Run(fmt.Sprintf("slot %d", c.slot), func(t *testing.T) {
 			fs, bs := NewEphemeralBlobStorageAndFs(t)
 			_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, c.slot, 1)
-			sc, err := verification.BlobSidecarNoop(sidecars[0])
-			require.NoError(t, err)
+			sc := verification.FakeVerifyForTest(t, sidecars[0])
 			require.NoError(t, bs.Save(sc))
 			namer := identForSidecar(sc)
 			sszPath := bs.layout.sszPath(namer)

@@ -21,8 +21,7 @@ import (
 
 func TestBlobStorage_SaveBlobData(t *testing.T) {
 	_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, fieldparams.MaxBlobsPerBlock)
-	testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
-	require.NoError(t, err)
+	testSidecars := verification.FakeVerifySliceForTest(t, sidecars)
 
 	t.Run("no error for duplicate", func(t *testing.T) {
 		fs, bs := NewEphemeralBlobStorageAndFs(t)

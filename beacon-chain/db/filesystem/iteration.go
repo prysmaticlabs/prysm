@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -168,6 +169,16 @@ func epochFromPath(p string) (primitives.Epoch, error) {
 	return primitives.Epoch(epoch), nil
 }
 
+func periodFromPath(p string) (uint64, error) {
+	subdir := filepath.Base(p)
+	period, err := strconv.ParseUint(subdir, 10, 64)
+	if err != nil {
+		return 0, errors.Wrapf(errInvalidDirectoryLayout,
+			"failed to decode period from path as uint, err=%s, dir=%s", err.Error(), p)
+	}
+	return period, nil
+}
+
 func rootFromPath(p string) ([32]byte, error) {
 	subdir := filepath.Base(p)
 	root, err := stringToRoot(subdir)
@@ -228,6 +239,38 @@ func isRootDir(p string) bool {
 
 func isSszFile(s string) bool {
 	return filepath.Ext(s) == "."+sszExt
+}
+
+func isBeforeEpoch(before primitives.Epoch) func(string) bool {
+	if before == 0 {
+		return filterNoop
+	}
+	return func(p string) bool {
+		epoch, err := epochFromPath(p)
+		if err != nil {
+			return false
+		}
+		return epoch < before
+	}
+}
+
+func isBeforePeriod(before primitives.Epoch) func(string) bool {
+	if before == 0 {
+		return filterNoop
+	}
+	beforePeriod := before / params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
+	if before%4096 != 0 {
+		// Add one because we need to include the period the epoch is in, unless it is the first epoch in the period,
+		// in which case we can just look at any previous period.
+		beforePeriod += 1
+	}
+	return func(p string) bool {
+		period, err := periodFromPath(p)
+		if err != nil {
+			return false
+		}
+		return primitives.Epoch(period) < beforePeriod
+	}
 }
 
 func rootToString(root [32]byte) string {

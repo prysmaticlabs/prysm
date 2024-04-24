@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"path"
@@ -40,7 +39,7 @@ type migratableLayout interface {
 	dir(n blobIdent) string
 	sszPath(n blobIdent) string
 	partPath(n blobIdent, entropy string) string
-	iterateIdents() (*identIterator, error)
+	iterateIdents(before primitives.Epoch) (*identIterator, error)
 }
 
 type fsLayout interface {
@@ -50,11 +49,11 @@ type fsLayout interface {
 	summary(root [32]byte) BlobStorageSummary
 	notify(sidecar blocks.VerifiedROBlob) error
 	pruneBefore(before primitives.Epoch) (*pruneSummary, error)
-	waitForSummarizer(ctx context.Context) (BlobStorageSummarizer, error)
+	remove(ident blobIdent) (int, error)
 }
 
 func warmCache(l fsLayout, cache *blobStorageCache) error {
-	iter, err := l.iterateIdents()
+	iter, err := l.iterateIdents(0)
 	if err != nil {
 		return errors.Wrap(errCacheWarmFailed, err.Error())
 	}
@@ -71,7 +70,7 @@ func warmCache(l fsLayout, cache *blobStorageCache) error {
 
 func migrateLayout(fs afero.Fs, from, to migratableLayout, cache *blobStorageCache) error {
 	start := time.Now()
-	iter, err := from.iterateIdents()
+	iter, err := from.iterateIdents(0)
 	if err != nil {
 		return errors.Wrapf(errMigrationFailure, "failed to iterate legacy structure while migrating blobs, err=%s", err.Error())
 	}
@@ -157,13 +156,6 @@ type periodicEpochLayout struct {
 	pruner *blobPruner
 }
 
-func (l *periodicEpochLayout) waitForSummarizer(ctx context.Context) (BlobStorageSummarizer, error) {
-	if err := l.cache.waitForReady(ctx); err != nil {
-		return nil, err
-	}
-	return l.cache, nil
-}
-
 func (l *periodicEpochLayout) notify(sc blocks.VerifiedROBlob) error {
 	epoch := slots.ToEpoch(sc.Slot())
 	if err := l.cache.ensure(sc.BlockRoot(), epoch, sc.Index); err != nil {
@@ -177,7 +169,8 @@ func (l *periodicEpochLayout) initialize() error {
 	return l.fs.MkdirAll(periodicEpochBaseDir, directoryPermissions)
 }
 
-func (l *periodicEpochLayout) iterateIdents() (*identIterator, error) {
+// If before == 0, it won't be used as a filter and all idents will be returned.
+func (l *periodicEpochLayout) iterateIdents(before primitives.Epoch) (*identIterator, error) {
 	// iterate root, which should have directories named by "period"
 	entries, err := listDir(l.fs, periodicEpochBaseDir)
 	if err != nil {
@@ -188,10 +181,10 @@ func (l *periodicEpochLayout) iterateIdents() (*identIterator, error) {
 		fs:   l.fs,
 		path: periodicEpochBaseDir,
 		levels: []layoutLevel{
-			{populateIdent: populateNoop, filter: filterNoop},  // no info to extract from "period" level
-			{populateIdent: populateEpoch, filter: filterNoop}, // extract epoch from path
-			{populateIdent: populateRoot, filter: isRootDir},   // extract root from path
-			{populateIdent: populateIndex, filter: isSszFile},  // extract index from filename
+			{populateIdent: populateNoop, filter: isBeforePeriod(before)},
+			{populateIdent: populateEpoch, filter: isBeforeEpoch(before)},
+			{populateIdent: populateRoot, filter: isRootDir},  // extract root from path
+			{populateIdent: populateIndex, filter: isSszFile}, // extract index from filename
 		},
 		entries: entries,
 	}, nil
@@ -210,12 +203,15 @@ func (l *periodicEpochLayout) summary(root [32]byte) BlobStorageSummary {
 }
 
 func (l *periodicEpochLayout) dir(n blobIdent) string {
-	return filepath.Join(periodicEpochBaseDir, l.period(n), fmt.Sprintf("%d", n.epoch), rootToString(n.root))
+	return filepath.Join(l.epochDir(n.epoch), rootToString(n.root))
 }
 
-func (l *periodicEpochLayout) period(n blobIdent) string {
-	period := n.epoch / params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
-	return fmt.Sprintf("%d", period)
+func (l *periodicEpochLayout) epochDir(epoch primitives.Epoch) string {
+	return filepath.Join(periodicEpochBaseDir, fmt.Sprintf("%d", periodForEpoch(epoch)), fmt.Sprintf("%d", epoch))
+}
+
+func periodForEpoch(epoch primitives.Epoch) primitives.Epoch {
+	return epoch / params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 }
 
 func (l *periodicEpochLayout) sszPath(n blobIdent) string {
@@ -227,54 +223,58 @@ func (l *periodicEpochLayout) partPath(n blobIdent, entropy string) string {
 }
 
 func (l *periodicEpochLayout) pruneBefore(before primitives.Epoch) (*pruneSummary, error) {
-	entries, err := listDir(l.fs, periodicEpochBaseDir)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to list %s", periodicEpochBaseDir)
-	}
-	sum := &pruneSummary{}
+	sums := make(map[primitives.Epoch]*pruneSummary)
+	iter, err := l.iterateIdents(before)
 
-	iter := &identIterator{
-		fs:   l.fs,
-		path: periodicEpochBaseDir,
-		levels: []layoutLevel{
-			{populateIdent: populateNoop, filter: filterNoop},
-			{populateIdent: populateEpoch, filter: l.filterBeforeEpoch(before)}, // only difference from stock iter
-			{populateIdent: populateRoot, filter: isRootDir},
-			{populateIdent: populateIndex, filter: isSszFile},
-		},
-		entries: entries,
-	}
 	for ident, err := iter.next(); err != io.EOF; ident, err = iter.next() {
 		if err != nil {
-			return sum, errors.Wrap(errPruneFailed, err.Error())
+			log.WithError(err).Error("encountered error during pruning")
+			return nil, errors.Wrap(errPruneFailed, err.Error())
 		}
-		removed := l.cache.evict(ident.root)
-		rmdir := l.dir(ident)
-		if err := l.fs.RemoveAll(rmdir); err != nil {
+		_, ok := sums[ident.epoch]
+		if !ok {
+			sums[ident.epoch] = &pruneSummary{}
+		}
+		s := sums[ident.epoch]
+		removed, err := l.remove(ident)
+		if err != nil {
+			s.failedRemovals = append(s.failedRemovals, l.dir(ident))
 			log.WithField("root", fmt.Sprintf("%#x", ident.root)).Error("Failed to delete root directory")
-			sum.failedRemovals = append(sum.failedRemovals, rmdir)
-			continue
 		}
-		sum.blobsPruned += removed
+		s.blobsPruned += removed
 	}
-	return sum, nil
+
+	// Roll up summaries and clean up per-epoch directories.
+	rollup := &pruneSummary{}
+	for epoch, sum := range sums {
+		rollup.blobsPruned += sum.blobsPruned
+		rollup.failedRemovals = append(rollup.failedRemovals, sum.failedRemovals...)
+		rmdir := l.epochDir(epoch)
+		if len(sum.failedRemovals) == 0 {
+			if err := l.fs.RemoveAll(rmdir); err != nil {
+				log.WithField("dir", rmdir).WithError(err).Error("Failed to remove epoch directory while pruning")
+			}
+		} else {
+			log.WithField("dir", rmdir).WithField("numFailed", len(sum.failedRemovals)).WithError(err).Error("Unable to remove epoch directory due to root pruning failures")
+		}
+	}
+
+	return rollup, nil
 }
 
-func (l *periodicEpochLayout) filterBeforeEpoch(before primitives.Epoch) func(string) bool {
-	return func(p string) bool {
-		epoch, err := epochFromPath(p)
-		if err != nil {
-			return false
-		}
-		return epoch < before
+func (l *periodicEpochLayout) remove(ident blobIdent) (int, error) {
+	removed := l.cache.evict(ident.root)
+	if err := l.fs.RemoveAll(l.dir(ident)); err != nil {
+		return removed, err
 	}
+	return removed, nil
 }
 
 type flatRootLayout struct {
 	fs afero.Fs
 }
 
-func (l *flatRootLayout) iterateIdents() (*identIterator, error) {
+func (l *flatRootLayout) iterateIdents(_ primitives.Epoch) (*identIterator, error) {
 	entries, err := listDir(l.fs, ".")
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not list root directory")

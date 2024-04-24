@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -35,10 +34,6 @@ func NewEphemeralBlobStorageUsingFs(t testing.TB, fs afero.Fs) *BlobStorage {
 		t.Fatalf("error initializing test BlobStorage, err=%s", err.Error())
 	}
 	bs.WarmCache()
-	_, err = bs.WaitForSummarizer(context.Background())
-	if err != nil {
-		t.Fatalf("problem with test cache warmup, err=%s", err.Error())
-	}
 	return bs
 }
 

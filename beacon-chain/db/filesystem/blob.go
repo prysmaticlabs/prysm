@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"path"
@@ -115,22 +114,6 @@ func (bs *BlobStorage) WarmCache() {
 	if err := migrateLayout(bs.fs, from, bs.layout, bs.cache); err != nil {
 		log.WithError(err).Error("Error encountered while migrating legacy blob storage scheme.")
 	}
-	bs.cache.warmComplete()
-}
-
-// ErrBlobStorageSummarizerUnavailable is a sentinel error returned when there is no pruner/cache available.
-// This should be used by code that optionally uses the summarizer to optimize rpc requests. Being able to
-// fallback when there is no summarizer allows client code to avoid test complexity where the summarizer doesn't matter.
-var ErrBlobStorageSummarizerUnavailable = errors.New("BlobStorage not initialized with a pruner or cache")
-
-// WaitForSummarizer blocks until the BlobStorageSummarizer is ready to use.
-// BlobStorageSummarizer is not ready immediately on node startup because it needs to sample the blob filesystem to
-// determine which blobs are available.
-func (bs *BlobStorage) WaitForSummarizer(ctx context.Context) (BlobStorageSummarizer, error) {
-	if bs == nil || bs.layout == nil {
-		return nil, ErrBlobStorageSummarizerUnavailable
-	}
-	return bs.layout.waitForSummarizer(ctx)
 }
 
 // Save saves blobs given a list of sidecars.
@@ -227,30 +210,37 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 // value is always a VerifiedROBlob.
 func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, error) {
 	startTime := time.Now()
-	expected, err := bs.layout.ident(root, idx)
+	ident, err := bs.layout.ident(root, idx)
 	if err != nil {
 		return verification.VerifiedROBlobError(err)
 	}
 	defer func() {
 		blobFetchLatency.Observe(float64(time.Since(startTime).Milliseconds()))
 	}()
-	return verification.VerifiedROBlobFromDisk(bs.fs, root, bs.layout.sszPath(expected))
+	return verification.VerifiedROBlobFromDisk(bs.fs, root, bs.layout.sszPath(ident))
 }
 
 // Remove removes all blobs for a given root.
 func (bs *BlobStorage) Remove(root [32]byte) error {
-	expected, err := bs.layout.dirIdent(root)
+	dirIdent, err := bs.layout.dirIdent(root)
 	if err != nil {
 		return err
 	}
-	return bs.fs.RemoveAll(bs.layout.dir(expected))
+	_, err = bs.layout.remove(dirIdent)
+	return err
 }
 
 // Indices generates a bitmap representing which BlobSidecar.Index values are present on disk for a given root.
 // This value can be compared to the commitments observed in a block to determine which indices need to be found
 // on the network to confirm data availability.
 func (bs *BlobStorage) Indices(root [32]byte) ([fieldparams.MaxBlobsPerBlock]bool, error) {
-	return bs.layout.summary(root).mask, nil
+	return bs.Summary(root).mask, nil
+}
+
+// Summary returns the BlobStorageSummary from the layout.
+// Internally, this is a cached representation of the directory listing for the given root.
+func (bs *BlobStorage) Summary(root [32]byte) BlobStorageSummary {
+	return bs.layout.summary(root)
 }
 
 // Clear deletes all files on the filesystem.
