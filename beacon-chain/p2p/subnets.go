@@ -266,16 +266,6 @@ func computeSubscribedSubnet(nodeID enode.ID, epoch primitives.Epoch, index uint
 	return subnet, nil
 }
 
-func computeSubscribedColumnSubnet(nodeID enode.ID, index uint64) (uint64, error) {
-	num := uint256.NewInt(0).SetBytes(nodeID.Bytes())
-	num = num.Add(num, uint256.NewInt(index))
-	num64bit := num.Uint64()
-	byteNum := bytesutil.Uint64ToBytesLittleEndian(num64bit)
-	hashedObj := hash.Hash(byteNum)
-	subnetID := bytesutil.FromBytes8(hashedObj[:8]) % params.BeaconConfig().DataColumnSidecarSubnetCount
-	return subnetID, nil
-}
-
 func computeSubscriptionExpirationTime(nodeID enode.ID, epoch primitives.Epoch) time.Duration {
 	nodeOffset, _ := computeOffsetAndPrefix(nodeID)
 	pastEpochs := (nodeOffset + uint64(epoch)) % params.BeaconConfig().EpochsPerSubnetSubscription
