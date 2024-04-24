@@ -19,4 +19,5 @@ var (
 	ErrMaxDataColumnReqExceeded = errors.New("requested more than MAX_REQUEST_DATA_COLUMN_SIDECARS")
 
 	ErrResourceUnavailable = errors.New("resource requested unavailable")
+	ErrInvalidColumnIndex  = errors.New("invalid column index requested")
 )

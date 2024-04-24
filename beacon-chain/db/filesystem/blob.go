@@ -246,9 +246,8 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 func (bs *BlobStorage) GetColumn(root [32]byte, idx uint64) (*ethpb.DataColumnSidecar, error) {
 	expected := blobNamer{root: root, index: idx}
 	encoded, err := afero.ReadFile(bs.fs, expected.path())
-	var v *ethpb.DataColumnSidecar
 	if err != nil {
-		return v, err
+		return nil, err
 	}
 	s := &ethpb.DataColumnSidecar{}
 	if err := s.UnmarshalSSZ(encoded); err != nil {

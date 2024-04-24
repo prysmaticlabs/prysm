@@ -67,11 +67,30 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		}
 
 		// Throttle request processing to no more than batchSize/sec.
-		if i != 0 && i%batchSize == 0 && ticker != nil {
+		if ticker != nil && i != 0 && i%batchSize == 0 {
 			<-ticker.C
 		}
 		s.rateLimiter.add(stream, 1)
 		root, idx := bytesutil.ToBytes32(columnIdents[i].BlockRoot), columnIdents[i].Index
+		custodiedColumns, err := p2p.ComputeCustodyColumns(s.cfg.p2p.NodeID())
+		if err != nil {
+			log.WithError(err).Errorf("unexpected error retrieving the node id")
+			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
+			return err
+		}
+		isCustodied := false
+		for _, col := range custodiedColumns {
+			if col == idx {
+				isCustodied = true
+				break
+			}
+		}
+		if !isCustodied {
+			s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+			s.writeErrorResponseToStream(responseCodeInvalidRequest, types.ErrInvalidColumnIndex.Error(), stream)
+			return types.ErrInvalidColumnIndex
+		}
+
 		// TODO: Differentiate between blobs and columns for our storage engine
 		sc, err := s.cfg.blobStorage.GetColumn(root, idx)
 		if err != nil {
