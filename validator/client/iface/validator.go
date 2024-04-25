@@ -73,5 +73,5 @@ type Validator interface {
 	AvailableHosts() []string
 }
 
-// SigningFunc interface defines a type for the a function that signs a message
+// SigningFunc interface defines a type for the function that signs a message
 type SigningFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)

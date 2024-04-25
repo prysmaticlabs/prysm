@@ -311,8 +311,13 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 				for i, url := range hosts {
 					if url == v.Host() {
 						next := (i + 1) % len(hosts)
-						log.Infof("Beacon node at %s is not responding, switching to %s", url, hosts[next])
+						log.Infof("Beacon node API at %s is not responding, switching to %s", url, hosts[next])
 						v.ChangeHost(hosts[next])
+
+						if !tracker.CheckHealth(ctx) {
+							log.Infof("New beacon node API at %s is also not responding", hosts[next])
+							continue // Skip to the next ticker
+						}
 
 						km, err := v.Keymanager()
 						if err != nil {
