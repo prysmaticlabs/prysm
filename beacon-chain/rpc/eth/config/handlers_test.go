@@ -133,6 +133,20 @@ func TestGetSpec(t *testing.T) {
 	config.MaxWithdrawalsPerPayload = 74
 	config.MaxBlsToExecutionChanges = 75
 	config.MaxValidatorsPerWithdrawalsSweep = 76
+	config.MinSlashingPenaltyQuotientElectra = 77
+	config.MaxEffectiveBalanceElectra = 78
+	config.CompoundingWithdrawalPrefixByte = byte('d')
+	config.WhistleBlowerRewardQuotientElectra = 79
+	config.PendingPartialWithdrawalsLimit = 80
+	config.MinActivationBalance = 81
+	config.PendingBalanceDepositLimit = 82
+	config.MaxPendingPartialsPerWithdrawalSweep = 83
+	config.PendingConsolidationsLimit = 84
+	config.MaxPartialWithdrawalsPerPayload = 85
+	config.FullExitRequestAmount = 86
+	config.MaxConsolidations = 87
+	config.MaxAttesterSlashingsElectra = 88
+	config.MaxAttestationsElectra = 89
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -158,6 +172,9 @@ func TestGetSpec(t *testing.T) {
 	var dam [4]byte
 	copy(dam[:], []byte{'1', '0', '0', '0'})
 	config.DomainApplicationMask = dam
+	var dc [4]byte
+	copy(dc[:], []byte{'1', '1', '0', '0'})
+	config.DomainConsolidation = dc
 
 	params.OverrideBeaconConfig(config)
 
@@ -172,7 +189,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 136, len(data))
+	assert.Equal(t, 151, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
@@ -471,6 +488,36 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "32", v)
 			case "MAX_REQUEST_DATA_COLUMN_SIDECARS":
 				assert.Equal(t, "16384", v)
+			case "MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA":
+				assert.Equal(t, "77", v)
+			case "MAX_EFFECTIVE_BALANCE_ELECTRA":
+				assert.Equal(t, "78", v)
+			case "COMPOUNDING_WITHDRAWAL_PREFIX":
+				assert.Equal(t, "0x64", v)
+			case "WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA":
+				assert.Equal(t, "79", v)
+			case "PENDING_PARTIAL_WITHDRAWALS_LIMIT":
+				assert.Equal(t, "80", v)
+			case "MIN_ACTIVATION_BALANCE":
+				assert.Equal(t, "81", v)
+			case "PENDING_BALANCE_DEPOSIT_LIMIT":
+				assert.Equal(t, "82", v)
+			case "MAX_PENDING_PARTIALS_PER_WITHDRAWAL_SWEEP":
+				assert.Equal(t, "83", v)
+			case "PENDING_CONSOLIDATIONS_LIMIT":
+				assert.Equal(t, "84", v)
+			case "MAX_PARTIAL_WITHDRAWALS_PER_PAYLOAD":
+				assert.Equal(t, "85", v)
+			case "FULL_EXIT_REQUEST_AMOUNT":
+				assert.Equal(t, "86", v)
+			case "MAX_CONSOLIDATIONS":
+				assert.Equal(t, "87", v)
+			case "DOMAIN_CONSOLIDATION":
+				assert.Equal(t, "0x31313030", v)
+			case "MAX_ATTESTER_SLASHINGS_ELECTRA":
+				assert.Equal(t, "88", v)
+			case "MAX_ATTESTATIONS_ELECTRA":
+				assert.Equal(t, "89", v)
 			default:
 				t.Errorf("Incorrect key: %s", k)
 			}

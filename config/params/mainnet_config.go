@@ -90,6 +90,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Initial value constants.
 	BLSWithdrawalPrefixByte:         byte(0),
 	ETH1AddressWithdrawalPrefixByte: byte(1),
+	CompoundingWithdrawalPrefixByte: byte(2),
 	ZeroHash:                        [32]byte{},
 
 	// Time parameter constants.
@@ -147,7 +148,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Max operations per block constants.
 	MaxProposerSlashings:             16,
 	MaxAttesterSlashings:             2,
+	MaxAttesterSlashingsElectra:      1,
 	MaxAttestations:                  128,
+	MaxAttestationsElectra:           8,
 	MaxDeposits:                      16,
 	MaxVoluntaryExits:                16,
 	MaxWithdrawalsPerPayload:         16,
@@ -168,6 +171,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
 	DomainApplicationBuilder:          bytesutil.Uint32ToBytes4(0x00000001),
 	DomainBLSToExecutionChange:        bytesutil.Uint32ToBytes4(0x0A000000),
+	DomainConsolidation:               bytesutil.Uint32ToBytes4(0x0B000000),
 
 	// Prysm constants.
 	GweiPerEth:                     1000000000,
@@ -189,6 +193,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateBellatrixFieldCount: 25,
 	BeaconStateCapellaFieldCount:   28,
 	BeaconStateDenebFieldCount:     28,
+	BeaconStateElectraFieldCount:   37,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -270,11 +275,19 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxRequestBlocksDeneb:            128,
 
 	// Values related to electra
-	NumberOfColumns:                     128,
 	MaxRequestDataColumnSidecars:        16384,
 	DataColumnSidecarSubnetCount:        32,
-	MinPerEpochChurnLimitElectra:        128000000000,
-	MaxPerEpochActivationExitChurnLimit: 256000000000,
+	MinPerEpochChurnLimitElectra:        128_000_000_000,
+	MaxPerEpochActivationExitChurnLimit: 256_000_000_000,
+	MaxEffectiveBalanceElectra:          2048_000_000_000,
+	MinSlashingPenaltyQuotientElectra:   4096,
+	WhistleBlowerRewardQuotientElectra:  4096,
+	PendingBalanceDepositLimit:          134_217_728,
+	PendingPartialWithdrawalsLimit:      134_217_728,
+	PendingConsolidationsLimit:          262_144,
+	MinActivationBalance:                32_000_000_000,
+	MaxConsolidations:                   1,
+	FullExitRequestAmount:               0,
 
 	// Values related to networking parameters.
 	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
@@ -293,6 +306,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AttestationSubnetPrefixBits:     6,
 	SubnetsPerNode:                  2,
 	NodeIdBits:                      256,
+
+	// PeerDAS
+	NumberOfColumns: 128,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name
