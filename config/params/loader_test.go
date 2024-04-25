@@ -342,9 +342,14 @@ func configFilePath(t *testing.T, config string) string {
 func presetsFilePath(t *testing.T, config string) []string {
 	fPath, err := bazel.Runfile("external/consensus_spec")
 	require.NoError(t, err)
+
 	return []string{
 		path.Join(fPath, "presets", config, "phase0.yaml"),
 		path.Join(fPath, "presets", config, "altair.yaml"),
+		path.Join(fPath, "presets", config, "bellatrix.yaml"),
+		path.Join(fPath, "presets", config, "capella.yaml"),
+		path.Join(fPath, "presets", config, "deneb.yaml"),
+		path.Join(fPath, "presets", config, "electra.yaml"),
 	}
 }
 
