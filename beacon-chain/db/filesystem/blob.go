@@ -10,11 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/logging"
@@ -27,6 +29,7 @@ var (
 	errEmptyBlobWritten    = errors.New("zero bytes written to disk when saving blob sidecar")
 	errSidecarEmptySSZData = errors.New("sidecar marshalled to an empty ssz byte slice")
 	errNoBasePath          = errors.New("BlobStorage base path not specified in init")
+	errInvalidRootString   = errors.New("Could not parse hex string as a [32]byte")
 )
 
 const (
@@ -332,4 +335,12 @@ func (p blobNamer) path() string {
 
 func rootString(root [32]byte) string {
 	return fmt.Sprintf("%#x", root)
+}
+
+func stringToRoot(str string) ([32]byte, error) {
+	slice, err := hexutil.Decode(str)
+	if err != nil {
+		return [32]byte{}, errors.Wrapf(errInvalidRootString, "input=%s", str)
+	}
+	return bytesutil.ToBytes32(slice), nil
 }
