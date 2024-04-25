@@ -98,7 +98,7 @@ type BlobStorage struct {
 	fsync           bool
 	fs              afero.Fs
 	pruner          *blobPruner
-	layout          fsLayout
+	layout          runtimeLayout
 	cache           *blobStorageCache
 }
 

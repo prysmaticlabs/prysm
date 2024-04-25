@@ -42,7 +42,7 @@ type migratableLayout interface {
 	iterateIdents(before primitives.Epoch) (*identIterator, error)
 }
 
-type fsLayout interface {
+type runtimeLayout interface {
 	migratableLayout
 	ident(root [32]byte, idx uint64) (blobIdent, error)
 	dirIdent(root [32]byte) (blobIdent, error)
@@ -52,7 +52,7 @@ type fsLayout interface {
 	remove(ident blobIdent) (int, error)
 }
 
-func warmCache(l fsLayout, cache *blobStorageCache) error {
+func warmCache(l runtimeLayout, cache *blobStorageCache) error {
 	iter, err := l.iterateIdents(0)
 	if err != nil {
 		return errors.Wrap(errCacheWarmFailed, err.Error())
@@ -170,7 +170,7 @@ func newPeriodicEpochLayout(fs afero.Fs, cache *blobStorageCache, pruner *blobPr
 }
 
 var _ migratableLayout = &flatRootLayout{}
-var _ fsLayout = &periodicEpochLayout{}
+var _ runtimeLayout = &periodicEpochLayout{}
 
 type periodicEpochLayout struct {
 	fs     afero.Fs

@@ -28,7 +28,7 @@ func newBlobPruner(retain primitives.Epoch) *blobPruner {
 	return p
 }
 
-func (p *blobPruner) notify(latest primitives.Epoch, layout fsLayout) {
+func (p *blobPruner) notify(latest primitives.Epoch, layout runtimeLayout) {
 	floor := periodFloor(latest, p.retentionPeriod)
 	if primitives.Epoch(p.prunedBefore.Swap(uint64(floor))) == floor {
 		// Only trigger pruning if the atomic swap changed the previous value of prunedBefore.
