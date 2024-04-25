@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/math"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
@@ -318,6 +319,14 @@ func (b *BeaconBlockBody) Attestations() []*eth.Attestation {
 }
 
 func (b *BeaconBlockBody) Version() int {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) PayloadAttestations() ([]*eth.PayloadAttestation, error) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error) {
 	panic("implement me")
 }
 
