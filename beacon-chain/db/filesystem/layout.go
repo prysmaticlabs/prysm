@@ -47,7 +47,7 @@ type runtimeLayout interface {
 	ident(root [32]byte, idx uint64) (blobIdent, error)
 	dirIdent(root [32]byte) (blobIdent, error)
 	summary(root [32]byte) BlobStorageSummary
-	notify(sidecar blocks.VerifiedROBlob) error
+	notify(ident blobIdent) error
 	pruneBefore(before primitives.Epoch) (*pruneSummary, error)
 	remove(ident blobIdent) (int, error)
 }
@@ -178,12 +178,11 @@ type periodicEpochLayout struct {
 	pruner *blobPruner
 }
 
-func (l *periodicEpochLayout) notify(sc blocks.VerifiedROBlob) error {
-	epoch := slots.ToEpoch(sc.Slot())
-	if err := l.cache.ensure(sc.BlockRoot(), epoch, sc.Index); err != nil {
+func (l *periodicEpochLayout) notify(ident blobIdent) error {
+	if err := l.cache.ensure(ident.root, ident.epoch, ident.index); err != nil {
 		return err
 	}
-	l.pruner.notify(epoch, l)
+	l.pruner.notify(ident.epoch, l)
 	return nil
 }
 

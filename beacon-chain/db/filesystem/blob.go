@@ -119,8 +119,8 @@ func (bs *BlobStorage) WarmCache() {
 // Save saves blobs given a list of sidecars.
 func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	startTime := time.Now()
-	namer := identForSidecar(sidecar)
-	sszPath := bs.layout.sszPath(namer)
+	ident := identForSidecar(sidecar)
+	sszPath := bs.layout.sszPath(ident)
 	exists, err := afero.Exists(bs.fs, sszPath)
 	if err != nil {
 		return err
@@ -130,7 +130,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return nil
 	}
 
-	if err := bs.layout.notify(sidecar); err != nil {
+	if err := bs.layout.notify(ident); err != nil {
 		return errors.Wrapf(err, "problem maintaining pruning cache/metrics for sidecar with root=%#x", sidecar.BlockRoot())
 	}
 
@@ -142,10 +142,10 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return errSidecarEmptySSZData
 	}
 
-	if err := bs.fs.MkdirAll(bs.layout.dir(namer), directoryPermissions); err != nil {
+	if err := bs.fs.MkdirAll(bs.layout.dir(ident), directoryPermissions); err != nil {
 		return err
 	}
-	partPath := bs.layout.partPath(namer, fmt.Sprintf("%p", sidecarData))
+	partPath := bs.layout.partPath(ident, fmt.Sprintf("%p", sidecarData))
 
 	partialMoved := false
 	// Ensure the partial file is deleted.

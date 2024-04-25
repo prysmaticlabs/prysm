@@ -45,18 +45,8 @@ type BlobMocker struct {
 // CreateFakeIndices creates empty blob sidecar files at the expected path for the given
 // root and indices to influence the result of Indices().
 func (bm *BlobMocker) CreateFakeIndices(root [32]byte, slot primitives.Slot, indices ...uint64) error {
-	epoch := slots.ToEpoch(slot)
-	layout := bm.bs.layout
 	for i := range indices {
-		n := newBlobIdent(root, epoch, indices[i])
-		if err := bm.fs.MkdirAll(layout.dir(n), directoryPermissions); err != nil {
-			return err
-		}
-		f, err := bm.fs.Create(layout.sszPath(n))
-		if err != nil {
-			return err
-		}
-		if err := f.Close(); err != nil {
+		if err := bm.bs.layout.notify(newBlobIdent(root, slots.ToEpoch(slot), indices[i])); err != nil {
 			return err
 		}
 	}

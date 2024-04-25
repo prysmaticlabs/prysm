@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -298,7 +297,7 @@ func isBeforePeriod(before primitives.Epoch) func(string) bool {
 	if before == 0 {
 		return filterNoop
 	}
-	beforePeriod := before / params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
+	beforePeriod := periodForEpoch(before)
 	if before%4096 != 0 {
 		// Add one because we need to include the period the epoch is in, unless it is the first epoch in the period,
 		// in which case we can just look at any previous period.
