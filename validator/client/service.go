@@ -197,7 +197,7 @@ func (v *ValidatorService) Start() {
 	u := strings.ReplaceAll(v.conn.GetBeaconApiUrl(), " ", "")
 	hosts := strings.Split(u, ",")
 	if len(hosts) == 0 {
-		log.WithError(err).Error("No beacon API hosts provided")
+		log.WithError(err).Error("No API hosts provided")
 		return
 	}
 	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
