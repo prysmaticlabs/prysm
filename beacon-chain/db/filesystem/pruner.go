@@ -28,11 +28,13 @@ func newBlobPruner(retain primitives.Epoch) *blobPruner {
 	return p
 }
 
-func (p *blobPruner) notify(latest primitives.Epoch, layout runtimeLayout) {
+func (p *blobPruner) notify(latest primitives.Epoch, layout runtimeLayout) chan struct{} {
+	done := make(chan struct{})
 	floor := periodFloor(latest, p.retentionPeriod)
-	if primitives.Epoch(p.prunedBefore.Swap(uint64(floor))) == floor {
+	if primitives.Epoch(p.prunedBefore.Swap(uint64(floor))) >= floor {
 		// Only trigger pruning if the atomic swap changed the previous value of prunedBefore.
-		return
+		close(done)
+		return done
 	}
 	go func() {
 		p.mu.Lock()
@@ -48,7 +50,9 @@ func (p *blobPruner) notify(latest primitives.Epoch, layout runtimeLayout) {
 			"filesRemoved": sum.blobsPruned,
 		}).Debug("Pruned old blobs")
 		blobsPrunedCounter.Add(float64(sum.blobsPruned))
+		close(done)
 	}()
+	return done
 }
 
 func periodFloor(latest, period primitives.Epoch) primitives.Epoch {
