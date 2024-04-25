@@ -147,6 +147,7 @@ func TestGetSpec(t *testing.T) {
 	config.MaxConsolidations = 87
 	config.MaxAttesterSlashingsElectra = 88
 	config.MaxAttestationsElectra = 89
+	config.MaxWithdrawalRequestsPerPayload = 90
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -189,7 +190,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 151, len(data))
+	assert.Equal(t, 152, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
@@ -500,9 +501,9 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "80", v)
 			case "MIN_ACTIVATION_BALANCE":
 				assert.Equal(t, "81", v)
-			case "PENDING_BALANCE_DEPOSIT_LIMIT":
+			case "PENDING_BALANCE_DEPOSITS_LIMIT":
 				assert.Equal(t, "82", v)
-			case "MAX_PENDING_PARTIALS_PER_WITHDRAWAL_SWEEP":
+			case "MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP":
 				assert.Equal(t, "83", v)
 			case "PENDING_CONSOLIDATIONS_LIMIT":
 				assert.Equal(t, "84", v)
@@ -518,6 +519,8 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "88", v)
 			case "MAX_ATTESTATIONS_ELECTRA":
 				assert.Equal(t, "89", v)
+			case "MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD":
+				assert.Equal(t, "90", v)
 			default:
 				t.Errorf("Incorrect key: %s", k)
 			}

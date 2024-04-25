@@ -104,6 +104,11 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	// New Electra params
 	minimalConfig.MinPerEpochChurnLimitElectra = 64000000000
 	minimalConfig.MaxPerEpochActivationExitChurnLimit = 128000000000
+	minimalConfig.PendingConsolidationsLimit = 64
+	minimalConfig.MaxPartialWithdrawalsPerPayload = 1
+	minimalConfig.MaxWithdrawalRequestsPerPayload = 2
+	minimalConfig.PendingPartialWithdrawalsLimit = 64
+	minimalConfig.MaxPendingPartialsPerWithdrawalSweep = 1
 
 	// Ethereum PoW parameters.
 	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.
