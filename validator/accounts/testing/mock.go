@@ -257,3 +257,7 @@ func (*Validator) Host() string {
 func (*Validator) ChangeHost(_ string) {
 	panic("implement me")
 }
+
+func (*Validator) AvailableHosts() []string {
+	panic("implement me")
+}
