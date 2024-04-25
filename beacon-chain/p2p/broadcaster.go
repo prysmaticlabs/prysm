@@ -254,7 +254,7 @@ func (s *Service) internalBroadcastBlob(
 	s.subnetLocker(wrappedSubIdx).RUnlock()
 
 	if !hasPeer {
-		blobSidecarCommitteeBroadcastAttempts.Inc()
+		blobSidecarBroadcastAttempts.Inc()
 		if err := func() error {
 			s.subnetLocker(wrappedSubIdx).Lock()
 			defer s.subnetLocker(wrappedSubIdx).Unlock()
@@ -263,7 +263,7 @@ func (s *Service) internalBroadcastBlob(
 				return err
 			}
 			if ok {
-				blobSidecarCommitteeBroadcasts.Inc()
+				blobSidecarBroadcasts.Inc()
 				return nil
 			}
 			return errors.New("failed to find peers for subnet")
