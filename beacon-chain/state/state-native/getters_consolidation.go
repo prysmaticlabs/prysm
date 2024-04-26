@@ -30,7 +30,7 @@ func (b *BeaconState) PendingConsolidations() ([]*ethpb.PendingConsolidation, er
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	return b.pendingConsolidations, nil
+	return b.pendingConsolidationsVal(), nil
 }
 
 func (b *BeaconState) NumPendingConsolidations() uint64 {

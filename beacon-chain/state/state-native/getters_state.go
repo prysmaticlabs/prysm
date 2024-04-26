@@ -529,7 +529,7 @@ func ProtobufBeaconStateCapella(s interface{}) (*ethpb.BeaconStateCapella, error
 func ProtobufBeaconStateDeneb(s interface{}) (*ethpb.BeaconStateDeneb, error) {
 	pbState, ok := s.(*ethpb.BeaconStateDeneb)
 	if !ok {
-		return nil, errors.New("input is not type pb.ProtobufBeaconStateDeneb")
+		return nil, errors.New("input is not type pb.BeaconStateDeneb")
 	}
 	return pbState, nil
 }
@@ -539,7 +539,7 @@ func ProtobufBeaconStateDeneb(s interface{}) (*ethpb.BeaconStateDeneb, error) {
 func ProtobufBeaconStateElectra(s interface{}) (*ethpb.BeaconStateElectra, error) {
 	pbState, ok := s.(*ethpb.BeaconStateElectra)
 	if !ok {
-		return nil, errors.New("input is not type pb.ProtobufBeaconStateElectra")
+		return nil, errors.New("input is not type pb.BeaconStateElectra")
 	}
 	return pbState, nil
 }

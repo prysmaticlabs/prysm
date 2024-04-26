@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 )
@@ -83,33 +85,37 @@ func (f FieldIndex) String() string {
 	case LatestExecutionPayloadHeader:
 		return "latestExecutionPayloadHeader"
 	case LatestExecutionPayloadHeaderCapella:
-		return "LatestExecutionPayloadHeaderCapella"
+		return "latestExecutionPayloadHeaderCapella"
+	case LatestExecutionPayloadHeaderDeneb:
+		return "latestExecutionPayloadHeaderDeneb"
+	case LatestExecutionPayloadHeaderElectra:
+		return "latestExecutionPayloadHeaderElectra"
 	case NextWithdrawalIndex:
-		return "NextWithdrawalIndex"
+		return "nextWithdrawalIndex"
 	case NextWithdrawalValidatorIndex:
-		return "NextWithdrawalValidatorIndex"
+		return "nextWithdrawalValidatorIndex"
 	case HistoricalSummaries:
-		return "HistoricalSummaries"
+		return "historicalSummaries"
 	case DepositReceiptsStartIndex:
-		return "DepositReceiptsStartIndex"
+		return "depositReceiptsStartIndex"
 	case DepositBalanceToConsume:
-		return "DepositBalanceToConsume"
+		return "depositBalanceToConsume"
 	case ExitBalanceToConsume:
-		return "ExitBalanceToConsume"
+		return "exitBalanceToConsume"
 	case EarliestExitEpoch:
-		return "EarliestExitEpoch"
+		return "earliestExitEpoch"
 	case ConsolidationBalanceToConsume:
-		return "ConsolidationBalanceToConsume"
+		return "consolidationBalanceToConsume"
 	case EarliestConsolidationEpoch:
-		return "EarliestConsolidationEpoch"
+		return "earliestConsolidationEpoch"
 	case PendingBalanceDeposits:
-		return "PendingBalanceDeposits"
+		return "pendingBalanceDeposits"
 	case PendingPartialWithdrawals:
-		return "PendingPartialWithdrawals"
+		return "pendingPartialWithdrawals"
 	case PendingConsolidations:
-		return "PendingConsolidations"
+		return "pendingConsolidations"
 	default:
-		return ""
+		return fmt.Sprintf("unknown field index name: %d", f)
 	}
 }
 
