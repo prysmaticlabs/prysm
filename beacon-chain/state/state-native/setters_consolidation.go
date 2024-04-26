@@ -2,6 +2,7 @@ package state_native
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -14,7 +15,9 @@ func (b *BeaconState) AppendPendingConsolidation(val *ethpb.PendingConsolidation
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// TODO: Shared field references
+	b.sharedFieldReferences[types.PendingConsolidations].MinusRef()
+	b.sharedFieldReferences[types.PendingConsolidations] = stateutil.NewRef(1)
+
 	b.pendingConsolidations = append(b.pendingConsolidations, val)
 
 	b.markFieldAsDirty(types.PendingConsolidations)
@@ -29,7 +32,9 @@ func (b *BeaconState) SetPendingConsolidations(val []*ethpb.PendingConsolidation
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// TODO: Shared field references
+	b.sharedFieldReferences[types.PendingConsolidations].MinusRef()
+	b.sharedFieldReferences[types.PendingConsolidations] = stateutil.NewRef(1)
+
 	b.pendingConsolidations = val
 
 	b.markFieldAsDirty(types.PendingConsolidations)

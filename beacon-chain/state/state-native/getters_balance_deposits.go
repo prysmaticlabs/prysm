@@ -20,7 +20,7 @@ func (b *BeaconState) PendingBalanceDeposits() ([]*ethpb.PendingBalanceDeposit, 
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	return b.pendingBalanceDeposits, nil
+	return b.pendingBalanceDepositsVal(), nil
 }
 
 func (b *BeaconState) pendingBalanceDepositsVal() []*ethpb.PendingBalanceDeposit {

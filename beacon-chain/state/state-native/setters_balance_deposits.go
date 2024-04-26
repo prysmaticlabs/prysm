@@ -2,6 +2,7 @@ package state_native
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -14,7 +15,9 @@ func (b *BeaconState) AppendPendingBalanceDeposit(index primitives.ValidatorInde
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// TODO: Shared field references
+	b.sharedFieldReferences[types.PendingBalanceDeposits].MinusRef()
+	b.sharedFieldReferences[types.PendingBalanceDeposits] = stateutil.NewRef(1)
+
 	b.pendingBalanceDeposits = append(b.pendingBalanceDeposits, &ethpb.PendingBalanceDeposit{Index: index, Amount: amount})
 
 	b.markFieldAsDirty(types.PendingBalanceDeposits)
@@ -29,7 +32,6 @@ func (b *BeaconState) SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDepos
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// TODO: Shared field references
 	b.pendingBalanceDeposits = val
 
 	b.markFieldAsDirty(types.PendingBalanceDeposits)
@@ -44,7 +46,6 @@ func (b *BeaconState) SetDepositBalanceToConsume(gwei uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// TODO: Shared field references
 	b.depositBalanceToConsume = gwei
 
 	b.markFieldAsDirty(types.DepositBalanceToConsume)

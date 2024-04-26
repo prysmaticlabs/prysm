@@ -1,12 +1,14 @@
 package state_native_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	testtmpl "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/testing"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -65,4 +67,72 @@ func TestValidatorIndexes(t *testing.T) {
 		require.NotEmpty(t, readOnlyBytes)
 		require.Equal(t, hexutil.Encode(readOnlyBytes[:]), hexutil.Encode(byteValue[:]))
 	})
+}
+
+func TestActiveBalanceAtIndex(t *testing.T) {
+	// Test setup with a state with 4 validators.
+	// Validators 0 & 1 have compounding withdrawal credentials while validators 2 & 3 have BLS withdrawal credentials.
+	pb := &ethpb.BeaconStateElectra{
+		Validators: []*ethpb.Validator{
+			{
+				WithdrawalCredentials: []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte},
+			},
+			{
+				WithdrawalCredentials: []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte},
+			},
+			{
+				WithdrawalCredentials: []byte{params.BeaconConfig().BLSWithdrawalPrefixByte},
+			},
+			{
+				WithdrawalCredentials: []byte{params.BeaconConfig().BLSWithdrawalPrefixByte},
+			},
+		},
+		Balances: []uint64{
+			55,
+			math.MaxUint64,
+			55,
+			math.MaxUint64,
+		},
+	}
+	state, err := statenative.InitializeFromProtoUnsafeElectra(pb)
+	require.NoError(t, err)
+
+	ab, err := state.ActiveBalanceAtIndex(0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(55), ab)
+
+	ab, err = state.ActiveBalanceAtIndex(1)
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxEffectiveBalanceElectra, ab)
+
+	ab, err = state.ActiveBalanceAtIndex(2)
+	require.NoError(t, err)
+	require.Equal(t, uint64(55), ab)
+
+	ab, err = state.ActiveBalanceAtIndex(3)
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MinActivationBalance, ab)
+
+}
+
+func TestPendingBalanceToWithdraw(t *testing.T) {
+	pb := &ethpb.BeaconStateElectra{
+		PendingPartialWithdrawals: []*ethpb.PendingPartialWithdrawal{
+			{
+				Amount: 100,
+			},
+			{
+				Amount: 200,
+			},
+			{
+				Amount: 300,
+			},
+		},
+	}
+	state, err := statenative.InitializeFromProtoUnsafeElectra(pb)
+	require.NoError(t, err)
+
+	ab, err := state.PendingBalanceToWithdraw(0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(600), ab)
 }

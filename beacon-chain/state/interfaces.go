@@ -217,6 +217,7 @@ type ReadOnlyElectra interface {
 	NumPendingPartialWithdrawals() uint64
 	ExitEpochAndUpdateChurn(exitBalance uint64) (primitives.Epoch, error)
 	PendingBalanceToWithdraw(idx primitives.ValidatorIndex) (uint64, error)
+	ActiveBalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error)
 }
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.

@@ -95,6 +95,7 @@ var denebFields = append(
 
 var electraFields = append(
 	denebFields,
+	types.LatestExecutionPayloadHeaderElectra,
 	types.DepositReceiptsStartIndex,
 	types.DepositBalanceToConsume,
 	types.ExitBalanceToConsume,
@@ -118,7 +119,7 @@ const (
 	experimentalStateBellatrixSharedFieldRefCount = 6
 	experimentalStateCapellaSharedFieldRefCount   = 8
 	experimentalStateDenebSharedFieldRefCount     = 8
-	experimentalStateElectraSharedFieldRefCount   = 8 // TODO: Is this correct?
+	experimentalStateElectraSharedFieldRefCount   = 8
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
@@ -763,7 +764,7 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 		b.balancesMultiValue = NewMultiValueBalances(st.Balances)
 		b.validatorsMultiValue = NewMultiValueValidators(st.Validators)
 		b.inactivityScoresMultiValue = NewMultiValueInactivityScores(st.InactivityScores)
-		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStateDenebSharedFieldRefCount)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStateElectraSharedFieldRefCount)
 	} else {
 		bRoots := make([][32]byte, fieldparams.BlockRootsLength)
 		for i, r := range st.BlockRoots {
@@ -807,11 +808,11 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.LatestExecutionPayloadHeaderDeneb] = stateutil.NewRef(1) // New in Deneb.
-	b.sharedFieldReferences[types.HistoricalSummaries] = stateutil.NewRef(1)               // New in Capella.
-	b.sharedFieldReferences[types.PendingBalanceDeposits] = stateutil.NewRef(1)            // New in Electra.
-	b.sharedFieldReferences[types.PendingPartialWithdrawals] = stateutil.NewRef(1)         // New in Electra.
-	b.sharedFieldReferences[types.PendingConsolidations] = stateutil.NewRef(1)             // New in Electra.
+	b.sharedFieldReferences[types.LatestExecutionPayloadHeaderElectra] = stateutil.NewRef(1) // New in Electra.
+	b.sharedFieldReferences[types.HistoricalSummaries] = stateutil.NewRef(1)                 // New in Capella.
+	b.sharedFieldReferences[types.PendingBalanceDeposits] = stateutil.NewRef(1)              // New in Electra.
+	b.sharedFieldReferences[types.PendingPartialWithdrawals] = stateutil.NewRef(1)           // New in Electra.
+	b.sharedFieldReferences[types.PendingConsolidations] = stateutil.NewRef(1)               // New in Electra.
 	if !features.Get().EnableExperimentalState {
 		b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
 		b.sharedFieldReferences[types.StateRoots] = stateutil.NewRef(1)
