@@ -79,6 +79,9 @@ ssz_gen_marshal(
         "SignedBeaconBlockContentsDeneb",
         "BlindedBeaconBlockDeneb",
         "BlindedBeaconBlockBodyDeneb",
+        "SignedBlindedBeaconBlockElectra",
+        "BlindedBeaconBlockElectra",
+        "BlindedBeaconBlockBodyElectra",
         "SyncAggregate",
         "SyncCommitteeMessage",
         "SyncCommitteeContribution",
@@ -203,6 +206,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cloners.go",
+        "eip_7251.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
         ":ssz_generated_files",  # keep
