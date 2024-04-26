@@ -324,8 +324,8 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 
 	var attr payloadattribute.Attributer
 	switch st.Version() {
-	case version.Deneb:
-		withdrawals, err := st.ExpectedWithdrawals()
+	case version.Deneb, version.Electra:
+		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
 			return emptyAttri
@@ -342,7 +342,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 			return emptyAttri
 		}
 	case version.Capella:
-		withdrawals, err := st.ExpectedWithdrawals()
+		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
 			return emptyAttri

@@ -449,7 +449,7 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
 		}
 	case version.Capella:
-		withdrawals, err := headState.ExpectedWithdrawals()
+		withdrawals, _, err := headState.ExpectedWithdrawals()
 		if err != nil {
 			return write(w, flusher, "Could not get head state expected withdrawals: "+err.Error())
 		}
@@ -460,7 +460,7 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
 		}
 	case version.Deneb:
-		withdrawals, err := headState.ExpectedWithdrawals()
+		withdrawals, _, err := headState.ExpectedWithdrawals()
 		if err != nil {
 			return write(w, flusher, "Could not get head state expected withdrawals: "+err.Error())
 		}

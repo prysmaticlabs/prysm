@@ -3,11 +3,15 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "beacon_state_mainnet.go",
+        "beacon_state_minimal.go",  # keep
         "doc.go",
         "error.go",
         "getters_attestation.go",
+        "getters_balance_deposits.go",
         "getters_block.go",
         "getters_checkpoint.go",
+        "getters_consolidation.go",
         "getters_eth1.go",
         "getters_misc.go",
         "getters_participation.go",
@@ -22,8 +26,11 @@ go_library(
         "proofs.go",
         "readonly_validator.go",
         "setters_attestation.go",
+        "setters_balance_deposits.go",
         "setters_block.go",
         "setters_checkpoint.go",
+        "setters_churn.go",
+        "setters_consolidation.go",
         "setters_eth1.go",
         "setters_misc.go",
         "setters_participation.go",
@@ -37,13 +44,11 @@ go_library(
         "ssz.go",
         "state_trie.go",
         "types.go",
-    ] + select({
-        "//config:mainnet": ["beacon_state_mainnet.go"],
-        "//config:minimal": ["beacon_state_minimal.go"],
-    }),
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/fieldtrie:go_default_library",

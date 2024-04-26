@@ -3,6 +3,7 @@ package state_native
 import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
@@ -32,5 +33,19 @@ func (b *BeaconState) SetNextWithdrawalValidatorIndex(i primitives.ValidatorInde
 
 	b.nextWithdrawalValidatorIndex = i
 	b.markFieldAsDirty(types.NextWithdrawalValidatorIndex)
+	return nil
+}
+
+func (b *BeaconState) AppendPendingPartialWithdrawal(ppw *eth.PendingPartialWithdrawal) error {
+	if b.version < version.Electra {
+		return errNotSupported("AppendPendingPartialWithdrawal", b.version)
+	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	// TODO: Shared field references
+	b.pendingPartialWithdrawals = append(b.pendingPartialWithdrawals, ppw)
+	b.markFieldAsDirty(types.PendingPartialWithdrawals)
 	return nil
 }

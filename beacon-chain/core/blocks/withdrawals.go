@@ -145,7 +145,7 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 //	    next_validator_index = ValidatorIndex(next_index % len(state.validators))
 //	    state.next_withdrawal_validator_index = next_validator_index
 func ProcessWithdrawals(st state.BeaconState, executionData interfaces.ExecutionData) (state.BeaconState, error) {
-	expectedWithdrawals, err := st.ExpectedWithdrawals()
+	expectedWithdrawals, _, err := st.ExpectedWithdrawals()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals")
 	}
