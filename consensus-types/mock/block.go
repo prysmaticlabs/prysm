@@ -313,6 +313,10 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	panic("implement me")
 }
 
+func (b *BeaconBlockBody) Consolidations() ([]*eth.SignedConsolidation, error) {
+	panic("implement me")
+}
+
 func (b *BeaconBlockBody) Attestations() []*eth.Attestation {
 	panic("implement me")
 }

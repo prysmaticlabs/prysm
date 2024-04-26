@@ -67,6 +67,14 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 		return initBlindedSignedBlockFromProtoDeneb(b)
 	case *eth.GenericSignedBeaconBlock_BlindedDeneb:
 		return initBlindedSignedBlockFromProtoDeneb(b.BlindedDeneb)
+	case *eth.GenericSignedBeaconBlock_Electra:
+		return initSignedBlockFromProtoElectra(b.Electra.Block)
+	case *eth.SignedBeaconBlockElectra:
+		return initSignedBlockFromProtoElectra(b)
+	case *eth.SignedBlindedBeaconBlockElectra:
+		return initBlindedSignedBlockFromProtoElectra(b)
+	case *eth.GenericSignedBeaconBlock_BlindedElectra:
+		return initBlindedSignedBlockFromProtoElectra(b.BlindedElectra)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -109,6 +117,14 @@ func NewBeaconBlock(i interface{}) (interfaces.ReadOnlyBeaconBlock, error) {
 		return initBlindedBlockFromProtoDeneb(b)
 	case *eth.GenericBeaconBlock_BlindedDeneb:
 		return initBlindedBlockFromProtoDeneb(b.BlindedDeneb)
+	case *eth.GenericBeaconBlock_Electra:
+		return initBlockFromProtoElectra(b.Electra.Block)
+	case *eth.BeaconBlockElectra:
+		return initBlockFromProtoElectra(b)
+	case *eth.BlindedBeaconBlockElectra:
+		return initBlindedBlockFromProtoElectra(b)
+	case *eth.GenericBeaconBlock_BlindedElectra:
+		return initBlindedBlockFromProtoElectra(b.BlindedElectra)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -135,6 +151,10 @@ func NewBeaconBlockBody(i interface{}) (interfaces.ReadOnlyBeaconBlockBody, erro
 		return initBlockBodyFromProtoDeneb(b)
 	case *eth.BlindedBeaconBlockBodyDeneb:
 		return initBlindedBlockBodyFromProtoDeneb(b)
+	case *eth.BeaconBlockBodyElectra:
+		return initBlockBodyFromProtoElectra(b)
+	case *eth.BlindedBeaconBlockBodyElectra:
+		return initBlindedBlockBodyFromProtoElectra(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlockBody, "unable to create block body from type %T", i)
 	}
@@ -201,6 +221,19 @@ func BuildSignedBeaconBlock(blk interfaces.ReadOnlyBeaconBlock, signature []byte
 			return nil, errIncorrectBlockVersion
 		}
 		return NewSignedBeaconBlock(&eth.SignedBeaconBlockDeneb{Block: pb, Signature: signature})
+	case version.Electra:
+		if blk.IsBlinded() {
+			pb, ok := pb.(*eth.BlindedBeaconBlockElectra)
+			if !ok {
+				return nil, errIncorrectBlockVersion
+			}
+			return NewSignedBeaconBlock(&eth.SignedBlindedBeaconBlockElectra{Message: pb, Signature: signature})
+		}
+		pb, ok := pb.(*eth.BeaconBlockElectra)
+		if !ok {
+			return nil, errIncorrectBlockVersion
+		}
+		return NewSignedBeaconBlock(&eth.SignedBeaconBlockElectra{Block: pb, Signature: signature})
 	default:
 		return nil, errUnsupportedBeaconBlock
 	}
