@@ -28,8 +28,10 @@ type ReadOnlySignedBeaconBlock interface {
 	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
 	PbCapellaBlock() (*ethpb.SignedBeaconBlockCapella, error)
 	PbDenebBlock() (*ethpb.SignedBeaconBlockDeneb, error)
+	PbElectraBlock() (*ethpb.SignedBeaconBlockElectra, error)
 	PbBlindedCapellaBlock() (*ethpb.SignedBlindedBeaconBlockCapella, error)
 	PbBlindedDenebBlock() (*ethpb.SignedBlindedBeaconBlockDeneb, error)
+	PbBlindedElectraBlock() (*ethpb.SignedBlindedBeaconBlockElectra, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
@@ -78,6 +80,7 @@ type ReadOnlyBeaconBlockBody interface {
 	Execution() (ExecutionData, error)
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 	BlobKzgCommitments() ([][]byte, error)
+	Consolidations() ([]*ethpb.SignedConsolidation, error)
 }
 
 type SignedBeaconBlock interface {
@@ -85,6 +88,7 @@ type SignedBeaconBlock interface {
 	SetExecution(ExecutionData) error
 	SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange) error
 	SetBlobKzgCommitments(c [][]byte) error
+	SetConsolidations([]*ethpb.SignedConsolidation) error
 	SetSyncAggregate(*ethpb.SyncAggregate) error
 	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SetDeposits([]*ethpb.Deposit)
@@ -165,8 +169,8 @@ type AttesterSlashing interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
-	GetAttestationOne() IndexedAttestation
-	SetAttestationOne(IndexedAttestation)
+	GetAttestationOnePreElectra() ethpb.IndexedAttestation
+	SetAttestationOnePreElectra(ethpb.IndexedAttestation)
 	GetAttestationTwo() IndexedAttestation
 	SetAttestationTwo(IndexedAttestation)
 }

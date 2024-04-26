@@ -144,3 +144,12 @@ func (b *SignedBeaconBlock) SetBlobKzgCommitments(c [][]byte) error {
 		return errIncorrectBlockVersion
 	}
 }
+
+// SetConsolidations sets the signed consolidations in the block. eip7521
+func (b *SignedBeaconBlock) SetConsolidations(consolidations []*eth.SignedConsolidation) error {
+	if b.version < version.Electra {
+		return consensus_types.ErrNotSupported("Consolidations", b.version)
+	}
+	b.block.body.signedConsolidations = consolidations
+	return nil
+}

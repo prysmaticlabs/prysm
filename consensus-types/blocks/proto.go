@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -894,14 +893,6 @@ func initBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBo
 	if pb == nil {
 		return nil, errNilBlockBody
 	}
-	atts := make([]interfaces.Attestation, len(pb.Attestations))
-	for i, att := range pb.Attestations {
-		atts[i] = att
-	}
-	attSlashings := make([]interfaces.AttesterSlashing, len(pb.AttesterSlashings))
-	for i, att := range pb.AttesterSlashings {
-		attSlashings[i] = att
-	}
 	b := &BeaconBlockBody{
 		version:           version.Altair,
 		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
@@ -979,14 +970,6 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
-	atts := make([]interfaces.Attestation, len(pb.Attestations))
-	for i, att := range pb.Attestations {
-		atts[i] = att
-	}
-	attSlashings := make([]interfaces.AttesterSlashing, len(pb.AttesterSlashings))
-	for i, att := range pb.AttesterSlashings {
-		attSlashings[i] = att
-	}
 	b := &BeaconBlockBody{
 		version:               version.Capella,
 		randaoReveal:          bytesutil.ToBytes96(pb.RandaoReveal),
@@ -1013,14 +996,6 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 	// We allow the payload to be nil
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
-	}
-	atts := make([]interfaces.Attestation, len(pb.Attestations))
-	for i, att := range pb.Attestations {
-		atts[i] = att
-	}
-	attSlashings := make([]interfaces.AttesterSlashing, len(pb.AttesterSlashings))
-	for i, att := range pb.AttesterSlashings {
-		attSlashings[i] = att
 	}
 	b := &BeaconBlockBody{
 		version:                version.Capella,

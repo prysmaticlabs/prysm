@@ -229,6 +229,30 @@ func (b *SignedBeaconBlock) PbBlindedDenebBlock() (*eth.SignedBlindedBeaconBlock
 	return pb.(*eth.SignedBlindedBeaconBlockDeneb), nil
 }
 
+// PbElectraBlock returns the underlying protobuf object.
+func (b *SignedBeaconBlock) PbElectraBlock() (*eth.SignedBeaconBlockElectra, error) {
+	if b.version != version.Electra || b.IsBlinded() {
+		return nil, consensus_types.ErrNotSupported("PbElectraBlock", b.version)
+	}
+	pb, err := b.Proto()
+	if err != nil {
+		return nil, err
+	}
+	return pb.(*eth.SignedBeaconBlockElectra), nil
+}
+
+// PbBlindedElectraBlock returns the underlying protobuf object.
+func (b *SignedBeaconBlock) PbBlindedElectraBlock() (*eth.SignedBlindedBeaconBlockElectra, error) {
+	if b.version != version.Electra || !b.IsBlinded() {
+		return nil, consensus_types.ErrNotSupported("PbBlindedElectraBlock", b.version)
+	}
+	pb, err := b.Proto()
+	if err != nil {
+		return nil, err
+	}
+	return pb.(*eth.SignedBlindedBeaconBlockElectra), nil
+}
+
 // ToBlinded converts a non-blinded block to its blinded equivalent.
 func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if b.version < version.Bellatrix {
@@ -1222,11 +1246,18 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	switch b.version {
 	case version.Phase0, version.Altair, version.Bellatrix, version.Capella:
 		return nil, consensus_types.ErrNotSupported("BlobKzgCommitments", b.version)
-	case version.Deneb:
+	case version.Deneb, version.Electra:
 		return b.blobKzgCommitments, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}
+}
+
+func (b *BeaconBlockBody) Consolidations() ([]*eth.SignedConsolidation, error) {
+	if b.version < version.Electra {
+		return nil, consensus_types.ErrNotSupported("Consolidations", b.version)
+	}
+	return b.signedConsolidations, nil
 }
 
 // Version returns the version of the beacon block body
