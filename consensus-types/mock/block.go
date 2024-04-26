@@ -224,7 +224,7 @@ func (BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
+func (BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
 	panic("implement me")
 }
 

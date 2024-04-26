@@ -88,8 +88,10 @@ type SignedBeaconBlock interface {
 	SetSyncAggregate(*ethpb.SyncAggregate) error
 	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SetDeposits([]*ethpb.Deposit)
-	SetAttestations([]Attestation)
+	SetAttestations([]*ethpb.Attestation)
+	SetAttestationsElectra([]*ethpb.AttestationElectra)
 	SetAttesterSlashings([]*ethpb.AttesterSlashing)
+	SetAttesterSlashingsElectra([]*ethpb.AttesterSlashingElectra)
 	SetProposerSlashings([]*ethpb.ProposerSlashing)
 	SetGraffiti([]byte)
 	SetEth1Data(*ethpb.Eth1Data)
@@ -149,6 +151,30 @@ type Attestation interface {
 	SetData(data *ethpb.AttestationData)
 	GetCommitteeBitsVal() bitfield.Bitfield
 	SetCommitteeBitsVal(bits bitfield.Bitfield)
+	GetSignature() []byte
+	SetSignature(sig []byte)
+}
+
+type AttesterSlashing interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	GetAttestationOne() IndexedAttestation
+	SetAttestationOne(IndexedAttestation)
+	GetAttestationTwo() IndexedAttestation
+	SetAttestationTwo(IndexedAttestation)
+}
+
+type IndexedAttestation interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	GetAttestingIndicesVal() []uint64
+	SetAttestingIndicesVal([]uint64)
+	GetData() *ethpb.AttestationData
+	SetData(*ethpb.AttestationData)
 	GetSignature() []byte
 	SetSignature(sig []byte)
 }

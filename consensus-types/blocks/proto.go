@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -292,53 +293,29 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 
 	switch b.version {
 	case version.Phase0:
-		// TODO: extend to Electra
-		atts := make([]*eth.Attestation, len(b.attestations))
-		for i, att := range b.attestations {
-			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
-			}
-		}
 		return &eth.BeaconBlockBody{
 			RandaoReveal:      b.randaoReveal[:],
 			Eth1Data:          b.eth1Data,
 			Graffiti:          b.graffiti[:],
 			ProposerSlashings: b.proposerSlashings,
 			AttesterSlashings: b.attesterSlashings,
-			Attestations:      atts,
+			Attestations:      b.attestations,
 			Deposits:          b.deposits,
 			VoluntaryExits:    b.voluntaryExits,
 		}, nil
 	case version.Altair:
-		// TODO: extend to Electra
-		atts := make([]*eth.Attestation, len(b.attestations))
-		for i, att := range b.attestations {
-			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
-			}
-		}
 		return &eth.BeaconBlockBodyAltair{
 			RandaoReveal:      b.randaoReveal[:],
 			Eth1Data:          b.eth1Data,
 			Graffiti:          b.graffiti[:],
 			ProposerSlashings: b.proposerSlashings,
 			AttesterSlashings: b.attesterSlashings,
-			Attestations:      atts,
+			Attestations:      b.attestations,
 			Deposits:          b.deposits,
 			VoluntaryExits:    b.voluntaryExits,
 			SyncAggregate:     b.syncAggregate,
 		}, nil
 	case version.Bellatrix:
-		// TODO: extend to Electra
-		atts := make([]*eth.Attestation, len(b.attestations))
-		for i, att := range b.attestations {
-			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
-			}
-		}
 		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeader
 			var ok bool
@@ -354,7 +331,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				Graffiti:               b.graffiti[:],
 				ProposerSlashings:      b.proposerSlashings,
 				AttesterSlashings:      b.attesterSlashings,
-				Attestations:           atts,
+				Attestations:           b.attestations,
 				Deposits:               b.deposits,
 				VoluntaryExits:         b.voluntaryExits,
 				SyncAggregate:          b.syncAggregate,
@@ -375,21 +352,13 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			Graffiti:          b.graffiti[:],
 			ProposerSlashings: b.proposerSlashings,
 			AttesterSlashings: b.attesterSlashings,
-			Attestations:      atts,
+			Attestations:      b.attestations,
 			Deposits:          b.deposits,
 			VoluntaryExits:    b.voluntaryExits,
 			SyncAggregate:     b.syncAggregate,
 			ExecutionPayload:  p,
 		}, nil
 	case version.Capella:
-		// TODO: extend to Electra
-		atts := make([]*eth.Attestation, len(b.attestations))
-		for i, att := range b.attestations {
-			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
-			}
-		}
 		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderCapella
 			var ok bool
@@ -405,7 +374,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				Graffiti:               b.graffiti[:],
 				ProposerSlashings:      b.proposerSlashings,
 				AttesterSlashings:      b.attesterSlashings,
-				Attestations:           atts,
+				Attestations:           b.attestations,
 				Deposits:               b.deposits,
 				VoluntaryExits:         b.voluntaryExits,
 				SyncAggregate:          b.syncAggregate,
@@ -427,7 +396,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			Graffiti:              b.graffiti[:],
 			ProposerSlashings:     b.proposerSlashings,
 			AttesterSlashings:     b.attesterSlashings,
-			Attestations:          atts,
+			Attestations:          b.attestations,
 			Deposits:              b.deposits,
 			VoluntaryExits:        b.voluntaryExits,
 			SyncAggregate:         b.syncAggregate,
@@ -435,14 +404,6 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			BlsToExecutionChanges: b.blsToExecutionChanges,
 		}, nil
 	case version.Deneb:
-		// TODO: extend to Electra
-		atts := make([]*eth.Attestation, len(b.attestations))
-		for i, att := range b.attestations {
-			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
-			}
-		}
 		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderDeneb
 			var ok bool
@@ -458,7 +419,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				Graffiti:               b.graffiti[:],
 				ProposerSlashings:      b.proposerSlashings,
 				AttesterSlashings:      b.attesterSlashings,
-				Attestations:           atts,
+				Attestations:           b.attestations,
 				Deposits:               b.deposits,
 				VoluntaryExits:         b.voluntaryExits,
 				SyncAggregate:          b.syncAggregate,
@@ -481,7 +442,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			Graffiti:              b.graffiti[:],
 			ProposerSlashings:     b.proposerSlashings,
 			AttesterSlashings:     b.attesterSlashings,
-			Attestations:          atts,
+			Attestations:          b.attestations,
 			Deposits:              b.deposits,
 			VoluntaryExits:        b.voluntaryExits,
 			SyncAggregate:         b.syncAggregate,
@@ -490,14 +451,6 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			BlobKzgCommitments:    b.blobKzgCommitments,
 		}, nil
 	case version.Electra:
-		// TODO: extend to Electra
-		atts := make([]*eth.AttestationElectra, len(b.attestations))
-		for i, att := range b.attestations {
-			a, ok := att.(*eth.AttestationElectra)
-			if ok {
-				atts[i] = a
-			}
-		}
 		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderElectra
 			var ok bool
@@ -512,8 +465,8 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				Eth1Data:               b.eth1Data,
 				Graffiti:               b.graffiti[:],
 				ProposerSlashings:      b.proposerSlashings,
-				AttesterSlashings:      b.attesterSlashings,
-				Attestations:           atts,
+				AttesterSlashings:      b.attesterSlashingsElectra,
+				Attestations:           b.attestationsElectra,
 				Deposits:               b.deposits,
 				VoluntaryExits:         b.voluntaryExits,
 				SyncAggregate:          b.syncAggregate,
@@ -522,7 +475,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				BlobKzgCommitments:     b.blobKzgCommitments,
 			}, nil
 		}
-		var p *enginev1.ExecutionPayloadDeneb
+		var p *enginev1.ExecutionPayloadElectra
 		var ok bool
 		if b.executionPayload != nil {
 			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayloadElectra)
@@ -535,8 +488,8 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			Eth1Data:              b.eth1Data,
 			Graffiti:              b.graffiti[:],
 			ProposerSlashings:     b.proposerSlashings,
-			AttesterSlashings:     b.attesterSlashings,
-			Attestations:          atts,
+			AttesterSlashings:     b.attesterSlashingsElectra,
+			Attestations:          b.attestationsElectra,
 			Deposits:              b.deposits,
 			VoluntaryExits:        b.voluntaryExits,
 			SyncAggregate:         b.syncAggregate,
@@ -696,6 +649,23 @@ func initBlindedSignedBlockFromProtoDeneb(pb *eth.SignedBlindedBeaconBlockDeneb)
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Deneb,
+		block:     block,
+		signature: bytesutil.ToBytes96(pb.Signature),
+	}
+	return b, nil
+}
+
+func initBlindedSignedBlockFromProtoElectra(pb *eth.SignedBlindedBeaconBlockElectra) (*SignedBeaconBlock, error) {
+	if pb == nil {
+		return nil, errNilBlock
+	}
+
+	block, err := initBlindedBlockFromProtoElectra(pb.Message)
+	if err != nil {
+		return nil, err
+	}
+	b := &SignedBeaconBlock{
+		version:   version.Electra,
 		block:     block,
 		signature: bytesutil.ToBytes96(pb.Signature),
 	}
@@ -882,6 +852,26 @@ func initBlindedBlockFromProtoDeneb(pb *eth.BlindedBeaconBlockDeneb) (*BeaconBlo
 	return b, nil
 }
 
+func initBlindedBlockFromProtoElectra(pb *eth.BlindedBeaconBlockElectra) (*BeaconBlock, error) {
+	if pb == nil {
+		return nil, errNilBlock
+	}
+
+	body, err := initBlindedBlockBodyFromProtoElectra(pb.Body)
+	if err != nil {
+		return nil, err
+	}
+	b := &BeaconBlock{
+		version:       version.Electra,
+		slot:          pb.Slot,
+		proposerIndex: pb.ProposerIndex,
+		parentRoot:    bytesutil.ToBytes32(pb.ParentRoot),
+		stateRoot:     bytesutil.ToBytes32(pb.StateRoot),
+		body:          body,
+	}
+	return b, nil
+}
+
 func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, error) {
 	if pb == nil {
 		return nil, errNilBlockBody
@@ -893,7 +883,7 @@ func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, er
 		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
 		proposerSlashings: pb.ProposerSlashings,
 		attesterSlashings: pb.AttesterSlashings,
-		attestations:      atts,
+		attestations:      pb.Attestations,
 		deposits:          pb.Deposits,
 		voluntaryExits:    pb.VoluntaryExits,
 	}
@@ -904,7 +894,14 @@ func initBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBo
 	if pb == nil {
 		return nil, errNilBlockBody
 	}
-
+	atts := make([]interfaces.Attestation, len(pb.Attestations))
+	for i, att := range pb.Attestations {
+		atts[i] = att
+	}
+	attSlashings := make([]interfaces.AttesterSlashing, len(pb.AttesterSlashings))
+	for i, att := range pb.AttesterSlashings {
+		attSlashings[i] = att
+	}
 	b := &BeaconBlockBody{
 		version:           version.Altair,
 		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
@@ -982,6 +979,14 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
+	atts := make([]interfaces.Attestation, len(pb.Attestations))
+	for i, att := range pb.Attestations {
+		atts[i] = att
+	}
+	attSlashings := make([]interfaces.AttesterSlashing, len(pb.AttesterSlashings))
+	for i, att := range pb.AttesterSlashings {
+		attSlashings[i] = att
+	}
 	b := &BeaconBlockBody{
 		version:               version.Capella,
 		randaoReveal:          bytesutil.ToBytes96(pb.RandaoReveal),
@@ -1008,6 +1013,14 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 	// We allow the payload to be nil
 	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
+	}
+	atts := make([]interfaces.Attestation, len(pb.Attestations))
+	for i, att := range pb.Attestations {
+		atts[i] = att
+	}
+	attSlashings := make([]interfaces.AttesterSlashing, len(pb.AttesterSlashings))
+	for i, att := range pb.AttesterSlashings {
+		attSlashings[i] = att
 	}
 	b := &BeaconBlockBody{
 		version:                version.Capella,
@@ -1093,19 +1106,19 @@ func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlock
 		return nil, err
 	}
 	b := &BeaconBlockBody{
-		version:               version.Electra,
-		randaoReveal:          bytesutil.ToBytes96(pb.RandaoReveal),
-		eth1Data:              pb.Eth1Data,
-		graffiti:              bytesutil.ToBytes32(pb.Graffiti),
-		proposerSlashings:     pb.ProposerSlashings,
-		attesterSlashings:     pb.AttesterSlashings,
-		attestations:          pb.Attestations,
-		deposits:              pb.Deposits,
-		voluntaryExits:        pb.VoluntaryExits,
-		syncAggregate:         pb.SyncAggregate,
-		executionPayload:      p,
-		blsToExecutionChanges: pb.BlsToExecutionChanges,
-		blobKzgCommitments:    pb.BlobKzgCommitments,
+		version:                  version.Electra,
+		randaoReveal:             bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:                 pb.Eth1Data,
+		graffiti:                 bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings:        pb.ProposerSlashings,
+		attesterSlashingsElectra: pb.AttesterSlashings,
+		attestationsElectra:      pb.Attestations,
+		deposits:                 pb.Deposits,
+		voluntaryExits:           pb.VoluntaryExits,
+		syncAggregate:            pb.SyncAggregate,
+		executionPayload:         p,
+		blsToExecutionChanges:    pb.BlsToExecutionChanges,
+		blobKzgCommitments:       pb.BlobKzgCommitments,
 	}
 	return b, nil
 }

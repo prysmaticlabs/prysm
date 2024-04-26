@@ -68,10 +68,22 @@ func (b *SignedBeaconBlock) SetAttesterSlashings(a []*eth.AttesterSlashing) {
 	b.block.body.attesterSlashings = a
 }
 
+// SetAttesterSlashingsElectra sets the attester slashings in the block.
+// This function is not thread safe, it is only used during block creation.
+func (b *SignedBeaconBlock) SetAttesterSlashingsElectra(a []*eth.AttesterSlashingElectra) {
+	b.block.body.attesterSlashingsElectra = a
+}
+
 // SetAttestations sets the attestations in the block.
 // This function is not thread safe, it is only used during block creation.
 func (b *SignedBeaconBlock) SetAttestations(a []*eth.Attestation) {
 	b.block.body.attestations = a
+}
+
+// SetAttestationsElectra sets the attestations in the block.
+// This function is not thread safe, it is only used during block creation.
+func (b *SignedBeaconBlock) SetAttestationsElectra(a []*eth.AttestationElectra) {
+	b.block.body.attestationsElectra = a
 }
 
 // SetDeposits sets the deposits in the block.
