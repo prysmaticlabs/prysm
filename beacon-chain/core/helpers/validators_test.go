@@ -703,25 +703,32 @@ func TestComputeProposerIndex(t *testing.T) {
 
 func TestIsEligibleForActivationQueue(t *testing.T) {
 	tests := []struct {
-		name      string
-		validator *ethpb.Validator
-		want      bool
+		name         string
+		validator    *ethpb.Validator
+		currentEpoch primitives.Epoch
+		want         bool
 	}{
-		{"Eligible",
-			&ethpb.Validator{ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-			true},
-		{"Incorrect activation eligibility epoch",
-			&ethpb.Validator{ActivationEligibilityEpoch: 1, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-			false},
-		{"Not enough balance",
-			&ethpb.Validator{ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: 1},
-			false},
+		{
+			name:      "Eligible",
+			validator: &ethpb.Validator{ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+			want:      true,
+		},
+		{
+			name:      "Incorrect activation eligibility epoch",
+			validator: &ethpb.Validator{ActivationEligibilityEpoch: 1, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+			want:      false,
+		},
+		{
+			name:      "Not enough balance",
+			validator: &ethpb.Validator{ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: 1},
+			want:      false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			helpers.ClearCache()
 
-			assert.Equal(t, tt.want, helpers.IsEligibleForActivationQueue(tt.validator), "IsEligibleForActivationQueue()")
+			assert.Equal(t, tt.want, helpers.IsEligibleForActivationQueue(tt.validator, tt.currentEpoch), "IsEligibleForActivationQueue()")
 		})
 	}
 }
@@ -827,4 +834,69 @@ func TestProposerIndexFromCheckpoint(t *testing.T) {
 	id, err := helpers.ProposerIndexAtSlotFromCheckpoint(c, slot)
 	require.NoError(t, err)
 	require.Equal(t, ids[5], id)
+}
+
+func TestHasETH1WithdrawalCredentials(t *testing.T) {
+	creds := []byte{0xFA, 0xCC}
+	v := &ethpb.Validator{WithdrawalCredentials: creds}
+	require.Equal(t, false, helpers.HasETH1WithdrawalCredential(v))
+	creds = []byte{params.BeaconConfig().ETH1AddressWithdrawalPrefixByte, 0xCC}
+	v = &ethpb.Validator{WithdrawalCredentials: creds}
+	require.Equal(t, true, helpers.HasETH1WithdrawalCredential(v))
+	// No Withdrawal cred
+	v = &ethpb.Validator{}
+	require.Equal(t, false, helpers.HasETH1WithdrawalCredential(v))
+}
+
+func TestHasCompoundingWithdrawalCredential(t *testing.T) {
+	tests := []struct {
+		name      string
+		validator *ethpb.Validator
+		want      bool
+	}{
+		{"Has compounding withdrawal credential",
+			&ethpb.Validator{WithdrawalCredentials: bytesutil.PadTo([]byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte}, 32)},
+			true},
+		{"Does not have compounding withdrawal credential",
+			&ethpb.Validator{WithdrawalCredentials: bytesutil.PadTo([]byte{0x00}, 32)},
+			false},
+		{"Handles nil case", nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, helpers.HasCompoundingWithdrawalCredential(tt.validator))
+		})
+	}
+}
+
+func TestIsFullyWithdrawableValidator(t *testing.T) {
+	// No ETH1 prefix
+	creds := []byte{0xFA, 0xCC}
+	v := &ethpb.Validator{
+		WithdrawalCredentials: creds,
+		WithdrawableEpoch:     2,
+	}
+	bal := params.BeaconConfig().MaxEffectiveBalance
+	require.Equal(t, false, helpers.IsFullyWithdrawableValidator(v, bal, 3))
+	// Wrong withdrawable epoch
+	creds = []byte{params.BeaconConfig().ETH1AddressWithdrawalPrefixByte, 0xCC}
+	v = &ethpb.Validator{
+		WithdrawalCredentials: creds,
+		WithdrawableEpoch:     2,
+	}
+	require.Equal(t, false, helpers.IsFullyWithdrawableValidator(v, bal, 1))
+	// No balance
+	creds = []byte{params.BeaconConfig().ETH1AddressWithdrawalPrefixByte, 0xCC}
+	v = &ethpb.Validator{
+		WithdrawalCredentials: creds,
+		WithdrawableEpoch:     2,
+	}
+	require.Equal(t, false, helpers.IsFullyWithdrawableValidator(v, 0, 3))
+	// Fully withdrawable
+	creds = []byte{params.BeaconConfig().ETH1AddressWithdrawalPrefixByte, 0xCC}
+	v = &ethpb.Validator{
+		WithdrawalCredentials: creds,
+		WithdrawableEpoch:     2,
+	}
+	require.Equal(t, true, helpers.IsFullyWithdrawableValidator(v, bal, 3))
 }
