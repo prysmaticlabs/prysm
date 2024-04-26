@@ -260,7 +260,10 @@ ssz_proto_files(
 
 go_test(
     name = "go_default_test",
-    srcs = ["cloners_test.go"],
+    srcs = [
+        "cloners_test.go",
+        "eip_7251_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//testing/assert:go_default_library",
