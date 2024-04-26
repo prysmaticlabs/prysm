@@ -393,6 +393,24 @@ func ComputeProposerIndex(bState state.ReadOnlyValidators, activeIndices []primi
 // IsEligibleForActivationQueue checks if the validator is eligible to
 // be placed into the activation queue.
 //
+// Spec definition:
+//
+//	def is_eligible_for_activation_queue(validator: Validator) -> bool:
+//	    """
+//	    Check if ``validator`` is eligible to be placed into the activation queue.
+//	    """
+//	    return (
+//	        validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+//	        and validator.effective_balance >= MIN_ACTIVATION_BALANCE  # [Modified in Electra:EIP7251]
+//	    )
+func IsEligibleForActivationQueue(validator *ethpb.Validator, currentEpoch primitives.Epoch) bool {
+	if currentEpoch >= params.BeaconConfig().ElectraForkEpoch {
+		return isEligibileForActivationQueueElectra(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+	}
+	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+}
+
+// isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue
 // Spec pseudocode definition:
 //
 //	def is_eligible_for_activation_queue(validator: Validator) -> bool:
@@ -403,14 +421,6 @@ func ComputeProposerIndex(bState state.ReadOnlyValidators, activeIndices []primi
 //	      validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
 //	      and validator.effective_balance == MAX_EFFECTIVE_BALANCE
 //	  )
-func IsEligibleForActivationQueue(validator *ethpb.Validator, currentEpoch primitives.Epoch) bool {
-	if currentEpoch < params.BeaconConfig().ElectraForkEpoch {
-		return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
-	}
-	return isEligibileForActivationQueueEIP7251(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
-}
-
-// isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue*
 func isEligibileForActivationQueue(activationEligibilityEpoch primitives.Epoch, effectiveBalance uint64) bool {
 	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
 		effectiveBalance == params.BeaconConfig().MaxEffectiveBalance
@@ -419,17 +429,17 @@ func isEligibileForActivationQueue(activationEligibilityEpoch primitives.Epoch, 
 // IsEligibleForActivationQueue checks if the validator is eligible to
 // be placed into the activation queue.
 //
-// Spec pseudocode definition:
+// Spec definition:
 //
 //	def is_eligible_for_activation_queue(validator: Validator) -> bool:
-//	  """
-//	  Check if ``validator`` is eligible to be placed into the activation queue.
-//	  """
-//	  return (
-//	      validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
-//	      and validator.effective_balance >= MIN_ACTIVATION_BALANCE  # [Modified in Electra:EIP7251]
-//	  )
-func isEligibileForActivationQueueEIP7251(activationEligibilityEpoch primitives.Epoch, effectiveBalance uint64) bool {
+//	    """
+//	    Check if ``validator`` is eligible to be placed into the activation queue.
+//	    """
+//	    return (
+//	        validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+//	        and validator.effective_balance >= MIN_ACTIVATION_BALANCE  # [Modified in Electra:EIP7251]
+//	    )
+func isEligibileForActivationQueueElectra(activationEligibilityEpoch primitives.Epoch, effectiveBalance uint64) bool {
 	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
 		effectiveBalance >= params.BeaconConfig().MinActivationBalance
 }
@@ -548,6 +558,9 @@ func HasExecutionWithdrawalCredentials(v *ethpb.Validator) bool {
 //
 //	return a.withdrawal_credentials[12:] == b.withdrawal_credentials[12:]
 func IsSameWithdrawalCredentials(a, b *ethpb.Validator) bool {
+	if a == nil || b == nil {
+		return false
+	}
 	if len(a.WithdrawalCredentials) <= 12 || len(b.WithdrawalCredentials) <= 12 {
 		return false
 	}

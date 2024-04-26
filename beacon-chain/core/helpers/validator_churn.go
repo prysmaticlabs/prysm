@@ -9,7 +9,7 @@ import (
 //
 // Spec definition:
 //
-//	def get_churn_limit(state: BeaconState) -> Gwei:
+//	def get_balance_churn_limit(state: BeaconState) -> Gwei:
 //	    """
 //	    Return the churn limit for the current epoch.
 //	    """
@@ -27,7 +27,7 @@ func BalanceChurnLimit(activeBalanceGwei uint64) uint64 {
 }
 
 // ActivationExitChurnLimit for the current active balance, in gwei.
-// New in EIP-7251: https://eips.ethereum.org/EIPS/eip-7251
+// New in Electra EIP-7251: https://eips.ethereum.org/EIPS/eip-7251
 //
 // Spec definition:
 //
