@@ -6,6 +6,7 @@ go_library(
         "active_balance.go",
         "active_balance_disabled.go",  # keep
         "attestation_data.go",
+        "balance_cache_key.go",
         "checkpoint_state.go",
         "committee.go",
         "committee_disabled.go",  # keep
