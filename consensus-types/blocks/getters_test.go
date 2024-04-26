@@ -490,3 +490,9 @@ func hydrateBeaconBlockBody() *eth.BeaconBlockBody {
 		},
 	}
 }
+
+func TestPreElectraFailsInterfaceAssertion(t *testing.T) {
+	var epd interfaces.ExecutionData = &executionPayloadDeneb{}
+	_, ok := epd.(interfaces.ExecutionDataElectra)
+	require.Equal(t, false, ok)
+}

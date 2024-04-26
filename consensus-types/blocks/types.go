@@ -57,6 +57,9 @@ type BeaconBlockBody struct {
 	signedConsolidations     []*eth.SignedConsolidation
 }
 
+var _ interfaces.ReadOnlyBeaconBlockBody = &BeaconBlockBody{}
+var _ interfaces.ROBlockBodyElectra = &BeaconBlockBody{}
+
 // BeaconBlock is the main beacon block structure. It can represent any block type.
 type BeaconBlock struct {
 	version       int

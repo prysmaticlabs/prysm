@@ -40,6 +40,8 @@ func NewWrappedExecutionData(v proto.Message, weiValue math.Wei) (interfaces.Exe
 	}
 }
 
+var _ interfaces.ExecutionData = &executionPayload{}
+
 // WrappedExecutionPayload is a constructor which wraps a protobuf execution payload into an interface.
 func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
 	w := executionPayload{p: p}
@@ -199,22 +201,14 @@ func (executionPayload) ValueInGwei() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// DepositReceipts --
-func (e executionPayload) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// WithdrawalRequests --
-func (e executionPayload) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeader struct {
 	p *enginev1.ExecutionPayloadHeader
 }
+
+var _ interfaces.ExecutionData = &executionPayloadHeader{}
 
 // WrappedExecutionPayloadHeader is a constructor which wraps a protobuf execution header into an interface.
 func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
@@ -375,16 +369,6 @@ func (executionPayloadHeader) ValueInGwei() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// DepositReceipts --
-func (e executionPayloadHeader) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// WithdrawalRequests --
-func (e executionPayloadHeader) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
 // PayloadToHeader converts `payload` into execution payload header format.
 func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeader, error) {
 	txs, err := payload.Transactions()
@@ -421,6 +405,8 @@ type executionPayloadCapella struct {
 	weiValue  math.Wei
 	gweiValue uint64
 }
+
+var _ interfaces.ExecutionData = &executionPayloadCapella{}
 
 // WrappedExecutionPayloadCapella is a constructor which wraps a protobuf execution payload into an interface.
 func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value math.Wei) (interfaces.ExecutionData, error) {
@@ -581,16 +567,6 @@ func (e executionPayloadCapella) ValueInGwei() (uint64, error) {
 	return e.gweiValue, nil
 }
 
-// DepositReceipts --
-func (e executionPayloadCapella) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// WithdrawalRequests --
-func (e executionPayloadCapella) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -599,6 +575,8 @@ type executionPayloadHeaderCapella struct {
 	weiValue  math.Wei
 	gweiValue uint64
 }
+
+var _ interfaces.ExecutionData = &executionPayloadHeaderCapella{}
 
 // WrappedExecutionPayloadHeaderCapella is a constructor which wraps a protobuf execution header into an interface.
 func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value math.Wei) (interfaces.ExecutionData, error) {
@@ -759,16 +737,6 @@ func (e executionPayloadHeaderCapella) ValueInGwei() (uint64, error) {
 	return e.gweiValue, nil
 }
 
-// DepositReceipts --
-func (e executionPayloadHeaderCapella) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// WithdrawalRequests --
-func (e executionPayloadHeaderCapella) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
 func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeaderCapella, error) {
 	txs, err := payload.Transactions()
@@ -856,7 +824,7 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 }
 
 // PayloadToHeaderElectra converts `payload` into execution payload header format.
-func PayloadToHeaderElectra(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeaderElectra, error) {
+func PayloadToHeaderElectra(payload interfaces.ExecutionDataElectra) (*enginev1.ExecutionPayloadHeaderElectra, error) {
 	txs, err := payload.Transactions()
 	if err != nil {
 		return nil, err
@@ -882,18 +850,13 @@ func PayloadToHeaderElectra(payload interfaces.ExecutionData) (*enginev1.Executi
 		return nil, err
 	}
 
-	depositReceipts, err := payload.DepositReceipts()
-	if err != nil {
-		return nil, err
-	}
+	depositReceipts := payload.DepositReceipts()
 	depositReceiptsRoot, err := ssz.DepositReceiptSliceRoot(depositReceipts, fieldparams.MaxDepositReceiptsPerPayload)
 	if err != nil {
 		return nil, err
 	}
-	withdrawalRequests, err := payload.WithdrawalRequests()
-	if err != nil {
-		return nil, err
-	}
+
+	withdrawalRequests := payload.WithdrawalRequests()
 	withdrawalRequestsRoot, err := ssz.WithdrawalRequestSliceRoot(withdrawalRequests, fieldparams.MaxWithdrawalRequestsPerPayload)
 	if err != nil {
 		return nil, err
@@ -980,23 +943,14 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 		return false, nil
 	}
 
-	drs, err := data.DepositReceipts()
-	switch {
-	case errors.Is(err, consensus_types.ErrUnsupportedField):
-	case err != nil:
-		return false, err
-	default:
+	epe, postElectra := data.(interfaces.ExecutionDataElectra)
+	if postElectra {
+		drs := epe.DepositReceipts()
 		if len(drs) != 0 {
 			return false, nil
 		}
-	}
 
-	wrs, err := data.WithdrawalRequests()
-	switch {
-	case errors.Is(err, consensus_types.ErrUnsupportedField):
-	case err != nil:
-		return false, err
-	default:
+		wrs := epe.WithdrawalRequests()
 		if len(wrs) != 0 {
 			return false, nil
 		}
@@ -1013,6 +967,8 @@ type executionPayloadHeaderDeneb struct {
 	weiValue  math.Wei
 	gweiValue uint64
 }
+
+var _ interfaces.ExecutionData = &executionPayloadHeaderDeneb{}
 
 // WrappedExecutionPayloadHeaderDeneb is a constructor which wraps a protobuf execution header into an interface.
 func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value math.Wei) (interfaces.ExecutionData, error) {
@@ -1168,16 +1124,6 @@ func (e executionPayloadHeaderDeneb) ValueInGwei() (uint64, error) {
 	return e.gweiValue, nil
 }
 
-// DepositReceipts --
-func (e executionPayloadHeaderDeneb) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// WithdrawalRequests --
-func (e executionPayloadHeaderDeneb) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadHeaderDeneb) IsBlinded() bool {
 	return true
@@ -1191,6 +1137,8 @@ type executionPayloadDeneb struct {
 	weiValue  math.Wei
 	gweiValue uint64
 }
+
+var _ interfaces.ExecutionData = &executionPayloadDeneb{}
 
 // WrappedExecutionPayloadDeneb is a constructor which wraps a protobuf execution payload into an interface.
 func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value math.Wei) (interfaces.ExecutionData, error) {
@@ -1344,16 +1292,6 @@ func (e executionPayloadDeneb) ValueInGwei() (uint64, error) {
 	return e.gweiValue, nil
 }
 
-// DepositReceipts --
-func (e executionPayloadDeneb) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// WithdrawalRequests --
-func (e executionPayloadDeneb) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadDeneb) IsBlinded() bool {
 	return false
@@ -1367,6 +1305,9 @@ type executionPayloadHeaderElectra struct {
 	weiValue  math.Wei
 	gweiValue uint64
 }
+
+var _ interfaces.ExecutionData = &executionPayloadElectra{}
+var _ interfaces.ExecutionDataElectra = &executionPayloadElectra{}
 
 // WrappedExecutionPayloadHeaderElectra is a constructor which wraps a protobuf execution header into an interface.
 func WrappedExecutionPayloadHeaderElectra(p *enginev1.ExecutionPayloadHeaderElectra, value math.Wei) (interfaces.ExecutionData, error) {
@@ -1575,6 +1516,9 @@ func WrappedExecutionPayloadElectra(p *enginev1.ExecutionPayloadElectra, value m
 	return w, nil
 }
 
+var _ interfaces.ExecutionData = &executionPayloadElectra{}
+var _ interfaces.ExecutionDataElectra = &executionPayloadElectra{}
+
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadElectra) IsNil() bool {
 	return e.p == nil
@@ -1739,13 +1683,13 @@ func (e executionPayloadElectra) ValueInGwei() (uint64, error) {
 }
 
 // DepositReceipts --
-func (e executionPayloadElectra) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
-	return e.p.DepositReceipts, nil
+func (e executionPayloadElectra) DepositReceipts() []*enginev1.DepositReceipt {
+	return e.p.DepositReceipts
 }
 
 // WithdrawalRequests --
-func (e executionPayloadElectra) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
-	return e.p.WithdrawalRequests, nil
+func (e executionPayloadElectra) WithdrawalRequests() []*enginev1.ExecutionLayerWithdrawalRequest {
+	return e.p.WithdrawalRequests
 }
 
 // IsBlinded returns true if the underlying data is blinded.
