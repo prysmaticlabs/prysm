@@ -77,6 +77,7 @@ type ReadOnlyBeaconBlockBody interface {
 	Execution() (ExecutionData, error)
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 	BlobKzgCommitments() ([][]byte, error)
+	Consolidations() ([]*ethpb.SignedConsolidation, error)
 }
 
 type SignedBeaconBlock interface {
@@ -132,6 +133,9 @@ type ExecutionData interface {
 	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
 	PbBellatrix() (*enginev1.ExecutionPayload, error)
 	PbDeneb() (*enginev1.ExecutionPayloadDeneb, error)
+	PbElectra() (*enginev1.ExecutionPayloadElectra, error)
 	ValueInWei() (math.Wei, error)
 	ValueInGwei() (uint64, error)
+	DepositReceipts() ([]*enginev1.DepositReceipt, error)
+	WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error)
 }
