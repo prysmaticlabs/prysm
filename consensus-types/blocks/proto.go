@@ -1122,3 +1122,32 @@ func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlock
 	}
 	return b, nil
 }
+
+func initBlindedBlockBodyFromProtoElectra(pb *eth.BlindedBeaconBlockBodyElectra) (*BeaconBlockBody, error) {
+	if pb == nil {
+		return nil, errNilBlockBody
+	}
+
+	ph, err := WrappedExecutionPayloadHeaderElectra(pb.ExecutionPayloadHeader, big.NewInt(0))
+	// We allow the payload to be nil
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
+		return nil, err
+	}
+	b := &BeaconBlockBody{
+		version:                  version.Electra,
+		randaoReveal:             bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:                 pb.Eth1Data,
+		graffiti:                 bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings:        pb.ProposerSlashings,
+		attesterSlashingsElectra: pb.AttesterSlashings,
+		attestationsElectra:      pb.Attestations,
+		deposits:                 pb.Deposits,
+		voluntaryExits:           pb.VoluntaryExits,
+		syncAggregate:            pb.SyncAggregate,
+		executionPayloadHeader:   ph,
+		blsToExecutionChanges:    pb.BlsToExecutionChanges,
+		blobKzgCommitments:       pb.BlobKzgCommitments,
+		signedConsolidations:     pb.Consolidations,
+	}
+	return b, nil
+}

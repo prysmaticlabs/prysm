@@ -135,8 +135,13 @@ type ExecutionData interface {
 	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
 	PbBellatrix() (*enginev1.ExecutionPayload, error)
 	PbDeneb() (*enginev1.ExecutionPayloadDeneb, error)
+	PbElectra() (*enginev1.ExecutionPayloadElectra, error)
 	ValueInWei() (math.Wei, error)
 	ValueInGwei() (uint64, error)
+	DepositReceipts() ([]*enginev1.DepositReceipt, error)
+	DepositReceiptsRoot() ([]byte, error)
+	WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error)
+	WithdrawalRequestsRoot() ([]byte, error)
 }
 
 type Attestation interface {

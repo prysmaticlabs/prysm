@@ -958,6 +958,73 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 	}, nil
 }
 
+// PayloadToHeaderElectra converts `payload` into execution payload header format.
+func PayloadToHeaderElectra(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeaderElectra, error) {
+	txs, err := payload.Transactions()
+	if err != nil {
+		return nil, err
+	}
+	txRoot, err := ssz.TransactionsRoot(txs)
+	if err != nil {
+		return nil, err
+	}
+	withdrawals, err := payload.Withdrawals()
+	if err != nil {
+		return nil, err
+	}
+	withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	if err != nil {
+		return nil, err
+	}
+	blobGasUsed, err := payload.BlobGasUsed()
+	if err != nil {
+		return nil, err
+	}
+	excessBlobGas, err := payload.ExcessBlobGas()
+	if err != nil {
+		return nil, err
+	}
+
+	depositReceipts, err := payload.DepositReceipts()
+	if err != nil {
+		return nil, err
+	}
+	depositReceiptsRoot, err := ssz.DepositReceiptSliceRoot(depositReceipts, fieldparams.MaxDepositReceiptsPerPayload)
+	if err != nil {
+		return nil, err
+	}
+	withdrawalRequests, err := payload.WithdrawalRequests()
+	if err != nil {
+		return nil, err
+	}
+	withdrawalRequestsRoot, err := ssz.WithdrawalRequestSliceRoot(withdrawalRequests, fieldparams.MaxWithdrawalRequestsPerPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	return &enginev1.ExecutionPayloadHeaderElectra{
+		ParentHash:             bytesutil.SafeCopyBytes(payload.ParentHash()),
+		FeeRecipient:           bytesutil.SafeCopyBytes(payload.FeeRecipient()),
+		StateRoot:              bytesutil.SafeCopyBytes(payload.StateRoot()),
+		ReceiptsRoot:           bytesutil.SafeCopyBytes(payload.ReceiptsRoot()),
+		LogsBloom:              bytesutil.SafeCopyBytes(payload.LogsBloom()),
+		PrevRandao:             bytesutil.SafeCopyBytes(payload.PrevRandao()),
+		BlockNumber:            payload.BlockNumber(),
+		GasLimit:               payload.GasLimit(),
+		GasUsed:                payload.GasUsed(),
+		Timestamp:              payload.Timestamp(),
+		ExtraData:              bytesutil.SafeCopyBytes(payload.ExtraData()),
+		BaseFeePerGas:          bytesutil.SafeCopyBytes(payload.BaseFeePerGas()),
+		BlockHash:              bytesutil.SafeCopyBytes(payload.BlockHash()),
+		TransactionsRoot:       txRoot[:],
+		WithdrawalsRoot:        withdrawalsRoot[:],
+		BlobGasUsed:            blobGasUsed,
+		ExcessBlobGas:          excessBlobGas,
+		DepositReceiptsRoot:    depositReceiptsRoot[:],
+		WithdrawalRequestsRoot: withdrawalRequestsRoot[:],
+	}, nil
+}
+
 // IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
 // a non-zero value, this function will return false.
 func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
