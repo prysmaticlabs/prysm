@@ -79,6 +79,9 @@ ssz_gen_marshal(
         "SignedBeaconBlockContentsDeneb",
         "BlindedBeaconBlockDeneb",
         "BlindedBeaconBlockBodyDeneb",
+        "SignedBlindedBeaconBlockElectra",
+        "BlindedBeaconBlockElectra",
+        "BlindedBeaconBlockBodyElectra",
         "SyncAggregate",
         "SyncCommitteeMessage",
         "SyncCommitteeContribution",
@@ -205,6 +208,7 @@ go_library(
         "attestation.go",
         "beacon_block.go",
         "cloners.go",
+        "eip_7251.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
         ":ssz_generated_files",  # keep
@@ -259,7 +263,10 @@ ssz_proto_files(
 
 go_test(
     name = "go_default_test",
-    srcs = ["cloners_test.go"],
+    srcs = [
+        "cloners_test.go",
+        "eip_7251_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//testing/assert:go_default_library",
