@@ -13,7 +13,7 @@ import (
 )
 
 // Proto converts the signed beacon block to a protobuf object.
-func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
+func (b *SignedBeaconBlock) Proto() (proto.Message, error) { // nolint:gocognit
 	if b == nil {
 		return nil, errNilBlock
 	}
@@ -164,7 +164,7 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 }
 
 // Proto converts the beacon block to a protobuf object.
-func (b *BeaconBlock) Proto() (proto.Message, error) {
+func (b *BeaconBlock) Proto() (proto.Message, error) { // nolint:gocognit
 	if b == nil {
 		return nil, nil
 	}
