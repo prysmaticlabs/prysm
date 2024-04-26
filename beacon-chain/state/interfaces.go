@@ -56,6 +56,7 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyParticipation
 	ReadOnlyInactivity
 	ReadOnlySyncCommittee
+	ReadOnlyElectra
 	ToProtoUnsafe() interface{}
 	ToProto() interface{}
 	GenesisTime() uint64
@@ -87,6 +88,8 @@ type WriteOnlyBeaconState interface {
 	WriteOnlyParticipation
 	WriteOnlyInactivity
 	WriteOnlySyncCommittee
+	WriteOnlyPendingBalanceDeposits
+	WriteOnlyElectra
 	SetGenesisTime(val uint64) error
 	SetGenesisValidatorsRoot(val []byte) error
 	SetSlot(val primitives.Slot) error
@@ -182,7 +185,7 @@ type ReadOnlyAttestations interface {
 
 // ReadOnlyWithdrawals defines a struct which only has read access to withdrawal methods.
 type ReadOnlyWithdrawals interface {
-	ExpectedWithdrawals() ([]*enginev1.Withdrawal, error)
+	ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, error)
 	NextWithdrawalValidatorIndex() (primitives.ValidatorIndex, error)
 	NextWithdrawalIndex() (uint64, error)
 }
@@ -202,6 +205,18 @@ type ReadOnlyInactivity interface {
 type ReadOnlySyncCommittee interface {
 	CurrentSyncCommittee() (*ethpb.SyncCommittee, error)
 	NextSyncCommittee() (*ethpb.SyncCommittee, error)
+}
+
+type ReadOnlyElectra interface {
+	ConsolidationBalanceToConsume() (uint64, error)
+	DepositBalanceToConsume() (uint64, error)
+	EarliestConsolidationEpoch() (primitives.Epoch, error)
+	PendingBalanceDeposits() ([]*ethpb.PendingBalanceDeposit, error)
+	PendingConsolidations() ([]*ethpb.PendingConsolidation, error)
+	NumPendingConsolidations() uint64
+	NumPendingPartialWithdrawals() uint64
+	ExitEpochAndUpdateChurn(exitBalance uint64) (primitives.Epoch, error)
+	PendingBalanceToWithdraw(idx primitives.ValidatorIndex) (uint64, error)
 }
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.
@@ -282,4 +297,19 @@ type WriteOnlyInactivity interface {
 type WriteOnlySyncCommittee interface {
 	SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error
 	SetNextSyncCommittee(val *ethpb.SyncCommittee) error
+}
+
+type WriteOnlyPendingBalanceDeposits interface {
+	AppendPendingBalanceDeposit(index primitives.ValidatorIndex, amount uint64) error
+}
+
+type WriteOnlyElectra interface {
+	SetConsolidationBalanceToConsume(gwei uint64) error
+	SetEarliestConsolidationEpoch(epoch primitives.Epoch) error
+	SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDeposit) error
+	SetDepositBalanceToConsume(gwei uint64) error
+	SetPendingConsolidations(val []*ethpb.PendingConsolidation) error
+	DequeuePartialWithdrawals(idx uint64) error
+	AppendPendingConsolidation(val *ethpb.PendingConsolidation) error
+	AppendPendingPartialWithdrawal(ppw *ethpb.PendingPartialWithdrawal) error
 }

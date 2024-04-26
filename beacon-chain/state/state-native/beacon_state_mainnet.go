@@ -57,8 +57,20 @@ type BeaconState struct {
 	latestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader
 	latestExecutionPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella
 	latestExecutionPayloadHeaderDeneb   *enginev1.ExecutionPayloadHeaderDeneb
+	latestExecutionPayloadHeaderElectra *enginev1.ExecutionPayloadHeaderElectra
 	nextWithdrawalIndex                 uint64
 	nextWithdrawalValidatorIndex        primitives.ValidatorIndex
+
+	// Electra fields
+	depositReceiptsStartIndex     uint64
+	depositBalanceToConsume       uint64 // Gwei
+	exitBalanceToConsume          uint64 // Gwei
+	earliestExitEpoch             primitives.Epoch
+	consolidationBalanceToConsume uint64 // Gwei
+	earliestConsolidationEpoch    primitives.Epoch
+	pendingBalanceDeposits        []*ethpb.PendingBalanceDeposit    // pending_balance_deposits: List[PendingBalanceDeposit, PENDING_BALANCE_DEPOSITS_LIMIT]
+	pendingPartialWithdrawals     []*ethpb.PendingPartialWithdrawal // pending_partial_withdrawals: List[PartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
+	pendingConsolidations         []*ethpb.PendingConsolidation     // pending_consolidations: List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]
 
 	id                    uint64
 	lock                  sync.RWMutex
@@ -164,6 +176,7 @@ func (b *BeaconState) MarshalJSON() ([]byte, error) {
 		LatestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapella,
 		NextWithdrawalIndex:                 b.nextWithdrawalIndex,
 		NextWithdrawalValidatorIndex:        b.nextWithdrawalValidatorIndex,
+		// TODO: Electra fields!
 	}
 	return json.Marshal(marshalable)
 }

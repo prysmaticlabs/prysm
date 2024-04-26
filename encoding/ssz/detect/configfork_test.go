@@ -126,6 +126,8 @@ func stateForVersion(v int) (state.BeaconState, error) {
 		return util.NewBeaconStateCapella()
 	case version.Deneb:
 		return util.NewBeaconStateDeneb()
+	case version.Electra:
+		return util.NewBeaconStateElectra()
 	default:
 		return nil, fmt.Errorf("unrecognized version %d", v)
 	}
