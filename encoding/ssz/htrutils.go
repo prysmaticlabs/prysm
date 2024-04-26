@@ -141,6 +141,56 @@ func WithdrawalSliceRoot(withdrawals []*enginev1.Withdrawal, limit uint64) ([32]
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
+// DepositReceiptSliceRoot computes the HTR of a slice of deposit receipts.
+// The limit parameter is used as input to the bitwise merkleization algorithm.
+func DepositReceiptSliceRoot(depositReceipts []*enginev1.DepositReceipt, limit uint64) ([32]byte, error) {
+	roots := make([][32]byte, len(depositReceipts))
+	for i := 0; i < len(depositReceipts); i++ {
+		r, err := depositReceipts[i].HashTreeRoot()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		roots[i] = r
+	}
+
+	bytesRoot, err := BitwiseMerkleize(roots, uint64(len(roots)), limit)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(depositReceipts))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
+// WithdrawalRequestSliceRoot computes the HTR of a slice of withdrawal requests from the EL.
+// The limit parameter is used as input to the bitwise merkleization algorithm.
+func WithdrawalRequestSliceRoot(withdrawalRequests []*enginev1.ExecutionLayerWithdrawalRequest, limit uint64) ([32]byte, error) {
+	roots := make([][32]byte, len(withdrawalRequests))
+	for i := 0; i < len(withdrawalRequests); i++ {
+		r, err := withdrawalRequests[i].HashTreeRoot()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		roots[i] = r
+	}
+
+	bytesRoot, err := BitwiseMerkleize(roots, uint64(len(roots)), limit)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(withdrawalRequests))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
 // ByteSliceRoot is a helper func to merkleize an arbitrary List[Byte, N]
 // this func runs Chunkify + MerkleizeVector
 // max length is dividable by 32 ( root length )
