@@ -153,6 +153,19 @@ type Attestation interface {
 	GetSignature() []byte
 }
 
+// TODO: remove unused methods
+type AttesterSlashing interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	GetFirstAttestation() ethpb.IndexedAtt
+	SetFirstAttestation(att ethpb.IndexedAtt)
+	GetSecondAttestation() ethpb.IndexedAtt
+	SetSecondAttestation(att ethpb.IndexedAtt)
+}
+
+// TODO: remove unused methods
 type AggregateAttestationAndProof interface {
 	proto.Message
 	ssz.Marshaler
@@ -166,6 +179,7 @@ type AggregateAttestationAndProof interface {
 	SetSelectionProof(proof []byte)
 }
 
+// TODO: remove unused methods
 type SignedAggregateAttestationAndProof interface {
 	proto.Message
 	ssz.Marshaler
