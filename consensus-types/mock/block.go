@@ -317,6 +317,10 @@ func (b *BeaconBlockBody) Attestations() []interfaces.Attestation {
 	panic("implement me")
 }
 
+func (b *BeaconBlockBody) Consolidations() ([]*eth.SignedConsolidation, error) {
+	panic("implement me")
+}
+
 func (b *BeaconBlockBody) Version() int {
 	panic("implement me")
 }
