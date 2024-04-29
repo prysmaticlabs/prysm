@@ -5,6 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -71,6 +72,25 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 		return nil, err
 	}
 
+	// RTFM: https://github.com/ethereum/consensus-specs/blob/dev/specs/electra/fork.md
+	// Find the earliest exit epoch
+	exitEpochs := make([]primitives.Epoch, 0)
+	for _, v := range state.Validators() {
+		if v.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, v.ExitEpoch)
+		}
+	}
+	if len(exitEpochs) == 0 {
+		exitEpochs = append(exitEpochs, time.CurrentEpoch(state))
+	}
+	var earliestExitEpoch primitives.Epoch
+	for _, e := range exitEpochs {
+		if e > earliestExitEpoch {
+			earliestExitEpoch = e
+		}
+	}
+	earliestExitEpoch++ // Increment to find the earliest possible exit epoch
+
 	s := &ethpb.BeaconStateElectra{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
@@ -126,6 +146,7 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 		HistoricalSummaries:          summaries,
 
 		// TODO: Verify these initial electra values are correct
+		// They are not zero!
 		DepositReceiptsStartIndex:     0,
 		DepositBalanceToConsume:       0,
 		ExitBalanceToConsume:          0,
@@ -136,6 +157,27 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 		PendingPartialWithdrawals:     nil,
 		PendingConsolidations:         nil,
 	}
+	// TODO: more logic to do
+	//post.exit_balance_to_consume = get_activation_exit_churn_limit(post)
+	//post.consolidation_balance_to_consume = get_consolidation_churn_limit(post)
+	//
+	//# [New in Electra:EIP7251]
+	//# add validators that are not yet active to pending balance deposits
+	//pre_activation = sorted([
+	//index for index, validator in enumerate(post.validators)
+	//if validator.activation_epoch == FAR_FUTURE_EPOCH
+	//], key=lambda index: (
+	//post.validators[index].activation_eligibility_epoch,
+	//index
+	//))
+	//
+	//for index in pre_activation:
+	//queue_entire_balance_and_reset_validator(post, ValidatorIndex(index))
+	//
+	//# Ensure early adopters of compounding credentials go through the activation churn
+	//for index, validator in enumerate(post.validators):
+	//if has_compounding_withdrawal_credential(validator):
+	//queue_excess_active_balance(post, ValidatorIndex(index))
 
 	return state_native.InitializeFromProtoUnsafeElectra(s)
 }
