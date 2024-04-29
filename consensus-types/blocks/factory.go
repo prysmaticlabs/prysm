@@ -265,6 +265,8 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p, big.NewInt(0))
 	case *enginev1.ExecutionPayloadDeneb:
 		wrappedPayload, wrapErr = WrappedExecutionPayloadDeneb(p, big.NewInt(0))
+	case *enginev1.ExecutionPayloadElectra:
+		wrappedPayload, wrapErr = WrappedExecutionPayloadElectra(p, big.NewInt(0))
 	default:
 		return nil, fmt.Errorf("%T is not a type of execution payload", p)
 	}
@@ -305,13 +307,21 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	var fullBlock interface{}
 	switch p := payload.(type) {
 	case *enginev1.ExecutionPayload:
-		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.Body().Attestations()))
 		for i, att := range b.Body().Attestations() {
 			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
+			if !ok {
+				return nil, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.Attestation{}, att)
 			}
+			atts[i] = a
+		}
+		attSlashings := make([]*eth.AttesterSlashing, len(b.Body().AttesterSlashings()))
+		for i, slashing := range b.Body().AttesterSlashings() {
+			s, ok := slashing.(*eth.AttesterSlashing)
+			if !ok {
+				return nil, fmt.Errorf("attester slashing has wrong type (expected %T, got %T)", &eth.AttesterSlashing{}, slashing)
+			}
+			attSlashings[i] = s
 		}
 		fullBlock = &eth.SignedBeaconBlockBellatrix{
 			Block: &eth.BeaconBlockBellatrix{
@@ -324,7 +334,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 					Eth1Data:          b.Body().Eth1Data(),
 					Graffiti:          graffiti[:],
 					ProposerSlashings: b.Body().ProposerSlashings(),
-					AttesterSlashings: b.Body().AttesterSlashings(),
+					AttesterSlashings: attSlashings,
 					Attestations:      atts,
 					Deposits:          b.Body().Deposits(),
 					VoluntaryExits:    b.Body().VoluntaryExits(),
@@ -339,13 +349,21 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		if err != nil {
 			return nil, err
 		}
-		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.Body().Attestations()))
 		for i, att := range b.Body().Attestations() {
 			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
+			if !ok {
+				return nil, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.Attestation{}, att)
 			}
+			atts[i] = a
+		}
+		attSlashings := make([]*eth.AttesterSlashing, len(b.Body().AttesterSlashings()))
+		for i, slashing := range b.Body().AttesterSlashings() {
+			s, ok := slashing.(*eth.AttesterSlashing)
+			if !ok {
+				return nil, fmt.Errorf("attester slashing has wrong type (expected %T, got %T)", &eth.AttesterSlashing{}, slashing)
+			}
+			attSlashings[i] = s
 		}
 		fullBlock = &eth.SignedBeaconBlockCapella{
 			Block: &eth.BeaconBlockCapella{
@@ -358,7 +376,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 					Eth1Data:              b.Body().Eth1Data(),
 					Graffiti:              graffiti[:],
 					ProposerSlashings:     b.Body().ProposerSlashings(),
-					AttesterSlashings:     b.Body().AttesterSlashings(),
+					AttesterSlashings:     attSlashings,
 					Attestations:          atts,
 					Deposits:              b.Body().Deposits(),
 					VoluntaryExits:        b.Body().VoluntaryExits(),
@@ -378,13 +396,21 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		if err != nil {
 			return nil, err
 		}
-		// TODO: extend to Electra
 		atts := make([]*eth.Attestation, len(b.Body().Attestations()))
 		for i, att := range b.Body().Attestations() {
 			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
+			if !ok {
+				return nil, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.Attestation{}, att)
 			}
+			atts[i] = a
+		}
+		attSlashings := make([]*eth.AttesterSlashing, len(b.Body().AttesterSlashings()))
+		for i, slashing := range b.Body().AttesterSlashings() {
+			s, ok := slashing.(*eth.AttesterSlashing)
+			if !ok {
+				return nil, fmt.Errorf("attester slashing has wrong type (expected %T, got %T)", &eth.AttesterSlashing{}, slashing)
+			}
+			attSlashings[i] = s
 		}
 		fullBlock = &eth.SignedBeaconBlockDeneb{
 			Block: &eth.BeaconBlockDeneb{
@@ -397,7 +423,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 					Eth1Data:              b.Body().Eth1Data(),
 					Graffiti:              graffiti[:],
 					ProposerSlashings:     b.Body().ProposerSlashings(),
-					AttesterSlashings:     b.Body().AttesterSlashings(),
+					AttesterSlashings:     attSlashings,
 					Attestations:          atts,
 					Deposits:              b.Body().Deposits(),
 					VoluntaryExits:        b.Body().VoluntaryExits(),
@@ -405,6 +431,59 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 					ExecutionPayload:      p,
 					BlsToExecutionChanges: blsToExecutionChanges,
 					BlobKzgCommitments:    commitments,
+				},
+			},
+			Signature: sig[:],
+		}
+	case *enginev1.ExecutionPayloadElectra:
+		blsToExecutionChanges, err := b.Body().BLSToExecutionChanges()
+		if err != nil {
+			return nil, err
+		}
+		commitments, err := b.Body().BlobKzgCommitments()
+		if err != nil {
+			return nil, err
+		}
+		consolidations, err := b.Body().Consolidations()
+		if err != nil {
+			return nil, err
+		}
+		atts := make([]*eth.AttestationElectra, len(b.Body().Attestations()))
+		for i, att := range b.Body().Attestations() {
+			a, ok := att.(*eth.AttestationElectra)
+			if !ok {
+				return nil, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.AttestationElectra{}, att)
+			}
+			atts[i] = a
+		}
+		attSlashings := make([]*eth.AttesterSlashingElectra, len(b.Body().AttesterSlashings()))
+		for i, slashing := range b.Body().AttesterSlashings() {
+			s, ok := slashing.(*eth.AttesterSlashingElectra)
+			if !ok {
+				return nil, fmt.Errorf("attester slashing has wrong type (expected %T, got %T)", &eth.AttesterSlashingElectra{}, slashing)
+			}
+			attSlashings[i] = s
+		}
+		fullBlock = &eth.SignedBeaconBlockElectra{
+			Block: &eth.BeaconBlockElectra{
+				Slot:          b.Slot(),
+				ProposerIndex: b.ProposerIndex(),
+				ParentRoot:    parentRoot[:],
+				StateRoot:     stateRoot[:],
+				Body: &eth.BeaconBlockBodyElectra{
+					RandaoReveal:          randaoReveal[:],
+					Eth1Data:              b.Body().Eth1Data(),
+					Graffiti:              graffiti[:],
+					ProposerSlashings:     b.Body().ProposerSlashings(),
+					AttesterSlashings:     attSlashings,
+					Attestations:          atts,
+					Deposits:              b.Body().Deposits(),
+					VoluntaryExits:        b.Body().VoluntaryExits(),
+					SyncAggregate:         syncAgg,
+					ExecutionPayload:      p,
+					BlsToExecutionChanges: blsToExecutionChanges,
+					BlobKzgCommitments:    commitments,
+					Consolidations:        consolidations,
 				},
 			},
 			Signature: sig[:],
