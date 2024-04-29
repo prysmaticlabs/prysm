@@ -202,20 +202,19 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if prysmtime.CanProcessEpoch(state) {
-			switch state.Version() {
-			case version.Phase0:
+			if state.Version() == version.Phase0 {
 				state, err = transition.ProcessEpochPrecompute(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Bellatrix, version.Capella, version.Deneb, version.Electra:
+			} else if state.Version() >= version.Altair {
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch")
 				}
-			default:
+			} else {
 				return nil, fmt.Errorf("unsupported beacon state version: %s", version.String(state.Version()))
 			}
 		}
