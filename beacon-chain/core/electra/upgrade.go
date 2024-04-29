@@ -1,6 +1,10 @@
 package electra
 
 import (
+	"sort"
+
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
@@ -157,27 +161,49 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 		PendingPartialWithdrawals:     nil,
 		PendingConsolidations:         nil,
 	}
-	// TODO: more logic to do
-	//post.exit_balance_to_consume = get_activation_exit_churn_limit(post)
-	//post.consolidation_balance_to_consume = get_consolidation_churn_limit(post)
-	//
+
+	tab, err := helpers.TotalActiveBalance(s) // TODO: need state readonly interface
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get total active balance")
+	}
+
+	s.ExitBalanceToConsume = helpers.ActivationExitChurnLimit(tab)
+	s.ConsolidationBalanceToConsume = helpers.ConsolidationChurnLimit(tab)
+
 	//# [New in Electra:EIP7251]
 	//# add validators that are not yet active to pending balance deposits
-	//pre_activation = sorted([
-	//index for index, validator in enumerate(post.validators)
-	//if validator.activation_epoch == FAR_FUTURE_EPOCH
-	//], key=lambda index: (
-	//post.validators[index].activation_eligibility_epoch,
-	//index
-	//))
-	//
-	//for index in pre_activation:
-	//queue_entire_balance_and_reset_validator(post, ValidatorIndex(index))
-	//
+
+	// Creating a slice to store indices of validators whose activation epoch is set to FAR_FUTURE_EPOCH
+	var preActivation []primitives.ValidatorIndex
+
+	for index, validator := range s.Validators {
+		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+			preActivation = append(preActivation, primitives.ValidatorIndex(index))
+		}
+	}
+
+	// Sorting preActivation based on a custom criteria
+	sort.Slice(preActivation, func(i, j int) bool {
+		// Comparing based on ActivationEligibilityEpoch and then by index if the epochs are the same
+		if s.Validators[preActivation[i]].ActivationEligibilityEpoch == s.Validators[preActivation[j]].ActivationEligibilityEpoch {
+			return preActivation[i] < preActivation[j]
+		}
+		return s.Validators[preActivation[i]].ActivationEligibilityEpoch < s.Validators[preActivation[j]].ActivationEligibilityEpoch
+	})
+
+	for _, index := range preActivation {
+		if err := QueueEntireBalanceAndResetValidator(s, index); err != nil {
+			return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
+		}
+	}
 	//# Ensure early adopters of compounding credentials go through the activation churn
-	//for index, validator in enumerate(post.validators):
-	//if has_compounding_withdrawal_credential(validator):
-	//queue_excess_active_balance(post, ValidatorIndex(index))
+	for index, validator := range s.Validators {
+		if helpers.HasCompoundingWithdrawalCredential(validator) {
+			if err := QueueEntireBalanceAndResetValidator(s, primitives.ValidatorIndex(index)); err != nil {
+				return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
+			}
+		}
+	}
 
 	return state_native.InitializeFromProtoUnsafeElectra(s)
 }
