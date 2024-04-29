@@ -66,6 +66,8 @@ ssz_gen_marshal(
         "BeaconBlockBodyCapella",
         "SignedBeaconBlockCapella",
         "BeaconBlockDeneb",
+	"BeaconBlockePBS",
+	"SignedBeaconBlockePBS",
         "BeaconBlockBodyDeneb",
         "SignedBeaconBlockDeneb",
         "BeaconBlockElectra",
