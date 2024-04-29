@@ -8,6 +8,7 @@ go_library(
         "epoch.go",
         "execution_address.go",
         "payload_id.go",
+        "ptc_status.go",
         "randao.go",
         "slot.go",
         "sszbytes.go",
