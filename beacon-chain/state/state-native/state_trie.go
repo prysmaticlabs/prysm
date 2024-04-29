@@ -93,17 +93,32 @@ var denebFields = append(
 	types.HistoricalSummaries,
 )
 
+var electraFields = append(
+	denebFields,
+	types.DepositReceiptsStartIndex,
+	types.DepositBalanceToConsume,
+	types.ExitBalanceToConsume,
+	types.EarliestExitEpoch,
+	types.ConsolidationBalanceToConsume,
+	types.EarliestConsolidationEpoch,
+	types.PendingBalanceDeposits,
+	types.PendingPartialWithdrawals,
+	types.PendingConsolidations,
+)
+
 const (
 	phase0SharedFieldRefCount                     = 10
 	altairSharedFieldRefCount                     = 11
 	bellatrixSharedFieldRefCount                  = 12
 	capellaSharedFieldRefCount                    = 14
 	denebSharedFieldRefCount                      = 14
+	electraSharedFieldRefCount                    = 17
 	experimentalStatePhase0SharedFieldRefCount    = 5
 	experimentalStateAltairSharedFieldRefCount    = 5
 	experimentalStateBellatrixSharedFieldRefCount = 6
 	experimentalStateCapellaSharedFieldRefCount   = 8
 	experimentalStateDenebSharedFieldRefCount     = 8
+	experimentalStateElectraSharedFieldRefCount   = 8 // TODO: Is this correct?
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
@@ -697,38 +712,38 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 
 	fieldCount := params.BeaconConfig().BeaconStateElectraFieldCount
 	b := &BeaconState{
-		version:                             version.Electra,
-		genesisTime:                         st.GenesisTime,
-		genesisValidatorsRoot:               bytesutil.ToBytes32(st.GenesisValidatorsRoot),
-		slot:                                st.Slot,
-		fork:                                st.Fork,
-		latestBlockHeader:                   st.LatestBlockHeader,
-		historicalRoots:                     hRoots,
-		eth1Data:                            st.Eth1Data,
-		eth1DataVotes:                       st.Eth1DataVotes,
-		eth1DepositIndex:                    st.Eth1DepositIndex,
-		slashings:                           st.Slashings,
-		previousEpochParticipation:          st.PreviousEpochParticipation,
-		currentEpochParticipation:           st.CurrentEpochParticipation,
-		justificationBits:                   st.JustificationBits,
-		previousJustifiedCheckpoint:         st.PreviousJustifiedCheckpoint,
-		currentJustifiedCheckpoint:          st.CurrentJustifiedCheckpoint,
-		finalizedCheckpoint:                 st.FinalizedCheckpoint,
-		currentSyncCommittee:                st.CurrentSyncCommittee,
-		nextSyncCommittee:                   st.NextSyncCommittee,
-		latestExecutionPayloadHeaderElectra: st.LatestExecutionPayloadHeader,
-		nextWithdrawalIndex:                 st.NextWithdrawalIndex,
-		nextWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
-		historicalSummaries:                 st.HistoricalSummaries,
-		depositReceiptsStartIndex:           st.DepositReceiptsStartIndex,
-		depositBalanceToConsume:             st.DepositBalanceToConsume,
-		exitBalanceToConsume:                st.ExitBalanceToConsume,
-		earliestExitEpoch:                   st.EarliestExitEpoch,
-		consolidationBalanceToConsume:       st.ConsolidationBalanceToConsume,
-		earliestConsolidationEpoch:          st.EarliestConsolidationEpoch,
-		pendingBalanceDeposits:              st.PendingBalanceDeposits,
-		pendingPartialWithdrawals:           st.PendingPartialWithdrawals,
-		pendingConsolidations:               st.PendingConsolidations,
+		version:                     version.Electra,
+		genesisTime:                 st.GenesisTime,
+		genesisValidatorsRoot:       bytesutil.ToBytes32(st.GenesisValidatorsRoot),
+		slot:                        st.Slot,
+		fork:                        st.Fork,
+		latestBlockHeader:           st.LatestBlockHeader,
+		historicalRoots:             hRoots,
+		eth1Data:                    st.Eth1Data,
+		eth1DataVotes:               st.Eth1DataVotes,
+		eth1DepositIndex:            st.Eth1DepositIndex,
+		slashings:                   st.Slashings,
+		previousEpochParticipation:  st.PreviousEpochParticipation,
+		currentEpochParticipation:   st.CurrentEpochParticipation,
+		justificationBits:           st.JustificationBits,
+		previousJustifiedCheckpoint: st.PreviousJustifiedCheckpoint,
+		currentJustifiedCheckpoint:  st.CurrentJustifiedCheckpoint,
+		finalizedCheckpoint:         st.FinalizedCheckpoint,
+		currentSyncCommittee:        st.CurrentSyncCommittee,
+		nextSyncCommittee:           st.NextSyncCommittee,
+		//latestExecutionPayloadHeaderElectra: st.LatestExecutionPayloadHeader,
+		nextWithdrawalIndex:          st.NextWithdrawalIndex,
+		nextWithdrawalValidatorIndex: st.NextWithdrawalValidatorIndex,
+		historicalSummaries:          st.HistoricalSummaries,
+		//depositReceiptsStartIndex:           st.DepositReceiptsStartIndex,
+		//depositBalanceToConsume:             st.DepositBalanceToConsume,
+		//exitBalanceToConsume:                st.ExitBalanceToConsume,
+		//earliestExitEpoch:                   st.EarliestExitEpoch,
+		//consolidationBalanceToConsume:       st.ConsolidationBalanceToConsume,
+		//earliestConsolidationEpoch:          st.EarliestConsolidationEpoch,
+		//pendingBalanceDeposits:              st.PendingBalanceDeposits,
+		//pendingPartialWithdrawals:           st.PendingPartialWithdrawals,
+		//pendingConsolidations:               st.PendingConsolidations,
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
