@@ -66,7 +66,7 @@ func NewMockBlobStorageSummarizer(t *testing.T, set map[[32]byte][]int) BlobStor
 	c := newBlobStorageCache()
 	for k, v := range set {
 		for i := range v {
-			if err := c.ensure(rootString(k), 0, uint64(v[i])); err != nil {
+			if err := c.ensure(k, 0, uint64(v[i])); err != nil {
 				t.Fatal(err)
 			}
 		}

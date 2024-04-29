@@ -40,9 +40,8 @@ message PendingPartialWithdrawal {
     uint64 amount = 2;
 
     // A partial withdrawal is valid at this epoch or later.
-    uint64 withdrawable_epoch = 3;
+    uint64 withdrawable_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 }
-
 
 message Consolidation {
     // Validator from which the funds will be moved.
@@ -52,7 +51,6 @@ message Consolidation {
     // A consolidation is valid at this epoch or later.
     uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 }
-
 
 message SignedConsolidation {
     // The unsigned consolidation itself.

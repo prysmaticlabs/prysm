@@ -48,7 +48,7 @@ func TestSlotByRoot_Summary(t *testing.T) {
 	sc := newBlobStorageCache()
 	for _, c := range cases {
 		if c.expected != nil {
-			key := rootString(bytesutil.ToBytes32([]byte(c.name)))
+			key := bytesutil.ToBytes32([]byte(c.name))
 			sc.cache[key] = BlobStorageSummary{slot: 0, mask: *c.expected}
 		}
 	}

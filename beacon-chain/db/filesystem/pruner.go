@@ -64,7 +64,7 @@ func newBlobPruner(fs afero.Fs, retain primitives.Epoch, opts ...prunerOpt) (*bl
 // notify updates the pruner's view of root->blob mappings. This allows the pruner to build a cache
 // of root->slot mappings and decide when to evict old blobs based on the age of present blobs.
 func (p *blobPruner) notify(root [32]byte, latest primitives.Slot, idx uint64) error {
-	if err := p.cache.ensure(rootString(root), latest, idx); err != nil {
+	if err := p.cache.ensure(root, latest, idx); err != nil {
 		return err
 	}
 	pruned := uint64(windowMin(latest, p.windowSize))
@@ -160,7 +160,10 @@ func shouldRetain(slot, pruneBefore primitives.Slot) bool {
 }
 
 func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, error) {
-	root := rootFromDir(dir)
+	root, err := rootFromDir(dir)
+	if err != nil {
+		return 0, errors.Wrapf(err, "invalid directory, could not parse subdir as root %s", dir)
+	}
 	slot, slotCached := p.cache.slot(root)
 	// Return early if the slot is cached and doesn't need pruning.
 	if slotCached && shouldRetain(slot, pruneBefore) {
@@ -218,7 +221,7 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 		return removed, errors.Wrapf(err, "unable to remove blob directory %s", dir)
 	}
 
-	p.cache.evict(rootFromDir(dir))
+	p.cache.evict(root)
 	return len(scFiles), nil
 }
 
@@ -235,8 +238,13 @@ func idxFromPath(fname string) (uint64, error) {
 	return strconv.ParseUint(parts[0], 10, 64)
 }
 
-func rootFromDir(dir string) string {
-	return filepath.Base(dir) // end of the path should be the blob directory, named by hex encoding of root
+func rootFromDir(dir string) ([32]byte, error) {
+	subdir := filepath.Base(dir) // end of the path should be the blob directory, named by hex encoding of root
+	root, err := stringToRoot(subdir)
+	if err != nil {
+		return root, errors.Wrapf(err, "invalid directory, could not parse subdir as root %s", dir)
+	}
+	return root, nil
 }
 
 // Read slot from marshaled BlobSidecar data in the given file. See slotFromBlob for details.
