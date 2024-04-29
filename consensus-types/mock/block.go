@@ -75,6 +75,14 @@ func (SignedBeaconBlock) PbBlindedDenebBlock() (*eth.SignedBlindedBeaconBlockDen
 	panic("implement me")
 }
 
+func (SignedBeaconBlock) PbElectraBlock() (*eth.SignedBeaconBlockElectra, error) {
+	panic("implement me")
+}
+
+func (SignedBeaconBlock) PbBlindedElectraBlock() (*eth.SignedBlindedBeaconBlockElectra, error) {
+	panic("implement me")
+}
+
 func (SignedBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
 	panic("implement me")
 }
@@ -284,7 +292,15 @@ func (b *BeaconBlockBody) SetAttesterSlashings([]*eth.AttesterSlashing) {
 	panic("implement me")
 }
 
+func (b *BeaconBlockBody) SetAttesterSlashingsElectra([]*eth.AttesterSlashingElectra) {
+	panic("implement me")
+}
+
 func (b *BeaconBlockBody) SetAttestations([]*eth.Attestation) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetAttestationsElectra([]*eth.AttestationElectra) {
 	panic("implement me")
 }
 
@@ -318,6 +334,10 @@ func (b *BeaconBlockBody) Attestations() []interfaces.Attestation {
 }
 
 func (b *BeaconBlockBody) Consolidations() ([]*eth.SignedConsolidation, error) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetConsolidations([]*eth.SignedConsolidation) error {
 	panic("implement me")
 }
 

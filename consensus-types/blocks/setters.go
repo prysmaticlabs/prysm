@@ -137,7 +137,7 @@ func (b *SignedBeaconBlock) SetBlobKzgCommitments(c [][]byte) error {
 	switch b.version {
 	case version.Phase0, version.Altair, version.Bellatrix, version.Capella:
 		return consensus_types.ErrNotSupported("SetBlobKzgCommitments", b.version)
-	case version.Deneb:
+	case version.Deneb, version.Electra:
 		b.block.body.blobKzgCommitments = c
 		return nil
 	default:

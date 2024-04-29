@@ -81,6 +81,13 @@ func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 		}
 		cp := eth.CopySignedBeaconBlockDeneb(pb.(*eth.SignedBeaconBlockDeneb))
 		return initSignedBlockFromProtoDeneb(cp)
+	case version.Electra:
+		if b.IsBlinded() {
+			cp := eth.CopySignedBlindedBeaconBlockElectra(pb.(*eth.SignedBlindedBeaconBlockElectra))
+			return initBlindedSignedBlockFromProtoElectra(cp)
+		}
+		cp := eth.CopySignedBeaconBlockElectra(pb.(*eth.SignedBeaconBlockElectra))
+		return initSignedBlockFromProtoElectra(cp)
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -127,6 +134,15 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 		}
 		return &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: pb.(*eth.SignedBeaconBlockContentsDeneb)},
+		}, nil
+	case version.Electra:
+		if b.IsBlinded() {
+			return &eth.GenericSignedBeaconBlock{
+				Block: &eth.GenericSignedBeaconBlock_BlindedElectra{BlindedElectra: pb.(*eth.SignedBlindedBeaconBlockElectra)},
+			}, nil
+		}
+		return &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Electra{Electra: pb.(*eth.SignedBeaconBlockContentsElectra)},
 		}, nil
 	default:
 		return nil, errIncorrectBlockVersion
@@ -1177,8 +1193,20 @@ func (b *BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 }
 
 // AttesterSlashings returns the attester slashings in the block.
-func (b *BeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
-	return b.attesterSlashings
+func (b *BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
+	var attestations []interfaces.AttesterSlashing
+	if b.version >= version.Electra {
+		attestations = make([]interfaces.AttesterSlashing, len(b.attesterSlashingsElectra))
+		for i, att := range b.attesterSlashingsElectra {
+			attestations[i] = att
+		}
+		return attestations
+	}
+	attestations = make([]interfaces.AttesterSlashing, len(b.attesterSlashings))
+	for i, att := range b.attesterSlashings {
+		attestations[i] = att
+	}
+	return attestations
 }
 
 // AttesterSlashingsElectra returns the attester slashings in the block.

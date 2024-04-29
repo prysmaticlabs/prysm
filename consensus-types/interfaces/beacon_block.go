@@ -69,7 +69,7 @@ type ReadOnlyBeaconBlockBody interface {
 	Eth1Data() *ethpb.Eth1Data
 	Graffiti() [field_params.RootLength]byte
 	ProposerSlashings() []*ethpb.ProposerSlashing
-	AttesterSlashings() []*ethpb.AttesterSlashing
+	AttesterSlashings() []AttesterSlashing
 	Attestations() []Attestation
 	Deposits() []*ethpb.Deposit
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
@@ -169,23 +169,10 @@ type AttesterSlashing interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
-	GetAttestationOnePreElectra() ethpb.IndexedAttestation
-	SetAttestationOnePreElectra(ethpb.IndexedAttestation)
-	GetAttestationTwo() IndexedAttestation
-	SetAttestationTwo(IndexedAttestation)
-}
-
-type IndexedAttestation interface {
-	proto.Message
-	ssz.Marshaler
-	ssz.Unmarshaler
-	ssz.HashRoot
-	GetAttestingIndicesVal() []uint64
-	SetAttestingIndicesVal([]uint64)
-	GetData() *ethpb.AttestationData
-	SetData(*ethpb.AttestationData)
-	GetSignature() []byte
-	SetSignature(sig []byte)
+	GetAttestationOne() ethpb.GeneralIndexedAttestation
+	SetAttestationOne(ethpb.GeneralIndexedAttestation)
+	GetAttestationTwo() ethpb.GeneralIndexedAttestation
+	SetAttestationTwo(ethpb.GeneralIndexedAttestation)
 }
 
 type AggregateAttestationAndProof interface {

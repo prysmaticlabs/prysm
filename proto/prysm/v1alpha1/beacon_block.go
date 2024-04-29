@@ -1,6 +1,45 @@
 package eth
 
+import (
+	ssz "github.com/prysmaticlabs/fastssz"
+	"google.golang.org/protobuf/proto"
+)
+
+type GeneralIndexedAttestation interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	GetAttestingIndicesVal() []uint64
+	SetAttestingIndicesVal([]uint64)
+	GetData() *AttestationData
+	SetData(*AttestationData)
+	GetSignature() []byte
+	SetSignature(sig []byte)
+}
+
 //TODO: consider replacing this entirely... indexattestation doesn't need to be a protobuf
+
+func (a *AttesterSlashing) GetAttestationOne() GeneralIndexedAttestation {
+	return a.Attestation_1
+}
+func (a *AttesterSlashing) SetAttestationOne(att GeneralIndexedAttestation) {
+	at, ok := att.(*IndexedAttestation)
+	//TODO: should this error?
+	if ok {
+		a.Attestation_1 = at
+	}
+}
+func (a *AttesterSlashing) GetAttestationTwo() GeneralIndexedAttestation {
+	return a.Attestation_2
+}
+func (a *AttesterSlashing) SetAttestationTwo(att GeneralIndexedAttestation) {
+	at, ok := att.(*IndexedAttestation)
+	//TODO: should this error?
+	if ok {
+		a.Attestation_2 = at
+	}
+}
 
 func (a *IndexedAttestation) GetAttestingIndicesVal() []uint64 {
 	return a.AttestingIndices
@@ -15,6 +54,27 @@ func (a *IndexedAttestation) SetData(data *AttestationData) {
 
 func (a *IndexedAttestation) SetSignature(sig []byte) {
 	a.Signature = sig
+}
+
+func (a *AttesterSlashingElectra) GetAttestationOne() GeneralIndexedAttestation {
+	return a.Attestation_1
+}
+func (a *AttesterSlashingElectra) SetAttestationOne(att GeneralIndexedAttestation) {
+	at, ok := att.(*IndexedAttestationElectra)
+	//TODO: should this error?
+	if ok {
+		a.Attestation_1 = at
+	}
+}
+func (a *AttesterSlashingElectra) GetAttestationTwo() GeneralIndexedAttestation {
+	return a.Attestation_2
+}
+func (a *AttesterSlashingElectra) SetAttestationTwo(att GeneralIndexedAttestation) {
+	at, ok := att.(*IndexedAttestationElectra)
+	//TODO: should this error?
+	if ok {
+		a.Attestation_2 = at
+	}
 }
 
 func (a *IndexedAttestationElectra) GetAttestingIndicesVal() []uint64 {
