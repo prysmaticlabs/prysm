@@ -38,7 +38,7 @@ import (
 //	     data=attestation.data,
 //	     signature=attestation.signature,
 //	 )
-func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committees [][]primitives.ValidatorIndex) (*ethpb.IndexedAttestation, error) {
+func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committees [][]primitives.ValidatorIndex) (ethpb.IndexedAtt, error) {
 	attIndices, err := AttestingIndices(attestation, committees)
 	if err != nil {
 		return nil, err
@@ -47,12 +47,19 @@ func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, c
 	sort.Slice(attIndices, func(i, j int) bool {
 		return attIndices[i] < attIndices[j]
 	})
-	inAtt := &ethpb.IndexedAttestation{
+
+	if attestation.Version() < version.Electra {
+		return &ethpb.IndexedAttestation{
+			Data:             attestation.GetData(),
+			Signature:        attestation.GetSignature(),
+			AttestingIndices: attIndices,
+		}, nil
+	}
+	return &ethpb.IndexedAttestationElectra{
 		Data:             attestation.GetData(),
 		Signature:        attestation.GetSignature(),
 		AttestingIndices: attIndices,
-	}
-	return inAtt, err
+	}, nil
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data. The
@@ -126,17 +133,17 @@ func AttestingIndices(att interfaces.Attestation, committees [][]primitives.Vali
 //	 domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //	 signing_root = compute_signing_root(indexed_attestation.data, domain)
 //	 return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKeys []bls.PublicKey, domain []byte) error {
+func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt ethpb.IndexedAtt, pubKeys []bls.PublicKey, domain []byte) error {
 	_, span := trace.StartSpan(ctx, "attestationutil.VerifyIndexedAttestationSig")
 	defer span.End()
-	indices := indexedAtt.AttestingIndices
+	indices := indexedAtt.GetAttestingIndices()
 
-	messageHash, err := signing.ComputeSigningRoot(indexedAtt.Data, domain)
+	messageHash, err := signing.ComputeSigningRoot(indexedAtt.GetData(), domain)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of object")
 	}
 
-	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
+	sig, err := bls.SignatureFromBytes(indexedAtt.GetSignature())
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
@@ -167,14 +174,17 @@ func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedA
 //	  domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //	  signing_root = compute_signing_root(indexed_attestation.data, domain)
 //	  return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.IndexedAttestation) error {
+func IsValidAttestationIndices(ctx context.Context, indexedAttestation ethpb.IndexedAtt) error {
 	_, span := trace.StartSpan(ctx, "attestationutil.IsValidAttestationIndices")
 	defer span.End()
 
-	if indexedAttestation == nil || indexedAttestation.Data == nil || indexedAttestation.Data.Target == nil || indexedAttestation.AttestingIndices == nil {
+	if indexedAttestation == nil ||
+		indexedAttestation.GetData() == nil ||
+		indexedAttestation.GetData().Target == nil ||
+		indexedAttestation.GetAttestingIndices() == nil {
 		return errors.New("nil or missing indexed attestation data")
 	}
-	indices := indexedAttestation.AttestingIndices
+	indices := indexedAttestation.GetAttestingIndices()
 	if len(indices) == 0 {
 		return errors.New("expected non-empty attesting indices")
 	}

@@ -168,9 +168,9 @@ func (s *Service) checkDoubleVotes(
 	existingAttWrappers := make(map[attestationInfo]*slashertypes.IndexedAttestationWrapper)
 
 	for _, incomingAttWrapper := range incomingAttWrappers {
-		targetEpoch := incomingAttWrapper.IndexedAttestation.Data.Target.Epoch
+		targetEpoch := incomingAttWrapper.IndexedAttestation.GetData().Target.Epoch
 
-		for _, validatorIndex := range incomingAttWrapper.IndexedAttestation.AttestingIndices {
+		for _, validatorIndex := range incomingAttWrapper.IndexedAttestation.GetAttestingIndices() {
 			info := attestationInfo{
 				validatorIndex: validatorIndex,
 				epoch:          targetEpoch,
@@ -438,7 +438,7 @@ func (s *Service) updateSpans(
 
 	for _, attWrappers := range attWrapperByChunkIdx {
 		for _, attWrapper := range attWrappers {
-			for _, validatorIdx := range attWrapper.IndexedAttestation.AttestingIndices {
+			for _, validatorIdx := range attWrapper.IndexedAttestation.GetAttestingIndices() {
 				validatorIndex := primitives.ValidatorIndex(validatorIdx)
 				computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
 
@@ -499,8 +499,8 @@ func (s *Service) applyAttestationForValidator(
 
 	var err error
 
-	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
-	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
+	sourceEpoch := attestation.IndexedAttestation.GetData().Source.Epoch
+	targetEpoch := attestation.IndexedAttestation.GetData().Target.Epoch
 
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
 	chunkIndex := s.params.chunkIndex(sourceEpoch)

@@ -22,7 +22,7 @@ const (
 // Receive indexed attestations from some source event feed,
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
-func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan *ethpb.IndexedAttestation) {
+func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan ethpb.IndexedAtt) {
 	defer s.wg.Done()
 
 	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(indexedAttsChan)
@@ -33,7 +33,7 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
-			dataRoot, err := att.Data.HashTreeRoot()
+			dataRoot, err := att.GetData().HashTreeRoot()
 			if err != nil {
 				log.WithError(err).Error("Could not get hash tree root of attestation")
 				continue

@@ -110,8 +110,8 @@ func (s *Service) verifyBlockSignature(ctx context.Context, header *ethpb.Signed
 	return blocks.VerifyBlockHeaderSignature(parentState, header)
 }
 
-func (s *Service) verifyAttSignature(ctx context.Context, att *ethpb.IndexedAttestation) error {
-	preState, err := s.serviceCfg.AttestationStateFetcher.AttestationTargetState(ctx, att.Data.Target)
+func (s *Service) verifyAttSignature(ctx context.Context, att ethpb.IndexedAtt) error {
+	preState, err := s.serviceCfg.AttestationStateFetcher.AttestationTargetState(ctx, att.GetData().Target)
 	if err != nil {
 		return err
 	}

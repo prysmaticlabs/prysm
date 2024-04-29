@@ -71,6 +71,18 @@ service BeaconChain {
         };
     }
 
+    // Retrieve indexed attestations by block root, slot, or epoch.
+    //
+    // The server may return an empty list when no indexed attestations match the given
+    // filter criteria. This RPC should not return NOT_FOUND. Only one filter
+    // criteria should be used. This endpoint allows for retrieval of genesis
+    // information via a boolean query filter.
+    rpc ListIndexedAttestationsElectra(ListIndexedAttestationsRequest) returns (ListIndexedAttestationsResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/attestations/indexed_electra"
+        };
+    }
+
     // Retrieve attestations from pool.
     //
     // The server returns a list of attestations that have been seen but not
@@ -315,6 +327,18 @@ message ListAttestationsResponseElectra {
 
 message ListIndexedAttestationsResponse {
     repeated IndexedAttestation indexed_attestations = 1;
+
+    // A pagination token returned from a previous call to `ListIndexedAttestations`
+    // that indicates from where listing should continue.
+    // This field is optional.
+    string next_page_token = 2;
+
+    // Total count of Attestations matching the request filter.
+    int32 total_size = 3;
+}
+
+message ListIndexedAttestationsElectraResponse {
+    repeated IndexedAttestationElectra indexed_attestations = 1;
 
     // A pagination token returned from a previous call to `ListIndexedAttestations`
     // that indicates from where listing should continue.

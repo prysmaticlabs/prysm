@@ -186,8 +186,8 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	validatorIdx primitives.ValidatorIndex,
 	incomingAttWrapper *slashertypes.IndexedAttestationWrapper,
 ) (*ethpb.AttesterSlashing, error) {
-	sourceEpoch := incomingAttWrapper.IndexedAttestation.Data.Source.Epoch
-	targetEpoch := incomingAttWrapper.IndexedAttestation.Data.Target.Epoch
+	sourceEpoch := incomingAttWrapper.IndexedAttestation.GetData().Source.Epoch
+	targetEpoch := incomingAttWrapper.IndexedAttestation.GetData().Target.Epoch
 
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
@@ -221,7 +221,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 		return nil, nil
 	}
 
-	if existingAttWrapper.IndexedAttestation.Data.Source.Epoch <= sourceEpoch {
+	if existingAttWrapper.IndexedAttestation.GetData().Source.Epoch <= sourceEpoch {
 		// This case should normally not happen, since if we have targetEpoch > minTarget,
 		// then there is at least one attestation we surround.
 		// However, it can happens if we have multiple attestation with the same target
@@ -265,8 +265,8 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	validatorIdx primitives.ValidatorIndex,
 	incomingAttWrapper *slashertypes.IndexedAttestationWrapper,
 ) (*ethpb.AttesterSlashing, error) {
-	sourceEpoch := incomingAttWrapper.IndexedAttestation.Data.Source.Epoch
-	targetEpoch := incomingAttWrapper.IndexedAttestation.Data.Target.Epoch
+	sourceEpoch := incomingAttWrapper.IndexedAttestation.GetData().Source.Epoch
+	targetEpoch := incomingAttWrapper.IndexedAttestation.GetData().Target.Epoch
 
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
@@ -300,7 +300,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 		return nil, nil
 	}
 
-	if existingAttWrapper.IndexedAttestation.Data.Source.Epoch >= sourceEpoch {
+	if existingAttWrapper.IndexedAttestation.GetData().Source.Epoch >= sourceEpoch {
 		// This case should normally not happen, since if we have targetEpoch < maxTarget,
 		// then there is at least one attestation that surrounds us.
 		// However, it can happens if we have multiple attestation with the same target

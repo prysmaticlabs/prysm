@@ -95,17 +95,17 @@ func (s *Service) filterAttestations(
 // source and target epochs, and that the source epoch of the attestation must
 // be less than the target epoch, which is a precondition for performing slashing
 // detection (except for the genesis epoch).
-func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
+func validateAttestationIntegrity(att ethpb.IndexedAtt) bool {
 	// If an attestation is malformed, we drop it.
 	if att == nil ||
-		att.Data == nil ||
-		att.Data.Source == nil ||
-		att.Data.Target == nil {
+		att.GetData() == nil ||
+		att.GetData().Source == nil ||
+		att.GetData().Target == nil {
 		return false
 	}
 
-	sourceEpoch := att.Data.Source.Epoch
-	targetEpoch := att.Data.Target.Epoch
+	sourceEpoch := att.GetData().Source.Epoch
+	targetEpoch := att.GetData().Target.Epoch
 
 	// The genesis epoch is a special case, since all attestations formed in it
 	// will have source and target 0, and they should be considered valid.

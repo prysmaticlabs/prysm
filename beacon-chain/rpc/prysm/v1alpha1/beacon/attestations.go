@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -186,7 +187,11 @@ func (bs *Server) ListIndexedAttestations(
 			if err != nil {
 				return nil, err
 			}
-			indexedAtts = append(indexedAtts, idxAtt)
+			a, ok := idxAtt.(*ethpb.IndexedAttestation)
+			if !ok {
+				return nil, fmt.Errorf("indexed attestation is of the wrong type (expected %T, got %T)", &ethpb.IndexedAttestation{}, idxAtt)
+			}
+			indexedAtts = append(indexedAtts, a)
 		}
 	}
 
