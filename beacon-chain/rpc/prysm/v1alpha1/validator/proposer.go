@@ -277,69 +277,15 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	}
 
 	if block.IsBlinded() {
-		if block.Version() < version.Bellatrix {
-			return nil, errors.New("pre-Bellatrix blinded block")
-		}
-		if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
-			return nil, errors.New("unconfigured block builder")
-		}
-
-		copiedBlock, err := block.Copy()
+		block, blobSidecars, dataColumnSideCars, err = vs.handleBlindedBlock(ctx, block, isPeerDASEnabled)
 		if err != nil {
-			return nil, errors.Wrap(err, "block copy")
-		}
-
-		payload, bundle, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, block)
-		if err != nil {
-			return nil, errors.Wrap(err, "submit blinded block")
-		}
-
-		if err := copiedBlock.Unblind(payload); err != nil {
-			return nil, errors.Wrap(err, "unblind")
-		}
-
-		if isPeerDASEnabled {
-			dataColumnSideCars, err = unblindDataColumnsSidecars(copiedBlock, bundle)
-			if err != nil {
-				return nil, errors.Wrap(err, "unblind data columns sidecars")
-			}
-		} else {
-			blobSidecars, err = unblindBlobsSidecars(copiedBlock, bundle)
-			if err != nil {
-				return nil, errors.Wrap(err, "unblind blobs sidecars")
-			}
+			return nil, status.Errorf(codes.Internal, "%s: %v", "handle blinded block", err)
 		}
 	} else {
-		dbBlockContents := req.GetDeneb()
-		if dbBlockContents == nil {
-			return nil, nil
+		blobSidecars, dataColumnSideCars, err = handleUnblidedBlock(block, req, isPeerDASEnabled)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "%s: %v", "handle unblided block", err)
 		}
-
-		if isPeerDASEnabled {
-			// Convert blobs from slices to array.
-			blobs := make([]cKzg4844.Blob, 0, len(dbBlockContents.Blobs))
-			for _, blob := range dbBlockContents.Blobs {
-				if len(blob) != cKzg4844.BytesPerBlob {
-					return nil, errors.Errorf("invalid blob size. expected %d bytes, got %d bytes", cKzg4844.BytesPerBlob, len(blob))
-				}
-
-				blobs = append(blobs, cKzg4844.Blob(blob))
-			}
-
-			dataColumnSideCars, err = peerdas.DataColumnSidecars(block, blobs)
-			if err != nil {
-				return nil, errors.Wrap(err, "data column sidecars")
-			}
-		} else {
-			blobSidecars, err = BuildBlobSidecars(block, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
-			if err != nil {
-				return nil, errors.Wrap(err, "build blob sidecars")
-			}
-		}
-	}
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%s: %v", "handle block failed", err)
 	}
 
 	root, err := block.Block().HashTreeRoot()
@@ -376,6 +322,82 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	}
 
 	return &ethpb.ProposeResponse{BlockRoot: root[:]}, nil
+}
+
+// handleBlindedBlock processes blinded beacon blocks.
+func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.SignedBeaconBlock, isPeerDASEnabled bool) (interfaces.SignedBeaconBlock, []*ethpb.BlobSidecar, []*ethpb.DataColumnSidecar, error) {
+	if block.Version() < version.Bellatrix {
+		return nil, nil, nil, errors.New("pre-Bellatrix blinded block")
+	}
+
+	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
+		return nil, nil, nil, errors.New("unconfigured block builder")
+	}
+
+	copiedBlock, err := block.Copy()
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "block copy")
+	}
+
+	payload, bundle, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, block)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "submit blinded block")
+	}
+
+	if err := copiedBlock.Unblind(payload); err != nil {
+		return nil, nil, nil, errors.Wrap(err, "unblind")
+	}
+
+	if isPeerDASEnabled {
+		dataColumnSideCars, err := unblindDataColumnsSidecars(copiedBlock, bundle)
+		if err != nil {
+			return nil, nil, nil, errors.Wrap(err, "unblind data columns sidecars")
+		}
+
+		return copiedBlock, nil, dataColumnSideCars, nil
+	}
+
+	blobSidecars, err := unblindBlobsSidecars(copiedBlock, bundle)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "unblind blobs sidecars")
+	}
+
+	return copiedBlock, blobSidecars, nil, nil
+}
+
+// handleUnblindedBlock processes unblinded beacon blocks.
+func handleUnblidedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericSignedBeaconBlock, isPeerDASEnabled bool) ([]*ethpb.BlobSidecar, []*ethpb.DataColumnSidecar, error) {
+	dbBlockContents := req.GetDeneb()
+
+	if dbBlockContents == nil {
+		return nil, nil, nil
+	}
+
+	if isPeerDASEnabled {
+		// Convert blobs from slices to array.
+		blobs := make([]cKzg4844.Blob, 0, len(dbBlockContents.Blobs))
+		for _, blob := range dbBlockContents.Blobs {
+			if len(blob) != cKzg4844.BytesPerBlob {
+				return nil, nil, errors.Errorf("invalid blob size. expected %d bytes, got %d bytes", cKzg4844.BytesPerBlob, len(blob))
+			}
+
+			blobs = append(blobs, cKzg4844.Blob(blob))
+		}
+
+		dataColumnSideCars, err := peerdas.DataColumnSidecars(block, blobs)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "data column sidecars")
+		}
+
+		return nil, dataColumnSideCars, nil
+	}
+
+	blobSidecars, err := BuildBlobSidecars(block, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "build blob sidecars")
+	}
+
+	return blobSidecars, nil, nil
 }
 
 // broadcastReceiveBlock broadcasts a block and handles its reception.
