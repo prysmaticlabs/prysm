@@ -23,7 +23,7 @@ var (
 // ValidateNilAttestation checks if any composite field of input attestation is nil.
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
-func ValidateNilAttestation(attestation interfaces.Attestation) error {
+func ValidateNilAttestation(attestation ethpb.Att) error {
 	if attestation == nil {
 		return errors.New("attestation can't be nil")
 	}
@@ -76,7 +76,7 @@ func IsAggregator(committeeCount uint64, slotSig []byte) (bool, error) {
 
 // IsAggregated returns true if the attestation is an aggregated attestation,
 // false otherwise.
-func IsAggregated(attestation interfaces.Attestation) bool {
+func IsAggregated(attestation ethpb.Att) bool {
 	return attestation.GetAggregationBits().Count() > 1
 }
 
@@ -95,7 +95,15 @@ func IsAggregated(attestation interfaces.Attestation) bool {
 //	committees_since_epoch_start = committees_per_slot * slots_since_epoch_start
 //
 //	return uint64((committees_since_epoch_start + committee_index) % ATTESTATION_SUBNET_COUNT)
-func ComputeSubnetForAttestation(activeValCount uint64, att interfaces.Attestation) uint64 {
+func ComputeSubnetForAttestation(activeValCount uint64, att ethpb.Att) uint64 {
+	if att.Version() >= version.Electra {
+		committeeIndex := 0
+		committeeIndices := att.CommitteeBitsVal().BitIndices()
+		if len(committeeIndices) > 0 {
+			committeeIndex = committeeIndices[0]
+		}
+		return ComputeSubnetFromCommitteeAndSlot(activeValCount, primitives.CommitteeIndex(committeeIndex), att.GetData().Slot)
+	}
 	return ComputeSubnetFromCommitteeAndSlot(activeValCount, att.GetData().CommitteeIndex, att.GetData().Slot)
 }
 

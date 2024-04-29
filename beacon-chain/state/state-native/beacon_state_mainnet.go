@@ -57,8 +57,20 @@ type BeaconState struct {
 	latestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader
 	latestExecutionPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella
 	latestExecutionPayloadHeaderDeneb   *enginev1.ExecutionPayloadHeaderDeneb
+	latestExecutionPayloadHeaderElectra *enginev1.ExecutionPayloadHeaderElectra
 	nextWithdrawalIndex                 uint64
 	nextWithdrawalValidatorIndex        primitives.ValidatorIndex
+
+	// Electra fields
+	depositRequestsStartIndex     uint64
+	depositBalanceToConsume       primitives.Gwei
+	exitBalanceToConsume          primitives.Gwei
+	earliestExitEpoch             primitives.Epoch
+	consolidationBalanceToConsume primitives.Gwei
+	earliestConsolidationEpoch    primitives.Epoch
+	pendingBalanceDeposits        []*ethpb.PendingBalanceDeposit    // pending_balance_deposits: List[PendingBalanceDeposit, PENDING_BALANCE_DEPOSITS_LIMIT]
+	pendingPartialWithdrawals     []*ethpb.PendingPartialWithdrawal // pending_partial_withdrawals: List[PartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
+	pendingConsolidations         []*ethpb.PendingConsolidation     // pending_consolidations: List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]
 
 	id                    uint64
 	lock                  sync.RWMutex
@@ -67,6 +79,7 @@ type BeaconState struct {
 	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
 	rebuildTrie           map[types.FieldIndex]bool
 	valMapHandler         *stateutil.ValidatorMapHandler
+	validatorIndexCache   *finalizedValidatorIndexCache
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
 }
@@ -102,8 +115,19 @@ type beaconStateMarshalable struct {
 	NextSyncCommittee                   *ethpb.SyncCommittee                    `json:"next_sync_committee" yaml:"next_sync_committee"`
 	LatestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader        `json:"latest_execution_payload_header" yaml:"latest_execution_payload_header"`
 	LatestExecutionPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella `json:"latest_execution_payload_header_capella" yaml:"latest_execution_payload_header_capella"`
+	LatestExecutionPayloadHeaderDeneb   *enginev1.ExecutionPayloadHeaderDeneb   `json:"latest_execution_payload_header_deneb" yaml:"latest_execution_payload_header_deneb"`
+	LatestExecutionPayloadHeaderElectra *enginev1.ExecutionPayloadHeaderElectra `json:"latest_execution_payload_header_electra" yaml:"latest_execution_payload_header_electra"`
 	NextWithdrawalIndex                 uint64                                  `json:"next_withdrawal_index" yaml:"next_withdrawal_index"`
 	NextWithdrawalValidatorIndex        primitives.ValidatorIndex               `json:"next_withdrawal_validator_index" yaml:"next_withdrawal_validator_index"`
+	DepositRequestsStartIndex           uint64                                  `json:"deposit_requests_start_index" yaml:"deposit_requests_start_index"`
+	DepositBalanceToConsume             primitives.Gwei                         `json:"deposit_balance_to_consume" yaml:"deposit_balance_to_consume"`
+	ExitBalanceToConsume                primitives.Gwei                         `json:"exit_balance_to_consume" yaml:"exit_balance_to_consume"`
+	EarliestExitEpoch                   primitives.Epoch                        `json:"earliest_exit_epoch" yaml:"earliest_exit_epoch"`
+	ConsolidationBalanceToConsume       primitives.Gwei                         `json:"consolidation_balance_to_consume" yaml:"consolidation_balance_to_consume"`
+	EarliestConsolidationEpoch          primitives.Epoch                        `json:"earliest_consolidation_epoch" yaml:"earliest_consolidation_epoch"`
+	PendingBalanceDeposits              []*ethpb.PendingBalanceDeposit          `json:"pending_balance_deposits" yaml:"pending_balance_deposits"`
+	PendingPartialWithdrawals           []*ethpb.PendingPartialWithdrawal       `json:"pending_partial_withdrawals" yaml:"pending_partial_withdrawals"`
+	PendingConsolidations               []*ethpb.PendingConsolidation           `json:"pending_consolidations" yaml:"pending_consolidations"`
 }
 
 func (b *BeaconState) MarshalJSON() ([]byte, error) {
@@ -161,8 +185,19 @@ func (b *BeaconState) MarshalJSON() ([]byte, error) {
 		NextSyncCommittee:                   b.nextSyncCommittee,
 		LatestExecutionPayloadHeader:        b.latestExecutionPayloadHeader,
 		LatestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapella,
+		LatestExecutionPayloadHeaderDeneb:   b.latestExecutionPayloadHeaderDeneb,
+		LatestExecutionPayloadHeaderElectra: b.latestExecutionPayloadHeaderElectra,
 		NextWithdrawalIndex:                 b.nextWithdrawalIndex,
 		NextWithdrawalValidatorIndex:        b.nextWithdrawalValidatorIndex,
+		DepositRequestsStartIndex:           b.depositRequestsStartIndex,
+		DepositBalanceToConsume:             b.depositBalanceToConsume,
+		ExitBalanceToConsume:                b.exitBalanceToConsume,
+		EarliestExitEpoch:                   b.earliestExitEpoch,
+		ConsolidationBalanceToConsume:       b.consolidationBalanceToConsume,
+		EarliestConsolidationEpoch:          b.earliestConsolidationEpoch,
+		PendingBalanceDeposits:              b.pendingBalanceDeposits,
+		PendingPartialWithdrawals:           b.pendingPartialWithdrawals,
+		PendingConsolidations:               b.pendingConsolidations,
 	}
 	return json.Marshal(marshalable)
 }

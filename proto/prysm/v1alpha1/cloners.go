@@ -63,8 +63,8 @@ func CopyAttestationElectra(att *AttestationElectra) *AttestationElectra {
 	}
 	return &AttestationElectra{
 		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
-		Data:            CopyAttestationData(att.Data),
 		CommitteeBits:   bytesutil.SafeCopyBytes(att.CommitteeBits),
+		Data:            CopyAttestationData(att.Data),
 		Signature:       bytesutil.SafeCopyBytes(att.Signature),
 	}
 }
@@ -245,6 +245,21 @@ func CopyAttesterSlashings(slashings []*AttesterSlashing) []*AttesterSlashing {
 	return newSlashings
 }
 
+// CopyAttesterSlashingsElectra copies the provided AttesterSlashings array.
+func CopyAttesterSlashingsElectra(slashings []*AttesterSlashingElectra) []*AttesterSlashingElectra {
+	if slashings == nil {
+		return nil
+	}
+	newSlashings := make([]*AttesterSlashingElectra, len(slashings))
+	for i, slashing := range slashings {
+		newSlashings[i] = &AttesterSlashingElectra{
+			Attestation_1: CopyIndexedAttestationElectra(slashing.Attestation_1),
+			Attestation_2: CopyIndexedAttestationElectra(slashing.Attestation_2),
+		}
+	}
+	return newSlashings
+}
+
 // CopyIndexedAttestation copies the provided IndexedAttestation.
 func CopyIndexedAttestation(indexedAtt *IndexedAttestation) *IndexedAttestation {
 	var indices []uint64
@@ -261,6 +276,22 @@ func CopyIndexedAttestation(indexedAtt *IndexedAttestation) *IndexedAttestation 
 	}
 }
 
+// CopyIndexedAttestationElectra copies the provided IndexedAttestation.
+func CopyIndexedAttestationElectra(indexedAtt *IndexedAttestationElectra) *IndexedAttestationElectra {
+	var indices []uint64
+	if indexedAtt == nil {
+		return nil
+	} else if indexedAtt.AttestingIndices != nil {
+		indices = make([]uint64, len(indexedAtt.AttestingIndices))
+		copy(indices, indexedAtt.AttestingIndices)
+	}
+	return &IndexedAttestationElectra{
+		AttestingIndices: indices,
+		Data:             CopyAttestationData(indexedAtt.Data),
+		Signature:        bytesutil.SafeCopyBytes(indexedAtt.Signature),
+	}
+}
+
 // CopyAttestations copies the provided Attestation array.
 func CopyAttestations(attestations []*Attestation) []*Attestation {
 	if attestations == nil {
@@ -269,6 +300,18 @@ func CopyAttestations(attestations []*Attestation) []*Attestation {
 	newAttestations := make([]*Attestation, len(attestations))
 	for i, att := range attestations {
 		newAttestations[i] = CopyAttestation(att)
+	}
+	return newAttestations
+}
+
+// CopyAttestations copies the provided AttestationElectra array.
+func CopyAttestationsElectra(attestations []*AttestationElectra) []*AttestationElectra {
+	if attestations == nil {
+		return nil
+	}
+	newAttestations := make([]*AttestationElectra, len(attestations))
+	for i, att := range attestations {
+		newAttestations[i] = CopyAttestationElectra(att)
 	}
 	return newAttestations
 }
@@ -571,6 +614,52 @@ func CopyBlindedBeaconBlockBodyDeneb(body *BlindedBeaconBlockBodyDeneb) *Blinded
 	}
 }
 
+// CopySignedBlindedBeaconBlockElectra copies the provided SignedBlindedBeaconBlockElectra.
+func CopySignedBlindedBeaconBlockElectra(sigBlock *SignedBlindedBeaconBlockElectra) *SignedBlindedBeaconBlockElectra {
+	if sigBlock == nil {
+		return nil
+	}
+	return &SignedBlindedBeaconBlockElectra{
+		Message:   CopyBlindedBeaconBlockElectra(sigBlock.Message),
+		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+	}
+}
+
+// CopyBlindedBeaconBlockElectra copies the provided BlindedBeaconBlockElectra.
+func CopyBlindedBeaconBlockElectra(block *BlindedBeaconBlockElectra) *BlindedBeaconBlockElectra {
+	if block == nil {
+		return nil
+	}
+	return &BlindedBeaconBlockElectra{
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		Body:          CopyBlindedBeaconBlockBodyElectra(block.Body),
+	}
+}
+
+// CopyBlindedBeaconBlockBodyElectra copies the provided BlindedBeaconBlockBodyElectra.
+func CopyBlindedBeaconBlockBodyElectra(body *BlindedBeaconBlockBodyElectra) *BlindedBeaconBlockBodyElectra {
+	if body == nil {
+		return nil
+	}
+	return &BlindedBeaconBlockBodyElectra{
+		RandaoReveal:           bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:               CopyETH1Data(body.Eth1Data),
+		Graffiti:               bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings:      CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings:      CopyAttesterSlashingsElectra(body.AttesterSlashings),
+		Attestations:           CopyAttestationsElectra(body.Attestations),
+		Deposits:               CopyDeposits(body.Deposits),
+		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
+		ExecutionPayloadHeader: CopyExecutionPayloadHeaderElectra(body.ExecutionPayloadHeader),
+		BlsToExecutionChanges:  CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
+		BlobKzgCommitments:     CopyBlobKZGs(body.BlobKzgCommitments),
+	}
+}
+
 // CopyExecutionPayload copies the provided execution payload.
 func CopyExecutionPayload(payload *enginev1.ExecutionPayload) *enginev1.ExecutionPayload {
 	if payload == nil {
@@ -861,6 +950,142 @@ func CopyExecutionPayloadDeneb(payload *enginev1.ExecutionPayloadDeneb) *enginev
 	}
 }
 
+// CopySignedBeaconBlockElectra copies the provided SignedBeaconBlockElectra.
+func CopySignedBeaconBlockElectra(sigBlock *SignedBeaconBlockElectra) *SignedBeaconBlockElectra {
+	if sigBlock == nil {
+		return nil
+	}
+	return &SignedBeaconBlockElectra{
+		Block:     CopyBeaconBlockElectra(sigBlock.Block),
+		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+	}
+}
+
+// CopyBeaconBlockElectra copies the provided BeaconBlockElectra.
+func CopyBeaconBlockElectra(block *BeaconBlockElectra) *BeaconBlockElectra {
+	if block == nil {
+		return nil
+	}
+	return &BeaconBlockElectra{
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		Body:          CopyBeaconBlockBodyElectra(block.Body),
+	}
+}
+
+// CopyBeaconBlockBodyElectra copies the provided BeaconBlockBodyElectra.
+func CopyBeaconBlockBodyElectra(body *BeaconBlockBodyElectra) *BeaconBlockBodyElectra {
+	if body == nil {
+		return nil
+	}
+	return &BeaconBlockBodyElectra{
+		RandaoReveal:          bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:              CopyETH1Data(body.Eth1Data),
+		Graffiti:              bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings:     CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings:     CopyAttesterSlashingsElectra(body.AttesterSlashings),
+		Attestations:          CopyAttestationsElectra(body.Attestations),
+		Deposits:              CopyDeposits(body.Deposits),
+		VoluntaryExits:        CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:         CopySyncAggregate(body.SyncAggregate),
+		ExecutionPayload:      CopyExecutionPayloadElectra(body.ExecutionPayload),
+		BlsToExecutionChanges: CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
+		BlobKzgCommitments:    CopyBlobKZGs(body.BlobKzgCommitments),
+	}
+}
+
+// CopyExecutionPayloadElectra copies the provided execution payload.
+func CopyExecutionPayloadElectra(payload *enginev1.ExecutionPayloadElectra) *enginev1.ExecutionPayloadElectra {
+	if payload == nil {
+		return nil
+	}
+	return &enginev1.ExecutionPayloadElectra{
+		ParentHash:         bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:       bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:          bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:       bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:          bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:         bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:        payload.BlockNumber,
+		GasLimit:           payload.GasLimit,
+		GasUsed:            payload.GasUsed,
+		Timestamp:          payload.Timestamp,
+		ExtraData:          bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:      bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:          bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:       bytesutil.SafeCopy2dBytes(payload.Transactions),
+		Withdrawals:        CopyWithdrawalSlice(payload.Withdrawals),
+		BlobGasUsed:        payload.BlobGasUsed,
+		ExcessBlobGas:      payload.ExcessBlobGas,
+		DepositRequests:    CopyDepositRequests(payload.DepositRequests),
+		WithdrawalRequests: CopyWithdrawalRequests(payload.WithdrawalRequests),
+	}
+}
+
+func CopyDepositRequests(dr []*enginev1.DepositRequest) []*enginev1.DepositRequest {
+	if dr == nil {
+		return nil
+	}
+
+	newDr := make([]*enginev1.DepositRequest, len(dr))
+	for i, d := range dr {
+		newDr[i] = &enginev1.DepositRequest{
+			Pubkey:                bytesutil.SafeCopyBytes(d.Pubkey),
+			WithdrawalCredentials: bytesutil.SafeCopyBytes(d.WithdrawalCredentials),
+			Amount:                d.Amount,
+			Signature:             bytesutil.SafeCopyBytes(d.Signature),
+			Index:                 d.Index,
+		}
+	}
+	return newDr
+}
+
+func CopyWithdrawalRequests(wr []*enginev1.WithdrawalRequest) []*enginev1.WithdrawalRequest {
+	if wr == nil {
+		return nil
+	}
+	newWr := make([]*enginev1.WithdrawalRequest, len(wr))
+	for i, w := range wr {
+		newWr[i] = &enginev1.WithdrawalRequest{
+			SourceAddress:   bytesutil.SafeCopyBytes(w.SourceAddress),
+			ValidatorPubkey: bytesutil.SafeCopyBytes(w.ValidatorPubkey),
+			Amount:          w.Amount,
+		}
+	}
+
+	return newWr
+}
+
+func CopyExecutionPayloadHeaderElectra(payload *enginev1.ExecutionPayloadHeaderElectra) *enginev1.ExecutionPayloadHeaderElectra {
+	if payload == nil {
+		return nil
+	}
+	return &enginev1.ExecutionPayloadHeaderElectra{
+		ParentHash:                bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:              bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:                 bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:              bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:                 bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:                bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:               payload.BlockNumber,
+		GasLimit:                  payload.GasLimit,
+		GasUsed:                   payload.GasUsed,
+		Timestamp:                 payload.Timestamp,
+		ExtraData:                 bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:             bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:                 bytesutil.SafeCopyBytes(payload.BlockHash),
+		TransactionsRoot:          bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+		WithdrawalsRoot:           bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
+		BlobGasUsed:               payload.BlobGasUsed,
+		ExcessBlobGas:             payload.ExcessBlobGas,
+		DepositRequestsRoot:       bytesutil.SafeCopyBytes(payload.DepositRequestsRoot),
+		WithdrawalRequestsRoot:    bytesutil.SafeCopyBytes(payload.WithdrawalRequestsRoot),
+		ConsolidationRequestsRoot: bytesutil.SafeCopyBytes(payload.ConsolidationRequestsRoot),
+	}
+}
+
 // CopyHistoricalSummaries copies the historical summaries.
 func CopyHistoricalSummaries(summaries []*HistoricalSummary) []*HistoricalSummary {
 	if summaries == nil {
@@ -874,4 +1099,48 @@ func CopyHistoricalSummaries(summaries []*HistoricalSummary) []*HistoricalSummar
 		}
 	}
 	return newSummaries
+}
+
+// CopyPartialWithdrawals copies the provided partial withdrawals.
+func CopyPendingPartialWithdrawals(pws []*PendingPartialWithdrawal) []*PendingPartialWithdrawal {
+	if pws == nil {
+		return nil
+	}
+	newPws := make([]*PendingPartialWithdrawal, len(pws))
+	for i, pw := range pws {
+		newPws[i] = &PendingPartialWithdrawal{
+			Index:             pw.Index,
+			Amount:            pw.Amount,
+			WithdrawableEpoch: pw.WithdrawableEpoch,
+		}
+	}
+	return newPws
+}
+
+func CopyPendingConsolidations(pcs []*PendingConsolidation) []*PendingConsolidation {
+	if pcs == nil {
+		return nil
+	}
+	newPcs := make([]*PendingConsolidation, len(pcs))
+	for i, pc := range pcs {
+		newPcs[i] = &PendingConsolidation{
+			SourceIndex: pc.SourceIndex,
+			TargetIndex: pc.TargetIndex,
+		}
+	}
+	return newPcs
+}
+
+func CopyPendingBalanceDeposits(pbd []*PendingBalanceDeposit) []*PendingBalanceDeposit {
+	if pbd == nil {
+		return nil
+	}
+	newPbd := make([]*PendingBalanceDeposit, len(pbd))
+	for i, pb := range pbd {
+		newPbd[i] = &PendingBalanceDeposit{
+			Index:  pb.Index,
+			Amount: pb.Amount,
+		}
+	}
+	return newPbd
 }

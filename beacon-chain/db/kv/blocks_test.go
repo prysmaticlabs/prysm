@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -124,6 +125,27 @@ var blockTests = []struct {
 			return blocks.NewSignedBeaconBlock(b)
 		},
 	},
+	{
+		name: "electra",
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+			b := util.NewBeaconBlockElectra()
+			b.Block.Slot = slot
+			if root != nil {
+				b.Block.ParentRoot = root
+			}
+			return blocks.NewSignedBeaconBlock(b)
+		},
+	},
+	{
+		name: "electra blind",
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+			b := util.NewBlindedBeaconBlockElectra()
+			b.Message.Slot = slot
+			if root != nil {
+				b.Message.ParentRoot = root
+			}
+			return blocks.NewSignedBeaconBlock(b)
+		}},
 }
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
@@ -180,7 +202,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 			retrievedBlock, err = db.Block(ctx, blockRoot)
 			require.NoError(t, err)
 			wanted := retrievedBlock
-			if _, err := retrievedBlock.PbBellatrixBlock(); err == nil {
+			if retrievedBlock.Version() >= version.Bellatrix {
 				wanted, err = retrievedBlock.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -368,15 +390,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 			require.NoError(t, err)
 
 			wanted := blk
-			if _, err := blk.PbBellatrixBlock(); err == nil {
-				wanted, err = blk.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := blk.PbCapellaBlock(); err == nil {
-				wanted, err = blk.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := blk.PbDenebBlock(); err == nil {
+			if blk.Version() >= version.Bellatrix {
 				wanted, err = blk.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -595,15 +609,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			b, err := db.Block(ctx, root)
 			require.NoError(t, err)
 			wanted := block1
-			if _, err := block1.PbBellatrixBlock(); err == nil {
-				wanted, err = wanted.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := block1.PbCapellaBlock(); err == nil {
-				wanted, err = wanted.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := block1.PbDenebBlock(); err == nil {
+			if block1.Version() >= version.Bellatrix {
 				wanted, err = wanted.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -621,15 +627,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			b, err = db.Block(ctx, root)
 			require.NoError(t, err)
 			wanted2 := block2
-			if _, err := block2.PbBellatrixBlock(); err == nil {
-				wanted2, err = block2.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := block2.PbCapellaBlock(); err == nil {
-				wanted2, err = block2.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := block2.PbDenebBlock(); err == nil {
+			if block2.Version() >= version.Bellatrix {
 				wanted2, err = block2.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -647,15 +645,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			b, err = db.Block(ctx, root)
 			require.NoError(t, err)
 			wanted = block3
-			if _, err := block3.PbBellatrixBlock(); err == nil {
-				wanted, err = wanted.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := block3.PbCapellaBlock(); err == nil {
-				wanted, err = wanted.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := block3.PbDenebBlock(); err == nil {
+			if block3.Version() >= version.Bellatrix {
 				wanted, err = wanted.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -691,15 +681,7 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			b, err := db.Block(ctx, root)
 			require.NoError(t, err)
 			wanted := block1
-			if _, err := block1.PbBellatrixBlock(); err == nil {
-				wanted, err = block1.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := block1.PbCapellaBlock(); err == nil {
-				wanted, err = block1.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := block1.PbDenebBlock(); err == nil {
+			if block1.Version() >= version.Bellatrix {
 				wanted, err = block1.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -716,15 +698,7 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			b, err = db.Block(ctx, root)
 			require.NoError(t, err)
 			wanted = genesisBlock
-			if _, err := genesisBlock.PbBellatrixBlock(); err == nil {
-				wanted, err = genesisBlock.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := genesisBlock.PbCapellaBlock(); err == nil {
-				wanted, err = genesisBlock.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := genesisBlock.PbDenebBlock(); err == nil {
+			if genesisBlock.Version() >= version.Bellatrix {
 				wanted, err = genesisBlock.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -741,15 +715,7 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			b, err = db.Block(ctx, root)
 			require.NoError(t, err)
 			wanted = genesisBlock
-			if _, err := genesisBlock.PbBellatrixBlock(); err == nil {
-				wanted, err = genesisBlock.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := genesisBlock.PbCapellaBlock(); err == nil {
-				wanted, err = genesisBlock.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := genesisBlock.PbDenebBlock(); err == nil {
+			if genesisBlock.Version() >= version.Bellatrix {
 				wanted, err = genesisBlock.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -845,15 +811,7 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 			require.NoError(t, err)
 
 			wanted := b1
-			if _, err := b1.PbBellatrixBlock(); err == nil {
-				wanted, err = b1.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := b1.PbCapellaBlock(); err == nil {
-				wanted, err = b1.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := b1.PbDenebBlock(); err == nil {
+			if b1.Version() >= version.Bellatrix {
 				wanted, err = b1.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -869,15 +827,7 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 				t.Fatalf("Expected 2 blocks, received %d blocks", len(retrievedBlocks))
 			}
 			wanted = b2
-			if _, err := b2.PbBellatrixBlock(); err == nil {
-				wanted, err = b2.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := b2.PbCapellaBlock(); err == nil {
-				wanted, err = b2.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := b2.PbDenebBlock(); err == nil {
+			if b2.Version() >= version.Bellatrix {
 				wanted, err = b2.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -887,15 +837,7 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, true, proto.Equal(wantedPb, retrieved0Pb), "Wanted: %v, received: %v", retrievedBlocks[0], wanted)
 			wanted = b3
-			if _, err := b3.PbBellatrixBlock(); err == nil {
-				wanted, err = b3.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := b3.PbCapellaBlock(); err == nil {
-				wanted, err = b3.ToBlinded()
-				require.NoError(t, err)
-			}
-			if _, err := b3.PbDenebBlock(); err == nil {
+			if b3.Version() >= version.Bellatrix {
 				wanted, err = b3.ToBlinded()
 				require.NoError(t, err)
 			}

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/capella"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/deneb"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/execution"
 	prysmtime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
@@ -26,7 +27,7 @@ import (
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 //
 // WARNING Blocks passed to the function must be in decreasing slots order.
-func (_ *State) replayBlocks(
+func (*State) replayBlocks(
 	ctx context.Context,
 	state state.BeaconState,
 	signed []interfaces.ReadOnlySignedBeaconBlock,
@@ -201,21 +202,18 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if prysmtime.CanProcessEpoch(state) {
-			switch state.Version() {
-			case version.Phase0:
+			if state.Version() == version.Phase0 {
 				state, err = transition.ProcessEpochPrecompute(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Bellatrix, version.Capella, version.Deneb:
-				state, err = altair.ProcessEpoch(ctx, state)
+			} else {
+				err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch")
 				}
-			default:
-				return nil, fmt.Errorf("unsupported beacon state version: %s", version.String(state.Version()))
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
@@ -249,6 +247,14 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 
 		if prysmtime.CanUpgradeToDeneb(state.Slot()) {
 			state, err = deneb.UpgradeToDeneb(state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if prysmtime.CanUpgradeToElectra(state.Slot()) {
+			state, err = electra.UpgradeToElectra(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

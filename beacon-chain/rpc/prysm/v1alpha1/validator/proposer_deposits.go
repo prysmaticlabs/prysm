@@ -9,9 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -19,10 +21,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []interfaces.Attestation, error) {
+func (vs *Server) packDepositsAndAttestations(
+	ctx context.Context,
+	head state.BeaconState,
+	blkSlot primitives.Slot,
+	eth1Data *ethpb.Eth1Data,
+) ([]*ethpb.Deposit, []ethpb.Att, error) {
 	eg, egctx := errgroup.WithContext(ctx)
 	var deposits []*ethpb.Deposit
-	var atts []interfaces.Attestation
+	var atts []ethpb.Att
 
 	eg.Go(func() error {
 		// Pack ETH1 deposits which have not been included in the beacon chain.
@@ -42,7 +49,7 @@ func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.Be
 
 	eg.Go(func() error {
 		// Pack aggregated attestations which have not been included in the beacon chain.
-		localAtts, err := vs.packAttestations(egctx, head)
+		localAtts, err := vs.packAttestations(egctx, head, blkSlot)
 		if err != nil {
 			return status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
 		}
@@ -108,9 +115,32 @@ func (vs *Server) deposits(
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*ethpb.DepositContainer
 	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
-			pendingDeps = append(pendingDeps, dep)
+		if beaconState.Version() < version.Electra {
+			// Add deposits up to min(MAX_DEPOSITS, eth1_data.deposit_count - state.eth1_deposit_index)
+			if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
+				pendingDeps = append(pendingDeps, dep)
+			}
+		} else {
+			// Electra change EIP6110
+			// def get_eth1_pending_deposit_count(state: BeaconState) -> uint64:
+			//    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_requests_start_index)
+			//    if state.eth1_deposit_index < eth1_deposit_index_limit:
+			//        return min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
+			//    else:
+			//        return uint64(0)
+			requestsStartIndex, err := beaconState.DepositRequestsStartIndex()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not retrieve requests start index")
+			}
+			eth1DepositIndexLimit := math.Min(canonicalEth1Data.DepositCount, requestsStartIndex)
+			if beaconState.Eth1DepositIndex() < eth1DepositIndexLimit {
+				if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < eth1DepositIndexLimit {
+					pendingDeps = append(pendingDeps, dep)
+				}
+			}
+			// just don't add any pending deps if it's not state.eth1_deposit_index < eth1_deposit_index_limit
 		}
+
 		// Don't try to pack more than the max allowed in a block
 		if uint64(len(pendingDeps)) == params.BeaconConfig().MaxDeposits {
 			break

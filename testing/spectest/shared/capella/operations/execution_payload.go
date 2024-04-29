@@ -1,7 +1,6 @@
 package operations
 
 import (
-	"math/big"
 	"os"
 	"path"
 	"strings"
@@ -54,7 +53,7 @@ func RunExecutionPayloadTest(t *testing.T, config string) {
 				require.NoError(t, err)
 			}
 
-			payload, err := blocks2.WrappedExecutionPayloadCapella(block.ExecutionPayload, big.NewInt(0))
+			payload, err := blocks2.WrappedExecutionPayloadCapella(block.ExecutionPayload)
 			require.NoError(t, err)
 
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "execution.yaml")

@@ -10,7 +10,7 @@ import (
 )
 
 // attList represents list of attestations, defined for easier en masse operations (filtering, sorting).
-type attList []interfaces.Attestation
+type attList []ethpb.Att
 
 // BLS aggregate signature aliases for testing / benchmark substitution. These methods are
 // significantly more expensive than the inner logic of AggregateAttestations so they must be
@@ -33,13 +33,13 @@ var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 //	    clonedAtts[i] = stateTrie.CopyAttestation(a)
 //	}
 //	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
-func Aggregate(atts []interfaces.Attestation) ([]interfaces.Attestation, error) {
+func Aggregate(atts []ethpb.Att) ([]ethpb.Att, error) {
 	return MaxCoverAttestationAggregation(atts)
 }
 
 // AggregateDisjointOneBitAtts aggregates unaggregated attestations with the
 // exact same attestation data.
-func AggregateDisjointOneBitAtts(atts []interfaces.Attestation) (interfaces.Attestation, error) {
+func AggregateDisjointOneBitAtts(atts []ethpb.Att) (ethpb.Att, error) {
 	if len(atts) == 0 {
 		return nil, nil
 	}

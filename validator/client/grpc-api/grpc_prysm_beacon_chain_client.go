@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/golang/protobuf/ptypes/empty"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
@@ -18,12 +17,12 @@ import (
 	"google.golang.org/grpc"
 )
 
-type grpcPrysmBeaconChainClient struct {
-	beaconChainClient iface.BeaconChainClient
+type grpcPrysmChainClient struct {
+	chainClient iface.ChainClient
 }
 
-func (g grpcPrysmBeaconChainClient) GetValidatorCount(ctx context.Context, _ string, statuses []validator.Status) ([]iface.ValidatorCount, error) {
-	resp, err := g.beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{PageSize: 0})
+func (g grpcPrysmChainClient) ValidatorCount(ctx context.Context, _ string, statuses []validator.Status) ([]iface.ValidatorCount, error) {
+	resp, err := g.chainClient.Validators(ctx, &ethpb.ListValidatorsRequest{PageSize: 0})
 	if err != nil {
 		return nil, errors.Wrap(err, "list validators failed")
 	}
@@ -33,7 +32,7 @@ func (g grpcPrysmBeaconChainClient) GetValidatorCount(ctx context.Context, _ str
 		vals = append(vals, val.Validator)
 	}
 
-	head, err := g.beaconChainClient.GetChainHead(ctx, &empty.Empty{})
+	head, err := g.chainClient.ChainHead(ctx, &empty.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "get chain head")
 	}
@@ -58,15 +57,15 @@ func validatorCountByStatus(validators []*ethpb.Validator, statuses []validator.
 	for _, val := range validators {
 		readOnlyVal, err := statenative.NewValidator(val)
 		if err != nil {
-			return nil, fmt.Errorf("could not convert validator: %v", err)
+			return nil, fmt.Errorf("could not convert validator: %w", err)
 		}
 		valStatus, err := helpers.ValidatorStatus(readOnlyVal, epoch)
 		if err != nil {
-			return nil, fmt.Errorf("could not get validator status: %v", err)
+			return nil, fmt.Errorf("could not get validator status: %w", err)
 		}
 		valSubStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
 		if err != nil {
-			return nil, fmt.Errorf("could not get validator sub status: %v", err)
+			return nil, fmt.Errorf("could not get validator sub status: %w", err)
 		}
 
 		for _, status := range statuses {
@@ -92,6 +91,6 @@ func validatorCountByStatus(validators []*ethpb.Validator, statuses []validator.
 	return resp, nil
 }
 
-func NewGrpcPrysmBeaconChainClient(cc grpc.ClientConnInterface) iface.PrysmBeaconChainClient {
-	return &grpcPrysmBeaconChainClient{beaconChainClient: &grpcBeaconChainClient{ethpb.NewBeaconChainClient(cc)}}
+func NewGrpcPrysmChainClient(cc grpc.ClientConnInterface) iface.PrysmChainClient {
+	return &grpcPrysmChainClient{chainClient: &grpcChainClient{ethpb.NewBeaconChainClient(cc)}}
 }

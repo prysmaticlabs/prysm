@@ -4,11 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"go.opencensus.io/trace"
 )
 
@@ -39,7 +38,7 @@ func (v *validator) HandleKeyReload(ctx context.Context, currentKeys [][fieldpar
 
 	// "-1" indicates that validator count endpoint is not supported by the beacon node.
 	var valCount int64 = -1
-	valCounts, err := v.prysmBeaconClient.GetValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
+	valCounts, err := v.prysmChainClient.ValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
 	if err != nil && !errors.Is(err, iface.ErrNotSupported) {
 		return false, errors.Wrap(err, "could not get active validator count")
 	}

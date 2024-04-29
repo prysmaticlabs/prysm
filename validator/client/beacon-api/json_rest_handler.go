@@ -18,6 +18,7 @@ type JsonRestHandler interface {
 	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) error
 	HttpClient() *http.Client
 	Host() string
+	SetHost(host string)
 }
 
 type BeaconApiJsonRestHandler struct {
@@ -33,19 +34,19 @@ func NewBeaconApiJsonRestHandler(client http.Client, host string) JsonRestHandle
 	}
 }
 
-// GetHttpClient returns the underlying HTTP client of the handler
-func (c BeaconApiJsonRestHandler) HttpClient() *http.Client {
+// HttpClient returns the underlying HTTP client of the handler
+func (c *BeaconApiJsonRestHandler) HttpClient() *http.Client {
 	return &c.client
 }
 
-// GetHost returns the underlying HTTP host
-func (c BeaconApiJsonRestHandler) Host() string {
+// Host returns the underlying HTTP host
+func (c *BeaconApiJsonRestHandler) Host() string {
 	return c.host
 }
 
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
-func (c BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) error {
+func (c *BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) error {
 	url := c.host + endpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -67,7 +68,7 @@ func (c BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp
 
 // Post sends a POST request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
-func (c BeaconApiJsonRestHandler) Post(
+func (c *BeaconApiJsonRestHandler) Post(
 	ctx context.Context,
 	apiEndpoint string,
 	headers map[string]string,
@@ -108,7 +109,7 @@ func decodeResp(httpResp *http.Response, resp interface{}) error {
 		return errors.Wrapf(err, "failed to read response body for %s", httpResp.Request.URL)
 	}
 
-	if httpResp.Header.Get("Content-Type") != api.JsonMediaType {
+	if !strings.Contains(httpResp.Header.Get("Content-Type"), api.JsonMediaType) {
 		// 2XX codes are a success
 		if strings.HasPrefix(httpResp.Status, "2") {
 			return nil
@@ -133,4 +134,8 @@ func decodeResp(httpResp *http.Response, resp interface{}) error {
 	}
 
 	return nil
+}
+
+func (c *BeaconApiJsonRestHandler) SetHost(host string) {
+	c.host = host
 }

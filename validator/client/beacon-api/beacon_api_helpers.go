@@ -12,7 +12,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
@@ -48,7 +47,7 @@ func buildURL(path string, queryParams ...neturl.Values) string {
 	return fmt.Sprintf("%s?%s", path, queryParams[0].Encode())
 }
 
-func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*structs.GetStateForkResponse, error) {
+func (c *beaconApiValidatorClient) fork(ctx context.Context) (*structs.GetStateForkResponse, error) {
 	const endpoint = "/eth/v1/beacon/states/head/fork"
 
 	stateForkResponseJson := &structs.GetStateForkResponse{}
@@ -60,7 +59,7 @@ func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*structs.GetSta
 	return stateForkResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*structs.GetBlockHeadersResponse, error) {
+func (c *beaconApiValidatorClient) headers(ctx context.Context) (*structs.GetBlockHeadersResponse, error) {
 	const endpoint = "/eth/v1/beacon/headers"
 
 	blockHeadersResponseJson := &structs.GetBlockHeadersResponse{}
@@ -72,7 +71,7 @@ func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*structs.Get
 	return blockHeadersResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primitives.Epoch, validatorIndexes []string) (*structs.GetLivenessResponse, error) {
+func (c *beaconApiValidatorClient) liveness(ctx context.Context, epoch primitives.Epoch, validatorIndexes []string) (*structs.GetLivenessResponse, error) {
 	const endpoint = "/eth/v1/validator/liveness/"
 	url := endpoint + strconv.FormatUint(uint64(epoch), 10)
 
@@ -90,7 +89,7 @@ func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primit
 	return livenessResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*structs.SyncStatusResponse, error) {
+func (c *beaconApiValidatorClient) syncing(ctx context.Context) (*structs.SyncStatusResponse, error) {
 	const endpoint = "/eth/v1/node/syncing"
 
 	syncingResponseJson := &structs.SyncStatusResponse{}
@@ -103,7 +102,7 @@ func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*structs.Syn
 }
 
 func (c *beaconApiValidatorClient) isSyncing(ctx context.Context) (bool, error) {
-	response, err := c.getSyncing(ctx)
+	response, err := c.syncing(ctx)
 	if err != nil || response == nil || response.Data == nil {
 		return true, errors.Wrapf(err, "failed to get syncing status")
 	}
@@ -112,7 +111,7 @@ func (c *beaconApiValidatorClient) isSyncing(ctx context.Context) (bool, error) 
 }
 
 func (c *beaconApiValidatorClient) isOptimistic(ctx context.Context) (bool, error) {
-	response, err := c.getSyncing(ctx)
+	response, err := c.syncing(ctx)
 	if err != nil || response == nil || response.Data == nil {
 		return true, errors.Wrapf(err, "failed to get syncing status")
 	}

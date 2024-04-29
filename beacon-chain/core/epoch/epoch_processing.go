@@ -24,27 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
-// sortableIndices implements the Sort interface to sort newly activated validator indices
-// by activation epoch and by index number.
-type sortableIndices struct {
-	indices    []primitives.ValidatorIndex
-	validators []*ethpb.Validator
-}
-
-// Len is the number of elements in the collection.
-func (s sortableIndices) Len() int { return len(s.indices) }
-
-// Swap swaps the elements with indexes i and j.
-func (s sortableIndices) Swap(i, j int) { s.indices[i], s.indices[j] = s.indices[j], s.indices[i] }
-
-// Less reports whether the element with index i must sort before the element with index j.
-func (s sortableIndices) Less(i, j int) bool {
-	if s.validators[s.indices[i]].ActivationEligibilityEpoch == s.validators[s.indices[j]].ActivationEligibilityEpoch {
-		return s.indices[i] < s.indices[j]
-	}
-	return s.validators[s.indices[i]].ActivationEligibilityEpoch < s.validators[s.indices[j]].ActivationEligibilityEpoch
-}
-
 // AttestingBalance returns the total balance from all the attesting indices.
 //
 // WARNING: This method allocates a new copy of the attesting validator indices set and is
@@ -91,55 +70,78 @@ func AttestingBalance(ctx context.Context, state state.ReadOnlyBeaconState, atts
 //	 for index in activation_queue[:get_validator_churn_limit(state)]:
 //	     validator = state.validators[index]
 //	     validator.activation_epoch = compute_activation_exit_epoch(get_current_epoch(state))
-func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
-	currentEpoch := time.CurrentEpoch(state)
-	vals := state.Validators()
+func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) (state.BeaconState, error) {
+	currentEpoch := time.CurrentEpoch(st)
 	var err error
 	ejectionBal := params.BeaconConfig().EjectionBalance
-	activationEligibilityEpoch := time.CurrentEpoch(state) + 1
-	for idx, validator := range vals {
-		// Process the validators for activation eligibility.
-		if helpers.IsEligibleForActivationQueue(validator) {
-			validator.ActivationEligibilityEpoch = activationEligibilityEpoch
-			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), validator); err != nil {
-				return nil, err
-			}
+
+	// To avoid copying the state validator set via st.Validators(), we will perform a read only pass
+	// over the validator set while collecting validator indices where the validator copy is actually
+	// necessary, then we will process these operations.
+	eligibleForActivationQ := make([]primitives.ValidatorIndex, 0)
+	eligibleForActivation := make([]primitives.ValidatorIndex, 0)
+	eligibleForEjection := make([]primitives.ValidatorIndex, 0)
+
+	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+		// Collect validators eligible to enter the activation queue.
+		if helpers.IsEligibleForActivationQueue(val, currentEpoch) {
+			eligibleForActivationQ = append(eligibleForActivationQ, primitives.ValidatorIndex(idx))
 		}
 
-		// Process the validators for ejection.
-		isActive := helpers.IsActiveValidator(validator, currentEpoch)
-		belowEjectionBalance := validator.EffectiveBalance <= ejectionBal
+		// Collect validators to eject.
+		isActive := helpers.IsActiveValidatorUsingTrie(val, currentEpoch)
+		belowEjectionBalance := val.EffectiveBalance() <= ejectionBal
 		if isActive && belowEjectionBalance {
-			// Here is fine to do a quadratic loop since this should
-			// barely happen
-			maxExitEpoch, churn := validators.MaxExitEpochAndChurn(state)
-			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), maxExitEpoch, churn)
-			if err != nil && !errors.Is(err, validators.ErrValidatorAlreadyExited) {
-				return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
-			}
+			eligibleForEjection = append(eligibleForEjection, primitives.ValidatorIndex(idx))
+		}
+
+		// Collect validators eligible for activation and not yet dequeued for activation.
+		if helpers.IsEligibleForActivationUsingROVal(st, val) {
+			eligibleForActivation = append(eligibleForActivation, primitives.ValidatorIndex(idx))
+		}
+
+		return nil
+	}); err != nil {
+		return st, fmt.Errorf("failed to read validators: %w", err)
+	}
+
+	// Process validators for activation eligibility.
+	activationEligibilityEpoch := time.CurrentEpoch(st) + 1
+	for _, idx := range eligibleForActivationQ {
+		v, err := st.ValidatorAtIndex(idx)
+		if err != nil {
+			return nil, err
+		}
+		v.ActivationEligibilityEpoch = activationEligibilityEpoch
+		if err := st.UpdateValidatorAtIndex(idx, v); err != nil {
+			return nil, err
+		}
+	}
+
+	// Process validators eligible for ejection.
+	for _, idx := range eligibleForEjection {
+		// Here is fine to do a quadratic loop since this should
+		// barely happen
+		maxExitEpoch, churn := validators.MaxExitEpochAndChurn(st)
+		st, _, err = validators.InitiateValidatorExit(ctx, st, idx, maxExitEpoch, churn)
+		if err != nil && !errors.Is(err, validators.ErrValidatorAlreadyExited) {
+			return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
 		}
 	}
 
 	// Queue validators eligible for activation and not yet dequeued for activation.
-	var activationQ []primitives.ValidatorIndex
-	for idx, validator := range vals {
-		if helpers.IsEligibleForActivation(state, validator) {
-			activationQ = append(activationQ, primitives.ValidatorIndex(idx))
-		}
-	}
-
-	sort.Sort(sortableIndices{indices: activationQ, validators: vals})
+	sort.Sort(sortableIndices{indices: eligibleForActivation, state: st})
 
 	// Only activate just enough validators according to the activation churn limit.
-	limit := uint64(len(activationQ))
-	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, state, currentEpoch)
+	limit := uint64(len(eligibleForActivation))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, st, currentEpoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active validator count")
 	}
 
 	churnLimit := helpers.ValidatorActivationChurnLimit(activeValidatorCount)
 
-	if state.Version() >= version.Deneb {
+	if st.Version() >= version.Deneb {
 		churnLimit = helpers.ValidatorActivationChurnLimitDeneb(activeValidatorCount)
 	}
 
@@ -149,17 +151,17 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 	}
 
 	activationExitEpoch := helpers.ActivationExitEpoch(currentEpoch)
-	for _, index := range activationQ[:limit] {
-		validator, err := state.ValidatorAtIndex(index)
+	for _, index := range eligibleForActivation[:limit] {
+		validator, err := st.ValidatorAtIndex(index)
 		if err != nil {
 			return nil, err
 		}
 		validator.ActivationEpoch = activationExitEpoch
-		if err := state.UpdateValidatorAtIndex(index, validator); err != nil {
+		if err := st.UpdateValidatorAtIndex(index, validator); err != nil {
 			return nil, err
 		}
 	}
-	return state, nil
+	return st, nil
 }
 
 // ProcessSlashings processes the slashed validators during epoch processing,
@@ -470,25 +472,11 @@ func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconSt
 	seen := make(map[uint64]bool)
 
 	for _, att := range atts {
-		var committees [][]primitives.ValidatorIndex
-		if att.Version() < version.Electra {
-			committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
-			if err != nil {
-				return nil, err
-			}
-			committees = [][]primitives.ValidatorIndex{committee}
-		} else {
-			committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBits())
-			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-			var err error
-			for i, ci := range committeeIndices {
-				committees[i], err = helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, ci)
-				if err != nil {
-					return nil, err
-				}
-			}
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
+		if err != nil {
+			return nil, err
 		}
-		attestingIndices, err := attestation.AttestingIndices(att, committees)
+		attestingIndices, err := attestation.AttestingIndices(att, committee)
 		if err != nil {
 			return nil, err
 		}

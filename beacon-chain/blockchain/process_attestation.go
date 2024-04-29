@@ -39,7 +39,7 @@ import (
 //
 //	 # Update latest messages for attesting indices
 //	 update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
-func (s *Service) OnAttestation(ctx context.Context, a interfaces.Attestation, disparity time.Duration) error {
+func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time.Duration) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
 
@@ -83,25 +83,11 @@ func (s *Service) OnAttestation(ctx context.Context, a interfaces.Attestation, d
 	}
 
 	// Use the target state to verify attesting indices are valid.
-	var committees [][]primitives.ValidatorIndex
-	if a.Version() < version.Electra {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, baseState, a.GetData().Slot, a.GetData().CommitteeIndex)
-		if err != nil {
-			return err
-		}
-		committees = [][]primitives.ValidatorIndex{committee}
-	} else {
-		committeeIndices := a.GetCommitteeBits().BitIndices()
-		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-		for i, ci := range committeeIndices {
-			committees[i], err = helpers.BeaconCommitteeFromState(ctx, baseState, a.GetData().Slot, primitives.CommitteeIndex(ci))
-			if err != nil {
-				return err
-			}
-		}
+	committees, err := helpers.AttestationCommittees(ctx, baseState, a)
+	if err != nil {
+		return err
 	}
-
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committees)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committees...)
 	if err != nil {
 		return err
 	}
@@ -114,7 +100,7 @@ func (s *Service) OnAttestation(ctx context.Context, a interfaces.Attestation, d
 	// We assume trusted attestation in this function has verified signature.
 
 	// Update forkchoice store with the new attestation for updating weight.
-	s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indexedAtt.AttestingIndices, bytesutil.ToBytes32(a.GetData().BeaconBlockRoot), a.GetData().Target.Epoch)
+	s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indexedAtt.GetAttestingIndices(), bytesutil.ToBytes32(a.GetData().BeaconBlockRoot), a.GetData().Target.Epoch)
 
 	return nil
 }

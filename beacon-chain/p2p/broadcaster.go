@@ -57,7 +57,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
-func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att interfaces.Attestation) error {
+func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att ethpb.Att) error {
 	if att == nil {
 		return errors.New("attempted to broadcast nil attestation")
 	}
@@ -97,7 +97,7 @@ func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint
 	return nil
 }
 
-func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint64, att interfaces.Attestation, forkDigest [4]byte) {
+func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint64, att ethpb.Att, forkDigest [4]byte) {
 	_, span := trace.StartSpan(ctx, "p2p.internalBroadcastAttestation")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
@@ -143,7 +143,7 @@ func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint6
 		log.WithFields(logrus.Fields{
 			"attestationSlot": att.GetData().Slot,
 			"currentSlot":     currSlot,
-		}).WithError(err).Warning("Attestation is too old to broadcast, discarding it")
+		}).WithError(err).Debug("Attestation is too old to broadcast, discarding it")
 		return
 	}
 

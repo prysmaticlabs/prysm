@@ -26,10 +26,17 @@ func (c ChunkKind) String() string {
 	}
 }
 
+// WrappedIndexedAtt is a wrapper over the IndexedAtt interface.
+// The wrapper is needed to overcome the limitation of the event feed library
+// which doesn't work well with interface types.
+type WrappedIndexedAtt struct {
+	ethpb.IndexedAtt
+}
+
 // IndexedAttestationWrapper contains an indexed attestation with its
 // data root to reduce duplicated computation.
 type IndexedAttestationWrapper struct {
-	IndexedAttestation *ethpb.IndexedAttestation
+	IndexedAttestation ethpb.IndexedAtt
 	DataRoot           [32]byte
 }
 

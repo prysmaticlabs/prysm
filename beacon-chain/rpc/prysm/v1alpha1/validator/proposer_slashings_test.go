@@ -28,7 +28,7 @@ func TestServer_getSlashings(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	attSlashings := make([]*ethpb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+	attSlashings := make([]ethpb.AttSlashing, params.BeaconConfig().MaxAttesterSlashings)
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
 		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 			beaconState,

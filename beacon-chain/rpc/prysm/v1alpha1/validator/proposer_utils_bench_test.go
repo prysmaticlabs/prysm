@@ -44,10 +44,10 @@ func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
 		},
 	}
 
-	runner := func(atts []*ethpb.Attestation) {
+	runner := func(atts []ethpb.Att) {
 		attsCopy := make(proposerAtts, len(atts))
 		for i, att := range atts {
-			attsCopy[i] = ethpb.CopyAttestation(att)
+			attsCopy[i] = ethpb.CopyAttestation(att.(*ethpb.Attestation))
 		}
 		_, err := attsCopy.sortByProfitability()
 		require.NoError(b, err, "Could not sort attestations by profitability")

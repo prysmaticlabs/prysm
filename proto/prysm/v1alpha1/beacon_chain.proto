@@ -53,7 +53,7 @@ service BeaconChain {
     // filter criteria. This RPC should not return NOT_FOUND. Only one filter
     // criteria should be used. This endpoint allows for retrieval of genesis
     // information via a boolean query filter.
-    rpc ListAttestationsElectra(ListAttestationsRequest) returns (ListAttestationsResponseElectra) {
+    rpc ListAttestationsElectra(ListAttestationsRequest) returns (ListAttestationsElectraResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/attestations_electra"
         };
@@ -68,6 +68,18 @@ service BeaconChain {
     rpc ListIndexedAttestations(ListIndexedAttestationsRequest) returns (ListIndexedAttestationsResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/attestations/indexed"
+        };
+    }
+
+    // Retrieve indexed attestations by block root, slot, or epoch.
+    //
+    // The server may return an empty list when no indexed attestations match the given
+    // filter criteria. This RPC should not return NOT_FOUND. Only one filter
+    // criteria should be used. This endpoint allows for retrieval of genesis
+    // information via a boolean query filter.
+    rpc ListIndexedAttestationsElectra(ListIndexedAttestationsRequest) returns (ListIndexedAttestationsElectraResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/attestations/indexed_electra"
         };
     }
 
@@ -95,7 +107,7 @@ service BeaconChain {
     // Refer to the Ethereum Beacon Chain specification for more details on how
     // attestations are processed and when they are no longer valid.
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
-    rpc AttestationPoolElectra(AttestationPoolRequest) returns (AttestationPoolResponseElectra) {
+    rpc AttestationPoolElectra(AttestationPoolRequest) returns (AttestationPoolElectraResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/attestations/pool_electra"
         };
@@ -232,6 +244,13 @@ service BeaconChain {
         };
     }
 
+    // Submit an attester slashing object to the beacon node.
+    rpc SubmitAttesterSlashingElectra(AttesterSlashingElectra) returns (SubmitSlashingResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/slashings/attester/submit_electra"
+        };
+    }
+
     // Submit a proposer slashing object to the beacon node.
     rpc SubmitProposerSlashing(ProposerSlashing) returns (SubmitSlashingResponse) {
         option (google.api.http) = {
@@ -301,7 +320,7 @@ message ListAttestationsResponse {
     int32 total_size = 3;
 }
 
-message ListAttestationsResponseElectra {
+message ListAttestationsElectraResponse {
     repeated AttestationElectra attestations = 1;
 
     // A pagination token returned from a previous call to `ListAttestations`
@@ -315,6 +334,18 @@ message ListAttestationsResponseElectra {
 
 message ListIndexedAttestationsResponse {
     repeated IndexedAttestation indexed_attestations = 1;
+
+    // A pagination token returned from a previous call to `ListIndexedAttestations`
+    // that indicates from where listing should continue.
+    // This field is optional.
+    string next_page_token = 2;
+
+    // Total count of Attestations matching the request filter.
+    int32 total_size = 3;
+}
+
+message ListIndexedAttestationsElectraResponse {
+    repeated IndexedAttestationElectra indexed_attestations = 1;
 
     // A pagination token returned from a previous call to `ListIndexedAttestations`
     // that indicates from where listing should continue.
@@ -819,7 +850,7 @@ message AttestationPoolResponse {
     int32 total_size = 3;
 }
 
-message AttestationPoolResponseElectra {
+message AttestationPoolElectraResponse {
     // List of attestations currently in the pool of the beacon chain.
     repeated AttestationElectra attestations = 1;
 

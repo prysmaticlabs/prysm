@@ -143,10 +143,6 @@ var (
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders.",
 	}
-	DisableEIP4881 = &cli.BoolFlag{
-		Name:  "disable-eip-4881",
-		Usage: "Disables the deposit tree specified in EIP-4881.",
-	}
 	EnableLightClient = &cli.BoolFlag{
 		Name:  "enable-lightclient",
 		Usage: "Enables the light client support in the beacon node",
@@ -169,6 +165,11 @@ var (
 	EnableQUIC = &cli.BoolFlag{
 		Name:  "enable-quic",
 		Usage: "Enables connection using the QUIC protocol for peers which support it.",
+	}
+	// eip6110ValidatorCache is a flag for enabling the EIP-6110 validator cache.
+	eip6110ValidatorCache = &cli.BoolFlag{
+		Name:  "eip6110-validator-cache",
+		Usage: "Enables the EIP-6110 validator cache.",
 	}
 )
 
@@ -222,12 +223,12 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
-	DisableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
 	EnableLightClient,
 	BlobSaveFsync,
 	EnableQUIC,
+	eip6110ValidatorCache,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

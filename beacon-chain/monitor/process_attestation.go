@@ -33,27 +33,12 @@ func (s *Service) canUpdateAttestedValidator(idx primitives.ValidatorIndex, slot
 }
 
 // attestingIndices returns the indices of validators that participated in the given aggregated attestation.
-func attestingIndices(ctx context.Context, state state.BeaconState, att interfaces.Attestation) ([]uint64, error) {
-	var committees [][]primitives.ValidatorIndex
-	if att.Version() < version.Electra {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
-		if err != nil {
-			return nil, err
-		}
-		committees = [][]primitives.ValidatorIndex{committee}
-	} else {
-		committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBits())
-		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-		var err error
-		for i, ci := range committeeIndices {
-			committees[i], err = helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, ci)
-			if err != nil {
-				return nil, err
-			}
-		}
+func attestingIndices(ctx context.Context, state state.BeaconState, att ethpb.Att) ([]uint64, error) {
+	committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
+	if err != nil {
+		return nil, err
 	}
-
-	return attestation.AttestingIndices(att, committees)
+	return attestation.AttestingIndices(att, committee)
 }
 
 // logMessageTimelyFlagsForIndex returns the log message with performance info for the attestation (head, source, target)
@@ -78,7 +63,7 @@ func (s *Service) processAttestations(ctx context.Context, state state.BeaconSta
 }
 
 // processIncludedAttestation logs in the event for the tracked validators' and their latest attestation gets processed.
-func (s *Service) processIncludedAttestation(ctx context.Context, state state.BeaconState, att interfaces.Attestation) {
+func (s *Service) processIncludedAttestation(ctx context.Context, state state.BeaconState, att ethpb.Att) {
 	attestingIndices, err := attestingIndices(ctx, state, att)
 	if err != nil {
 		log.WithError(err).Error("Could not get attesting indices")
@@ -176,7 +161,7 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 }
 
 // processUnaggregatedAttestation logs when the beacon node observes an unaggregated attestation from tracked validator.
-func (s *Service) processUnaggregatedAttestation(ctx context.Context, att interfaces.Attestation) {
+func (s *Service) processUnaggregatedAttestation(ctx context.Context, att ethpb.Att) {
 	s.RLock()
 	defer s.RUnlock()
 	root := bytesutil.ToBytes32(att.GetData().BeaconBlockRoot)

@@ -73,21 +73,37 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
-	att := &ethpb.Attestation{
-		AggregationBits: []byte{'A'},
-		Data: &ethpb.AttestationData{
-			Slot:            34,
-			CommitteeIndex:  4,
-			BeaconBlockRoot: []byte{'C'},
-			Source:          nil,
-			Target:          nil,
-		},
-		Signature: []byte{'B'},
-	}
-	valCount, err := helpers.ActiveValidatorCount(context.Background(), state, slots.ToEpoch(att.Data.Slot))
+	valCount, err := helpers.ActiveValidatorCount(context.Background(), state, slots.ToEpoch(34))
 	require.NoError(t, err)
-	sub := helpers.ComputeSubnetForAttestation(valCount, att)
-	assert.Equal(t, uint64(6), sub, "Did not get correct subnet for attestation")
+
+	t.Run("Phase 0", func(t *testing.T) {
+		att := &ethpb.Attestation{
+			AggregationBits: []byte{'A'},
+			Data: &ethpb.AttestationData{
+				Slot:            34,
+				CommitteeIndex:  4,
+				BeaconBlockRoot: []byte{'C'},
+			},
+			Signature: []byte{'B'},
+		}
+		sub := helpers.ComputeSubnetForAttestation(valCount, att)
+		assert.Equal(t, uint64(6), sub, "Did not get correct subnet for attestation")
+	})
+	t.Run("Electra", func(t *testing.T) {
+		cb := primitives.NewAttestationCommitteeBits()
+		cb.SetBitAt(4, true)
+		att := &ethpb.AttestationElectra{
+			AggregationBits: []byte{'A'},
+			CommitteeBits:   cb,
+			Data: &ethpb.AttestationData{
+				Slot:            34,
+				BeaconBlockRoot: []byte{'C'},
+			},
+			Signature: []byte{'B'},
+		}
+		sub := helpers.ComputeSubnetForAttestation(valCount, att)
+		assert.Equal(t, uint64(6), sub, "Did not get correct subnet for attestation")
+	})
 }
 
 func Test_ValidateAttestationTime(t *testing.T) {
@@ -238,7 +254,7 @@ func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
 func TestValidateNilAttestation(t *testing.T) {
 	tests := []struct {
 		name        string
-		attestation *ethpb.Attestation
+		attestation ethpb.Att
 		errString   string
 	}{
 		{

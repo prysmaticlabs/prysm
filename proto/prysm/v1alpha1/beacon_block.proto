@@ -19,6 +19,7 @@ import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
+import "proto/prysm/v1alpha1/eip_7251.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
 option go_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1;eth";
@@ -240,6 +241,14 @@ message AttesterSlashing {
     IndexedAttestation attestation_2 = 2;
 }
 
+message AttesterSlashingElectra {
+    // First conflicting attestation.
+    IndexedAttestationElectra attestation_1 = 1;
+
+    // Second conflicting attestation.
+    IndexedAttestationElectra attestation_2 = 2;
+}
+
 // Deposit into the Ethereum consensus from the Ethereum 1.x deposit contract.
 message Deposit {
     // DepositData that is encoded into a deposit signature.
@@ -327,6 +336,15 @@ message SignedBeaconBlockHeader {
 }
 
 message IndexedAttestation {
+    repeated uint64 attesting_indices = 1 [(ethereum.eth.ext.ssz_max) = "max_attesting_indices.size"];
+
+    AttestationData data = 2;
+
+    // 96 bytes aggregate signature.
+    bytes signature = 3 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message IndexedAttestationElectra {
     repeated uint64 attesting_indices = 1 [(ethereum.eth.ext.ssz_max) = "max_attesting_indices.size"];
 
     AttestationData data = 2;
@@ -785,7 +803,7 @@ message BeaconBlockBodyElectra {
     repeated ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
 
     // At most MAX_ATTESTER_SLASHINGS_ELECTRA.
-    repeated AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "1"];
+    repeated AttesterSlashingElectra attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "1"];
 
     // At most MAX_ATTESTATIONS_ELECTRA.
     repeated AttestationElectra attestations = 6 [(ethereum.eth.ext.ssz_max) = "8"];
@@ -800,7 +818,7 @@ message BeaconBlockBodyElectra {
     SyncAggregate sync_aggregate = 9;
 
     // Execution payload from the execution chain. New in Bellatrix network upgrade.
-    ethereum.engine.v1.ExecutionPayloadDeneb execution_payload = 10;
+    ethereum.engine.v1.ExecutionPayloadElectra execution_payload = 10;
 
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
@@ -848,7 +866,7 @@ message BlindedBeaconBlockBodyElectra {
     repeated ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
 
     // At most MAX_ATTESTER_SLASHINGS_ELECTRA.
-    repeated AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "1"];
+    repeated AttesterSlashingElectra attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "1"];
 
     // At most MAX_ATTESTATIONS_ELECTRA.
     repeated AttestationElectra attestations = 6 [(ethereum.eth.ext.ssz_max) = "8"];
@@ -863,7 +881,7 @@ message BlindedBeaconBlockBodyElectra {
     SyncAggregate sync_aggregate = 9;
 
     // Execution payload header from the execution chain. New in Bellatrix network upgrade to accommodate MEV interaction.
-    ethereum.engine.v1.ExecutionPayloadHeaderDeneb execution_payload_header = 10;
+    ethereum.engine.v1.ExecutionPayloadHeaderElectra execution_payload_header = 10;
 
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];

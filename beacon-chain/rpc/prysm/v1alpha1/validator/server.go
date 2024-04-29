@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -69,7 +69,7 @@ type Server struct {
 	BlobReceiver           blockchain.BlobReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       execution.POWBlockFetcher
-	PendingDepositsFetcher depositcache.PendingDepositsFetcher
+	PendingDepositsFetcher depositsnapshot.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
 	ReplayerBuilder        stategen.ReplayerBuilder
@@ -114,10 +114,14 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 		return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
 	}
 
+	waitTime := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	ticker := time.NewTicker(waitTime)
+	defer ticker.Stop()
+
 	for {
 		select {
 		// Pinging every slot for activation.
-		case <-time.After(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second):
+		case <-ticker.C:
 			activeValidatorExists, validatorStatuses, err := vs.activationStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)

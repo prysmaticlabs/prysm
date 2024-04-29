@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	testhelpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"go.uber.org/mock/gomock"
 )
 
@@ -58,7 +58,7 @@ func TestProposeBeaconBlock_Altair(t *testing.T) {
 	// Make sure that what we send in the POST body is the marshalled version of the protobuf block
 	headers := map[string]string{"Eth-Consensus-Version": "altair"}
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/blocks",
 		headers,
 		bytes.NewBuffer(marshalledBlock),
@@ -80,8 +80,8 @@ func TestProposeBeaconBlock_Altair(t *testing.T) {
 func generateSignedAltairBlock() *ethpb.GenericSignedBeaconBlock_Altair {
 	return &ethpb.GenericSignedBeaconBlock_Altair{
 		Altair: &ethpb.SignedBeaconBlockAltair{
-			Block:     test_helpers.GenerateProtoAltairBeaconBlock(),
-			Signature: test_helpers.FillByteSlice(96, 112),
+			Block:     testhelpers.GenerateProtoAltairBeaconBlock(),
+			Signature: testhelpers.FillByteSlice(96, 112),
 		},
 	}
 }

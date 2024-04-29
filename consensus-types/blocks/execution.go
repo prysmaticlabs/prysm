@@ -3,7 +3,6 @@ package blocks
 import (
 	"bytes"
 	"errors"
-	"math/big"
 
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -11,10 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"google.golang.org/protobuf/proto"
 )
+
+var _ interfaces.ExecutionDataElectra = (*executionPayloadElectra)(nil)
 
 // executionPayload is a convenience wrapper around a beacon block body's execution payload data structure
 // This wrapper allows us to conform to a common interface so that beacon
@@ -22,6 +22,33 @@ import (
 type executionPayload struct {
 	p *enginev1.ExecutionPayload
 }
+
+// NewWrappedExecutionData creates an appropriate execution payload wrapper based on the incoming type.
+func NewWrappedExecutionData(v proto.Message) (interfaces.ExecutionData, error) {
+	if v == nil {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	switch pbStruct := v.(type) {
+	case *enginev1.ExecutionPayload:
+		return WrappedExecutionPayload(pbStruct)
+	case *enginev1.ExecutionPayloadCapella:
+		return WrappedExecutionPayloadCapella(pbStruct)
+	case *enginev1.ExecutionPayloadCapellaWithValue:
+		return WrappedExecutionPayloadCapella(pbStruct.Payload)
+	case *enginev1.ExecutionPayloadDeneb:
+		return WrappedExecutionPayloadDeneb(pbStruct)
+	case *enginev1.ExecutionPayloadDenebWithValueAndBlobsBundle:
+		return WrappedExecutionPayloadDeneb(pbStruct.Payload)
+	case *enginev1.ExecutionPayloadElectra:
+		return WrappedExecutionPayloadElectra(pbStruct)
+	case *enginev1.ExecutionPayloadElectraWithValueAndBlobsBundle:
+		return WrappedExecutionPayloadElectra(pbStruct.Payload)
+	default:
+		return nil, ErrUnsupportedVersion
+	}
+}
+
+var _ interfaces.ExecutionData = &executionPayload{}
 
 // WrappedExecutionPayload is a constructor which wraps a protobuf execution payload into an interface.
 func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
@@ -172,37 +199,14 @@ func (e executionPayload) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// PbBellatrix --
-func (e executionPayload) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return e.p, nil
-}
-
-// PbCapella --
-func (executionPayload) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbDeneb --
-func (executionPayload) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (executionPayload) ValueInWei() (math.Wei, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInGwei --
-func (executionPayload) ValueInGwei() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeader struct {
 	p *enginev1.ExecutionPayloadHeader
 }
+
+var _ interfaces.ExecutionData = &executionPayloadHeader{}
 
 // WrappedExecutionPayloadHeader is a constructor which wraps a protobuf execution header into an interface.
 func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
@@ -353,31 +357,6 @@ func (e executionPayloadHeader) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// PbDeneb --
-func (executionPayloadHeader) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbCapella --
-func (executionPayloadHeader) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbBellatrix --
-func (executionPayloadHeader) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (executionPayloadHeader) ValueInWei() (math.Wei, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInGwei --
-func (executionPayloadHeader) ValueInGwei() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
 // PayloadToHeader converts `payload` into execution payload header format.
 func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeader, error) {
 	txs, err := payload.Transactions()
@@ -410,14 +389,14 @@ func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPaylo
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadCapella struct {
-	p         *enginev1.ExecutionPayloadCapella
-	weiValue  math.Wei
-	gweiValue uint64
+	p *enginev1.ExecutionPayloadCapella
 }
 
+var _ interfaces.ExecutionData = &executionPayloadCapella{}
+
 // WrappedExecutionPayloadCapella is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value math.Wei) (interfaces.ExecutionData, error) {
-	w := executionPayloadCapella{p: p, weiValue: value, gweiValue: uint64(math.WeiToGwei(value))}
+func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella) (interfaces.ExecutionData, error) {
+	w := executionPayloadCapella{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -564,43 +543,18 @@ func (e executionPayloadCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// PbDeneb --
-func (executionPayloadCapella) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbCapella --
-func (e executionPayloadCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return e.p, nil
-}
-
-// PbBellatrix --
-func (executionPayloadCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (e executionPayloadCapella) ValueInWei() (math.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadCapella) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeaderCapella struct {
-	p         *enginev1.ExecutionPayloadHeaderCapella
-	weiValue  math.Wei
-	gweiValue uint64
+	p *enginev1.ExecutionPayloadHeaderCapella
 }
 
+var _ interfaces.ExecutionData = &executionPayloadHeaderCapella{}
+
 // WrappedExecutionPayloadHeaderCapella is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value math.Wei) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderCapella{p: p, weiValue: value, gweiValue: uint64(math.WeiToGwei(value))}
+func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderCapella{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -747,31 +701,6 @@ func (e executionPayloadHeaderCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// PbDeneb --
-func (executionPayloadHeaderCapella) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbCapella --
-func (executionPayloadHeaderCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbBellatrix --
-func (executionPayloadHeaderCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (e executionPayloadHeaderCapella) ValueInWei() (math.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderCapella) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
 func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeaderCapella, error) {
 	txs, err := payload.Transactions()
@@ -858,6 +787,75 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 	}, nil
 }
 
+// PayloadToHeaderElectra converts `payload` into execution payload header format.
+func PayloadToHeaderElectra(payload interfaces.ExecutionDataElectra) (*enginev1.ExecutionPayloadHeaderElectra, error) {
+	txs, err := payload.Transactions()
+	if err != nil {
+		return nil, err
+	}
+	txRoot, err := ssz.TransactionsRoot(txs)
+	if err != nil {
+		return nil, err
+	}
+	withdrawals, err := payload.Withdrawals()
+	if err != nil {
+		return nil, err
+	}
+	withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	if err != nil {
+		return nil, err
+	}
+	blobGasUsed, err := payload.BlobGasUsed()
+	if err != nil {
+		return nil, err
+	}
+	excessBlobGas, err := payload.ExcessBlobGas()
+	if err != nil {
+		return nil, err
+	}
+
+	depositRequests := payload.DepositRequests()
+	depositRequestsRoot, err := ssz.DepositRequestsSliceRoot(depositRequests, fieldparams.MaxDepositRequestsPerPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	withdrawalRequests := payload.WithdrawalRequests()
+	withdrawalRequestsRoot, err := ssz.WithdrawalRequestsSliceRoot(withdrawalRequests, fieldparams.MaxWithdrawalRequestsPerPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	consolidationRequests := payload.ConsolidationRequests()
+	consolidationRequestsRoot, err := ssz.ConsolidationRequestsSliceRoot(consolidationRequests, fieldparams.MaxConsolidationRequestsPerPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	return &enginev1.ExecutionPayloadHeaderElectra{
+		ParentHash:                bytesutil.SafeCopyBytes(payload.ParentHash()),
+		FeeRecipient:              bytesutil.SafeCopyBytes(payload.FeeRecipient()),
+		StateRoot:                 bytesutil.SafeCopyBytes(payload.StateRoot()),
+		ReceiptsRoot:              bytesutil.SafeCopyBytes(payload.ReceiptsRoot()),
+		LogsBloom:                 bytesutil.SafeCopyBytes(payload.LogsBloom()),
+		PrevRandao:                bytesutil.SafeCopyBytes(payload.PrevRandao()),
+		BlockNumber:               payload.BlockNumber(),
+		GasLimit:                  payload.GasLimit(),
+		GasUsed:                   payload.GasUsed(),
+		Timestamp:                 payload.Timestamp(),
+		ExtraData:                 bytesutil.SafeCopyBytes(payload.ExtraData()),
+		BaseFeePerGas:             bytesutil.SafeCopyBytes(payload.BaseFeePerGas()),
+		BlockHash:                 bytesutil.SafeCopyBytes(payload.BlockHash()),
+		TransactionsRoot:          txRoot[:],
+		WithdrawalsRoot:           withdrawalsRoot[:],
+		BlobGasUsed:               blobGasUsed,
+		ExcessBlobGas:             excessBlobGas,
+		DepositRequestsRoot:       depositRequestsRoot[:],
+		WithdrawalRequestsRoot:    withdrawalRequestsRoot[:],
+		ConsolidationRequestsRoot: consolidationRequestsRoot[:],
+	}, nil
+}
+
 // IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
 // a non-zero value, this function will return false.
 func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
@@ -915,6 +913,20 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 	if data.Timestamp() != 0 {
 		return false, nil
 	}
+
+	epe, postElectra := data.(interfaces.ExecutionDataElectra)
+	if postElectra {
+		drs := epe.DepositRequests()
+		if len(drs) != 0 {
+			return false, nil
+		}
+
+		wrs := epe.WithdrawalRequests()
+		if len(wrs) != 0 {
+			return false, nil
+		}
+	}
+
 	return true, nil
 }
 
@@ -922,14 +934,14 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeaderDeneb struct {
-	p         *enginev1.ExecutionPayloadHeaderDeneb
-	weiValue  math.Wei
-	gweiValue uint64
+	p *enginev1.ExecutionPayloadHeaderDeneb
 }
 
+var _ interfaces.ExecutionData = &executionPayloadHeaderDeneb{}
+
 // WrappedExecutionPayloadHeaderDeneb is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value math.Wei) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderDeneb{p: p, weiValue: value, gweiValue: uint64(math.WeiToGwei(value))}
+func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderDeneb{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -1071,31 +1083,6 @@ func (e executionPayloadHeaderDeneb) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// PbDeneb --
-func (executionPayloadHeaderDeneb) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbBellatrix --
-func (executionPayloadHeaderDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbCapella --
-func (executionPayloadHeaderDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (e executionPayloadHeaderDeneb) ValueInWei() (math.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderDeneb) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadHeaderDeneb) IsBlinded() bool {
 	return true
@@ -1105,14 +1092,14 @@ func (e executionPayloadHeaderDeneb) IsBlinded() bool {
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadDeneb struct {
-	p         *enginev1.ExecutionPayloadDeneb
-	weiValue  math.Wei
-	gweiValue uint64
+	p *enginev1.ExecutionPayloadDeneb
 }
 
+var _ interfaces.ExecutionData = &executionPayloadDeneb{}
+
 // WrappedExecutionPayloadDeneb is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value math.Wei) (interfaces.ExecutionData, error) {
-	w := executionPayloadDeneb{p: p, weiValue: value, gweiValue: uint64(math.WeiToGwei(value))}
+func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb) (interfaces.ExecutionData, error) {
+	w := executionPayloadDeneb{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -1252,45 +1239,346 @@ func (e executionPayloadDeneb) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// PbBellatrix --
-func (e executionPayloadDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbCapella --
-func (e executionPayloadDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbDeneb --
-func (e executionPayloadDeneb) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
-	return e.p, nil
-}
-
-// ValueInWei --
-func (e executionPayloadDeneb) ValueInWei() (math.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadDeneb) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadDeneb) IsBlinded() bool {
 	return false
 }
 
-// PayloadValueToWei returns a Wei value given the payload's value
-func PayloadValueToWei(value []byte) math.Wei {
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
+// executionPayloadHeaderElectra is a convenience wrapper around a blinded beacon block body's execution header data structure.
+// This wrapper allows us to conform to a common interface so that beacon
+// blocks for future forks can also be applied across Prysm without issues.
+type executionPayloadHeaderElectra struct {
+	p *enginev1.ExecutionPayloadHeaderElectra
 }
 
-// PayloadValueToGwei returns a Gwei value given the payload's value
-func PayloadValueToGwei(value []byte) math.Gwei {
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
-	return math.WeiToGwei(v)
+var _ interfaces.ExecutionData = &executionPayloadElectra{}
+
+// WrappedExecutionPayloadHeaderElectra is a constructor which wraps a protobuf execution header into an interface.
+func WrappedExecutionPayloadHeaderElectra(p *enginev1.ExecutionPayloadHeaderElectra) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderElectra{p: p}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// IsNil checks if the underlying data is nil.
+func (e executionPayloadHeaderElectra) IsNil() bool {
+	return e.p == nil
+}
+
+// MarshalSSZ --
+func (e executionPayloadHeaderElectra) MarshalSSZ() ([]byte, error) {
+	return e.p.MarshalSSZ()
+}
+
+// MarshalSSZTo --
+func (e executionPayloadHeaderElectra) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return e.p.MarshalSSZTo(dst)
+}
+
+// SizeSSZ --
+func (e executionPayloadHeaderElectra) SizeSSZ() int {
+	return e.p.SizeSSZ()
+}
+
+// UnmarshalSSZ --
+func (e executionPayloadHeaderElectra) UnmarshalSSZ(buf []byte) error {
+	return e.p.UnmarshalSSZ(buf)
+}
+
+// HashTreeRoot --
+func (e executionPayloadHeaderElectra) HashTreeRoot() ([32]byte, error) {
+	return e.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (e executionPayloadHeaderElectra) HashTreeRootWith(hh *fastssz.Hasher) error {
+	return e.p.HashTreeRootWith(hh)
+}
+
+// Proto --
+func (e executionPayloadHeaderElectra) Proto() proto.Message {
+	return e.p
+}
+
+// ParentHash --
+func (e executionPayloadHeaderElectra) ParentHash() []byte {
+	return e.p.ParentHash
+}
+
+// FeeRecipient --
+func (e executionPayloadHeaderElectra) FeeRecipient() []byte {
+	return e.p.FeeRecipient
+}
+
+// StateRoot --
+func (e executionPayloadHeaderElectra) StateRoot() []byte {
+	return e.p.StateRoot
+}
+
+// ReceiptsRoot --
+func (e executionPayloadHeaderElectra) ReceiptsRoot() []byte {
+	return e.p.ReceiptsRoot
+}
+
+// LogsBloom --
+func (e executionPayloadHeaderElectra) LogsBloom() []byte {
+	return e.p.LogsBloom
+}
+
+// PrevRandao --
+func (e executionPayloadHeaderElectra) PrevRandao() []byte {
+	return e.p.PrevRandao
+}
+
+// BlockNumber --
+func (e executionPayloadHeaderElectra) BlockNumber() uint64 {
+	return e.p.BlockNumber
+}
+
+// GasLimit --
+func (e executionPayloadHeaderElectra) GasLimit() uint64 {
+	return e.p.GasLimit
+}
+
+// GasUsed --
+func (e executionPayloadHeaderElectra) GasUsed() uint64 {
+	return e.p.GasUsed
+}
+
+// Timestamp --
+func (e executionPayloadHeaderElectra) Timestamp() uint64 {
+	return e.p.Timestamp
+}
+
+// ExtraData --
+func (e executionPayloadHeaderElectra) ExtraData() []byte {
+	return e.p.ExtraData
+}
+
+// BaseFeePerGas --
+func (e executionPayloadHeaderElectra) BaseFeePerGas() []byte {
+	return e.p.BaseFeePerGas
+}
+
+// BlockHash --
+func (e executionPayloadHeaderElectra) BlockHash() []byte {
+	return e.p.BlockHash
+}
+
+// Transactions --
+func (executionPayloadHeaderElectra) Transactions() ([][]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// TransactionsRoot --
+func (e executionPayloadHeaderElectra) TransactionsRoot() ([]byte, error) {
+	return e.p.TransactionsRoot, nil
+}
+
+// Withdrawals --
+func (e executionPayloadHeaderElectra) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalsRoot --
+func (e executionPayloadHeaderElectra) WithdrawalsRoot() ([]byte, error) {
+	return e.p.WithdrawalsRoot, nil
+}
+
+// BlobGasUsed --
+func (e executionPayloadHeaderElectra) BlobGasUsed() (uint64, error) {
+	return e.p.BlobGasUsed, nil
+}
+
+// ExcessBlobGas --
+func (e executionPayloadHeaderElectra) ExcessBlobGas() (uint64, error) {
+	return e.p.ExcessBlobGas, nil
+}
+
+// DepositRequests --
+func (e executionPayloadHeaderElectra) DepositRequests() ([]*enginev1.DepositRequest, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// WithdrawalRequests --
+func (e executionPayloadHeaderElectra) WithdrawalRequests() ([]*enginev1.WithdrawalRequest, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadHeaderElectra) IsBlinded() bool {
+	return true
+}
+
+// executionPayloadElectra is a convenience wrapper around a beacon block body's execution payload data structure
+// This wrapper allows us to conform to a common interface so that beacon
+// blocks for future forks can also be applied across Prysm without issues.
+type executionPayloadElectra struct {
+	p *enginev1.ExecutionPayloadElectra
+}
+
+// WrappedExecutionPayloadElectra is a constructor which wraps a protobuf execution payload into an interface.
+func WrappedExecutionPayloadElectra(p *enginev1.ExecutionPayloadElectra) (interfaces.ExecutionData, error) {
+	w := executionPayloadElectra{p: p}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+var _ interfaces.ExecutionData = &executionPayloadElectra{}
+
+// IsNil checks if the underlying data is nil.
+func (e executionPayloadElectra) IsNil() bool {
+	return e.p == nil
+}
+
+// MarshalSSZ --
+func (e executionPayloadElectra) MarshalSSZ() ([]byte, error) {
+	return e.p.MarshalSSZ()
+}
+
+// MarshalSSZTo --
+func (e executionPayloadElectra) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return e.p.MarshalSSZTo(dst)
+}
+
+// SizeSSZ --
+func (e executionPayloadElectra) SizeSSZ() int {
+	return e.p.SizeSSZ()
+}
+
+// UnmarshalSSZ --
+func (e executionPayloadElectra) UnmarshalSSZ(buf []byte) error {
+	return e.p.UnmarshalSSZ(buf)
+}
+
+// HashTreeRoot --
+func (e executionPayloadElectra) HashTreeRoot() ([32]byte, error) {
+	return e.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (e executionPayloadElectra) HashTreeRootWith(hh *fastssz.Hasher) error {
+	return e.p.HashTreeRootWith(hh)
+}
+
+// Proto --
+func (e executionPayloadElectra) Proto() proto.Message {
+	return e.p
+}
+
+// ParentHash --
+func (e executionPayloadElectra) ParentHash() []byte {
+	return e.p.ParentHash
+}
+
+// FeeRecipient --
+func (e executionPayloadElectra) FeeRecipient() []byte {
+	return e.p.FeeRecipient
+}
+
+// StateRoot --
+func (e executionPayloadElectra) StateRoot() []byte {
+	return e.p.StateRoot
+}
+
+// ReceiptsRoot --
+func (e executionPayloadElectra) ReceiptsRoot() []byte {
+	return e.p.ReceiptsRoot
+}
+
+// LogsBloom --
+func (e executionPayloadElectra) LogsBloom() []byte {
+	return e.p.LogsBloom
+}
+
+// PrevRandao --
+func (e executionPayloadElectra) PrevRandao() []byte {
+	return e.p.PrevRandao
+}
+
+// BlockNumber --
+func (e executionPayloadElectra) BlockNumber() uint64 {
+	return e.p.BlockNumber
+}
+
+// GasLimit --
+func (e executionPayloadElectra) GasLimit() uint64 {
+	return e.p.GasLimit
+}
+
+// GasUsed --
+func (e executionPayloadElectra) GasUsed() uint64 {
+	return e.p.GasUsed
+}
+
+// Timestamp --
+func (e executionPayloadElectra) Timestamp() uint64 {
+	return e.p.Timestamp
+}
+
+// ExtraData --
+func (e executionPayloadElectra) ExtraData() []byte {
+	return e.p.ExtraData
+}
+
+// BaseFeePerGas --
+func (e executionPayloadElectra) BaseFeePerGas() []byte {
+	return e.p.BaseFeePerGas
+}
+
+// BlockHash --
+func (e executionPayloadElectra) BlockHash() []byte {
+	return e.p.BlockHash
+}
+
+// Transactions --
+func (e executionPayloadElectra) Transactions() ([][]byte, error) {
+	return e.p.Transactions, nil
+}
+
+// TransactionsRoot --
+func (e executionPayloadElectra) TransactionsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// Withdrawals --
+func (e executionPayloadElectra) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return e.p.Withdrawals, nil
+}
+
+// WithdrawalsRoot --
+func (e executionPayloadElectra) WithdrawalsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+func (e executionPayloadElectra) BlobGasUsed() (uint64, error) {
+	return e.p.BlobGasUsed, nil
+}
+
+func (e executionPayloadElectra) ExcessBlobGas() (uint64, error) {
+	return e.p.ExcessBlobGas, nil
+}
+
+// DepositRequests --
+func (e executionPayloadElectra) DepositRequests() []*enginev1.DepositRequest {
+	return e.p.DepositRequests
+}
+
+// WithdrawalRequests --
+func (e executionPayloadElectra) WithdrawalRequests() []*enginev1.WithdrawalRequest {
+	return e.p.WithdrawalRequests
+}
+
+// ConsolidationRequests --
+func (e executionPayloadElectra) ConsolidationRequests() []*enginev1.ConsolidationRequest {
+	return e.p.ConsolidationRequests
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadElectra) IsBlinded() bool {
+	return false
 }

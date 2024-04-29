@@ -2,10 +2,13 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"sort"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -14,7 +17,7 @@ import (
 )
 
 func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
-	atts := proposerAtts([]*ethpb.Attestation{
+	atts := proposerAtts([]ethpb.Att{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11000000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11100000}}),
@@ -22,7 +25,7 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}}),
 	})
-	want := proposerAtts([]*ethpb.Attestation{
+	want := proposerAtts([]ethpb.Att{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11110000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}}),
@@ -411,15 +414,118 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 				t.Error(err)
 			}
 			sort.Slice(atts, func(i, j int) bool {
-				if atts[i].AggregationBits.Count() == atts[j].AggregationBits.Count() {
-					if atts[i].Data.Slot == atts[j].Data.Slot {
-						return bytes.Compare(atts[i].AggregationBits, atts[j].AggregationBits) <= 0
+				if atts[i].GetAggregationBits().Count() == atts[j].GetAggregationBits().Count() {
+					if atts[i].GetData().Slot == atts[j].GetData().Slot {
+						return bytes.Compare(atts[i].GetAggregationBits(), atts[j].GetAggregationBits()) <= 0
 					}
-					return atts[i].Data.Slot > atts[j].Data.Slot
+					return atts[i].GetData().Slot > atts[j].GetData().Slot
 				}
-				return atts[i].AggregationBits.Count() > atts[j].AggregationBits.Count()
+				return atts[i].GetAggregationBits().Count() > atts[j].GetAggregationBits().Count()
 			})
 			assert.DeepEqual(t, tt.want, atts)
 		})
 	}
+}
+
+func Test_packAttestations(t *testing.T) {
+	ctx := context.Background()
+	phase0Att := &ethpb.Attestation{
+		AggregationBits: bitfield.Bitlist{0b11111},
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  make([]byte, 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+	cb := primitives.NewAttestationCommitteeBits()
+	cb.SetBitAt(0, true)
+	electraAtt := &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b11111},
+		CommitteeBits:   cb,
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  make([]byte, 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+	pool := attestations.NewPool()
+	require.NoError(t, pool.SaveAggregatedAttestations([]ethpb.Att{phase0Att, electraAtt}))
+	s := &Server{AttPool: pool}
+
+	t.Run("Phase 0", func(t *testing.T) {
+		st, _ := util.DeterministicGenesisState(t, 64)
+		require.NoError(t, st.SetSlot(1))
+
+		atts, err := s.packAttestations(ctx, st, 0)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(atts))
+		assert.DeepEqual(t, phase0Att, atts[0])
+	})
+	t.Run("Electra", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.ElectraForkEpoch = 1
+		params.OverrideBeaconConfig(cfg)
+
+		st, _ := util.DeterministicGenesisStateElectra(t, 64)
+		require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+
+		atts, err := s.packAttestations(ctx, st, params.BeaconConfig().SlotsPerEpoch)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(atts))
+		assert.DeepEqual(t, electraAtt, atts[0])
+	})
+}
+
+func Test_limitToMaxAttestations(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		atts := make([]ethpb.Att, params.BeaconConfig().MaxAttestations+1)
+		for i := range atts {
+			atts[i] = &ethpb.Attestation{}
+		}
+
+		// 1 less than limit
+		pAtts := proposerAtts(atts[:len(atts)-3])
+		assert.Equal(t, len(pAtts), len(pAtts.limitToMaxAttestations()))
+
+		// equal to limit
+		pAtts = atts[:len(atts)-2]
+		assert.Equal(t, len(pAtts), len(pAtts.limitToMaxAttestations()))
+
+		// 1 more than limit
+		pAtts = atts
+		assert.Equal(t, len(pAtts)-1, len(pAtts.limitToMaxAttestations()))
+	})
+	t.Run("Electra", func(t *testing.T) {
+		atts := make([]ethpb.Att, params.BeaconConfig().MaxAttestationsElectra+1)
+		for i := range atts {
+			atts[i] = &ethpb.AttestationElectra{}
+		}
+
+		// 1 less than limit
+		pAtts := proposerAtts(atts[:len(atts)-3])
+		assert.Equal(t, len(pAtts), len(pAtts.limitToMaxAttestations()))
+
+		// equal to limit
+		pAtts = atts[:len(atts)-2]
+		assert.Equal(t, len(pAtts), len(pAtts.limitToMaxAttestations()))
+
+		// 1 more than limit
+		pAtts = atts
+		assert.Equal(t, len(pAtts)-1, len(pAtts.limitToMaxAttestations()))
+	})
 }

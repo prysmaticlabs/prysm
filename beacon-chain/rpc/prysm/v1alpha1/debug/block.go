@@ -79,7 +79,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get committee: %v", err)
 			}
-			indices, err := attestation.AttestingIndices(a, [][]primitives.ValidatorIndex{c})
+			indices, err := attestation.AttestingIndices(a, c)
 			if err != nil {
 				return nil, err
 			}

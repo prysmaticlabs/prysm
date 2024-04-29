@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -12,7 +12,7 @@ import (
 )
 
 // constructGenericBeaconBlock constructs a `GenericBeaconBlock` based on the block version and other parameters.
-func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock, blobsBundle *enginev1.BlobsBundle) (*ethpb.GenericBeaconBlock, error) {
+func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock, blobsBundle *enginev1.BlobsBundle, winningBid primitives.Wei) (*ethpb.GenericBeaconBlock, error) {
 	if sBlk == nil || sBlk.Block() == nil {
 		return nil, fmt.Errorf("block cannot be nil")
 	}
@@ -23,15 +23,17 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 	}
 
 	isBlinded := sBlk.IsBlinded()
-	payloadValue := sBlk.ValueInWei()
+	bidStr := primitives.WeiToBigInt(winningBid).String()
 
 	switch sBlk.Version() {
+	case version.Electra:
+		return vs.constructElectraBlock(blockProto, isBlinded, bidStr, blobsBundle), nil
 	case version.Deneb:
-		return vs.constructDenebBlock(blockProto, isBlinded, payloadValue, blobsBundle), nil
+		return vs.constructDenebBlock(blockProto, isBlinded, bidStr, blobsBundle), nil
 	case version.Capella:
-		return vs.constructCapellaBlock(blockProto, isBlinded, payloadValue), nil
+		return vs.constructCapellaBlock(blockProto, isBlinded, bidStr), nil
 	case version.Bellatrix:
-		return vs.constructBellatrixBlock(blockProto, isBlinded, payloadValue), nil
+		return vs.constructBellatrixBlock(blockProto, isBlinded, bidStr), nil
 	case version.Altair:
 		return vs.constructAltairBlock(blockProto), nil
 	case version.Phase0:
@@ -42,30 +44,42 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 }
 
 // Helper functions for constructing blocks for each version
-func (vs *Server) constructDenebBlock(blockProto proto.Message, isBlinded bool, payloadValue math.Wei, bundle *enginev1.BlobsBundle) *ethpb.GenericBeaconBlock {
+func (vs *Server) constructElectraBlock(blockProto proto.Message, isBlinded bool, payloadValue string, bundle *enginev1.BlobsBundle) *ethpb.GenericBeaconBlock {
 	if isBlinded {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blockProto.(*ethpb.BlindedBeaconBlockDeneb)}, IsBlinded: true, PayloadValue: (*payloadValue).String()}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedElectra{BlindedElectra: blockProto.(*ethpb.BlindedBeaconBlockElectra)}, IsBlinded: true, PayloadValue: payloadValue}
+	}
+	electraContents := &ethpb.BeaconBlockContentsElectra{Block: blockProto.(*ethpb.BeaconBlockElectra)}
+	if bundle != nil {
+		electraContents.KzgProofs = bundle.Proofs
+		electraContents.Blobs = bundle.Blobs
+	}
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Electra{Electra: electraContents}, IsBlinded: false, PayloadValue: payloadValue}
+}
+
+func (vs *Server) constructDenebBlock(blockProto proto.Message, isBlinded bool, payloadValue string, bundle *enginev1.BlobsBundle) *ethpb.GenericBeaconBlock {
+	if isBlinded {
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blockProto.(*ethpb.BlindedBeaconBlockDeneb)}, IsBlinded: true, PayloadValue: payloadValue}
 	}
 	denebContents := &ethpb.BeaconBlockContentsDeneb{Block: blockProto.(*ethpb.BeaconBlockDeneb)}
 	if bundle != nil {
 		denebContents.KzgProofs = bundle.Proofs
 		denebContents.Blobs = bundle.Blobs
 	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: denebContents}, IsBlinded: false, PayloadValue: (*payloadValue).String()}
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: denebContents}, IsBlinded: false, PayloadValue: payloadValue}
 }
 
-func (vs *Server) constructCapellaBlock(pb proto.Message, isBlinded bool, payloadValue math.Wei) *ethpb.GenericBeaconBlock {
+func (vs *Server) constructCapellaBlock(pb proto.Message, isBlinded bool, payloadValue string) *ethpb.GenericBeaconBlock {
 	if isBlinded {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedCapella{BlindedCapella: pb.(*ethpb.BlindedBeaconBlockCapella)}, IsBlinded: true, PayloadValue: (*payloadValue).String()}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedCapella{BlindedCapella: pb.(*ethpb.BlindedBeaconBlockCapella)}, IsBlinded: true, PayloadValue: payloadValue}
 	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}, IsBlinded: false, PayloadValue: (*payloadValue).String()}
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}, IsBlinded: false, PayloadValue: payloadValue}
 }
 
-func (vs *Server) constructBellatrixBlock(pb proto.Message, isBlinded bool, payloadValue math.Wei) *ethpb.GenericBeaconBlock {
+func (vs *Server) constructBellatrixBlock(pb proto.Message, isBlinded bool, payloadValue string) *ethpb.GenericBeaconBlock {
 	if isBlinded {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb.(*ethpb.BlindedBeaconBlockBellatrix)}, IsBlinded: true, PayloadValue: (*payloadValue).String()}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb.(*ethpb.BlindedBeaconBlockBellatrix)}, IsBlinded: true, PayloadValue: payloadValue}
 	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}, IsBlinded: false, PayloadValue: (*payloadValue).String()}
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}, IsBlinded: false, PayloadValue: payloadValue}
 }
 
 func (vs *Server) constructAltairBlock(pb proto.Message) *ethpb.GenericBeaconBlock {

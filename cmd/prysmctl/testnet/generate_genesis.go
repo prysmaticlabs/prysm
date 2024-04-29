@@ -174,11 +174,11 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 		)
 	}
 	if err := setGlobalParams(); err != nil {
-		return fmt.Errorf("could not set config params: %v", err)
+		return fmt.Errorf("could not set config params: %w", err)
 	}
 	st, err := generateGenesis(cliCtx.Context)
 	if err != nil {
-		return fmt.Errorf("could not generate genesis state: %v", err)
+		return fmt.Errorf("could not generate genesis state: %w", err)
 	}
 
 	if outputJson != "" {
@@ -218,7 +218,7 @@ func setGlobalParams() error {
 	}
 	cfg, err := params.ByName(generateGenesisStateFlags.ConfigName)
 	if err != nil {
-		return fmt.Errorf("unable to find config using name %s: %v", generateGenesisStateFlags.ConfigName, err)
+		return fmt.Errorf("unable to find config using name %s: %w", generateGenesisStateFlags.ConfigName, err)
 	}
 	return params.SetActive(cfg.Copy())
 }
@@ -273,6 +273,7 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 		gen.Timestamp = f.GenesisTime
 		gen.Config.ShanghaiTime = interop.GethShanghaiTime(f.GenesisTime, params.BeaconConfig())
 		gen.Config.CancunTime = interop.GethCancunTime(f.GenesisTime, params.BeaconConfig())
+		gen.Config.PragueTime = interop.GethPragueTime(f.GenesisTime, params.BeaconConfig())
 
 		fields := logrus.Fields{}
 		if gen.Config.ShanghaiTime != nil {
@@ -280,6 +281,9 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 		}
 		if gen.Config.CancunTime != nil {
 			fields["cancun"] = fmt.Sprintf("%d", *gen.Config.CancunTime)
+		}
+		if gen.Config.PragueTime != nil {
+			fields["prague"] = fmt.Sprintf("%d", *gen.Config.PragueTime)
 		}
 		log.WithFields(fields).Info("Setting fork geth times")
 		if v > version.Altair {

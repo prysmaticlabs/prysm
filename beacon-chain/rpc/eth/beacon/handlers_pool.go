@@ -61,6 +61,9 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 			a, ok := att.(*eth.Attestation)
 			if ok {
 				allAtts[i] = structs.AttFromConsensus(a)
+			} else {
+				httputil.HandleError(w, fmt.Sprintf("unable to convert attestations of type %T", att), http.StatusInternalServerError)
+				return
 			}
 		}
 		httputil.WriteJson(w, &structs.ListAttestationsResponse{Data: allAtts})
@@ -77,6 +80,9 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 			a, ok := att.(*eth.Attestation)
 			if ok {
 				filteredAtts = append(filteredAtts, structs.AttFromConsensus(a))
+			} else {
+				httputil.HandleError(w, fmt.Sprintf("unable to convert attestations of type %T", att), http.StatusInternalServerError)
+				return
 			}
 		}
 	}
@@ -92,7 +98,7 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 	var req structs.SubmitAttestationsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -210,7 +216,7 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	var req structs.SignedVoluntaryExit
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -268,7 +274,7 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 	var req structs.SubmitSyncCommitteeSignaturesRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -327,7 +333,7 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 	var req []*structs.SignedBLSToExecutionChange
 	err = json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -461,7 +467,17 @@ func (s *Server) GetAttesterSlashings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
-	slashings := structs.AttesterSlashingsFromConsensus(sourceSlashings)
+	ss := make([]*eth.AttesterSlashing, 0, len(sourceSlashings))
+	for _, slashing := range sourceSlashings {
+		s, ok := slashing.(*eth.AttesterSlashing)
+		if ok {
+			ss = append(ss, s)
+		} else {
+			httputil.HandleError(w, fmt.Sprintf("unable to convert slashing of type %T", slashing), http.StatusInternalServerError)
+			return
+		}
+	}
+	slashings := structs.AttesterSlashingsFromConsensus(ss)
 
 	httputil.WriteJson(w, &structs.GetAttesterSlashingsResponse{Data: slashings})
 }
@@ -475,7 +491,7 @@ func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) 
 	var req structs.AttesterSlashing
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -549,7 +565,7 @@ func (s *Server) SubmitProposerSlashing(w http.ResponseWriter, r *http.Request) 
 	var req structs.ProposerSlashing
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:

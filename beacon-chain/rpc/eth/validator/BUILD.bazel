@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "handlers.go",
         "handlers_block.go",
+        "log.go",
         "server.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/validator",

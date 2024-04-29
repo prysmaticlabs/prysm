@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"math/big"
 	"path"
 	"testing"
 
@@ -41,7 +40,7 @@ func RunWithdrawalsTest(t *testing.T, config string) {
 				if err != nil {
 					return nil, err
 				}
-				p, err := consensusblocks.WrappedExecutionPayloadDeneb(&enginev1.ExecutionPayloadDeneb{Withdrawals: withdrawals}, big.NewInt(0))
+				p, err := consensusblocks.WrappedExecutionPayloadDeneb(&enginev1.ExecutionPayloadDeneb{Withdrawals: withdrawals})
 				require.NoError(t, err)
 				return blocks.ProcessWithdrawals(s, p)
 			})

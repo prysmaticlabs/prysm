@@ -31,6 +31,7 @@ proto_library(
 ssz_gen_marshal(
     name = "ssz_generated_files",
     go_proto = ":go_proto",
+    out = "engine.ssz.go",
     includes = [
         "//consensus-types/primitives:go_default_library",
     ],
@@ -41,9 +42,14 @@ ssz_gen_marshal(
         "ExecutionPayloadHeaderCapella",
         "ExecutionPayloadHeaderDeneb",
         "ExecutionPayloadDeneb",
+        "ExecutionPayloadHeaderElectra",
+        "ExecutionPayloadElectra",
         "BlindedBlobsBundle",
         "BlobsBundle",
         "Withdrawal",
+        "WithdrawalRequest",
+        "DepositRequest",
+        "ConsolidationRequest",
     ],
 )
 

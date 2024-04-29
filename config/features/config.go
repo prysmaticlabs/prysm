@@ -20,14 +20,15 @@ The process for implementing new features using this package is as follows:
 package features
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -68,14 +69,14 @@ type Flags struct {
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
-	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 	// BlobSaveFsync requires blob saving to block on fsync to ensure blobs are durably persisted before passing DA.
 	BlobSaveFsync bool
 
-	SaveInvalidBlock bool // SaveInvalidBlock saves invalid block to temp.
-	SaveInvalidBlob  bool // SaveInvalidBlob saves invalid blob to temp.
+	SaveInvalidBlock           bool // SaveInvalidBlock saves invalid block to temp.
+	SaveInvalidBlob            bool // SaveInvalidBlob saves invalid blob to temp.
+	EIP6110ValidatorIndexCache bool // EIP6110ValidatorIndexCache specifies whether to use the new validator index cache.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -242,11 +243,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
 	}
-	cfg.EnableEIP4881 = true
-	if ctx.IsSet(DisableEIP4881.Name) {
-		logEnabled(DisableEIP4881)
-		cfg.EnableEIP4881 = false
-	}
 	if ctx.IsSet(EnableLightClient.Name) {
 		logEnabled(EnableLightClient)
 		cfg.EnableLightClient = true
@@ -258,6 +254,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(EnableQUIC.Name) {
 		logEnabled(EnableQUIC)
 		cfg.EnableQUIC = true
+	}
+
+	if ctx.IsSet(eip6110ValidatorCache.Name) {
+		logEnabled(eip6110ValidatorCache)
+		cfg.EIP6110ValidatorIndexCache = true
 	}
 
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
@@ -337,4 +338,26 @@ func logDisabled(flag cli.DocGenerationFlag) {
 		name = names[0]
 	}
 	log.WithField(name, flag.GetUsage()).Warn(disabledFeatureFlag)
+}
+
+// ValidateNetworkFlags validates provided flags and
+// prevents beacon node or validator to start
+// if more than one network flag is provided
+func ValidateNetworkFlags(ctx *cli.Context) error {
+	networkFlagsCount := 0
+	for _, flag := range NetworkFlags {
+		if ctx.IsSet(flag.Names()[0]) {
+			networkFlagsCount++
+			if networkFlagsCount > 1 {
+				// using a forLoop so future addition
+				// doesn't require changes in this function
+				var flagNames []string
+				for _, flag := range NetworkFlags {
+					flagNames = append(flagNames, "--"+flag.Names()[0])
+				}
+				return fmt.Errorf("cannot use more than one network flag at the same time. Possible network flags are: %s", strings.Join(flagNames, ", "))
+			}
+		}
+	}
+	return nil
 }

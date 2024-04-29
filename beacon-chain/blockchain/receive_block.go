@@ -13,6 +13,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -52,7 +53,7 @@ type BlobReceiver interface {
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
 type SlashingReceiver interface {
-	ReceiveAttesterSlashing(ctx context.Context, slashings *ethpb.AttesterSlashing)
+	ReceiveAttesterSlashing(ctx context.Context, slashing ethpb.AttSlashing)
 }
 
 // ReceiveBlock is a function that defines the operations (minus pubsub)
@@ -169,13 +170,8 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	}
 	// Send finalized events and finalized deposits in the background
 	if newFinalized {
-		finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
-		go s.sendNewFinalizedEvent(ctx, postState)
-		depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
-		go func() {
-			s.insertFinalizedDeposits(depCtx, finalized.Root)
-			cancel()
-		}()
+		// hook to process all post state finalization tasks
+		s.executePostFinalizationTasks(ctx, postState)
 	}
 
 	// If slasher is configured, forward the attestations in the block via an event feed for processing.
@@ -222,6 +218,19 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	chainServiceProcessingTime.Observe(float64(timeWithoutDaWait.Milliseconds()))
 
 	return nil
+}
+
+func (s *Service) executePostFinalizationTasks(ctx context.Context, finalizedState state.BeaconState) {
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
+	go func() {
+		finalizedState.SaveValidatorIndices() // used to handle Validator index invariant from EIP6110
+		s.sendNewFinalizedEvent(ctx, finalizedState)
+	}()
+	depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
+	go func() {
+		s.insertFinalizedDeposits(depCtx, finalized.Root)
+		cancel()
+	}()
 }
 
 // ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
@@ -295,10 +304,10 @@ func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 }
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
-func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
+func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing ethpb.AttSlashing) {
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
+	s.InsertSlashingsToForkChoiceStore(ctx, []ethpb.AttSlashing{slashing})
 }
 
 // prunePostBlockOperationPools only runs on new head otherwise should return a nil.
@@ -479,32 +488,17 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 	// is done in the background to avoid adding more load to this critical code path.
 	ctx := context.TODO()
 	for _, att := range signed.Block().Body().Attestations() {
-		var committees [][]primitives.ValidatorIndex
-		if att.Version() < version.Electra {
-			committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.GetData().Slot, att.GetData().CommitteeIndex)
-			if err != nil {
-				log.WithError(err).Error("Could not get attestation committee")
-				return
-			}
-			committees = [][]primitives.ValidatorIndex{committee}
-		} else {
-			committeeIndices := att.GetCommitteeBits().BitIndices()
-			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-			var err error
-			for i, ci := range committeeIndices {
-				committees[i], err = helpers.BeaconCommitteeFromState(ctx, preState, att.GetData().Slot, primitives.CommitteeIndex(ci))
-				if err != nil {
-					log.WithError(err).Error("Could not get attestation committee")
-					return
-				}
-			}
+		committees, err := helpers.AttestationCommittees(ctx, preState, att)
+		if err != nil {
+			log.WithError(err).Error("Could not get attestation committees")
+			return
 		}
-		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees)
+		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees...)
 		if err != nil {
 			log.WithError(err).Error("Could not convert to indexed attestation")
 			return
 		}
-		s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
+		s.cfg.SlasherAttestationsFeed.Send(&types.WrappedIndexedAtt{IndexedAtt: indexedAtt})
 	}
 }
 
@@ -512,7 +506,10 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 func (s *Service) validateExecutionOnBlock(ctx context.Context, ver int, header interfaces.ExecutionData, signed interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) (bool, error) {
 	isValidPayload, err := s.notifyNewPayload(ctx, ver, header, signed)
 	if err != nil {
-		return false, s.handleInvalidExecutionError(ctx, err, blockRoot, signed.Block().ParentRoot())
+		s.cfg.ForkChoiceStore.Lock()
+		err = s.handleInvalidExecutionError(ctx, err, blockRoot, signed.Block().ParentRoot())
+		s.cfg.ForkChoiceStore.Unlock()
+		return false, err
 	}
 	if signed.Version() < version.Capella && isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, ver, header, signed); err != nil {

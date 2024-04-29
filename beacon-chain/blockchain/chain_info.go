@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	f "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
@@ -20,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"go.opencensus.io/trace"
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which
@@ -507,13 +506,6 @@ func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slo
 	}
 
 	return ar[:], nil
-}
-
-// SetOptimisticToInvalid wraps the corresponding method in forkchoice
-func (s *Service) SetOptimisticToInvalid(ctx context.Context, root, parent, lvh [32]byte) ([][32]byte, error) {
-	s.cfg.ForkChoiceStore.Lock()
-	defer s.cfg.ForkChoiceStore.Unlock()
-	return s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parent, lvh)
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.

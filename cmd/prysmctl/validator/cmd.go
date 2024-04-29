@@ -160,12 +160,12 @@ var Commands = []*cli.Command{
 					flags.InteropStartIndex,
 					cmd.GrpcMaxCallRecvMsgSizeFlag,
 					flags.CertFlag,
-					flags.GrpcHeadersFlag,
-					flags.GrpcRetriesFlag,
-					flags.GrpcRetryDelayFlag,
+					flags.GRPCHeadersFlag,
+					flags.GRPCRetriesFlag,
+					flags.GRPCRetryDelayFlag,
 					flags.ExitAllFlag,
 					flags.ForceExitFlag,
-					flags.VoluntaryExitJSONOutputPath,
+					flags.VoluntaryExitJSONOutputPathFlag,
 					features.Mainnet,
 					features.SepoliaTestnet,
 					features.HoleskyTestnet,
@@ -173,6 +173,9 @@ var Commands = []*cli.Command{
 				}),
 				Before: func(cliCtx *cli.Context) error {
 					if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
+						return err
+					}
+					if err := features.ValidateNetworkFlags(cliCtx); err != nil {
 						return err
 					}
 					if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {

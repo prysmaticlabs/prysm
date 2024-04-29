@@ -275,7 +275,6 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		"--" + cmdshared.ValidatorMonitorIndicesFlag.Name + "=2",
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
-		"--" + flags.EnableDebugRPCEndpoints.Name,
 		"--" + features.EnableQUIC.Name,
 	}
 	if config.UsePprof {

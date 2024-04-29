@@ -156,10 +156,10 @@ func (s *Store) CheckAttesterDoubleVotes(
 				signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 				attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 
-				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
+				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.GetData().Target.Epoch)
 				localDoubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
 
-				for _, valIdx := range attToProcess.IndexedAttestation.AttestingIndices {
+				for _, valIdx := range attToProcess.IndexedAttestation.GetAttestingIndices() {
 					// Check if there is signing root in the database for this combination
 					// of validator index and target epoch.
 					encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))
@@ -194,7 +194,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 					// Build the proof of double vote.
 					slashAtt := &slashertypes.AttesterDoubleVote{
 						ValidatorIndex: primitives.ValidatorIndex(valIdx),
-						Target:         attToProcess.IndexedAttestation.Data.Target.Epoch,
+						Target:         attToProcess.IndexedAttestation.GetData().Target.Epoch,
 						Wrapper_1:      existingAttRecord,
 						Wrapper_2:      attToProcess,
 					}
@@ -280,7 +280,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	encodedRecords := make([][]byte, attWrappersCount)
 
 	for i, attestation := range attWrappers {
-		encEpoch := encodeTargetEpoch(attestation.IndexedAttestation.Data.Target.Epoch)
+		encEpoch := encodeTargetEpoch(attestation.IndexedAttestation.GetData().Target.Epoch)
 
 		value, err := encodeAttestationRecord(attestation)
 		if err != nil {
@@ -325,7 +325,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 					return err
 				}
 
-				for _, validatorIndex := range attWrapper.IndexedAttestation.AttestingIndices {
+				for _, validatorIndex := range attWrapper.IndexedAttestation.GetAttestingIndices() {
 					encodedIndex := encodeValidatorIndex(primitives.ValidatorIndex(validatorIndex))
 
 					key := append(encodedTargetEpoch, encodedIndex...)
@@ -484,14 +484,10 @@ func (s *Store) CheckDoubleBlockProposals(
 
 		for _, incomingProposal := range incomingProposals {
 			// Build the key corresponding to this slot + validator index combination
-			key, err := keyForValidatorProposal(
+			key := keyForValidatorProposal(
 				incomingProposal.SignedBeaconBlockHeader.Header.Slot,
 				incomingProposal.SignedBeaconBlockHeader.Header.ProposerIndex,
 			)
-
-			if err != nil {
-				return err
-			}
 
 			// Retrieve the existing proposal record from the database
 			encExistingProposalWrapper := bkt.Get(key)
@@ -531,11 +527,9 @@ func (s *Store) BlockProposalForValidator(
 	_, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
 	defer span.End()
 	var record *slashertypes.SignedBlockHeaderWrapper
-	key, err := keyForValidatorProposal(slot, validatorIdx)
-	if err != nil {
-		return nil, err
-	}
-	err = s.db.View(func(tx *bolt.Tx) error {
+	key := keyForValidatorProposal(slot, validatorIdx)
+
+	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposalRecordsBucket)
 		encProposal := bkt.Get(key)
 		if encProposal == nil {
@@ -567,13 +561,10 @@ func (s *Store) SaveBlockProposals(
 	// Loop over all proposals to encode keys and proposals themselves.
 	for i, proposal := range proposals {
 		// Encode the key for this proposal.
-		key, err := keyForValidatorProposal(
+		key := keyForValidatorProposal(
 			proposal.SignedBeaconBlockHeader.Header.Slot,
 			proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
 		)
-		if err != nil {
-			return err
-		}
 
 		// Encode the proposal itself.
 		enc, err := encodeProposalRecord(proposal)
@@ -638,8 +629,8 @@ func (s *Store) HighestAttestations(
 					}
 					highestAtt := &ethpb.HighestAttestation{
 						ValidatorIndex:     uint64(indices[i]),
-						HighestSourceEpoch: attWrapper.IndexedAttestation.Data.Source.Epoch,
-						HighestTargetEpoch: attWrapper.IndexedAttestation.Data.Target.Epoch,
+						HighestSourceEpoch: attWrapper.IndexedAttestation.GetData().Source.Epoch,
+						HighestTargetEpoch: attWrapper.IndexedAttestation.GetData().Target.Epoch,
 					}
 					history = append(history, highestAtt)
 					break
@@ -657,13 +648,11 @@ func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
 }
 
 // keyForValidatorProposal returns a disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
-func keyForValidatorProposal(slot primitives.Slot, proposerIndex primitives.ValidatorIndex) ([]byte, error) {
-	encSlot, err := slot.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
+func keyForValidatorProposal(slot primitives.Slot, proposerIndex primitives.ValidatorIndex) []byte {
+	encSlot := make([]byte, 8)
+	binary.BigEndian.PutUint64(encSlot, uint64(slot))
 	encValidatorIdx := encodeValidatorIndex(proposerIndex)
-	return append(encSlot, encValidatorIdx...), nil
+	return append(encSlot, encValidatorIdx...)
 }
 
 func encodeSlasherChunk(chunk []uint16) ([]byte, error) {
@@ -780,10 +769,10 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 	}, nil
 }
 
-// Encodes an epoch into little-endian bytes.
+// Encodes an epoch into big-endian bytes.
 func encodeTargetEpoch(epoch primitives.Epoch) []byte {
 	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, uint64(epoch))
+	binary.BigEndian.PutUint64(buf, uint64(epoch))
 	return buf
 }
 

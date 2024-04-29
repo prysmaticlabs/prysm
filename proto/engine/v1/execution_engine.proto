@@ -41,11 +41,6 @@ message ExecutionPayload {
 	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
 }
 
-message ExecutionPayloadBodyV1 {
-	repeated bytes transactions = 1;
-	repeated Withdrawal withdrawals = 2;
-}
-
 message ExecutionPayloadCapella {
 	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];
@@ -84,6 +79,37 @@ message ExecutionPayloadDeneb {
 	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"];
 	uint64 blob_gas_used  = 16;
 	uint64 excess_blob_gas  = 17;
+}
+
+message ExecutionPayloadElectra {
+	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+	bytes state_root            = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes receipts_root         = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes logs_bloom            = 5 [(ethereum.eth.ext.ssz_size) = "logs_bloom.size"];
+	bytes prev_randao           = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+	uint64 block_number         = 7;
+	uint64 gas_limit            = 8;
+	uint64 gas_used             = 9;
+	uint64 timestamp            = 10;
+	bytes extra_data            = 11 [(ethereum.eth.ext.ssz_max) = "extra_data.size"];
+	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
+	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
+	// MAX_WITHDRAWALS_PER_PAYLOAD
+	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"];
+	uint64 blob_gas_used  = 16;
+	uint64 excess_blob_gas  = 17;
+	repeated DepositRequest deposit_requests = 18 [(ethereum.eth.ext.ssz_max) = "max_deposit_requests_per_payload.size"]; // new in electra, eip6110
+	repeated WithdrawalRequest	withdrawal_requests = 19 [(ethereum.eth.ext.ssz_max) = "max_withdrawal_requests_per_payload.size"]; // new in electra, eip7002, eip7251
+  repeated ConsolidationRequest consolidation_requests = 20 [(ethereum.eth.ext.ssz_max) = "max_consolidation_requests_per_payload.size"]; // new in electra, eip6110
+}
+
+message ExecutionPayloadElectraWithValueAndBlobsBundle {
+	ExecutionPayloadElectra payload = 1;
+	bytes value = 2;
+	BlobsBundle blobs_bundle = 3;
+	bool should_override_builder = 4;
 }
 
 message ExecutionPayloadCapellaWithValue {
@@ -152,6 +178,29 @@ message ExecutionPayloadHeaderDeneb {
 	bytes withdrawals_root  = 15 [(ethereum.eth.ext.ssz_size) = "32"];
 	uint64 blob_gas_used  = 16;
 	uint64 excess_blob_gas  = 17;
+}
+
+message ExecutionPayloadHeaderElectra {
+	bytes parent_hash       = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes fee_recipient     = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+	bytes state_root        = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes receipts_root     = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes logs_bloom        = 5 [(ethereum.eth.ext.ssz_size) = "logs_bloom.size"];
+	bytes prev_randao       = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+	uint64 block_number     = 7;
+	uint64 gas_limit        = 8;
+	uint64 gas_used         = 9;
+	uint64 timestamp        = 10;
+	bytes extra_data        = 11 [(ethereum.eth.ext.ssz_max) = "extra_data.size"];
+	bytes base_fee_per_gas  = 12 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes block_hash        = 13 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes withdrawals_root  = 15 [(ethereum.eth.ext.ssz_size) = "32"];
+	uint64 blob_gas_used  = 16;
+	uint64 excess_blob_gas  = 17;
+	bytes	deposit_requests_root  = 18 [(ethereum.eth.ext.ssz_size) = "32"]; // new in electra, eip6110
+	bytes	withdrawal_requests_root = 19 [(ethereum.eth.ext.ssz_size) = "32"]; // new in electra, eip7002, eip7251
+  bytes consolidation_requests_root = 20 [(ethereum.eth.ext.ssz_size) = "32"]; // new in electra, eip7251
 }
 
 message PayloadAttributes {
@@ -231,4 +280,38 @@ message Blob {
 
 message ExchangeCapabilities {
 	repeated string supported_methods = 1;
+}
+
+// WithdrawalRequest is the message from the execution layer to trigger the withdrawal of a validator's balance to its withdrawal address
+// new in Electra
+message WithdrawalRequest {
+	// The execution address receiving the funds
+	bytes source_address = 1 [(ethereum.eth.ext.ssz_size) = "20"];
+
+	// 48 byte BLS public key of the validator.
+	bytes validator_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
+
+	// Deposit amount in gwei.
+	uint64 amount = 3;
+}
+
+// DepositRequest is the message from the execution layer to trigger the deposit of a validator's balance to its balance
+// new in Electra
+message DepositRequest {
+	bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48"];
+	bytes withdrawal_credentials = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+	uint64 amount = 3;
+	bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
+	uint64 index = 5;
+}
+
+// ConsolidationRequest is the message from the execution layer to trigger the consolidation of one
+// validator to another validator.
+message ConsolidationRequest {
+	// Source address of account which originated the request.
+	bytes source_address = 1 [(ethereum.eth.ext.ssz_size) = "20"];
+	// Funds will be moved from this public key.
+	bytes source_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
+	// Funds will be moved to this public key.
+	bytes target_pubkey = 3 [(ethereum.eth.ext.ssz_size) = "48"];
 }

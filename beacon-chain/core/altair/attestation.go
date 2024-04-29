@@ -49,7 +49,7 @@ func ProcessAttestationsNoVerifySignature(
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	att interfaces.Attestation,
+	att ethpb.Att,
 	totalBalance uint64,
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
@@ -67,29 +67,15 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-
-	var committees [][]primitives.ValidatorIndex
-	if att.Version() < version.Electra {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
-		if err != nil {
-			return nil, err
-		}
-		committees = [][]primitives.ValidatorIndex{committee}
-	} else {
-		committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBits())
-		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-		for i, ci := range committeeIndices {
-			committees[i], err = helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, ci)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	indices, err := attestation.AttestingIndices(att, committees)
+	committees, err := helpers.AttestationCommittees(ctx, beaconState, att)
 	if err != nil {
 		return nil, err
 	}
+	indices, err := attestation.AttestingIndices(att, committees...)
+	if err != nil {
+		return nil, err
+	}
+
 	return SetParticipationAndRewardProposer(ctx, beaconState, att.GetData().Target.Epoch, indices, participatedFlags, totalBalance)
 }
 

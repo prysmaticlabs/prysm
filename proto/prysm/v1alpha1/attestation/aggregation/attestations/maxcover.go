@@ -9,13 +9,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // MaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
 // Aggregation occurs in many rounds, up until no more aggregation is possible (all attestations
 // are overlapping).
 // See https://hackmd.io/@farazdagi/in-place-attagg for design and rationale.
-func MaxCoverAttestationAggregation(atts []interfaces.Attestation) ([]interfaces.Attestation, error) {
+func MaxCoverAttestationAggregation(atts []ethpb.Att) ([]ethpb.Att, error) {
 	if len(atts) < 2 {
 		return atts, nil
 	}
@@ -150,7 +151,7 @@ func padSelectedKeys(keys []int, pad int) []int {
 
 // aggregateAttestations combines signatures of selected attestations into a single aggregate attestation, and
 // pushes that aggregated attestation into the position of the first of selected attestations.
-func aggregateAttestations(atts []interfaces.Attestation, keys []int, coverage *bitfield.Bitlist64) (targetIdx int, err error) {
+func aggregateAttestations(atts []ethpb.Att, keys []int, coverage *bitfield.Bitlist64) (targetIdx int, err error) {
 	if len(keys) < 2 || atts == nil || len(atts) < 2 {
 		return targetIdx, errors.Wrap(ErrInvalidAttestationCount, "cannot aggregate")
 	}
@@ -172,11 +173,21 @@ func aggregateAttestations(atts []interfaces.Attestation, keys []int, coverage *
 		}
 	}
 	// Put aggregated attestation at a position of the first selected attestation.
-	atts[targetIdx] = &ethpb.Attestation{
-		// Append size byte, which will be unnecessary on switch to Bitlist64.
-		AggregationBits: coverage.ToBitlist(),
-		Data:            data,
-		Signature:       aggregateSignatures(signs).Marshal(),
+	if atts[0].Version() == version.Phase0 {
+		atts[targetIdx] = &ethpb.Attestation{
+			// Append size byte, which will be unnecessary on switch to Bitlist64.
+			AggregationBits: coverage.ToBitlist(),
+			Data:            data,
+			Signature:       aggregateSignatures(signs).Marshal(),
+		}
+	} else {
+		atts[targetIdx] = &ethpb.AttestationElectra{
+			// Append size byte, which will be unnecessary on switch to Bitlist64.
+			AggregationBits: coverage.ToBitlist(),
+			CommitteeBits:   atts[0].CommitteeBitsVal().Bytes(),
+			Data:            data,
+			Signature:       aggregateSignatures(signs).Marshal(),
+		}
 	}
 	return
 }
@@ -184,7 +195,7 @@ func aggregateAttestations(atts []interfaces.Attestation, keys []int, coverage *
 // rearrangeProcessedAttestations pushes processed attestations to the end of the slice, returning
 // the number of items re-arranged (so that caller can cut the slice, and allow processed items to be
 // garbage collected).
-func rearrangeProcessedAttestations(atts []interfaces.Attestation, candidates []*bitfield.Bitlist64, processedKeys []int) {
+func rearrangeProcessedAttestations(atts []ethpb.Att, candidates []*bitfield.Bitlist64, processedKeys []int) {
 	if atts == nil || candidates == nil || processedKeys == nil {
 		return
 	}
@@ -216,7 +227,7 @@ func (al attList) merge(al1 attList) attList {
 
 // selectUsingKeys returns only items with specified keys.
 func (al attList) selectUsingKeys(keys []int) attList {
-	filtered := make([]interfaces.Attestation, len(keys))
+	filtered := make([]ethpb.Att, len(keys))
 	for i, key := range keys {
 		filtered[i] = al[key]
 	}

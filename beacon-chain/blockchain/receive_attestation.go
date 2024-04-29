@@ -32,7 +32,7 @@ type AttestationStateFetcher interface {
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
 	AttestationStateFetcher
-	VerifyLmdFfgConsistency(ctx context.Context, att interfaces.Attestation) error
+	VerifyLmdFfgConsistency(ctx context.Context, att ethpb.Att) error
 	InForkchoice([32]byte) bool
 }
 
@@ -52,7 +52,7 @@ func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Chec
 }
 
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
-func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a interfaces.Attestation) error {
+func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a ethpb.Att) error {
 	r, err := s.TargetRootForEpoch([32]byte(a.GetData().BeaconBlockRoot), a.GetData().Target.Epoch)
 	if err != nil {
 		return err
@@ -207,7 +207,7 @@ func (s *Service) processAttestations(ctx context.Context, disparity time.Durati
 //  1. Validate attestation, update validator's latest vote
 //  2. Apply fork choice to the processed attestation
 //  3. Save latest head info
-func (s *Service) receiveAttestationNoPubsub(ctx context.Context, att interfaces.Attestation, disparity time.Duration) error {
+func (s *Service) receiveAttestationNoPubsub(ctx context.Context, att ethpb.Att, disparity time.Duration) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.receiveAttestationNoPubsub")
 	defer span.End()
 

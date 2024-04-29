@@ -12,14 +12,18 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
-type proposerAtts []interfaces.Attestation
+type proposerAtts []ethpb.Att
 
-func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState) ([]interfaces.Attestation, error) {
+func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState, blkSlot primitives.Slot) ([]ethpb.Att, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
 	defer span.End()
 
@@ -39,23 +43,40 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	}
 	atts = append(atts, uAtts...)
 
+	postElectra := slots.ToEpoch(blkSlot) >= params.BeaconConfig().ElectraForkEpoch
+
+	versionAtts := make([]ethpb.Att, 0, len(atts))
+	if postElectra {
+		for _, a := range atts {
+			if a.Version() == version.Electra {
+				versionAtts = append(versionAtts, a)
+			}
+		}
+	} else {
+		for _, a := range atts {
+			if a.Version() == version.Phase0 {
+				versionAtts = append(versionAtts, a)
+			}
+		}
+	}
+
 	// Remove duplicates from both aggregated/unaggregated attestations. This
 	// prevents inefficient aggregates being created.
-	atts, err = proposerAtts(atts).dedup()
+	versionAtts, err = proposerAtts(versionAtts).dedup()
 	if err != nil {
 		return nil, err
 	}
 
-	attsByDataRoot := make(map[[32]byte][]interfaces.Attestation, len(atts))
-	for _, att := range atts {
-		attDataRoot, err := att.GetData().HashTreeRoot()
+	attsByDataRoot := make(map[attestation.Id][]ethpb.Att, len(versionAtts))
+	for _, att := range versionAtts {
+		id, err := attestation.NewId(att, attestation.Data)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not create attestation ID")
 		}
-		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+		attsByDataRoot[id] = append(attsByDataRoot[id], att)
 	}
 
-	attsForInclusion := proposerAtts(make([]interfaces.Attestation, 0))
+	attsForInclusion := proposerAtts(make([]ethpb.Att, 0))
 	for _, as := range attsByDataRoot {
 		as, err := attaggregation.Aggregate(as)
 		if err != nil {
@@ -79,8 +100,8 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 // The first group passes the all the required checks for attestation to be considered for proposing.
 // And attestations from the second group should be deleted.
 func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts) {
-	validAtts := make([]interfaces.Attestation, 0, len(a))
-	invalidAtts := make([]interfaces.Attestation, 0, len(a))
+	validAtts := make([]ethpb.Att, 0, len(a))
+	invalidAtts := make([]ethpb.Att, 0, len(a))
 
 	for _, att := range a {
 		if err := blocks.VerifyAttestationNoVerifySignature(ctx, st, att); err == nil {
@@ -169,8 +190,18 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 
 // limitToMaxAttestations limits attestations to maximum attestations per block.
 func (a proposerAtts) limitToMaxAttestations() proposerAtts {
-	if uint64(len(a)) > params.BeaconConfig().MaxAttestations {
-		return a[:params.BeaconConfig().MaxAttestations]
+	if len(a) == 0 {
+		return a
+	}
+
+	var limit uint64
+	if a[0].Version() == version.Phase0 {
+		limit = params.BeaconConfig().MaxAttestations
+	} else {
+		limit = params.BeaconConfig().MaxAttestationsElectra
+	}
+	if uint64(len(a)) > limit {
+		return a[:limit]
 	}
 	return a
 }
@@ -182,16 +213,16 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
-	attsByDataRoot := make(map[[32]byte][]interfaces.Attestation, len(a))
+	attsByDataRoot := make(map[attestation.Id][]ethpb.Att, len(a))
 	for _, att := range a {
-		attDataRoot, err := att.GetData().HashTreeRoot()
+		id, err := attestation.NewId(att, attestation.Data)
 		if err != nil {
-			continue
+			return nil, errors.Wrap(err, "failed to create attestation ID")
 		}
-		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+		attsByDataRoot[id] = append(attsByDataRoot[id], att)
 	}
 
-	uniqAtts := make([]interfaces.Attestation, 0, len(a))
+	uniqAtts := make([]ethpb.Att, 0, len(a))
 	for _, atts := range attsByDataRoot {
 		for i := 0; i < len(atts); i++ {
 			a := atts[i]
@@ -224,7 +255,7 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []interfaces.Attestation) ([]interfaces.Attestation, error) {
+func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []ethpb.Att) ([]ethpb.Att, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.validateAndDeleteAttsInPool")
 	defer span.End()
 
@@ -237,7 +268,7 @@ func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.Beac
 
 // The input attestations are processed and seen by the node, this deletes them from pool
 // so proposers don't include them in a block for the future.
-func (vs *Server) deleteAttsInPool(ctx context.Context, atts []interfaces.Attestation) error {
+func (vs *Server) deleteAttsInPool(ctx context.Context, atts []ethpb.Att) error {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.deleteAttsInPool")
 	defer span.End()
 

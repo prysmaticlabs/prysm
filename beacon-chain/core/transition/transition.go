@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/capella"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/deneb"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	e "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/execution"
@@ -23,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
@@ -255,14 +255,16 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			} else if state.Version() >= version.Altair {
-				state, err = altair.ProcessEpoch(ctx, state)
-				if err != nil {
+			} else if state.Version() <= version.Deneb {
+				if err = altair.ProcessEpoch(ctx, state); err != nil {
 					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
+					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
 				}
 			} else {
-				return nil, errors.New("beacon state should have a version")
+				if err = electra.ProcessEpoch(ctx, state); err != nil {
+					tracing.AnnotateError(span, err)
+					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+				}
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
@@ -320,6 +322,14 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			return nil, err
 		}
 	}
+
+	if time.CanUpgradeToElectra(state.Slot()) {
+		state, err = electra.UpgradeToElectra(state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
 	return state, nil
 }
 
@@ -365,14 +375,25 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interf
 	if eth1Data == nil {
 		return nil, errors.New("nil eth1data in state")
 	}
-	if state.Eth1DepositIndex() > eth1Data.DepositCount {
-		return nil, fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), eth1Data.DepositCount)
-	}
-	maxDeposits := math.Min(params.BeaconConfig().MaxDeposits, eth1Data.DepositCount-state.Eth1DepositIndex())
-	// Verify outstanding deposits are processed up to max number of deposits
-	if uint64(len(body.Deposits())) != maxDeposits {
-		return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
-			maxDeposits, len(body.Deposits()))
+
+	if state.Version() < version.Electra {
+		// Deneb specs
+		//  # Verify that outstanding deposits are processed up to the maximum number of deposits
+		//    assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
+		if state.Eth1DepositIndex() > eth1Data.DepositCount {
+			return nil, fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), eth1Data.DepositCount)
+		}
+		maxDeposits := min(params.BeaconConfig().MaxDeposits, eth1Data.DepositCount-state.Eth1DepositIndex())
+		// Verify outstanding deposits are processed up to max number of deposits
+		if uint64(len(body.Deposits())) != maxDeposits {
+			return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
+				maxDeposits, len(body.Deposits()))
+		}
+	} else {
+		// Electra
+		if err := electra.VerifyBlockDepositLength(body, state); err != nil {
+			return nil, errors.Wrap(err, "failed to verify block deposit length")
+		}
 	}
 
 	return state, nil

@@ -55,7 +55,7 @@ func TestTranslateParticipation(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(ctx, s, pendingAtts[0].Data.Slot, pendingAtts[0].Data.CommitteeIndex)
 	require.NoError(t, err)
-	indices, err := attestation.AttestingIndices(pendingAtts[0].AggregationBits, committee)
+	indices, err := attestation.AttestingIndices(pendingAtts[0], committee)
 	require.NoError(t, err)
 	for _, index := range indices {
 		has, err := altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelySourceFlagIndex)

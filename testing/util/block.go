@@ -22,6 +22,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assertions"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -109,18 +110,34 @@ func GenerateFullBlock(
 	numToGen = conf.NumAttesterSlashings
 	var aSlashings []*ethpb.AttesterSlashing
 	if numToGen > 0 {
-		aSlashings, err = generateAttesterSlashings(bState, privs, numToGen)
+		generated, err := generateAttesterSlashings(bState, privs, numToGen)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed generating %d attester slashings:", numToGen)
+		}
+		aSlashings = make([]*ethpb.AttesterSlashing, len(generated))
+		var ok bool
+		for i, s := range generated {
+			aSlashings[i], ok = s.(*ethpb.AttesterSlashing)
+			if !ok {
+				return nil, fmt.Errorf("attester slashing has the wrong type (expected %T, got %T)", &ethpb.AttesterSlashing{}, s)
+			}
 		}
 	}
 
 	numToGen = conf.NumAttestations
 	var atts []*ethpb.Attestation
 	if numToGen > 0 {
-		atts, err = GenerateAttestations(bState, privs, numToGen, slot, false)
+		generatedAtts, err := GenerateAttestations(bState, privs, numToGen, slot, false)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed generating %d attestations:", numToGen)
+		}
+		atts = make([]*ethpb.Attestation, len(generatedAtts))
+		var ok bool
+		for i, a := range generatedAtts {
+			atts[i], ok = a.(*ethpb.Attestation)
+			if !ok {
+				return nil, fmt.Errorf("attestation has the wrong type (expected %T, got %T)", &ethpb.Attestation{}, a)
+			}
 		}
 	}
 
@@ -265,8 +282,58 @@ func GenerateAttesterSlashingForValidator(
 	bState state.BeaconState,
 	priv bls.SecretKey,
 	idx primitives.ValidatorIndex,
-) (*ethpb.AttesterSlashing, error) {
+) (ethpb.AttSlashing, error) {
 	currentEpoch := time.CurrentEpoch(bState)
+
+	if bState.Version() >= version.Electra {
+		att1 := &ethpb.IndexedAttestationElectra{
+			Data: &ethpb.AttestationData{
+				Slot:            bState.Slot(),
+				CommitteeIndex:  0,
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				Target: &ethpb.Checkpoint{
+					Epoch: currentEpoch,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+				Source: &ethpb.Checkpoint{
+					Epoch: currentEpoch + 1,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+			},
+			AttestingIndices: []uint64{uint64(idx)},
+		}
+		var err error
+		att1.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, att1.Data, params.BeaconConfig().DomainBeaconAttester, priv)
+		if err != nil {
+			return nil, err
+		}
+
+		att2 := &ethpb.IndexedAttestationElectra{
+			Data: &ethpb.AttestationData{
+				Slot:            bState.Slot(),
+				CommitteeIndex:  0,
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				Target: &ethpb.Checkpoint{
+					Epoch: currentEpoch,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+				Source: &ethpb.Checkpoint{
+					Epoch: currentEpoch,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+			},
+			AttestingIndices: []uint64{uint64(idx)},
+		}
+		att2.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, att2.Data, params.BeaconConfig().DomainBeaconAttester, priv)
+		if err != nil {
+			return nil, err
+		}
+
+		return &ethpb.AttesterSlashingElectra{
+			Attestation_1: att1,
+			Attestation_2: att2,
+		}, nil
+	}
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
@@ -321,8 +388,8 @@ func generateAttesterSlashings(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
 	numSlashings uint64,
-) ([]*ethpb.AttesterSlashing, error) {
-	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
+) ([]ethpb.AttSlashing, error) {
+	attesterSlashings := make([]ethpb.AttSlashing, numSlashings)
 	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := randGen.Uint64() % helpers.SlotCommitteeCount(uint64(bState.NumValidators()))
@@ -1140,10 +1207,30 @@ func HydrateSignedBeaconBlockDeneb(b *ethpb.SignedBeaconBlockDeneb) *ethpb.Signe
 	return b
 }
 
+// HydrateSignedBeaconBlockElectra hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockElectra(b *ethpb.SignedBeaconBlockElectra) *ethpb.SignedBeaconBlockElectra {
+	if b == nil {
+		b = &ethpb.SignedBeaconBlockElectra{}
+	}
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Block = HydrateBeaconBlockElectra(b.Block)
+	return b
+}
+
 // HydrateSignedBeaconBlockContentsDeneb hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateSignedBeaconBlockContentsDeneb(b *ethpb.SignedBeaconBlockContentsDeneb) *ethpb.SignedBeaconBlockContentsDeneb {
 	b.Block = HydrateSignedBeaconBlockDeneb(b.Block)
+	return b
+}
+
+// HydrateSignedBeaconBlockContentsElectra hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockContentsElectra(b *ethpb.SignedBeaconBlockContentsElectra) *ethpb.SignedBeaconBlockContentsElectra {
+	b.Block = HydrateSignedBeaconBlockElectra(b.Block)
 	return b
 }
 
@@ -1170,6 +1257,22 @@ func HydrateBeaconBlockDeneb(b *ethpb.BeaconBlockDeneb) *ethpb.BeaconBlockDeneb 
 		b.StateRoot = make([]byte, fieldparams.RootLength)
 	}
 	b.Body = HydrateBeaconBlockBodyDeneb(b.Body)
+	return b
+}
+
+// HydrateBeaconBlockElectra hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockElectra(b *ethpb.BeaconBlockElectra) *ethpb.BeaconBlockElectra {
+	if b == nil {
+		b = &ethpb.BeaconBlockElectra{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, fieldparams.RootLength)
+	}
+	b.Body = HydrateBeaconBlockBodyElectra(b.Body)
 	return b
 }
 
@@ -1231,6 +1334,51 @@ func HydrateBeaconBlockBodyDeneb(b *ethpb.BeaconBlockBodyDeneb) *ethpb.BeaconBlo
 	return b
 }
 
+// HydrateBeaconBlockBodyElectra hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockBodyElectra(b *ethpb.BeaconBlockBodyElectra) *ethpb.BeaconBlockBodyElectra {
+	if b == nil {
+		b = &ethpb.BeaconBlockBodyElectra{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, fieldparams.RootLength)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	if b.ExecutionPayload == nil {
+		b.ExecutionPayload = &enginev1.ExecutionPayloadElectra{
+			ParentHash:            make([]byte, fieldparams.RootLength),
+			FeeRecipient:          make([]byte, 20),
+			StateRoot:             make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:          make([]byte, fieldparams.RootLength),
+			LogsBloom:             make([]byte, 256),
+			PrevRandao:            make([]byte, fieldparams.RootLength),
+			ExtraData:             make([]byte, 0),
+			BaseFeePerGas:         make([]byte, fieldparams.RootLength),
+			BlockHash:             make([]byte, fieldparams.RootLength),
+			Transactions:          make([][]byte, 0),
+			Withdrawals:           make([]*enginev1.Withdrawal, 0),
+			DepositRequests:       make([]*enginev1.DepositRequest, 0),
+			WithdrawalRequests:    make([]*enginev1.WithdrawalRequest, 0),
+			ConsolidationRequests: make([]*enginev1.ConsolidationRequest, 0),
+		}
+	}
+	return b
+}
+
 // HydrateV2BeaconBlockBodyDeneb hydrates a v2 beacon block body with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateV2BeaconBlockBodyDeneb(b *v2.BeaconBlockBodyDeneb) *v2.BeaconBlockBodyDeneb {
@@ -1283,6 +1431,16 @@ func HydrateSignedBlindedBeaconBlockDeneb(b *ethpb.SignedBlindedBeaconBlockDeneb
 	return b
 }
 
+// HydrateSignedBlindedBeaconBlockElectra hydrates a signed blinded beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBlindedBeaconBlockElectra(b *ethpb.SignedBlindedBeaconBlockElectra) *ethpb.SignedBlindedBeaconBlockElectra {
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Message = HydrateBlindedBeaconBlockElectra(b.Message)
+	return b
+}
+
 // HydrateV2SignedBlindedBeaconBlockDeneb hydrates a signed v2 blinded beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateV2SignedBlindedBeaconBlockDeneb(b *v2.SignedBlindedBeaconBlockDeneb) *v2.SignedBlindedBeaconBlockDeneb {
@@ -1306,6 +1464,22 @@ func HydrateBlindedBeaconBlockDeneb(b *ethpb.BlindedBeaconBlockDeneb) *ethpb.Bli
 		b.StateRoot = make([]byte, fieldparams.RootLength)
 	}
 	b.Body = HydrateBlindedBeaconBlockBodyDeneb(b.Body)
+	return b
+}
+
+// HydrateBlindedBeaconBlockElectra hydrates a blinded beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBlindedBeaconBlockElectra(b *ethpb.BlindedBeaconBlockElectra) *ethpb.BlindedBeaconBlockElectra {
+	if b == nil {
+		b = &ethpb.BlindedBeaconBlockElectra{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, fieldparams.RootLength)
+	}
+	b.Body = HydrateBlindedBeaconBlockBodyElectra(b.Body)
 	return b
 }
 
@@ -1362,6 +1536,51 @@ func HydrateBlindedBeaconBlockBodyDeneb(b *ethpb.BlindedBeaconBlockBodyDeneb) *e
 			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, fieldparams.RootLength),
 			WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+		}
+	}
+	return b
+}
+
+// HydrateBlindedBeaconBlockBodyElectra hydrates a blinded beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBlindedBeaconBlockBodyElectra(b *ethpb.BlindedBeaconBlockBodyElectra) *ethpb.BlindedBeaconBlockBodyElectra {
+	if b == nil {
+		b = &ethpb.BlindedBeaconBlockBodyElectra{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	if b.ExecutionPayloadHeader == nil {
+		b.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderElectra{
+			ParentHash:                make([]byte, 32),
+			FeeRecipient:              make([]byte, 20),
+			StateRoot:                 make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:              make([]byte, fieldparams.RootLength),
+			LogsBloom:                 make([]byte, 256),
+			PrevRandao:                make([]byte, 32),
+			ExtraData:                 make([]byte, 0),
+			BaseFeePerGas:             make([]byte, 32),
+			BlockHash:                 make([]byte, 32),
+			TransactionsRoot:          make([]byte, fieldparams.RootLength),
+			WithdrawalsRoot:           make([]byte, fieldparams.RootLength),
+			WithdrawalRequestsRoot:    make([]byte, fieldparams.RootLength),
+			DepositRequestsRoot:       make([]byte, fieldparams.RootLength),
+			ConsolidationRequestsRoot: make([]byte, fieldparams.RootLength),
 		}
 	}
 	return b

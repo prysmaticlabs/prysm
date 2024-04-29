@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -15,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
@@ -49,7 +51,7 @@ func (quicProtocol) ENRKey() string { return "quic" }
 // with the tracked committee ids for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee ids.
 func (s *Service) RefreshENR() {
-	// return early if discv5 isnt running
+	// return early if discv5 isn't running
 	if s.dv5Listener == nil || !s.isInitialized() {
 		return
 	}
@@ -106,7 +108,7 @@ func (s *Service) RefreshENR() {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	iterator := enode.Filter(s.dv5Listener.RandomNodes(), s.filterPeer)
+	iterator := filterNodes(s.ctx, s.dv5Listener.RandomNodes(), s.filterPeer)
 	defer iterator.Close()
 
 	for {
@@ -122,29 +124,41 @@ func (s *Service) listenForNewNodes() {
 			time.Sleep(pollingPeriod)
 			continue
 		}
-
-		if exists := iterator.Next(); !exists {
-			break
-		}
-
-		node := iterator.Node()
-		peerInfo, _, err := convertToAddrInfo(node)
-		if err != nil {
-			log.WithError(err).Error("Could not convert to peer info")
+		wantedCount := s.wantedPeerDials()
+		if wantedCount == 0 {
+			log.Trace("Not looking for peers, at peer limit")
+			time.Sleep(pollingPeriod)
 			continue
 		}
-
-		if peerInfo == nil {
-			continue
+		// Restrict dials if limit is applied.
+		if flags.MaxDialIsActive() {
+			wantedCount = min(wantedCount, flags.Get().MaxConcurrentDials)
 		}
-
-		// Make sure that peer is not dialed too often, for each connection attempt there's a backoff period.
-		s.Peers().RandomizeBackOff(peerInfo.ID)
-		go func(info *peer.AddrInfo) {
-			if err := s.connectWithPeer(s.ctx, *info); err != nil {
-				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+		wantedNodes := enode.ReadNodes(iterator, wantedCount)
+		wg := new(sync.WaitGroup)
+		for i := 0; i < len(wantedNodes); i++ {
+			node := wantedNodes[i]
+			peerInfo, _, err := convertToAddrInfo(node)
+			if err != nil {
+				log.WithError(err).Error("Could not convert to peer info")
+				continue
 			}
-		}(peerInfo)
+
+			if peerInfo == nil {
+				continue
+			}
+
+			// Make sure that peer is not dialed too often, for each connection attempt there's a backoff period.
+			s.Peers().RandomizeBackOff(peerInfo.ID)
+			wg.Add(1)
+			go func(info *peer.AddrInfo) {
+				if err := s.connectWithPeer(s.ctx, *info); err != nil {
+					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+				}
+				wg.Done()
+			}(peerInfo)
+		}
+		wg.Wait()
 	}
 }
 
@@ -382,6 +396,17 @@ func (s *Service) isPeerAtLimit(inbound bool) bool {
 	}
 	activePeers := len(s.Peers().Active())
 	return activePeers >= maxPeers || numOfConns >= maxPeers
+}
+
+func (s *Service) wantedPeerDials() int {
+	maxPeers := int(s.cfg.MaxPeers)
+
+	activePeers := len(s.Peers().Active())
+	wantedCount := 0
+	if maxPeers > activePeers {
+		wantedCount = maxPeers - activePeers
+	}
+	return wantedCount
 }
 
 // PeersFromStringAddrs converts peer raw ENRs into multiaddrs for p2p.

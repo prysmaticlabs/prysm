@@ -28,7 +28,7 @@ func (s *Service) groupByValidatorChunkIndex(
 	for _, attestation := range attestations {
 		validatorChunkIndexes := make(map[uint64]bool)
 
-		for _, validatorIndex := range attestation.IndexedAttestation.AttestingIndices {
+		for _, validatorIndex := range attestation.IndexedAttestation.GetAttestingIndices() {
 			validatorChunkIndex := s.params.validatorChunkIndex(primitives.ValidatorIndex(validatorIndex))
 			validatorChunkIndexes[validatorChunkIndex] = true
 		}
@@ -51,7 +51,7 @@ func (s *Service) groupByChunkIndex(
 	attestationsByChunkIndex := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
 
 	for _, attestation := range attestations {
-		chunkIndex := s.params.chunkIndex(attestation.IndexedAttestation.Data.Source.Epoch)
+		chunkIndex := s.params.chunkIndex(attestation.IndexedAttestation.GetData().Source.Epoch)
 		attestationsByChunkIndex[chunkIndex] = append(attestationsByChunkIndex[chunkIndex], attestation)
 	}
 
@@ -74,13 +74,13 @@ func (s *Service) filterAttestations(
 
 		// If an attestation's source is epoch is older than the max history length
 		// we keep track of for slashing detection, we drop it.
-		if attWrapper.IndexedAttestation.Data.Source.Epoch+s.params.historyLength <= currentEpoch {
+		if attWrapper.IndexedAttestation.GetData().Source.Epoch+s.params.historyLength <= currentEpoch {
 			numDropped++
 			continue
 		}
 
 		// If an attestation's target epoch is in the future, we defer processing for later.
-		if attWrapper.IndexedAttestation.Data.Target.Epoch > currentEpoch {
+		if attWrapper.IndexedAttestation.GetData().Target.Epoch > currentEpoch {
 			validInFuture = append(validInFuture, attWrapper)
 			continue
 		}
@@ -95,17 +95,17 @@ func (s *Service) filterAttestations(
 // source and target epochs, and that the source epoch of the attestation must
 // be less than the target epoch, which is a precondition for performing slashing
 // detection (except for the genesis epoch).
-func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
+func validateAttestationIntegrity(att ethpb.IndexedAtt) bool {
 	// If an attestation is malformed, we drop it.
 	if att == nil ||
-		att.Data == nil ||
-		att.Data.Source == nil ||
-		att.Data.Target == nil {
+		att.GetData() == nil ||
+		att.GetData().Source == nil ||
+		att.GetData().Target == nil {
 		return false
 	}
 
-	sourceEpoch := att.Data.Source.Epoch
-	targetEpoch := att.Data.Target.Epoch
+	sourceEpoch := att.GetData().Source.Epoch
+	targetEpoch := att.GetData().Target.Epoch
 
 	// The genesis epoch is a special case, since all attestations formed in it
 	// will have source and target 0, and they should be considered valid.
@@ -129,14 +129,14 @@ func validateBlockHeaderIntegrity(header *ethpb.SignedBeaconBlockHeader) bool {
 	return true
 }
 
-func logAttesterSlashing(slashing *ethpb.AttesterSlashing) {
-	indices := slice.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
+func logAttesterSlashing(slashing ethpb.AttSlashing) {
+	indices := slice.IntersectionUint64(slashing.FirstAttestation().GetAttestingIndices(), slashing.SecondAttestation().GetAttestingIndices())
 	log.WithFields(logrus.Fields{
 		"validatorIndex":  indices,
-		"prevSourceEpoch": slashing.Attestation_1.Data.Source.Epoch,
-		"prevTargetEpoch": slashing.Attestation_1.Data.Target.Epoch,
-		"sourceEpoch":     slashing.Attestation_2.Data.Source.Epoch,
-		"targetEpoch":     slashing.Attestation_2.Data.Target.Epoch,
+		"prevSourceEpoch": slashing.FirstAttestation().GetData().Source.Epoch,
+		"prevTargetEpoch": slashing.FirstAttestation().GetData().Target.Epoch,
+		"sourceEpoch":     slashing.SecondAttestation().GetData().Source.Epoch,
+		"targetEpoch":     slashing.SecondAttestation().GetData().Target.Epoch,
 	}).Info("Attester slashing detected")
 }
 

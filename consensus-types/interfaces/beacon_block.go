@@ -1,16 +1,18 @@
 package interfaces
 
 import (
+	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
 )
+
+var ErrIncompatibleFork = errors.New("Can't convert to fork-specific interface")
 
 // ReadOnlySignedBeaconBlock is an interface describing the method set of
 // a signed beacon block.
@@ -21,21 +23,11 @@ type ReadOnlySignedBeaconBlock interface {
 	Copy() (SignedBeaconBlock, error)
 	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
-	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
-	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
 	ToBlinded() (ReadOnlySignedBeaconBlock, error)
-	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
-	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
-	PbCapellaBlock() (*ethpb.SignedBeaconBlockCapella, error)
-	PbDenebBlock() (*ethpb.SignedBeaconBlockDeneb, error)
-	PbBlindedCapellaBlock() (*ethpb.SignedBlindedBeaconBlockCapella, error)
-	PbBlindedDenebBlock() (*ethpb.SignedBlindedBeaconBlockDeneb, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
 	IsBlinded() bool
-	ValueInWei() math.Wei
-	ValueInGwei() uint64
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 
@@ -67,8 +59,8 @@ type ReadOnlyBeaconBlockBody interface {
 	Eth1Data() *ethpb.Eth1Data
 	Graffiti() [field_params.RootLength]byte
 	ProposerSlashings() []*ethpb.ProposerSlashing
-	AttesterSlashings() []*ethpb.AttesterSlashing
-	Attestations() []Attestation
+	AttesterSlashings() []ethpb.AttSlashing
+	Attestations() []ethpb.Att
 	Deposits() []*ethpb.Deposit
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
 	SyncAggregate() (*ethpb.SyncAggregate, error)
@@ -88,8 +80,8 @@ type SignedBeaconBlock interface {
 	SetSyncAggregate(*ethpb.SyncAggregate) error
 	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SetDeposits([]*ethpb.Deposit)
-	SetAttestations([]Attestation)
-	SetAttesterSlashings([]*ethpb.AttesterSlashing)
+	SetAttestations([]ethpb.Att) error
+	SetAttesterSlashings([]ethpb.AttSlashing) error
 	SetProposerSlashings([]*ethpb.ProposerSlashing)
 	SetGraffiti([]byte)
 	SetEth1Data(*ethpb.Eth1Data)
@@ -130,11 +122,13 @@ type ExecutionData interface {
 	TransactionsRoot() ([]byte, error)
 	Withdrawals() ([]*enginev1.Withdrawal, error)
 	WithdrawalsRoot() ([]byte, error)
-	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
-	PbBellatrix() (*enginev1.ExecutionPayload, error)
-	PbDeneb() (*enginev1.ExecutionPayloadDeneb, error)
-	ValueInWei() (math.Wei, error)
-	ValueInGwei() (uint64, error)
+}
+
+type ExecutionDataElectra interface {
+	ExecutionData
+	DepositRequests() []*enginev1.DepositRequest
+	WithdrawalRequests() []*enginev1.WithdrawalRequest
+	ConsolidationRequests() []*enginev1.ConsolidationRequest
 }
 
 type Attestation interface {

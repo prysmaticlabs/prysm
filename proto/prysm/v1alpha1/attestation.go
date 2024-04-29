@@ -1,78 +1,201 @@
 package eth
 
 import (
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"google.golang.org/protobuf/proto"
 )
 
+// Att defines common functionality for all attestation types.
+type Att interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	Copy() Att
+	GetAggregationBits() bitfield.Bitlist
+	GetData() *AttestationData
+	CommitteeBitsVal() bitfield.Bitfield
+	GetSignature() []byte
+}
+
+// IndexedAtt defines common functionality for all indexed attestation types.
+type IndexedAtt interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	GetAttestingIndices() []uint64
+	GetData() *AttestationData
+	GetSignature() []byte
+}
+
+// SignedAggregateAttAndProof defines common functionality for all signed aggregate attestation types.
+type SignedAggregateAttAndProof interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	AggregateAttestationAndProof() AggregateAttAndProof
+	GetSignature() []byte
+}
+
+// AggregateAttAndProof defines common functionality for all aggregate attestation types.
+type AggregateAttAndProof interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	GetAggregatorIndex() primitives.ValidatorIndex
+	AggregateVal() Att
+	GetSelectionProof() []byte
+}
+
+// AttSlashing defines common functionality for all attestation slashing types.
+type AttSlashing interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	FirstAttestation() IndexedAtt
+	SecondAttestation() IndexedAtt
+}
+
+// Version --
 func (a *Attestation) Version() int {
 	return version.Phase0
 }
 
-func (a *Attestation) GetCommitteeBits() bitfield.Bitlist {
-	return nil
+// Copy --
+func (a *Attestation) Copy() Att {
+	return CopyAttestation(a)
 }
 
-func (a *Attestation) SetAggregationBits(bits bitfield.Bitlist) {
-	a.AggregationBits = bits
+// CommitteeBitsVal --
+func (a *Attestation) CommitteeBitsVal() bitfield.Bitfield {
+	cb := primitives.NewAttestationCommitteeBits()
+	cb.SetBitAt(uint64(a.Data.CommitteeIndex), true)
+	return cb
 }
 
-func (a *Attestation) SetData(data *AttestationData) {
-	a.Data = data
-}
-
-func (a *Attestation) SetCommitteeBits(bits bitfield.Bitlist) {
-	return
-}
-
-func (a *Attestation) SetSignature(sig []byte) {
-	a.Signature = sig
-}
-
+// Version --
 func (a *PendingAttestation) Version() int {
 	return version.Phase0
 }
 
-func (a *PendingAttestation) GetCommitteeBits() bitfield.Bitlist {
+// Copy --
+func (a *PendingAttestation) Copy() Att {
+	return CopyPendingAttestation(a)
+}
+
+// CommitteeBitsVal --
+func (a *PendingAttestation) CommitteeBitsVal() bitfield.Bitfield {
 	return nil
 }
 
-func (a *PendingAttestation) SetAggregationBits(bits bitfield.Bitlist) {
-	a.AggregationBits = bits
-}
-
-func (a *PendingAttestation) SetData(data *AttestationData) {
-	a.Data = data
-}
-
-func (a *PendingAttestation) SetCommitteeBits(bits bitfield.Bitlist) {
-	return
-}
-
-func (a *PendingAttestation) SetSignature(sig []byte) {
-	return
-}
-
+// GetSignature --
 func (a *PendingAttestation) GetSignature() []byte {
 	return nil
 }
 
+// Version --
 func (a *AttestationElectra) Version() int {
 	return version.Electra
 }
 
-func (a *AttestationElectra) SetAggregationBits(bits bitfield.Bitlist) {
-	a.AggregationBits = bits
+// Copy --
+func (a *AttestationElectra) Copy() Att {
+	return CopyAttestationElectra(a)
 }
 
-func (a *AttestationElectra) SetData(data *AttestationData) {
-	a.Data = data
+// CommitteeBitsVal --
+func (a *AttestationElectra) CommitteeBitsVal() bitfield.Bitfield {
+	return a.CommitteeBits
 }
 
-func (a *AttestationElectra) SetCommitteeBits(bits bitfield.Bitlist) {
-	a.CommitteeBits = bits
+// Version --
+func (a *IndexedAttestation) Version() int {
+	return version.Phase0
 }
 
-func (a *AttestationElectra) SetSignature(sig []byte) {
-	a.Signature = sig
+// Version --
+func (a *IndexedAttestationElectra) Version() int {
+	return version.Electra
+}
+
+// Version --
+func (a *AttesterSlashing) Version() int {
+	return version.Phase0
+}
+
+// FirstAttestation --
+func (a *AttesterSlashing) FirstAttestation() IndexedAtt {
+	return a.Attestation_1
+}
+
+// SecondAttestation --
+func (a *AttesterSlashing) SecondAttestation() IndexedAtt {
+	return a.Attestation_2
+}
+
+// Version --
+func (a *AttesterSlashingElectra) Version() int {
+	return version.Electra
+}
+
+// FirstAttestation --
+func (a *AttesterSlashingElectra) FirstAttestation() IndexedAtt {
+	return a.Attestation_1
+}
+
+// SecondAttestation --
+func (a *AttesterSlashingElectra) SecondAttestation() IndexedAtt {
+	return a.Attestation_2
+}
+
+// Version --
+func (a *AggregateAttestationAndProof) Version() int {
+	return version.Phase0
+}
+
+// AggregateVal --
+func (a *AggregateAttestationAndProof) AggregateVal() Att {
+	return a.Aggregate
+}
+
+// Version --
+func (a *AggregateAttestationAndProofElectra) Version() int {
+	return version.Electra
+}
+
+// AggregateVal --
+func (a *AggregateAttestationAndProofElectra) AggregateVal() Att {
+	return a.Aggregate
+}
+
+// Version --
+func (a *SignedAggregateAttestationAndProof) Version() int {
+	return version.Phase0
+}
+
+// AggregateAttestationAndProof --
+func (a *SignedAggregateAttestationAndProof) AggregateAttestationAndProof() AggregateAttAndProof {
+	return a.Message
+}
+
+// Version --
+func (a *SignedAggregateAttestationAndProofElectra) Version() int {
+	return version.Electra
+}
+
+// AggregateAttestationAndProof --
+func (a *SignedAggregateAttestationAndProofElectra) AggregateAttestationAndProof() AggregateAttAndProof {
+	return a.Message
 }

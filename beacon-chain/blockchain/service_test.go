@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
@@ -29,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -80,7 +82,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	attService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	fc := doublylinkedtree.New()
@@ -203,7 +205,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		BlockHash:    make([]byte, 32),
 	})
 	require.NoError(t, err)
-	genState, err = blocks.ProcessPreGenesisDeposits(ctx, genState, deposits)
+	genState, err = altair.ProcessPreGenesisDeposits(ctx, genState, deposits)
 	require.NoError(t, err)
 
 	_, err = bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{DepositRoot: hashTreeRoot[:], BlockHash: make([]byte, 32)})
@@ -497,6 +499,66 @@ func TestChainService_EverythingOptimistic(t *testing.T) {
 	op, err := c.cfg.ForkChoiceStore.IsOptimistic(headRoot)
 	require.NoError(t, err)
 	require.Equal(t, true, op)
+}
+
+func TestStartFromSavedState_ValidatorIndexCacheUpdated(t *testing.T) {
+	resetFn := features.InitWithReset(&features.Flags{
+		EnableStartOptimistic:      true,
+		EIP6110ValidatorIndexCache: true,
+	})
+	defer resetFn()
+
+	genesis := util.NewBeaconBlock()
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
+	headBlock := util.NewBeaconBlock()
+	headBlock.Block.Slot = finalizedSlot
+	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
+	headState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	hexKey := "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
+	key, err := hexutil.Decode(hexKey)
+	require.NoError(t, err)
+	hexKey2 := "0x42247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
+	key2, err := hexutil.Decode(hexKey2)
+	require.NoError(t, err)
+	require.NoError(t, headState.SetValidators([]*ethpb.Validator{
+		{
+			PublicKey:             key,
+			WithdrawalCredentials: make([]byte, fieldparams.RootLength),
+		},
+		{
+			PublicKey:             key2,
+			WithdrawalCredentials: make([]byte, fieldparams.RootLength),
+		},
+	}))
+	require.NoError(t, headState.SetSlot(finalizedSlot))
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
+	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	c, tr := minimalTestService(t, WithFinalizedStateAtStartUp(headState))
+	ctx, beaconDB, stateGen := tr.ctx, tr.db, tr.sg
+
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
+	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
+	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
+	util.SaveBlock(t, ctx, beaconDB, headBlock)
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
+
+	require.NoError(t, err)
+	require.NoError(t, stateGen.SaveState(ctx, headRoot, headState))
+	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
+	require.NoError(t, c.StartFromSavedState(headState))
+
+	index, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
+	require.Equal(t, true, ok)
+	require.Equal(t, primitives.ValidatorIndex(0), index) // first index
+	index2, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(key2))
+	require.Equal(t, true, ok)
+	require.Equal(t, primitives.ValidatorIndex(1), index2) // first index
 }
 
 // MockClockSetter satisfies the ClockSetter interface for testing the conditions where blockchain.Service should

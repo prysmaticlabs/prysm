@@ -18,6 +18,7 @@ proto_library(
     srcs = [
         "beacon_chain.proto",
         "debug.proto",
+        "eip_7251.proto",
         "finalized_block_root_container.proto",
         "health.proto",
         "node.proto",
@@ -44,95 +45,210 @@ proto_library(
 ##############################################################################
 # Go
 ##############################################################################
+
+ssz_phase0_objs = [
+    "AggregateAttestationAndProof",
+    "Attestation",
+    "AttestationData",
+    "AttesterSlashing",
+    "BeaconBlock",
+    "BeaconBlockHeader",
+    "BeaconState",
+    "Checkpoint",
+    "Deposit",
+    "Deposit_Data",
+    "DepositMessage",
+    "ENRForkID",
+    "Eth1Data",
+    "Fork",
+    "ForkData",
+    "HistoricalBatch",
+    "IndexedAttestation",
+    "PowBlock",
+    "ProposerSlashing",
+    "SignedAggregateAttestationAndProof",
+    "SignedBeaconBlock",
+    "SignedBeaconBlockHeader",
+    "SignedVoluntaryExit",
+    "SigningData",
+    "Status",
+    "Status",
+    "Validator",
+    "VoluntaryExit",
+]
+
+ssz_altair_objs = [
+    "BeaconBlockAltair",
+    "BeaconBlockBodyAltair",
+    "BeaconStateAltair",
+    "ContributionAndProof",
+    "SignedBeaconBlockAltair",
+    "SignedContributionAndProof",
+    "SyncAggregate",
+    "SyncAggregate",
+    "SyncAggregatorSelectionData",
+    "SyncCommittee",
+    "SyncCommitteeContribution",
+    "SyncCommitteeMessage",
+]
+
+ssz_bellatrix_objs = [
+    "BeaconBlockBellatrix",
+    "BeaconBlockBodyBellatrix",
+    "BeaconStateBellatrix",
+    "BlindedBeaconBlockBellatrix",
+    "BlindedBeaconBlockBodyBellatrix",
+    "SignedBeaconBlockBellatrix",
+    "SignedBlindedBeaconBlockBellatrix",
+]
+
+ssz_capella_objs = [
+    "BLSToExecutionChange",
+    "BeaconBlockBodyCapella",
+    "BeaconBlockCapella",
+    "BeaconStateCapella",
+    "BlindedBeaconBlockBodyCapella",
+    "BlindedBeaconBlockCapella",
+    "BuilderBidCapella",
+    "HistoricalSummary",
+    "SignedBLSToExecutionChange",
+    "SignedBeaconBlockCapella",
+    "SignedBlindedBeaconBlockCapella",
+    "Withdrawal",
+]
+
+ssz_deneb_objs = [
+    "BeaconBlockBodyDeneb",
+    "BeaconBlockContentsDeneb",
+    "BeaconBlockDeneb",
+    "BeaconStateDeneb",
+    "BlindedBeaconBlockBodyDeneb",
+    "BlindedBeaconBlockDeneb",
+    "BlobIdentifier",
+    "BlobSidecar",
+    "BlobSidecars",
+    "BuilderBidDeneb",
+    "SignedBeaconBlockContentsDeneb",
+    "SignedBeaconBlockDeneb",
+    "SignedBlindedBeaconBlockDeneb",
+]
+
+ssz_electra_objs = [
+    "AggregateAttestationAndProofElectra",
+    "AttestationElectra",
+    "AttesterSlashingElectra",
+    "BeaconBlockElectra",
+    "BeaconBlockElectra",
+    "BeaconStateElectra",
+    "BlindedBeaconBlockBodyElectra",
+    "BlindedBeaconBlockElectra",
+    "Consolidation",
+    "IndexedAttestationElectra",
+    "PendingBalanceDeposit",
+    "PendingBalanceDeposits",
+    "PendingConsolidation",
+    "PendingPartialWithdrawal",
+    "SignedAggregateAttestationAndProofElectra",
+    "SignedBeaconBlockElectra",
+    "SignedBlindedBeaconBlockElectra",
+    "SignedConsolidation",
+]
+
 ssz_gen_marshal(
-    name = "ssz_generated_files",
+    name = "ssz_generated_phase0",
     go_proto = ":go_proto",
+    out = "phase0.ssz.go",
     includes = [
         "//consensus-types/primitives:go_default_library",
         "//proto/engine/v1:go_default_library",
+        "//math:go_default_library",
+    ],
+    objs = ssz_phase0_objs,
+)
+
+ssz_gen_marshal(
+    name = "ssz_generated_altair",
+    go_proto = ":go_proto",
+    out = "altair.ssz.go",
+    includes = [
+        "//consensus-types/primitives:go_default_library",
+        "//proto/engine/v1:go_default_library",
+        "//math:go_default_library",
+    ],
+    objs = ssz_altair_objs,
+    exclude_objs = ssz_phase0_objs,
+)
+
+ssz_gen_marshal(
+    name = "ssz_generated_bellatrix",
+    go_proto = ":go_proto",
+    out = "bellatrix.ssz.go",
+    includes = [
+        "//consensus-types/primitives:go_default_library",
+        "//proto/engine/v1:go_default_library",
+        "//math:go_default_library",
+    ],
+    objs = ssz_bellatrix_objs,
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs,
+)
+
+ssz_gen_marshal(
+    name = "ssz_generated_capella",
+    go_proto = ":go_proto",
+    out = "capella.ssz.go",
+    includes = [
+        "//consensus-types/primitives:go_default_library",
+        "//proto/engine/v1:go_default_library",
+        "//math:go_default_library",
+    ],
+    objs = ssz_capella_objs,
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs,
+)
+
+ssz_gen_marshal(
+    name = "ssz_generated_deneb",
+    go_proto = ":go_proto",
+    out = "deneb.ssz.go",
+    includes = [
+        "//consensus-types/primitives:go_default_library",
+        "//proto/engine/v1:go_default_library",
+        "//math:go_default_library",
+    ],
+    objs = ssz_deneb_objs,
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs,
+)
+
+ssz_gen_marshal(
+    name = "ssz_generated_electra",
+    go_proto = ":go_proto",
+    out = "electra.ssz.go",
+    includes = [
+        "//consensus-types/primitives:go_default_library",
+        "//proto/engine/v1:go_default_library",
+        "//math:go_default_library",
+    ],
+    objs = ssz_electra_objs,
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs + ssz_deneb_objs,
+)
+
+
+ssz_gen_marshal(
+    name = "ssz_generated_non_core",
+    go_proto = ":go_proto",
+    out = "non-core.ssz.go",
+    includes = [
+        "//consensus-types/primitives:go_default_library",
+        "//proto/engine/v1:go_default_library",
+        "//math:go_default_library",
     ],
     objs = [
-        "BeaconBlockAltair",
-        "BeaconBlockBodyAltair",
-        "SignedBeaconBlockAltair",
-        "BeaconBlockBellatrix",
-        "BeaconBlockBodyBellatrix",
-        "SignedBeaconBlockBellatrix",
-        "SignedBlindedBeaconBlockBellatrix",
-        "BlindedBeaconBlockBellatrix",
-        "BlindedBeaconBlockBodyBellatrix",
-        "BeaconBlockCapella",
-        "BeaconBlockBodyCapella",
-        "SignedBeaconBlockCapella",
-        "BeaconBlockDeneb",
-        "BeaconBlockBodyDeneb",
-        "SignedBeaconBlockDeneb",
-        "SignedBlindedBeaconBlockCapella",
-        "BlindedBeaconBlockCapella",
-        "BlindedBeaconBlockBodyCapella",
-        "SignedBlindedBeaconBlockDeneb",
-        "BeaconBlockContentsDeneb",
-        "SignedBeaconBlockContentsDeneb",
-        "BlindedBeaconBlockDeneb",
-        "BlindedBeaconBlockBodyDeneb",
-        "SyncAggregate",
-        "SyncCommitteeMessage",
-        "SyncCommitteeContribution",
-        "ContributionAndProof",
-        "SignedContributionAndProof",
         "BeaconBlocksByRangeRequest",
         "BlobSidecarsByRangeRequest",
-        "ENRForkID",
         "MetaDataV0",
         "MetaDataV1",
-        "Status",
-        "AggregateAttestationAndProof",
-        "AggregateAttestationAndProofElectra",
-        "Attestation",
-        "AttestationElectra",
-        "AttestationData",
-        "AttesterSlashing",
-        "BeaconBlock",
-        "BeaconBlockHeader",
-        "Checkpoint",
-        "Deposit",
-        "Eth1Data",
-        "IndexedAttestation",
-        "ProposerSlashing",
-        "SignedAggregateAttestationAndProof",
-        "SignedAggregateAttestationAndProofElectra",
-        "SignedBeaconBlock",
-        "SignedBeaconBlockHeader",
-        "SignedVoluntaryExit",
-        "Validator",
-        "VoluntaryExit",
-        "ContributionAndProof",
-        "SignedContributionAndProof",
-        "DepositMessage",
-        "Fork",
-        "ForkData",
-        "HistoricalBatch",
-        "Status",
-        "BeaconState",
-        "BeaconStateAltair",
-        "BeaconStateBellatrix",
-        "BeaconStateCapella",
-        "BeaconStateDeneb",
-        "SigningData",
-        "SyncCommittee",
-        "SyncAggregatorSelectionData",
-        "PowBlock",
         "SignedValidatorRegistrationV1",
         "ValidatorRegistrationV1",
-        "Withdrawal",
-        "BLSToExecutionChange",
-        "SignedBLSToExecutionChange",
         "BuilderBid",
-        "BuilderBidCapella",
-        "BuilderBidDeneb",
-        "BlobSidecar",
-        "BlobSidecars",
-        "BlobIdentifier",
         "DepositSnapshot",
     ],
 )
@@ -147,6 +263,7 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/primitives:go_default_library",
+        "//math:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
@@ -194,7 +311,13 @@ go_library(
         "cloners.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
-        ":ssz_generated_files",  # keep
+        ":ssz_generated_non_core",  # keep
+        ":ssz_generated_phase0",  # keep
+        ":ssz_generated_altair",  # keep
+        ":ssz_generated_bellatrix",  # keep
+        ":ssz_generated_capella",  # keep
+        ":ssz_generated_deneb",  # keep
+        ":ssz_generated_electra",  # keep
     ],
     embed = [
         ":go_grpc_gateway_library",
@@ -203,6 +326,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS + [
         "//encoding/bytesutil:go_default_library",
+        "//math:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//runtime/version:go_default_library",
@@ -246,7 +370,9 @@ ssz_proto_files(
 
 go_test(
     name = "go_default_test",
-    srcs = ["cloners_test.go"],
+    srcs = [
+        "cloners_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//testing/assert:go_default_library",

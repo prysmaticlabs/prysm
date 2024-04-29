@@ -254,10 +254,11 @@ func OpenOrCreateNewWallet(cliCtx *cli.Context) (*Wallet, error) {
 }
 
 // NewWalletForWeb3Signer returns a new wallet for web3 signer which is temporary and not stored locally.
-func NewWalletForWeb3Signer() *Wallet {
+func NewWalletForWeb3Signer(cliCtx *cli.Context) *Wallet {
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	// wallet is just a temporary wallet for web3 signer used to call initialize keymanager.
 	return &Wallet{
-		walletDir:      "",
+		walletDir:      walletDir, // it's ok if there's an existing wallet
 		accountsPath:   "",
 		keymanagerKind: keymanager.Web3Signer,
 		walletPassword: "",
@@ -316,6 +317,11 @@ func (w *Wallet) KeymanagerKind() keymanager.Kind {
 // AccountsDir for the wallet.
 func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
+}
+
+// Dir for the wallet.
+func (w *Wallet) Dir() string {
+	return w.walletDir
 }
 
 // Password for the wallet.

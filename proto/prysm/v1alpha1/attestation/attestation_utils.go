@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -38,8 +39,8 @@ import (
 //	     data=attestation.data,
 //	     signature=attestation.signature,
 //	 )
-func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committees [][]primitives.ValidatorIndex) (*ethpb.IndexedAttestation, error) {
-	attIndices, err := AttestingIndices(attestation, committees)
+func ConvertToIndexed(ctx context.Context, attestation ethpb.Att, committees ...[]primitives.ValidatorIndex) (ethpb.IndexedAtt, error) {
+	attIndices, err := AttestingIndices(attestation, committees...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,29 +48,44 @@ func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, c
 	sort.Slice(attIndices, func(i, j int) bool {
 		return attIndices[i] < attIndices[j]
 	})
-	inAtt := &ethpb.IndexedAttestation{
+
+	if attestation.Version() >= version.Electra {
+		return &ethpb.IndexedAttestationElectra{
+			Data:             attestation.GetData(),
+			Signature:        attestation.GetSignature(),
+			AttestingIndices: attIndices,
+		}, nil
+	}
+	return &ethpb.IndexedAttestation{
 		Data:             attestation.GetData(),
 		Signature:        attestation.GetSignature(),
 		AttestingIndices: attIndices,
-	}
-	return inAtt, err
+	}, nil
 }
 
-// AttestingIndices returns the attesting participants indices from the attestation data. The
-// committee is provided as an argument rather than a imported implementation from the spec definition.
-// Having the committee as an argument allows for re-use of beacon committees when possible.
+// AttestingIndices returns the attesting participants indices from the attestation data.
+// Committees are provided as an argument rather than an imported implementation from the spec definition.
+// Having committees as an argument allows for re-use of beacon committees when possible.
 //
-// Spec pseudocode definition:
+// Spec pseudocode definition (Electra version):
 //
-//	def get_attesting_indices(state: BeaconState,
-//	                       data: AttestationData,
-//	                       bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]) -> Set[ValidatorIndex]:
-//	 """
-//	 Return the set of attesting indices corresponding to ``data`` and ``bits``.
-//	 """
-//	 committee = get_beacon_committee(state, data.slot, data.index)
-//	 return set(index for i, index in enumerate(committee) if bits[i])
-func AttestingIndices(att interfaces.Attestation, committees [][]primitives.ValidatorIndex) ([]uint64, error) {
+//	def get_attesting_indices(state: BeaconState, attestation: Attestation) -> Set[ValidatorIndex]:
+//	    """
+//	    Return the set of attesting indices corresponding to ``aggregation_bits`` and ``committee_bits``.
+//	    """
+//	    output: Set[ValidatorIndex] = set()
+//	    committee_indices = get_committee_indices(attestation.committee_bits)
+//	    committee_offset = 0
+//	    for index in committee_indices:
+//	        committee = get_beacon_committee(state, attestation.data.slot, index)
+//	        committee_attesters = set(
+//	        index for i, index in enumerate(committee) if attestation.aggregation_bits[committee_offset + i])
+//	        output = output.union(committee_attesters)
+//
+//	        committee_offset += len(committee)
+//
+//	    return output
+func AttestingIndices(att ethpb.Att, committees ...[]primitives.ValidatorIndex) ([]uint64, error) {
 	if len(committees) == 0 {
 		return []uint64{}, nil
 	}
@@ -77,34 +93,32 @@ func AttestingIndices(att interfaces.Attestation, committees [][]primitives.Vali
 	aggBits := att.GetAggregationBits()
 
 	if att.Version() < version.Electra {
-		committee := committees[0]
-		if aggBits.Len() != uint64(len(committee)) {
-			return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", aggBits.Len(), len(committee))
-		}
-		indices := make([]uint64, 0, aggBits.Count())
-		p := aggBits.BitIndices()
-		for _, idx := range p {
-			if idx < len(committee) {
-				indices = append(indices, uint64(committee[idx]))
-			}
-		}
-		return indices, nil
+		return attestingIndicesPhase0(aggBits, committees[0])
 	}
 
-	attesters := make([]uint64, 0, len(aggBits))
+	committeesLen := 0
+	for _, c := range committees {
+		committeesLen += len(c)
+	}
+	if aggBits.Len() != uint64(committeesLen) {
+		return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", aggBits.Len(), committeesLen)
+	}
+
+	attesters := make([]uint64, 0, aggBits.Count())
 	committeeOffset := 0
 	for _, c := range committees {
 		committeeAttesters := make([]uint64, 0, len(c))
 		for i, vi := range c {
-			if aggBits[committeeOffset+i] == 1 {
-				committeeAttesters = append(committeeAttesters, uint64(c[vi]))
+			if aggBits.BitAt(uint64(committeeOffset + i)) {
+				committeeAttesters = append(committeeAttesters, uint64(vi))
 			}
 		}
 		attesters = append(attesters, committeeAttesters...)
 		committeeOffset += len(c)
 	}
 
-	return attesters, nil
+	slices.Sort(attesters)
+	return slices.Compact(attesters), nil
 }
 
 // VerifyIndexedAttestationSig this helper function performs the last part of the
@@ -126,17 +140,17 @@ func AttestingIndices(att interfaces.Attestation, committees [][]primitives.Vali
 //	 domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //	 signing_root = compute_signing_root(indexed_attestation.data, domain)
 //	 return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKeys []bls.PublicKey, domain []byte) error {
+func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt ethpb.IndexedAtt, pubKeys []bls.PublicKey, domain []byte) error {
 	_, span := trace.StartSpan(ctx, "attestationutil.VerifyIndexedAttestationSig")
 	defer span.End()
-	indices := indexedAtt.AttestingIndices
+	indices := indexedAtt.GetAttestingIndices()
 
-	messageHash, err := signing.ComputeSigningRoot(indexedAtt.Data, domain)
+	messageHash, err := signing.ComputeSigningRoot(indexedAtt.GetData(), domain)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of object")
 	}
 
-	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
+	sig, err := bls.SignatureFromBytes(indexedAtt.GetSignature())
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
@@ -167,20 +181,30 @@ func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedA
 //	  domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //	  signing_root = compute_signing_root(indexed_attestation.data, domain)
 //	  return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.IndexedAttestation) error {
+func IsValidAttestationIndices(ctx context.Context, indexedAttestation ethpb.IndexedAtt) error {
 	_, span := trace.StartSpan(ctx, "attestationutil.IsValidAttestationIndices")
 	defer span.End()
 
-	if indexedAttestation == nil || indexedAttestation.Data == nil || indexedAttestation.Data.Target == nil || indexedAttestation.AttestingIndices == nil {
+	if indexedAttestation == nil ||
+		indexedAttestation.GetData() == nil ||
+		indexedAttestation.GetData().Target == nil ||
+		indexedAttestation.GetAttestingIndices() == nil {
 		return errors.New("nil or missing indexed attestation data")
 	}
-	indices := indexedAttestation.AttestingIndices
+	indices := indexedAttestation.GetAttestingIndices()
 	if len(indices) == 0 {
 		return errors.New("expected non-empty attesting indices")
 	}
-	maxLength := params.BeaconConfig().MaxValidatorsPerCommittee * params.BeaconConfig().MaxCommitteesPerSlot
-	if uint64(len(indices)) > maxLength {
-		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT, %d > %d", len(indices), maxLength)
+	if indexedAttestation.Version() < version.Electra {
+		maxLength := params.BeaconConfig().MaxValidatorsPerCommittee
+		if uint64(len(indices)) > maxLength {
+			return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), maxLength)
+		}
+	} else {
+		maxLength := params.BeaconConfig().MaxValidatorsPerCommittee * params.BeaconConfig().MaxCommitteesPerSlot
+		if uint64(len(indices)) > maxLength {
+			return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT, %d > %d", len(indices), maxLength)
+		}
 	}
 	for i := 1; i < len(indices); i++ {
 		if indices[i-1] >= indices[i] {
@@ -225,4 +249,30 @@ func CheckPointIsEqual(checkPt1, checkPt2 *ethpb.Checkpoint) bool {
 		return false
 	}
 	return true
+}
+
+// attestingIndicesPhase0 returns the attesting participants indices from the attestation data.
+// Committees are provided as an argument rather than an imported implementation from the spec definition.
+// Having committees as an argument allows for re-use of beacon committees when possible.
+//
+// Spec pseudocode definition (Phase0 version):
+//
+//	def get_attesting_indices(state: BeaconState, attestation: Attestation) -> Set[ValidatorIndex]:
+//	    """
+//	    Return the set of attesting indices corresponding to ``data`` and ``bits``.
+//	    """
+//	    committee = get_beacon_committee(state, attestation.data.slot, attestation.data.index)
+//	    return set(index for i, index in enumerate(committee) if attestation.aggregation_bits[i])
+func attestingIndicesPhase0(aggBits bitfield.Bitlist, committee []primitives.ValidatorIndex) ([]uint64, error) {
+	if aggBits.Len() != uint64(len(committee)) {
+		return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", aggBits.Len(), len(committee))
+	}
+	indices := make([]uint64, 0, aggBits.Count())
+	p := aggBits.BitIndices()
+	for _, idx := range p {
+		if idx < len(committee) {
+			indices = append(indices, uint64(committee[idx]))
+		}
+	}
+	return indices, nil
 }
