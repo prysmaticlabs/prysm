@@ -202,7 +202,7 @@ func createAttestationSignatureBatch(
 			}
 			committees = [][]primitives.ValidatorIndex{committee}
 		} else {
-			committeeIndices := helpers.CommitteeIndices(a.GetCommitteeBits())
+			committeeIndices := helpers.CommitteeIndices(a.GetCommitteeBitsVal())
 			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
 			var err error
 			for j, ci := range committeeIndices {

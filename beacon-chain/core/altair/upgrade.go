@@ -164,7 +164,7 @@ func TranslateParticipation(ctx context.Context, state state.BeaconState, atts [
 			}
 			committees = [][]primitives.ValidatorIndex{committee}
 		} else {
-			committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBits())
+			committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBitsVal())
 			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
 			for i, ci := range committeeIndices {
 				committees[i], err = helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, ci)

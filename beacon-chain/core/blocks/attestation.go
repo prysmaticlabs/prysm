@@ -220,7 +220,7 @@ func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyB
 		}
 		committees = [][]primitives.ValidatorIndex{committee}
 	} else {
-		committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBits())
+		committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBitsVal())
 		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
 		var err error
 		for i, ci := range committeeIndices {
