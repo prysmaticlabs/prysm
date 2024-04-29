@@ -1171,8 +1171,20 @@ func (b *BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 }
 
 // AttesterSlashings returns the attester slashings in the block.
-func (b *BeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
-	return b.attesterSlashings
+func (b *BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
+	var slashings []interfaces.AttesterSlashing
+	if b.version < version.Electra {
+		slashings = make([]interfaces.AttesterSlashing, len(b.attesterSlashings))
+		for i, s := range b.attesterSlashings {
+			slashings[i] = s
+		}
+	} else {
+		slashings = make([]interfaces.AttesterSlashing, len(b.attesterSlashingsElectra))
+		for i, s := range b.attesterSlashingsElectra {
+			slashings[i] = s
+		}
+	}
+	return slashings
 }
 
 // Attestations returns the stored attestations in the block.

@@ -15,6 +15,7 @@ type IndexedAtt interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
+	Version() int
 	GetAttestingIndices() []uint64
 	SetAttestingIndices([]uint64)
 	GetData() *AttestationData
@@ -51,6 +52,10 @@ func (a *AttestationElectra) GetCommitteeBitsVal() bitfield.Bitfield {
 	return a.CommitteeBits
 }
 
+func (a *IndexedAttestation) Version() int {
+	return version.Phase0
+}
+
 func (a *IndexedAttestation) SetAttestingIndices(indices []uint64) {
 	a.AttestingIndices = indices
 }
@@ -63,6 +68,10 @@ func (a *IndexedAttestation) SetSignature(sig []byte) {
 	a.Signature = sig
 }
 
+func (a *IndexedAttestationElectra) Version() int {
+	return version.Electra
+}
+
 func (a *IndexedAttestationElectra) SetAttestingIndices(indices []uint64) {
 	a.AttestingIndices = indices
 }
@@ -73,6 +82,10 @@ func (a *IndexedAttestationElectra) SetData(data *AttestationData) {
 
 func (a *IndexedAttestationElectra) SetSignature(sig []byte) {
 	a.Signature = sig
+}
+
+func (a *AttesterSlashing) Version() int {
+	return version.Phase0
 }
 
 func (a *AttesterSlashing) GetFirstAttestation() IndexedAtt {
@@ -94,6 +107,10 @@ func (a *AttesterSlashing) SetSecondAttestation(att IndexedAtt) {
 	if ok {
 		a.Attestation_2 = at
 	}
+}
+
+func (a *AttesterSlashingElectra) Version() int {
+	return version.Electra
 }
 
 func (a *AttesterSlashingElectra) GetFirstAttestation() IndexedAtt {

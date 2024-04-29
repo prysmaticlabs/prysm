@@ -244,6 +244,13 @@ service BeaconChain {
         };
     }
 
+    // Submit an attester slashing object to the beacon node.
+    rpc SubmitAttesterSlashingElectra(AttesterSlashingElectra) returns (SubmitSlashingResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/slashings/attester/submit_electra"
+        };
+    }
+
     // Submit a proposer slashing object to the beacon node.
     rpc SubmitProposerSlashing(ProposerSlashing) returns (SubmitSlashingResponse) {
         option (google.api.http) = {

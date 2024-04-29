@@ -16,7 +16,7 @@ var gossipTopicMappings = map[string]proto.Message{
 	AttestationSubnetTopicFormat:              &ethpb.Attestation{}, // TODO: how to extend to Electra?
 	ExitSubnetTopicFormat:                     &ethpb.SignedVoluntaryExit{},
 	ProposerSlashingSubnetTopicFormat:         &ethpb.ProposerSlashing{},
-	AttesterSlashingSubnetTopicFormat:         &ethpb.AttesterSlashing{},
+	AttesterSlashingSubnetTopicFormat:         &ethpb.AttesterSlashing{}, // TODO: how to extend to Electra?
 	AggregateAndProofSubnetTopicFormat:        &ethpb.SignedAggregateAttestationAndProof{},
 	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
 	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},

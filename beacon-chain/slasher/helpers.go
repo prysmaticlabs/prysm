@@ -10,6 +10,7 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -28,7 +29,7 @@ func (s *Service) groupByValidatorChunkIndex(
 	for _, attestation := range attestations {
 		validatorChunkIndexes := make(map[uint64]bool)
 
-		for _, validatorIndex := range attestation.IndexedAttestation.AttestingIndices {
+		for _, validatorIndex := range attestation.IndexedAttestation.GetAttestingIndices() {
 			validatorChunkIndex := s.params.validatorChunkIndex(primitives.ValidatorIndex(validatorIndex))
 			validatorChunkIndexes[validatorChunkIndex] = true
 		}
@@ -51,7 +52,7 @@ func (s *Service) groupByChunkIndex(
 	attestationsByChunkIndex := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
 
 	for _, attestation := range attestations {
-		chunkIndex := s.params.chunkIndex(attestation.IndexedAttestation.Data.Source.Epoch)
+		chunkIndex := s.params.chunkIndex(attestation.IndexedAttestation.GetData().Source.Epoch)
 		attestationsByChunkIndex[chunkIndex] = append(attestationsByChunkIndex[chunkIndex], attestation)
 	}
 
@@ -74,13 +75,13 @@ func (s *Service) filterAttestations(
 
 		// If an attestation's source is epoch is older than the max history length
 		// we keep track of for slashing detection, we drop it.
-		if attWrapper.IndexedAttestation.Data.Source.Epoch+s.params.historyLength <= currentEpoch {
+		if attWrapper.IndexedAttestation.GetData().Source.Epoch+s.params.historyLength <= currentEpoch {
 			numDropped++
 			continue
 		}
 
 		// If an attestation's target epoch is in the future, we defer processing for later.
-		if attWrapper.IndexedAttestation.Data.Target.Epoch > currentEpoch {
+		if attWrapper.IndexedAttestation.GetData().Target.Epoch > currentEpoch {
 			validInFuture = append(validInFuture, attWrapper)
 			continue
 		}
@@ -129,14 +130,14 @@ func validateBlockHeaderIntegrity(header *ethpb.SignedBeaconBlockHeader) bool {
 	return true
 }
 
-func logAttesterSlashing(slashing *ethpb.AttesterSlashing) {
-	indices := slice.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
+func logAttesterSlashing(slashing interfaces.AttesterSlashing) {
+	indices := slice.IntersectionUint64(slashing.GetFirstAttestation().GetAttestingIndices(), slashing.GetSecondAttestation().GetAttestingIndices())
 	log.WithFields(logrus.Fields{
 		"validatorIndex":  indices,
-		"prevSourceEpoch": slashing.Attestation_1.Data.Source.Epoch,
-		"prevTargetEpoch": slashing.Attestation_1.Data.Target.Epoch,
-		"sourceEpoch":     slashing.Attestation_2.Data.Source.Epoch,
-		"targetEpoch":     slashing.Attestation_2.Data.Target.Epoch,
+		"prevSourceEpoch": slashing.GetFirstAttestation().GetData().Source.Epoch,
+		"prevTargetEpoch": slashing.GetFirstAttestation().GetData().Target.Epoch,
+		"sourceEpoch":     slashing.GetSecondAttestation().GetData().Source.Epoch,
+		"targetEpoch":     slashing.GetSecondAttestation().GetData().Target.Epoch,
 	}).Info("Attester slashing detected")
 }
 

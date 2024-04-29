@@ -64,8 +64,27 @@ func (b *SignedBeaconBlock) SetProposerSlashings(p []*eth.ProposerSlashing) {
 
 // SetAttesterSlashings sets the attester slashings in the block.
 // This function is not thread safe, it is only used during block creation.
-func (b *SignedBeaconBlock) SetAttesterSlashings(a []*eth.AttesterSlashing) {
-	b.block.body.attesterSlashings = a
+func (b *SignedBeaconBlock) SetAttesterSlashings(slashings []interfaces.AttesterSlashing) {
+	// TODO: return an error if casting fails?
+	if b.version < version.Electra {
+		blockSlashings := make([]*eth.AttesterSlashing, 0, len(slashings))
+		for _, slashing := range slashings {
+			s, ok := slashing.(*eth.AttesterSlashing)
+			if ok {
+				blockSlashings = append(blockSlashings, s)
+			}
+		}
+		b.block.body.attesterSlashings = blockSlashings
+	} else {
+		blockSlashings := make([]*eth.AttesterSlashingElectra, 0, len(slashings))
+		for _, slashing := range slashings {
+			s, ok := slashing.(*eth.AttesterSlashingElectra)
+			if ok {
+				blockSlashings = append(blockSlashings, s)
+			}
+		}
+		b.block.body.attesterSlashingsElectra = blockSlashings
+	}
 }
 
 // SetAttestations sets the attestations in the block.

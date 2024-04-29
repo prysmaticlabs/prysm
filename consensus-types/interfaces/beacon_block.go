@@ -67,7 +67,7 @@ type ReadOnlyBeaconBlockBody interface {
 	Eth1Data() *ethpb.Eth1Data
 	Graffiti() [field_params.RootLength]byte
 	ProposerSlashings() []*ethpb.ProposerSlashing
-	AttesterSlashings() []*ethpb.AttesterSlashing
+	AttesterSlashings() []AttesterSlashing
 	Attestations() []Attestation
 	Deposits() []*ethpb.Deposit
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
@@ -90,7 +90,7 @@ type SignedBeaconBlock interface {
 	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SetDeposits([]*ethpb.Deposit)
 	SetAttestations([]Attestation)
-	SetAttesterSlashings([]*ethpb.AttesterSlashing)
+	SetAttesterSlashings([]AttesterSlashing)
 	SetProposerSlashings([]*ethpb.ProposerSlashing)
 	SetGraffiti([]byte)
 	SetEth1Data(*ethpb.Eth1Data)
@@ -159,6 +159,7 @@ type AttesterSlashing interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
+	Version() int
 	GetFirstAttestation() ethpb.IndexedAtt
 	SetFirstAttestation(att ethpb.IndexedAtt)
 	GetSecondAttestation() ethpb.IndexedAtt
