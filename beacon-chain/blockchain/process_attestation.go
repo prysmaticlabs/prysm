@@ -91,7 +91,7 @@ func (s *Service) OnAttestation(ctx context.Context, a interfaces.Attestation, d
 		}
 		committees = [][]primitives.ValidatorIndex{committee}
 	} else {
-		committeeIndices := a.GetCommitteeBits().BitIndices()
+		committeeIndices := a.GetCommitteeBitsVal().BitIndices()
 		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
 		for i, ci := range committeeIndices {
 			committees[i], err = helpers.BeaconCommitteeFromState(ctx, baseState, a.GetData().Slot, primitives.CommitteeIndex(ci))

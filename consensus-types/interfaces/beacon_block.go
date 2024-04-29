@@ -148,13 +148,9 @@ type Attestation interface {
 	ssz.HashRoot
 	Version() int
 	GetAggregationBits() bitfield.Bitlist
-	SetAggregationBits(bits bitfield.Bitlist)
 	GetData() *ethpb.AttestationData
-	SetData(data *ethpb.AttestationData)
-	GetCommitteeBits() bitfield.Bitlist
-	SetCommitteeBits(bits bitfield.Bitlist)
+	GetCommitteeBitsVal() bitfield.Bitfield
 	GetSignature() []byte
-	SetSignature(sig []byte)
 }
 
 type AggregateAttestationAndProof interface {

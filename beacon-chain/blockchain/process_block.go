@@ -374,7 +374,7 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Re
 			}
 			committees = [][]primitives.ValidatorIndex{committee}
 		} else {
-			committeeIndices := a.GetCommitteeBits().BitIndices()
+			committeeIndices := a.GetCommitteeBitsVal().BitIndices()
 			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
 			var err error
 			for i, ci := range committeeIndices {

@@ -296,7 +296,7 @@ func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]pri
 }
 
 // TODO: doc
-func CommitteeIndices(committeeBits bitfield.Bitlist) []primitives.CommitteeIndex {
+func CommitteeIndices(committeeBits bitfield.Bitfield) []primitives.CommitteeIndex {
 	indices := committeeBits.BitIndices()
 	committeeIndices := make([]primitives.CommitteeIndex, len(indices))
 	for i, ix := range indices {

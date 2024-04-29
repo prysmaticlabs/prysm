@@ -488,7 +488,7 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 			}
 			committees = [][]primitives.ValidatorIndex{committee}
 		} else {
-			committeeIndices := att.GetCommitteeBits().BitIndices()
+			committeeIndices := att.GetCommitteeBitsVal().BitIndices()
 			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
 			var err error
 			for i, ci := range committeeIndices {

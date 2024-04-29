@@ -70,8 +70,27 @@ func (b *SignedBeaconBlock) SetAttesterSlashings(a []*eth.AttesterSlashing) {
 
 // SetAttestations sets the attestations in the block.
 // This function is not thread safe, it is only used during block creation.
-func (b *SignedBeaconBlock) SetAttestations(a []interfaces.Attestation) {
-	b.block.body.attestations = a
+func (b *SignedBeaconBlock) SetAttestations(atts []interfaces.Attestation) {
+	// TODO: return an error if casting fails?
+	if b.version < version.Electra {
+		blockAtts := make([]*eth.Attestation, 0, len(atts))
+		for _, att := range atts {
+			a, ok := att.(*eth.Attestation)
+			if ok {
+				blockAtts = append(blockAtts, a)
+			}
+		}
+		b.block.body.attestations = blockAtts
+	} else {
+		blockAtts := make([]*eth.AttestationElectra, 0, len(atts))
+		for _, att := range atts {
+			a, ok := att.(*eth.AttestationElectra)
+			if ok {
+				blockAtts = append(blockAtts, a)
+			}
+		}
+		b.block.body.attestationsElectra = blockAtts
+	}
 }
 
 // SetDeposits sets the deposits in the block.
