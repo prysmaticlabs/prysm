@@ -29,7 +29,7 @@ func (c ChunkKind) String() string {
 // IndexedAttestationWrapper contains an indexed attestation with its
 // data root to reduce duplicated computation.
 type IndexedAttestationWrapper struct {
-	IndexedAttestation *ethpb.IndexedAttestation
+	IndexedAttestation ethpb.IndexedAtt
 	DataRoot           [32]byte
 }
 

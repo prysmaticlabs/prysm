@@ -97,11 +97,11 @@ func (bs *Server) ListAttestations(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
 	}
-	attestations := make([]*ethpb.Attestation, len(atts))
-	for i, att := range atts {
+	attestations := make([]*ethpb.Attestation, 0, len(atts))
+	for _, att := range atts {
 		a, ok := att.(*ethpb.Attestation)
 		if ok {
-			attestations[i] = a
+			attestations = append(attestations, a)
 		}
 	}
 	return &ethpb.ListAttestationsResponse{
@@ -186,7 +186,10 @@ func (bs *Server) ListIndexedAttestations(
 			if err != nil {
 				return nil, err
 			}
-			indexedAtts = append(indexedAtts, idxAtt)
+			a, ok := idxAtt.(*ethpb.IndexedAttestation)
+			if ok {
+				indexedAtts = append(indexedAtts, a)
+			}
 		}
 	}
 
@@ -234,11 +237,11 @@ func (bs *Server) AttestationPool(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
 	}
-	attestations := make([]*ethpb.Attestation, len(atts))
-	for i, att := range atts {
+	attestations := make([]*ethpb.Attestation, 0, len(atts))
+	for _, att := range atts {
 		a, ok := att.(*ethpb.Attestation)
 		if ok {
-			attestations[i] = a
+			attestations = append(attestations, a)
 		}
 	}
 	return &ethpb.AttestationPoolResponse{

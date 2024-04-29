@@ -76,5 +76,5 @@ type ProposerSlashingReceivedData struct {
 
 // AttesterSlashingReceivedData is the data sent with AttesterSlashingReceived events.
 type AttesterSlashingReceivedData struct {
-	AttesterSlashing *ethpb.AttesterSlashing
+	AttesterSlashing interfaces.AttesterSlashing
 }

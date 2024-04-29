@@ -42,6 +42,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableEIP4881 = &cli.BoolFlag{
+		Name:   "disable-eip-4881",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedVerboseSigVerification = &cli.BoolFlag{
 		Name:   "enable-verbose-sig-verification",
 		Usage:  deprecatedUsage,
@@ -58,6 +63,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableOptionalEngineMethods,
 	deprecatedDisableAggregateParallel,
 	deprecatedEnableEIP4881,
+	deprecatedDisableEIP4881,
 	deprecatedVerboseSigVerification,
 }
 

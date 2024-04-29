@@ -43,7 +43,7 @@ message AttestationElectra {
     AttestationData data = 2;
 
     // TODO: doc
-    bytes committee_bits = 4 [(ethereum.eth.ext.ssz_max) = "max_committees_per_slot.size", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    bytes committee_bits = 4 [(ethereum.eth.ext.ssz_size) = "committee_bits.size", (ethereum.eth.ext.cast_type) = "committee_bits.type"];
 
     // 96 byte BLS aggregate signature.
     bytes signature = 3 [(ethereum.eth.ext.ssz_size) = "96"];

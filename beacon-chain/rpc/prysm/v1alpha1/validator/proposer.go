@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -202,17 +203,23 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
 		if err != nil {
 			sBlk.SetDeposits([]*ethpb.Deposit{})
-			sBlk.SetAttestations([]interfaces.Attestation{})
+			if err := sBlk.SetAttestations([]interfaces.Attestation{}); err != nil {
+				log.WithError(err).Error("Could not set attestations on block")
+			}
 			log.WithError(err).Error("Could not pack deposits and attestations")
 		} else {
 			sBlk.SetDeposits(deposits)
-			sBlk.SetAttestations(atts)
+			if err := sBlk.SetAttestations(atts); err != nil {
+				log.WithError(err).Error("Could not set attestations on block")
+			}
 		}
 
 		// Set slashings.
 		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
 		sBlk.SetProposerSlashings(validProposerSlashings)
-		sBlk.SetAttesterSlashings(validAttSlashings)
+		if err := sBlk.SetAttesterSlashings(validAttSlashings); err != nil {
+			log.WithError(err).Error("Could not set attester slashings on block")
+		}
 
 		// Set exits.
 		sBlk.SetVoluntaryExits(vs.getExits(head, sBlk.Block().Slot()))
@@ -362,25 +369,32 @@ func (vs *Server) broadcastReceiveBlock(ctx context.Context, block interfaces.Si
 
 // broadcastAndReceiveBlobs handles the broadcasting and reception of blob sidecars.
 func (vs *Server) broadcastAndReceiveBlobs(ctx context.Context, sidecars []*ethpb.BlobSidecar, root [32]byte) error {
+	eg, eCtx := errgroup.WithContext(ctx)
 	for i, sc := range sidecars {
-		if err := vs.P2P.BroadcastBlob(ctx, uint64(i), sc); err != nil {
-			return errors.Wrap(err, "broadcast blob failed")
-		}
-
-		readOnlySc, err := blocks.NewROBlobWithRoot(sc, root)
-		if err != nil {
-			return errors.Wrap(err, "ROBlob creation failed")
-		}
-		verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
-		if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
-			return errors.Wrap(err, "receive blob failed")
-		}
-		vs.OperationNotifier.OperationFeed().Send(&feed.Event{
-			Type: operation.BlobSidecarReceived,
-			Data: &operation.BlobSidecarReceivedData{Blob: &verifiedBlob},
+		// Copy the iteration instance to a local variable to give each go-routine its own copy to play with.
+		// See https://golang.org/doc/faq#closures_and_goroutines for more details.
+		subIdx := i
+		sCar := sc
+		eg.Go(func() error {
+			if err := vs.P2P.BroadcastBlob(eCtx, uint64(subIdx), sCar); err != nil {
+				return errors.Wrap(err, "broadcast blob failed")
+			}
+			readOnlySc, err := blocks.NewROBlobWithRoot(sCar, root)
+			if err != nil {
+				return errors.Wrap(err, "ROBlob creation failed")
+			}
+			verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
+			if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
+				return errors.Wrap(err, "receive blob failed")
+			}
+			vs.OperationNotifier.OperationFeed().Send(&feed.Event{
+				Type: operation.BlobSidecarReceived,
+				Data: &operation.BlobSidecarReceivedData{Blob: &verifiedBlob},
+			})
+			return nil
 		})
 	}
-	return nil
+	return eg.Wait()
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.

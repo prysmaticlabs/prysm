@@ -156,10 +156,10 @@ func (s *Store) CheckAttesterDoubleVotes(
 				signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 				attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 
-				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
+				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.GetData().Target.Epoch)
 				localDoubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
 
-				for _, valIdx := range attToProcess.IndexedAttestation.AttestingIndices {
+				for _, valIdx := range attToProcess.IndexedAttestation.GetAttestingIndices() {
 					// Check if there is signing root in the database for this combination
 					// of validator index and target epoch.
 					encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))
@@ -194,7 +194,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 					// Build the proof of double vote.
 					slashAtt := &slashertypes.AttesterDoubleVote{
 						ValidatorIndex: primitives.ValidatorIndex(valIdx),
-						Target:         attToProcess.IndexedAttestation.Data.Target.Epoch,
+						Target:         attToProcess.IndexedAttestation.GetData().Target.Epoch,
 						Wrapper_1:      existingAttRecord,
 						Wrapper_2:      attToProcess,
 					}
@@ -280,7 +280,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	encodedRecords := make([][]byte, attWrappersCount)
 
 	for i, attestation := range attWrappers {
-		encEpoch := encodeTargetEpoch(attestation.IndexedAttestation.Data.Target.Epoch)
+		encEpoch := encodeTargetEpoch(attestation.IndexedAttestation.GetData().Target.Epoch)
 
 		value, err := encodeAttestationRecord(attestation)
 		if err != nil {
@@ -325,7 +325,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 					return err
 				}
 
-				for _, validatorIndex := range attWrapper.IndexedAttestation.AttestingIndices {
+				for _, validatorIndex := range attWrapper.IndexedAttestation.GetAttestingIndices() {
 					encodedIndex := encodeValidatorIndex(primitives.ValidatorIndex(validatorIndex))
 
 					key := append(encodedTargetEpoch, encodedIndex...)
@@ -638,8 +638,8 @@ func (s *Store) HighestAttestations(
 					}
 					highestAtt := &ethpb.HighestAttestation{
 						ValidatorIndex:     uint64(indices[i]),
-						HighestSourceEpoch: attWrapper.IndexedAttestation.Data.Source.Epoch,
-						HighestTargetEpoch: attWrapper.IndexedAttestation.Data.Target.Epoch,
+						HighestSourceEpoch: attWrapper.IndexedAttestation.GetData().Source.Epoch,
+						HighestTargetEpoch: attWrapper.IndexedAttestation.GetData().Target.Epoch,
 					}
 					history = append(history, highestAtt)
 					break

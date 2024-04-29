@@ -48,27 +48,26 @@ type BlobStorageSummarizer interface {
 type blobStorageCache struct {
 	mu     sync.RWMutex
 	nBlobs float64
-	cache  map[string]BlobStorageSummary
+	cache  map[[32]byte]BlobStorageSummary
 }
 
 var _ BlobStorageSummarizer = &blobStorageCache{}
 
 func newBlobStorageCache() *blobStorageCache {
 	return &blobStorageCache{
-		cache: make(map[string]BlobStorageSummary, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest*fieldparams.SlotsPerEpoch),
+		cache: make(map[[32]byte]BlobStorageSummary, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest*fieldparams.SlotsPerEpoch),
 	}
 }
 
 // Summary returns the BlobStorageSummary for `root`. The BlobStorageSummary can be used to check for the presence of
 // BlobSidecars based on Index.
 func (s *blobStorageCache) Summary(root [32]byte) BlobStorageSummary {
-	k := rootString(root)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.cache[k]
+	return s.cache[root]
 }
 
-func (s *blobStorageCache) ensure(key string, slot primitives.Slot, idx uint64) error {
+func (s *blobStorageCache) ensure(key [32]byte, slot primitives.Slot, idx uint64) error {
 	if idx >= fieldparams.MaxBlobsPerBlock {
 		return errIndexOutOfBounds
 	}
@@ -84,7 +83,7 @@ func (s *blobStorageCache) ensure(key string, slot primitives.Slot, idx uint64) 
 	return nil
 }
 
-func (s *blobStorageCache) slot(key string) (primitives.Slot, bool) {
+func (s *blobStorageCache) slot(key [32]byte) (primitives.Slot, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	v, ok := s.cache[key]
@@ -94,7 +93,7 @@ func (s *blobStorageCache) slot(key string) (primitives.Slot, bool) {
 	return v.slot, ok
 }
 
-func (s *blobStorageCache) evict(key string) {
+func (s *blobStorageCache) evict(key [32]byte) {
 	var deleted float64
 	s.mu.Lock()
 	v, ok := s.cache[key]

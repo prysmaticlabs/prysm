@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -102,7 +103,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	}
 	att, ok := best.(*ethpb.Attestation)
 	if !ok {
-		return nil, errors.New("best attestation has wrong type")
+		return nil, fmt.Errorf("best attestation has wrong type (expected %T, got %T)", &ethpb.Attestation{}, best)
 	}
 	a := &ethpb.AggregateAttestationAndProof{
 		Aggregate:       att,

@@ -220,7 +220,7 @@ func createAttestationSignatureBatch(
 		if err := attestation.IsValidAttestationIndices(ctx, ia); err != nil {
 			return nil, err
 		}
-		indices := ia.AttestingIndices
+		indices := ia.GetAttestingIndices()
 		pubkeys := make([][]byte, len(indices))
 		for i := 0; i < len(indices); i++ {
 			pubkeyAtIdx := beaconState.PubkeyAtIndex(primitives.ValidatorIndex(indices[i]))
@@ -232,7 +232,7 @@ func createAttestationSignatureBatch(
 		}
 		pks[i] = aggP
 
-		root, err := signing.ComputeSigningRoot(ia.Data, domain)
+		root, err := signing.ComputeSigningRoot(ia.GetData(), domain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root of object")
 		}

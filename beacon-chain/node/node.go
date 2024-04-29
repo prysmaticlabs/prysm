@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
@@ -567,11 +566,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	b.db = d
 
-	if features.Get().EnableEIP4881 {
-		depositCache, err = depositsnapshot.New()
-	} else {
-		depositCache, err = depositcache.New()
-	}
+	depositCache, err = depositsnapshot.New()
 	if err != nil {
 		return errors.Wrap(err, "could not create deposit cache")
 	}
@@ -643,9 +638,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		if err := b.BlobStorage.Clear(); err != nil {
-			return errors.Wrap(err, "could not clear blob storage")
-		}
+
 		d, err = slasherkv.NewKVStore(b.ctx, dbPath)
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")

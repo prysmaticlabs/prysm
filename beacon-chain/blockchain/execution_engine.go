@@ -256,7 +256,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 // reportInvalidBlock deals with the event that an invalid block was detected by the execution layer
 func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
 	newPayloadInvalidNodeCount.Inc()
-	invalidRoots, err := s.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
+	invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
 	if err != nil {
 		return err
 	}
@@ -325,7 +325,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	var attr payloadattribute.Attributer
 	switch st.Version() {
 	case version.Deneb:
-		withdrawals, err := st.ExpectedWithdrawals()
+		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
 			return emptyAttri
@@ -342,7 +342,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 			return emptyAttri
 		}
 	case version.Capella:
-		withdrawals, err := st.ExpectedWithdrawals()
+		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
 			return emptyAttri

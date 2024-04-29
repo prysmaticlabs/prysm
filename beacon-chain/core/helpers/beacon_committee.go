@@ -140,7 +140,7 @@ func BeaconCommittee(
 	}
 	count := committeesPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
 
-	return computeCommittee(validatorIndices, seed, indexOffset, count)
+	return ComputeCommittee(validatorIndices, seed, indexOffset, count)
 }
 
 // CommitteeAssignmentContainer represents a committee list, committee index, and to be attested slot for a given epoch.
@@ -295,8 +295,13 @@ func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]pri
 	return UnshuffleList(indices, seed)
 }
 
-// TODO: doc
-func CommitteeIndices(committeeBits bitfield.Bitlist) []primitives.CommitteeIndex {
+// CommitteeIndices return beacon committee indices corresponding to bits that are set on the argument bitfield.
+//
+// Spec pseudocode definition:
+//
+//	def get_committee_indices(committee_bits: Bitvector) -> Sequence[CommitteeIndex]:
+//	   return [CommitteeIndex(index) for index, bit in enumerate(committee_bits) if bit]
+func CommitteeIndices(committeeBits bitfield.Bitfield) []primitives.CommitteeIndex {
 	indices := committeeBits.BitIndices()
 	committeeIndices := make([]primitives.CommitteeIndex, len(indices))
 	for i, ix := range indices {
@@ -369,7 +374,7 @@ func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaco
 	if err != nil {
 		return err
 	}
-	proposerIndices, err := precomputeProposerIndices(state, indices, epoch)
+	proposerIndices, err := PrecomputeProposerIndices(state, indices, epoch)
 	if err != nil {
 		return err
 	}
@@ -419,7 +424,7 @@ func ClearCache() {
 	balanceCache.Clear()
 }
 
-// computeCommittee returns the requested shuffled committee out of the total committees using
+// ComputeCommittee returns the requested shuffled committee out of the total committees using
 // validator indices and seed.
 //
 // Spec pseudocode definition:
@@ -434,7 +439,7 @@ func ClearCache() {
 //	  start = (len(indices) * index) // count
 //	  end = (len(indices) * uint64(index + 1)) // count
 //	  return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
-func computeCommittee(
+func ComputeCommittee(
 	indices []primitives.ValidatorIndex,
 	seed [32]byte,
 	index, count uint64,
@@ -461,9 +466,9 @@ func computeCommittee(
 	return shuffledList[start:end], nil
 }
 
-// This computes proposer indices of the current epoch and returns a list of proposer indices,
+// PrecomputeProposerIndices computes proposer indices of the current epoch and returns a list of proposer indices,
 // the index of the list represents the slot number.
-func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]primitives.ValidatorIndex, error) {
+func PrecomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]primitives.ValidatorIndex, error) {
 	hashFunc := hash.CustomSHA256Hasher()
 	proposerIndices := make([]primitives.ValidatorIndex, params.BeaconConfig().SlotsPerEpoch)
 

@@ -36,7 +36,6 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
-        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
@@ -94,7 +93,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//async/event:go_default_library",
-        "//beacon-chain/cache/depositcache:go_default_library",
+        "//beacon-chain/cache/depositsnapshot:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",

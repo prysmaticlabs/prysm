@@ -107,18 +107,20 @@ func VerifyAttestationNoVerifySignature(
 			)
 		}
 	}
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.GetData().Target.Epoch)
+	if err != nil {
+		return err
+	}
+	c := helpers.SlotCommitteeCount(activeValidatorCount)
+
+	var indexedAtt ethpb.IndexedAtt
 
 	if att.Version() < version.Electra {
-		activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.GetData().Target.Epoch)
-		if err != nil {
-			return err
-		}
-		c := helpers.SlotCommitteeCount(activeValidatorCount)
 		if uint64(att.GetData().CommitteeIndex) >= c {
 			return fmt.Errorf("committee index %d >= committee count %d", att.GetData().CommitteeIndex, c)
 		}
 
-		if err := helpers.VerifyAttestationBitfieldLengths(ctx, beaconState, att); err != nil {
+		if err = helpers.VerifyAttestationBitfieldLengths(ctx, beaconState, att); err != nil {
 			return errors.Wrap(err, "could not verify attestation bitfields")
 		}
 
@@ -127,27 +129,39 @@ func VerifyAttestationNoVerifySignature(
 		if err != nil {
 			return err
 		}
-		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, [][]primitives.ValidatorIndex{committee})
+		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committee)
 		if err != nil {
 			return err
 		}
-		return attestation.IsValidAttestationIndices(ctx, indexedAtt)
 	} else {
-		committeeIndices := att.GetCommitteeBits().BitIndices()
+		if att.GetData().CommitteeIndex != 0 {
+			return errors.New("committee index must be 0 post-Electra")
+		}
+
+		committeeIndices := att.GetCommitteeBitsVal().BitIndices()
 		committees := make([][]primitives.ValidatorIndex, len(committeeIndices))
+		participantsCount := 0
 		var err error
 		for i, ci := range committeeIndices {
+			if uint64(ci) >= c {
+				return fmt.Errorf("committee index %d >= committee count %d", ci, c)
+			}
 			committees[i], err = helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, primitives.CommitteeIndex(ci))
 			if err != nil {
 				return err
 			}
+			participantsCount += len(committees[i])
 		}
-		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees)
+		if att.GetAggregationBits().Len() != uint64(participantsCount) {
+			return fmt.Errorf("aggregation bits count %d is different than participant count %d", att.GetAggregationBits().Len(), participantsCount)
+		}
+		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committees)
 		if err != nil {
 			return err
 		}
-		return attestation.IsValidAttestationIndices(ctx, indexedAtt)
 	}
+
+	return attestation.IsValidAttestationIndices(ctx, indexedAtt)
 }
 
 // ProcessAttestationNoVerifySignature processes the attestation without verifying the attestation signature. This
@@ -241,7 +255,7 @@ func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyB
 //	  domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //	  signing_root = compute_signing_root(indexed_attestation.data, domain)
 //	  return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBeaconState, indexedAtt ethpb.IndexedAtt) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 
@@ -250,14 +264,14 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBea
 	}
 	domain, err := signing.Domain(
 		beaconState.Fork(),
-		indexedAtt.Data.Target.Epoch,
+		indexedAtt.GetData().Target.Epoch,
 		params.BeaconConfig().DomainBeaconAttester,
 		beaconState.GenesisValidatorsRoot(),
 	)
 	if err != nil {
 		return err
 	}
-	indices := indexedAtt.AttestingIndices
+	indices := indexedAtt.GetAttestingIndices()
 	var pubkeys []bls.PublicKey
 	for i := 0; i < len(indices); i++ {
 		pubkeyAtIdx := beaconState.PubkeyAtIndex(primitives.ValidatorIndex(indices[i]))
