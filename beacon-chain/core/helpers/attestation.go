@@ -39,7 +39,7 @@ func ValidateNilAttestation(attestation ethpb.Att) error {
 	if attestation.GetAggregationBits() == nil {
 		return errors.New("attestation's aggregation bitfield can't be nil")
 	}
-	if attestation.Version() > version.Deneb && attestation.GetCommitteeBits() == nil {
+	if attestation.Version() > version.Deneb && attestation.GetCommitteeBitsVal() == nil {
 		return errors.New("attestation's committee bitfield can't be nil")
 	}
 	return nil

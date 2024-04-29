@@ -169,14 +169,6 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 		if err != nil {
 			return nil, err
 		}
-		// TODO: extend to Electra
-		atts := make([]*eth.Attestation, len(b.block.body.attestations))
-		for i, att := range b.block.body.attestations {
-			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
-			}
-		}
 		return initBlindedSignedBlockFromProtoBellatrix(
 			&eth.SignedBlindedBeaconBlockBellatrix{
 				Block: &eth.BlindedBeaconBlockBellatrix{
@@ -190,7 +182,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 						Graffiti:               b.block.body.graffiti[:],
 						ProposerSlashings:      b.block.body.proposerSlashings,
 						AttesterSlashings:      b.block.body.attesterSlashings,
-						Attestations:           atts,
+						Attestations:           b.block.body.attestations,
 						Deposits:               b.block.body.deposits,
 						VoluntaryExits:         b.block.body.voluntaryExits,
 						SyncAggregate:          b.block.body.syncAggregate,
@@ -203,14 +195,6 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 		header, err := PayloadToHeaderCapella(payload)
 		if err != nil {
 			return nil, err
-		}
-		// TODO: extend to Electra
-		atts := make([]*eth.Attestation, len(b.block.body.attestations))
-		for i, att := range b.block.body.attestations {
-			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
-			}
 		}
 		return initBlindedSignedBlockFromProtoCapella(
 			&eth.SignedBlindedBeaconBlockCapella{
@@ -225,7 +209,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 						Graffiti:               b.block.body.graffiti[:],
 						ProposerSlashings:      b.block.body.proposerSlashings,
 						AttesterSlashings:      b.block.body.attesterSlashings,
-						Attestations:           atts,
+						Attestations:           b.block.body.attestations,
 						Deposits:               b.block.body.deposits,
 						VoluntaryExits:         b.block.body.voluntaryExits,
 						SyncAggregate:          b.block.body.syncAggregate,
@@ -240,14 +224,6 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 		if err != nil {
 			return nil, err
 		}
-		// TODO: extend to Electra
-		atts := make([]*eth.Attestation, len(b.block.body.attestations))
-		for i, att := range b.block.body.attestations {
-			a, ok := att.(*eth.Attestation)
-			if ok {
-				atts[i] = a
-			}
-		}
 		return initBlindedSignedBlockFromProtoDeneb(
 			&eth.SignedBlindedBeaconBlockDeneb{
 				Message: &eth.BlindedBeaconBlockDeneb{
@@ -261,7 +237,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 						Graffiti:               b.block.body.graffiti[:],
 						ProposerSlashings:      b.block.body.proposerSlashings,
 						AttesterSlashings:      b.block.body.attesterSlashings,
-						Attestations:           atts,
+						Attestations:           b.block.body.attestations,
 						Deposits:               b.block.body.deposits,
 						VoluntaryExits:         b.block.body.voluntaryExits,
 						SyncAggregate:          b.block.body.syncAggregate,
