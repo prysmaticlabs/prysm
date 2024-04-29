@@ -467,6 +467,7 @@ func (s *Server) GetAttesterSlashings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
+	// TODO: limited to pre-Electra for now
 	ss := make([]*eth.AttesterSlashing, 0, len(sourceSlashings))
 	for _, slashing := range sourceSlashings {
 		s, ok := slashing.(*eth.AttesterSlashing)
