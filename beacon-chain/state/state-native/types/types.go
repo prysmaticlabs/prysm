@@ -90,6 +90,24 @@ func (f FieldIndex) String() string {
 		return "NextWithdrawalValidatorIndex"
 	case HistoricalSummaries:
 		return "HistoricalSummaries"
+	case DepositReceiptsStartIndex:
+		return "DepositReceiptsStartIndex"
+	case DepositBalanceToConsume:
+		return "DepositBalanceToConsume"
+	case ExitBalanceToConsume:
+		return "ExitBalanceToConsume"
+	case EarliestExitEpoch:
+		return "EarliestExitEpoch"
+	case ConsolidationBalanceToConsume:
+		return "ConsolidationBalanceToConsume"
+	case EarliestConsolidationEpoch:
+		return "EarliestConsolidationEpoch"
+	case PendingBalanceDeposits:
+		return "PendingBalanceDeposits"
+	case PendingPartialWithdrawals:
+		return "PendingPartialWithdrawals"
+	case PendingConsolidations:
+		return "PendingConsolidations"
 	default:
 		return ""
 	}
@@ -155,6 +173,24 @@ func (f FieldIndex) RealPosition() int {
 		return 26
 	case HistoricalSummaries:
 		return 27
+	case DepositReceiptsStartIndex:
+		return 28
+	case DepositBalanceToConsume:
+		return 29
+	case ExitBalanceToConsume:
+		return 30
+	case EarliestExitEpoch:
+		return 31
+	case ConsolidationBalanceToConsume:
+		return 32
+	case EarliestConsolidationEpoch:
+		return 33
+	case PendingBalanceDeposits:
+		return 34
+	case PendingPartialWithdrawals:
+		return 35
+	case PendingConsolidations:
+		return 36
 	default:
 		return -1
 	}
@@ -207,9 +243,19 @@ const (
 	LatestExecutionPayloadHeader
 	LatestExecutionPayloadHeaderCapella
 	LatestExecutionPayloadHeaderDeneb
+	LatestExecutionPayloadHeaderElectra
 	NextWithdrawalIndex
 	NextWithdrawalValidatorIndex
 	HistoricalSummaries
+	DepositReceiptsStartIndex     // Electra: EIP-6110
+	DepositBalanceToConsume       // Electra: EIP-7251
+	ExitBalanceToConsume          // Electra: EIP-7251
+	EarliestExitEpoch             // Electra: EIP-7251
+	ConsolidationBalanceToConsume // Electra: EIP-7251
+	EarliestConsolidationEpoch    // Electra: EIP-7251
+	PendingBalanceDeposits        // Electra: EIP-7251
+	PendingPartialWithdrawals     // Electra: EIP-7251
+	PendingConsolidations         // Electra: EIP-7251
 )
 
 // Enumerator keeps track of the number of states created since the node's start.

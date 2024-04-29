@@ -230,6 +230,8 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 		fmt.Sprintf("MESSAGE_DOMAIN_INVALID_SNAPPY:  %#x", cfg.MessageDomainInvalidSnappy),
 		fmt.Sprintf("MESSAGE_DOMAIN_VALID_SNAPPY: %#x", cfg.MessageDomainValidSnappy),
 		fmt.Sprintf("MIN_EPOCHS_FOR_BLOCK_REQUESTS: %d", int(cfg.MinEpochsForBlockRequests)),
+		fmt.Sprintf("ELECTRA_FORK_EPOCH: %d", cfg.ElectraForkEpoch),
+		fmt.Sprintf("ELECTRA_FORK_VERSION: %#x", cfg.ElectraForkVersion),
 	}
 
 	yamlFile := []byte(strings.Join(lines, "\n"))

@@ -320,6 +320,14 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			return nil, err
 		}
 	}
+
+	if time.CanUpgradeToElectra(state.Slot()) {
+		state, err = deneb.UpgradeToElectra(state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
 	return state, nil
 }
 
