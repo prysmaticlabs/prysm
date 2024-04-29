@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
