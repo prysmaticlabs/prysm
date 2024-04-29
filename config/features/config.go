@@ -261,8 +261,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(EnableQUIC)
 		cfg.EnableQUIC = true
 	}
-	// For the p.o.c we enable it by default.
-	cfg.EnablePeerDAS = true
 	if ctx.IsSet(EnablePeerDAS.Name) {
 		logEnabled(EnablePeerDAS)
 		cfg.EnablePeerDAS = true
