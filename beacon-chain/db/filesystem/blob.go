@@ -218,6 +218,101 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	return nil
 }
 
+// SaveDataColumn saves a data column to our local filesystem.
+func (bs *BlobStorage) SaveDataColumn(column *ethpb.DataColumnSidecar) error {
+	startTime := time.Now()
+	fname := namerForDataColumn(column)
+	sszPath := fname.path()
+	exists, err := afero.Exists(bs.fs, sszPath)
+	if err != nil {
+		return err
+	}
+	if exists {
+		log.Debug("Ignoring a duplicate data column sidecar save attempt")
+		return nil
+	}
+	if bs.pruner != nil {
+		hRoot, err := column.SignedBlockHeader.Header.HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		if err := bs.pruner.notify(hRoot, column.SignedBlockHeader.Header.Slot, column.ColumnIndex); err != nil {
+			return errors.Wrapf(err, "problem maintaining pruning cache/metrics for sidecar with root=%#x", hRoot)
+		}
+	}
+
+	// Serialize the ethpb.DataColumnSidecar to binary data using SSZ.
+	sidecarData, err := column.MarshalSSZ()
+	if err != nil {
+		return errors.Wrap(err, "failed to serialize sidecar data")
+	} else if len(sidecarData) == 0 {
+		return errSidecarEmptySSZData
+	}
+
+	if err := bs.fs.MkdirAll(fname.dir(), directoryPermissions); err != nil {
+		return err
+	}
+	partPath := fname.partPath(fmt.Sprintf("%p", sidecarData))
+
+	partialMoved := false
+	// Ensure the partial file is deleted.
+	defer func() {
+		if partialMoved {
+			return
+		}
+		// It's expected to error if the save is successful.
+		err = bs.fs.Remove(partPath)
+		if err == nil {
+			log.WithFields(logrus.Fields{
+				"partPath": partPath,
+			}).Debugf("Removed partial file")
+		}
+	}()
+
+	// Create a partial file and write the serialized data to it.
+	partialFile, err := bs.fs.Create(partPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to create partial file")
+	}
+
+	n, err := partialFile.Write(sidecarData)
+	if err != nil {
+		closeErr := partialFile.Close()
+		if closeErr != nil {
+			return closeErr
+		}
+		return errors.Wrap(err, "failed to write to partial file")
+	}
+	if bs.fsync {
+		if err := partialFile.Sync(); err != nil {
+			return err
+		}
+	}
+
+	if err := partialFile.Close(); err != nil {
+		return err
+	}
+
+	if n != len(sidecarData) {
+		return fmt.Errorf("failed to write the full bytes of sidecarData, wrote only %d of %d bytes", n, len(sidecarData))
+	}
+
+	if n == 0 {
+		return errEmptyBlobWritten
+	}
+
+	// Atomically rename the partial file to its final name.
+	err = bs.fs.Rename(partPath, sszPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to rename partial file to final name")
+	}
+	partialMoved = true
+	// TODO: Use new metrics for data columns
+	blobsWrittenCounter.Inc()
+	blobSaveLatency.Observe(float64(time.Since(startTime).Milliseconds()))
+	return nil
+}
+
 // Get retrieves a single BlobSidecar by its root and index.
 // Since BlobStorage only writes blobs that have undergone full verification, the return
 // value is always a VerifiedROBlob.
@@ -330,6 +425,14 @@ type blobNamer struct {
 
 func namerForSidecar(sc blocks.VerifiedROBlob) blobNamer {
 	return blobNamer{root: sc.BlockRoot(), index: sc.Index}
+}
+
+func namerForDataColumn(col *ethpb.DataColumnSidecar) blobNamer {
+	bRoot, err := col.SignedBlockHeader.Header.HashTreeRoot()
+	if err != nil {
+		panic(err)
+	}
+	return blobNamer{root: bRoot, index: col.ColumnIndex}
 }
 
 func (p blobNamer) dir() string {
