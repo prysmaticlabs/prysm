@@ -42,7 +42,7 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 	tests := []struct {
 		name          string
-		att           *ethpb.Attestation
+		att           interfaces.Attestation
 		count         int
 		wantErrString string
 	}{
@@ -192,7 +192,7 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	att1 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}})
 	att2 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}})
 	att3 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}})
-	atts := []*ethpb.Attestation{att1, att2, att3}
+	atts := []interfaces.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
 		require.NoError(t, cache.SaveAggregatedAttestation(att))
@@ -253,7 +253,7 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 		require.NoError(t, cache.DeleteAggregatedAttestation(att3))
 
 		returned := cache.AggregatedAttestations()
-		wanted := []*ethpb.Attestation{att2}
+		wanted := []interfaces.Attestation{att2}
 		assert.DeepEqual(t, wanted, returned)
 	})
 
@@ -270,7 +270,7 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 		require.NoError(t, cache.DeleteAggregatedAttestation(att4))
 
 		returned := cache.AggregatedAttestations()
-		wanted := []*ethpb.Attestation{att1, att2}
+		wanted := []interfaces.Attestation{att1, att2}
 		sort.Slice(returned, func(i, j int) bool {
 			return string(returned[i].GetAggregationBits()) < string(returned[j].GetAggregationBits())
 		})

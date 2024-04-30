@@ -20,7 +20,7 @@ import (
 func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 	tests := []struct {
 		name          string
-		att           *ethpb.Attestation
+		att           interfaces.Attestation
 		count         int
 		wantErrString string
 	}{
@@ -67,8 +67,8 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 			cache.seenAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
 			assert.Equal(t, 0, len(cache.unAggregatedAtt), "Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 
-			if tt.att != nil && tt.att.Signature == nil {
-				tt.att.Signature = make([]byte, fieldparams.BLSSignatureLength)
+			if tt.att != nil && tt.att.GetSignature() == nil {
+				tt.att.(*ethpb.Attestation).Signature = make([]byte, fieldparams.BLSSignatureLength)
 			}
 
 			err := cache.SaveUnaggregatedAttestation(tt.att)
@@ -153,7 +153,7 @@ func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 		}
 		returned, err := cache.UnaggregatedAttestations()
 		require.NoError(t, err)
-		assert.DeepEqual(t, []*ethpb.Attestation{}, returned)
+		assert.DeepEqual(t, []interfaces.Attestation{}, returned)
 	})
 }
 
@@ -230,7 +230,7 @@ func TestKV_Unaggregated_DeleteSeenUnaggregatedAttestations(t *testing.T) {
 		assert.Equal(t, 0, cache.UnaggregatedAttestationCount())
 		returned, err := cache.UnaggregatedAttestations()
 		require.NoError(t, err)
-		assert.DeepEqual(t, []*ethpb.Attestation{}, returned)
+		assert.DeepEqual(t, []interfaces.Attestation{}, returned)
 	})
 }
 
@@ -247,9 +247,9 @@ func TestKV_Unaggregated_UnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	}
 	ctx := context.Background()
 	returned := cache.UnaggregatedAttestationsBySlotIndex(ctx, 1, 1)
-	assert.DeepEqual(t, []*ethpb.Attestation{att1}, returned)
+	assert.DeepEqual(t, []interfaces.Attestation{att1}, returned)
 	returned = cache.UnaggregatedAttestationsBySlotIndex(ctx, 1, 2)
-	assert.DeepEqual(t, []*ethpb.Attestation{att2}, returned)
+	assert.DeepEqual(t, []interfaces.Attestation{att2}, returned)
 	returned = cache.UnaggregatedAttestationsBySlotIndex(ctx, 2, 1)
-	assert.DeepEqual(t, []*ethpb.Attestation{att3}, returned)
+	assert.DeepEqual(t, []interfaces.Attestation{att3}, returned)
 }

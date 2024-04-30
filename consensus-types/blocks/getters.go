@@ -1174,11 +1174,17 @@ func (b *BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 func (b *BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
 	var slashings []interfaces.AttesterSlashing
 	if b.version < version.Electra {
+		if b.attesterSlashings == nil {
+			return nil
+		}
 		slashings = make([]interfaces.AttesterSlashing, len(b.attesterSlashings))
 		for i, s := range b.attesterSlashings {
 			slashings[i] = s
 		}
 	} else {
+		if b.attesterSlashingsElectra == nil {
+			return nil
+		}
 		slashings = make([]interfaces.AttesterSlashing, len(b.attesterSlashingsElectra))
 		for i, s := range b.attesterSlashingsElectra {
 			slashings[i] = s
@@ -1191,11 +1197,17 @@ func (b *BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
 func (b *BeaconBlockBody) Attestations() []interfaces.Attestation {
 	var atts []interfaces.Attestation
 	if b.version < version.Electra {
+		if b.attestations == nil {
+			return nil
+		}
 		atts = make([]interfaces.Attestation, len(b.attestations))
 		for i, a := range b.attestations {
 			atts[i] = a
 		}
 	} else {
+		if b.attestationsElectra == nil {
+			return nil
+		}
 		atts = make([]interfaces.Attestation, len(b.attestationsElectra))
 		for i, a := range b.attestations {
 			atts[i] = a

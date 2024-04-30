@@ -545,14 +545,16 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	state, _ := util.DeterministicGenesisState(t, numValidators)
 
 	// Next up we convert the test attestations to indexed form:
-	indexedAtts := make([]ethpb.IndexedAtt, len(atts)+len(atts2))
+	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts)+len(atts2))
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
 		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
-		indexedAtts[i] = idxAtt
+		a, ok := idxAtt.(*ethpb.IndexedAttestation)
+		require.Equal(t, true, ok, "unexpected type of indexed attestation")
+		indexedAtts[i] = a
 	}
 	for i := 0; i < len(atts2); i++ {
 		att := atts2[i]
@@ -560,7 +562,9 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		require.NoError(t, err)
 		idxAtt, err := attestation.ConvertToIndexed(ctx, atts2[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
-		indexedAtts[i+len(atts)] = idxAtt
+		a, ok := idxAtt.(*ethpb.IndexedAttestation)
+		require.Equal(t, true, ok, "unexpected type of indexed attestation")
+		indexedAtts[i+len(atts)] = a
 	}
 
 	bs := &Server{
@@ -652,14 +656,16 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	require.NoError(t, state.SetSlot(startSlot))
 
 	// Next up we convert the test attestations to indexed form:
-	indexedAtts := make([]ethpb.IndexedAtt, len(atts))
+	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts))
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
 		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
-		indexedAtts[i] = idxAtt
+		a, ok := idxAtt.(*ethpb.IndexedAttestation)
+		require.Equal(t, true, ok, "unexpected type of indexed attestation")
+		indexedAtts[i] = a
 	}
 
 	bs := &Server{
