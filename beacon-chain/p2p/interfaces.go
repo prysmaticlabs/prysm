@@ -38,6 +38,7 @@ type Broadcaster interface {
 	BroadcastAttestation(ctx context.Context, subnet uint64, att interfaces.Attestation) error
 	BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint64, sMsg *ethpb.SyncCommitteeMessage) error
 	BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.BlobSidecar) error
+	BroadcastDataColumn(ctx context.Context, columnSubnet uint64, dataColumnSidecar *ethpb.DataColumnSidecar) error
 }
 
 // SetStreamHandler configures p2p to handle streams of a certain topic ID.
