@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -69,7 +69,7 @@ type Server struct {
 	BlobReceiver           blockchain.BlobReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       execution.POWBlockFetcher
-	PendingDepositsFetcher depositcache.PendingDepositsFetcher
+	PendingDepositsFetcher depositsnapshot.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
 	ReplayerBuilder        stategen.ReplayerBuilder

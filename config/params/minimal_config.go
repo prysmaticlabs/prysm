@@ -64,7 +64,9 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16
 	minimalConfig.MaxAttesterSlashings = 2
+	minimalConfig.MaxAttesterSlashingsElectra = 1
 	minimalConfig.MaxAttestations = 128
+	minimalConfig.MaxAttestationsElectra = 8
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
 	minimalConfig.MaxWithdrawalsPerPayload = 4
@@ -92,7 +94,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DenebForkVersion = []byte{4, 0, 0, 1}
 	minimalConfig.DenebForkEpoch = math.MaxUint64
 	minimalConfig.ElectraForkVersion = []byte{5, 0, 0, 1}
-	minimalConfig.AltairForkEpoch = math.MaxUint64
+	minimalConfig.ElectraForkEpoch = math.MaxUint64
 
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
@@ -102,6 +104,11 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	// New Electra params
 	minimalConfig.MinPerEpochChurnLimitElectra = 64000000000
 	minimalConfig.MaxPerEpochActivationExitChurnLimit = 128000000000
+	minimalConfig.PendingConsolidationsLimit = 64
+	minimalConfig.MaxPartialWithdrawalsPerPayload = 1
+	minimalConfig.MaxWithdrawalRequestsPerPayload = 2
+	minimalConfig.PendingPartialWithdrawalsLimit = 64
+	minimalConfig.MaxPendingPartialsPerWithdrawalSweep = 1
 
 	// Ethereum PoW parameters.
 	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.
