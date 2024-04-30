@@ -2447,9 +2447,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 					require.NoError(t, err)
 					sigs := make([]bls.Signature, len(attestingIndices))
 					var zeroSig [96]byte
-					att, ok := atts[i].(*ethpb.Attestation)
-					require.Equal(t, true, ok, "unexpected type of attestation")
-					att.Signature = zeroSig[:]
+					atts[i].(*ethpb.Attestation).Signature = zeroSig[:]
 
 					for i, indice := range attestingIndices {
 						hashTreeRoot, err := signing.ComputeSigningRoot(atts[i].GetData(), domain)
@@ -2457,7 +2455,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 						sig := privKeys[indice].Sign(hashTreeRoot[:])
 						sigs[i] = sig
 					}
-					att.Signature = bls.AggregateSignatures(sigs).Marshal()
+					atts[i].(*ethpb.Attestation).Signature = bls.AggregateSignatures(sigs).Marshal()
 				}
 				return atts
 			},

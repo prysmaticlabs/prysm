@@ -667,13 +667,9 @@ func Test_processAttestations(t *testing.T) {
 					)
 
 					// Create the attester slashing.
-					att_1, ok := wrapper_1.IndexedAttestation.(*ethpb.IndexedAttestation)
-					require.Equal(t, true, ok, "unexpected type of first attestation")
-					att_2, ok := wrapper_2.IndexedAttestation.(*ethpb.IndexedAttestation)
-					require.Equal(t, true, ok, "unexpected type of second attestation")
 					expectedSlashing := &ethpb.AttesterSlashing{
-						Attestation_1: att_1,
-						Attestation_2: att_2,
+						Attestation_1: wrapper_1.IndexedAttestation.(*ethpb.IndexedAttestation),
+						Attestation_2: wrapper_2.IndexedAttestation.(*ethpb.IndexedAttestation),
 					}
 
 					root, err := expectedSlashing.HashTreeRoot()
@@ -1168,9 +1164,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.IsNil(t, slashing)
-	indexedAtt, ok := att.IndexedAttestation.(*ethpb.IndexedAttestation)
-	require.Equal(t, true, ok, "unexpected type of indexed attestation")
-	indexedAtt.AttestingIndices = []uint64{uint64(validatorIdx)}
+	att.IndexedAttestation.(*ethpb.IndexedAttestation).AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{att},
@@ -1227,9 +1221,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
-	indexedAtt, ok := att.IndexedAttestation.(*ethpb.IndexedAttestation)
-	require.Equal(t, true, ok, "unexpected type of indexed attestation")
-	indexedAtt.AttestingIndices = []uint64{uint64(validatorIdx)}
+	att.IndexedAttestation.(*ethpb.IndexedAttestation).AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{att},
