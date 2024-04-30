@@ -522,7 +522,7 @@ func missingDataColumns(bs *filesystem.BlobStorage, root [32]byte, expected map[
 	if len(expected) > int(params.BeaconConfig().NumberOfColumns) {
 		return nil, errMaxDataColumnsExceeded
 	}
-	indices, err := bs.Indices(root)
+	indices, err := bs.ColumnIndices(root)
 	if err != nil {
 		return nil, err
 	}

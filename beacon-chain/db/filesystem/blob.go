@@ -395,6 +395,41 @@ func (bs *BlobStorage) Indices(root [32]byte) ([fieldparams.MaxBlobsPerBlock]boo
 	return mask, nil
 }
 
+// ColumnIndices retrieve the stored column indexes from our filesystem.
+func (bs *BlobStorage) ColumnIndices(root [32]byte) ([fieldparams.NumberOfColumns]bool, error) {
+	var mask [fieldparams.NumberOfColumns]bool
+	rootDir := blobNamer{root: root}.dir()
+	entries, err := afero.ReadDir(bs.fs, rootDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return mask, nil
+		}
+		return mask, err
+	}
+	for i := range entries {
+		if entries[i].IsDir() {
+			continue
+		}
+		name := entries[i].Name()
+		if !strings.HasSuffix(name, sszExt) {
+			continue
+		}
+		parts := strings.Split(name, ".")
+		if len(parts) != 2 {
+			continue
+		}
+		u, err := strconv.ParseUint(parts[0], 10, 64)
+		if err != nil {
+			return mask, errors.Wrapf(err, "unexpected directory entry breaks listing, %s", parts[0])
+		}
+		if u >= fieldparams.NumberOfColumns {
+			return mask, errIndexOutOfBounds
+		}
+		mask[u] = true
+	}
+	return mask, nil
+}
+
 // Clear deletes all files on the filesystem.
 func (bs *BlobStorage) Clear() error {
 	dirs, err := listDir(bs.fs, ".")
