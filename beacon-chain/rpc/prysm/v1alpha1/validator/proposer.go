@@ -217,7 +217,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
 		sBlk.SetProposerSlashings(validProposerSlashings)
 		if err := sBlk.SetAttesterSlashings(validAttSlashings); err != nil {
-				log.WithError(err).Error("Could not set attester slashings on block")
+			log.WithError(err).Error("Could not set attester slashings on block")
 		}
 
 		// Set exits.
