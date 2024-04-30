@@ -70,6 +70,11 @@ func (v readOnlyValidator) PublicKey() [fieldparams.BLSPubkeyLength]byte {
 	return pubkey
 }
 
+// PublicKeySlice returns the public key in the slice form for the read only validator.
+func (v readOnlyValidator) PublicKeySlice() []byte {
+	return v.validator.PublicKey
+}
+
 // WithdrawalCredentials returns the withdrawal credentials of the
 // read only validator.
 func (v readOnlyValidator) WithdrawalCredentials() []byte {

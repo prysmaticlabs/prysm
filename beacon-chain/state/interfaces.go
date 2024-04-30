@@ -100,6 +100,7 @@ type WriteOnlyBeaconState interface {
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
 	SetNextWithdrawalIndex(i uint64) error
 	SetNextWithdrawalValidatorIndex(i primitives.ValidatorIndex) error
+	SaveValidatorIndices()
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
@@ -110,6 +111,7 @@ type ReadOnlyValidator interface {
 	WithdrawableEpoch() primitives.Epoch
 	ExitEpoch() primitives.Epoch
 	PublicKey() [fieldparams.BLSPubkeyLength]byte
+	PublicKeySlice() []byte
 	WithdrawalCredentials() []byte
 	Slashed() bool
 	IsNil() bool
