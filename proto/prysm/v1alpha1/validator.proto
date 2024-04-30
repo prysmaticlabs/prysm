@@ -206,36 +206,6 @@ service BeaconNodeValidator {
         };
     }
 
-    // Sends the newly signed attestation to beacon node.
-    //
-    // The validator sends the newly signed attestation to the beacon node for the attestation to
-    // be included in the beacon chain. The beacon node is expected to validate and publish attestation on
-    // appropriate committee subnet.
-    rpc ProposeAttestationElectra(AttestationElectra) returns (AttestResponse) {
-        option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/attestation_electra"
-            body: "*"
-        };
-    }
-
-    // Submit selection proof to the beacon node to aggregate all matching wire attestations with the same data root.
-    // the beacon node responses with an aggregate and proof object back to validator to sign over.
-    rpc SubmitAggregateSelectionProofElectra(AggregateSelectionRequest) returns (AggregateSelectionResponseElectra) {
-        option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/aggregate_electra"
-            body: "*"
-        };
-    }
-
-    // Submit a signed aggregate and proof object, the beacon node will broadcast the
-    // signed aggregated attestation and proof object.
-    rpc SubmitSignedAggregateSelectionProofElectra(SignedAggregateSubmitRequestElectra) returns (SignedAggregateSubmitResponse) {
-        option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/aggregate_electra"
-            body: "*"
-        };
-    }
-
     // Propose to leave the list of active validators.
     //
     // The beacon node is expected to validate the request and make it available for inclusion in
@@ -629,19 +599,9 @@ message AggregateSelectionResponse {
     AggregateAttestationAndProof aggregate_and_proof = 1;
 }
 
-message AggregateSelectionResponseElectra {
-    // The aggregate and proof message without the signature.
-    AggregateAttestationAndProofElectra aggregate_and_proof = 1;
-}
-
 message SignedAggregateSubmitRequest {
     // The signed aggregate and proof message with the signature.
     SignedAggregateAttestationAndProof signed_aggregate_and_proof = 1;
-}
-
-message SignedAggregateSubmitRequestElectra {
-    // The signed aggregate and proof message with the signature.
-    SignedAggregateAttestationAndProofElectra signed_aggregate_and_proof = 1;
 }
 
 message SignedAggregateSubmitResponse {

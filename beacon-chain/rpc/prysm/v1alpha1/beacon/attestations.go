@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
@@ -183,15 +181,14 @@ func (bs *Server) ListIndexedAttestations(
 					err,
 				)
 			}
-			idxAtt, err := attestation.ConvertToIndexed(ctx, att, [][]primitives.ValidatorIndex{committee})
+			idxAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
 			if err != nil {
 				return nil, err
 			}
 			a, ok := idxAtt.(*ethpb.IndexedAttestation)
-			if !ok {
-				return nil, fmt.Errorf("indexed attestation is of the wrong type (expected %T, got %T)", &ethpb.IndexedAttestation{}, idxAtt)
+			if ok {
+				indexedAtts = append(indexedAtts, a)
 			}
-			indexedAtts = append(indexedAtts, a)
 		}
 	}
 

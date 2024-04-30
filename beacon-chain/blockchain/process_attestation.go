@@ -7,11 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -83,25 +81,11 @@ func (s *Service) OnAttestation(ctx context.Context, a interfaces.Attestation, d
 	}
 
 	// Use the target state to verify attesting indices are valid.
-	var committees [][]primitives.ValidatorIndex
-	if a.Version() < version.Electra {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, baseState, a.GetData().Slot, a.GetData().CommitteeIndex)
-		if err != nil {
-			return err
-		}
-		committees = [][]primitives.ValidatorIndex{committee}
-	} else {
-		committeeIndices := a.GetCommitteeBitsVal().BitIndices()
-		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-		for i, ci := range committeeIndices {
-			committees[i], err = helpers.BeaconCommitteeFromState(ctx, baseState, a.GetData().Slot, primitives.CommitteeIndex(ci))
-			if err != nil {
-				return err
-			}
-		}
+	committee, err := helpers.BeaconCommitteeFromState(ctx, baseState, a.GetData().Slot, a.GetData().CommitteeIndex)
+	if err != nil {
+		return err
 	}
-
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committees)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committee)
 	if err != nil {
 		return err
 	}

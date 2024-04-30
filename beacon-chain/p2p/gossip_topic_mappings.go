@@ -13,10 +13,10 @@ import (
 // lookup.
 var gossipTopicMappings = map[string]proto.Message{
 	BlockSubnetTopicFormat:                    &ethpb.SignedBeaconBlock{},
-	AttestationSubnetTopicFormat:              &ethpb.Attestation{}, // TODO: how to extend to Electra?
+	AttestationSubnetTopicFormat:              &ethpb.Attestation{},
 	ExitSubnetTopicFormat:                     &ethpb.SignedVoluntaryExit{},
 	ProposerSlashingSubnetTopicFormat:         &ethpb.ProposerSlashing{},
-	AttesterSlashingSubnetTopicFormat:         &ethpb.AttesterSlashing{}, // TODO: how to extend to Electra?
+	AttesterSlashingSubnetTopicFormat:         &ethpb.AttesterSlashing{},
 	AggregateAndProofSubnetTopicFormat:        &ethpb.SignedAggregateAttestationAndProof{},
 	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
 	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},

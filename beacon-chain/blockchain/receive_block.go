@@ -479,27 +479,12 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 	// is done in the background to avoid adding more load to this critical code path.
 	ctx := context.TODO()
 	for _, att := range signed.Block().Body().Attestations() {
-		var committees [][]primitives.ValidatorIndex
-		if att.Version() < version.Electra {
-			committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.GetData().Slot, att.GetData().CommitteeIndex)
-			if err != nil {
-				log.WithError(err).Error("Could not get attestation committee")
-				return
-			}
-			committees = [][]primitives.ValidatorIndex{committee}
-		} else {
-			committeeIndices := att.GetCommitteeBitsVal().BitIndices()
-			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-			var err error
-			for i, ci := range committeeIndices {
-				committees[i], err = helpers.BeaconCommitteeFromState(ctx, preState, att.GetData().Slot, primitives.CommitteeIndex(ci))
-				if err != nil {
-					log.WithError(err).Error("Could not get attestation committee")
-					return
-				}
-			}
+		committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.GetData().Slot, att.GetData().CommitteeIndex)
+		if err != nil {
+			log.WithError(err).Error("Could not get attestation committee")
+			return
 		}
-		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees)
+		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
 		if err != nil {
 			log.WithError(err).Error("Could not convert to indexed attestation")
 			return

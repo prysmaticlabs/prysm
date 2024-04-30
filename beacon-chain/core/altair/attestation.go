@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -67,26 +66,11 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-
-	var committees [][]primitives.ValidatorIndex
-	if att.Version() < version.Electra {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
-		if err != nil {
-			return nil, err
-		}
-		committees = [][]primitives.ValidatorIndex{committee}
-	} else {
-		committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBitsVal())
-		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-		for i, ci := range committeeIndices {
-			committees[i], err = helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, ci)
-			if err != nil {
-				return nil, err
-			}
-		}
+	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
+	if err != nil {
+		return nil, err
 	}
-
-	indices, err := attestation.AttestingIndices(att, committees)
+	indices, err := attestation.AttestingIndices(att.GetAggregationBits(), committee)
 	if err != nil {
 		return nil, err
 	}

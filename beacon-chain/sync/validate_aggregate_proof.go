@@ -270,7 +270,6 @@ func validateSelectionIndex(
 	ctx, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 
-	// TODO: Extend to Electra. We can no longer pass AttestationData to the function because CommitteeIndex is always 0.
 	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, data.Slot, data.CommitteeIndex)
 	if err != nil {
 		return nil, err

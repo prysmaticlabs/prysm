@@ -81,21 +81,6 @@ type Server struct {
 	CoreService            *core.Service
 }
 
-func (vs *Server) ProposeAttestationElectra(ctx context.Context, electra *ethpb.AttestationElectra) (*ethpb.AttestResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (vs *Server) SubmitAggregateSelectionProofElectra(ctx context.Context, request *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponseElectra, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (vs *Server) SubmitSignedAggregateSelectionProofElectra(ctx context.Context, electra *ethpb.SignedAggregateSubmitRequestElectra) (*ethpb.SignedAggregateSubmitResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.

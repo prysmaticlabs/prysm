@@ -234,11 +234,8 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, AttesterSlashingTopic)
 		}
-		if attesterSlashingData.AttesterSlashing.Version() < version.Electra {
-			slashing, ok := attesterSlashingData.AttesterSlashing.(*eth.AttesterSlashing)
-			if !ok {
-				log.Errorf("attester slashing has wrong type (expected %T, got %T)", &eth.AttesterSlashing{}, attesterSlashingData.AttesterSlashing)
-			}
+		slashing, ok := attesterSlashingData.AttesterSlashing.(*eth.AttesterSlashing)
+		if ok {
 			return send(w, flusher, AttesterSlashingTopic, structs.AttesterSlashingFromConsensus(slashing))
 		}
 		// TODO: extend to Electra
