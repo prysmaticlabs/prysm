@@ -628,6 +628,18 @@ func (s *Service) isDataAvailableDataColumns(ctx context.Context, root [32]byte,
 	if !params.WithinDAPeriod(slots.ToEpoch(block.Slot()), slots.ToEpoch(s.CurrentSlot())) {
 		return nil
 	}
+	body := block.Body()
+	if body == nil {
+		return errors.New("invalid nil beacon block body")
+	}
+	kzgCommitments, err := body.BlobKzgCommitments()
+	if err != nil {
+		return errors.Wrap(err, "could not get KZG commitments")
+	}
+	// If block has not commitments there is nothing to wait for.
+	if len(kzgCommitments) == 0 {
+		return nil
+	}
 
 	colMap, err := peerdas.CustodyColumns(s.cfg.P2P.NodeID(), params.BeaconConfig().CustodyRequirement)
 	if err != nil {
