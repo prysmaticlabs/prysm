@@ -241,9 +241,7 @@ func BuildSignedBeaconBlock(blk interfaces.ReadOnlyBeaconBlock, signature []byte
 
 // BuildSignedBeaconBlockFromExecutionPayload takes a signed, blinded beacon block and converts into
 // a full, signed beacon block by specifying an execution payload.
-func BuildSignedBeaconBlockFromExecutionPayload(
-	blk interfaces.ReadOnlySignedBeaconBlock, payload interface{},
-) (interfaces.SignedBeaconBlock, error) {
+func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBeaconBlock, payload interface{}) (interfaces.SignedBeaconBlock, error) { // nolint:gocognit
 	if err := BeaconBlockIsNil(blk); err != nil {
 		return nil, err
 	}
