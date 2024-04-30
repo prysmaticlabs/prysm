@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -131,7 +132,16 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 		"validationTime":     validationTime,
 	}).Debug("Received data column sidecar")
 
-	msg.ValidatorData = ds
+	// TODO: Transform this whole function so it looks like to the `validateBlob`
+	// with the tiny verifiers inside.
+	roDataColumn, err := blocks.NewRODataColumn(ds)
+	if err != nil {
+		return pubsub.ValidationReject, errors.Wrap(err, "new RO data columns")
+	}
+
+	verifiedRODataColumn := blocks.NewVerifiedRODataColumn(roDataColumn)
+
+	msg.ValidatorData = verifiedRODataColumn
 	return pubsub.ValidationAccept, nil
 }
 
