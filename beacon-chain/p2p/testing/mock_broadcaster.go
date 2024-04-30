@@ -5,6 +5,11 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/bazel-go-ethereum/p2p/enode"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -66,4 +71,48 @@ func (m *MockBroadcaster) NumAttestations() int {
 	m.attLock.Lock()
 	defer m.attLock.Unlock()
 	return len(m.BroadcastAttestations)
+}
+func (_ *MockBroadcaster) Disconnect(id peer.ID) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (_ *MockBroadcaster) PeerID() peer.ID {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (_ *MockBroadcaster) Host() host.Host {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (_ *MockBroadcaster) ENR() *enr.Record {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (_ *MockBroadcaster) NodeID() enode.ID {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (_ *MockBroadcaster) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (_ *MockBroadcaster) RefreshPersistentSubnets() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (_ *MockBroadcaster) FindPeersWithSubnet(ctx context.Context, topic string, subIndex uint64, threshold int) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (_ *MockBroadcaster) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
+	//TODO implement me
+	panic("implement me")
 }
