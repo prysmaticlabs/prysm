@@ -89,8 +89,8 @@ type SignedBeaconBlock interface {
 	SetSyncAggregate(*ethpb.SyncAggregate) error
 	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SetDeposits([]*ethpb.Deposit)
-	SetAttestations([]Attestation)
-	SetAttesterSlashings([]AttesterSlashing)
+	SetAttestations([]Attestation) error
+	SetAttesterSlashings([]AttesterSlashing) error
 	SetProposerSlashings([]*ethpb.ProposerSlashing)
 	SetGraffiti([]byte)
 	SetEth1Data(*ethpb.Eth1Data)

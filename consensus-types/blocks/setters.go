@@ -1,6 +1,8 @@
 package blocks
 
 import (
+	"fmt"
+
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -64,52 +66,56 @@ func (b *SignedBeaconBlock) SetProposerSlashings(p []*eth.ProposerSlashing) {
 
 // SetAttesterSlashings sets the attester slashings in the block.
 // This function is not thread safe, it is only used during block creation.
-func (b *SignedBeaconBlock) SetAttesterSlashings(slashings []interfaces.AttesterSlashing) {
-	// TODO: return an error if casting fails?
+func (b *SignedBeaconBlock) SetAttesterSlashings(slashings []interfaces.AttesterSlashing) error {
 	if b.version < version.Electra {
 		blockSlashings := make([]*eth.AttesterSlashing, 0, len(slashings))
 		for _, slashing := range slashings {
 			s, ok := slashing.(*eth.AttesterSlashing)
-			if ok {
-				blockSlashings = append(blockSlashings, s)
+			if !ok {
+				return fmt.Errorf("slashing of type %T is not *eth.AttesterSlashing", slashing)
 			}
+			blockSlashings = append(blockSlashings, s)
 		}
 		b.block.body.attesterSlashings = blockSlashings
 	} else {
 		blockSlashings := make([]*eth.AttesterSlashingElectra, 0, len(slashings))
 		for _, slashing := range slashings {
 			s, ok := slashing.(*eth.AttesterSlashingElectra)
-			if ok {
-				blockSlashings = append(blockSlashings, s)
+			if !ok {
+				return fmt.Errorf("slashing of type %T is not *eth.AttesterSlashingElectra", slashing)
 			}
+			blockSlashings = append(blockSlashings, s)
 		}
 		b.block.body.attesterSlashingsElectra = blockSlashings
 	}
+	return nil
 }
 
 // SetAttestations sets the attestations in the block.
 // This function is not thread safe, it is only used during block creation.
-func (b *SignedBeaconBlock) SetAttestations(atts []interfaces.Attestation) {
-	// TODO: return an error if casting fails?
+func (b *SignedBeaconBlock) SetAttestations(atts []interfaces.Attestation) error {
 	if b.version < version.Electra {
 		blockAtts := make([]*eth.Attestation, 0, len(atts))
 		for _, att := range atts {
 			a, ok := att.(*eth.Attestation)
-			if ok {
-				blockAtts = append(blockAtts, a)
+			if !ok {
+				return fmt.Errorf("attestation of type %T is not *eth.Attestation", att)
 			}
+			blockAtts = append(blockAtts, a)
 		}
 		b.block.body.attestations = blockAtts
 	} else {
 		blockAtts := make([]*eth.AttestationElectra, 0, len(atts))
 		for _, att := range atts {
 			a, ok := att.(*eth.AttestationElectra)
-			if ok {
-				blockAtts = append(blockAtts, a)
+			if !ok {
+				return fmt.Errorf("attestation of type %T is not *eth.AttestationElectra", att)
 			}
+			blockAtts = append(blockAtts, a)
 		}
 		b.block.body.attestationsElectra = blockAtts
 	}
+	return nil
 }
 
 // SetDeposits sets the deposits in the block.
