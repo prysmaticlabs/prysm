@@ -219,7 +219,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 }
 
 // SaveDataColumn saves a data column to our local filesystem.
-func (bs *BlobStorage) SaveDataColumn(column *ethpb.DataColumnSidecar) error {
+func (bs *BlobStorage) SaveDataColumn(column blocks.VerifiedRODataColumn) error {
 	startTime := time.Now()
 	fname := namerForDataColumn(column)
 	sszPath := fname.path()
@@ -462,12 +462,8 @@ func namerForSidecar(sc blocks.VerifiedROBlob) blobNamer {
 	return blobNamer{root: sc.BlockRoot(), index: sc.Index}
 }
 
-func namerForDataColumn(col *ethpb.DataColumnSidecar) blobNamer {
-	bRoot, err := col.SignedBlockHeader.Header.HashTreeRoot()
-	if err != nil {
-		panic(err)
-	}
-	return blobNamer{root: bRoot, index: col.ColumnIndex}
+func namerForDataColumn(col blocks.VerifiedRODataColumn) blobNamer {
+	return blobNamer{root: col.BlockRoot(), index: col.ColumnIndex}
 }
 
 func (p blobNamer) dir() string {
