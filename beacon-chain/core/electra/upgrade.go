@@ -176,6 +176,7 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 	// Creating a slice to store indices of validators whose activation epoch is set to FAR_FUTURE_EPOCH
 	var preActivation []primitives.ValidatorIndex
 
+	// TODO: make this loop over validators more efficient
 	for index, validator := range s.Validators {
 		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 			preActivation = append(preActivation, primitives.ValidatorIndex(index))
@@ -196,6 +197,7 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 			return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
 		}
 	}
+	// TODO: combine below loop with above loop
 	//# Ensure early adopters of compounding credentials go through the activation churn
 	for index, validator := range s.Validators {
 		if helpers.HasCompoundingWithdrawalCredential(validator) {
