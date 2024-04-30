@@ -101,7 +101,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 				tracing.AnnotateError(span, err)
 				return
 			}
-
 			committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.Data.Slot, att.Data.CommitteeIndex)
 			if err != nil {
 				log.WithError(err).Error("Could not get attestation committee")

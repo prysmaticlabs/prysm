@@ -102,7 +102,6 @@ func VerifyAttestationNoVerifySignature(
 			)
 		}
 	}
-
 	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.GetData().Target.Epoch)
 	if err != nil {
 		return err
@@ -125,6 +124,7 @@ func VerifyAttestationNoVerifySignature(
 	if err != nil {
 		return err
 	}
+
 	return attestation.IsValidAttestationIndices(ctx, indexedAtt)
 }
 

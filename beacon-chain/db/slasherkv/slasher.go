@@ -728,7 +728,7 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 		return nil, err
 	}
 
-	// Decode attestation
+	// Decode attestation.
 	decodedAtt := &ethpb.IndexedAttestation{}
 	if err := decodedAtt.UnmarshalSSZ(decodedAttBytes); err != nil {
 		return nil, err
