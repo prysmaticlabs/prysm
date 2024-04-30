@@ -515,7 +515,7 @@ func missingIndices(bs *filesystem.BlobStorage, root [32]byte, expected [][]byte
 	return missing, nil
 }
 
-func missingDataColumns(bs *filesystem.BlobStorage, root [32]byte, expected map[uint64]bool) (map[uint64]struct{}, error) {
+func missingDataColumns(bs *filesystem.BlobStorage, root [32]byte, expected map[uint64]bool) (map[uint64]bool, error) {
 	if len(expected) == 0 {
 		return nil, nil
 	}
@@ -526,10 +526,10 @@ func missingDataColumns(bs *filesystem.BlobStorage, root [32]byte, expected map[
 	if err != nil {
 		return nil, err
 	}
-	missing := make(map[uint64]struct{}, len(expected))
+	missing := make(map[uint64]bool, len(expected))
 	for col := range expected {
 		if !indices[col] {
-			missing[col] = struct{}{}
+			missing[col] = true
 		}
 	}
 	return missing, nil
