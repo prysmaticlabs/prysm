@@ -61,6 +61,9 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 			a, ok := att.(*eth.Attestation)
 			if ok {
 				allAtts[i] = structs.AttFromConsensus(a)
+			} else {
+				httputil.HandleError(w, fmt.Sprintf("unable to convert attestations of type %T", att), http.StatusInternalServerError)
+				return
 			}
 		}
 		httputil.WriteJson(w, &structs.ListAttestationsResponse{Data: allAtts})
@@ -77,6 +80,9 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 			a, ok := att.(*eth.Attestation)
 			if ok {
 				filteredAtts = append(filteredAtts, structs.AttFromConsensus(a))
+			} else {
+				httputil.HandleError(w, fmt.Sprintf("unable to convert attestations of type %T", att), http.StatusInternalServerError)
+				return
 			}
 		}
 	}
@@ -466,6 +472,9 @@ func (s *Server) GetAttesterSlashings(w http.ResponseWriter, r *http.Request) {
 		s, ok := slashing.(*eth.AttesterSlashing)
 		if ok {
 			ss = append(ss, s)
+		} else {
+			httputil.HandleError(w, fmt.Sprintf("unable to convert slashing of type %T", slashing), http.StatusInternalServerError)
+			return
 		}
 	}
 	slashings := structs.AttesterSlashingsFromConsensus(ss)
