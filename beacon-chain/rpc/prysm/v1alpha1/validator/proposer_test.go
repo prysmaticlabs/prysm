@@ -38,6 +38,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -2396,22 +2397,22 @@ func TestProposer_FilterAttestation(t *testing.T) {
 	tests := []struct {
 		name         string
 		wantedErr    string
-		inputAtts    func() []*ethpb.Attestation
-		expectedAtts func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation
+		inputAtts    func() []interfaces.Attestation
+		expectedAtts func(inputAtts []interfaces.Attestation) []interfaces.Attestation
 	}{
 		{
 			name: "nil attestations",
-			inputAtts: func() []*ethpb.Attestation {
+			inputAtts: func() []interfaces.Attestation {
 				return nil
 			},
-			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
-				return []*ethpb.Attestation{}
+			expectedAtts: func(inputAtts []interfaces.Attestation) []interfaces.Attestation {
+				return []interfaces.Attestation{}
 			},
 		},
 		{
 			name: "invalid attestations",
-			inputAtts: func() []*ethpb.Attestation {
-				atts := make([]*ethpb.Attestation, 10)
+			inputAtts: func() []interfaces.Attestation {
+				atts := make([]interfaces.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
 					atts[i] = util.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
@@ -2421,14 +2422,14 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				}
 				return atts
 			},
-			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
-				return []*ethpb.Attestation{}
+			expectedAtts: func(inputAtts []interfaces.Attestation) []interfaces.Attestation {
+				return []interfaces.Attestation{}
 			},
 		},
 		{
 			name: "filter aggregates ok",
-			inputAtts: func() []*ethpb.Attestation {
-				atts := make([]*ethpb.Attestation, 10)
+			inputAtts: func() []interfaces.Attestation {
+				atts := make([]interfaces.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
 					atts[i] = util.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
@@ -2437,29 +2438,31 @@ func TestProposer_FilterAttestation(t *testing.T) {
 						},
 						AggregationBits: bitfield.Bitlist{0b00010010},
 					})
-					committee, err := helpers.BeaconCommitteeFromState(context.Background(), st, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
+					committee, err := helpers.BeaconCommitteeFromState(context.Background(), st, atts[i].GetData().Slot, atts[i].GetData().CommitteeIndex)
 					assert.NoError(t, err)
-					attestingIndices, err := attestation.AttestingIndices(atts[i].AggregationBits, committee)
+					attestingIndices, err := attestation.AttestingIndices(atts[i].GetAggregationBits(), committee)
 					require.NoError(t, err)
 					assert.NoError(t, err)
 					domain, err := signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 					require.NoError(t, err)
 					sigs := make([]bls.Signature, len(attestingIndices))
 					var zeroSig [96]byte
-					atts[i].Signature = zeroSig[:]
+					att, ok := atts[i].(*ethpb.Attestation)
+					require.Equal(t, true, ok, "unexpected type of attestation")
+					att.Signature = zeroSig[:]
 
 					for i, indice := range attestingIndices {
-						hashTreeRoot, err := signing.ComputeSigningRoot(atts[i].Data, domain)
+						hashTreeRoot, err := signing.ComputeSigningRoot(atts[i].GetData(), domain)
 						require.NoError(t, err)
 						sig := privKeys[indice].Sign(hashTreeRoot[:])
 						sigs[i] = sig
 					}
-					atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()
+					att.Signature = bls.AggregateSignatures(sigs).Marshal()
 				}
 				return atts
 			},
-			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
-				return []*ethpb.Attestation{inputAtts[0], inputAtts[1]}
+			expectedAtts: func(inputAtts []interfaces.Attestation) []interfaces.Attestation {
+				return []interfaces.Attestation{inputAtts[0], inputAtts[1]}
 			},
 		},
 	}
@@ -2589,10 +2592,10 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sig := priv.Sign([]byte("foo")).Marshal()
-	aggregatedAtts := []*ethpb.Attestation{
+	aggregatedAtts := []interfaces.Attestation{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig})}
-	unaggregatedAtts := []*ethpb.Attestation{
+	unaggregatedAtts := []interfaces.Attestation{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10010}, Signature: sig}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10100}, Signature: sig})}
 

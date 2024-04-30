@@ -26,7 +26,7 @@ func TestKV_Forkchoice_CanSaveRetrieve(t *testing.T) {
 	returned := cache.ForkchoiceAttestations()
 
 	sort.Slice(returned, func(i, j int) bool {
-		return returned[i].Data.Slot < returned[j].Data.Slot
+		return returned[i].GetData().Slot < returned[j].GetData().Slot
 	})
 
 	assert.DeepEqual(t, atts, returned)

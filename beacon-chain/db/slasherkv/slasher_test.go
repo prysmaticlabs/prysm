@@ -62,7 +62,7 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 		actual, err := beaconDB.AttestationRecordForValidator(ctx, validatorIndex, primitives.Epoch(i+1))
 		require.NoError(t, err)
 
-		require.DeepEqual(t, expected.IndexedAttestation.Data.Source.Epoch, actual.IndexedAttestation.Data.Source.Epoch)
+		require.DeepEqual(t, expected.IndexedAttestation.GetData().Source.Epoch, actual.IndexedAttestation.GetData().Source.Epoch)
 	}
 }
 
@@ -544,7 +544,7 @@ func BenchmarkHighestAttestations(b *testing.B) {
 	for i := 0; i < count; i++ {
 		indicesForAtt := make([]primitives.ValidatorIndex, valsPerAtt)
 		for r := 0; r < valsPerAtt; r++ {
-			indicesForAtt[r] = primitives.ValidatorIndex(atts[i].IndexedAttestation.AttestingIndices[r])
+			indicesForAtt[r] = primitives.ValidatorIndex(atts[i].IndexedAttestation.GetAttestingIndices()[r])
 		}
 		allIndices = append(allIndices, indicesForAtt...)
 	}

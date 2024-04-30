@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -77,8 +78,8 @@ func Bitlists64WithMultipleBitSet(t testing.TB, n, length, count uint64) []*bitf
 }
 
 // MakeAttestationsFromBitlists creates list of attestations from list of bitlist.
-func MakeAttestationsFromBitlists(bl []bitfield.Bitlist) []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, len(bl))
+func MakeAttestationsFromBitlists(bl []bitfield.Bitlist) []interfaces.Attestation {
+	atts := make([]interfaces.Attestation, len(bl))
 	for i, b := range bl {
 		atts[i] = &ethpb.Attestation{
 			AggregationBits: b,

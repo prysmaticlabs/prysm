@@ -667,9 +667,13 @@ func Test_processAttestations(t *testing.T) {
 					)
 
 					// Create the attester slashing.
+					att_1, ok := wrapper_1.IndexedAttestation.(*ethpb.IndexedAttestation)
+					require.Equal(t, true, ok, "unexpected type of first attestation")
+					att_2, ok := wrapper_2.IndexedAttestation.(*ethpb.IndexedAttestation)
+					require.Equal(t, true, ok, "unexpected type of second attestation")
 					expectedSlashing := &ethpb.AttesterSlashing{
-						Attestation_1: wrapper_1.IndexedAttestation,
-						Attestation_2: wrapper_2.IndexedAttestation,
+						Attestation_1: att_1,
+						Attestation_2: att_2,
 					}
 
 					root, err := expectedSlashing.HashTreeRoot()
@@ -821,7 +825,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	s.attsQueue = newAttestationsQueue()
 	s.attsQueue.push(att1)
 	s.attsQueue.push(att2)
-	slot, err := slots.EpochStart(att2.IndexedAttestation.Data.Target.Epoch)
+	slot, err := slots.EpochStart(att2.IndexedAttestation.GetData().Target.Epoch)
 	require.NoError(t, err)
 	mockChain.Slot = &slot
 	s.serviceCfg.HeadStateFetcher = mockChain
@@ -1164,7 +1168,9 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.IsNil(t, slashing)
-	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
+	indexedAtt, ok := att.IndexedAttestation.(*ethpb.IndexedAttestation)
+	require.Equal(t, true, ok, "unexpected type of indexed attestation")
+	indexedAtt.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{att},
@@ -1221,7 +1227,9 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
-	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
+	indexedAtt, ok := att.IndexedAttestation.(*ethpb.IndexedAttestation)
+	require.Equal(t, true, ok, "unexpected type of indexed attestation")
+	indexedAtt.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{att},

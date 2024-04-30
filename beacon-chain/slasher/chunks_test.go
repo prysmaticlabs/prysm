@@ -145,7 +145,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surrounding vote is indeed slashable.
-	attData := att.IndexedAttestation.Data
+	attData := att.IndexedAttestation.GetData()
 	attRecord := createAttestationWrapperEmptySig(t, attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
@@ -223,7 +223,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surroundedVote vote is indeed slashable.
-	attData := att.IndexedAttestation.Data
+	attData := att.IndexedAttestation.GetData()
 	signingRoot := [32]byte{1}
 	attRecord := createAttestationWrapperEmptySig(
 		t, attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, signingRoot[:],

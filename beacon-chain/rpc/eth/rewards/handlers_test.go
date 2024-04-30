@@ -104,13 +104,13 @@ func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, int
 	sbb.SetSlot(2)
 	// we have to set the proposer index to the value that will be randomly chosen (fortunately it's deterministic)
 	sbb.SetProposerIndex(12)
-	sbb.SetAttestations([]*eth.Attestation{
-		{
+	sbb.SetAttestations([]interfaces.Attestation{
+		&eth.Attestation{
 			AggregationBits: bitfield.Bitlist{0b00000111},
 			Data:            util.HydrateAttestationData(&eth.AttestationData{}),
 			Signature:       make([]byte, fieldparams.BLSSignatureLength),
 		},
-		{
+		&eth.Attestation{
 			AggregationBits: bitfield.Bitlist{0b00000111},
 			Data:            util.HydrateAttestationData(&eth.AttestationData{}),
 			Signature:       make([]byte, fieldparams.BLSSignatureLength),
@@ -125,8 +125,8 @@ func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, int
 	require.NoError(t, err)
 	sigRoot2, err := signing.ComputeSigningRoot(attData2, domain)
 	require.NoError(t, err)
-	sbb.SetAttesterSlashings([]*eth.AttesterSlashing{
-		{
+	sbb.SetAttesterSlashings([]interfaces.AttesterSlashing{
+		&eth.AttesterSlashing{
 			Attestation_1: &eth.IndexedAttestation{
 				AttestingIndices: []uint64{0},
 				Data:             attData1,

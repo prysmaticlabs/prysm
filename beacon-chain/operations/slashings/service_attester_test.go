@@ -314,7 +314,9 @@ func TestPool_InsertAttesterSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 	// We mess up the signature of the second slashing.
 	badSig := make([]byte, 96)
 	copy(badSig, "muahaha")
-	pendingSlashings[1].attesterSlashing.Attestation_1.Signature = badSig
+	pending, ok := pendingSlashings[1].attesterSlashing.(*ethpb.AttesterSlashing)
+	require.Equal(t, true, ok, "unexpected type of attester slashing")
+	pending.Attestation_1.Signature = badSig
 	slashings[1].Attestation_1.Signature = badSig
 	p := &Pool{
 		pendingAttesterSlashing: make([]*PendingAttesterSlashing, 0),
