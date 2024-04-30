@@ -405,9 +405,9 @@ func ComputeProposerIndex(bState state.ReadOnlyValidators, activeIndices []primi
 //	    )
 func IsEligibleForActivationQueue(validator *ethpb.Validator, currentEpoch primitives.Epoch) bool {
 	if currentEpoch >= params.BeaconConfig().ElectraForkEpoch {
-		return isEligibileForActivationQueueElectra(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+		return isEligibleForActivationQueueElectra(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
 	}
-	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+	return isEligibleForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
 }
 
 // isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue
@@ -421,7 +421,7 @@ func IsEligibleForActivationQueue(validator *ethpb.Validator, currentEpoch primi
 //	      validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
 //	      and validator.effective_balance == MAX_EFFECTIVE_BALANCE
 //	  )
-func isEligibileForActivationQueue(activationEligibilityEpoch primitives.Epoch, effectiveBalance uint64) bool {
+func isEligibleForActivationQueue(activationEligibilityEpoch primitives.Epoch, effectiveBalance uint64) bool {
 	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
 		effectiveBalance == params.BeaconConfig().MaxEffectiveBalance
 }
@@ -439,7 +439,7 @@ func isEligibileForActivationQueue(activationEligibilityEpoch primitives.Epoch, 
 //	        validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
 //	        and validator.effective_balance >= MIN_ACTIVATION_BALANCE  # [Modified in Electra:EIP7251]
 //	    )
-func isEligibileForActivationQueueElectra(activationEligibilityEpoch primitives.Epoch, effectiveBalance uint64) bool {
+func isEligibleForActivationQueueElectra(activationEligibilityEpoch primitives.Epoch, effectiveBalance uint64) bool {
 	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
 		effectiveBalance >= params.BeaconConfig().MinActivationBalance
 }
