@@ -152,7 +152,6 @@ type Attestation interface {
 	GetSignature() []byte
 }
 
-// TODO: remove unused methods
 type AttesterSlashing interface {
 	proto.Message
 	ssz.Marshaler
@@ -160,35 +159,7 @@ type AttesterSlashing interface {
 	ssz.HashRoot
 	Version() int
 	GetFirstAttestation() ethpb.IndexedAtt
-	SetFirstAttestation(att ethpb.IndexedAtt)
 	GetSecondAttestation() ethpb.IndexedAtt
-	SetSecondAttestation(att ethpb.IndexedAtt)
-}
-
-// TODO: remove unused methods
-type AggregateAttestationAndProof interface {
-	proto.Message
-	ssz.Marshaler
-	ssz.Unmarshaler
-	ssz.HashRoot
-	GetAggregatorIndex() primitives.ValidatorIndex
-	SetAggregatorIndex(index primitives.ValidatorIndex)
-	GetAttestation() Attestation
-	SetAttestation(att Attestation)
-	GetSelectionProof() []byte
-	SetSelectionProof(proof []byte)
-}
-
-// TODO: remove unused methods
-type SignedAggregateAttestationAndProof interface {
-	proto.Message
-	ssz.Marshaler
-	ssz.Unmarshaler
-	ssz.HashRoot
-	GetAggregateAttestationAndProof() AggregateAttestationAndProof
-	SetAggregateAttestationAndProof(agg AggregateAttestationAndProof)
-	GetSignature() []byte
-	SetSignature(sig []byte)
 }
 
 // TODO: this is ugly. The proper way to do this is to create a Copy() function on the interface and implement it. But this results in a circular dependency.

@@ -57,10 +57,6 @@ func (a *AttesterSlashingElectra) Version() int {
 	return version.Electra
 }
 
-func (a *AttesterSlashingElectra) Version() int {
-	return version.Electra
-}
-
 func (a *AttesterSlashingElectra) GetFirstAttestation() IndexedAtt {
 	return a.Attestation_1
 }
