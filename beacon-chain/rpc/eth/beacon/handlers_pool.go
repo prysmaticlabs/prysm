@@ -58,7 +58,13 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	if isEmptyReq {
 		allAtts := make([]*structs.Attestation, len(attestations))
 		for i, att := range attestations {
-			allAtts[i] = structs.AttFromConsensus(att)
+			a, ok := att.(*eth.Attestation)
+			if ok {
+				allAtts[i] = structs.AttFromConsensus(a)
+			} else {
+				httputil.HandleError(w, fmt.Sprintf("unable to convert attestations of type %T", att), http.StatusInternalServerError)
+				return
+			}
 		}
 		httputil.WriteJson(w, &structs.ListAttestationsResponse{Data: allAtts})
 		return
@@ -67,11 +73,17 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	bothDefined := rawSlot != "" && rawCommitteeIndex != ""
 	filteredAtts := make([]*structs.Attestation, 0, len(attestations))
 	for _, att := range attestations {
-		committeeIndexMatch := rawCommitteeIndex != "" && att.Data.CommitteeIndex == primitives.CommitteeIndex(committeeIndex)
-		slotMatch := rawSlot != "" && att.Data.Slot == primitives.Slot(slot)
+		committeeIndexMatch := rawCommitteeIndex != "" && att.GetData().CommitteeIndex == primitives.CommitteeIndex(committeeIndex)
+		slotMatch := rawSlot != "" && att.GetData().Slot == primitives.Slot(slot)
 		shouldAppend := (bothDefined && committeeIndexMatch && slotMatch) || (!bothDefined && (committeeIndexMatch || slotMatch))
 		if shouldAppend {
-			filteredAtts = append(filteredAtts, structs.AttFromConsensus(att))
+			a, ok := att.(*eth.Attestation)
+			if ok {
+				filteredAtts = append(filteredAtts, structs.AttFromConsensus(a))
+			} else {
+				httputil.HandleError(w, fmt.Sprintf("unable to convert attestations of type %T", att), http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 	httputil.WriteJson(w, &structs.ListAttestationsResponse{Data: filteredAtts})
@@ -455,7 +467,17 @@ func (s *Server) GetAttesterSlashings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
-	slashings := structs.AttesterSlashingsFromConsensus(sourceSlashings)
+	ss := make([]*eth.AttesterSlashing, 0, len(sourceSlashings))
+	for _, slashing := range sourceSlashings {
+		s, ok := slashing.(*eth.AttesterSlashing)
+		if ok {
+			ss = append(ss, s)
+		} else {
+			httputil.HandleError(w, fmt.Sprintf("unable to convert slashing of type %T", slashing), http.StatusInternalServerError)
+			return
+		}
+	}
+	slashings := structs.AttesterSlashingsFromConsensus(ss)
 
 	httputil.WriteJson(w, &structs.GetAttesterSlashingsResponse{Data: slashings})
 }

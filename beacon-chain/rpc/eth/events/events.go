@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
@@ -173,7 +174,11 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
 		}
-		att := structs.AttFromConsensus(attData.Attestation)
+		a, ok := attData.Attestation.(*eth.Attestation)
+		if !ok {
+			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
+		}
+		att := structs.AttFromConsensus(a)
 		return send(w, flusher, AttestationTopic, att)
 	case operation.ExitReceived:
 		if _, ok := requestedTopics[VoluntaryExitTopic]; !ok {
@@ -229,7 +234,11 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, AttesterSlashingTopic)
 		}
-		return send(w, flusher, AttesterSlashingTopic, structs.AttesterSlashingFromConsensus(attesterSlashingData.AttesterSlashing))
+		slashing, ok := attesterSlashingData.AttesterSlashing.(*eth.AttesterSlashing)
+		if ok {
+			return send(w, flusher, AttesterSlashingTopic, structs.AttesterSlashingFromConsensus(slashing))
+		}
+		// TODO: extend to Electra
 	case operation.ProposerSlashingReceived:
 		if _, ok := requestedTopics[ProposerSlashingTopic]; !ok {
 			return nil

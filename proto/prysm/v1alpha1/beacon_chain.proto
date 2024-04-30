@@ -338,27 +338,35 @@ message BeaconBlockContainer {
 
     // The desired block to be returned.
     oneof block {
-        // Representing a phase 0 block.
+        // Representing a Phase0 block.
         SignedBeaconBlock phase0_block = 3;
 
-        // Representing an altair block.
+        // Representing an Altair block.
         SignedBeaconBlockAltair altair_block = 4;
 
-        // Representing a bellatrix block.
+        // Representing a Bellatrix block.
         SignedBeaconBlockBellatrix bellatrix_block = 5;
 
-        // Representing a blinded bellatrix block.
+        // Representing a blinded Bellatrix block.
         SignedBlindedBeaconBlockBellatrix blinded_bellatrix_block = 6;
 
-        // Representing a capella block.
+        // Representing a Capella block.
         SignedBeaconBlockCapella capella_block = 7;
 
-        // Representing a blinded capella block.
+        // Representing a blinded Capella block.
         SignedBlindedBeaconBlockCapella blinded_capella_block = 8;
 
+        // Representing a Deneb block.
         SignedBeaconBlockDeneb deneb_block = 9;
 
+        // Representing a blinded Deneb block.
         SignedBlindedBeaconBlockDeneb blinded_deneb_block = 10;
+
+        // Representing an Electra block.
+        SignedBeaconBlockElectra electra_block = 11;
+
+        // Representing a blinded Electra block.
+        SignedBlindedBeaconBlockElectra blinded_electra_block = 12;
     }
 }
 

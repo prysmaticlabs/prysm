@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/go-bitfield"
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/math"
@@ -66,8 +67,8 @@ type ReadOnlyBeaconBlockBody interface {
 	Eth1Data() *ethpb.Eth1Data
 	Graffiti() [field_params.RootLength]byte
 	ProposerSlashings() []*ethpb.ProposerSlashing
-	AttesterSlashings() []*ethpb.AttesterSlashing
-	Attestations() []*ethpb.Attestation
+	AttesterSlashings() []AttesterSlashing
+	Attestations() []Attestation
 	Deposits() []*ethpb.Deposit
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
 	SyncAggregate() (*ethpb.SyncAggregate, error)
@@ -77,6 +78,7 @@ type ReadOnlyBeaconBlockBody interface {
 	Execution() (ExecutionData, error)
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 	BlobKzgCommitments() ([][]byte, error)
+	Consolidations() ([]*ethpb.SignedConsolidation, error)
 }
 
 type SignedBeaconBlock interface {
@@ -87,8 +89,8 @@ type SignedBeaconBlock interface {
 	SetSyncAggregate(*ethpb.SyncAggregate) error
 	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SetDeposits([]*ethpb.Deposit)
-	SetAttestations([]*ethpb.Attestation)
-	SetAttesterSlashings([]*ethpb.AttesterSlashing)
+	SetAttestations([]Attestation) error
+	SetAttesterSlashings([]AttesterSlashing) error
 	SetProposerSlashings([]*ethpb.ProposerSlashing)
 	SetGraffiti([]byte)
 	SetEth1Data(*ethpb.Eth1Data)
@@ -132,6 +134,45 @@ type ExecutionData interface {
 	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
 	PbBellatrix() (*enginev1.ExecutionPayload, error)
 	PbDeneb() (*enginev1.ExecutionPayloadDeneb, error)
+	PbElectra() (*enginev1.ExecutionPayloadElectra, error)
 	ValueInWei() (math.Wei, error)
 	ValueInGwei() (uint64, error)
+	DepositReceipts() ([]*enginev1.DepositReceipt, error)
+	WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error)
+}
+
+type Attestation interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	GetAggregationBits() bitfield.Bitlist
+	GetData() *ethpb.AttestationData
+	GetCommitteeBitsVal() bitfield.Bitfield
+	GetSignature() []byte
+}
+
+type AttesterSlashing interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	GetFirstAttestation() ethpb.IndexedAtt
+	GetSecondAttestation() ethpb.IndexedAtt
+}
+
+// TODO: this is ugly. The proper way to do this is to create a Copy() function on the interface and implement it. But this results in a circular dependency.
+// CopyAttestation copies the provided attestation object.
+func CopyAttestation(att Attestation) Attestation {
+	a, ok := att.(*ethpb.Attestation)
+	if ok {
+		return ethpb.CopyAttestation(a)
+	}
+	ae, ok := att.(*ethpb.AttestationElectra)
+	if ok {
+		return ethpb.CopyAttestationElectra(ae)
+	}
+	return nil
 }
