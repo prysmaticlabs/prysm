@@ -161,7 +161,7 @@ func (s *Server) getBlockResponseBodyJson(ctx context.Context, blk interfaces.Re
 	}
 	blkRoot, err := blk.Block().HashTreeRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not get block root")
+		return nil, errors.Wrap(err, "could not get block root")
 	}
 	finalized := s.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 	isOptimistic := false
