@@ -305,7 +305,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		r.Header.Set("Accept", api.JsonMediaType)
 	}
 	// post the blinded block - the execution payload response should contain the unblinded payload, along with the
-	// blocks bundle if it is post deneb.
+	// blobs bundle if it is post deneb.
 	rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), postOpts)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error posting the blinded block to the builder api")
