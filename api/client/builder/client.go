@@ -312,7 +312,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		return nil, nil, errors.Wrap(err, "error posting the blinded block to the builder api")
 	}
 	// ExecutionPayloadResponse parses just the outer container and the Value key, enabling it to use the .Value
-	// key to determine whihc underlying data type to use to finish the unmarshaling.
+	// key to determine which underlying data type to use to finish the unmarshaling.
 	ep := &ExecutionPayloadResponse{}
 	if err := json.Unmarshal(rb, ep); err != nil {
 		return nil, nil, errors.Wrap(err, "error unmarshaling the builder ExecutionPayloadResponse")

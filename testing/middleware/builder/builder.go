@@ -606,7 +606,6 @@ func (p *Builder) handleBlindedBlock(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	return
 }
 
 func (p *Builder) retrievePendingBlock() (*v1.ExecutionPayload, error) {

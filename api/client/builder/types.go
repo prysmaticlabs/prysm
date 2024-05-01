@@ -416,7 +416,7 @@ func ExecutionPayloadResponseFromData(ed interfaces.ExecutionData, bundle *v1.Bl
 	pb := ed.Proto()
 	var data interface{}
 	var err error
-	ver := ""
+	var ver string
 	switch pbStruct := pb.(type) {
 	case *v1.ExecutionPayload:
 		ver = version.String(version.Bellatrix)
