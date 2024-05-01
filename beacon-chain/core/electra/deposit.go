@@ -3,6 +3,7 @@ package electra
 import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -23,14 +24,15 @@ func ProcessDepositReceipts(beaconState state.BeaconState, receipts []*enginev1.
 	//		amount=deposit_receipt.amount,
 	//		signature=deposit_receipt.signature,
 	//)
-	deposits := make([]*eth.Deposit,len(receipts)
-	for i,receipt := range receipts {
+	deposits := make([]*eth.Deposit, len(receipts))
+	for i, receipt := range receipts {
 		deposits[i] = &eth.Deposit{
 			Data: &eth.Deposit_Data{
-
+				PublicKey:             bytesutil.SafeCopyBytes(receipt.Pubkey),
+				WithdrawalCredentials: bytesutil.SafeCopyBytes(receipt.WithdrawalCredentials),
+				Signature:             bytesutil.SafeCopyBytes(receipt.Signature),
 			},
-			Proof:
 		}
 	}
-	altair.ProcessDeposits(beaconState, deposits)
+	return altair.ProcessDeposits(beaconState, deposits)
 }
