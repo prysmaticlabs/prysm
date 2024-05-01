@@ -302,7 +302,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 	postOpts := func(r *http.Request) {
 		r.Header.Add("Eth-Consensus-Version", version.String(sb.Version()))
 		r.Header.Set("Content-Type", api.JsonMediaType)
-		r.Header.Set("Accept", "application/json")
+		r.Header.Set("Accept", api.JsonMediaType)
 	}
 	// post the blinded block - the execution payload response should contain the unblinded payload, along with the
 	// blocks bundle if it is post deneb.
