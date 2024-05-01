@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -251,18 +252,17 @@ func ProcessOperationsNoVerifyAttsSigs(
 	}
 
 	var err error
-	switch beaconBlock.Version() {
-	case version.Phase0:
+	if beaconBlock.Version() == version.Phase0 {
 		state, err = phase0Operations(ctx, state, beaconBlock)
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Bellatrix, version.Capella, version.Deneb:
+	} else if beaconBlock.Version() >= version.Altair {
 		state, err = altairOperations(ctx, state, beaconBlock)
 		if err != nil {
 			return nil, err
 		}
-	default:
+	} else {
 		return nil, errors.New("block does not have correct version")
 	}
 
@@ -402,7 +402,11 @@ func altairOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process voluntary exits")
 	}
-	return b.ProcessBLSToExecutionChanges(st, beaconBlock)
+	st, err = b.ProcessBLSToExecutionChanges(st, beaconBlock)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process bls-to-execution changes")
+	}
+	return electra.ProcessDepositReceipts()
 }
 
 // This calls phase 0 block operations.
