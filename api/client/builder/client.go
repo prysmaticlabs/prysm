@@ -280,7 +280,7 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 	return err
 }
 
-var errResponseVersionMismatch = errors.New("builder API response uses a different version than requested in Eth-Consensus-Version header")
+var errResponseVersionMismatch = errors.New("builder API response uses a different version than requested in " + api.VersionHeader + " header")
 
 // SubmitBlindedBlock calls the builder API endpoint that binds the validator to the builder and submits the block.
 // The response is the full execution payload used to create the blinded block.
