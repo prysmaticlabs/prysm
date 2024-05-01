@@ -5,6 +5,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-func HistoricalSummariesRoot(summaries []*ethpb.HistoricalSummary) ([32]byte, error) {
-	return SliceRoot(summaries, fieldparams.HistoricalRootsLength)
+func PendingConsolidationsRoot(slice []*ethpb.PendingConsolidation) ([32]byte, error) {
+	return SliceRoot(slice, fieldparams.PendingConsolidationsLimit)
 }
