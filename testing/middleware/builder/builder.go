@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"net/http"
@@ -152,7 +151,7 @@ func New(opts ...Option) (*Builder, error) {
 	router.HandleFunc(registerPath, p.registerValidators)
 	router.HandleFunc(headerPath, p.handleHeaderRequest)
 	router.HandleFunc(blindedPath, p.handleBlindedBlock)
-	addr := fmt.Sprintf("%s:%d", p.cfg.builderHost, p.cfg.builderPort)
+	addr := net.JoinHostPort(p.cfg.builderHost, strconv.Itoa(p.cfg.builderPort))
 	srv := &http.Server{
 		Handler:           mux,
 		Addr:              addr,
@@ -268,7 +267,7 @@ func (p *Builder) handleEngineCalls(req, resp []byte) {
 		}
 		payloadID := [8]byte{}
 		status := ""
-		lastValHash := []byte{}
+		var lastValHash []byte
 		if result.Result.PayloadId != nil {
 			payloadID = *result.Result.PayloadId
 		}
@@ -280,7 +279,7 @@ func (p *Builder) handleEngineCalls(req, resp []byte) {
 	}
 }
 
-func (p *Builder) isBuilderCall(req *http.Request) bool {
+func (*Builder) isBuilderCall(req *http.Request) bool {
 	return strings.Contains(req.URL.Path, "/eth/v1/builder/")
 }
 
@@ -523,7 +522,7 @@ func (p *Builder) handleHeaderRequestDeneb(w http.ResponseWriter) {
 		return
 	}
 	val := builderAPI.Uint256{Int: v}
-	commitments := []hexutil.Bytes{}
+	var commitments []hexutil.Bytes
 	for _, c := range b.BlobsBundle.KzgCommitments {
 		copiedC := c
 		commitments = append(commitments, copiedC)
@@ -695,7 +694,7 @@ func (p *Builder) sendHttpRequest(req *http.Request, requestBytes []byte) (*http
 	}
 
 	// Set the modified request as the proxy request body.
-	proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(requestBytes))
+	proxyReq.Body = io.NopCloser(bytes.NewBuffer(requestBytes))
 
 	// Required proxy headers for forwarding JSON-RPC requests to the execution client.
 	proxyReq.Header.Set("Host", req.Host)
@@ -716,14 +715,14 @@ func (p *Builder) sendHttpRequest(req *http.Request, requestBytes []byte) (*http
 
 // Peek into the bytes of an HTTP request's body.
 func parseRequestBytes(req *http.Request) ([]byte, error) {
-	requestBytes, err := ioutil.ReadAll(req.Body)
+	requestBytes, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, err
 	}
 	if err = req.Body.Close(); err != nil {
 		return nil, err
 	}
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(requestBytes))
+	req.Body = io.NopCloser(bytes.NewBuffer(requestBytes))
 	return requestBytes, nil
 }
 

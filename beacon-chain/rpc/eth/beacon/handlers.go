@@ -125,7 +125,7 @@ func (s *Server) getBlockV2Ssz(w http.ResponseWriter, blk interfaces.ReadOnlySig
 	httputil.WriteSsz(w, result, "beacon_block.ssz")
 }
 
-func (s *Server) getBlockResponseBodySsz(blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
+func (*Server) getBlockResponseBodySsz(blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
 	err := blocks.BeaconBlockIsNil(blk)
 	if err != nil {
 		return nil, errNilBlock

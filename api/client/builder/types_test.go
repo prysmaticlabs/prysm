@@ -1602,7 +1602,6 @@ func TestBuilderBidUnmarshalUint256(t *testing.T) {
 	require.NoError(t, expectedValue.UnmarshalText([]byte(base10)))
 	r := &ExecHeaderResponse{}
 	require.NoError(t, json.Unmarshal([]byte(testBuilderBid), r))
-	//require.Equal(t, expectedValue, r.Data.Message.Value)
 	marshaled := r.Data.Message.Value.String()
 	require.Equal(t, base10, marshaled)
 	require.Equal(t, 0, expectedValue.Cmp(r.Data.Message.Value.Int))
@@ -1912,7 +1911,7 @@ func TestErrorMessage_non200Err(t *testing.T) {
 
 func TestEmptyResponseBody(t *testing.T) {
 	t.Run("empty buffer", func(t *testing.T) {
-		b := []byte{}
+		var b []byte
 		r := &ExecutionPayloadResponse{}
 		err := json.Unmarshal(b, r)
 		_, ok := err.(*json.SyntaxError)
