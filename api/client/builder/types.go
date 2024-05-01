@@ -22,6 +22,7 @@ import (
 
 var errInvalidUint256 = errors.New("invalid Uint256")
 var errDecodeUint256 = errors.New("unable to decode into Uint256")
+var errMalformedJson = errors.New("unable to decode json value")
 
 // Uint256 a wrapper representation of big.Int
 type Uint256 struct {
@@ -48,6 +49,9 @@ func sszBytesToUint256(b []byte) (Uint256, error) {
 
 // SSZBytes creates an ssz-style (little-endian byte slice) representation of the Uint256.
 func (s Uint256) SSZBytes() []byte {
+	if s.Int == nil {
+		s.Int = big.NewInt(0)
+	}
 	if !math.IsValidUint256(s.Int) {
 		return []byte{}
 	}
@@ -1223,6 +1227,12 @@ func (r *ExecPayloadResponseDeneb) ToProto() (*v1.ExecutionPayloadDeneb, *v1.Blo
 	if r.Data == nil {
 		return nil, nil, errors.New("data field in response is empty")
 	}
+	if r.Data.ExecutionPayload == nil {
+		return nil, nil, errors.Wrap(consensusblocks.ErrNilObject, "nil execution payload")
+	}
+	if r.Data.BlobsBundle == nil {
+		return nil, nil, errors.Wrap(consensusblocks.ErrNilObject, "nil blobs bundle")
+	}
 	payload, err := r.Data.ExecutionPayload.ToProto()
 	if err != nil {
 		return nil, nil, err
@@ -1235,16 +1245,25 @@ func (r *ExecPayloadResponseDeneb) ToProto() (*v1.ExecutionPayloadDeneb, *v1.Blo
 }
 
 func (r *ExecutionPayloadDenebAndBlobsBundle) PayloadProto() (proto.Message, error) {
+	if r.ExecutionPayload == nil {
+		return nil, errors.Wrap(consensusblocks.ErrNilObject, "nil execution payload in combined deneb payload")
+	}
 	pb, err := r.ExecutionPayload.ToProto()
 	return pb, err
 }
 
 func (r *ExecutionPayloadDenebAndBlobsBundle) BundleProto() (*v1.BlobsBundle, error) {
+	if r.BlobsBundle == nil {
+		return nil, errors.Wrap(consensusblocks.ErrNilObject, "nil blobs bundle")
+	}
 	return r.BlobsBundle.ToProto()
 }
 
 // ToProto returns the ExecutionPayloadDeneb Proto.
 func (p *ExecutionPayloadDeneb) ToProto() (*v1.ExecutionPayloadDeneb, error) {
+	if p == nil {
+		return nil, errors.Wrap(consensusblocks.ErrNilObject, "nil execution payload")
+	}
 	txs := make([][]byte, len(p.Transactions))
 	for i := range p.Transactions {
 		txs[i] = bytesutil.SafeCopyBytes(p.Transactions[i])
