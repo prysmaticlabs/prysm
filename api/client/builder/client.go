@@ -13,6 +13,7 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -297,7 +298,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 
 	body, err := json.Marshal(mj)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
+		return nil, nil, errors.Wrap(err, "error marshaling blinded block post request to json")
 	}
 	postOpts := func(r *http.Request) {
 		r.Header.Add("Eth-Consensus-Version", version.String(sb.Version()))
