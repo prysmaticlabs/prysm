@@ -179,7 +179,6 @@ func (s *Server) getBlockResponseBodyJson(ctx context.Context, blk interfaces.Re
 	if err != nil {
 		return nil, err
 	}
-	// Does not include values for optimistic and finalized. This code expects the caller to fill those out.
 	return &structs.GetBlockV2Response{
 		Finalized:           finalized,
 		ExecutionOptimistic: isOptimistic,
