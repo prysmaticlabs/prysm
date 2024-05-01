@@ -1165,67 +1165,6 @@ func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlock
 	return b, nil
 }
 
-func initBlindedBlockBodyFromProtoDeneb(pb *eth.BlindedBeaconBlockBodyDeneb) (*BeaconBlockBody, error) {
-	if pb == nil {
-		return nil, errNilBlockBody
-	}
-
-	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader, big.NewInt(0))
-	// We allow the payload to be nil
-	if err != nil && err != consensus_types.ErrNilObjectWrapped {
-		return nil, err
-	}
-	atts := make([]interfaces.Attestation, len(pb.Attestations))
-	for i, att := range pb.Attestations {
-		atts[i] = att
-	}
-	b := &BeaconBlockBody{
-		version:                version.Deneb,
-		randaoReveal:           bytesutil.ToBytes96(pb.RandaoReveal),
-		eth1Data:               pb.Eth1Data,
-		graffiti:               bytesutil.ToBytes32(pb.Graffiti),
-		proposerSlashings:      pb.ProposerSlashings,
-		attesterSlashings:      pb.AttesterSlashings,
-		attestations:           atts,
-		deposits:               pb.Deposits,
-		voluntaryExits:         pb.VoluntaryExits,
-		syncAggregate:          pb.SyncAggregate,
-		executionPayloadHeader: ph,
-		blsToExecutionChanges:  pb.BlsToExecutionChanges,
-		blobKzgCommitments:     pb.BlobKzgCommitments,
-	}
-	return b, nil
-}
-
-func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlockBody, error) {
-	if pb == nil {
-		return nil, errNilBlockBody
-	}
-
-	p, err := WrappedExecutionPayloadElectra(pb.ExecutionPayload, big.NewInt(0))
-	// We allow the payload to be nil
-	if err != nil && err != consensus_types.ErrNilObjectWrapped {
-		return nil, err
-	}
-	b := &BeaconBlockBody{
-		version:                  version.Electra,
-		randaoReveal:             bytesutil.ToBytes96(pb.RandaoReveal),
-		eth1Data:                 pb.Eth1Data,
-		graffiti:                 bytesutil.ToBytes32(pb.Graffiti),
-		proposerSlashings:        pb.ProposerSlashings,
-		attesterSlashingsElectra: pb.AttesterSlashings,
-		attestationsElectra:      pb.Attestations,
-		deposits:                 pb.Deposits,
-		voluntaryExits:           pb.VoluntaryExits,
-		syncAggregate:            pb.SyncAggregate,
-		executionPayload:         p,
-		blsToExecutionChanges:    pb.BlsToExecutionChanges,
-		blobKzgCommitments:       pb.BlobKzgCommitments,
-		signedConsolidations:     pb.Consolidations,
-	}
-	return b, nil
-}
-
 func initBlindedBlockBodyFromProtoElectra(pb *eth.BlindedBeaconBlockBodyElectra) (*BeaconBlockBody, error) {
 	if pb == nil {
 		return nil, errNilBlockBody
