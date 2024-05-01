@@ -22,7 +22,6 @@ import (
 
 var errInvalidUint256 = errors.New("invalid Uint256")
 var errDecodeUint256 = errors.New("unable to decode into Uint256")
-var errMalformedJson = errors.New("unable to decode json value")
 
 // Uint256 a wrapper representation of big.Int
 type Uint256 struct {
