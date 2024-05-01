@@ -265,8 +265,10 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 		assert.NoError(t, err)
 		blinded, err := wrapped.ToBlinded()
 		assert.NoError(t, err)
-		blindedProto, err := blinded.PbBlindedBellatrixBlock()
+		pb, err := blinded.Proto()
 		assert.NoError(t, err)
+		blindedProto, ok := pb.(*ethpb.SignedBlindedBeaconBlockBellatrix)
+		require.Equal(t, true, ok)
 		blkContainer := &ethpb.BeaconBlockContainer{
 			Block: &ethpb.BeaconBlockContainer_BlindedBellatrixBlock{BlindedBellatrixBlock: blindedProto}}
 		runListBlocksGenesis(t, wrapped, blkContainer)
@@ -279,7 +281,10 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 		assert.NoError(t, err)
 		blinded, err := wrapped.ToBlinded()
 		assert.NoError(t, err)
-		blindedProto, err := blinded.PbBlindedCapellaBlock()
+		pb, err := blinded.Proto()
+		assert.NoError(t, err)
+		blindedProto, ok := pb.(*ethpb.SignedBlindedBeaconBlockCapella)
+		require.Equal(t, true, ok)
 		assert.NoError(t, err)
 		blkContainer := &ethpb.BeaconBlockContainer{
 			Block: &ethpb.BeaconBlockContainer_BlindedCapellaBlock{BlindedCapellaBlock: blindedProto}}
