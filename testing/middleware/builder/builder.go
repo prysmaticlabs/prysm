@@ -592,72 +592,21 @@ func (p *Builder) handleBlindedBlock(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "payload not found", http.StatusInternalServerError)
 		return
 	}
-	if payload, err := p.currPayload.PbDeneb(); err == nil {
-		convertedPayload, err := builderAPI.FromProtoDeneb(payload)
-		if err != nil {
-			p.cfg.logger.WithError(err).Error("Could not convert the payload")
-			http.Error(w, "payload not found", http.StatusInternalServerError)
-			return
-		}
-		execResp := &builderAPI.ExecPayloadResponseDeneb{
-			Version: "deneb",
-			Data: &builderAPI.ExecutionPayloadDenebAndBlobsBundle{
-				ExecutionPayload: &convertedPayload,
-				BlobsBundle:      builderAPI.FromBundleProto(p.blobBundle),
-			},
-		}
-		err = json.NewEncoder(w).Encode(execResp)
-		if err != nil {
-			p.cfg.logger.WithError(err).Error("Could not encode full payload response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	if payload, err := p.currPayload.PbCapella(); err == nil {
-		convertedPayload, err := builderAPI.FromProtoCapella(payload)
-		if err != nil {
-			p.cfg.logger.WithError(err).Error("Could not convert the payload")
-			http.Error(w, "payload not found", http.StatusInternalServerError)
-			return
-		}
-		execResp := &builderAPI.ExecPayloadResponseCapella{
-			Version: "capella",
-			Data:    convertedPayload,
-		}
-		err = json.NewEncoder(w).Encode(execResp)
-		if err != nil {
-			p.cfg.logger.WithError(err).Error("Could not encode full payload response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	bellPayload, err := p.currPayload.PbBellatrix()
-	if err != nil {
-		p.cfg.logger.WithError(err).Error("Could not retrieve the payload")
-		http.Error(w, "payload not found", http.StatusInternalServerError)
-		return
-	}
-	convertedPayload, err := builderAPI.FromProto(bellPayload)
+
+	resp, err := builderAPI.ExecutionPayloadResponseFromData(p.currPayload, p.blobBundle)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not convert the payload")
-		http.Error(w, "payload not found", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	execResp := &builderAPI.ExecPayloadResponse{
-		Version: "bellatrix",
-		Data:    convertedPayload,
-	}
-	err = json.NewEncoder(w).Encode(execResp)
+	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not encode full payload response")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+	return
 }
 
 func (p *Builder) retrievePendingBlock() (*v1.ExecutionPayload, error) {

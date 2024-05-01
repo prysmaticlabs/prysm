@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
@@ -401,6 +402,51 @@ func FromProtoDeneb(payload *v1.ExecutionPayloadDeneb) (ExecutionPayloadDeneb, e
 		Withdrawals:   withdrawals,
 		BlobGasUsed:   Uint64String(payload.BlobGasUsed),
 		ExcessBlobGas: Uint64String(payload.ExcessBlobGas),
+	}, nil
+}
+
+var errInvalidTypeConversion = errors.New("unable to translate between api and foreign type")
+
+// ExecutionPayloadResponseFromData converts an ExecutionData interface value to a payload response.
+// This involves serializing the execution payload value so that the abstract payload envelope can be used.
+func ExecutionPayloadResponseFromData(ed interfaces.ExecutionData, bundle *v1.BlobsBundle) (*ExecutionPayloadResponse, error) {
+	pb := ed.Proto()
+	var data interface{}
+	var err error
+	ver := ""
+	switch pbStruct := pb.(type) {
+	case *v1.ExecutionPayload:
+		ver = version.String(version.Bellatrix)
+		data, err = FromProto(pbStruct)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert a Bellatrix ExecutionPayload to an API response")
+		}
+	case *v1.ExecutionPayloadCapella:
+		ver = version.String(version.Capella)
+		data, err = FromProtoCapella(pbStruct)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert a Capella ExecutionPayload to an API response")
+		}
+	case *v1.ExecutionPayloadDeneb:
+		ver = version.String(version.Deneb)
+		payloadStruct, err := FromProtoDeneb(pbStruct)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert a Deneb ExecutionPayload to an API response")
+		}
+		data = &ExecutionPayloadDenebAndBlobsBundle{
+			ExecutionPayload: &payloadStruct,
+			BlobsBundle:      FromBundleProto(bundle),
+		}
+	default:
+		return nil, errInvalidTypeConversion
+	}
+	encoded, err := json.Marshal(data)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal execution payload version=%s", ver)
+	}
+	return &ExecutionPayloadResponse{
+		Version: ver,
+		Data:    encoded,
 	}, nil
 }
 
