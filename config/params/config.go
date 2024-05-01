@@ -288,6 +288,7 @@ func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
 	fvs[bytesutil.ToBytes4(b.CapellaForkVersion)] = b.CapellaForkEpoch
 	fvs[bytesutil.ToBytes4(b.DenebForkVersion)] = b.DenebForkEpoch
+	fvs[bytesutil.ToBytes4(b.ElectraForkVersion)] = b.ElectraForkEpoch
 	return fvs
 }
 
@@ -309,6 +310,7 @@ func ConfigForkVersions(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 		bytesutil.ToBytes4(b.BellatrixForkVersion): version.Bellatrix,
 		bytesutil.ToBytes4(b.CapellaForkVersion):   version.Capella,
 		bytesutil.ToBytes4(b.DenebForkVersion):     version.Deneb,
+		bytesutil.ToBytes4(b.ElectraForkVersion):   version.Electra,
 	}
 }
 

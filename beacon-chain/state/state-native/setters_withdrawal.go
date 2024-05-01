@@ -1,6 +1,8 @@
 package state_native
 
 import (
+	"errors"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -42,6 +44,10 @@ func (b *BeaconState) AppendPendingPartialWithdrawal(ppw *eth.PendingPartialWith
 		return errNotSupported("AppendPendingPartialWithdrawal", b.version)
 	}
 
+	if ppw == nil {
+		return errors.New("cannot append nil pending partial withdrawal")
+	}
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -51,5 +57,34 @@ func (b *BeaconState) AppendPendingPartialWithdrawal(ppw *eth.PendingPartialWith
 	b.pendingPartialWithdrawals = append(b.pendingPartialWithdrawals, ppw)
 
 	b.markFieldAsDirty(types.PendingPartialWithdrawals)
+	b.rebuildTrie[types.PendingPartialWithdrawals] = true
+	return nil
+}
+
+// DequeuePartialWithdrawals removes the partial withdrawals from the beginning of the partial withdrawals list.
+func (b *BeaconState) DequeuePartialWithdrawals(n uint64) error {
+	if b.version < version.Electra {
+		return errNotSupported("DequeuePartialWithdrawals", b.version)
+	}
+
+	if n > uint64(len(b.pendingPartialWithdrawals)) {
+		return errors.New("cannot dequeue more withdrawals than are in the queue")
+	}
+
+	if n == 0 {
+		return nil // Don't wait on a lock for no reason.
+	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.sharedFieldReferences[types.PendingPartialWithdrawals].MinusRef()
+	b.sharedFieldReferences[types.PendingPartialWithdrawals] = stateutil.NewRef(1)
+
+	b.pendingPartialWithdrawals = b.pendingPartialWithdrawals[n:]
+
+	b.markFieldAsDirty(types.PendingPartialWithdrawals)
+	b.rebuildTrie[types.PendingPartialWithdrawals] = true
+
 	return nil
 }

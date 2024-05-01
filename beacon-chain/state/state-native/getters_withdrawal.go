@@ -187,24 +187,6 @@ func (b *BeaconState) pendingPartialWithdrawalsVal() []*ethpb.PendingPartialWith
 	return ethpb.CopyPendingPartialWithdrawals(b.pendingPartialWithdrawals)
 }
 
-// DequeuePartialWithdrawals removes the partial withdrawals from the beginning of the partial withdrawals list.
-func (b *BeaconState) DequeuePartialWithdrawals(n uint64) error {
-	if b.version < version.Electra {
-		return errNotSupported("DequeuePartialWithdrawals", b.version)
-	}
-
-	if n >= uint64(len(b.pendingPartialWithdrawals)) {
-		return errors.New("cannot dequeue more withdrawals than are in the queue")
-	}
-
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	b.pendingPartialWithdrawals = b.pendingPartialWithdrawals[n:]
-
-	return nil
-}
-
 func (b *BeaconState) NumPendingPartialWithdrawals() uint64 {
 	return uint64(len(b.pendingPartialWithdrawals))
 }

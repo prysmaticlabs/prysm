@@ -310,7 +310,7 @@ type WriteOnlyElectra interface {
 	SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDeposit) error
 	SetDepositBalanceToConsume(gwei uint64) error
 	SetPendingConsolidations(val []*ethpb.PendingConsolidation) error
-	DequeuePartialWithdrawals(idx uint64) error
+	DequeuePartialWithdrawals(num uint64) error
 	AppendPendingConsolidation(val *ethpb.PendingConsolidation) error
 	AppendPendingPartialWithdrawal(ppw *ethpb.PendingPartialWithdrawal) error
 }
