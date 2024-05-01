@@ -334,11 +334,11 @@ func (s *Service) checkDoubleVotes(
 		} else {
 			att_1, ok := wrapper_1.IndexedAttestation.(*ethpb.IndexedAttestation)
 			if !ok {
-				return nil, fmt.Errorf("wrong first attestation type (expected %T, got %T)", &ethpb.IndexedAttestation{}, existing)
+				return nil, fmt.Errorf("wrong first attestation type (expected %T, got %T)", &ethpb.IndexedAttestation{}, wrapper_1.IndexedAttestation)
 			}
 			att_2, ok := wrapper_2.IndexedAttestation.(*ethpb.IndexedAttestation)
 			if !ok {
-				return nil, fmt.Errorf("wrong second attestation type (expected %T, got %T)", &ethpb.IndexedAttestation{}, incoming)
+				return nil, fmt.Errorf("wrong second attestation type (expected %T, got %T)", &ethpb.IndexedAttestation{}, wrapper_2.IndexedAttestation)
 			}
 			slashing = &ethpb.AttesterSlashing{
 				Attestation_1: att_1,
