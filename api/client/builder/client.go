@@ -337,7 +337,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 	if ok {
 		bbpb, err := bb.BundleProto()
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to extract blbos bundle from builder response with version=%s", ep.Version)
+			return nil, nil, errors.Wrapf(err, "failed to extract blobs bundle from builder response with version=%s", ep.Version)
 		}
 		return ed, bbpb, nil
 	}
