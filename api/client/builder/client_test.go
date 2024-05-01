@@ -432,7 +432,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		sbbb, err := blocks.NewSignedBeaconBlock(testSignedBlindedBeaconBlockBellatrix(t))
 		require.NoError(t, err)
 		_, _, err = c.SubmitBlindedBlock(ctx, sbbb)
-		require.ErrorContains(t, "not a bellatrix payload", err)
+		//require.ErrorContains(t, "not a bellatrix payload", err)
+		require.ErrorIs(t, err, errResponseVersionMismatch)
 	})
 	t.Run("not blinded", func(t *testing.T) {
 		sbb, err := blocks.NewSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: &eth.BeaconBlockBellatrix{Body: &eth.BeaconBlockBodyBellatrix{ExecutionPayload: &v1.ExecutionPayload{}}}})

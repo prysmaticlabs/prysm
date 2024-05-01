@@ -9,11 +9,14 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"google.golang.org/protobuf/proto"
 )
 
 var errInvalidUint256 = errors.New("invalid Uint256")
@@ -263,6 +266,11 @@ type ExecutionPayload struct {
 // ToProto returns a ExecutionPayload Proto from ExecPayloadResponse
 func (r *ExecPayloadResponse) ToProto() (*v1.ExecutionPayload, error) {
 	return r.Data.ToProto()
+}
+
+func (r *ExecutionPayload) PayloadProto() (proto.Message, error) {
+	pb, err := r.ToProto()
+	return pb, err
 }
 
 // ToProto returns a ExecutionPayload Proto
@@ -523,6 +531,42 @@ type ExecPayloadResponseCapella struct {
 	Data    ExecutionPayloadCapella `json:"data"`
 }
 
+// ExecutionPayloadResponse allows for unmarshaling just the Version field of the payload.
+// This allows it to return different ExecutionPayload types based on the version field.
+type ExecutionPayloadResponse struct {
+	Version string          `json:"version"`
+	Data    json.RawMessage `json:"data"`
+}
+
+// ParsedPayload can retrieve the underlying protobuf message for the given execution payload response.
+type ParsedPayload interface {
+	PayloadProto() (proto.Message, error)
+}
+
+// BlobBundler can retrieve the underlying blob bundle protobuf message for the given execution payload response.
+type BlobBundler interface {
+	BundleProto() (*v1.BlobsBundle, error)
+}
+
+func (r *ExecutionPayloadResponse) ParsePayload() (ParsedPayload, error) {
+	var toProto ParsedPayload
+	switch r.Version {
+	case version.String(version.Bellatrix):
+		toProto = &ExecutionPayload{}
+	case version.String(version.Capella):
+		toProto = &ExecutionPayloadCapella{}
+	case version.String(version.Deneb):
+		toProto = &ExecutionPayloadDenebAndBlobsBundle{}
+	default:
+		return nil, consensusblocks.ErrUnsupportedVersion
+	}
+
+	if err := json.Unmarshal(r.Data, toProto); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal the response .Data field with the stated version schema")
+	}
+	return toProto, nil
+}
+
 // ExecutionPayloadCapella is a field of ExecPayloadResponseCapella.
 type ExecutionPayloadCapella struct {
 	ParentHash    hexutil.Bytes   `json:"parent_hash"`
@@ -545,6 +589,11 @@ type ExecutionPayloadCapella struct {
 // ToProto returns a ExecutionPayloadCapella Proto.
 func (r *ExecPayloadResponseCapella) ToProto() (*v1.ExecutionPayloadCapella, error) {
 	return r.Data.ToProto()
+}
+
+func (p *ExecutionPayloadCapella) PayloadProto() (proto.Message, error) {
+	pb, err := p.ToProto()
+	return pb, err
 }
 
 // ToProto returns a ExecutionPayloadCapella Proto.
@@ -1137,6 +1186,15 @@ func (r *ExecPayloadResponseDeneb) ToProto() (*v1.ExecutionPayloadDeneb, *v1.Blo
 		return nil, nil, err
 	}
 	return payload, bundle, nil
+}
+
+func (r *ExecutionPayloadDenebAndBlobsBundle) PayloadProto() (proto.Message, error) {
+	pb, err := r.ExecutionPayload.ToProto()
+	return pb, err
+}
+
+func (r *ExecutionPayloadDenebAndBlobsBundle) BundleProto() (*v1.BlobsBundle, error) {
+	return r.BlobsBundle.ToProto()
 }
 
 // ToProto returns the ExecutionPayloadDeneb Proto.

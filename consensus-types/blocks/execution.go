@@ -23,6 +23,23 @@ type executionPayload struct {
 	p *enginev1.ExecutionPayload
 }
 
+// NewWrappedExecutionData creates an appropriate execution payload wrapper based on the incoming type.
+func NewWrappedExecutionData(v proto.Message, weiValue math.Wei) (interfaces.ExecutionData, error) {
+	if weiValue == nil {
+		weiValue = new(big.Int).SetInt64(0)
+	}
+	switch pbStruct := v.(type) {
+	case *enginev1.ExecutionPayload:
+		return WrappedExecutionPayload(pbStruct)
+	case *enginev1.ExecutionPayloadCapella:
+		return WrappedExecutionPayloadCapella(pbStruct, weiValue)
+	case *enginev1.ExecutionPayloadDeneb:
+		return WrappedExecutionPayloadDeneb(pbStruct, weiValue)
+	default:
+		return nil, ErrUnsupportedVersion
+	}
+}
+
 // WrappedExecutionPayload is a constructor which wraps a protobuf execution payload into an interface.
 func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
 	w := executionPayload{p: p}
