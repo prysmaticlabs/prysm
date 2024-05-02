@@ -25,23 +25,10 @@ func ProcessDeposits(
 		if deposit == nil || deposit.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, err = ProcessDeposit(beaconState, deposit, batchVerified)
+		beaconState, err = blocks.ProcessDeposit(beaconState, deposit, batchVerified)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
 	}
-	return beaconState, nil
-}
-
-// ProcessDeposit processes validator deposit for beacon state Altair.
-func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, error) {
-	beaconState, isNewValidator, err := blocks.ProcessDeposit(beaconState, deposit, verifySignature)
-	if err != nil {
-		return nil, err
-	}
-	if isNewValidator {
-
-	}
-
 	return beaconState, nil
 }

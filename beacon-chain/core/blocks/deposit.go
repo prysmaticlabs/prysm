@@ -91,7 +91,7 @@ func ProcessDeposits(
 		if d == nil || d.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, _, err = ProcessDeposit(beaconState, d, batchVerified)
+		beaconState, err = ProcessDeposit(beaconState, d, batchVerified)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(d.Data.PublicKey))
 		}
@@ -191,25 +191,24 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 				return beaconState, nil
 			}
 		}
-
-		val := GetValidatorFromDeposit(beaconState.Version(), pubKey, withdrawalCredentials, amount)
-		if err := beaconState.AppendValidator(val); err != nil {
+		if err := AddValidatorToRegistry(beaconState, pubKey, withdrawalCredentials, amount); err != nil {
 			return nil, err
 		}
-		if err := beaconState.AppendBalance(amount); err != nil { // TODO: need to change this value for EIP7251
-			return nil, err
+	} else {
+		if beaconState.Version() >= version.Electra {
+			//if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
+			//		return nil, newValidator, err
+			//	}
+			// if ( is_compounding_withdrawal_credential(withdrawal_credentials) and has_eth1_withdrawal_credential(state.validators[index])
+			//
+			//	 and is_valid_deposit_signature(pubkey, withdrawal_credentials, amount, signature)
+			//	):
+			//	 switch_to_compounding_validator(state, index)
+		} else {
+			if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
+				return nil, err
+			}
 		}
-		if err := beaconState.AppendInactivityScore(0); err != nil {
-			return nil, err
-		}
-		if err := beaconState.AppendPreviousParticipationBits(0); err != nil {
-			return nil, err
-		}
-		if err := beaconState.AppendCurrentParticipationBits(0); err != nil {
-			return nil, err
-		}
-	} else if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
-		return nil, err
 	}
 
 	return beaconState, nil
@@ -229,8 +228,32 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 //	set_or_append_list(state.current_epoch_participation, index, ParticipationFlags(0b0000_0000))
 //	set_or_append_list(state.inactivity_scores, index, uint64(0))
 //	state.pending_balance_deposits.append(PendingBalanceDeposit(index=index, amount=amount))  # [New in Electra:EIP7251]
-func AddValidatorToRegistry(pubKey []byte, withdrawalCredentials []byte, amount uint64) {
+func AddValidatorToRegistry(beaconState state.BeaconState, pubKey []byte, withdrawalCredentials []byte, amount uint64) error {
+	val := GetValidatorFromDeposit(beaconState.Version(), pubKey, withdrawalCredentials, amount)
+	if err := beaconState.AppendValidator(val); err != nil {
+		return err
+	}
+	if beaconState.Version() >= version.Electra {
+		if err := beaconState.AppendBalance(0); err != nil {
+			return err
+		}
+		// In specs this function is at the end function
+		//	if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
+		//		return nil, newValidator, err
+		//	}
+	} else {
+		if err := beaconState.AppendBalance(amount); err != nil {
+			return err
+		}
+	}
 
+	if err := beaconState.AppendPreviousParticipationBits(0); err != nil {
+		return err
+	}
+	if err := beaconState.AppendCurrentParticipationBits(0); err != nil {
+		return err
+	}
+	return beaconState.AppendInactivityScore(0)
 }
 
 // GetValidatorFromDeposit gets a new validator object with provided paramaters

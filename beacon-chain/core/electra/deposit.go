@@ -1,6 +1,8 @@
 package electra
 
 import (
+	"context"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -9,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
-func ProcessDepositReceipts(beaconState state.BeaconState, receipts []*enginev1.DepositReceipt) (state.BeaconState, error) {
+func ProcessDepositReceipts(ctx context.Context, beaconState state.BeaconState, receipts []*enginev1.DepositReceipt) (state.BeaconState, error) {
 	if beaconState.Version() < version.Electra {
 		return beaconState, nil
 	}
@@ -34,5 +36,5 @@ func ProcessDepositReceipts(beaconState state.BeaconState, receipts []*enginev1.
 			},
 		}
 	}
-	return altair.ProcessDeposits(beaconState, deposits)
+	return altair.ProcessDeposits(ctx, beaconState, deposits)
 }
