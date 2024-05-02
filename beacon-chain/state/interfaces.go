@@ -209,6 +209,7 @@ type ReadOnlySyncCommittee interface {
 type ReadOnlyElectra interface {
 	ConsolidationBalanceToConsume() (uint64, error)
 	DepositBalanceToConsume() (uint64, error)
+	DepositReceiptsStartIndex() (uint64, error)
 	EarliestConsolidationEpoch() (primitives.Epoch, error)
 	PendingBalanceDeposits() ([]*ethpb.PendingBalanceDeposit, error)
 	PendingConsolidations() ([]*ethpb.PendingConsolidation, error)
@@ -305,6 +306,7 @@ type WriteOnlyPendingBalanceDeposits interface {
 
 type WriteOnlyElectra interface {
 	SetConsolidationBalanceToConsume(gwei uint64) error
+	SetDepositReceiptsStartIndex(index uint64) error
 	SetEarliestConsolidationEpoch(epoch primitives.Epoch) error
 	SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDeposit) error
 	SetDepositBalanceToConsume(gwei uint64) error
