@@ -37,6 +37,7 @@ go_library(
         "ssz.go",
         "state_trie.go",
         "types.go",
+        "validator_index_cache.go",
     ] + select({
         "//config:mainnet": ["beacon_state_mainnet.go"],
         "//config:minimal": ["beacon_state_minimal.go"],
@@ -102,6 +103,7 @@ go_test(
         "state_test.go",
         "state_trie_test.go",
         "types_test.go",
+        "validator_index_cache_test.go",
     ],
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
