@@ -59,7 +59,7 @@ func (b *BeaconState) ExitEpochAndUpdateChurn(exitBalance uint64) (primitives.Ep
 	}
 
 	// Exit doesn't fit in the current earliest epoch.
-	if exitBalance <= exitBalanceToConsume {
+	if exitBalance > exitBalanceToConsume {
 		balanceToProcess := exitBalance - exitBalanceToConsume
 		additionalEpochs := primitives.Epoch((balanceToProcess-1)/perEpochChurn + 1)
 		earliestExitEpoch += additionalEpochs
