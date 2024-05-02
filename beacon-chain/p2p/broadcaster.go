@@ -364,7 +364,7 @@ func (s *Service) internalBroadcastDataColumn(
 
 	// Broadcast the data column sidecar to the network.
 	if err := s.broadcastObject(ctx, dataColumnSidecar, topic); err != nil {
-		log.WithError(err).Error("Failed to broadcast blob sidecar")
+		log.WithError(err).Error("Failed to broadcast data column sidecar")
 		tracing.AnnotateError(span, err)
 	}
 
