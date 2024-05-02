@@ -29,7 +29,7 @@ const (
 )
 
 type (
-	extendedMatrix []cKzg4844.Cell
+	ExtendedMatrix []cKzg4844.Cell
 
 	cellCoordinate struct {
 		blobIndex uint64
@@ -46,6 +46,7 @@ var (
 	maxUint256 = &uint256.Int{maxUint64, maxUint64, maxUint64, maxUint64}
 )
 
+// CustodyColumns computes the columns the node should custody.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#helper-functions
 func CustodyColumns(nodeId enode.ID, custodySubnetCount uint64) (map[uint64]bool, error) {
 	dataColumnSidecarSubnetCount := params.BeaconConfig().DataColumnSidecarSubnetCount
@@ -117,8 +118,8 @@ func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) (map[uint6
 
 // ComputeExtendedMatrix computes the extended matrix from the blobs.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#compute_extended_matrix
-func ComputeExtendedMatrix(blobs []cKzg4844.Blob) (extendedMatrix, error) {
-	matrix := make(extendedMatrix, 0, extendedMatrixSize)
+func ComputeExtendedMatrix(blobs []cKzg4844.Blob) (ExtendedMatrix, error) {
+	matrix := make(ExtendedMatrix, 0, extendedMatrixSize)
 
 	for i := range blobs {
 		// Chunk a non-extended blob into cells representing the corresponding extended blob.
@@ -136,8 +137,8 @@ func ComputeExtendedMatrix(blobs []cKzg4844.Blob) (extendedMatrix, error) {
 
 // RecoverMatrix recovers the extended matrix from some cells.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#recover_matrix
-func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCount uint64) (extendedMatrix, error) {
-	matrix := make(extendedMatrix, 0, extendedMatrixSize)
+func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCount uint64) (ExtendedMatrix, error) {
+	matrix := make(ExtendedMatrix, 0, extendedMatrixSize)
 
 	for blobIndex := uint64(0); blobIndex < blobCount; blobIndex++ {
 		// Filter all cells that belong to the current blob.
@@ -174,6 +175,7 @@ func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCoun
 	return matrix, nil
 }
 
+// DataColumnSidecars computes the data column sidecars from the signed block and blobs.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#recover_matrix
 func DataColumnSidecars(signedBlock interfaces.SignedBeaconBlock, blobs []cKzg4844.Blob) ([]*ethpb.DataColumnSidecar, error) {
 	blobsCount := len(blobs)
