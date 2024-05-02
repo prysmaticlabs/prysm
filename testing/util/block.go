@@ -1286,17 +1286,19 @@ func HydrateBeaconBlockBodyElectra(b *ethpb.BeaconBlockBodyElectra) *ethpb.Beaco
 	}
 	if b.ExecutionPayload == nil {
 		b.ExecutionPayload = &enginev1.ExecutionPayloadElectra{
-			ParentHash:    make([]byte, fieldparams.RootLength),
-			FeeRecipient:  make([]byte, 20),
-			StateRoot:     make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-			LogsBloom:     make([]byte, 256),
-			PrevRandao:    make([]byte, fieldparams.RootLength),
-			ExtraData:     make([]byte, 0),
-			BaseFeePerGas: make([]byte, fieldparams.RootLength),
-			BlockHash:     make([]byte, fieldparams.RootLength),
-			Transactions:  make([][]byte, 0),
-			Withdrawals:   make([]*enginev1.Withdrawal, 0),
+			ParentHash:         make([]byte, fieldparams.RootLength),
+			FeeRecipient:       make([]byte, 20),
+			StateRoot:          make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:       make([]byte, fieldparams.RootLength),
+			LogsBloom:          make([]byte, 256),
+			PrevRandao:         make([]byte, fieldparams.RootLength),
+			ExtraData:          make([]byte, 0),
+			BaseFeePerGas:      make([]byte, fieldparams.RootLength),
+			BlockHash:          make([]byte, fieldparams.RootLength),
+			Transactions:       make([][]byte, 0),
+			Withdrawals:        make([]*enginev1.Withdrawal, 0),
+			DepositReceipts:    make([]*enginev1.DepositReceipt, 0),
+			WithdrawalRequests: make([]*enginev1.ExecutionLayerWithdrawalRequest, 0),
 		}
 	}
 	return b
