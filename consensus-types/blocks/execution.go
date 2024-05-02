@@ -35,6 +35,8 @@ func NewWrappedExecutionData(v proto.Message, weiValue math.Wei) (interfaces.Exe
 		return WrappedExecutionPayloadCapella(pbStruct, weiValue)
 	case *enginev1.ExecutionPayloadDeneb:
 		return WrappedExecutionPayloadDeneb(pbStruct, weiValue)
+	case *enginev1.ExecutionPayloadElectra:
+		return WrappedExecutionPayloadElectra(pbStruct, weiValue)
 	default:
 		return nil, ErrUnsupportedVersion
 	}
