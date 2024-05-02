@@ -21,15 +21,7 @@ type ReadOnlySignedBeaconBlock interface {
 	Copy() (SignedBeaconBlock, error)
 	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
-	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
-	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
 	ToBlinded() (ReadOnlySignedBeaconBlock, error)
-	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
-	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
-	PbCapellaBlock() (*ethpb.SignedBeaconBlockCapella, error)
-	PbDenebBlock() (*ethpb.SignedBeaconBlockDeneb, error)
-	PbBlindedCapellaBlock() (*ethpb.SignedBlindedBeaconBlockCapella, error)
-	PbBlindedDenebBlock() (*ethpb.SignedBlindedBeaconBlockDeneb, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
@@ -131,10 +123,6 @@ type ExecutionData interface {
 	TransactionsRoot() ([]byte, error)
 	Withdrawals() ([]*enginev1.Withdrawal, error)
 	WithdrawalsRoot() ([]byte, error)
-	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
-	PbBellatrix() (*enginev1.ExecutionPayload, error)
-	PbDeneb() (*enginev1.ExecutionPayloadDeneb, error)
-	PbElectra() (*enginev1.ExecutionPayloadElectra, error)
 	ValueInWei() (math.Wei, error)
 	ValueInGwei() (uint64, error)
 	DepositReceipts() ([]*enginev1.DepositReceipt, error)

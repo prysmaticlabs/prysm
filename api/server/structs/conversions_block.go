@@ -6,14 +6,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
+
+var ErrUnsupportedConversion = errors.New("Could not determine api struct type to use for value")
 
 func (h *SignedBeaconBlockHeader) ToConsensus() (*eth.SignedBeaconBlockHeader, error) {
 	msg, err := h.Message.ToConsensus()
@@ -1852,7 +1856,34 @@ func BeaconBlockFromConsensus(b *eth.BeaconBlock) *BeaconBlock {
 	}
 }
 
-func SignedBeaconBlockFromConsensus(b *eth.SignedBeaconBlock) *SignedBeaconBlock {
+func SignedBeaconBlockMessageJsoner(block interfaces.ReadOnlySignedBeaconBlock) (SignedMessageJsoner, error) {
+	pb, err := block.Proto()
+	if err != nil {
+		return nil, err
+	}
+	switch pbStruct := pb.(type) {
+	case *eth.SignedBeaconBlock:
+		return SignedBeaconBlockPhase0FromConsensus(pbStruct), nil
+	case *eth.SignedBeaconBlockAltair:
+		return SignedBeaconBlockAltairFromConsensus(pbStruct), nil
+	case *eth.SignedBlindedBeaconBlockBellatrix:
+		return SignedBlindedBeaconBlockBellatrixFromConsensus(pbStruct)
+	case *eth.SignedBeaconBlockBellatrix:
+		return SignedBeaconBlockBellatrixFromConsensus(pbStruct)
+	case *eth.SignedBlindedBeaconBlockCapella:
+		return SignedBlindedBeaconBlockCapellaFromConsensus(pbStruct)
+	case *eth.SignedBeaconBlockCapella:
+		return SignedBeaconBlockCapellaFromConsensus(pbStruct)
+	case *eth.SignedBlindedBeaconBlockDeneb:
+		return SignedBlindedBeaconBlockDenebFromConsensus(pbStruct)
+	case *eth.SignedBeaconBlockDeneb:
+		return SignedBeaconBlockDenebFromConsensus(pbStruct)
+	default:
+		return nil, ErrUnsupportedConversion
+	}
+}
+
+func SignedBeaconBlockPhase0FromConsensus(b *eth.SignedBeaconBlock) *SignedBeaconBlock {
 	return &SignedBeaconBlock{
 		Message:   BeaconBlockFromConsensus(b.Block),
 		Signature: hexutil.Encode(b.Signature),
