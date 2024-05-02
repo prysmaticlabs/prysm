@@ -39,6 +39,9 @@ func (b *BeaconState) SetNextWithdrawalValidatorIndex(i primitives.ValidatorInde
 	return nil
 }
 
+// AppendPendingPartialWithdrawal is a mutating call to the beacon state which appends the given
+// value to the end of the pending partial withdrawals slice in the state. This method requires
+// access to the Lock on the state and only applies in electra or later.
 func (b *BeaconState) AppendPendingPartialWithdrawal(ppw *eth.PendingPartialWithdrawal) error {
 	if b.version < version.Electra {
 		return errNotSupported("AppendPendingPartialWithdrawal", b.version)

@@ -8,6 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
+// AppendPendingBalanceDeposit is a mutating call to the beacon state to create and append a pending
+// balance deposit object on to the state. This method requires access to the Lock on the state and
+// only applies in electra or later.
 func (b *BeaconState) AppendPendingBalanceDeposit(index primitives.ValidatorIndex, amount uint64) error {
 	if b.version < version.Electra {
 		return errNotSupported("AppendPendingBalanceDeposit", b.version)
@@ -25,6 +28,9 @@ func (b *BeaconState) AppendPendingBalanceDeposit(index primitives.ValidatorInde
 	return nil
 }
 
+// SetPendingBalanceDeposits is a mutating call to the beacon state which replaces the pending
+// balance deposit slice with the provided value. This method requires access to the Lock on the
+// state and only applies in electra or later.
 func (b *BeaconState) SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDeposit) error {
 	if b.version < version.Electra {
 		return errNotSupported("SetPendingBalanceDeposits", b.version)
@@ -39,6 +45,9 @@ func (b *BeaconState) SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDepos
 	return nil
 }
 
+// SetDepositBalanceToConsume is a mutating call to the beacon state which sets the deposit balance
+// to consume value to the given value. This method requires access to the Lock on the state and
+// only applies in electra or later.
 func (b *BeaconState) SetDepositBalanceToConsume(gwei uint64) error {
 	if b.version < version.Electra {
 		return errNotSupported("SetDepositBalanceToConsume", b.version)

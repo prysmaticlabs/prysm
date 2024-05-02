@@ -8,6 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
+// AppendPendingConsolidation is a mutating call to the beacon state which appends the provided
+// pending consolidation to the end of the slice on the state. This method requires access to the
+// Lock on the state and only applies in electra or later.
 func (b *BeaconState) AppendPendingConsolidation(val *ethpb.PendingConsolidation) error {
 	if b.version < version.Electra {
 		return errNotSupported("AppendPendingConsolidation", b.version)
@@ -25,6 +28,9 @@ func (b *BeaconState) AppendPendingConsolidation(val *ethpb.PendingConsolidation
 	return nil
 }
 
+// SetPendingConsolidations is a mutating call to the beacon state which replaces the slice on the
+// state with the given value. This method requires access to the Lock on the state and only applies
+// in electra or later.
 func (b *BeaconState) SetPendingConsolidations(val []*ethpb.PendingConsolidation) error {
 	if b.version < version.Electra {
 		return errNotSupported("SetPendingConsolidations", b.version)
@@ -42,6 +48,9 @@ func (b *BeaconState) SetPendingConsolidations(val []*ethpb.PendingConsolidation
 	return nil
 }
 
+// SetEarliestConsolidationEpoch is a mutating call to the beacon state which sets the earlest
+// consolidation epoch value. This method requires access to the Lock on the state and only applies
+// in electra or later.
 func (b *BeaconState) SetEarliestConsolidationEpoch(epoch primitives.Epoch) error {
 	if b.version < version.Electra {
 		return errNotSupported("SetEarliestConsolidationEpoch", b.version)
@@ -56,6 +65,9 @@ func (b *BeaconState) SetEarliestConsolidationEpoch(epoch primitives.Epoch) erro
 	return nil
 }
 
+// SetConsolidationBalanceToConsume is a mutating call to the beacon state which sets the value of
+// the consolidation balance to consume to the provided value. This method requires access to the
+// Lock on the state and only applies in electra or later.
 func (b *BeaconState) SetConsolidationBalanceToConsume(balance uint64) error {
 	if b.version < version.Electra {
 		return errNotSupported("SetConsolidationBalanceToConsume", b.version)
