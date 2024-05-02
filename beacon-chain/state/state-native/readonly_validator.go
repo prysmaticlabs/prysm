@@ -70,8 +70,8 @@ func (v readOnlyValidator) PublicKey() [fieldparams.BLSPubkeyLength]byte {
 	return pubkey
 }
 
-// PublicKeySlice returns the public key in the slice form for the read only validator.
-func (v readOnlyValidator) PublicKeySlice() []byte {
+// publicKeySlice returns the public key in the slice form for the read only validator.
+func (v readOnlyValidator) publicKeySlice() []byte {
 	return v.validator.PublicKey
 }
 

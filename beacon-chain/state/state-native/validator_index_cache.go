@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -40,7 +39,7 @@ func (b *BeaconState) getValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte
 	validatorCount := len(b.validatorIndexCache.indexMap)
 	vals := b.validatorsReadOnlySinceIndex(validatorCount)
 	for i, val := range vals {
-		if bytes.Equal(bytesutil.PadTo(val.PublicKeySlice(), 48), pubKey[:]) {
+		if bytes.Equal(bytesutil.PadTo(val.publicKeySlice(), 48), pubKey[:]) {
 			index := primitives.ValidatorIndex(validatorCount + i)
 			return index, true
 		}
@@ -64,7 +63,7 @@ func (b *BeaconState) saveValidatorIndices() {
 // validatorsReadOnlySinceIndex constructs a list of read only validator references after a specified index.
 // The indices in the returned list correspond to their respective validator indices in the state.
 // It returns nil if the specified index is out of bounds. This function is read-only and does not use locks.
-func (b *BeaconState) validatorsReadOnlySinceIndex(index int) []state.ReadOnlyValidator {
+func (b *BeaconState) validatorsReadOnlySinceIndex(index int) []readOnlyValidator {
 	totalValidators := b.validatorsLen()
 	if index >= totalValidators {
 		return nil
@@ -83,16 +82,14 @@ func (b *BeaconState) validatorsReadOnlySinceIndex(index int) []state.ReadOnlyVa
 		v = b.validators
 	}
 
-	result := make([]state.ReadOnlyValidator, totalValidators-index)
-	var err error
+	result := make([]readOnlyValidator, totalValidators-index)
 	for i := 0; i < len(result); i++ {
 		val := v[i+index]
 		if val == nil {
 			continue
 		}
-		result[i], err = NewValidator(val)
-		if err != nil {
-			continue
+		result[i] = readOnlyValidator{
+			validator: val,
 		}
 	}
 	return result

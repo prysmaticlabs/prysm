@@ -25,7 +25,7 @@ func Test_FinalizedValidatorIndexCache(t *testing.T) {
 		{PublicKey: []byte{2}},
 		{PublicKey: []byte{3}},
 	}
-	// We should get able to retrieve these validators by public key even they are not in the cache
+	// We should be able to retrieve these validators by public key even when they are not in the cache
 	i, exists = b.getValidatorIndex([fieldparams.BLSPubkeyLength]byte{1})
 	require.Equal(t, primitives.ValidatorIndex(0), i)
 	require.Equal(t, true, exists)
@@ -36,9 +36,18 @@ func Test_FinalizedValidatorIndexCache(t *testing.T) {
 	require.Equal(t, primitives.ValidatorIndex(2), i)
 	require.Equal(t, true, exists)
 
-	// State is finalized. We flush [0, 1, 2 ] to the cache.
+	// State is finalized. We save [0, 1, 2 ] to the cache.
 	b.saveValidatorIndices()
 	require.Equal(t, 3, len(b.validatorIndexCache.indexMap))
+	i, exists = b.getValidatorIndex([fieldparams.BLSPubkeyLength]byte{1})
+	require.Equal(t, primitives.ValidatorIndex(0), i)
+	require.Equal(t, true, exists)
+	i, exists = b.getValidatorIndex([fieldparams.BLSPubkeyLength]byte{2})
+	require.Equal(t, primitives.ValidatorIndex(1), i)
+	require.Equal(t, true, exists)
+	i, exists = b.getValidatorIndex([fieldparams.BLSPubkeyLength]byte{3})
+	require.Equal(t, primitives.ValidatorIndex(2), i)
+	require.Equal(t, true, exists)
 
 	// New validators are added to the state. They are [4, 5]
 	b.validators = []*ethpb.Validator{
@@ -48,7 +57,7 @@ func Test_FinalizedValidatorIndexCache(t *testing.T) {
 		{PublicKey: []byte{4}},
 		{PublicKey: []byte{5}},
 	}
-	// We should get able to retrieve these validators by public key even they are not in the cache
+	// We should be able to retrieve these validators by public key even when they are not in the cache
 	i, exists = b.getValidatorIndex([fieldparams.BLSPubkeyLength]byte{4})
 	require.Equal(t, primitives.ValidatorIndex(3), i)
 	require.Equal(t, true, exists)
@@ -56,7 +65,7 @@ func Test_FinalizedValidatorIndexCache(t *testing.T) {
 	require.Equal(t, primitives.ValidatorIndex(4), i)
 	require.Equal(t, true, exists)
 
-	// State is finalized. We flush [4, 5] to the cache.
+	// State is finalized. We save [4, 5] to the cache.
 	b.saveValidatorIndices()
 	require.Equal(t, 5, len(b.validatorIndexCache.indexMap))
 
@@ -69,15 +78,16 @@ func Test_FinalizedValidatorIndexCache(t *testing.T) {
 		{PublicKey: []byte{5}},
 		{PublicKey: []byte{6}},
 	}
-	// We should get able to retrieve these validators by public key even they are not in the cache
+	// We should be able to retrieve these validators by public key even when they are not in the cache
 	i, exists = b.getValidatorIndex([fieldparams.BLSPubkeyLength]byte{6})
 	require.Equal(t, primitives.ValidatorIndex(5), i)
+	require.Equal(t, true, exists)
 
-	// State is finalized. We flush [6] to the cache.
+	// State is finalized. We save [6] to the cache.
 	b.saveValidatorIndices()
 	require.Equal(t, 6, len(b.validatorIndexCache.indexMap))
 
-	// Flush a few more times.
+	// Save a few more times.
 	b.saveValidatorIndices()
 	b.saveValidatorIndices()
 	require.Equal(t, 6, len(b.validatorIndexCache.indexMap))
@@ -91,4 +101,5 @@ func Test_FinalizedValidatorIndexCache(t *testing.T) {
 	require.Equal(t, true, exists)
 	i, exists = b.getValidatorIndex([fieldparams.BLSPubkeyLength]byte{3})
 	require.Equal(t, primitives.ValidatorIndex(2), i)
+	require.Equal(t, true, exists)
 }
