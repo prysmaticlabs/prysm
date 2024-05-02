@@ -311,7 +311,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 
 	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
 	assert.NoError(t, err)
-	attestingIndices, err := attestation.AttestingIndices(blockAtt.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(blockAtt, [][]primitives.ValidatorIndex{committee})
 	require.NoError(t, err)
 	assert.NoError(t, err)
 	hashTreeRoot, err = signing.ComputeSigningRoot(blockAtt.Data, domain)

@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
@@ -85,7 +86,7 @@ func (s *Service) OnAttestation(ctx context.Context, a interfaces.Attestation, d
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committee)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, [][]primitives.ValidatorIndex{committee})
 	if err != nil {
 		return err
 	}

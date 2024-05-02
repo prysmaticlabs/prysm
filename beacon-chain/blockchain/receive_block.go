@@ -484,7 +484,7 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 			log.WithError(err).Error("Could not get attestation committee")
 			return
 		}
-		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
+		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, [][]primitives.ValidatorIndex{committee})
 		if err != nil {
 			log.WithError(err).Error("Could not convert to indexed attestation")
 			return
