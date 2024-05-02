@@ -2,11 +2,11 @@ package peerdas
 
 import (
 	"encoding/binary"
+	"math"
 
 	cKzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
-	"github.com/holiman/uint256"
-
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/holiman/uint256"
 	errors "github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -23,9 +23,6 @@ const (
 
 	// Number of cells in the extended matrix
 	extendedMatrixSize = fieldparams.MaxBlobsPerBlock * cKzg4844.CellsPerExtBlob
-
-	// Maxmimum value of an uint64
-	maxUint64 = ^uint64(0)
 )
 
 type (
@@ -43,7 +40,7 @@ var (
 	errCellNotFound               = errors.New("cell not found (should never happen)")
 
 	// maxUint256 is the maximum value of a uint256.
-	maxUint256 = &uint256.Int{maxUint64, maxUint64, maxUint64, maxUint64}
+	maxUint256 = &uint256.Int{math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64}
 )
 
 // CustodyColumns computes the columns the node should custody.
