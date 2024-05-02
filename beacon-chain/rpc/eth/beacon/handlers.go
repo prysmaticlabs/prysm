@@ -878,7 +878,13 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	consensusAtts := blk.Block().Body().Attestations()
 	atts := make([]*structs.Attestation, len(consensusAtts))
 	for i, att := range consensusAtts {
-		atts[i] = structs.AttFromConsensus(att)
+		a, ok := att.(*eth.Attestation)
+		if ok {
+			atts[i] = structs.AttFromConsensus(a)
+		} else {
+			httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations of type %T", att), http.StatusInternalServerError)
+			return
+		}
 	}
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {

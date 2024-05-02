@@ -188,7 +188,6 @@ service BeaconNodeValidator {
         };
     }
 
-
     // Submit selection proof to the beacon node to aggregate all matching wire attestations with the same data root.
     // the beacon node responses with an aggregate and proof object back to validator to sign over.
     rpc SubmitAggregateSelectionProof(AggregateSelectionRequest) returns (AggregateSelectionResponse) {
