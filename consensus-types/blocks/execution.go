@@ -1455,26 +1455,6 @@ func (e executionPayloadHeaderElectra) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// PbElectra --
-func (e executionPayloadHeaderElectra) PbElectra() (*enginev1.ExecutionPayloadElectra, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbDeneb --
-func (executionPayloadHeaderElectra) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbBellatrix --
-func (executionPayloadHeaderElectra) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbCapella --
-func (executionPayloadHeaderElectra) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
 // ValueInWei --
 func (e executionPayloadHeaderElectra) ValueInWei() (math.Wei, error) {
 	return e.weiValue, nil
@@ -1652,26 +1632,6 @@ func (e executionPayloadElectra) BlobGasUsed() (uint64, error) {
 
 func (e executionPayloadElectra) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
-}
-
-// PbBellatrix --
-func (e executionPayloadElectra) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbCapella --
-func (e executionPayloadElectra) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbDeneb --
-func (e executionPayloadElectra) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// PbElectra --
-func (e executionPayloadElectra) PbElectra() (*enginev1.ExecutionPayloadElectra, error) {
-	return e.p, nil
 }
 
 // ValueInWei --
