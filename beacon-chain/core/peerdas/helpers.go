@@ -218,7 +218,7 @@ func DataColumnSidecars(signedBlock interfaces.SignedBeaconBlock, blobs []cKzg48
 	}
 
 	// Get the column sidecars.
-	sidecars := make([]*ethpb.DataColumnSidecar, cKzg4844.CellsPerExtBlob)
+	sidecars := make([]*ethpb.DataColumnSidecar, 0, cKzg4844.CellsPerExtBlob)
 	for columnIndex := uint64(0); columnIndex < cKzg4844.CellsPerExtBlob; columnIndex++ {
 		column := make([]cKzg4844.Cell, 0, blobsCount)
 		kzgProofOfColumn := make([]cKzg4844.KZGProof, 0, blobsCount)
