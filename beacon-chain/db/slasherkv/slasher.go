@@ -728,9 +728,8 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 		return nil, err
 	}
 
-	// Decode attestation. We decode to an Electra attestation because it is less restrictive.
-	// This means that both pre and post-Electra atts can be decoded into this type.
-	decodedAtt := &ethpb.IndexedAttestationElectra{}
+	// Decode attestation.
+	decodedAtt := &ethpb.IndexedAttestation{}
 	if err := decodedAtt.UnmarshalSSZ(decodedAttBytes); err != nil {
 		return nil, err
 	}
