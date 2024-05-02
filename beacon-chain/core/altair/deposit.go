@@ -40,15 +40,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 		return nil, err
 	}
 	if isNewValidator {
-		if err := beaconState.AppendInactivityScore(0); err != nil {
-			return nil, err
-		}
-		if err := beaconState.AppendPreviousParticipationBits(0); err != nil {
-			return nil, err
-		}
-		if err := beaconState.AppendCurrentParticipationBits(0); err != nil {
-			return nil, err
-		}
+
 	}
 
 	return beaconState, nil
