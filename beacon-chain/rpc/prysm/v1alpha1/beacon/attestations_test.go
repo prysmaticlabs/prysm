@@ -550,7 +550,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], committee)
+		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], [][]primitives.ValidatorIndex{committee})
 		require.NoError(t, err, "Could not convert attestation to indexed")
 		a, ok := idxAtt.(*ethpb.IndexedAttestation)
 		require.Equal(t, true, ok, "unexpected type of indexed attestation")
@@ -560,7 +560,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		att := atts2[i]
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		idxAtt, err := attestation.ConvertToIndexed(ctx, atts2[i], committee)
+		idxAtt, err := attestation.ConvertToIndexed(ctx, atts2[i], [][]primitives.ValidatorIndex{committee})
 		require.NoError(t, err, "Could not convert attestation to indexed")
 		a, ok := idxAtt.(*ethpb.IndexedAttestation)
 		require.Equal(t, true, ok, "unexpected type of indexed attestation")
@@ -661,7 +661,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], committee)
+		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], [][]primitives.ValidatorIndex{committee})
 		require.NoError(t, err, "Could not convert attestation to indexed")
 		a, ok := idxAtt.(*ethpb.IndexedAttestation)
 		require.Equal(t, true, ok, "unexpected type of indexed attestation")

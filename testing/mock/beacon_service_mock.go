@@ -62,6 +62,26 @@ func (mr *MockBeaconChainClientMockRecorder) AttestationPool(arg0, arg1 any, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttestationPool", reflect.TypeOf((*MockBeaconChainClient)(nil).AttestationPool), varargs...)
 }
 
+// AttestationPoolElectra mocks base method.
+func (m *MockBeaconChainClient) AttestationPoolElectra(arg0 context.Context, arg1 *eth.AttestationPoolRequest, arg2 ...grpc.CallOption) (*eth.AttestationPoolResponseElectra, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AttestationPoolElectra", varargs...)
+	ret0, _ := ret[0].(*eth.AttestationPoolResponseElectra)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AttestationPoolElectra indicates an expected call of AttestationPoolElectra.
+func (mr *MockBeaconChainClientMockRecorder) AttestationPoolElectra(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttestationPoolElectra", reflect.TypeOf((*MockBeaconChainClient)(nil).AttestationPoolElectra), varargs...)
+}
+
 // GetBeaconConfig mocks base method.
 func (m *MockBeaconChainClient) GetBeaconConfig(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.BeaconConfig, error) {
 	m.ctrl.T.Helper()
@@ -242,6 +262,26 @@ func (mr *MockBeaconChainClientMockRecorder) ListAttestations(arg0, arg1 any, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAttestations", reflect.TypeOf((*MockBeaconChainClient)(nil).ListAttestations), varargs...)
 }
 
+// ListAttestationsElectra mocks base method.
+func (m *MockBeaconChainClient) ListAttestationsElectra(arg0 context.Context, arg1 *eth.ListAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListAttestationsResponseElectra, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListAttestationsElectra", varargs...)
+	ret0, _ := ret[0].(*eth.ListAttestationsResponseElectra)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAttestationsElectra indicates an expected call of ListAttestationsElectra.
+func (mr *MockBeaconChainClientMockRecorder) ListAttestationsElectra(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAttestationsElectra", reflect.TypeOf((*MockBeaconChainClient)(nil).ListAttestationsElectra), varargs...)
+}
+
 // ListBeaconBlocks mocks base method.
 func (m *MockBeaconChainClient) ListBeaconBlocks(arg0 context.Context, arg1 *eth.ListBlocksRequest, arg2 ...grpc.CallOption) (*eth.ListBeaconBlocksResponse, error) {
 	m.ctrl.T.Helper()
@@ -300,6 +340,26 @@ func (mr *MockBeaconChainClientMockRecorder) ListIndexedAttestations(arg0, arg1 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIndexedAttestations", reflect.TypeOf((*MockBeaconChainClient)(nil).ListIndexedAttestations), varargs...)
+}
+
+// ListIndexedAttestationsElectra mocks base method.
+func (m *MockBeaconChainClient) ListIndexedAttestationsElectra(arg0 context.Context, arg1 *eth.ListIndexedAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListIndexedAttestationsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListIndexedAttestationsElectra", varargs...)
+	ret0, _ := ret[0].(*eth.ListIndexedAttestationsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListIndexedAttestationsElectra indicates an expected call of ListIndexedAttestationsElectra.
+func (mr *MockBeaconChainClientMockRecorder) ListIndexedAttestationsElectra(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIndexedAttestationsElectra", reflect.TypeOf((*MockBeaconChainClient)(nil).ListIndexedAttestationsElectra), varargs...)
 }
 
 // ListValidatorAssignments mocks base method.
@@ -380,6 +440,26 @@ func (mr *MockBeaconChainClientMockRecorder) SubmitAttesterSlashing(arg0, arg1 a
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAttesterSlashing", reflect.TypeOf((*MockBeaconChainClient)(nil).SubmitAttesterSlashing), varargs...)
+}
+
+// SubmitAttesterSlashingElectra mocks base method.
+func (m *MockBeaconChainClient) SubmitAttesterSlashingElectra(arg0 context.Context, arg1 *eth.AttesterSlashingElectra, arg2 ...grpc.CallOption) (*eth.SubmitSlashingResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubmitAttesterSlashingElectra", varargs...)
+	ret0, _ := ret[0].(*eth.SubmitSlashingResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitAttesterSlashingElectra indicates an expected call of SubmitAttesterSlashingElectra.
+func (mr *MockBeaconChainClientMockRecorder) SubmitAttesterSlashingElectra(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAttesterSlashingElectra", reflect.TypeOf((*MockBeaconChainClient)(nil).SubmitAttesterSlashingElectra), varargs...)
 }
 
 // SubmitProposerSlashing mocks base method.
