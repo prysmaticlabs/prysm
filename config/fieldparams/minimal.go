@@ -39,4 +39,5 @@ const (
 	MaxDepositRequestsPerPayload          = 4             // Maximum number of deposit requests in an execution payload.
 	MaxWithdrawalRequestsPerPayload       = 2             // Maximum number of execution layer withdrawal requests in an execution payload.
 	MaxConsolidationRequestsPerPayload    = 1             // Maximum number of consolidation requests in an execution payload.
+	NumberOfColumns                       = 128           // NumberOfColumns refers to the specified number of data columns that can exist in a network.
 )
