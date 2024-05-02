@@ -43,6 +43,7 @@ func ProcessAttestationsNoVerifySignature(
 
 // VerifyAttestationNoVerifySignature verifies the attestation without verifying the attestation signature. This is
 // used before processing attestation with the beacon state.
+// TODO: eip-7549-beacon-spec
 func VerifyAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.ReadOnlyBeaconState,
@@ -53,10 +54,6 @@ func VerifyAttestationNoVerifySignature(
 
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
-	}
-
-	if att.Version() >= version.Electra && att.GetData().CommitteeIndex != 0 {
-		return errors.New("committee index must be 0 post-Electra")
 	}
 
 	currEpoch := time.CurrentEpoch(beaconState)
@@ -107,6 +104,14 @@ func VerifyAttestationNoVerifySignature(
 			)
 		}
 	}
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.GetData().Target.Epoch)
+	if err != nil {
+		return err
+	}
+	c := helpers.SlotCommitteeCount(activeValidatorCount)
+
+	var indexedAtt ethpb.IndexedAtt
+
 	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.GetData().Target.Epoch)
 	if err != nil {
 		return err

@@ -63,14 +63,14 @@ func (mr *MockBeaconChainClientMockRecorder) AttestationPool(arg0, arg1 any, arg
 }
 
 // AttestationPoolElectra mocks base method.
-func (m *MockBeaconChainClient) AttestationPoolElectra(arg0 context.Context, arg1 *eth.AttestationPoolRequest, arg2 ...grpc.CallOption) (*eth.AttestationPoolElectraResponse, error) {
+func (m *MockBeaconChainClient) AttestationPoolElectra(arg0 context.Context, arg1 *eth.AttestationPoolRequest, arg2 ...grpc.CallOption) (*eth.AttestationPoolResponseElectra, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "AttestationPoolElectra", varargs...)
-	ret0, _ := ret[0].(*eth.AttestationPoolElectraResponse)
+	ret0, _ := ret[0].(*eth.AttestationPoolResponseElectra)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -263,14 +263,14 @@ func (mr *MockBeaconChainClientMockRecorder) ListAttestations(arg0, arg1 any, ar
 }
 
 // ListAttestationsElectra mocks base method.
-func (m *MockBeaconChainClient) ListAttestationsElectra(arg0 context.Context, arg1 *eth.ListAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListAttestationsElectraResponse, error) {
+func (m *MockBeaconChainClient) ListAttestationsElectra(arg0 context.Context, arg1 *eth.ListAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListAttestationsResponseElectra, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ListAttestationsElectra", varargs...)
-	ret0, _ := ret[0].(*eth.ListAttestationsElectraResponse)
+	ret0, _ := ret[0].(*eth.ListAttestationsResponseElectra)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -343,14 +343,14 @@ func (mr *MockBeaconChainClientMockRecorder) ListIndexedAttestations(arg0, arg1 
 }
 
 // ListIndexedAttestationsElectra mocks base method.
-func (m *MockBeaconChainClient) ListIndexedAttestationsElectra(arg0 context.Context, arg1 *eth.ListIndexedAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListIndexedAttestationsElectraResponse, error) {
+func (m *MockBeaconChainClient) ListIndexedAttestationsElectra(arg0 context.Context, arg1 *eth.ListIndexedAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListIndexedAttestationsResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ListIndexedAttestationsElectra", varargs...)
-	ret0, _ := ret[0].(*eth.ListIndexedAttestationsElectraResponse)
+	ret0, _ := ret[0].(*eth.ListIndexedAttestationsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
