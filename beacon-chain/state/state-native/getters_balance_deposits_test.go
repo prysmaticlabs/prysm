@@ -37,9 +37,9 @@ func TestPendingBalanceDeposits(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 2, len(pbd))
 	require.Equal(t, primitives.ValidatorIndex(1), pbd[0].Index)
-	require.Equal(t, 2, pbd[0].Amount)
+	require.Equal(t, uint64(2), pbd[0].Amount)
 	require.Equal(t, primitives.ValidatorIndex(3), pbd[1].Index)
-	require.Equal(t, 4, pbd[1].Amount)
+	require.Equal(t, uint64(4), pbd[1].Amount)
 
 	// Fails for older than electra state
 	s, err = state_native.InitializeFromProtoDeneb(&eth.BeaconStateDeneb{})
