@@ -18,7 +18,7 @@ func (e *InvalidCastError) Error() string {
 		Error()
 }
 
-func (e *InvalidCastError) Is(err error) bool {
+func (*InvalidCastError) Is(err error) bool {
 	return errors.Is(err, ErrInvalidCast)
 }
 
