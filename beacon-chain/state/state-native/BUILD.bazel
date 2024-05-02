@@ -89,6 +89,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "getters_attestation_test.go",
+        "getters_balance_deposits_test.go",
         "getters_block_test.go",
         "getters_checkpoint_test.go",
         "getters_consolidation_test.go",
