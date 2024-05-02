@@ -38,4 +38,5 @@ const (
 	PendingConsolidationsLimit            = 262144        // Maximum number of pending consolidations in the beacon state.
 	MaxDepositRequestsPerPayload          = 8192          // Maximum number of deposit requests in an execution payload.
 	MaxWithdrawalRequestsPerPayload       = 16            // Maximum number of execution layer withdrawal requests in an execution payload.
+	NumberOfColumns                       = 128           // NumberOfColumns refers to the specified number of data columns that can exist in a network.
 )
