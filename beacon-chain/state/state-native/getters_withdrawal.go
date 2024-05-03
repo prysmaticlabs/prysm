@@ -115,7 +115,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 	// Electra partial withdrawals functionality.
 	if b.version >= version.Electra {
 		for _, w := range b.pendingPartialWithdrawals {
-			if w.WithdrawableEpoch > epoch || len(withdrawals) >= int(params.BeaconConfig().MaxPendingPartialsPerWithdrawalSweep) {
+			if w.WithdrawableEpoch > epoch || len(withdrawals) >= int(params.BeaconConfig().MaxPendingPartialsPerWithdrawalsSweep) {
 				break
 			}
 
