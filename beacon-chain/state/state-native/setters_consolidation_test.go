@@ -13,9 +13,13 @@ import (
 func TestAppendPendingConsolidation(t *testing.T) {
 	s, err := state_native.InitializeFromProtoElectra(&eth.BeaconStateElectra{})
 	require.NoError(t, err)
-	require.Equal(t, uint64(0), s.NumPendingConsolidations())
+	num, err := s.NumPendingConsolidations()
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), num)
 	require.NoError(t, s.AppendPendingConsolidation(&eth.PendingConsolidation{}))
-	require.Equal(t, uint64(1), s.NumPendingConsolidations())
+	num, err = s.NumPendingConsolidations()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), num)
 
 	// Fails for versions older than electra
 	s, err = state_native.InitializeFromProtoDeneb(&eth.BeaconStateDeneb{})
@@ -26,9 +30,13 @@ func TestAppendPendingConsolidation(t *testing.T) {
 func TestSetPendingConsolidations(t *testing.T) {
 	s, err := state_native.InitializeFromProtoElectra(&eth.BeaconStateElectra{})
 	require.NoError(t, err)
-	require.Equal(t, uint64(0), s.NumPendingConsolidations())
+	num, err := s.NumPendingConsolidations()
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), num)
 	require.NoError(t, s.SetPendingConsolidations([]*eth.PendingConsolidation{{}, {}, {}}))
-	require.Equal(t, uint64(3), s.NumPendingConsolidations())
+	num, err = s.NumPendingConsolidations()
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), num)
 
 	// Fails for versions older than electra
 	s, err = state_native.InitializeFromProtoDeneb(&eth.BeaconStateDeneb{})

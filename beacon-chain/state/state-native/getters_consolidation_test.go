@@ -111,7 +111,8 @@ func TestNumPendingConsolidations(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		got := st.NumPendingConsolidations()
+		got, err := st.NumPendingConsolidations()
+		require.NoError(t, err)
 		require.Equal(t, want, got)
 	})
 }

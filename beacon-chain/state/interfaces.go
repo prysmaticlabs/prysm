@@ -191,7 +191,7 @@ type ReadOnlyWithdrawals interface {
 	NextWithdrawalValidatorIndex() (primitives.ValidatorIndex, error)
 	NextWithdrawalIndex() (uint64, error)
 	PendingBalanceToWithdraw(idx primitives.ValidatorIndex) (uint64, error)
-	NumPendingPartialWithdrawals() uint64
+	NumPendingPartialWithdrawals() (uint64, error)
 }
 
 // ReadOnlyParticipation defines a struct which only has read access to participation methods.
@@ -221,7 +221,7 @@ type ReadOnlyConsolidations interface {
 	ConsolidationBalanceToConsume() (math.Gwei, error)
 	EarliestConsolidationEpoch() (primitives.Epoch, error)
 	PendingConsolidations() ([]*ethpb.PendingConsolidation, error)
-	NumPendingConsolidations() uint64
+	NumPendingConsolidations() (uint64, error)
 }
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.

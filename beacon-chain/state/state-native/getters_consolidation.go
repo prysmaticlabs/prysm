@@ -46,10 +46,13 @@ func (b *BeaconState) PendingConsolidations() ([]*ethpb.PendingConsolidation, er
 // NumPendingConsolidations is a non-mutating call to the beacon state which returns the number of
 // pending consolidations in the beacon state. This method requires access to the RLock on the state
 // and only applies in electra or later.
-func (b *BeaconState) NumPendingConsolidations() uint64 {
+func (b *BeaconState) NumPendingConsolidations() (uint64, error) {
+	if b.version < version.Electra {
+		return 0, errNotSupported("NumPendingConsolidations", b.version)
+	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	return uint64(len(b.pendingConsolidations))
+	return uint64(len(b.pendingConsolidations)), nil
 }
 
 func (b *BeaconState) pendingConsolidationsVal() []*ethpb.PendingConsolidation {

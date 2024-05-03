@@ -187,6 +187,9 @@ func (b *BeaconState) pendingPartialWithdrawalsVal() []*ethpb.PendingPartialWith
 	return ethpb.CopyPendingPartialWithdrawals(b.pendingPartialWithdrawals)
 }
 
-func (b *BeaconState) NumPendingPartialWithdrawals() uint64 {
-	return uint64(len(b.pendingPartialWithdrawals))
+func (b *BeaconState) NumPendingPartialWithdrawals() (uint64, error) {
+	if b.version < version.Electra {
+		return 0, errNotSupported("NumPendingPartialWithdrawals", b.version)
+	}
+	return uint64(len(b.pendingPartialWithdrawals)), nil
 }
