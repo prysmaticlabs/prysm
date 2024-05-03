@@ -59,7 +59,11 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 		if b.version != version.Electra {
 			return fmt.Errorf("wrong state version (%s) for electra execution payload", version.String(b.version))
 		}
-		latest, err := consensusblocks.PayloadToHeaderElectra(val)
+		eVal, ok := val.(interfaces.ExecutionDataElectra)
+		if !ok {
+			return fmt.Errorf("could not cast %T to ExecutionDataElectra: %w", val, interfaces.ErrInvalidCast)
+		}
+		latest, err := consensusblocks.PayloadToHeaderElectra(eVal)
 		if err != nil {
 			return errors.Wrap(err, "could not convert payload to header")
 		}
