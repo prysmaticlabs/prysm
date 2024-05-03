@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
 	"github.com/sirupsen/logrus"
@@ -166,7 +167,7 @@ func (p *TestP2P) Broadcast(_ context.Context, _ proto.Message) error {
 }
 
 // BroadcastAttestation broadcasts an attestation.
-func (p *TestP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
+func (p *TestP2P) BroadcastAttestation(_ context.Context, _ uint64, _ interfaces.Attestation) error {
 	p.BroadcastCalled.Store(true)
 	return nil
 }

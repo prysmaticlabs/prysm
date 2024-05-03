@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -40,7 +41,7 @@ import (
 func ProcessAttesterSlashings(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	slashings []*ethpb.AttesterSlashing,
+	slashings []interfaces.AttesterSlashing,
 	slashFunc slashValidatorFunc,
 ) (state.BeaconState, error) {
 	var err error
@@ -57,7 +58,7 @@ func ProcessAttesterSlashings(
 func ProcessAttesterSlashing(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	slashing *ethpb.AttesterSlashing,
+	slashing interfaces.AttesterSlashing,
 	slashFunc slashValidatorFunc,
 ) (state.BeaconState, error) {
 	if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
@@ -104,20 +105,20 @@ func ProcessAttesterSlashing(
 }
 
 // VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
-func VerifyAttesterSlashing(ctx context.Context, beaconState state.ReadOnlyBeaconState, slashing *ethpb.AttesterSlashing) error {
+func VerifyAttesterSlashing(ctx context.Context, beaconState state.ReadOnlyBeaconState, slashing interfaces.AttesterSlashing) error {
 	if slashing == nil {
 		return errors.New("nil slashing")
 	}
-	if slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
+	if slashing.GetFirstAttestation() == nil || slashing.GetSecondAttestation() == nil {
 		return errors.New("nil attestation")
 	}
-	if slashing.Attestation_1.Data == nil || slashing.Attestation_2.Data == nil {
+	if slashing.GetFirstAttestation().GetData() == nil || slashing.GetSecondAttestation().GetData() == nil {
 		return errors.New("nil attestation data")
 	}
-	att1 := slashing.Attestation_1
-	att2 := slashing.Attestation_2
-	data1 := att1.Data
-	data2 := att2.Data
+	att1 := slashing.GetFirstAttestation()
+	att2 := slashing.GetSecondAttestation()
+	data1 := att1.GetData()
+	data2 := att2.GetData()
 	if !IsSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
@@ -157,11 +158,11 @@ func IsSlashableAttestationData(data1, data2 *ethpb.AttestationData) bool {
 }
 
 // SlashableAttesterIndices returns the intersection of attester indices from both attestations in this slashing.
-func SlashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
-	if slashing == nil || slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
+func SlashableAttesterIndices(slashing interfaces.AttesterSlashing) []uint64 {
+	if slashing == nil || slashing.GetFirstAttestation() == nil || slashing.GetSecondAttestation() == nil {
 		return nil
 	}
-	indices1 := slashing.Attestation_1.AttestingIndices
-	indices2 := slashing.Attestation_2.AttestingIndices
+	indices1 := slashing.GetFirstAttestation().GetAttestingIndices()
+	indices2 := slashing.GetSecondAttestation().GetAttestingIndices()
 	return slice.IntersectionUint64(indices1, indices2)
 }

@@ -43,38 +43,6 @@ func (SignedBeaconBlock) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 
-func (SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) PbCapellaBlock() (*eth.SignedBeaconBlockCapella, error) {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) PbBlindedCapellaBlock() (*eth.SignedBlindedBeaconBlockCapella, error) {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) PbDenebBlock() (*eth.SignedBeaconBlockDeneb, error) {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) PbBlindedDenebBlock() (*eth.SignedBlindedBeaconBlockDeneb, error) {
-	panic("implement me")
-}
-
 func (SignedBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
 	panic("implement me")
 }
@@ -224,7 +192,7 @@ func (BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
+func (BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
 	panic("implement me")
 }
 
@@ -280,7 +248,7 @@ func (b *BeaconBlockBody) SetProposerSlashings([]*eth.ProposerSlashing) {
 	panic("implement me")
 }
 
-func (b *BeaconBlockBody) SetAttesterSlashings([]*eth.AttesterSlashing) {
+func (b *BeaconBlockBody) SetAttesterSlashings([]interfaces.AttesterSlashing) {
 	panic("implement me")
 }
 
@@ -313,7 +281,11 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	panic("implement me")
 }
 
-func (b *BeaconBlockBody) Attestations() []*eth.Attestation {
+func (b *BeaconBlockBody) Attestations() []interfaces.Attestation {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) Consolidations() ([]*eth.SignedConsolidation, error) {
 	panic("implement me")
 }
 

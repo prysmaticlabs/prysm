@@ -52,7 +52,7 @@ type BlobReceiver interface {
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
 type SlashingReceiver interface {
-	ReceiveAttesterSlashing(ctx context.Context, slashings *ethpb.AttesterSlashing)
+	ReceiveAttesterSlashing(ctx context.Context, slashing interfaces.AttesterSlashing)
 }
 
 // ReceiveBlock is a function that defines the operations (minus pubsub)
@@ -295,10 +295,10 @@ func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 }
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
-func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
+func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing interfaces.AttesterSlashing) {
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
+	s.InsertSlashingsToForkChoiceStore(ctx, []interfaces.AttesterSlashing{slashing})
 }
 
 // prunePostBlockOperationPools only runs on new head otherwise should return a nil.
@@ -479,7 +479,7 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 	// is done in the background to avoid adding more load to this critical code path.
 	ctx := context.TODO()
 	for _, att := range signed.Block().Body().Attestations() {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.GetData().Slot, att.GetData().CommitteeIndex)
 		if err != nil {
 			log.WithError(err).Error("Could not get attestation committee")
 			return

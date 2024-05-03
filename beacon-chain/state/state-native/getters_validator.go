@@ -178,6 +178,10 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]by
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	if features.Get().EIP6110ValidatorIndexCache {
+		return b.getValidatorIndex(key)
+	}
+
 	var numOfVals int
 	if features.Get().EnableExperimentalState {
 		numOfVals = b.validatorsMultiValue.Len(b)

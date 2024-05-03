@@ -115,11 +115,11 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	// based on our min chunk for either validator.
 	slashing, err := chunk.CheckSlashable(ctx, slasherDB, validatorIdx, att)
 	require.NoError(t, err)
-	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
+	require.Equal(t, nil, slashing)
 
 	slashing, err = chunk.CheckSlashable(ctx, slasherDB, validatorIdx.Sub(1), att)
 	require.NoError(t, err)
-	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
+	require.Equal(t, nil, slashing)
 
 	// Next up we initialize an empty chunks slice and mark an attestation
 	// with (source 1, target 2) as attested.
@@ -141,11 +141,11 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	slashing, err = chunk.CheckSlashable(ctx, slasherDB, validatorIdx, surroundingVote)
 	require.NoError(t, err)
-	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
+	require.Equal(t, nil, slashing)
 
 	// Next up, we save the old attestation record, then check if the
 	// surrounding vote is indeed slashable.
-	attData := att.IndexedAttestation.Data
+	attData := att.IndexedAttestation.GetData()
 	attRecord := createAttestationWrapperEmptySig(t, attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
@@ -193,11 +193,11 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	// based on our max chunk for either validator.
 	slashing, err := chunk.CheckSlashable(ctx, slasherDB, validatorIdx, att)
 	require.NoError(t, err)
-	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
+	require.Equal(t, nil, slashing)
 
 	slashing, err = chunk.CheckSlashable(ctx, slasherDB, validatorIdx.Sub(1), att)
 	require.NoError(t, err)
-	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
+	require.Equal(t, nil, slashing)
 
 	// Next up we initialize an empty chunks slice and mark an attestation
 	// with (source 0, target 3) as attested.
@@ -219,11 +219,11 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	slashing, err = chunk.CheckSlashable(ctx, slasherDB, validatorIdx, surroundedVote)
 	require.NoError(t, err)
-	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
+	require.Equal(t, nil, slashing)
 
 	// Next up, we save the old attestation record, then check if the
 	// surroundedVote vote is indeed slashable.
-	attData := att.IndexedAttestation.Data
+	attData := att.IndexedAttestation.GetData()
 	signingRoot := [32]byte{1}
 	attRecord := createAttestationWrapperEmptySig(
 		t, attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, signingRoot[:],

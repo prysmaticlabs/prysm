@@ -401,7 +401,7 @@ func (s *Service) saveOrphanedOperations(ctx context.Context, orphanedRoot [32]b
 		}
 		for _, a := range orphanedBlk.Block().Body().Attestations() {
 			// if the attestation is one epoch older, it wouldn't been useful to save it.
-			if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+			if a.GetData().Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
 				continue
 			}
 			if helpers.IsAggregated(a) {

@@ -21,7 +21,7 @@ import (
 
 // sortableAttestations implements the Sort interface to sort attestations
 // by slot as the canonical sorting attribute.
-type sortableAttestations []*ethpb.Attestation
+type sortableAttestations []interfaces.Attestation
 
 // Len is the number of elements in the collection.
 func (s sortableAttestations) Len() int { return len(s) }
@@ -31,16 +31,16 @@ func (s sortableAttestations) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 // Less reports whether the element with index i must sort before the element with index j.
 func (s sortableAttestations) Less(i, j int) bool {
-	return s[i].Data.Slot < s[j].Data.Slot
+	return s[i].GetData().Slot < s[j].GetData().Slot
 }
 
-func mapAttestationsByTargetRoot(atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
-	attsMap := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+func mapAttestationsByTargetRoot(atts []interfaces.Attestation) map[[32]byte][]interfaces.Attestation {
+	attsMap := make(map[[32]byte][]interfaces.Attestation, len(atts))
 	if len(atts) == 0 {
 		return attsMap
 	}
 	for _, att := range atts {
-		attsMap[bytesutil.ToBytes32(att.Data.Target.Root)] = append(attsMap[bytesutil.ToBytes32(att.Data.Target.Root)], att)
+		attsMap[bytesutil.ToBytes32(att.GetData().Target.Root)] = append(attsMap[bytesutil.ToBytes32(att.GetData().Target.Root)], att)
 	}
 	return attsMap
 }
@@ -74,7 +74,7 @@ func (bs *Server) ListAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
-	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	atts := make([]interfaces.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, blk := range blocks {
 		atts = append(atts, blk.Block().Body().Attestations()...)
 	}
@@ -96,8 +96,15 @@ func (bs *Server) ListAttestations(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
 	}
+	attestations := make([]*ethpb.Attestation, 0, len(atts))
+	for _, att := range atts {
+		a, ok := att.(*ethpb.Attestation)
+		if ok {
+			attestations = append(attestations, a)
+		}
+	}
 	return &ethpb.ListAttestationsResponse{
-		Attestations:  atts[start:end],
+		Attestations:  attestations[start:end],
 		TotalSize:     int32(numAttestations),
 		NextPageToken: nextPageToken,
 	}, nil
@@ -129,7 +136,7 @@ func (bs *Server) ListIndexedAttestations(
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
 
-	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	attsArray := make([]interfaces.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, b := range blocks {
 		attsArray = append(attsArray, b.Block().Body().Attestations()...)
 	}
@@ -166,7 +173,7 @@ func (bs *Server) ListIndexedAttestations(
 		}
 		for i := 0; i < len(atts); i++ {
 			att := atts[i]
-			committee, err := helpers.BeaconCommitteeFromState(ctx, attState, att.Data.Slot, att.Data.CommitteeIndex)
+			committee, err := helpers.BeaconCommitteeFromState(ctx, attState, att.GetData().Slot, att.GetData().CommitteeIndex)
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
@@ -178,7 +185,10 @@ func (bs *Server) ListIndexedAttestations(
 			if err != nil {
 				return nil, err
 			}
-			indexedAtts = append(indexedAtts, idxAtt)
+			a, ok := idxAtt.(*ethpb.IndexedAttestation)
+			if ok {
+				indexedAtts = append(indexedAtts, a)
+			}
 		}
 	}
 
@@ -226,8 +236,15 @@ func (bs *Server) AttestationPool(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
 	}
+	attestations := make([]*ethpb.Attestation, 0, len(atts))
+	for _, att := range atts {
+		a, ok := att.(*ethpb.Attestation)
+		if ok {
+			attestations = append(attestations, a)
+		}
+	}
 	return &ethpb.AttestationPoolResponse{
-		Attestations:  atts[start:end],
+		Attestations:  attestations[start:end],
 		TotalSize:     int32(numAtts),
 		NextPageToken: nextPageToken,
 	}, nil

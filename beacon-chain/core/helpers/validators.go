@@ -671,5 +671,5 @@ func ValidatorMaxEffectiveBalance(val *ethpb.Validator) uint64 {
 	if HasCompoundingWithdrawalCredential(val) {
 		return params.BeaconConfig().MaxEffectiveBalanceElectra
 	}
-	return params.BeaconConfig().MinActivationBalance // TODO: Add test that MinActivationBalance == (old) MaxEffectiveBalance
+	return params.BeaconConfig().MinActivationBalance
 }

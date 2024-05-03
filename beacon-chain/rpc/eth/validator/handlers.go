@@ -25,6 +25,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -52,7 +53,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var match *ethpbalpha.Attestation
+	var match interfaces.Attestation
 	var err error
 
 	match, err = matchingAtt(s.AttestationsPool.AggregatedAttestations(), primitives.Slot(slot), attDataRoot)
@@ -79,29 +80,29 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 
 	response := &structs.AggregateAttestationResponse{
 		Data: &structs.Attestation{
-			AggregationBits: hexutil.Encode(match.AggregationBits),
+			AggregationBits: hexutil.Encode(match.GetAggregationBits()),
 			Data: &structs.AttestationData{
-				Slot:            strconv.FormatUint(uint64(match.Data.Slot), 10),
-				CommitteeIndex:  strconv.FormatUint(uint64(match.Data.CommitteeIndex), 10),
-				BeaconBlockRoot: hexutil.Encode(match.Data.BeaconBlockRoot),
+				Slot:            strconv.FormatUint(uint64(match.GetData().Slot), 10),
+				CommitteeIndex:  strconv.FormatUint(uint64(match.GetData().CommitteeIndex), 10),
+				BeaconBlockRoot: hexutil.Encode(match.GetData().BeaconBlockRoot),
 				Source: &structs.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(match.Data.Source.Epoch), 10),
-					Root:  hexutil.Encode(match.Data.Source.Root),
+					Epoch: strconv.FormatUint(uint64(match.GetData().Source.Epoch), 10),
+					Root:  hexutil.Encode(match.GetData().Source.Root),
 				},
 				Target: &structs.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(match.Data.Target.Epoch), 10),
-					Root:  hexutil.Encode(match.Data.Target.Root),
+					Epoch: strconv.FormatUint(uint64(match.GetData().Target.Epoch), 10),
+					Root:  hexutil.Encode(match.GetData().Target.Root),
 				},
 			},
-			Signature: hexutil.Encode(match.Signature),
+			Signature: hexutil.Encode(match.GetSignature()),
 		}}
 	httputil.WriteJson(w, response)
 }
 
-func matchingAtt(atts []*ethpbalpha.Attestation, slot primitives.Slot, attDataRoot []byte) (*ethpbalpha.Attestation, error) {
+func matchingAtt(atts []interfaces.Attestation, slot primitives.Slot, attDataRoot []byte) (interfaces.Attestation, error) {
 	for _, att := range atts {
-		if att.Data.Slot == slot {
-			root, err := att.Data.HashTreeRoot()
+		if att.GetData().Slot == slot {
+			root, err := att.GetData().HashTreeRoot()
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get attestation data root")
 			}
