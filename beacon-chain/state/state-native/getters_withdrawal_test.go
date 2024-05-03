@@ -334,9 +334,8 @@ func TestExpectedWithdrawals(t *testing.T) {
 
 	t.Run("electra all pending partial withdrawals", func(t *testing.T) {
 		// Load a serialized Electra state from disk.
-		// This case is copied from spectest mainnet/electra/operations/execution_layer_withdrawal_request/pyspec_tests/pending_withdrawals_consume_all_excess_balance/pre.ssz_snappy
-		// and that case was retrieved from the consensus-spec-tests repository at tag v1.5.0-alpha.1.
-		serializedBytes, err := util.BazelFileBytes("testdata/electra_withdrawal_0.ssz_snappy")
+		// This spectest has a fully hydrated beacon state with partial pending withdrawals.
+		serializedBytes, err := util.BazelFileBytes("tests/mainnet/electra/operations/execution_layer_withdrawal_request/pyspec_tests/pending_withdrawals_consume_all_excess_balance/pre.ssz_snappy")
 		require.NoError(t, err)
 		serializedSSZ, err := snappy.Decode(nil /* dst */, serializedBytes)
 		require.NoError(t, err)

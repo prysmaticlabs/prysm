@@ -120,7 +120,9 @@ go_test(
         "types_test.go",
         "validator_index_cache_test.go",
     ],
-    data = glob(["testdata/**"]),
+    data = glob(["testdata/**"]) + [
+        "@consensus_spec_tests_mainnet//:test_data",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/transition:go_default_library",

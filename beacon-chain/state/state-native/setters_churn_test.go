@@ -15,10 +15,8 @@ import (
 
 func TestExitEpochAndUpdateChurn(t *testing.T) {
 	// Load a serialized Electra state from disk.
-	// This case is copied from spectest mainnet/electra/operations/voluntary_exit/pyspec_tests/exit_existing_churn_and_churn_limit_balance/pre.ssz_snappy
-	// and that case was retrieved from the consensus-spec-tests repository at tag v1.5.0-alpha.1.
 	// The spec tests shows that the exit epoch is 262 for validator 0 performing a voluntary exit.
-	serializedBytes, err := util.BazelFileBytes("testdata/electra_exit_0.ssz_snappy")
+	serializedBytes, err := util.BazelFileBytes("tests/mainnet/electra/operations/voluntary_exit/pyspec_tests/exit_existing_churn_and_churn_limit_balance/pre.ssz_snappy")
 	require.NoError(t, err)
 	serializedSSZ, err := snappy.Decode(nil /* dst */, serializedBytes)
 	require.NoError(t, err)

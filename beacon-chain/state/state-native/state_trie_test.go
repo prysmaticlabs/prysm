@@ -845,7 +845,8 @@ func TestBeaconState_InitializeInactivityScoresCorrectly_Deneb(t *testing.T) {
 
 func TestBeaconChainCopy_Electra(t *testing.T) {
 	// Load a serialized Electra state from disk.
-	serializedBytes, err := util.BazelFileBytes("testdata/electra_random_0.ssz_snappy")
+	// This is a fully hydrated random test case from spectests.
+	serializedBytes, err := util.BazelFileBytes("tests/mainnet/electra/ssz_static/BeaconState/ssz_random/case_0/serialized.ssz_snappy")
 	require.NoError(t, err)
 	serializedSSZ, err := snappy.Decode(nil /* dst */, serializedBytes)
 	require.NoError(t, err)
