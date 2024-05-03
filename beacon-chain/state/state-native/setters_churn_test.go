@@ -5,10 +5,8 @@ import (
 
 	"github.com/golang/snappy"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
-	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
@@ -20,9 +18,9 @@ func TestExitEpochAndUpdateChurn(t *testing.T) {
 	require.NoError(t, err)
 	serializedSSZ, err := snappy.Decode(nil /* dst */, serializedBytes)
 	require.NoError(t, err)
-	pb := &ethpb.BeaconStateElectra{}
+	pb := &eth.BeaconStateElectra{}
 	require.NoError(t, pb.UnmarshalSSZ(serializedSSZ))
-	s, err := statenative.InitializeFromProtoElectra(pb)
+	s, err := state_native.InitializeFromProtoElectra(pb)
 	require.NoError(t, err)
 
 	val, err := s.ValidatorAtIndex(0)
