@@ -35,20 +35,135 @@ func BeaconBlock(t *testing.T) *ethpb.BeaconBlockEpbs {
 // BeaconBlockBody creates a random BeaconBlockBodyEPBS for testing purposes.
 func BeaconBlockBody(t *testing.T) *ethpb.BeaconBlockBodyEpbs {
 	return &ethpb.BeaconBlockBodyEpbs{
-		RandaoReveal:                 randomBytes(96, t),
-		Eth1Data:                     nil,
-		Graffiti:                     nil,
-		ProposerSlashings:            nil,
-		AttesterSlashings:            nil,
-		Attestations:                 nil,
-		Deposits:                     nil,
-		VoluntaryExits:               nil,
-		SyncAggregate:                nil,
-		BlsToExecutionChanges:        nil,
+		RandaoReveal: randomBytes(96, t),
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot:  randomBytes(32, t),
+			DepositCount: randomUint64(t),
+			BlockHash:    randomBytes(32, t),
+		},
+		Graffiti: randomBytes(32, t),
+		ProposerSlashings: []*ethpb.ProposerSlashing{
+			{Header_1: SignedBeaconBlockHeader(t),
+				Header_2: SignedBeaconBlockHeader(t)},
+		},
+		AttesterSlashings: []*ethpb.AttesterSlashing{
+			{
+				Attestation_1: IndexedAttestation(t),
+				Attestation_2: IndexedAttestation(t),
+			},
+		},
+		Attestations:   []*ethpb.Attestation{Attestation(t), Attestation(t), Attestation(t)},
+		Deposits:       []*ethpb.Deposit{Deposit(t), Deposit(t), Deposit(t)},
+		VoluntaryExits: []*ethpb.SignedVoluntaryExit{SignedVoluntaryExit(t), SignedVoluntaryExit(t)},
+		SyncAggregate: &ethpb.SyncAggregate{
+			SyncCommitteeBits:      bitfield.NewBitvector512(),
+			SyncCommitteeSignature: randomBytes(96, t),
+		},
+		BlsToExecutionChanges:        []*ethpb.SignedBLSToExecutionChange{SignedBLSToExecutionChange(t), SignedBLSToExecutionChange(t)},
 		SignedExecutionPayloadHeader: SignedExecutionPayloadHeader(t),
 		PayloadAttestations: []*ethpb.PayloadAttestation{
 			PayloadAttestation(t), PayloadAttestation(t), PayloadAttestation(t), PayloadAttestation(t),
 		},
+	}
+}
+
+// SignedBeaconBlockHeader creates a random SignedBeaconBlockHeader for testing purposes.
+func SignedBeaconBlockHeader(t *testing.T) *ethpb.SignedBeaconBlockHeader {
+	return &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			Slot:          primitives.Slot(randomUint64(t)),
+			ProposerIndex: primitives.ValidatorIndex(randomUint64(t)),
+			ParentRoot:    randomBytes(32, t),
+			StateRoot:     randomBytes(32, t),
+			BodyRoot:      randomBytes(32, t),
+		},
+		Signature: randomBytes(96, t),
+	}
+}
+
+// IndexedAttestation creates a random IndexedAttestation for testing purposes.
+func IndexedAttestation(t *testing.T) *ethpb.IndexedAttestation {
+	return &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{randomUint64(t), randomUint64(t), randomUint64(t)},
+		Data:             AttestationData(t),
+		Signature:        randomBytes(96, t),
+	}
+}
+
+// Attestation creates a random Attestation for testing purposes.
+func Attestation(t *testing.T) *ethpb.Attestation {
+	return &ethpb.Attestation{
+		AggregationBits: bitfield.NewBitlist(123),
+		Data:            AttestationData(t),
+		Signature:       randomBytes(96, t),
+	}
+}
+
+// AttestationData creates a random AttestationData for testing purposes.
+func AttestationData(t *testing.T) *ethpb.AttestationData {
+	return &ethpb.AttestationData{
+		Slot:            primitives.Slot(randomUint64(t)),
+		CommitteeIndex:  primitives.CommitteeIndex(randomUint64(t)),
+		BeaconBlockRoot: randomBytes(32, t),
+		Source: &ethpb.Checkpoint{
+			Epoch: primitives.Epoch(randomUint64(t)),
+			Root:  randomBytes(32, t),
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: primitives.Epoch(randomUint64(t)),
+			Root:  randomBytes(32, t),
+		},
+	}
+}
+
+// Deposit creates a random Deposit for testing purposes.
+func Deposit(t *testing.T) *ethpb.Deposit {
+	return &ethpb.Deposit{
+		Proof: [][]byte{randomBytes(32, t), randomBytes(32, t), randomBytes(32, t)},
+		Data:  DepositData(t),
+	}
+}
+
+// DepositData creates a random DepositData for testing purposes.
+func DepositData(t *testing.T) *ethpb.Deposit_Data {
+	return &ethpb.Deposit_Data{
+		PublicKey:             randomBytes(48, t),
+		WithdrawalCredentials: randomBytes(32, t),
+		Amount:                randomUint64(t),
+		Signature:             randomBytes(96, t),
+	}
+}
+
+// SignedBLSToExecutionChange creates a random SignedBLSToExecutionChange for testing purposes.
+func SignedBLSToExecutionChange(t *testing.T) *ethpb.SignedBLSToExecutionChange {
+	return &ethpb.SignedBLSToExecutionChange{
+		Message:   BLSToExecutionChange(t),
+		Signature: randomBytes(96, t),
+	}
+}
+
+// BLSToExecutionChange creates a random BLSToExecutionChange for testing purposes.
+func BLSToExecutionChange(t *testing.T) *ethpb.BLSToExecutionChange {
+	return &ethpb.BLSToExecutionChange{
+		ValidatorIndex:     primitives.ValidatorIndex(randomUint64(t)),
+		FromBlsPubkey:      randomBytes(48, t),
+		ToExecutionAddress: randomBytes(20, t),
+	}
+}
+
+// SignedVoluntaryExit creates a random SignedVoluntaryExit for testing purposes.
+func SignedVoluntaryExit(t *testing.T) *ethpb.SignedVoluntaryExit {
+	return &ethpb.SignedVoluntaryExit{
+		Exit:      VoluntaryExit(t),
+		Signature: randomBytes(96, t),
+	}
+}
+
+// VoluntaryExit creates a random VoluntaryExit for testing purposes.
+func VoluntaryExit(t *testing.T) *ethpb.VoluntaryExit {
+	return &ethpb.VoluntaryExit{
+		Epoch:          primitives.Epoch(randomUint64(t)),
+		ValidatorIndex: primitives.ValidatorIndex(randomUint64(t)),
 	}
 }
 
@@ -58,14 +173,28 @@ func BeaconState(t *testing.T) *ethpb.BeaconStateEPBS {
 		GenesisTime:           randomUint64(t),
 		GenesisValidatorsRoot: randomBytes(32, t),
 		Slot:                  primitives.Slot(randomUint64(t)),
-		Fork:                  nil,
-		LatestBlockHeader:     nil,
-		BlockRoots:            nil,
-		StateRoots:            nil,
-		HistoricalRoots:       nil,
-		Eth1Data:              &ethpb.Eth1Data{},
-		Eth1DataVotes:         []*ethpb.Eth1Data{},
-		Eth1DepositIndex:      randomUint64(t),
+		Fork: &ethpb.Fork{
+			PreviousVersion: randomBytes(4, t),
+			CurrentVersion:  randomBytes(4, t),
+			Epoch:           primitives.Epoch(randomUint64(t)),
+		},
+		LatestBlockHeader: &ethpb.BeaconBlockHeader{
+			Slot:          primitives.Slot(randomUint64(t)),
+			ProposerIndex: primitives.ValidatorIndex(randomUint64(t)),
+			ParentRoot:    randomBytes(32, t),
+			StateRoot:     randomBytes(32, t),
+			BodyRoot:      randomBytes(32, t),
+		},
+		BlockRoots:      [][]byte{randomBytes(32, t), randomBytes(32, t), randomBytes(32, t)},
+		StateRoots:      [][]byte{randomBytes(32, t), randomBytes(32, t), randomBytes(32, t)},
+		HistoricalRoots: [][]byte{randomBytes(32, t), randomBytes(32, t), randomBytes(32, t)},
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot:  randomBytes(32, t),
+			DepositCount: randomUint64(t),
+			BlockHash:    randomBytes(32, t),
+		},
+		Eth1DataVotes:    []*ethpb.Eth1Data{{DepositRoot: randomBytes(32, t), DepositCount: randomUint64(t), BlockHash: randomBytes(32, t)}},
+		Eth1DepositIndex: randomUint64(t),
 		Validators: []*ethpb.Validator{
 			{
 				PublicKey:                  randomBytes(48, t),
@@ -77,21 +206,30 @@ func BeaconState(t *testing.T) *ethpb.BeaconStateEPBS {
 				WithdrawableEpoch:          primitives.Epoch(randomUint64(t)),
 			},
 		},
-		Balances:                      []uint64{randomUint64(t)},
-		RandaoMixes:                   nil,
-		Slashings:                     nil,
-		PreviousEpochParticipation:    nil,
-		CurrentEpochParticipation:     nil,
-		JustificationBits:             nil,
-		PreviousJustifiedCheckpoint:   nil,
-		CurrentJustifiedCheckpoint:    nil,
-		FinalizedCheckpoint:           nil,
-		InactivityScores:              nil,
-		CurrentSyncCommittee:          nil,
-		NextSyncCommittee:             nil,
-		NextWithdrawalIndex:           randomUint64(t),
-		NextWithdrawalValidatorIndex:  primitives.ValidatorIndex(randomUint64(t)),
-		HistoricalSummaries:           nil,
+		Balances:                    []uint64{randomUint64(t)},
+		RandaoMixes:                 [][]byte{randomBytes(32, t), randomBytes(32, t), randomBytes(32, t)},
+		Slashings:                   []uint64{randomUint64(t)},
+		PreviousEpochParticipation:  randomBytes(32, t),
+		CurrentEpochParticipation:   randomBytes(32, t),
+		JustificationBits:           randomBytes(1, t),
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: primitives.Epoch(randomUint64(t)), Root: randomBytes(32, t)},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: primitives.Epoch(randomUint64(t)), Root: randomBytes(32, t)},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: primitives.Epoch(randomUint64(t)), Root: randomBytes(32, t)},
+		InactivityScores:            []uint64{randomUint64(t)},
+		CurrentSyncCommittee: &ethpb.SyncCommittee{
+			Pubkeys:         [][]byte{randomBytes(48, t), randomBytes(48, t), randomBytes(48, t)},
+			AggregatePubkey: randomBytes(48, t),
+		},
+		NextSyncCommittee: &ethpb.SyncCommittee{
+			Pubkeys:         [][]byte{randomBytes(48, t), randomBytes(48, t), randomBytes(48, t)},
+			AggregatePubkey: randomBytes(48, t),
+		},
+		NextWithdrawalIndex:          randomUint64(t),
+		NextWithdrawalValidatorIndex: primitives.ValidatorIndex(randomUint64(t)),
+		HistoricalSummaries: []*ethpb.HistoricalSummary{{
+			BlockSummaryRoot: randomBytes(32, t),
+			StateSummaryRoot: randomBytes(32, t),
+		}},
 		PreviousInclusionListProposer: primitives.ValidatorIndex(randomUint64(t)),
 		PreviousInclusionListSlot:     primitives.Slot(randomUint64(t)),
 		LatestInclusionListProposer:   primitives.ValidatorIndex(randomUint64(t)),
