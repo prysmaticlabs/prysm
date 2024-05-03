@@ -9,6 +9,7 @@ import (
 	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	testtmpl "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/testing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -113,6 +114,14 @@ func TestActiveBalanceAtIndex(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, params.BeaconConfig().MinActivationBalance, ab)
 
+	// Accessing a validator index out of bounds should error.
+	_, err = state.ActiveBalanceAtIndex(4)
+	require.ErrorIs(t, err, consensus_types.ErrOutOfBounds)
+
+	// Accessing a validator wwhere balance slice is out of bounds for some reason.
+	require.NoError(t, state.SetBalances([]uint64{}))
+	_, err = state.ActiveBalanceAtIndex(0)
+	require.ErrorIs(t, err, consensus_types.ErrOutOfBounds)
 }
 
 func TestPendingBalanceToWithdraw(t *testing.T) {

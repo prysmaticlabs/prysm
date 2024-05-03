@@ -432,6 +432,8 @@ func (b *BeaconState) ActiveBalanceAtIndex(i primitives.ValidatorIndex) (uint64,
 
 	if i >= primitives.ValidatorIndex(len(b.validators)) {
 		return 0, errors.Wrapf(consensus_types.ErrOutOfBounds, "validator index %d does not exist", i)
+	} else if i >= primitives.ValidatorIndex(len(b.balances)) {
+		return 0, errors.Wrapf(consensus_types.ErrOutOfBounds, "balance for validator %d does not exist", i)
 	}
 	v := b.validators[i]
 
