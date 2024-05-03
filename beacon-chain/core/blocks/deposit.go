@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -199,11 +200,20 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 			//if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
 			//		return nil, newValidator, err
 			//	}
-			// if ( is_compounding_withdrawal_credential(withdrawal_credentials) and has_eth1_withdrawal_credential(state.validators[index])
-			//
-			//	 and is_valid_deposit_signature(pubkey, withdrawal_credentials, amount, signature)
-			//	):
-			//	 switch_to_compounding_validator(state, index)
+			val, err := beaconState.ValidatorAtIndex(index)
+			if err != nil {
+				return nil, err
+			}
+
+			hasValidSignature, err := IsValidDepositSignature(data)
+			if err != nil {
+				return nil, err
+			}
+			if helpers.IsCompoundingWithdrawalCredential(withdrawalCredentials) && helpers.HasETH1WithdrawalCredential(val) && hasValidSignature {
+				if err := electra.SwitchToCompoundingValidator(beaconState, index); err != nil {
+					return nil, err
+				}
+			}
 		} else {
 			if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
 				return nil, err

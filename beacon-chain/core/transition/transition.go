@@ -365,6 +365,13 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interf
 	if eth1Data == nil {
 		return nil, errors.New("nil eth1data in state")
 	}
+	//  # [Modified in Electra:EIP6110]
+	//    # Disable former deposit mechanism once all prior deposits are processed
+	//    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_receipts_start_index)
+	//    if state.eth1_deposit_index < eth1_deposit_index_limit:
+	//        assert len(body.deposits) == min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
+	//    else:
+	//        assert len(body.deposits) == 0
 	if state.Eth1DepositIndex() > eth1Data.DepositCount {
 		if len(body.Deposits()) != 0 {
 			return nil, fmt.Errorf("expected no deposits, but got %d", len(body.Deposits()))
