@@ -430,14 +430,17 @@ func (b *BeaconState) ActiveBalanceAtIndex(i primitives.ValidatorIndex) (uint64,
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if i >= primitives.ValidatorIndex(len(b.validators)) {
-		return 0, errors.Wrapf(consensus_types.ErrOutOfBounds, "validator index %d does not exist", i)
-	} else if i >= primitives.ValidatorIndex(len(b.balances)) {
-		return 0, errors.Wrapf(consensus_types.ErrOutOfBounds, "balance for validator %d does not exist", i)
+	v, err := b.validatorAtIndex(i)
+	if err != nil {
+		return 0, err
 	}
-	v := b.validators[i]
 
-	return min(b.balances[i], helpers.ValidatorMaxEffectiveBalance(v)), nil
+	bal, err := b.balanceAtIndex(i)
+	if err != nil {
+		return 0, err
+	}
+
+	return min(bal, helpers.ValidatorMaxEffectiveBalance(v)), nil
 }
 
 // PendingBalanceToWithdraw returns the sum of all pending withdrawals for the given validator.
