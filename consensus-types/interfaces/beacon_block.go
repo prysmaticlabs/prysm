@@ -71,6 +71,8 @@ type ReadOnlyBeaconBlockBody interface {
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 	BlobKzgCommitments() ([][]byte, error)
 	Consolidations() ([]*ethpb.SignedConsolidation, error)
+	PayloadAttestations() ([]*ethpb.PayloadAttestation, error)
+	SignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error)
 }
 
 type SignedBeaconBlock interface {
@@ -93,6 +95,8 @@ type SignedBeaconBlock interface {
 	SetSlot(slot primitives.Slot)
 	SetSignature(sig []byte)
 	Unblind(e ExecutionData) error
+	SetSignedExecutionPayloadHeader(h *enginev1.SignedExecutionPayloadHeader) error
+	SetPayloadAttestations([]*ethpb.PayloadAttestation) error
 }
 
 // ExecutionData represents execution layer information that is contained
