@@ -270,7 +270,8 @@ type BeaconChainConfig struct {
 	NodeIdBits                      uint64          `yaml:"NODE_ID_BITS" spec:"true"`                       // NodeIdBits defines the bit length of a node id.
 
 	// PeerDAS
-	NumberOfColumns uint64 `yaml:"NUMBER_OF_COLUMNS" spec:"true"` // NumberOfColumns in the extended data matrix.
+	NumberOfColumns          uint64 `yaml:"NUMBER_OF_COLUMNS" spec:"true"`            // NumberOfColumns in the extended data matrix.
+	MaxCellsInExtendedMatrix uint64 `yaml:"MAX_CELLS_IN_EXTENDED_MATRIX" spec:"true"` // MaxCellsInExtendedMatrix is the full data of one-dimensional erasure coding extended blobs (in row major format).
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
