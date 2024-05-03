@@ -20,6 +20,7 @@ import (
 	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -47,7 +48,7 @@ func setFeeRecipientIfBurnAddress(val *cache.TrackedValidator) {
 }
 
 // This returns the local execution payload of a given slot. The function has full awareness of pre and post merge.
-func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) (interfaces.ExecutionData, bool, error) {
+func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) (*consensusblocks.PayloadWithBid, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getLocalPayload")
 	defer span.End()
 
@@ -77,12 +78,16 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		var pid primitives.PayloadID
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
+		payload, bid, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
 			bundleCache.add(slot, bundle)
 			warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
-			return payload, overrideBuilder, nil
+			pwb, err := consensusblocks.NewPayloadWithBid(payload, bid)
+			if err != nil {
+				return nil, false, err
+			}
+			return pwb, overrideBuilder, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
 			return nil, false, errors.Wrap(err, "could not get cached payload from execution client")
@@ -96,7 +101,11 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		if err != nil {
 			return nil, false, err
 		}
-		return p, false, nil
+		pwb, err := consensusblocks.NewPayloadWithBid(p, math.ZeroWei)
+		if err != nil {
+			return nil, false, err
+		}
+		return pwb, false, nil
 	case err != nil:
 		return nil, false, err
 	}
@@ -175,17 +184,18 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	if payloadID == nil {
 		return nil, false, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
+	payload, bid, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
+	if err != nil {
+		return nil, false, err
+	}
+	pwb, err := consensusblocks.NewPayloadWithBid(payload, bid)
 	if err != nil {
 		return nil, false, err
 	}
 	bundleCache.add(slot, bundle)
 	warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
-	localValueGwei, err := payload.ValueInGwei()
-	if err == nil {
-		log.WithField("value", localValueGwei).Debug("received execution payload from local engine")
-	}
-	return payload, overrideBuilder, nil
+	log.WithField("value", math.WeiToGwei(bid)).Debug("received execution payload from local engine")
+	return pwb, overrideBuilder, nil
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
@@ -234,7 +244,7 @@ func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTi
 
 func (vs *Server) getBuilderPayloadAndBlobs(ctx context.Context,
 	slot primitives.Slot,
-	vIdx primitives.ValidatorIndex) (interfaces.ExecutionData, [][]byte, error) {
+	vIdx primitives.ValidatorIndex) (*consensusblocks.PayloadWithBid, [][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getBuilderPayloadAndBlobs")
 	defer span.End()
 

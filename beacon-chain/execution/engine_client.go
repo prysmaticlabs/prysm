@@ -22,6 +22,7 @@ import (
 	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -101,7 +102,7 @@ type EngineCaller interface {
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
-	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error)
+	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, math.Wei, *pb.BlobsBundle, bool, error)
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error)
 	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
 }
@@ -242,7 +243,7 @@ func (s *Service) ForkchoiceUpdated(
 
 // GetPayload calls the engine_getPayloadVX method via JSON-RPC.
 // It returns the execution data as well as the blobs bundle.
-func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
+func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, math.Wei, *pb.BlobsBundle, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
@@ -258,38 +259,38 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		result := &pb.ExecutionPayloadDenebWithValueAndBlobsBundle{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV3, pb.PayloadIDBytes(payloadId))
 		if err != nil {
-			return nil, nil, false, handleRPCError(err)
+			return nil, math.ZeroWei, nil, false, handleRPCError(err)
 		}
-		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, blocks.PayloadValueToWei(result.Value))
+		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, math.ZeroWei)
 		if err != nil {
-			return nil, nil, false, err
+			return nil, math.ZeroWei, nil, false, err
 		}
-		return ed, result.BlobsBundle, result.ShouldOverrideBuilder, nil
+		return ed, math.BigEndianBytesToWei(result.Value), result.BlobsBundle, result.ShouldOverrideBuilder, nil
 	}
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
 		result := &pb.ExecutionPayloadCapellaWithValue{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV2, pb.PayloadIDBytes(payloadId))
 		if err != nil {
-			return nil, nil, false, handleRPCError(err)
+			return nil, math.ZeroWei, nil, false, handleRPCError(err)
 		}
-		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, blocks.PayloadValueToWei(result.Value))
+		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, math.ZeroWei)
 		if err != nil {
-			return nil, nil, false, err
+			return nil, math.ZeroWei, nil, false, err
 		}
-		return ed, nil, false, nil
+		return ed, math.BigEndianBytesToWei(result.Value), nil, false, nil
 	}
 
 	result := &pb.ExecutionPayload{}
 	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	if err != nil {
-		return nil, nil, false, handleRPCError(err)
+		return nil, math.ZeroWei, nil, false, handleRPCError(err)
 	}
 	ed, err := blocks.WrappedExecutionPayload(result)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, math.ZeroWei, nil, false, err
 	}
-	return ed, nil, false, nil
+	return ed, math.ZeroWei, nil, false, nil
 }
 
 func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {

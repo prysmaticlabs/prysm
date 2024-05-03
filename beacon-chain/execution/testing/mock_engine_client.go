@@ -14,6 +14,7 @@ import (
 	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
@@ -60,26 +61,26 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, math.Wei, *pb.BlobsBundle, bool, error) {
 	if slots.ToEpoch(s) >= params.BeaconConfig().DenebForkEpoch {
-		ed, err := blocks.WrappedExecutionPayloadDeneb(e.ExecutionPayloadDeneb, big.NewInt(int64(e.BlockValue)))
+		ed, err := blocks.WrappedExecutionPayloadDeneb(e.ExecutionPayloadDeneb, big.NewInt(0))
 		if err != nil {
-			return nil, nil, false, err
+			return nil, math.ZeroWei, nil, false, err
 		}
-		return ed, e.BlobsBundle, e.BuilderOverride, nil
+		return ed, math.Uint64ToWei(e.BlockValue), e.BlobsBundle, e.BuilderOverride, nil
 	}
 	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
 		ed, err := blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, big.NewInt(int64(e.BlockValue)))
 		if err != nil {
-			return nil, nil, false, err
+			return nil, math.ZeroWei, nil, false, err
 		}
-		return ed, nil, e.BuilderOverride, nil
+		return ed, math.Uint64ToWei(e.BlockValue), e.BlobsBundle, e.BuilderOverride, nil
 	}
 	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, math.ZeroWei, nil, false, err
 	}
-	return p, nil, e.BuilderOverride, e.ErrGetPayload
+	return p, math.ZeroWei, nil, e.BuilderOverride, e.ErrGetPayload
 }
 
 // LatestExecutionBlock --

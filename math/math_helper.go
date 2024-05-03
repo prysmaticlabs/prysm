@@ -6,6 +6,7 @@ import (
 	stdmath "math"
 	"math/big"
 	"math/bits"
+	"slices"
 	"sync"
 
 	"github.com/thomaso-mirodin/intmath/u64"
@@ -216,8 +217,16 @@ func AddInt(i ...int) (int, error) {
 // Wei is the smallest unit of Ether, represented as a pointer to a bigInt.
 type Wei *big.Int
 
+// WeiToBigInt is a convenience method to cast a wei back to a big int
+func WeiToBigInt(w Wei) *big.Int {
+	return w
+}
+
 // Gwei is a denomination of 1e9 Wei represented as an uint64.
 type Gwei uint64
+
+// ZeroWei is a non-nil zero value for math.Wei
+var ZeroWei Wei = big.NewInt(0)
 
 // WeiToGwei converts big int wei to uint64 gwei.
 // The input `v` is copied before being modified.
@@ -234,4 +243,18 @@ func WeiToGwei(v Wei) Gwei {
 // IsValidUint256 given a bigint checks if the value is a valid Uint256
 func IsValidUint256(bi *big.Int) bool {
 	return bi.Cmp(big.NewInt(0)) >= 0 && bi.BitLen() <= 256
+}
+
+// BigEndianBytesToWei returns a Wei value given a big-endian binary representation (eg engine api payload bids).
+func BigEndianBytesToWei(value []byte) Wei {
+	v := make([]byte, len(value))
+	copy(v, value)
+	slices.Reverse(v)
+	// We have to convert big endian to little endian because the value is coming from the execution layer.
+	return big.NewInt(0).SetBytes(v)
+}
+
+// Uint64ToWei creates a new Wei (aka big.Int) representing the given uint64 value.
+func Uint64ToWei(v uint64) Wei {
+	return big.NewInt(0).SetUint64(v)
 }

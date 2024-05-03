@@ -236,7 +236,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 	}
 
 	// There's no reason to try to get a builder bid if local override is true.
-	var builderPayload interfaces.ExecutionData
+	var builderPayload *blocks.PayloadWithBid
 	var builderKzgCommitments [][]byte
 	overrideBuilder = overrideBuilder || skipMevBoost // Skip using mev-boost if requested by the caller.
 	if !overrideBuilder {

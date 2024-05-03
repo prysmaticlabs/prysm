@@ -1659,15 +1659,31 @@ func (e executionPayloadElectra) IsBlinded() bool {
 	return false
 }
 
-// PayloadValueToWei returns a Wei value given the payload's value
-func PayloadValueToWei(value []byte) math.Wei {
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
+// PayloadWithBid allows a payload to be conveniently coupled with its bid value (builder or local).
+type PayloadWithBid struct {
+	interfaces.ExecutionData
+	bid math.Wei
 }
 
-// PayloadValueToGwei returns a Gwei value given the payload's value
-func PayloadValueToGwei(value []byte) math.Gwei {
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
-	return math.WeiToGwei(v)
+// NewPayloadWithBid initializes a PayloadWithBid. This should only be used to represent payloads that have a bid,
+// otherwise directly use an ExecutionData type.
+func NewPayloadWithBid(p interfaces.ExecutionData, bid math.Wei) (*PayloadWithBid, error) {
+	if p.IsNil() {
+		return nil, ErrNilObject
+	}
+	return &PayloadWithBid{ExecutionData: p, bid: bid}, nil
+}
+
+func (p *PayloadWithBid) IsNil() bool {
+	return p == nil || p.ExecutionData == nil
+}
+
+// ValueInWei returns the bid value in wei.
+func (p *PayloadWithBid) ValueInWei() math.Wei {
+	return p.bid
+}
+
+// ValueInGwei is a helper to converts the bid value to its gwei representation.
+func (p *PayloadWithBid) ValueInGwei() math.Gwei {
+	return math.WeiToGwei(p.bid)
 }

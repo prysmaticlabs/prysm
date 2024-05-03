@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -72,7 +73,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, _, override, err := srv.GetPayload(ctx, payloadId, 1)
+		resp, _, _, override, err := srv.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
 		require.Equal(t, false, override)
 		pbs := resp.Proto()
@@ -85,7 +86,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayloadCapellaWithValue"].(*pb.ExecutionPayloadCapellaWithValue)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, _, override, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, _, _, override, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
 		require.Equal(t, false, override)
 		pbs := resp.Proto()
@@ -200,7 +201,7 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, _, override, err := client.GetPayload(ctx, payloadId, 1)
+		resp, _, _, override, err := client.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
 		require.Equal(t, false, override)
 		pbs := resp.Proto()
@@ -246,7 +247,7 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, _, override, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, bid, _, override, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
 		require.Equal(t, false, override)
 		pbs := resp.Proto()
@@ -259,9 +260,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.DeepEqual(t, want.ExecutionPayload.PrevRandao.Bytes(), ep.PrevRandao)
 		require.DeepEqual(t, want.ExecutionPayload.ParentHash.Bytes(), ep.ParentHash)
 
-		v, err := resp.ValueInGwei()
-		require.NoError(t, err)
-		require.Equal(t, uint64(1236), v)
+		require.Equal(t, math.Gwei(1236), math.WeiToGwei(bid))
 	})
 	t.Run(GetPayloadMethodV3, func(t *testing.T) {
 		payloadId := [8]byte{1}
@@ -301,7 +300,7 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, blobsBundle, override, err := client.GetPayload(ctx, payloadId, 2*params.BeaconConfig().SlotsPerEpoch)
+		resp, _, blobsBundle, override, err := client.GetPayload(ctx, payloadId, 2*params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
 		require.Equal(t, true, override)
 		g, err := resp.ExcessBlobGas()

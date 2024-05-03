@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -51,7 +52,7 @@ var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData, builderKzgCommitments [][]byte, builderBoostFactor uint64) error {
+func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload *consensusblocks.PayloadWithBid, builderKzgCommitments [][]byte, builderBoostFactor uint64) error {
 	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
 	defer span.End()
 
@@ -60,33 +61,30 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		return nil
 	}
 
-	if localPayload == nil {
+	if localPayload.IsNil() {
 		return errors.New("local payload is nil")
 	}
 
 	// Use local payload if builder payload is nil.
-	if builderPayload == nil {
-		return setLocalExecution(blk, localPayload)
+	if builderPayload.IsNil() {
+		return setLocalExecution(blk, localPayload.ExecutionData)
 	}
 
 	switch {
 	case blk.Version() >= version.Capella:
 		// Compare payload values between local and builder. Default to the local value if it is higher.
-		localValueGwei, err := localPayload.ValueInGwei()
-		if err != nil {
-			return errors.Wrap(err, "failed to get local payload value")
-		}
-		builderValueGwei, err := builderPayload.ValueInGwei()
-		if err != nil {
-			log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-			return setLocalExecution(blk, localPayload)
+		localValueGwei := uint64(localPayload.ValueInGwei())
+		builderValueGwei := uint64(builderPayload.ValueInGwei())
+		if builderValueGwei == 0 {
+			log.WithField("builderGwei", 0).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
+			return setLocalExecution(blk, localPayload.ExecutionData)
 		}
 
-		withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
+		withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload.ExecutionData, builderPayload.ExecutionData)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			log.WithError(err).Warn("Proposer: failed to match withdrawals root")
-			return setLocalExecution(blk, localPayload)
+			return setLocalExecution(blk, localPayload.ExecutionData)
 		}
 
 		// Use builder payload if the following in true:
@@ -106,9 +104,9 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 		// If we can't get the builder value, just use local block.
 		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
-			if err := setBuilderExecution(blk, builderPayload, builderKzgCommitments); err != nil {
+			if err := setBuilderExecution(blk, builderPayload.ExecutionData, builderKzgCommitments); err != nil {
 				log.WithError(err).Warn("Proposer: failed to set builder payload")
-				return setLocalExecution(blk, localPayload)
+				return setLocalExecution(blk, localPayload.ExecutionData)
 			} else {
 				return nil
 			}
@@ -128,11 +126,11 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
 			trace.Int64Attribute("builderBoostFactor", int64(builderBoostFactor)), // lint:ignore uintcast -- This is OK for tracing.
 		)
-		return setLocalExecution(blk, localPayload)
+		return setLocalExecution(blk, localPayload.ExecutionData)
 	default: // Bellatrix case.
-		if err := setBuilderExecution(blk, builderPayload, builderKzgCommitments); err != nil {
+		if err := setBuilderExecution(blk, builderPayload.ExecutionData, builderKzgCommitments); err != nil {
 			log.WithError(err).Warn("Proposer: failed to set builder payload")
-			return setLocalExecution(blk, localPayload)
+			return setLocalExecution(blk, localPayload.ExecutionData)
 		} else {
 			return nil
 		}
@@ -141,7 +139,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 // This function retrieves the payload header and kzg commitments given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, [][]byte, error) {
+func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (*consensusblocks.PayloadWithBid, [][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getPayloadHeaderFromBuilder")
 	defer span.End()
 
@@ -202,6 +200,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get bid header")
 	}
+	bidWei := math.BigEndianBytesToWei(bid.Value())
 	txRoot, err := header.TransactionsRoot()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get transaction root")
@@ -226,6 +225,11 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, nil, errors.Wrap(err, "could not validate builder signature")
 	}
 
+	pwb, err := consensusblocks.NewPayloadWithBid(header, bidWei)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "invalid/nil payload data from builder")
+	}
+
 	var kzgCommitments [][]byte
 	if bid.Version() >= version.Deneb {
 		kzgCommitments, err = bid.BlobKzgCommitments()
@@ -243,7 +247,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	}
 
 	l := log.WithFields(logrus.Fields{
-		"gweiValue":          math.WeiToGwei(v),
+		"gweiValue":          math.WeiToGwei(bidWei),
 		"builderPubKey":      fmt.Sprintf("%#x", bid.Pubkey()),
 		"blockHash":          fmt.Sprintf("%#x", header.BlockHash()),
 		"slot":               slot,
@@ -256,12 +260,12 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	l.Info("Received header with bid")
 
 	span.AddAttributes(
-		trace.StringAttribute("value", v.String()),
+		trace.StringAttribute("value", math.WeiToBigInt(bidWei).String()),
 		trace.StringAttribute("builderPubKey", fmt.Sprintf("%#x", bid.Pubkey())),
 		trace.StringAttribute("blockHash", fmt.Sprintf("%#x", header.BlockHash())),
 	)
 
-	return header, kzgCommitments, nil
+	return pwb, kzgCommitments, nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.

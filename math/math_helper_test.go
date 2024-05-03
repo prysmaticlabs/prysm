@@ -575,3 +575,9 @@ func TestWeiToGwei_CopyOk(t *testing.T) {
 	require.Equal(t, math.Gwei(1), got)
 	require.Equal(t, big.NewInt(1e9).Uint64(), v.Uint64())
 }
+
+func TestWeiStringer(t *testing.T) {
+	require.Equal(t, "0", math.WeiToBigInt(math.ZeroWei).String())
+	require.Equal(t, "1234", math.WeiToBigInt(math.Uint64ToWei(1234)).String())
+	require.Equal(t, "18446744073709551615", math.WeiToBigInt(math.Uint64ToWei(stdmath.MaxUint64)).String())
+}
