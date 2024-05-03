@@ -3,6 +3,7 @@ package state_native
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
@@ -41,7 +42,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	case version.Electra:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateElectraFieldCount)
 	default:
-		return nil, errors.New("unknown state version")
+		return nil, fmt.Errorf("unknown state version %s", version.String(state.version))
 	}
 
 	// Genesis time root.
@@ -285,11 +286,11 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[types.DepositReceiptsStartIndex.RealPosition()] = drsiRoot[:]
 
 		// DepositBalanceToConsume root.
-		dbtcRoot := ssz.Uint64Root(state.depositBalanceToConsume)
+		dbtcRoot := ssz.Uint64Root(uint64(state.depositBalanceToConsume))
 		fieldRoots[types.DepositBalanceToConsume.RealPosition()] = dbtcRoot[:]
 
 		// ExitBalanceToConsume root.
-		ebtcRoot := ssz.Uint64Root(state.exitBalanceToConsume)
+		ebtcRoot := ssz.Uint64Root(uint64(state.exitBalanceToConsume))
 		fieldRoots[types.ExitBalanceToConsume.RealPosition()] = ebtcRoot[:]
 
 		// EarliestExitEpoch root.
@@ -297,7 +298,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[types.EarliestExitEpoch.RealPosition()] = eeeRoot[:]
 
 		// ConsolidationBalanceToConsume root.
-		cbtcRoot := ssz.Uint64Root(state.consolidationBalanceToConsume)
+		cbtcRoot := ssz.Uint64Root(uint64(state.consolidationBalanceToConsume))
 		fieldRoots[types.ConsolidationBalanceToConsume.RealPosition()] = cbtcRoot[:]
 
 		// EarliestConsolidationEpoch root.

@@ -11,6 +11,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
@@ -56,7 +57,8 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyParticipation
 	ReadOnlyInactivity
 	ReadOnlySyncCommittee
-	ReadOnlyElectra
+	ReadOnlyDeposits
+	ReadOnlyConsolidations
 	ToProtoUnsafe() interface{}
 	ToProto() interface{}
 	GenesisTime() uint64
@@ -88,8 +90,9 @@ type WriteOnlyBeaconState interface {
 	WriteOnlyParticipation
 	WriteOnlyInactivity
 	WriteOnlySyncCommittee
-	WriteOnlyPendingBalanceDeposits
-	WriteOnlyElectra
+	WriteOnlyConsolidations
+	WriteOnlyWithdrawals
+	WriteOnlyDeposits
 	SetGenesisTime(val uint64) error
 	SetGenesisValidatorsRoot(val []byte) error
 	SetSlot(val primitives.Slot) error
@@ -101,8 +104,6 @@ type WriteOnlyBeaconState interface {
 	AppendHistoricalRoots(root [32]byte) error
 	AppendHistoricalSummaries(*ethpb.HistoricalSummary) error
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
-	SetNextWithdrawalIndex(i uint64) error
-	SetNextWithdrawalValidatorIndex(i primitives.ValidatorIndex) error
 	SaveValidatorIndices()
 }
 
@@ -137,6 +138,7 @@ type ReadOnlyBalances interface {
 	Balances() []uint64
 	BalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error)
 	BalancesLength() int
+	ActiveBalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error)
 }
 
 // ReadOnlyCheckpoint defines a struct which only has read access to checkpoint methods.
@@ -188,6 +190,8 @@ type ReadOnlyWithdrawals interface {
 	ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, error)
 	NextWithdrawalValidatorIndex() (primitives.ValidatorIndex, error)
 	NextWithdrawalIndex() (uint64, error)
+	PendingBalanceToWithdraw(idx primitives.ValidatorIndex) (uint64, error)
+	NumPendingPartialWithdrawals() uint64
 }
 
 // ReadOnlyParticipation defines a struct which only has read access to participation methods.
@@ -207,18 +211,17 @@ type ReadOnlySyncCommittee interface {
 	NextSyncCommittee() (*ethpb.SyncCommittee, error)
 }
 
-type ReadOnlyElectra interface {
-	ConsolidationBalanceToConsume() (uint64, error)
-	DepositBalanceToConsume() (uint64, error)
+type ReadOnlyDeposits interface {
+	DepositBalanceToConsume() (math.Gwei, error)
 	DepositReceiptsStartIndex() (uint64, error)
-	EarliestConsolidationEpoch() (primitives.Epoch, error)
 	PendingBalanceDeposits() ([]*ethpb.PendingBalanceDeposit, error)
+}
+
+type ReadOnlyConsolidations interface {
+	ConsolidationBalanceToConsume() (math.Gwei, error)
+	EarliestConsolidationEpoch() (primitives.Epoch, error)
 	PendingConsolidations() ([]*ethpb.PendingConsolidation, error)
 	NumPendingConsolidations() uint64
-	NumPendingPartialWithdrawals() uint64
-	ExitEpochAndUpdateChurn(exitBalance uint64) (primitives.Epoch, error)
-	PendingBalanceToWithdraw(idx primitives.ValidatorIndex) (uint64, error)
-	ActiveBalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error)
 }
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.
@@ -239,6 +242,7 @@ type WriteOnlyEth1Data interface {
 	SetEth1DataVotes(val []*ethpb.Eth1Data) error
 	AppendEth1DataVotes(val *ethpb.Eth1Data) error
 	SetEth1DepositIndex(val uint64) error
+	ExitEpochAndUpdateChurn(exitBalance math.Gwei) (primitives.Epoch, error)
 }
 
 // WriteOnlyValidators defines a struct which only has write access to validators methods.
@@ -301,18 +305,23 @@ type WriteOnlySyncCommittee interface {
 	SetNextSyncCommittee(val *ethpb.SyncCommittee) error
 }
 
-type WriteOnlyPendingBalanceDeposits interface {
-	AppendPendingBalanceDeposit(index primitives.ValidatorIndex, amount uint64) error
+type WriteOnlyWithdrawals interface {
+	AppendPendingPartialWithdrawal(ppw *ethpb.PendingPartialWithdrawal) error
+	DequeuePartialWithdrawals(num uint64) error
+	SetNextWithdrawalIndex(i uint64) error
+	SetNextWithdrawalValidatorIndex(i primitives.ValidatorIndex) error
 }
 
-type WriteOnlyElectra interface {
-	SetConsolidationBalanceToConsume(gwei uint64) error
-	SetDepositReceiptsStartIndex(index uint64) error
-	SetEarliestConsolidationEpoch(epoch primitives.Epoch) error
-	SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDeposit) error
-	SetDepositBalanceToConsume(gwei uint64) error
-	SetPendingConsolidations(val []*ethpb.PendingConsolidation) error
-	DequeuePartialWithdrawals(num uint64) error
+type WriteOnlyConsolidations interface {
 	AppendPendingConsolidation(val *ethpb.PendingConsolidation) error
-	AppendPendingPartialWithdrawal(ppw *ethpb.PendingPartialWithdrawal) error
+	SetConsolidationBalanceToConsume(math.Gwei) error
+	SetEarliestConsolidationEpoch(epoch primitives.Epoch) error
+	SetPendingConsolidations(val []*ethpb.PendingConsolidation) error
+}
+
+type WriteOnlyDeposits interface {
+	AppendPendingBalanceDeposit(index primitives.ValidatorIndex, amount uint64) error
+	SetDepositReceiptsStartIndex(index uint64) error
+	SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDeposit) error
+	SetDepositBalanceToConsume(math.Gwei) error
 }

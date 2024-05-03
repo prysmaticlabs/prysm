@@ -1,7 +1,7 @@
 package state_native
 
 import (
-	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -30,7 +30,7 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionData, 
 	case version.Electra:
 		return blocks.WrappedExecutionPayloadHeaderElectra(b.latestExecutionPayloadHeaderElectraVal(), big.NewInt(0))
 	default:
-		return nil, errors.New("unsupported version for latest execution payload header")
+		return nil, fmt.Errorf("unsupported version (%s) for latest execution payload header", version.String(b.version))
 	}
 }
 

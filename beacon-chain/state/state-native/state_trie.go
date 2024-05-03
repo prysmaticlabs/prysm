@@ -2,6 +2,7 @@ package state_native
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"sort"
 
@@ -94,7 +95,10 @@ var denebFields = append(
 )
 
 var electraFields = append(
-	denebFields,
+	altairFields,
+	types.NextWithdrawalIndex,
+	types.NextWithdrawalValidatorIndex,
+	types.HistoricalSummaries,
 	types.LatestExecutionPayloadHeaderElectra,
 	types.DepositReceiptsStartIndex,
 	types.DepositBalanceToConsume,
@@ -1055,7 +1059,7 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	case version.Electra:
 		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateElectraFieldCount)
 	default:
-		return errors.New("unknown state version when computing dirty fields in merklization")
+		return fmt.Errorf("unknown state version (%s) when computing dirty fields in merklization", version.String(b.version))
 	}
 
 	return nil
@@ -1285,13 +1289,13 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case types.DepositReceiptsStartIndex:
 		return ssz.Uint64Root(b.depositReceiptsStartIndex), nil
 	case types.DepositBalanceToConsume:
-		return ssz.Uint64Root(b.depositBalanceToConsume), nil
+		return ssz.Uint64Root(uint64(b.depositBalanceToConsume)), nil
 	case types.ExitBalanceToConsume:
-		return ssz.Uint64Root(b.exitBalanceToConsume), nil
+		return ssz.Uint64Root(uint64(b.exitBalanceToConsume)), nil
 	case types.EarliestExitEpoch:
 		return ssz.Uint64Root(uint64(b.earliestExitEpoch)), nil
 	case types.ConsolidationBalanceToConsume:
-		return ssz.Uint64Root(b.consolidationBalanceToConsume), nil
+		return ssz.Uint64Root(uint64(b.consolidationBalanceToConsume)), nil
 	case types.EarliestConsolidationEpoch:
 		return ssz.Uint64Root(uint64(b.earliestConsolidationEpoch)), nil
 	case types.PendingBalanceDeposits:

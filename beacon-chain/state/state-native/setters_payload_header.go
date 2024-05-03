@@ -24,7 +24,7 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 	switch header := val.Proto().(type) {
 	case *enginev1.ExecutionPayload:
 		if b.version != version.Bellatrix {
-			return fmt.Errorf("wrong state version (%s) for belletrix execution payload", version.String(b.version))
+			return fmt.Errorf("wrong state version (%s) for bellatrix execution payload", version.String(b.version))
 		}
 		latest, err := consensusblocks.PayloadToHeader(val)
 		if err != nil {

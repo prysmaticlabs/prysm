@@ -1,6 +1,7 @@
 package state_native
 
 import (
+	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
@@ -8,7 +9,7 @@ import (
 // DepositBalanceToConsume is a non-mutating call to the beacon state which returns the value of the
 // deposit balance to consume field. This method requires access to the RLock on the state and only
 // applies in electra or later.
-func (b *BeaconState) DepositBalanceToConsume() (uint64, error) {
+func (b *BeaconState) DepositBalanceToConsume() (math.Gwei, error) {
 	if b.version < version.Electra {
 		return 0, errNotSupported("DepositBalanceToConsume", b.version)
 	}

@@ -121,7 +121,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 
 			v, err := b.validatorAtIndex(w.Index)
 			if err != nil {
-				return nil, 0, fmt.Errorf("failed to determine withdrawals: %w", err)
+				return nil, 0, fmt.Errorf("failed to determine withdrawals at index %d: %w", w.Index, err)
 			}
 			vBal, err := b.balanceAtIndex(w.Index)
 			if err != nil {

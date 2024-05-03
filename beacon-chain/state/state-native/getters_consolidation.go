@@ -2,6 +2,7 @@ package state_native
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
@@ -21,7 +22,7 @@ func (b *BeaconState) EarliestConsolidationEpoch() (primitives.Epoch, error) {
 // ConsolidationBalanceToConsume is a non-mutating call to the beacon state which returns the value
 // of the consolidation balance to consume field. This method requires access to the RLock on the
 // state and only applies in electra or later.
-func (b *BeaconState) ConsolidationBalanceToConsume() (uint64, error) {
+func (b *BeaconState) ConsolidationBalanceToConsume() (math.Gwei, error) {
 	if b.version < version.Electra {
 		return 0, errNotSupported("ConsolidationBalanceToConsume", b.version)
 	}

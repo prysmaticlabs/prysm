@@ -6,6 +6,7 @@ import (
 	"github.com/golang/snappy"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -26,7 +27,7 @@ func TestExitEpochAndUpdateChurn(t *testing.T) {
 	val, err := s.ValidatorAtIndex(0)
 	require.NoError(t, err)
 
-	ee, err := s.ExitEpochAndUpdateChurn(val.EffectiveBalance)
+	ee, err := s.ExitEpochAndUpdateChurn(math.Gwei(val.EffectiveBalance))
 	require.NoError(t, err)
 	require.Equal(t, primitives.Epoch(262), ee)
 

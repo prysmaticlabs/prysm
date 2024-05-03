@@ -115,7 +115,7 @@ func (f FieldIndex) String() string {
 	case PendingConsolidations:
 		return "pendingConsolidations"
 	default:
-		return fmt.Sprintf("unknown field index name: %d", f)
+		return fmt.Sprintf("unknown field index number: %d", f)
 	}
 }
 

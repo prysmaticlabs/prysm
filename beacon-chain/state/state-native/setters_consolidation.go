@@ -4,6 +4,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
@@ -68,7 +69,7 @@ func (b *BeaconState) SetEarliestConsolidationEpoch(epoch primitives.Epoch) erro
 // SetConsolidationBalanceToConsume is a mutating call to the beacon state which sets the value of
 // the consolidation balance to consume to the provided value. This method requires access to the
 // Lock on the state and only applies in electra or later.
-func (b *BeaconState) SetConsolidationBalanceToConsume(balance uint64) error {
+func (b *BeaconState) SetConsolidationBalanceToConsume(balance math.Gwei) error {
 	if b.version < version.Electra {
 		return errNotSupported("SetConsolidationBalanceToConsume", b.version)
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
@@ -63,10 +64,10 @@ type BeaconState struct {
 
 	// Electra fields
 	depositReceiptsStartIndex     uint64
-	depositBalanceToConsume       uint64 // Gwei
-	exitBalanceToConsume          uint64 // Gwei
+	depositBalanceToConsume       math.Gwei
+	exitBalanceToConsume          math.Gwei
 	earliestExitEpoch             primitives.Epoch
-	consolidationBalanceToConsume uint64 // Gwei
+	consolidationBalanceToConsume math.Gwei
 	earliestConsolidationEpoch    primitives.Epoch
 	pendingBalanceDeposits        []*ethpb.PendingBalanceDeposit    // pending_balance_deposits: List[PendingBalanceDeposit, PENDING_BALANCE_DEPOSITS_LIMIT]
 	pendingPartialWithdrawals     []*ethpb.PendingPartialWithdrawal // pending_partial_withdrawals: List[PartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
@@ -119,11 +120,11 @@ type beaconStateMarshalable struct {
 	LatestExecutionPayloadHeaderElectra *enginev1.ExecutionPayloadHeaderElectra `json:"latest_execution_payload_header_electra" yaml:"latest_execution_payload_header_electra"`
 	NextWithdrawalIndex                 uint64                                  `json:"next_withdrawal_index" yaml:"next_withdrawal_index"`
 	NextWithdrawalValidatorIndex        primitives.ValidatorIndex               `json:"next_withdrawal_validator_index" yaml:"next_withdrawal_validator_index"`
-	DepositReceiptsStartIndex           uint64                                  `json:"deposit_receipt_start_index" yaml:"deposit_receipt_start_index"`
-	DepositBalanceToConsume             uint64                                  `json:"deposit_balance_to_consume" yaml:"deposit_balance_to_consume"`
-	ExitBalanceToConsume                uint64                                  `json:"exit_balance_to_consume" yaml:"exit_balance_to_consume"`
+	DepositReceiptsStartIndex           uint64                                  `json:"deposit_receipts_start_index" yaml:"deposit_receipts_start_index"`
+	DepositBalanceToConsume             math.Gwei                               `json:"deposit_balance_to_consume" yaml:"deposit_balance_to_consume"`
+	ExitBalanceToConsume                math.Gwei                               `json:"exit_balance_to_consume" yaml:"exit_balance_to_consume"`
 	EarliestExitEpoch                   primitives.Epoch                        `json:"earliest_exit_epoch" yaml:"earliest_exit_epoch"`
-	ConsolidationBalanceToConsume       uint64                                  `json:"consolidation_balance_to_consume" yaml:"consolidation_balance_to_consume"`
+	ConsolidationBalanceToConsume       math.Gwei                               `json:"consolidation_balance_to_consume" yaml:"consolidation_balance_to_consume"`
 	EarliestConsolidationEpoch          primitives.Epoch                        `json:"earliest_consolidation_epoch" yaml:"earliest_consolidation_epoch"`
 	PendingBalanceDeposits              []*ethpb.PendingBalanceDeposit          `json:"pending_balance_deposits" yaml:"pending_balance_deposits"`
 	PendingPartialWithdrawals           []*ethpb.PendingPartialWithdrawal       `json:"pending_partial_withdrawals" yaml:"pending_partial_withdrawals"`
