@@ -284,8 +284,7 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 func (b *BeaconBlockBody) Attestations() []interfaces.Attestation {
 	panic("implement me")
 }
-
-func (b *BeaconBlockBody) Consolidations() ([]*eth.SignedConsolidation, error) {
+func (b *BeaconBlockBody) Consolidations() []*eth.SignedConsolidation {
 	panic("implement me")
 }
 
@@ -296,3 +295,4 @@ func (b *BeaconBlockBody) Version() int {
 var _ interfaces.ReadOnlySignedBeaconBlock = &SignedBeaconBlock{}
 var _ interfaces.ReadOnlyBeaconBlock = &BeaconBlock{}
 var _ interfaces.ReadOnlyBeaconBlockBody = &BeaconBlockBody{}
+var _ interfaces.ROBlockBodyElectra = &BeaconBlockBody{}
