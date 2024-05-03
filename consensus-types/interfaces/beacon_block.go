@@ -102,12 +102,20 @@ type SignedBeaconBlock interface {
 	Unblind(e ExecutionData) error
 }
 
+// ProtoSSZ is satisfied by any of the types that use our protobuf + fastssz codegen.
+type ProtoSSZ interface {
+	MarshalSSZ() ([]byte, error)
+	MarshalSSZTo(dst []byte) ([]byte, error)
+	SizeSSZ() int
+	UnmarshalSSZ(buf []byte) error
+	HashTreeRoot() ([32]byte, error)
+	HashTreeRootWith(hh *ssz.Hasher) error
+}
+
 // ExecutionData represents execution layer information that is contained
 // within post-Bellatrix beacon block bodies.
 type ExecutionData interface {
-	ssz.Marshaler
-	ssz.Unmarshaler
-	ssz.HashRoot
+	ProtoSSZ
 	IsNil() bool
 	IsBlinded() bool
 	Proto() proto.Message
@@ -142,9 +150,7 @@ type ExecutionDataElectra interface {
 
 type Attestation interface {
 	proto.Message
-	ssz.Marshaler
-	ssz.Unmarshaler
-	ssz.HashRoot
+	ProtoSSZ
 	Version() int
 	GetAggregationBits() bitfield.Bitlist
 	GetData() *ethpb.AttestationData
@@ -154,9 +160,7 @@ type Attestation interface {
 
 type AttesterSlashing interface {
 	proto.Message
-	ssz.Marshaler
-	ssz.Unmarshaler
-	ssz.HashRoot
+	ProtoSSZ
 	Version() int
 	GetFirstAttestation() ethpb.IndexedAtt
 	GetSecondAttestation() ethpb.IndexedAtt
