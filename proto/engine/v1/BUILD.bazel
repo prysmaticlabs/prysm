@@ -54,6 +54,7 @@ ssz_gen_marshal(
 	"ExecutionPayloadEPBS",
 	"ExecutionPayloadEnvelope",
 	"SignedExecutionPayloadHeader",
+        "SignedExecutionPayloadEnvelope",
         "BlindedBlobsBundle",
         "BlobsBundle",
         "Withdrawal",
