@@ -188,24 +188,6 @@ service BeaconNodeValidator {
         };
     }
 
-    // Submit selection proof to the beacon node to aggregate all matching wire attestations with the same data root.
-    // the beacon node responses with an aggregate and proof object back to validator to sign over.
-    rpc SubmitAggregateSelectionProof(AggregateSelectionRequest) returns (AggregateSelectionResponse) {
-        option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/aggregate"
-            body: "*"
-        };
-    }
-
-    // Submit a signed aggregate and proof object, the beacon node will broadcast the
-    // signed aggregated attestation and proof object.
-    rpc SubmitSignedAggregateSelectionProof(SignedAggregateSubmitRequest) returns (SignedAggregateSubmitResponse) {
-        option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/aggregate"
-            body: "*"
-        };
-    }
-
     // Sends the newly signed attestation to beacon node.
     //
     // The validator sends the newly signed attestation to the beacon node for the attestation to
@@ -220,7 +202,16 @@ service BeaconNodeValidator {
 
     // Submit selection proof to the beacon node to aggregate all matching wire attestations with the same data root.
     // the beacon node responses with an aggregate and proof object back to validator to sign over.
-    rpc SubmitAggregateSelectionProofElectra(AggregateSelectionRequest) returns (AggregateSelectionResponseElectra) {
+    rpc SubmitAggregateSelectionProof(AggregateSelectionRequest) returns (AggregateSelectionResponse) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/aggregate"
+            body: "*"
+        };
+    }
+
+    // Submit selection proof to the beacon node to aggregate all matching wire attestations with the same data root.
+    // the beacon node responses with an aggregate and proof object back to validator to sign over.
+    rpc SubmitAggregateSelectionProofElectra(AggregateSelectionRequest) returns (AggregateSelectionElectraResponse) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/aggregate_electra"
             body: "*"
@@ -229,7 +220,16 @@ service BeaconNodeValidator {
 
     // Submit a signed aggregate and proof object, the beacon node will broadcast the
     // signed aggregated attestation and proof object.
-    rpc SubmitSignedAggregateSelectionProofElectra(SignedAggregateSubmitRequestElectra) returns (SignedAggregateSubmitResponse) {
+    rpc SubmitSignedAggregateSelectionProof(SignedAggregateSubmitRequest) returns (SignedAggregateSubmitResponse) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/aggregate"
+            body: "*"
+        };
+    }
+
+    // Submit a signed aggregate and proof object, the beacon node will broadcast the
+    // signed aggregated attestation and proof object.
+    rpc SubmitSignedAggregateSelectionProofElectra(SignedAggregateSubmitElectraRequest) returns (SignedAggregateSubmitResponse) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/aggregate_electra"
             body: "*"
@@ -632,7 +632,7 @@ message AggregateSelectionResponse {
     AggregateAttestationAndProof aggregate_and_proof = 1;
 }
 
-message AggregateSelectionResponseElectra {
+message AggregateSelectionElectraResponse {
     // The aggregate and proof message without the signature.
     AggregateAttestationAndProofElectra aggregate_and_proof = 1;
 }
@@ -642,7 +642,7 @@ message SignedAggregateSubmitRequest {
     SignedAggregateAttestationAndProof signed_aggregate_and_proof = 1;
 }
 
-message SignedAggregateSubmitRequestElectra {
+message SignedAggregateSubmitElectraRequest {
     // The signed aggregate and proof message with the signature.
     SignedAggregateAttestationAndProofElectra signed_aggregate_and_proof = 1;
 }

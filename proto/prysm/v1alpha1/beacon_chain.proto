@@ -53,7 +53,7 @@ service BeaconChain {
     // filter criteria. This RPC should not return NOT_FOUND. Only one filter
     // criteria should be used. This endpoint allows for retrieval of genesis
     // information via a boolean query filter.
-    rpc ListAttestationsElectra(ListAttestationsRequest) returns (ListAttestationsResponseElectra) {
+    rpc ListAttestationsElectra(ListAttestationsRequest) returns (ListAttestationsElectraResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/attestations_electra"
         };
@@ -77,7 +77,7 @@ service BeaconChain {
     // filter criteria. This RPC should not return NOT_FOUND. Only one filter
     // criteria should be used. This endpoint allows for retrieval of genesis
     // information via a boolean query filter.
-    rpc ListIndexedAttestationsElectra(ListIndexedAttestationsRequest) returns (ListIndexedAttestationsResponse) {
+    rpc ListIndexedAttestationsElectra(ListIndexedAttestationsRequest) returns (ListIndexedAttestationsElectraResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/attestations/indexed_electra"
         };
@@ -107,7 +107,7 @@ service BeaconChain {
     // Refer to the Ethereum Beacon Chain specification for more details on how
     // attestations are processed and when they are no longer valid.
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
-    rpc AttestationPoolElectra(AttestationPoolRequest) returns (AttestationPoolResponseElectra) {
+    rpc AttestationPoolElectra(AttestationPoolRequest) returns (AttestationPoolElectraResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/attestations/pool_electra"
         };
@@ -320,7 +320,7 @@ message ListAttestationsResponse {
     int32 total_size = 3;
 }
 
-message ListAttestationsResponseElectra {
+message ListAttestationsElectraResponse {
     repeated AttestationElectra attestations = 1;
 
     // A pagination token returned from a previous call to `ListAttestations`
@@ -850,7 +850,7 @@ message AttestationPoolResponse {
     int32 total_size = 3;
 }
 
-message AttestationPoolResponseElectra {
+message AttestationPoolElectraResponse {
     // List of attestations currently in the pool of the beacon chain.
     repeated AttestationElectra attestations = 1;
 
