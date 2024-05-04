@@ -6,9 +6,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -38,7 +40,7 @@ import (
 //	     data=attestation.data,
 //	     signature=attestation.signature,
 //	 )
-func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committees [][]primitives.ValidatorIndex) (ethpb.IndexedAtt, error) {
+func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committees ...[]primitives.ValidatorIndex) (ethpb.IndexedAtt, error) {
 	attIndices, err := AttestingIndices(attestation, committees)
 	if err != nil {
 		return nil, err
@@ -85,18 +87,7 @@ func AttestingIndices(att interfaces.Attestation, committees [][]primitives.Vali
 	aggBits := att.GetAggregationBits()
 
 	if att.Version() < version.Electra {
-		committee := committees[0]
-		if aggBits.Len() != uint64(len(committee)) {
-			return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", aggBits.Len(), len(committee))
-		}
-		indices := make([]uint64, 0, aggBits.Count())
-		p := aggBits.BitIndices()
-		for _, idx := range p {
-			if idx < len(committee) {
-				indices = append(indices, uint64(committee[idx]))
-			}
-		}
-		return indices, nil
+		return attestingIndicesPhase0(aggBits, committees[0])
 	}
 
 	committeesLen := 0
@@ -120,7 +111,8 @@ func AttestingIndices(att interfaces.Attestation, committees [][]primitives.Vali
 		committeeOffset += len(c)
 	}
 
-	return attesters, nil
+	slices.Sort(attesters)
+	return slices.Compact(attesters), nil
 }
 
 // VerifyIndexedAttestationSig this helper function performs the last part of the
@@ -251,4 +243,30 @@ func CheckPointIsEqual(checkPt1, checkPt2 *ethpb.Checkpoint) bool {
 		return false
 	}
 	return true
+}
+
+// attestingIndicesPhase0 returns the attesting participants indices from the attestation data.
+// Committees are provided as an argument rather than an imported implementation from the spec definition.
+// Having committees as an argument allows for re-use of beacon committees when possible.
+//
+// Spec pseudocode definition (Phase0 version):
+//
+//	def get_attesting_indices(state: BeaconState, attestation: Attestation) -> Set[ValidatorIndex]:
+//	    """
+//	    Return the set of attesting indices corresponding to ``data`` and ``bits``.
+//	    """
+//	    committee = get_beacon_committee(state, attestation.data.slot, attestation.data.index)
+//	    return set(index for i, index in enumerate(committee) if attestation.aggregation_bits[i])
+func attestingIndicesPhase0(aggBits bitfield.Bitlist, committee []primitives.ValidatorIndex) ([]uint64, error) {
+	if aggBits.Len() != uint64(len(committee)) {
+		return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", aggBits.Len(), len(committee))
+	}
+	indices := make([]uint64, 0, aggBits.Count())
+	p := aggBits.BitIndices()
+	for _, idx := range p {
+		if idx < len(committee) {
+			indices = append(indices, uint64(committee[idx]))
+		}
+	}
+	return indices, nil
 }

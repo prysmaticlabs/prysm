@@ -196,7 +196,7 @@ func createAttestationSignatureBatch(
 		if err != nil {
 			return nil, err
 		}
-		ia, err := attestation.ConvertToIndexed(ctx, a, [][]primitives.ValidatorIndex{c})
+		ia, err := attestation.ConvertToIndexed(ctx, a, c)
 		if err != nil {
 			return nil, err
 		}

@@ -74,6 +74,14 @@ func TestAttestingIndices(t *testing.T) {
 			},
 			err: "bitfield length 5 is not equal to committee length 4",
 		},
+		{
+			name: "Electra - No duplicates",
+			args: args{
+				att:        &eth.AttestationElectra{AggregationBits: bitfield.Bitlist{0b11111}},
+				committees: [][]primitives.ValidatorIndex{{0, 1}, {0, 1}},
+			},
+			want: []uint64{0, 1},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

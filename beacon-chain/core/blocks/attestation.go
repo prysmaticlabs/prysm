@@ -124,7 +124,7 @@ func VerifyAttestationNoVerifySignature(
 		if err != nil {
 			return err
 		}
-		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, [][]primitives.ValidatorIndex{committee})
+		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committee)
 		if err != nil {
 			return err
 		}
@@ -150,7 +150,7 @@ func VerifyAttestationNoVerifySignature(
 		if att.GetAggregationBits().Len() != uint64(participantsCount) {
 			return fmt.Errorf("aggregation bits count %d is different than participant count %d", att.GetAggregationBits().Len(), participantsCount)
 		}
-		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committees)
+		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committees...)
 		if err != nil {
 			return err
 		}
@@ -210,7 +210,7 @@ func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyB
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, [][]primitives.ValidatorIndex{committee})
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
 	if err != nil {
 		return err
 	}
