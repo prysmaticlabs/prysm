@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -90,64 +89,32 @@ func convertToBlockContainer(blk interfaces.ReadOnlySignedBeaconBlock, root [32]
 		Canonical: isCanonical,
 	}
 
-	switch blk.Version() {
-	case version.Phase0:
-		rBlk, err := blk.PbPhase0Block()
-		if err != nil {
-			return nil, err
-		}
-		ctr.Block = &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: rBlk}
-	case version.Altair:
-		rBlk, err := blk.PbAltairBlock()
-		if err != nil {
-			return nil, err
-		}
-		ctr.Block = &ethpb.BeaconBlockContainer_AltairBlock{AltairBlock: rBlk}
-	case version.Bellatrix:
-		if blk.IsBlinded() {
-			rBlk, err := blk.PbBlindedBellatrixBlock()
-			if err != nil {
-				return nil, err
-			}
-			ctr.Block = &ethpb.BeaconBlockContainer_BlindedBellatrixBlock{BlindedBellatrixBlock: rBlk}
-		} else {
-			rBlk, err := blk.PbBellatrixBlock()
-			if err != nil {
-				return nil, err
-			}
-			ctr.Block = &ethpb.BeaconBlockContainer_BellatrixBlock{BellatrixBlock: rBlk}
-		}
-	case version.Capella:
-		if blk.IsBlinded() {
-			rBlk, err := blk.PbBlindedCapellaBlock()
-			if err != nil {
-				return nil, err
-			}
-			ctr.Block = &ethpb.BeaconBlockContainer_BlindedCapellaBlock{BlindedCapellaBlock: rBlk}
-		} else {
-			rBlk, err := blk.PbCapellaBlock()
-			if err != nil {
-				return nil, err
-			}
-			ctr.Block = &ethpb.BeaconBlockContainer_CapellaBlock{CapellaBlock: rBlk}
-		}
-	case version.Deneb:
-		if blk.IsBlinded() {
-			rBlk, err := blk.PbBlindedDenebBlock()
-			if err != nil {
-				return nil, err
-			}
-			ctr.Block = &ethpb.BeaconBlockContainer_BlindedDenebBlock{BlindedDenebBlock: rBlk}
-		} else {
-			rBlk, err := blk.PbDenebBlock()
-			if err != nil {
-				return nil, err
-			}
-			ctr.Block = &ethpb.BeaconBlockContainer_DenebBlock{DenebBlock: rBlk}
-		}
+	pb, err := blk.Proto()
+	if err != nil {
+		return nil, err
+	}
+
+	switch pbStruct := pb.(type) {
+	case *ethpb.SignedBeaconBlock:
+		ctr.Block = &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: pbStruct}
+	case *ethpb.SignedBeaconBlockAltair:
+		ctr.Block = &ethpb.BeaconBlockContainer_AltairBlock{AltairBlock: pbStruct}
+	case *ethpb.SignedBlindedBeaconBlockBellatrix:
+		ctr.Block = &ethpb.BeaconBlockContainer_BlindedBellatrixBlock{BlindedBellatrixBlock: pbStruct}
+	case *ethpb.SignedBeaconBlockBellatrix:
+		ctr.Block = &ethpb.BeaconBlockContainer_BellatrixBlock{BellatrixBlock: pbStruct}
+	case *ethpb.SignedBlindedBeaconBlockCapella:
+		ctr.Block = &ethpb.BeaconBlockContainer_BlindedCapellaBlock{BlindedCapellaBlock: pbStruct}
+	case *ethpb.SignedBeaconBlockCapella:
+		ctr.Block = &ethpb.BeaconBlockContainer_CapellaBlock{CapellaBlock: pbStruct}
+	case *ethpb.SignedBlindedBeaconBlockDeneb:
+		ctr.Block = &ethpb.BeaconBlockContainer_BlindedDenebBlock{BlindedDenebBlock: pbStruct}
+	case *ethpb.SignedBeaconBlockDeneb:
+		ctr.Block = &ethpb.BeaconBlockContainer_DenebBlock{DenebBlock: pbStruct}
 	default:
 		return nil, errors.Errorf("block type is not recognized: %d", blk.Version())
 	}
+
 	return ctr, nil
 }
 

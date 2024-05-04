@@ -310,7 +310,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	NodeIdBits:                      256,
 
 	// PeerDAS
-	NumberOfColumns: 128,
+	NumberOfColumns:          128,
+	MaxCellsInExtendedMatrix: 768,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

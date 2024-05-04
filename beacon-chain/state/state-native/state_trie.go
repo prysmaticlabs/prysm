@@ -759,7 +759,8 @@ func (b *BeaconState) Copy() state.BeaconState {
 		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 
 		// Share the reference to validator index map.
-		valMapHandler: b.valMapHandler,
+		valMapHandler:       b.valMapHandler,
+		validatorIndexCache: b.validatorIndexCache,
 	}
 
 	if features.Get().EnableExperimentalState {
