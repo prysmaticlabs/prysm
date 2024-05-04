@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -213,7 +212,6 @@ func (bs *Server) ListIndexedAttestations(
 	if err != nil {
 		return nil, err
 	}
-
 	// If there are no attestations, we simply return a response specifying this.
 	// Otherwise, attempting to paginate 0 attestations below would result in an error.
 	if len(indexedAtts) == 0 {

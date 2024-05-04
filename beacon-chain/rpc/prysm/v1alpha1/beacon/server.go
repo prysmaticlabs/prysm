@@ -51,22 +51,7 @@ type Server struct {
 	CoreService                 *core.Service
 }
 
-func (bs *Server) ListIndexedAttestationsElectra(ctx context.Context, request *ethpb.ListIndexedAttestationsRequest) (*ethpb.ListIndexedAttestationsResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (bs *Server) SubmitAttesterSlashingElectra(ctx context.Context, electra *ethpb.AttesterSlashingElectra) (*ethpb.SubmitSlashingResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (bs *Server) ListAttestationsElectra(ctx context.Context, request *ethpb.ListAttestationsRequest) (*ethpb.ListAttestationsResponseElectra, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (bs *Server) AttestationPoolElectra(ctx context.Context, request *ethpb.AttestationPoolRequest) (*ethpb.AttestationPoolResponseElectra, error) {
 	//TODO implement me
 	panic("implement me")
 }
