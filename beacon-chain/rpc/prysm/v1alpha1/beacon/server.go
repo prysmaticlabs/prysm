@@ -50,8 +50,3 @@ type Server struct {
 	OptimisticModeFetcher       blockchain.OptimisticModeFetcher
 	CoreService                 *core.Service
 }
-
-func (bs *Server) SubmitAttesterSlashingElectra(ctx context.Context, electra *ethpb.AttesterSlashingElectra) (*ethpb.SubmitSlashingResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
