@@ -194,7 +194,7 @@ func (s *Service) checkDoubleVotes(
 			// This is a double vote.
 			doubleVotesTotal.Inc()
 
-			var slashing interfaces.AttesterSlashing
+			var slashing ethpb.AttSlashing
 
 			// Both attestations should have the same type
 			if existingAttWrapper.IndexedAttestation.Version() >= version.Electra && incomingAttWrapper.IndexedAttestation.Version() < version.Electra {
@@ -285,7 +285,7 @@ func (s *Service) checkDoubleVotes(
 		wrapper_1 := doubleVote.Wrapper_1
 		wrapper_2 := doubleVote.Wrapper_2
 
-		var slashing interfaces.AttesterSlashing
+		var slashing ethpb.AttSlashing
 
 		// Both attestations should have the same type
 		if wrapper_1.IndexedAttestation.Version() >= version.Electra && wrapper_2.IndexedAttestation.Version() < version.Electra {
