@@ -95,6 +95,17 @@ func (vs *Server) ProposeAttestationElectra(ctx context.Context, att *ethpb.Atte
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.ProposeAttestationElectra")
 	defer span.End()
 
+	if att.GetData().CommitteeIndex != 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Committee index must be set to 0")
+	}
+	committeeIndices := helpers.CommitteeIndices(att.CommitteeBits)
+	if len(committeeIndices) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Committee bits has no bit set")
+	}
+	if len(committeeIndices) > 1 {
+		return nil, status.Errorf(codes.InvalidArgument, "Committee bits has more than one index set")
+	}
+
 	if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
 	}
@@ -118,15 +129,12 @@ func (vs *Server) ProposeAttestationElectra(ctx context.Context, att *ethpb.Atte
 	if err != nil {
 		return nil, err
 	}
-	committeeIndices := helpers.CommitteeIndices(att.CommitteeBits)
-	// TODO: as this is an unaggregated attestation, there should be only one committee index. Check this and return an error?
-	for _, ix := range committeeIndices {
-		// Determine subnet to broadcast attestation to
-		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), ix, att.Data.Slot)
-		// Broadcast the new attestation to the network.
-		if err := vs.P2P.BroadcastAttestation(ctx, subnet, att); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast attestation: %v", err)
-		}
+
+	// Determine subnet to broadcast attestation to
+	subnet := helpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), committeeIndices[0], att.Data.Slot)
+	// Broadcast the new attestation to the network.
+	if err := vs.P2P.BroadcastAttestation(ctx, subnet, att); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast attestation: %v", err)
 	}
 
 	go func() {
