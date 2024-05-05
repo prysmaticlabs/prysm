@@ -54,9 +54,7 @@ func mapAttestationsByTargetRoot(atts []interfaces.Attestation) map[[32]byte][]i
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
 // criteria should be used.
-func (bs *Server) ListAttestations(
-	ctx context.Context, req *ethpb.ListAttestationsRequest,
-) (*ethpb.ListAttestationsResponse, error) {
+func (bs *Server) ListAttestations(ctx context.Context, req *ethpb.ListAttestationsRequest) (*ethpb.ListAttestationsResponse, error) {
 	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
@@ -181,9 +179,7 @@ func (bs *Server) ListAttestationsElectra(ctx context.Context, req *ethpb.ListAt
 //
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND.
-func (bs *Server) ListIndexedAttestations(
-	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
-) (*ethpb.ListIndexedAttestationsResponse, error) {
+func (bs *Server) ListIndexedAttestations(ctx context.Context, req *ethpb.ListIndexedAttestationsRequest) (*ethpb.ListIndexedAttestationsResponse, error) {
 	var blocks []interfaces.ReadOnlySignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
@@ -304,9 +300,7 @@ func (bs *Server) ListIndexedAttestationsElectra(
 // Refer to the ethereum consensus specification for more details on how
 // attestations are processed and when they are no longer valid.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
-func (bs *Server) AttestationPool(
-	_ context.Context, req *ethpb.AttestationPoolRequest,
-) (*ethpb.AttestationPoolResponse, error) {
+func (bs *Server) AttestationPool(_ context.Context, req *ethpb.AttestationPoolRequest) (*ethpb.AttestationPoolResponse, error) {
 	atts, err := attestationsFromPool[*ethpb.Attestation](req.PageSize, bs.AttestationsPool)
 	if err != nil {
 		return nil, err
