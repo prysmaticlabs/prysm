@@ -36,24 +36,6 @@ func (v *ValidatorMapHandler) IsNil() bool {
 	return v.mapRef == nil || v.valIdxMap == nil
 }
 
-// Copy the whole map and returns a map handler with the copied map.
-func (v *ValidatorMapHandler) Copy() *ValidatorMapHandler {
-	if v == nil || v.valIdxMap == nil {
-		return &ValidatorMapHandler{valIdxMap: map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex{}, mapRef: new(Reference), RWMutex: new(sync.RWMutex)}
-	}
-	v.RLock()
-	defer v.RUnlock()
-	m := make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex, len(v.valIdxMap))
-	for k, v := range v.valIdxMap {
-		m[k] = v
-	}
-	return &ValidatorMapHandler{
-		valIdxMap: m,
-		mapRef:    &Reference{refs: 1},
-		RWMutex:   new(sync.RWMutex),
-	}
-}
-
 // Get the validator index using the corresponding public key.
 func (v *ValidatorMapHandler) Get(key [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
 	v.RLock()
