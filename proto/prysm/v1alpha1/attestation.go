@@ -2,14 +2,72 @@ package eth
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
+
+type Att interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	Copy() Att
+	GetAggregationBits() bitfield.Bitlist
+	GetData() *AttestationData
+	GetCommitteeBitsVal() bitfield.Bitfield
+	GetSignature() []byte
+}
+
+type IndexedAtt interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	GetAttestingIndices() []uint64
+	GetData() *AttestationData
+	GetSignature() []byte
+}
+
+type SignedAggregateAttAndProof interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	GetAggregateAttestationAndProofVal() AggregateAttestationAndProof
+	GetSignature() []byte
+}
+
+type AggregateAttAndProof interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	GetAggregatorIndex() primitives.ValidatorIndex
+	GetAggregateVal() Att
+	GetSelectionProof() []byte
+}
+
+type AttSlashing interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	GetFirstAttestation() IndexedAtt
+	GetSecondAttestation() IndexedAtt
+}
 
 func (a *Attestation) Version() int {
 	return version.Phase0
 }
 
-func (a *Attestation) GetCommitteeBits() bitfield.Bitlist {
+func (a *Attestation) Copy() Att {
+	return CopyAttestation(a)
+}
+
+func (a *Attestation) GetCommitteeBitsVal() bitfield.Bitfield {
 	return nil
 }
 
@@ -17,7 +75,11 @@ func (a *PendingAttestation) Version() int {
 	return version.Phase0
 }
 
-func (a *PendingAttestation) GetCommitteeBits() bitfield.Bitlist {
+func (a *PendingAttestation) Copy() Att {
+	return CopyPendingAttestation(a)
+}
+
+func (a *PendingAttestation) GetCommitteeBitsVal() bitfield.Bitfield {
 	return nil
 }
 
@@ -27,6 +89,10 @@ func (a *PendingAttestation) GetSignature() []byte {
 
 func (a *AttestationElectra) Version() int {
 	return version.Electra
+}
+
+func (a *AttestationElectra) Copy() Att {
+	return CopyAttestationElectra(a)
 }
 
 func (a *AttestationElectra) GetCommitteeBitsVal() bitfield.Bitfield {
@@ -63,4 +129,20 @@ func (a *AttesterSlashingElectra) GetFirstAttestation() IndexedAtt {
 
 func (a *AttesterSlashingElectra) GetSecondAttestation() IndexedAtt {
 	return a.Attestation_2
+}
+
+func (a *AggregateAttestationAndProof) GetAggregateVal() Att {
+	return a.Aggregate
+}
+
+func (a *AggregateAttestationAndProofElectra) GetAggregateVal() Att {
+	return a.Aggregate
+}
+
+func (a *SignedAggregateAttestationAndProof) GetAggregateAttestationAndProofVal() AggregateAttAndProof {
+	return a.Message
+}
+
+func (a *SignedAggregateAttestationAndProofElectra) GetAggregateAttestationAndProofVal() AggregateAttAndProof {
+	return a.Message
 }

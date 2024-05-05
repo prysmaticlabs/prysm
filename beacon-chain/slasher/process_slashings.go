@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
@@ -14,9 +13,9 @@ import (
 // Verifies attester slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
 func (s *Service) processAttesterSlashings(
-	ctx context.Context, slashings map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing,
-) (map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing, error) {
-	processedSlashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{}
+	ctx context.Context, slashings map[[fieldparams.RootLength]byte]ethpb.AttSlashing,
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
+	processedSlashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// If no slashings, return early.
 	if len(slashings) == 0 {

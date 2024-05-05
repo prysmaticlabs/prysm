@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -26,7 +25,7 @@ func (s *Service) voluntaryExitSubscriber(_ context.Context, msg proto.Message) 
 }
 
 func (s *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Message) error {
-	aSlashing, ok := msg.(interfaces.AttesterSlashing)
+	aSlashing, ok := msg.(ethpb.AttSlashing)
 	if !ok {
 		return fmt.Errorf("wrong type, expected: *ethpb.AttesterSlashing got: %T", msg)
 	}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -39,7 +38,7 @@ import (
 //
 //	 # Update latest messages for attesting indices
 //	 update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
-func (s *Service) OnAttestation(ctx context.Context, a interfaces.Attestation, disparity time.Duration) error {
+func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time.Duration) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
 

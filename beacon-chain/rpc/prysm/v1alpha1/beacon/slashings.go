@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/v5/config/features"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -51,7 +50,7 @@ func (bs *Server) SubmitAttesterSlashingElectra(ctx context.Context, req *ethpb.
 	return bs.submitAttesterSlashing(ctx, req)
 }
 
-func (bs *Server) submitAttesterSlashing(ctx context.Context, slashing interfaces.AttesterSlashing) (*ethpb.SubmitSlashingResponse, error) {
+func (bs *Server) submitAttesterSlashing(ctx context.Context, slashing ethpb.AttSlashing) (*ethpb.SubmitSlashingResponse, error) {
 	beaconState, err := bs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)

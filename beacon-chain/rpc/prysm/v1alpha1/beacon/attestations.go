@@ -24,7 +24,7 @@ import (
 
 // sortableAttestations implements the Sort interface to sort attestations
 // by slot as the canonical sorting attribute.
-type sortableAttestations []interfaces.Attestation
+type sortableAttestations []ethpb.Att
 
 // Len is the number of elements in the collection.
 func (s sortableAttestations) Len() int { return len(s) }
@@ -37,8 +37,8 @@ func (s sortableAttestations) Less(i, j int) bool {
 	return s[i].GetData().Slot < s[j].GetData().Slot
 }
 
-func mapAttestationsByTargetRoot(atts []interfaces.Attestation) map[[32]byte][]interfaces.Attestation {
-	attsMap := make(map[[32]byte][]interfaces.Attestation, len(atts))
+func mapAttestationsByTargetRoot(atts []ethpb.Att) map[[32]byte][]ethpb.Att {
+	attsMap := make(map[[32]byte][]ethpb.Att, len(atts))
 	if len(atts) == 0 {
 		return attsMap
 	}
@@ -354,8 +354,8 @@ func (bs *Server) AttestationPoolElectra(_ context.Context, req *ethpb.Attestati
 	}, nil
 }
 
-func blockAttestations[T interfaces.Attestation](blocks []interfaces.ReadOnlySignedBeaconBlock) ([]T, error) {
-	blockAtts := make([]interfaces.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+func blockAttestations[T ethpb.Att](blocks []interfaces.ReadOnlySignedBeaconBlock) ([]T, error) {
+	blockAtts := make([]ethpb.Att, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, blk := range blocks {
 		blockAtts = append(blockAtts, blk.Block().Body().Attestations()...)
 	}
@@ -384,7 +384,7 @@ func blockIndexedAttestations[T ethpb.IndexedAtt](
 	blocks []interfaces.ReadOnlySignedBeaconBlock,
 	stateGen stategen.StateManager,
 ) ([]T, error) {
-	attsArray := make([]interfaces.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	attsArray := make([]ethpb.Att, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, b := range blocks {
 		attsArray = append(attsArray, b.Block().Body().Attestations()...)
 	}
@@ -440,7 +440,7 @@ func blockIndexedAttestations[T ethpb.IndexedAtt](
 	return indexed, nil
 }
 
-func attestationsFromPool[T interfaces.Attestation](pageSize int32, pool attestations.Pool) ([]T, error) {
+func attestationsFromPool[T ethpb.Att](pageSize int32, pool attestations.Pool) ([]T, error) {
 	if int(pageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(
 			codes.InvalidArgument,

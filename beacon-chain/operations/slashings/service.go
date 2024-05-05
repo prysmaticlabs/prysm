@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -31,7 +30,7 @@ func NewPool() *Pool {
 // PendingAttesterSlashings returns attester slashings that are able to be included into a block.
 // This method will return the amount of pending attester slashings for a block transition unless parameter `noLimit` is true
 // to indicate the request is for noLimit pending items.
-func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []interfaces.AttesterSlashing {
+func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []ethpb.AttSlashing {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	_, span := trace.StartSpan(ctx, "operations.PendingAttesterSlashing")
@@ -47,7 +46,7 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnl
 	if noLimit {
 		maxSlashings = uint64(len(p.pendingAttesterSlashing))
 	}
-	pending := make([]interfaces.AttesterSlashing, 0, maxSlashings)
+	pending := make([]ethpb.AttSlashing, 0, maxSlashings)
 	for i := 0; i < len(p.pendingAttesterSlashing); i++ {
 		if uint64(len(pending)) >= maxSlashings {
 			break
@@ -122,7 +121,7 @@ func (p *Pool) PendingProposerSlashings(ctx context.Context, state state.ReadOnl
 func (p *Pool) InsertAttesterSlashing(
 	ctx context.Context,
 	state state.ReadOnlyBeaconState,
-	slashing interfaces.AttesterSlashing,
+	slashing ethpb.AttSlashing,
 ) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -233,7 +232,7 @@ func (p *Pool) InsertProposerSlashing(
 // MarkIncludedAttesterSlashing is used when an attester slashing has been included in a beacon block.
 // Every block seen by this node that contains proposer slashings should call this method to include
 // the proposer slashings.
-func (p *Pool) MarkIncludedAttesterSlashing(as interfaces.AttesterSlashing) {
+func (p *Pool) MarkIncludedAttesterSlashing(as ethpb.AttSlashing) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	slashedVal := slice.IntersectionUint64(as.GetFirstAttestation().GetAttestingIndices(), as.GetSecondAttestation().GetAttestingIndices())

@@ -203,7 +203,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
 		if err != nil {
 			sBlk.SetDeposits([]*ethpb.Deposit{})
-			if err := sBlk.SetAttestations([]interfaces.Attestation{}); err != nil {
+			if err := sBlk.SetAttestations([]ethpb.Att{}); err != nil {
 				log.WithError(err).Error("Could not set attestations on block")
 			}
 			log.WithError(err).Error("Could not pack deposits and attestations")

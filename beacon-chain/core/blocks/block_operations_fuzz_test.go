@@ -10,7 +10,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -217,7 +216,7 @@ func TestFuzzProcessAttesterSlashings_10000(t *testing.T) {
 		fuzzer.Fuzz(a)
 		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
 		require.NoError(t, err)
-		r, err := ProcessAttesterSlashings(ctx, s, []interfaces.AttesterSlashing{a}, v.SlashValidator)
+		r, err := ProcessAttesterSlashings(ctx, s, []ethpb.AttSlashing{a}, v.SlashValidator)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and slashing: %v", r, err, state, a)
 		}

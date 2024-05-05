@@ -824,7 +824,7 @@ func TestRemoveBlockAttestationsInPool(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, r))
 
-	atts := make([]interfaces.Attestation, len(b.Block.Body.Attestations))
+	atts := make([]ethpb.Att, len(b.Block.Body.Attestations))
 	for i, a := range b.Block.Body.Attestations {
 		atts[i] = a
 	}

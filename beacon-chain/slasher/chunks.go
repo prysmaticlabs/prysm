@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -28,7 +27,7 @@ type Chunker interface {
 		slasherDB db.SlasherDatabase,
 		validatorIdx primitives.ValidatorIndex,
 		attestation *slashertypes.IndexedAttestationWrapper,
-	) (interfaces.AttesterSlashing, error)
+	) (ethpb.AttSlashing, error)
 	Update(
 		chunkIndex uint64,
 		currentEpoch primitives.Epoch,
@@ -187,7 +186,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	slasherDB db.SlasherDatabase,
 	validatorIdx primitives.ValidatorIndex,
 	incomingAttWrapper *slashertypes.IndexedAttestationWrapper,
-) (interfaces.AttesterSlashing, error) {
+) (ethpb.AttSlashing, error) {
 	sourceEpoch := incomingAttWrapper.IndexedAttestation.GetData().Source.Epoch
 	targetEpoch := incomingAttWrapper.IndexedAttestation.GetData().Target.Epoch
 
@@ -322,7 +321,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	slasherDB db.SlasherDatabase,
 	validatorIdx primitives.ValidatorIndex,
 	incomingAttWrapper *slashertypes.IndexedAttestationWrapper,
-) (interfaces.AttesterSlashing, error) {
+) (ethpb.AttSlashing, error) {
 	sourceEpoch := incomingAttWrapper.IndexedAttestation.GetData().Source.Epoch
 	targetEpoch := incomingAttWrapper.IndexedAttestation.GetData().Target.Epoch
 
