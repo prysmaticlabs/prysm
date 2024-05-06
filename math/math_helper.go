@@ -3,11 +3,13 @@ package math
 
 import (
 	"errors"
+	"fmt"
 	stdmath "math"
 	"math/big"
 	"math/bits"
 	"sync"
 
+	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/thomaso-mirodin/intmath/u64"
 )
 
@@ -216,8 +218,52 @@ func AddInt(i ...int) (int, error) {
 // Wei is the smallest unit of Ether, represented as a pointer to a bigInt.
 type Wei *big.Int
 
+var _ fssz.HashRoot = (Gwei)(0)
+var _ fssz.Marshaler = (*Gwei)(nil)
+var _ fssz.Unmarshaler = (*Gwei)(nil)
+
 // Gwei is a denomination of 1e9 Wei represented as an uint64.
 type Gwei uint64
+
+// HashTreeRoot --
+func (g Gwei) HashTreeRoot() ([32]byte, error) {
+	return fssz.HashWithDefaultHasher(g)
+}
+
+// HashTreeRootWith --
+func (g Gwei) HashTreeRootWith(hh *fssz.Hasher) error {
+	hh.PutUint64(uint64(g))
+	return nil
+}
+
+// UnmarshalSSZ --
+func (g *Gwei) UnmarshalSSZ(buf []byte) error {
+	if len(buf) != g.SizeSSZ() {
+		return fmt.Errorf("expected buffer of length %d received %d", g.SizeSSZ(), len(buf))
+	}
+	*g = Gwei(fssz.UnmarshallUint64(buf))
+	return nil
+}
+
+// MarshalSSZTo --
+func (g *Gwei) MarshalSSZTo(dst []byte) ([]byte, error) {
+	marshalled, err := g.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	return append(dst, marshalled...), nil
+}
+
+// MarshalSSZ --
+func (g *Gwei) MarshalSSZ() ([]byte, error) {
+	marshalled := fssz.MarshalUint64([]byte{}, uint64(*g))
+	return marshalled, nil
+}
+
+// SizeSSZ --
+func (g *Gwei) SizeSSZ() int {
+	return 8
+}
 
 // WeiToGwei converts big int wei to uint64 gwei.
 // The input `v` is copied before being modified.

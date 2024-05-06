@@ -128,7 +128,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	var attr payloadattribute.Attributer
 	switch st.Version() {
 	case version.Deneb:
-		withdrawals, err := st.ExpectedWithdrawals()
+		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			return nil, false, err
 		}
@@ -143,7 +143,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 			return nil, false, err
 		}
 	case version.Capella:
-		withdrawals, err := st.ExpectedWithdrawals()
+		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			return nil, false, err
 		}

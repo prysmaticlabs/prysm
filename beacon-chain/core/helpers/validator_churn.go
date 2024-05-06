@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/math"
 )
 
 // BalanceChurnLimit for the current active balance, in gwei.
@@ -18,12 +19,12 @@ import (
 //	        get_total_active_balance(state) // CHURN_LIMIT_QUOTIENT
 //	    )
 //	    return churn - churn % EFFECTIVE_BALANCE_INCREMENT
-func BalanceChurnLimit(activeBalanceGwei uint64) uint64 {
+func BalanceChurnLimit(activeBalance math.Gwei) math.Gwei {
 	churn := max(
 		params.BeaconConfig().MinPerEpochChurnLimitElectra,
-		(activeBalanceGwei / params.BeaconConfig().ChurnLimitQuotient),
+		(uint64(activeBalance) / params.BeaconConfig().ChurnLimitQuotient),
 	)
-	return churn - churn%params.BeaconConfig().EffectiveBalanceIncrement
+	return math.Gwei(churn - churn%params.BeaconConfig().EffectiveBalanceIncrement)
 }
 
 // ActivationExitChurnLimit for the current active balance, in gwei.
@@ -36,8 +37,8 @@ func BalanceChurnLimit(activeBalanceGwei uint64) uint64 {
 //	    Return the churn limit for the current epoch dedicated to activations and exits.
 //	    """
 //	    return min(MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, get_balance_churn_limit(state))
-func ActivationExitChurnLimit(activeBalanceGwei uint64) uint64 {
-	return min(params.BeaconConfig().MaxPerEpochActivationExitChurnLimit, BalanceChurnLimit(activeBalanceGwei))
+func ActivationExitChurnLimit(activeBalance math.Gwei) math.Gwei {
+	return min(math.Gwei(params.BeaconConfig().MaxPerEpochActivationExitChurnLimit), BalanceChurnLimit(activeBalance))
 }
 
 // ConsolidationChurnLimit for the current active balance, in gwei.
@@ -47,6 +48,6 @@ func ActivationExitChurnLimit(activeBalanceGwei uint64) uint64 {
 //
 //	def get_consolidation_churn_limit(state: BeaconState) -> Gwei:
 //	    return get_balance_churn_limit(state) - get_activation_exit_churn_limit(state)
-func ConsolidationChurnLimit(activeBalanceGwei uint64) uint64 {
-	return BalanceChurnLimit(activeBalanceGwei) - ActivationExitChurnLimit(activeBalanceGwei)
+func ConsolidationChurnLimit(activeBalance math.Gwei) math.Gwei {
+	return BalanceChurnLimit(activeBalance) - ActivationExitChurnLimit(activeBalance)
 }

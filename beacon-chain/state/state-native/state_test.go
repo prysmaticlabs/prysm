@@ -502,3 +502,13 @@ func generateState(t *testing.T) state.BeaconState {
 	assert.NoError(t, err)
 	return newState
 }
+
+func EmptyStateFromVersion(t *testing.T, v int) state.BeaconState {
+	gen := generateState(t)
+	s, ok := gen.(*BeaconState)
+	if !ok {
+		t.Fatal("not a beacon state")
+	}
+	s.version = v
+	return s
+}

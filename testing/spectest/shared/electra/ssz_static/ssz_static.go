@@ -1,12 +1,15 @@
 package ssz_static
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	fssz "github.com/prysmaticlabs/fastssz"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	common "github.com/prysmaticlabs/prysm/v5/testing/spectest/shared/common/ssz_static"
 )
 
@@ -16,26 +19,21 @@ func RunSSZStaticTests(t *testing.T, config string) {
 }
 
 func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
-	// TODO: Replace BeaconStateDeneb with BeaconStateElectra below and uncomment the code
-	//_, ok := object.(*ethpb.BeaconStateDeneb)
-	//if !ok {
-	//	return htrs
-	//}
-	//
-	//htrs = append(htrs, func(s interface{}) ([32]byte, error) {
-	//	beaconState, err := state_native.InitializeFromProtoDeneb(s.(*ethpb.BeaconStateDeneb))
-	//	require.NoError(t, err)
-	//	return beaconState.HashTreeRoot(context.Background())
-	//})
+	_, ok := object.(*ethpb.BeaconStateElectra)
+	if !ok {
+		return htrs
+	}
+
+	htrs = append(htrs, func(s interface{}) ([32]byte, error) {
+		beaconState, err := state_native.InitializeFromProtoElectra(s.(*ethpb.BeaconStateElectra))
+		require.NoError(t, err)
+		return beaconState.HashTreeRoot(context.Background())
+	})
 	return htrs
 }
 
 // UnmarshalledSSZ unmarshalls serialized input.
 func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
-	// TODO: Remove this check once BeaconState custom HTR function is ready
-	if folderName == "BeaconState" {
-		t.Skip("BeaconState is not ready")
-	}
 	var obj interface{}
 	switch folderName {
 	case "ExecutionPayload":
