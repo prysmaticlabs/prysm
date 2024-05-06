@@ -11,8 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // UpgradeToElectra updates inputs a generic state to return the version Electra state.
@@ -95,6 +97,13 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 	}
 	earliestExitEpoch++ // Increment to find the earliest possible exit epoch
 
+	// note: should be the same in prestate and post state.
+	// we are deviating from the specs a bit as it calls for using the post state
+	tab, err := helpers.TotalActiveBalance(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get total active balance")
+	}
+
 	s := &ethpb.BeaconStateElectra{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
@@ -149,34 +158,23 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 		NextWithdrawalValidatorIndex: vi,
 		HistoricalSummaries:          summaries,
 
-		// TODO: Verify these initial electra values are correct
-		// They are not zero!
-		DepositReceiptsStartIndex:     0,
+		DepositReceiptsStartIndex:     params.BeaconConfig().UnsetDepositReceiptsStartIndex,
 		DepositBalanceToConsume:       0,
-		ExitBalanceToConsume:          0,
-		EarliestExitEpoch:             0,
-		ConsolidationBalanceToConsume: 0,
-		EarliestConsolidationEpoch:    0,
+		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(math.Gwei(tab)),
+		EarliestExitEpoch:             earliestExitEpoch,
+		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(math.Gwei(tab)),
+		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(state.Slot())),
 		PendingBalanceDeposits:        nil,
 		PendingPartialWithdrawals:     nil,
 		PendingConsolidations:         nil,
 	}
 
-	tab, err := helpers.TotalActiveBalance(s) // TODO: need state readonly interface
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get total active balance")
-	}
-
-	s.ExitBalanceToConsume = helpers.ActivationExitChurnLimit(tab)
-	s.ConsolidationBalanceToConsume = helpers.ConsolidationChurnLimit(tab)
-
-	//# [New in Electra:EIP7251]
-	//# add validators that are not yet active to pending balance deposits
+	// [New in Electra:EIP7251]
+	// add validators that are not yet active to pending balance deposits
 
 	// Creating a slice to store indices of validators whose activation epoch is set to FAR_FUTURE_EPOCH
 	var preActivation []primitives.ValidatorIndex
 
-	// TODO: make this loop over validators more efficient
 	for index, validator := range s.Validators {
 		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 			preActivation = append(preActivation, primitives.ValidatorIndex(index))
@@ -192,20 +190,26 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 		return s.Validators[preActivation[i]].ActivationEligibilityEpoch < s.Validators[preActivation[j]].ActivationEligibilityEpoch
 	})
 
+	// need to cast the state to use in helper functions
+	post, err := state_native.InitializeFromProtoUnsafeElectra(s)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize post electra state")
+	}
+
 	for _, index := range preActivation {
-		if err := QueueEntireBalanceAndResetValidator(s, index); err != nil {
+		if err := QueueEntireBalanceAndResetValidator(post, index); err != nil {
 			return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
 		}
 	}
-	// TODO: combine below loop with above loop
-	//# Ensure early adopters of compounding credentials go through the activation churn
+
+	// Ensure early adopters of compounding credentials go through the activation churn
 	for index, validator := range s.Validators {
 		if helpers.HasCompoundingWithdrawalCredential(validator) {
-			if err := QueueEntireBalanceAndResetValidator(s, primitives.ValidatorIndex(index)); err != nil {
+			if err := QueueEntireBalanceAndResetValidator(post, primitives.ValidatorIndex(index)); err != nil {
 				return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
 			}
 		}
 	}
 
-	return state_native.InitializeFromProtoUnsafeElectra(s)
+	return post, nil
 }

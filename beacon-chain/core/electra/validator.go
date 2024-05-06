@@ -6,7 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
-// TODO: need to be updated from state PR
 // QueueEntireBalanceAndResetValidator queues the entire balance and resets the validator. This is used in electra fork logic.
 //
 // Spec definition:
