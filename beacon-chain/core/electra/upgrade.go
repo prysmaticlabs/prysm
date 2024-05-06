@@ -151,8 +151,8 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 			WithdrawalsRoot:        wdRoot,
 			ExcessBlobGas:          excessBlobGas,
 			BlobGasUsed:            blobGasUsed,
-			DepositReceiptsRoot:    bytesutil.Bytes32(0),
-			WithdrawalRequestsRoot: bytesutil.Bytes32(0),
+			DepositReceiptsRoot:    bytesutil.Bytes32(0), // [New in Electra:EIP6110]
+			WithdrawalRequestsRoot: bytesutil.Bytes32(0), // [New in Electra:EIP7002]
 		},
 		NextWithdrawalIndex:          wi,
 		NextWithdrawalValidatorIndex: vi,

@@ -543,13 +543,3 @@ func ProtobufBeaconStateElectra(s interface{}) (*ethpb.BeaconStateElectra, error
 	}
 	return pbState, nil
 }
-
-// ProtobufBeaconStateElectra transforms an input into beacon state Electra in the form of protobuf.
-// Error is returned if the input is not type protobuf beacon state.
-func ProtobufBeaconStateElectra(s interface{}) (*ethpb.BeaconStateElectra, error) {
-	pbState, ok := s.(*ethpb.BeaconStateElectra)
-	if !ok {
-		return nil, errors.New("input is not type pb.ProtobufBeaconStateElectra")
-	}
-	return pbState, nil
-}
