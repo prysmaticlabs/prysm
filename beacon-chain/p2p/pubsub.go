@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"strings"
 	"time"
 
@@ -25,7 +26,7 @@ const (
 	// gossip parameters
 	gossipSubMcacheLen    = 6   // number of windows to retain full messages in cache for `IWANT` responses
 	gossipSubMcacheGossip = 3   // number of windows to gossip about
-	gossipSubSeenTTL      = 550 // number of heartbeat intervals to retain message IDs
+	gossipSubSeenTTL      = 768 // number of seconds to retain message IDs ( 2 epochs)
 
 	// fanout ttl
 	gossipSubFanoutTTL = 60000000000 // TTL for fanout maps for topics we are not subscribed to but have published to, in nano seconds
@@ -130,7 +131,7 @@ func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 	}
 }
 
-// Creates a list of pubsub options to configure out router with.
+// pubsubOptions creates a list of options to configure our router with.
 func (s *Service) pubsubOptions() []pubsub.Option {
 	psOpts := []pubsub.Option{
 		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
@@ -147,7 +148,33 @@ func (s *Service) pubsubOptions() []pubsub.Option {
 		pubsub.WithGossipSubParams(pubsubGossipParam()),
 		pubsub.WithRawTracer(gossipTracer{host: s.host}),
 	}
+
+	if len(s.cfg.StaticPeers) > 0 {
+		directPeersAddrInfos, err := parsePeersEnr(s.cfg.StaticPeers)
+		if err != nil {
+			log.WithError(err).Error("Could not add direct peer option")
+			return psOpts
+		}
+		psOpts = append(psOpts, pubsub.WithDirectPeers(directPeersAddrInfos))
+	}
+
 	return psOpts
+}
+
+// parsePeersEnr takes a list of raw ENRs and converts them into a list of AddrInfos.
+func parsePeersEnr(peers []string) ([]peer.AddrInfo, error) {
+	addrs, err := PeersFromStringAddrs(peers)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot convert peers raw ENRs into multiaddresses: %v", err)
+	}
+	if len(addrs) == 0 {
+		return nil, fmt.Errorf("Converting peers raw ENRs into multiaddresses resulted in an empty list")
+	}
+	directAddrInfos, err := peer.AddrInfosFromP2pAddrs(addrs...)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot convert peers multiaddresses into AddrInfos: %v", err)
+	}
+	return directAddrInfos, nil
 }
 
 // creates a custom gossipsub parameter set.
@@ -165,7 +192,8 @@ func pubsubGossipParam() pubsub.GossipSubParams {
 // to configure our message id time-cache rather than instantiating
 // it with a router instance.
 func setPubSubParameters() {
-	pubsub.TimeCacheDuration = 550 * gossipSubHeartbeatInterval
+	seenTtl := 2 * time.Second * time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	pubsub.TimeCacheDuration = seenTtl
 }
 
 // convert from libp2p's internal schema to a compatible prysm protobuf format.

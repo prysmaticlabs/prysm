@@ -3,6 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "batch.go",
         "blob.go",
         "cache.go",
         "error.go",
@@ -45,6 +46,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "batch_test.go",
         "blob_test.go",
         "cache_test.go",
         "initializer_test.go",
@@ -69,5 +71,6 @@ go_test(
         "//testing/util:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_stretchr_testify//require:go_default_library",
     ],
 )

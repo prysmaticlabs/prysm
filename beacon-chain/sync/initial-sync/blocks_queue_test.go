@@ -971,24 +971,12 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 }
 
 func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
-	blockBatchLimit := flags.Get().BlockBatchLimit
-	mc, p2p, _ := initializeTestServices(t, []primitives.Slot{}, []*peerData{})
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-		chain: mc,
-		p2p:   p2p,
-	})
 
 	t.Run("expired context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
-		queue := newBlocksQueue(ctx, &blocksQueueConfig{
-			blocksFetcher:       fetcher,
-			chain:               mc,
-			highestExpectedSlot: primitives.Slot(blockBatchLimit),
-		})
-		handlerFn := queue.onCheckStaleEvent(ctx)
+		handlerFn := onCheckStaleEvent(ctx)
 		cancel()
 		updatedState, err := handlerFn(&stateMachine{
 			state: stateSkipped,
@@ -998,16 +986,10 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 	})
 
 	t.Run("invalid input state", func(t *testing.T) {
-		queue := newBlocksQueue(ctx, &blocksQueueConfig{
-			blocksFetcher:       fetcher,
-			chain:               mc,
-			highestExpectedSlot: primitives.Slot(blockBatchLimit),
-		})
-
 		invalidStates := []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped}
 		for _, state := range invalidStates {
 			t.Run(state.String(), func(t *testing.T) {
-				handlerFn := queue.onCheckStaleEvent(ctx)
+				handlerFn := onCheckStaleEvent(ctx)
 				updatedState, err := handlerFn(&stateMachine{
 					state: state,
 				}, nil)
@@ -1018,12 +1000,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 	})
 
 	t.Run("process non stale machine", func(t *testing.T) {
-		queue := newBlocksQueue(ctx, &blocksQueueConfig{
-			blocksFetcher:       fetcher,
-			chain:               mc,
-			highestExpectedSlot: primitives.Slot(blockBatchLimit),
-		})
-		handlerFn := queue.onCheckStaleEvent(ctx)
+		handlerFn := onCheckStaleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
 			state:   stateSent,
 			updated: prysmTime.Now().Add(-staleEpochTimeout / 2),
@@ -1034,12 +1011,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 	})
 
 	t.Run("process stale machine", func(t *testing.T) {
-		queue := newBlocksQueue(ctx, &blocksQueueConfig{
-			blocksFetcher:       fetcher,
-			chain:               mc,
-			highestExpectedSlot: primitives.Slot(blockBatchLimit),
-		})
-		handlerFn := queue.onCheckStaleEvent(ctx)
+		handlerFn := onCheckStaleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
 			state:   stateSent,
 			updated: prysmTime.Now().Add(-staleEpochTimeout),

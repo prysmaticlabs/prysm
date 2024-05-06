@@ -356,16 +356,16 @@ func Test_BeaconBlockBody_ProposerSlashings(t *testing.T) {
 }
 
 func Test_BeaconBlockBody_AttesterSlashings(t *testing.T) {
-	as := make([]*eth.AttesterSlashing, 0)
+	as := make([]interfaces.AttesterSlashing, 0)
 	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
-	bb.SetAttesterSlashings(as)
+	require.NoError(t, bb.SetAttesterSlashings(as))
 	assert.DeepSSZEqual(t, as, bb.Block().Body().AttesterSlashings())
 }
 
 func Test_BeaconBlockBody_Attestations(t *testing.T) {
-	a := make([]*eth.Attestation, 0)
+	a := make([]interfaces.Attestation, 0)
 	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
-	bb.SetAttestations(a)
+	require.NoError(t, bb.SetAttestations(a))
 	assert.DeepSSZEqual(t, a, bb.Block().Body().Attestations())
 }
 
@@ -489,4 +489,10 @@ func hydrateBeaconBlockBody() *eth.BeaconBlockBody {
 			BlockHash:   make([]byte, fieldparams.RootLength),
 		},
 	}
+}
+
+func TestPreElectraFailsInterfaceAssertion(t *testing.T) {
+	var epd interfaces.ExecutionData = &executionPayloadDeneb{}
+	_, ok := epd.(interfaces.ExecutionDataElectra)
+	require.Equal(t, false, ok)
 }

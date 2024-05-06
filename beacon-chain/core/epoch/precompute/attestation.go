@@ -54,7 +54,7 @@ func ProcessAttestations(
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
 		}
 
-		committee, err := helpers.BeaconCommitteeFromState(ctx, state, a.Data.Slot, a.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, a.GetData().Slot, a.GetData().CommitteeIndex)
 		if err != nil {
 			return nil, nil, err
 		}

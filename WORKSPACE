@@ -29,23 +29,7 @@ http_archive(
 
 load("@hermetic_cc_toolchain//toolchain:defs.bzl", zig_toolchains = "toolchains")
 
-# Temporarily use a nightly build until 0.12.0 is released.
-# See: https://github.com/prysmaticlabs/prysm/issues/13130
-zig_toolchains(
-    host_platform_sha256 = {
-        "linux-aarch64": "45afb8e32adde825165f4f293fcea9ecea503f7f9ec0e9bf4435afe70e67fb70",
-        "linux-x86_64": "f136c6a8a0f6adcb057d73615fbcd6f88281b3593f7008d5f7ed514ff925c02e",
-        "macos-aarch64": "05d995853c05243151deff47b60bdc2674f1e794a939eaeca0f42312da031cee",
-        "macos-x86_64": "721754ba5a50f31e8a1f0e1a74cace26f8246576878ac4a8591b0ee7b6db1fc1",
-        "windows-x86_64": "93f5248b2ea8c5ee8175e15b1384e133edc1cd49870b3ea259062a2e04164343",
-    },
-    url_formats = [
-        "https://ziglang.org/builds/zig-{host_platform}-{version}.{_ext}",
-        "https://mirror.bazel.build/ziglang.org/builds/zig-{host_platform}-{version}.{_ext}",
-        "https://prysmaticlabs.com/mirror/ziglang.org/builds/zig-{host_platform}-{version}.{_ext}",
-    ],
-    version = "0.12.0-dev.1349+fa022d1ec",
-)
+zig_toolchains()
 
 # Register zig sdk toolchains with support for Ubuntu 20.04 (Focal Fossa) which has an EOL date of April, 2025.
 # For ubuntu glibc support, see https://launchpad.net/ubuntu/+source/glibc
@@ -130,9 +114,9 @@ aspect_bazel_lib_register_toolchains()
 
 http_archive(
     name = "rules_oci",
-    sha256 = "c71c25ed333a4909d2dd77e0b16c39e9912525a98c7fa85144282be8d04ef54c",
-    strip_prefix = "rules_oci-1.3.4",
-    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.3.4/rules_oci-v1.3.4.tar.gz",
+    sha256 = "4a276e9566c03491649eef63f27c2816cc222f41ccdebd97d2c5159e84917c3b",
+    strip_prefix = "rules_oci-1.7.4",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.7.4/rules_oci-v1.7.4.tar.gz",
 )
 
 load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
@@ -243,7 +227,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.4.0"
+consensus_spec_version = "v1.5.0-alpha.1"
 
 bls_test_version = "v0.1.1"
 
@@ -259,7 +243,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "c282c0f86f23f3d2e0f71f5975769a4077e62a7e3c7382a16bd26a7e589811a0",
+    integrity = "sha256-bvbgNjfVVsqt3oGjfdsxXyfn33wq1Xwv1OlrVBXEea4=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -275,7 +259,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "4649c35aa3b8eb0cfdc81bee7c05649f90ef36bede5b0513e1f2e8baf37d6033",
+    integrity = "sha256-6yhbVIiyE0GiLci9jYRFbq1dHhLxYiS4xnw+ZLE3XQ0=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -291,7 +275,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "c5a03f724f757456ffaabd2a899992a71d2baf45ee4db65ca3518f2b7ee928c8",
+    integrity = "sha256-Z3OBOudJhD1C1/1lpCu5ShiaLxq1QgXKs5ncLz537SY=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -306,7 +290,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "cd1c9d97baccbdde1d2454a7dceb8c6c61192a3b581eee12ffc94969f2db8453",
+    integrity = "sha256-+uaqIfJ7c2Uu+vQU5eYSzacEEWe1AixWWISycDU5ak4=",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -340,22 +324,6 @@ filegroup(
     sha256 = "77e7e3ed65e33b7bb19d30131f4c2bb39e4dfeb188ab9ae84651c3cc7600131d",
     strip_prefix = "eth2-networks-934c948e69205dcf2deb87e4ae6cc140c335f94d",
     url = "https://github.com/eth-clients/eth2-networks/archive/934c948e69205dcf2deb87e4ae6cc140c335f94d.tar.gz",
-)
-
-http_archive(
-    name = "goerli_testnet",
-    build_file_content = """
-filegroup(
-    name = "configs",
-    srcs = [
-        "prater/config.yaml",
-    ],
-    visibility = ["//visibility:public"],
-)
-    """,
-    sha256 = "43fc0f55ddff7b511713e2de07aa22846a67432df997296fb4fc09cd8ed1dcdb",
-    strip_prefix = "goerli-6522ac6684693740cd4ddcc2a0662e03702aa4a1",
-    url = "https://github.com/eth-clients/goerli/archive/6522ac6684693740cd4ddcc2a0662e03702aa4a1.tar.gz",
 )
 
 http_archive(

@@ -46,7 +46,7 @@ func ProcessAttestationsNoVerifySignature(
 func VerifyAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.ReadOnlyBeaconState,
-	att *ethpb.Attestation,
+	att interfaces.Attestation,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestationNoVerifySignature")
 	defer span.End()
@@ -56,7 +56,7 @@ func VerifyAttestationNoVerifySignature(
 	}
 	currEpoch := time.CurrentEpoch(beaconState)
 	prevEpoch := time.PrevEpoch(beaconState)
-	data := att.Data
+	data := att.GetData()
 	if data.Target.Epoch != prevEpoch && data.Target.Epoch != currEpoch {
 		return fmt.Errorf(
 			"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
@@ -76,11 +76,11 @@ func VerifyAttestationNoVerifySignature(
 		}
 	}
 
-	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
+	if err := helpers.ValidateSlotTargetEpoch(att.GetData()); err != nil {
 		return err
 	}
 
-	s := att.Data.Slot
+	s := att.GetData().Slot
 	minInclusionCheck := s+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot()
 	if !minInclusionCheck {
 		return fmt.Errorf(
@@ -102,13 +102,13 @@ func VerifyAttestationNoVerifySignature(
 			)
 		}
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.Data.Target.Epoch)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.GetData().Target.Epoch)
 	if err != nil {
 		return err
 	}
 	c := helpers.SlotCommitteeCount(activeValidatorCount)
-	if uint64(att.Data.CommitteeIndex) >= c {
-		return fmt.Errorf("committee index %d >= committee count %d", att.Data.CommitteeIndex, c)
+	if uint64(att.GetData().CommitteeIndex) >= c {
+		return fmt.Errorf("committee index %d >= committee count %d", att.GetData().CommitteeIndex, c)
 	}
 
 	if err := helpers.VerifyAttestationBitfieldLengths(ctx, beaconState, att); err != nil {
@@ -116,7 +116,7 @@ func VerifyAttestationNoVerifySignature(
 	}
 
 	// Verify attesting indices are correct.
-	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func VerifyAttestationNoVerifySignature(
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	att *ethpb.Attestation,
+	att interfaces.Attestation,
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
 	defer span.End()
@@ -143,15 +143,15 @@ func ProcessAttestationNoVerifySignature(
 	}
 
 	currEpoch := time.CurrentEpoch(beaconState)
-	data := att.Data
-	s := att.Data.Slot
+	data := att.GetData()
+	s := att.GetData().Slot
 	proposerIndex, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	if err != nil {
 		return nil, err
 	}
 	pendingAtt := &ethpb.PendingAttestation{
 		Data:            data,
-		AggregationBits: att.AggregationBits,
+		AggregationBits: att.GetAggregationBits(),
 		InclusionDelay:  beaconState.Slot() - s,
 		ProposerIndex:   proposerIndex,
 	}
@@ -171,11 +171,11 @@ func ProcessAttestationNoVerifySignature(
 
 // VerifyAttestationSignature converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyBeaconState, att *ethpb.Attestation) error {
+func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyBeaconState, att interfaces.Attestation) error {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
-	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyB
 //	  domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //	  signing_root = compute_signing_root(indexed_attestation.data, domain)
 //	  return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBeaconState, indexedAtt ethpb.IndexedAtt) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 
@@ -212,14 +212,14 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBea
 	}
 	domain, err := signing.Domain(
 		beaconState.Fork(),
-		indexedAtt.Data.Target.Epoch,
+		indexedAtt.GetData().Target.Epoch,
 		params.BeaconConfig().DomainBeaconAttester,
 		beaconState.GenesisValidatorsRoot(),
 	)
 	if err != nil {
 		return err
 	}
-	indices := indexedAtt.AttestingIndices
+	indices := indexedAtt.GetAttestingIndices()
 	var pubkeys []bls.PublicKey
 	for i := 0; i < len(indices); i++ {
 		pubkeyAtIdx := beaconState.PubkeyAtIndex(primitives.ValidatorIndex(indices[i]))

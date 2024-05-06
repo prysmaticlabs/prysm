@@ -21,8 +21,9 @@ import (
 
 // MockNodeClient is a mock of NodeClient interface.
 type MockNodeClient struct {
-	ctrl     *gomock.Controller
-	recorder *MockNodeClientMockRecorder
+	ctrl          *gomock.Controller
+	recorder      *MockNodeClientMockRecorder
+	healthTracker *beacon.NodeHealthTracker
 }
 
 // MockNodeClientMockRecorder is the mock recorder for MockNodeClient.
