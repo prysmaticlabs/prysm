@@ -175,7 +175,7 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 		}
 		rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(
 			ctx,
-			&ethpbalpha.SignedAggregateSubmitRequest{SignedAggregateAndProof: consensusItem},
+			consensusItem,
 		)
 		if rpcError != nil {
 			_, ok := rpcError.Err.(*core.AggregateBroadcastFailedError)

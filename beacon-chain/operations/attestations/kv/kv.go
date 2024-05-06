@@ -15,18 +15,23 @@ import (
 
 var hashFn = hash.Proto
 
+type versionAndDataRoot struct {
+	version  int
+	dataRoot [32]byte
+}
+
 // AttCaches defines the caches used to satisfy attestation pool interface.
 // These caches are KV store for various attestations
 // such are unaggregated, aggregated or attestations within a block.
 type AttCaches struct {
 	aggregatedAttLock  sync.RWMutex
-	aggregatedAtt      map[[32]byte][]ethpb.Att
+	aggregatedAtt      map[versionAndDataRoot][]ethpb.Att
 	unAggregateAttLock sync.RWMutex
-	unAggregatedAtt    map[[32]byte]ethpb.Att
+	unAggregatedAtt    map[versionAndDataRoot]ethpb.Att
 	forkchoiceAttLock  sync.RWMutex
-	forkchoiceAtt      map[[32]byte]ethpb.Att
+	forkchoiceAtt      map[versionAndDataRoot]ethpb.Att
 	blockAttLock       sync.RWMutex
-	blockAtt           map[[32]byte][]ethpb.Att
+	blockAtt           map[versionAndDataRoot][]ethpb.Att
 	seenAtt            *cache.Cache
 }
 
@@ -36,10 +41,10 @@ func NewAttCaches() *AttCaches {
 	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	c := cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second)
 	pool := &AttCaches{
-		unAggregatedAtt: make(map[[32]byte]ethpb.Att),
-		aggregatedAtt:   make(map[[32]byte][]ethpb.Att),
-		forkchoiceAtt:   make(map[[32]byte]ethpb.Att),
-		blockAtt:        make(map[[32]byte][]ethpb.Att),
+		unAggregatedAtt: make(map[versionAndDataRoot]ethpb.Att),
+		aggregatedAtt:   make(map[versionAndDataRoot][]ethpb.Att),
+		forkchoiceAtt:   make(map[versionAndDataRoot]ethpb.Att),
+		blockAtt:        make(map[versionAndDataRoot][]ethpb.Att),
 		seenAtt:         c,
 	}
 

@@ -14,10 +14,11 @@ func (c *AttCaches) SaveBlockAttestation(att ethpb.Att) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
+	key := versionAndDataRoot{att.Version(), r}
 
 	c.blockAttLock.Lock()
 	defer c.blockAttLock.Unlock()
-	atts, ok := c.blockAtt[r]
+	atts, ok := c.blockAtt[key]
 	if !ok {
 		atts = make([]ethpb.Att, 0, 1)
 	}
@@ -31,7 +32,7 @@ func (c *AttCaches) SaveBlockAttestation(att ethpb.Att) error {
 		}
 	}
 
-	c.blockAtt[r] = append(atts, att.Copy())
+	c.blockAtt[key] = append(atts, att.Copy())
 
 	return nil
 }
@@ -61,7 +62,7 @@ func (c *AttCaches) DeleteBlockAttestation(att ethpb.Att) error {
 
 	c.blockAttLock.Lock()
 	defer c.blockAttLock.Unlock()
-	delete(c.blockAtt, r)
+	delete(c.blockAtt, versionAndDataRoot{att.Version(), r})
 
 	return nil
 }

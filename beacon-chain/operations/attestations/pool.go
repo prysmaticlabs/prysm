@@ -8,6 +8,11 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
+type versionAndDataRoot struct {
+	version  int
+	dataRoot [32]byte
+}
+
 // Pool defines the necessary methods for Prysm attestations pool to serve
 // fork choice and validators. In the current design, aggregated attestations
 // are used by proposer actor. Unaggregated attestations are used by
@@ -18,7 +23,8 @@ type Pool interface {
 	SaveAggregatedAttestation(att ethpb.Att) error
 	SaveAggregatedAttestations(atts []ethpb.Att) error
 	AggregatedAttestations() []ethpb.Att
-	AggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []ethpb.Att
+	AggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.Attestation
+	AggregatedAttestationsBySlotIndexElectra(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.AttestationElectra
 	DeleteAggregatedAttestation(att ethpb.Att) error
 	HasAggregatedAttestation(att ethpb.Att) (bool, error)
 	AggregatedAttestationCount() int
@@ -26,7 +32,8 @@ type Pool interface {
 	SaveUnaggregatedAttestation(att ethpb.Att) error
 	SaveUnaggregatedAttestations(atts []ethpb.Att) error
 	UnaggregatedAttestations() ([]ethpb.Att, error)
-	UnaggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []ethpb.Att
+	UnaggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.Attestation
+	UnaggregatedAttestationsBySlotIndexElectra(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.AttestationElectra
 	DeleteUnaggregatedAttestation(att ethpb.Att) error
 	DeleteSeenUnaggregatedAttestations() (int, error)
 	UnaggregatedAttestationCount() int

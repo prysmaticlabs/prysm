@@ -67,7 +67,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
 	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
 
-	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(atts))
+	attsByVerAndDataRoot := make(map[versionAndDataRoot][]ethpb.Att, len(atts))
 
 	// Consolidate attestations by aggregating them by similar data root.
 	for _, att := range atts {
@@ -83,10 +83,11 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+		key := versionAndDataRoot{att.Version(), attDataRoot}
+		attsByVerAndDataRoot[key] = append(attsByVerAndDataRoot[key], att)
 	}
 
-	for _, atts := range attsByDataRoot {
+	for _, atts := range attsByVerAndDataRoot {
 		if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
 			return err
 		}
@@ -123,8 +124,9 @@ func (s *Service) seen(att ethpb.Att) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	key := versionAndDataRoot{att.Version(), attRoot}
 	incomingBits := att.GetAggregationBits()
-	savedBits, ok := s.forkChoiceProcessedRoots.Get(attRoot)
+	savedBits, ok := s.forkChoiceProcessedAtts.Get(key)
 	if ok {
 		savedBitlist, ok := savedBits.(bitfield.Bitlist)
 		if !ok {
@@ -149,6 +151,6 @@ func (s *Service) seen(att ethpb.Att) (bool, error) {
 		}
 	}
 
-	s.forkChoiceProcessedRoots.Add(attRoot, incomingBits)
+	s.forkChoiceProcessedAtts.Add(key, incomingBits)
 	return false, nil
 }
