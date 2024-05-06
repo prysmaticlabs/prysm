@@ -2614,3 +2614,27 @@ func TestValidator_Host(t *testing.T) {
 	host = v.validatorClient.Host()
 	require.Equal(t, hosts[1], host)
 }
+
+func TestValidator_ChangeHost(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	client := validatormock.NewMockValidatorClient(ctrl)
+	v := validator{
+		validatorClient: client,
+		beaconNodeHosts: []string{"http://localhost:8080", "http://localhost:8081"},
+	}
+	client.EXPECT().ChangeHost(v.beaconNodeHosts[0]).Times(2)
+	v.validatorClient.ChangeHost(v.beaconNodeHosts[0])
+
+	client.EXPECT().Host().Return(v.beaconNodeHosts[0]).Times(2)
+	host := v.Host()
+	require.Equal(t, v.beaconNodeHosts[0], host)
+
+	client.EXPECT().Host().Return(v.beaconNodeHosts[1]).Times(1)
+	client.EXPECT().ChangeHost(v.beaconNodeHosts[1]).Times(1)
+	v.ChangeHost()
+
+	client.EXPECT().Host().Return(v.beaconNodeHosts[1]).Times(1)
+	require.Equal(t, v.beaconNodeHosts[1], v.Host())
+}

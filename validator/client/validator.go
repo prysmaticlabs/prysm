@@ -1112,12 +1112,18 @@ func (v *validator) Host() string {
 	return v.validatorClient.Host()
 }
 
-func (v *validator) ChangeHost(host string) {
-	v.validatorClient.ChangeHost(host)
-}
-
-func (v *validator) AvailableHosts() []string {
-	return v.beaconNodeHosts
+func (v *validator) ChangeHost() {
+	if len(v.beaconNodeHosts) <= 1 {
+		log.Infof("Beacon node API at %s is not responding, no backup node configured", v.Host())
+		return
+	}
+	for i, url := range v.beaconNodeHosts {
+		if url == v.Host() {
+			next := (i + 1) % len(v.beaconNodeHosts)
+			log.Infof("Beacon node API at %s is not responding, switching to %s", url, v.beaconNodeHosts[next])
+			v.validatorClient.ChangeHost(v.beaconNodeHosts[next])
+		}
+	}
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {

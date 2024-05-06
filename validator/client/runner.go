@@ -306,35 +306,28 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 				return
 			}
 			isHealthy := tracker.CheckHealth(ctx)
-			hosts := v.AvailableHosts()
-			if !isHealthy && len(hosts) > 1 && features.Get().EnableBeaconRESTApi {
-				for i, url := range hosts {
-					if url == v.Host() {
-						next := (i + 1) % len(hosts)
-						log.Infof("Beacon node API at %s is not responding, switching to %s", url, hosts[next])
-						v.ChangeHost(hosts[next])
-
-						if !tracker.CheckHealth(ctx) {
-							log.Infof("New beacon node API at %s is also not responding", hosts[next])
-							continue // Skip to the next ticker
-						}
-
-						km, err := v.Keymanager()
-						if err != nil {
-							log.WithError(err).Error("Could not get keymanager")
-							return
-						}
-						slot, err := v.CanonicalHeadSlot(ctx)
-						if err != nil {
-							log.WithError(err).Error("Could not get canonical head slot")
-							return
-						}
-						deadline := time.Now().Add(5 * time.Minute)
-						if err := v.PushProposerSettings(ctx, km, slot, deadline); err != nil {
-							log.WithError(err).Warn("Failed to update proposer settings")
-						}
-					}
+			if !isHealthy && features.Get().EnableBeaconRESTApi {
+				v.ChangeHost()
+				if !tracker.CheckHealth(ctx) {
+					log.Infof("New beacon node API at %s is also not responding", v.Host())
+					continue // Skip to the next ticker
 				}
+
+				km, err := v.Keymanager()
+				if err != nil {
+					log.WithError(err).Error("Could not get keymanager")
+					return
+				}
+				slot, err := v.CanonicalHeadSlot(ctx)
+				if err != nil {
+					log.WithError(err).Error("Could not get canonical head slot")
+					return
+				}
+				deadline := time.Now().Add(5 * time.Minute)
+				if err := v.PushProposerSettings(ctx, km, slot, deadline); err != nil {
+					log.WithError(err).Warn("Failed to update proposer settings")
+				}
+
 			}
 
 			// in case of node returning healthy but event stream died
