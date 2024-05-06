@@ -80,6 +80,12 @@ type ROBlockBodyElectra interface {
 	Consolidations() []*ethpb.SignedConsolidation
 }
 
+type ROBlockBodyEpbs interface {
+	ROBlockBodyElectra
+	PayloadAttestations() []*ethpb.PayloadAttestation
+	SignedExecutionPayloadHeader() *enginev1.SignedExecutionPayloadHeader
+}
+
 type SignedBeaconBlock interface {
 	ReadOnlySignedBeaconBlock
 	SetExecution(ExecutionData) error
@@ -100,6 +106,8 @@ type SignedBeaconBlock interface {
 	SetSlot(slot primitives.Slot)
 	SetSignature(sig []byte)
 	Unblind(e ExecutionData) error
+	SetSignedExecutionPayloadHeader(h *enginev1.SignedExecutionPayloadHeader) error
+	SetPayloadAttestations([]*ethpb.PayloadAttestation) error
 }
 
 // ExecutionData represents execution layer information that is contained
