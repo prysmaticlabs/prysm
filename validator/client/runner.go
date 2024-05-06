@@ -323,11 +323,10 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 					log.WithError(err).Error("Could not get canonical head slot")
 					return
 				}
-				deadline := time.Now().Add(5 * time.Minute)
+				deadline := time.Now().Add(5 * time.Minute) // Should consider changing to a constant
 				if err := v.PushProposerSettings(ctx, km, slot, deadline); err != nil {
 					log.WithError(err).Warn("Failed to update proposer settings")
 				}
-
 			}
 
 			// in case of node returning healthy but event stream died
