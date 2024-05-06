@@ -51,6 +51,7 @@ ssz_gen_marshal(
     includes = [
         "//consensus-types/primitives:go_default_library",
         "//proto/engine/v1:go_default_library",
+        "//math:go_default_library",
     ],
     objs = [
         "BeaconBlockAltair",
@@ -162,6 +163,7 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/primitives:go_default_library",
+        "//math:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
@@ -219,6 +221,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS + [
         "//encoding/bytesutil:go_default_library",
+        "//math:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//runtime/version:go_default_library",
