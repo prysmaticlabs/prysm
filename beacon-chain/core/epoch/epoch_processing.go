@@ -474,7 +474,7 @@ func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconSt
 		if err != nil {
 			return nil, err
 		}
-		attestingIndices, err := attestation.AttestingIndices(att, [][]primitives.ValidatorIndex{committee})
+		attestingIndices, err := attestation.AttestingIndices(att, committee)
 		if err != nil {
 			return nil, err
 		}

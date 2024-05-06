@@ -38,7 +38,7 @@ func attestingIndices(ctx context.Context, state state.BeaconState, att interfac
 	if err != nil {
 		return nil, err
 	}
-	return attestation.AttestingIndices(att, [][]primitives.ValidatorIndex{committee})
+	return attestation.AttestingIndices(att, committee)
 }
 
 // logMessageTimelyFlagsForIndex returns the log message with performance info for the attestation (head, source, target)

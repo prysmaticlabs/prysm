@@ -41,7 +41,7 @@ import (
 //	     signature=attestation.signature,
 //	 )
 func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committees ...[]primitives.ValidatorIndex) (ethpb.IndexedAtt, error) {
-	attIndices, err := AttestingIndices(attestation, committees)
+	attIndices, err := AttestingIndices(attestation, committees...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, c
 //	        committee_offset += len(committee)
 //
 //	    return output
-func AttestingIndices(att interfaces.Attestation, committees [][]primitives.ValidatorIndex) ([]uint64, error) {
+func AttestingIndices(att interfaces.Attestation, committees ...[]primitives.ValidatorIndex) ([]uint64, error) {
 	if len(committees) == 0 {
 		return []uint64{}, nil
 	}

@@ -370,7 +370,7 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Re
 		if err != nil {
 			return err
 		}
-		indices, err := attestation.AttestingIndices(a, [][]primitives.ValidatorIndex{committee})
+		indices, err := attestation.AttestingIndices(a, committee)
 		if err != nil {
 			return err
 		}

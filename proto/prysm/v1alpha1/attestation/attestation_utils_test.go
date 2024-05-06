@@ -85,7 +85,7 @@ func TestAttestingIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := attestation.AttestingIndices(tt.args.att, tt.args.committees)
+			got, err := attestation.AttestingIndices(tt.args.att, tt.args.committees...)
 			if tt.err == "" {
 				require.NoError(t, err)
 				assert.DeepEqual(t, tt.want, got)
@@ -205,7 +205,7 @@ func BenchmarkAttestingIndices_PartialCommittee(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := attestation.AttestingIndices(&eth.Attestation{AggregationBits: bf}, [][]primitives.ValidatorIndex{committee})
+		_, err := attestation.AttestingIndices(&eth.Attestation{AggregationBits: bf}, committee)
 		require.NoError(b, err)
 	}
 }

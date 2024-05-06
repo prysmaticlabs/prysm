@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 )
@@ -159,7 +158,7 @@ func TranslateParticipation(ctx context.Context, state state.BeaconState, atts [
 		if err != nil {
 			return nil, err
 		}
-		indices, err := attestation.AttestingIndices(att, [][]primitives.ValidatorIndex{committee})
+		indices, err := attestation.AttestingIndices(att, committee)
 		if err != nil {
 			return nil, err
 		}
