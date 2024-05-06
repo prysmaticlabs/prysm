@@ -1,6 +1,7 @@
 package interfaces
 
 import (
+	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -12,6 +13,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+var ErrIncompatibleFork = errors.New("Can't convert to fork-specific interface")
+
 // ReadOnlySignedBeaconBlock is an interface describing the method set of
 // a signed beacon block.
 type ReadOnlySignedBeaconBlock interface {
@@ -21,15 +24,7 @@ type ReadOnlySignedBeaconBlock interface {
 	Copy() (SignedBeaconBlock, error)
 	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
-	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
-	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
 	ToBlinded() (ReadOnlySignedBeaconBlock, error)
-	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
-	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
-	PbCapellaBlock() (*ethpb.SignedBeaconBlockCapella, error)
-	PbDenebBlock() (*ethpb.SignedBeaconBlockDeneb, error)
-	PbBlindedCapellaBlock() (*ethpb.SignedBlindedBeaconBlockCapella, error)
-	PbBlindedDenebBlock() (*ethpb.SignedBlindedBeaconBlockDeneb, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
@@ -78,7 +73,11 @@ type ReadOnlyBeaconBlockBody interface {
 	Execution() (ExecutionData, error)
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 	BlobKzgCommitments() ([][]byte, error)
-	Consolidations() ([]*ethpb.SignedConsolidation, error)
+}
+
+type ROBlockBodyElectra interface {
+	ReadOnlyBeaconBlockBody
+	Consolidations() []*ethpb.SignedConsolidation
 }
 
 type SignedBeaconBlock interface {
@@ -131,14 +130,14 @@ type ExecutionData interface {
 	TransactionsRoot() ([]byte, error)
 	Withdrawals() ([]*enginev1.Withdrawal, error)
 	WithdrawalsRoot() ([]byte, error)
-	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
-	PbBellatrix() (*enginev1.ExecutionPayload, error)
-	PbDeneb() (*enginev1.ExecutionPayloadDeneb, error)
-	PbElectra() (*enginev1.ExecutionPayloadElectra, error)
 	ValueInWei() (math.Wei, error)
 	ValueInGwei() (uint64, error)
-	DepositReceipts() ([]*enginev1.DepositReceipt, error)
-	WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error)
+}
+
+type ExecutionDataElectra interface {
+	ExecutionData
+	DepositReceipts() []*enginev1.DepositReceipt
+	WithdrawalRequests() []*enginev1.ExecutionLayerWithdrawalRequest
 }
 
 type Attestation interface {

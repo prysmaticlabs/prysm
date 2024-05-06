@@ -460,10 +460,11 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 		if err != nil {
 			return nil, err
 		}
-		consolidations, err := b.Body().Consolidations()
-		if err != nil {
-			return nil, err
+		electraBody, ok := b.Body().(interfaces.ROBlockBodyElectra)
+		if !ok {
+			return nil, errors.Wrapf(interfaces.ErrInvalidCast, "%T does not support electra getters", b.Body())
 		}
+		consolidations := electraBody.Consolidations()
 		var atts []*eth.AttestationElectra
 		if b.Body().Attestations() != nil {
 			atts = make([]*eth.AttestationElectra, len(b.Body().Attestations()))

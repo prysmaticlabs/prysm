@@ -73,8 +73,9 @@ type Flags struct {
 	// BlobSaveFsync requires blob saving to block on fsync to ensure blobs are durably persisted before passing DA.
 	BlobSaveFsync bool
 
-	SaveInvalidBlock bool // SaveInvalidBlock saves invalid block to temp.
-	SaveInvalidBlob  bool // SaveInvalidBlob saves invalid blob to temp.
+	SaveInvalidBlock           bool // SaveInvalidBlock saves invalid block to temp.
+	SaveInvalidBlob            bool // SaveInvalidBlob saves invalid blob to temp.
+	EIP6110ValidatorIndexCache bool // EIP6110ValidatorIndexCache specifies whether to use the new validator index cache.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -252,6 +253,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(EnableQUIC.Name) {
 		logEnabled(EnableQUIC)
 		cfg.EnableQUIC = true
+	}
+
+	if ctx.IsSet(eip6110ValidatorCache.Name) {
+		logEnabled(eip6110ValidatorCache)
+		cfg.EIP6110ValidatorIndexCache = true
 	}
 
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}

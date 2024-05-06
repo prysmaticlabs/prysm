@@ -128,9 +128,14 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 
 	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
 	if blk.Version() >= version.Deneb && !blk.IsBlinded() {
-		denebBlock, err := blk.PbDenebBlock()
+		pb, err := blk.Proto()
 		if err != nil {
 			log.WithError(err).Error("Failed to get deneb block")
+			return
+		}
+		denebBlock, ok := pb.(*ethpb.SignedBeaconBlockDeneb)
+		if !ok {
+			log.WithError(err).Error("Failed to get deneb block - assertion failure")
 			return
 		}
 		genericSignedBlock = &ethpb.GenericSignedBeaconBlock{

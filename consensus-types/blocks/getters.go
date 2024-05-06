@@ -150,102 +150,6 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 	}
 }
 
-// PbPhase0Block returns the underlying protobuf object.
-func (b *SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
-	if b.version != version.Phase0 {
-		return nil, consensus_types.ErrNotSupported("PbPhase0Block", b.version)
-	}
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	return pb.(*eth.SignedBeaconBlock), nil
-}
-
-// PbAltairBlock returns the underlying protobuf object.
-func (b *SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
-	if b.version != version.Altair {
-		return nil, consensus_types.ErrNotSupported("PbAltairBlock", b.version)
-	}
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	return pb.(*eth.SignedBeaconBlockAltair), nil
-}
-
-// PbBellatrixBlock returns the underlying protobuf object.
-func (b *SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
-	if b.version != version.Bellatrix || b.IsBlinded() {
-		return nil, consensus_types.ErrNotSupported("PbBellatrixBlock", b.version)
-	}
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	return pb.(*eth.SignedBeaconBlockBellatrix), nil
-}
-
-// PbBlindedBellatrixBlock returns the underlying protobuf object.
-func (b *SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
-	if b.version != version.Bellatrix || !b.IsBlinded() {
-		return nil, consensus_types.ErrNotSupported("PbBlindedBellatrixBlock", b.version)
-	}
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	return pb.(*eth.SignedBlindedBeaconBlockBellatrix), nil
-}
-
-// PbCapellaBlock returns the underlying protobuf object.
-func (b *SignedBeaconBlock) PbCapellaBlock() (*eth.SignedBeaconBlockCapella, error) {
-	if b.version != version.Capella || b.IsBlinded() {
-		return nil, consensus_types.ErrNotSupported("PbCapellaBlock", b.version)
-	}
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	return pb.(*eth.SignedBeaconBlockCapella), nil
-}
-
-// PbBlindedCapellaBlock returns the underlying protobuf object.
-func (b *SignedBeaconBlock) PbBlindedCapellaBlock() (*eth.SignedBlindedBeaconBlockCapella, error) {
-	if b.version != version.Capella || !b.IsBlinded() {
-		return nil, consensus_types.ErrNotSupported("PbBlindedCapellaBlock", b.version)
-	}
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	return pb.(*eth.SignedBlindedBeaconBlockCapella), nil
-}
-
-// PbDenebBlock returns the underlying protobuf object.
-func (b *SignedBeaconBlock) PbDenebBlock() (*eth.SignedBeaconBlockDeneb, error) {
-	if b.version != version.Deneb || b.IsBlinded() {
-		return nil, consensus_types.ErrNotSupported("PbDenebBlock", b.version)
-	}
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	return pb.(*eth.SignedBeaconBlockDeneb), nil
-}
-
-// PbBlindedDenebBlock returns the underlying protobuf object.
-func (b *SignedBeaconBlock) PbBlindedDenebBlock() (*eth.SignedBlindedBeaconBlockDeneb, error) {
-	if b.version != version.Deneb || !b.IsBlinded() {
-		return nil, consensus_types.ErrNotSupported("PbBlindedDenebBlock", b.version)
-	}
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	return pb.(*eth.SignedBlindedBeaconBlockDeneb), nil
-}
-
 // ToBlinded converts a non-blinded block to its blinded equivalent.
 func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if b.version < version.Bellatrix {
@@ -348,7 +252,11 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 				Signature: b.signature[:],
 			})
 	case *enginev1.ExecutionPayloadElectra:
-		header, err := PayloadToHeaderElectra(payload)
+		pe, ok := payload.(interfaces.ExecutionDataElectra)
+		if !ok {
+			return nil, interfaces.ErrIncompatibleFork
+		}
+		header, err := PayloadToHeaderElectra(pe)
 		if err != nil {
 			return nil, err
 		}
@@ -377,7 +285,6 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 				},
 				Signature: b.signature[:],
 			})
-
 	default:
 		return nil, fmt.Errorf("%T is not an execution payload header", p)
 	}
@@ -1266,11 +1173,8 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	}
 }
 
-func (b *BeaconBlockBody) Consolidations() ([]*eth.SignedConsolidation, error) {
-	if b.version < version.Electra {
-		return nil, consensus_types.ErrNotSupported("Consolidations", b.version)
-	}
-	return b.signedConsolidations, nil
+func (b *BeaconBlockBody) Consolidations() []*eth.SignedConsolidation {
+	return b.signedConsolidations
 }
 
 // Version returns the version of the beacon block body
