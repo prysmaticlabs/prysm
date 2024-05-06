@@ -252,7 +252,11 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 				Signature: b.signature[:],
 			})
 	case *enginev1.ExecutionPayloadElectra:
-		header, err := PayloadToHeaderElectra(payload)
+		pe, ok := payload.(interfaces.ExecutionDataElectra)
+		if !ok {
+			return nil, interfaces.ErrIncompatibleFork
+		}
+		header, err := PayloadToHeaderElectra(pe)
 		if err != nil {
 			return nil, err
 		}
@@ -281,7 +285,6 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 				},
 				Signature: b.signature[:],
 			})
-
 	default:
 		return nil, fmt.Errorf("%T is not an execution payload header", p)
 	}
@@ -1170,11 +1173,8 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	}
 }
 
-func (b *BeaconBlockBody) Consolidations() ([]*eth.SignedConsolidation, error) {
-	if b.version < version.Electra {
-		return nil, consensus_types.ErrNotSupported("Consolidations", b.version)
-	}
-	return b.signedConsolidations, nil
+func (b *BeaconBlockBody) Consolidations() []*eth.SignedConsolidation {
+	return b.signedConsolidations
 }
 
 // Version returns the version of the beacon block body
