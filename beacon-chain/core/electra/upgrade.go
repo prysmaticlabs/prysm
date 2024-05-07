@@ -195,14 +195,18 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 	// add validators that are not yet active to pending balance deposits
 
 	// Creating a slice to store indices of validators whose activation epoch is set to FAR_FUTURE_EPOCH
-	preActivation := make([]primitives.ValidatorIndex, 0)
-
+	preActivationIndices := make([]primitives.ValidatorIndex, 0)
+	// get all the validators with compound withdrawal indicies for eip7521
+	compoundWithdrawalIndices := make([]primitives.ValidatorIndex, 0)
 	if err = beaconState.ReadFromEveryValidator(func(index int, val state.ReadOnlyValidator) error {
 		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
 			exitEpochs = append(exitEpochs, val.ExitEpoch())
 		}
 		if val.ActivationEpoch() == params.BeaconConfig().FarFutureEpoch {
-			preActivation = append(preActivation, primitives.ValidatorIndex(index))
+			preActivationIndices = append(preActivationIndices, primitives.ValidatorIndex(index))
+		}
+		if helpers.HasCompoundingWithdrawalCredential(val.Validator()) {
+			compoundWithdrawalIndices = append(compoundWithdrawalIndices, primitives.ValidatorIndex(index))
 		}
 		return nil
 	}); err != nil {
@@ -291,13 +295,13 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 		PendingConsolidations:         nil,
 	}
 
-	// Sorting preActivation based on a custom criteria
-	sort.Slice(preActivation, func(i, j int) bool {
+	// Sorting preActivationIndices based on a custom criteria
+	sort.Slice(preActivationIndices, func(i, j int) bool {
 		// Comparing based on ActivationEligibilityEpoch and then by index if the epochs are the same
-		if s.Validators[preActivation[i]].ActivationEligibilityEpoch == s.Validators[preActivation[j]].ActivationEligibilityEpoch {
-			return preActivation[i] < preActivation[j]
+		if s.Validators[preActivationIndices[i]].ActivationEligibilityEpoch == s.Validators[preActivationIndices[j]].ActivationEligibilityEpoch {
+			return preActivationIndices[i] < preActivationIndices[j]
 		}
-		return s.Validators[preActivation[i]].ActivationEligibilityEpoch < s.Validators[preActivation[j]].ActivationEligibilityEpoch
+		return s.Validators[preActivationIndices[i]].ActivationEligibilityEpoch < s.Validators[preActivationIndices[j]].ActivationEligibilityEpoch
 	})
 
 	// need to cast the beaconState to use in helper functions
@@ -306,18 +310,16 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 		return nil, errors.Wrap(err, "failed to initialize post electra beaconState")
 	}
 
-	for _, index := range preActivation {
+	for _, index := range preActivationIndices {
 		if err := QueueEntireBalanceAndResetValidator(post, index); err != nil {
 			return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
 		}
 	}
 
 	// Ensure early adopters of compounding credentials go through the activation churn
-	for index, validator := range post.Validators() {
-		if helpers.HasCompoundingWithdrawalCredential(validator) {
-			if err := QueueEntireBalanceAndResetValidator(post, primitives.ValidatorIndex(index)); err != nil {
-				return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
-			}
+	for _, index := range compoundWithdrawalIndices {
+		if err := QueueEntireBalanceAndResetValidator(post, primitives.ValidatorIndex(index)); err != nil {
+			return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
 		}
 	}
 

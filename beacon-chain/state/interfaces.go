@@ -119,6 +119,7 @@ type ReadOnlyValidator interface {
 	WithdrawalCredentials() []byte
 	Slashed() bool
 	IsNil() bool
+	Validator() *ethpb.Validator
 }
 
 // ReadOnlyValidators defines a struct which only has read access to validators methods.

@@ -92,3 +92,7 @@ func (v readOnlyValidator) Slashed() bool {
 func (v readOnlyValidator) IsNil() bool {
 	return v.validator == nil
 }
+
+func (v readOnlyValidator) Validator() *ethpb.Validator {
+	return v.validator
+}
