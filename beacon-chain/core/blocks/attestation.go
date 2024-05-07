@@ -107,22 +107,53 @@ func VerifyAttestationNoVerifySignature(
 		return err
 	}
 	c := helpers.SlotCommitteeCount(activeValidatorCount)
-	if uint64(att.GetData().CommitteeIndex) >= c {
-		return fmt.Errorf("committee index %d >= committee count %d", att.GetData().CommitteeIndex, c)
-	}
 
-	if err := helpers.VerifyAttestationBitfieldLengths(ctx, beaconState, att); err != nil {
-		return errors.Wrap(err, "could not verify attestation bitfields")
-	}
+	var indexedAtt ethpb.IndexedAtt
 
-	// Verify attesting indices are correct.
-	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
-	if err != nil {
-		return err
-	}
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
-	if err != nil {
-		return err
+	if att.Version() < version.Electra {
+		if uint64(att.GetData().CommitteeIndex) >= c {
+			return fmt.Errorf("committee index %d >= committee count %d", att.GetData().CommitteeIndex, c)
+		}
+
+		if err = helpers.VerifyAttestationBitfieldLengths(ctx, beaconState, att); err != nil {
+			return errors.Wrap(err, "could not verify attestation bitfields")
+		}
+
+		// Verify attesting indices are correct.
+		committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
+		if err != nil {
+			return err
+		}
+		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committee)
+		if err != nil {
+			return err
+		}
+	} else {
+		if att.GetData().CommitteeIndex != 0 {
+			return errors.New("committee index must be 0 post-Electra")
+		}
+
+		committeeIndices := att.GetCommitteeBitsVal().BitIndices()
+		committees := make([][]primitives.ValidatorIndex, len(committeeIndices))
+		participantsCount := 0
+		var err error
+		for i, ci := range committeeIndices {
+			if uint64(ci) >= c {
+				return fmt.Errorf("committee index %d >= committee count %d", ci, c)
+			}
+			committees[i], err = helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, primitives.CommitteeIndex(ci))
+			if err != nil {
+				return err
+			}
+			participantsCount += len(committees[i])
+		}
+		if att.GetAggregationBits().Len() != uint64(participantsCount) {
+			return fmt.Errorf("aggregation bits count %d is different than participant count %d", att.GetAggregationBits().Len(), participantsCount)
+		}
+		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committees...)
+		if err != nil {
+			return err
+		}
 	}
 
 	return attestation.IsValidAttestationIndices(ctx, indexedAtt)
