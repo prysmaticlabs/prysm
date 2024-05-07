@@ -1,4 +1,4 @@
-package peerdas
+package peerdas_test
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	GoKZG "github.com/crate-crypto/go-kzg-4844"
 	ckzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -62,7 +63,7 @@ func GenerateCommitmentAndProof(blob ckzg4844.Blob) (ckzg4844.KZGCommitment, ckz
 	return commitment, proof, err
 }
 
-func TestGenerateCommitmentAndProof(t *testing.T) {
+func TestVerifyDataColumnSidecarKZGProofs(t *testing.T) {
 	dbBlock := util.NewBeaconBlockDeneb()
 	require.NoError(t, kzg.Start())
 
@@ -79,11 +80,11 @@ func TestGenerateCommitmentAndProof(t *testing.T) {
 	dbBlock.Block.Body.BlobKzgCommitments = comms
 	sBlock, err := blocks.NewSignedBeaconBlock(dbBlock)
 	require.NoError(t, err)
-	sCars, err := DataColumnSidecars(sBlock, blobs)
+	sCars, err := peerdas.DataColumnSidecars(sBlock, blobs)
 	require.NoError(t, err)
 
 	for i, sidecar := range sCars {
-		verified, err := VerifyDataColumnSidecarKZGProofs(sidecar)
+		verified, err := peerdas.VerifyDataColumnSidecarKZGProofs(sidecar)
 		require.NoError(t, err)
 		require.Equal(t, true, verified, fmt.Sprintf("sidecar %d failed", i))
 	}
