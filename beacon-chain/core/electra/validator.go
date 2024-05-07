@@ -6,6 +6,34 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
+// QueueExcessActiveBalance
+//
+// Spec definition:
+//
+//	def queue_excess_active_balance(state: BeaconState, index: ValidatorIndex) -> None:
+//	    balance = state.balances[index]
+//	    if balance > MIN_ACTIVATION_BALANCE:
+//	        excess_balance = balance - MIN_ACTIVATION_BALANCE
+//	        state.balances[index] = MIN_ACTIVATION_BALANCE
+//	        state.pending_balance_deposits.append(
+//	            PendingBalanceDeposit(index=index, amount=excess_balance)
+//	        )
+func QueueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex) error {
+	bal, err := s.BalanceAtIndex(idx)
+	if err != nil {
+		return err
+	}
+
+	if bal > params.BeaconConfig().MinActivationBalance {
+		excessBalance := bal - params.BeaconConfig().MinActivationBalance
+		if err := s.UpdateBalancesAtIndex(idx, params.BeaconConfig().MinActivationBalance); err != nil {
+			return err
+		}
+		return s.AppendPendingBalanceDeposit(idx, excessBalance)
+	}
+	return nil
+}
+
 // QueueEntireBalanceAndResetValidator queues the entire balance and resets the validator. This is used in electra fork logic.
 //
 // Spec definition:

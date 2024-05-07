@@ -24,6 +24,10 @@ func TestUpgradeToElectra(t *testing.T) {
 	vals[0].ActivationEpoch = params.BeaconConfig().FarFutureEpoch
 	vals[1].WithdrawalCredentials = []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte}
 	require.NoError(t, st.SetValidators(vals))
+	bals := st.Balances()
+	bals[1] = params.BeaconConfig().MinActivationBalance + 1000
+	require.NoError(t, st.SetBalances(bals))
+
 	preForkState := st.Copy()
 	mSt, err := electra.UpgradeToElectra(st)
 	require.NoError(t, err)
@@ -62,7 +66,7 @@ func TestUpgradeToElectra(t *testing.T) {
 
 	mVal2, err := mSt.ValidatorAtIndex(1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(0), mVal2.EffectiveBalance)
+	require.Equal(t, params.BeaconConfig().MinActivationBalance, mVal2.EffectiveBalance)
 
 	numValidators := mSt.NumValidators()
 	p, err := mSt.PreviousEpochParticipation()
@@ -172,6 +176,7 @@ func TestUpgradeToElectra(t *testing.T) {
 	pendingBalanceDeposits, err := mSt.PendingBalanceDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 2, len(pendingBalanceDeposits))
+	require.Equal(t, uint64(1000), pendingBalanceDeposits[1].Amount)
 
 	numPendingPartialWithdrawals, err := mSt.NumPendingPartialWithdrawals()
 	require.NoError(t, err)
