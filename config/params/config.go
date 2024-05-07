@@ -126,6 +126,8 @@ type BeaconChainConfig struct {
 	DomainApplicationBuilder          [4]byte `yaml:"DOMAIN_APPLICATION_BUILDER" spec:"true"`            // DomainApplicationBuilder defines the BLS signature domain for application builder.
 	DomainBLSToExecutionChange        [4]byte `yaml:"DOMAIN_BLS_TO_EXECUTION_CHANGE" spec:"true"`        // DomainBLSToExecutionChange defines the BLS signature domain to change withdrawal addresses to ETH1 prefix
 	DomainConsolidation               [4]byte `yaml:"DOMAIN_CONSOLIDATION" spec:"true"`
+	DomainBeaconBuilder               [4]byte `yaml:"DOMAIN_BEACON_BULDER" spec:"false"` // DomainBeaconBuilder defines the BLS signature domain used by builders [New in ePBS]
+	DomainPTCAttester                 [4]byte `yaml:"DOMAIN_PTC_ATTESTER" spec:"false"`  // DomainPTCAttester defines the BLS signature domain used by PTC members [New in ePBS]
 
 	// Prysm constants.
 	GweiPerEth                     uint64          // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -166,6 +168,8 @@ type BeaconChainConfig struct {
 	DenebForkEpoch       primitives.Epoch `yaml:"DENEB_FORK_EPOCH" spec:"true"`       // DenebForkEpoch is used to represent the assigned fork epoch for deneb.
 	ElectraForkVersion   []byte           `yaml:"ELECTRA_FORK_VERSION" spec:"true"`   // ElectraForkVersion is used to represent the fork version for deneb.
 	ElectraForkEpoch     primitives.Epoch `yaml:"ELECTRA_FORK_EPOCH" spec:"true"`     // ElectraForkEpoch is used to represent the assigned fork epoch for deneb.
+	EPBSForkVersion      []byte           // EPBSForkVersion is used to represent the fork version for ePBS.
+	EPBSForkEpoch        primitives.Epoch // EPBSForkEpoch is used to represent the assigned fork epoch for ePBS.
 
 	ForkVersionSchedule map[[fieldparams.VersionLength]byte]primitives.Epoch // Schedule of fork epochs by version.
 	ForkVersionNames    map[[fieldparams.VersionLength]byte]string           // Human-readable names of fork versions.
@@ -312,6 +316,7 @@ func ConfigForkVersions(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 		bytesutil.ToBytes4(b.CapellaForkVersion):   version.Capella,
 		bytesutil.ToBytes4(b.DenebForkVersion):     version.Deneb,
 		bytesutil.ToBytes4(b.ElectraForkVersion):   version.Electra,
+		bytesutil.ToBytes4(b.EPBSForkVersion):      version.EPBS,
 	}
 }
 
