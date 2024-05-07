@@ -690,7 +690,7 @@ func (s *Service) isDataAvailableDataColumns(ctx context.Context, root [32]byte,
 			s.blobNotifiers.delete(root)
 			return nil
 		case <-ctx.Done():
-			missingIndexes := []uint64{}
+			missingIndexes := make([]uint64, 0, len(missing))
 			for val := range missing {
 				copiedVal := val
 				missingIndexes = append(missingIndexes, copiedVal)
