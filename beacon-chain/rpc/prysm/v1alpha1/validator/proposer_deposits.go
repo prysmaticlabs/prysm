@@ -223,7 +223,7 @@ func constructMerkleProof(trie cache.MerkleTree, index int, deposit *ethpb.Depos
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not generate merkle proof for deposit at index %d", index)
 	}
-	// For every deposit, we construct a Merkle proof using the powchain service's
+	// For every deposit, we constructGenericBeaconBlock a Merkle proof using the powchain service's
 	// in-memory deposits trie, which is updated only once the state's LatestETH1Data
 	// property changes during a state transition after a voting period.
 	deposit.Proof = proof

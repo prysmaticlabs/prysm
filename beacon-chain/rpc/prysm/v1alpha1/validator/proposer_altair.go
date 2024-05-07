@@ -41,7 +41,7 @@ func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.SignedBea
 	}
 }
 
-// getSyncAggregate retrieves the sync contributions from the pool to construct the sync aggregate object.
+// getSyncAggregate retrieves the sync contributions from the pool to constructGenericBeaconBlock the sync aggregate object.
 // The contributions are filtered based on matching of the input root and slot then profitability.
 func (vs *Server) getSyncAggregate(ctx context.Context, slot primitives.Slot, root [32]byte) (*ethpb.SyncAggregate, error) {
 	_, span := trace.StartSpan(ctx, "ProposerServer.getSyncAggregate")

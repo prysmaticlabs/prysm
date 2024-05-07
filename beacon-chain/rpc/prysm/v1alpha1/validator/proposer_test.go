@@ -18,7 +18,6 @@ import (
 	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
-	coretime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
@@ -37,7 +36,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
@@ -816,39 +814,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestProposer_ComputeStateRoot_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-
-	beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 100)
-
-	proposerServer := &Server{
-		ChainStartFetcher: &mockExecution.Chain{},
-		Eth1InfoFetcher:   &mockExecution.Chain{},
-		Eth1BlockFetcher:  &mockExecution.Chain{},
-		StateGen:          stategen.New(db, doublylinkedtree.New()),
-	}
-	req := util.NewBeaconBlock()
-	req.Block.ProposerIndex = 84
-	req.Block.ParentRoot = parentRoot[:]
-	req.Block.Slot = 1
-	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
-	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
-	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetSlot(slots.PrevSlot(beaconState.Slot())))
-	req.Block.Body.RandaoReveal = randaoReveal
-	currentEpoch := coretime.CurrentEpoch(beaconState)
-	req.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
-	require.NoError(t, err)
-
-	wsb, err := blocks.NewSignedBeaconBlock(req)
-	require.NoError(t, err)
-	_, err = proposerServer.computeStateRoot(context.Background(), wsb)
-	require.NoError(t, err)
 }
 
 func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {

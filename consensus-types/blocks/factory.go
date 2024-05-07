@@ -21,6 +21,8 @@ var (
 	// errUnsupportedBeaconBlockBody is returned when the struct type is not a supported beacon block body
 	// type.
 	errUnsupportedBeaconBlockBody = errors.New("unsupported beacon block body")
+	// ErrIsNil is used when a value fails an IsNil check.
+	ErrIsNil = errors.New("unexpected nil value")
 	// ErrNilObject is returned in a constructor when the underlying object is nil.
 	ErrNilObject = errors.New("received nil object")
 	// ErrNilSignedBeaconBlock is returned when a nil signed beacon block is received.

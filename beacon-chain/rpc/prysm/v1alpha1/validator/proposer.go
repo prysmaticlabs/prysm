@@ -75,7 +75,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk, err := getEmptyBlock(req.Slot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not completeWithBest block: %v", err)
 	}
 	// Set slot, graffiti, randao reveal, and parent root.
 	sBlk.SetSlot(req.Slot)
@@ -90,20 +90,10 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetProposerIndex(idx)
 
-	builderBoostFactor := defaultBuilderBoostFactor
-	if req.BuilderBoostFactor != nil {
-		builderBoostFactor = req.BuilderBoostFactor.Value
-	}
-
-	if err = vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost, builderBoostFactor); err != nil {
+	resp := &proposalResponseConstructor{block: sBlk}
+	if err = vs.BuildBlockParallel(ctx, resp, head, req.SkipMevBoost); err != nil {
 		return nil, errors.Wrap(err, "could not build block in parallel")
 	}
-
-	sr, err := vs.computeStateRoot(ctx, sBlk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
-	}
-	sBlk.SetStateRoot(sr)
 
 	log.WithFields(logrus.Fields{
 		"slot":               req.Slot,
@@ -111,8 +101,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
 
-	// Blob cache is updated after BuildBlockParallel
-	return vs.constructGenericBeaconBlock(sBlk, bundleCache.get(req.Slot))
+	builderBoostFactor := defaultBuilderBoostFactor
+	if req.BuilderBoostFactor != nil {
+		builderBoostFactor = req.BuilderBoostFactor.Value
+	}
+	return resp.construct(ctx, head, builderBoostFactor)
 }
 
 func (vs *Server) handleSuccesfulReorgAttempt(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (state.BeaconState, error) {
@@ -183,7 +176,8 @@ func (vs *Server) getParentState(ctx context.Context, slot primitives.Slot) (sta
 	return head, parentRoot, err
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor uint64) error {
+func (vs *Server) BuildBlockParallel(ctx context.Context, resp *proposalResponseConstructor, head state.BeaconState, skipMevBoost bool) error {
+	sBlk := resp.block
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -230,28 +224,21 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	localPayload, overrideBuilder, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
+	if err := vs.setLocalPayloadResp(ctx, resp, head); err != nil {
+		if !errors.Is(err, errActivationNotReached) && !errors.Is(err, errNoTerminalBlockHash) {
+			return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
+		}
 	}
 
+	defer wg.Wait() // Wait until block is built via consensus and execution fields.
+
 	// There's no reason to try to get a builder bid if local override is true.
-	var builderPayload *blocks.PayloadWithBid
-	var builderKzgCommitments [][]byte
-	overrideBuilder = overrideBuilder || skipMevBoost // Skip using mev-boost if requested by the caller.
-	if !overrideBuilder {
-		builderPayload, builderKzgCommitments, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
-		if err != nil {
+	if !resp.overrideBuilder || skipMevBoost {
+		if err := vs.setBuilderPayloadResp(ctx, resp, sBlk.Block().Slot(), sBlk.Block().ProposerIndex()); err != nil {
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Error("Could not get builder payload")
 		}
 	}
-
-	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload, builderKzgCommitments, builderBoostFactor); err != nil {
-		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
-	}
-
-	wg.Wait() // Wait until block is built via consensus and execution fields.
 
 	return nil
 }
@@ -457,26 +444,6 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 	return &ethpb.FeeRecipientByPubKeyResponse{
 		FeeRecipient: address.Bytes(),
 	}, nil
-}
-
-// computeStateRoot computes the state root after a block has been processed through a state transition and
-// returns it to the validator client.
-func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
-	beaconState, err := vs.StateGen.StateByRoot(ctx, block.Block().ParentRoot())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve beacon state")
-	}
-	root, err := transition.CalculateStateRoot(
-		ctx,
-		beaconState,
-		block,
-	)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not calculate state root at slot %d", beaconState.Slot())
-	}
-
-	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
-	return root[:], nil
 }
 
 // SubmitValidatorRegistrations submits validator registrations.

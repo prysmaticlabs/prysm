@@ -24,10 +24,8 @@ type executionPayload struct {
 }
 
 // NewWrappedExecutionData creates an appropriate execution payload wrapper based on the incoming type.
-func NewWrappedExecutionData(v proto.Message, weiValue math.Wei) (interfaces.ExecutionData, error) {
-	if weiValue == nil {
-		weiValue = new(big.Int).SetInt64(0)
-	}
+func NewWrappedExecutionData(v proto.Message) (interfaces.ExecutionData, error) {
+	weiValue := new(big.Int).SetInt64(0)
 	switch pbStruct := v.(type) {
 	case *enginev1.ExecutionPayload:
 		return WrappedExecutionPayload(pbStruct)
@@ -193,16 +191,6 @@ func (e executionPayload) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// ValueInWei --
-func (executionPayload) ValueInWei() (math.Wei, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInGwei --
-func (executionPayload) ValueInGwei() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -358,16 +346,6 @@ func (e executionPayloadHeader) BlobGasUsed() (uint64, error) {
 
 // ExcessBlobGas --
 func (e executionPayloadHeader) ExcessBlobGas() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (executionPayloadHeader) ValueInWei() (math.Wei, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInGwei --
-func (executionPayloadHeader) ValueInGwei() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
@@ -559,16 +537,6 @@ func (e executionPayloadCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// ValueInWei --
-func (e executionPayloadCapella) ValueInWei() (math.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadCapella) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -727,16 +695,6 @@ func (e executionPayloadHeaderCapella) BlobGasUsed() (uint64, error) {
 // ExcessBlobGas --
 func (e executionPayloadHeaderCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (e executionPayloadHeaderCapella) ValueInWei() (math.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderCapella) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
@@ -1116,16 +1074,6 @@ func (e executionPayloadHeaderDeneb) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// ValueInWei --
-func (e executionPayloadHeaderDeneb) ValueInWei() (math.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderDeneb) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadHeaderDeneb) IsBlinded() bool {
 	return true
@@ -1282,16 +1230,6 @@ func (e executionPayloadDeneb) BlobGasUsed() (uint64, error) {
 
 func (e executionPayloadDeneb) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
-}
-
-// ValueInWei --
-func (e executionPayloadDeneb) ValueInWei() (math.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadDeneb) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
 }
 
 // IsBlinded returns true if the underlying data is blinded.
@@ -1453,16 +1391,6 @@ func (e executionPayloadHeaderElectra) BlobGasUsed() (uint64, error) {
 // ExcessBlobGas --
 func (e executionPayloadHeaderElectra) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
-}
-
-// ValueInWei --
-func (e executionPayloadHeaderElectra) ValueInWei() (math.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderElectra) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
 }
 
 // DepositReceipts --
@@ -1634,16 +1562,6 @@ func (e executionPayloadElectra) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// ValueInWei --
-func (e executionPayloadElectra) ValueInWei() (math.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadElectra) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // DepositReceipts --
 func (e executionPayloadElectra) DepositReceipts() []*enginev1.DepositReceipt {
 	return e.p.DepositReceipts
@@ -1657,33 +1575,4 @@ func (e executionPayloadElectra) WithdrawalRequests() []*enginev1.ExecutionLayer
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadElectra) IsBlinded() bool {
 	return false
-}
-
-// PayloadWithBid allows a payload to be conveniently coupled with its bid value (builder or local).
-type PayloadWithBid struct {
-	interfaces.ExecutionData
-	bid math.Wei
-}
-
-// NewPayloadWithBid initializes a PayloadWithBid. This should only be used to represent payloads that have a bid,
-// otherwise directly use an ExecutionData type.
-func NewPayloadWithBid(p interfaces.ExecutionData, bid math.Wei) (*PayloadWithBid, error) {
-	if p.IsNil() {
-		return nil, ErrNilObject
-	}
-	return &PayloadWithBid{ExecutionData: p, bid: bid}, nil
-}
-
-func (p *PayloadWithBid) IsNil() bool {
-	return p == nil || p.ExecutionData == nil
-}
-
-// ValueInWei returns the bid value in wei.
-func (p *PayloadWithBid) ValueInWei() math.Wei {
-	return p.bid
-}
-
-// ValueInGwei is a helper to converts the bid value to its gwei representation.
-func (p *PayloadWithBid) ValueInGwei() math.Gwei {
-	return math.WeiToGwei(p.bid)
 }

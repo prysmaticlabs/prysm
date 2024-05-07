@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
@@ -10,13 +9,25 @@ import (
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
-	log "github.com/sirupsen/logrus"
 )
+
+// IsNiler describes a type that provides a method that can be used to determine if it holds a nil value.
+type IsNiler interface {
+	IsNil() bool
+}
+
+// HasNilErr uses the IsNil method of the provided IsNiler. If IsNil returns true, an error is returned.
+// If IsNil is false, the return value is nil.
+func HasNilErr(n IsNiler) error {
+	if n == nil || n.IsNil() {
+		return ErrIsNil
+	}
+	return nil
+}
 
 // BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
 // Access to these nil fields will result in run time panic,
@@ -326,44 +337,6 @@ func (b *SignedBeaconBlock) Version() int {
 // IsBlinded metadata on whether a block is blinded
 func (b *SignedBeaconBlock) IsBlinded() bool {
 	return b.version >= version.Bellatrix && b.block.body.executionPayload == nil
-}
-
-// ValueInWei metadata on the payload value returned by the builder.
-func (b *SignedBeaconBlock) ValueInWei() math.Wei {
-	exec, err := b.block.body.Execution()
-	if err != nil {
-		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
-			log.WithError(err).Warn("failed to retrieve execution payload")
-		}
-		return big.NewInt(0)
-	}
-	val, err := exec.ValueInWei()
-	if err != nil {
-		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
-			log.WithError(err).Warn("failed to retrieve execution payload")
-		}
-		return big.NewInt(0)
-	}
-	return val
-}
-
-// ValueInGwei metadata on the payload value returned by the builder.
-func (b *SignedBeaconBlock) ValueInGwei() uint64 {
-	exec, err := b.block.body.Execution()
-	if err != nil {
-		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
-			log.WithError(err).Warn("failed to retrieve execution payload")
-		}
-		return 0
-	}
-	val, err := exec.ValueInGwei()
-	if err != nil {
-		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
-			log.WithError(err).Warn("failed to retrieve execution payload")
-		}
-		return 0
-	}
-	return val
 }
 
 // Header converts the underlying protobuf object from blinded block to header format.
