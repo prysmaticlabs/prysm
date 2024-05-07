@@ -286,7 +286,7 @@ func VerifyDataColumnSidecarKZGProofs(sc *ethpb.DataColumnSidecar) (bool, error)
 		colI := sc.ColumnIndex
 		colIdx = append(colIdx, colI)
 	}
-	var ckzgComms []cKzg4844.Bytes48
+    ckzgComms := make([]cKzg4844.Bytes48, 0, len(sc.KzgCommitments))
 	for _, com := range sc.KzgCommitments {
 		ckzgComms = append(ckzgComms, cKzg4844.Bytes48(com))
 	}
