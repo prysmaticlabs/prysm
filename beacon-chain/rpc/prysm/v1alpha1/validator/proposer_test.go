@@ -2440,7 +2440,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 					})
 					committee, err := helpers.BeaconCommitteeFromState(context.Background(), st, atts[i].GetData().Slot, atts[i].GetData().CommitteeIndex)
 					assert.NoError(t, err)
-					attestingIndices, err := attestation.AttestingIndices(atts[i].GetAggregationBits(), committee)
+					attestingIndices, err := attestation.AttestingIndices(atts[i], committee)
 					require.NoError(t, err)
 					assert.NoError(t, err)
 					domain, err := signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])

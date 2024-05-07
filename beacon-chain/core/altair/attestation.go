@@ -70,7 +70,7 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-	indices, err := attestation.AttestingIndices(att.GetAggregationBits(), committee)
+	indices, err := attestation.AttestingIndices(att, committee)
 	if err != nil {
 		return nil, err
 	}
