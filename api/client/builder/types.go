@@ -8,12 +8,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"google.golang.org/protobuf/proto"
 )
 
 var errInvalidUint256 = errors.New("invalid Uint256")
@@ -44,6 +48,9 @@ func sszBytesToUint256(b []byte) (Uint256, error) {
 
 // SSZBytes creates an ssz-style (little-endian byte slice) representation of the Uint256.
 func (s Uint256) SSZBytes() []byte {
+	if s.Int == nil {
+		s.Int = big.NewInt(0)
+	}
 	if !math.IsValidUint256(s.Int) {
 		return []byte{}
 	}
@@ -91,6 +98,9 @@ func (s Uint256) MarshalJSON() ([]byte, error) {
 
 // MarshalText returns a text byte representation of Uint256.
 func (s Uint256) MarshalText() ([]byte, error) {
+	if s.Int == nil {
+		s.Int = big.NewInt(0)
+	}
 	if !math.IsValidUint256(s.Int) {
 		return nil, errors.Wrapf(errInvalidUint256, "value=%s", s.Int)
 	}
@@ -265,6 +275,11 @@ func (r *ExecPayloadResponse) ToProto() (*v1.ExecutionPayload, error) {
 	return r.Data.ToProto()
 }
 
+func (r *ExecutionPayload) PayloadProto() (proto.Message, error) {
+	pb, err := r.ToProto()
+	return pb, err
+}
+
 // ToProto returns a ExecutionPayload Proto
 func (p *ExecutionPayload) ToProto() (*v1.ExecutionPayload, error) {
 	txs := make([][]byte, len(p.Transactions))
@@ -354,6 +369,90 @@ func FromProtoCapella(payload *v1.ExecutionPayloadCapella) (ExecutionPayloadCape
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  txs,
 		Withdrawals:   withdrawals,
+	}, nil
+}
+
+func FromProtoDeneb(payload *v1.ExecutionPayloadDeneb) (ExecutionPayloadDeneb, error) {
+	bFee, err := sszBytesToUint256(payload.BaseFeePerGas)
+	if err != nil {
+		return ExecutionPayloadDeneb{}, err
+	}
+	txs := make([]hexutil.Bytes, len(payload.Transactions))
+	for i := range payload.Transactions {
+		txs[i] = bytesutil.SafeCopyBytes(payload.Transactions[i])
+	}
+	withdrawals := make([]Withdrawal, len(payload.Withdrawals))
+	for i, w := range payload.Withdrawals {
+		withdrawals[i] = Withdrawal{
+			Index:          Uint256{Int: big.NewInt(0).SetUint64(w.Index)},
+			ValidatorIndex: Uint256{Int: big.NewInt(0).SetUint64(uint64(w.ValidatorIndex))},
+			Address:        bytesutil.SafeCopyBytes(w.Address),
+			Amount:         Uint256{Int: big.NewInt(0).SetUint64(w.Amount)},
+		}
+	}
+	return ExecutionPayloadDeneb{
+		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:   Uint64String(payload.BlockNumber),
+		GasLimit:      Uint64String(payload.GasLimit),
+		GasUsed:       Uint64String(payload.GasUsed),
+		Timestamp:     Uint64String(payload.Timestamp),
+		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas: bFee,
+		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:  txs,
+		Withdrawals:   withdrawals,
+		BlobGasUsed:   Uint64String(payload.BlobGasUsed),
+		ExcessBlobGas: Uint64String(payload.ExcessBlobGas),
+	}, nil
+}
+
+var errInvalidTypeConversion = errors.New("unable to translate between api and foreign type")
+
+// ExecutionPayloadResponseFromData converts an ExecutionData interface value to a payload response.
+// This involves serializing the execution payload value so that the abstract payload envelope can be used.
+func ExecutionPayloadResponseFromData(ed interfaces.ExecutionData, bundle *v1.BlobsBundle) (*ExecutionPayloadResponse, error) {
+	pb := ed.Proto()
+	var data interface{}
+	var err error
+	var ver string
+	switch pbStruct := pb.(type) {
+	case *v1.ExecutionPayload:
+		ver = version.String(version.Bellatrix)
+		data, err = FromProto(pbStruct)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert a Bellatrix ExecutionPayload to an API response")
+		}
+	case *v1.ExecutionPayloadCapella:
+		ver = version.String(version.Capella)
+		data, err = FromProtoCapella(pbStruct)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert a Capella ExecutionPayload to an API response")
+		}
+	case *v1.ExecutionPayloadDeneb:
+		ver = version.String(version.Deneb)
+		payloadStruct, err := FromProtoDeneb(pbStruct)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert a Deneb ExecutionPayload to an API response")
+		}
+		data = &ExecutionPayloadDenebAndBlobsBundle{
+			ExecutionPayload: &payloadStruct,
+			BlobsBundle:      FromBundleProto(bundle),
+		}
+	default:
+		return nil, errInvalidTypeConversion
+	}
+	encoded, err := json.Marshal(data)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal execution payload version=%s", ver)
+	}
+	return &ExecutionPayloadResponse{
+		Version: ver,
+		Data:    encoded,
 	}, nil
 }
 
@@ -484,6 +583,42 @@ type ExecPayloadResponseCapella struct {
 	Data    ExecutionPayloadCapella `json:"data"`
 }
 
+// ExecutionPayloadResponse allows for unmarshaling just the Version field of the payload.
+// This allows it to return different ExecutionPayload types based on the version field.
+type ExecutionPayloadResponse struct {
+	Version string          `json:"version"`
+	Data    json.RawMessage `json:"data"`
+}
+
+// ParsedPayload can retrieve the underlying protobuf message for the given execution payload response.
+type ParsedPayload interface {
+	PayloadProto() (proto.Message, error)
+}
+
+// BlobBundler can retrieve the underlying blob bundle protobuf message for the given execution payload response.
+type BlobBundler interface {
+	BundleProto() (*v1.BlobsBundle, error)
+}
+
+func (r *ExecutionPayloadResponse) ParsePayload() (ParsedPayload, error) {
+	var toProto ParsedPayload
+	switch r.Version {
+	case version.String(version.Bellatrix):
+		toProto = &ExecutionPayload{}
+	case version.String(version.Capella):
+		toProto = &ExecutionPayloadCapella{}
+	case version.String(version.Deneb):
+		toProto = &ExecutionPayloadDenebAndBlobsBundle{}
+	default:
+		return nil, consensusblocks.ErrUnsupportedVersion
+	}
+
+	if err := json.Unmarshal(r.Data, toProto); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal the response .Data field with the stated version schema")
+	}
+	return toProto, nil
+}
+
 // ExecutionPayloadCapella is a field of ExecPayloadResponseCapella.
 type ExecutionPayloadCapella struct {
 	ParentHash    hexutil.Bytes   `json:"parent_hash"`
@@ -506,6 +641,11 @@ type ExecutionPayloadCapella struct {
 // ToProto returns a ExecutionPayloadCapella Proto.
 func (r *ExecPayloadResponseCapella) ToProto() (*v1.ExecutionPayloadCapella, error) {
 	return r.Data.ToProto()
+}
+
+func (p *ExecutionPayloadCapella) PayloadProto() (proto.Message, error) {
+	pb, err := p.ToProto()
+	return pb, err
 }
 
 // ToProto returns a ExecutionPayloadCapella Proto.
@@ -869,6 +1009,9 @@ func (bb *BuilderBidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(bb.BlobKzgCommitments) > fieldparams.MaxBlobsPerBlock {
+		return nil, fmt.Errorf("too many blob commitments: %d", len(bb.BlobKzgCommitments))
+	}
 	kzgCommitments := make([][]byte, len(bb.BlobKzgCommitments))
 	for i, commit := range bb.BlobKzgCommitments {
 		if len(commit) != fieldparams.BLSPubkeyLength {
@@ -1021,6 +1164,16 @@ type BlobsBundle struct {
 
 // ToProto returns a BlobsBundle Proto.
 func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
+	if len(b.Blobs) > fieldparams.MaxBlobCommitmentsPerBlock {
+		return nil, fmt.Errorf("blobs length %d is more than max %d", len(b.Blobs), fieldparams.MaxBlobCommitmentsPerBlock)
+	}
+	if len(b.Commitments) != len(b.Blobs) {
+		return nil, fmt.Errorf("commitments length %d does not equal blobs length %d", len(b.Commitments), len(b.Blobs))
+	}
+	if len(b.Proofs) != len(b.Blobs) {
+		return nil, fmt.Errorf("proofs length %d does not equal blobs length %d", len(b.Proofs), len(b.Blobs))
+	}
+
 	commitments := make([][]byte, len(b.Commitments))
 	for i := range b.Commitments {
 		if len(b.Commitments[i]) != fieldparams.BLSPubkeyLength {
@@ -1034,9 +1187,6 @@ func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
 			return nil, fmt.Errorf("proof length %d is not %d", len(b.Proofs[i]), fieldparams.BLSPubkeyLength)
 		}
 		proofs[i] = bytesutil.SafeCopyBytes(b.Proofs[i])
-	}
-	if len(b.Blobs) > fieldparams.MaxBlobsPerBlock {
-		return nil, fmt.Errorf("blobs length %d is more than max %d", len(b.Blobs), fieldparams.MaxBlobsPerBlock)
 	}
 	blobs := make([][]byte, len(b.Blobs))
 	for i := range b.Blobs {
@@ -1052,10 +1202,38 @@ func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
 	}, nil
 }
 
+// FromBundleProto converts the proto bundle type to the builder
+// type.
+func FromBundleProto(bundle *v1.BlobsBundle) *BlobsBundle {
+	commitments := make([]hexutil.Bytes, len(bundle.KzgCommitments))
+	for i := range bundle.KzgCommitments {
+		commitments[i] = bytesutil.SafeCopyBytes(bundle.KzgCommitments[i])
+	}
+	proofs := make([]hexutil.Bytes, len(bundle.Proofs))
+	for i := range bundle.Proofs {
+		proofs[i] = bytesutil.SafeCopyBytes(bundle.Proofs[i])
+	}
+	blobs := make([]hexutil.Bytes, len(bundle.Blobs))
+	for i := range bundle.Blobs {
+		blobs[i] = bytesutil.SafeCopyBytes(bundle.Blobs[i])
+	}
+	return &BlobsBundle{
+		Commitments: commitments,
+		Proofs:      proofs,
+		Blobs:       blobs,
+	}
+}
+
 // ToProto returns ExecutionPayloadDeneb Proto and BlobsBundle Proto separately.
 func (r *ExecPayloadResponseDeneb) ToProto() (*v1.ExecutionPayloadDeneb, *v1.BlobsBundle, error) {
 	if r.Data == nil {
 		return nil, nil, errors.New("data field in response is empty")
+	}
+	if r.Data.ExecutionPayload == nil {
+		return nil, nil, errors.Wrap(consensusblocks.ErrNilObject, "nil execution payload")
+	}
+	if r.Data.BlobsBundle == nil {
+		return nil, nil, errors.Wrap(consensusblocks.ErrNilObject, "nil blobs bundle")
 	}
 	payload, err := r.Data.ExecutionPayload.ToProto()
 	if err != nil {
@@ -1068,8 +1246,26 @@ func (r *ExecPayloadResponseDeneb) ToProto() (*v1.ExecutionPayloadDeneb, *v1.Blo
 	return payload, bundle, nil
 }
 
+func (r *ExecutionPayloadDenebAndBlobsBundle) PayloadProto() (proto.Message, error) {
+	if r.ExecutionPayload == nil {
+		return nil, errors.Wrap(consensusblocks.ErrNilObject, "nil execution payload in combined deneb payload")
+	}
+	pb, err := r.ExecutionPayload.ToProto()
+	return pb, err
+}
+
+func (r *ExecutionPayloadDenebAndBlobsBundle) BundleProto() (*v1.BlobsBundle, error) {
+	if r.BlobsBundle == nil {
+		return nil, errors.Wrap(consensusblocks.ErrNilObject, "nil blobs bundle")
+	}
+	return r.BlobsBundle.ToProto()
+}
+
 // ToProto returns the ExecutionPayloadDeneb Proto.
 func (p *ExecutionPayloadDeneb) ToProto() (*v1.ExecutionPayloadDeneb, error) {
+	if p == nil {
+		return nil, errors.Wrap(consensusblocks.ErrNilObject, "nil execution payload")
+	}
 	txs := make([][]byte, len(p.Transactions))
 	for i := range p.Transactions {
 		txs[i] = bytesutil.SafeCopyBytes(p.Transactions[i])

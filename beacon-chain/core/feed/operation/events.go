@@ -2,8 +2,9 @@
 package operation
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 const (
@@ -26,12 +27,18 @@ const (
 
 	// BlobSidecarReceived is sent after a blob sidecar is received from gossip or rpc.
 	BlobSidecarReceived = 6
+
+	// ProposerSlashingReceived is sent after a proposer slashing is received from gossip or rpc
+	ProposerSlashingReceived = 7
+
+	// AttesterSlashingReceived is sent after an attester slashing is received from gossip or rpc
+	AttesterSlashingReceived = 8
 )
 
 // UnAggregatedAttReceivedData is the data sent with UnaggregatedAttReceived events.
 type UnAggregatedAttReceivedData struct {
 	// Attestation is the unaggregated attestation object.
-	Attestation *ethpb.Attestation
+	Attestation interfaces.Attestation
 }
 
 // AggregatedAttReceivedData is the data sent with AggregatedAttReceived events.
@@ -60,4 +67,14 @@ type BLSToExecutionChangeReceivedData struct {
 // BlobSidecarReceivedData is the data sent with BlobSidecarReceived events.
 type BlobSidecarReceivedData struct {
 	Blob *blocks.VerifiedROBlob
+}
+
+// ProposerSlashingReceivedData is the data sent with ProposerSlashingReceived events.
+type ProposerSlashingReceivedData struct {
+	ProposerSlashing *ethpb.ProposerSlashing
+}
+
+// AttesterSlashingReceivedData is the data sent with AttesterSlashingReceived events.
+type AttesterSlashingReceivedData struct {
+	AttesterSlashing interfaces.AttesterSlashing
 }

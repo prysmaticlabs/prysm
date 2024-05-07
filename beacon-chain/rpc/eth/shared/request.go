@@ -6,24 +6,26 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 )
 
 func UintFromQuery(w http.ResponseWriter, r *http.Request, name string, required bool) (string, uint64, bool) {
-	raw := r.URL.Query().Get(name)
-	if raw == "" && !required {
+	trimmed := strings.ReplaceAll(r.URL.Query().Get(name), " ", "")
+	if trimmed == "" && !required {
 		return "", 0, true
 	}
-	v, valid := ValidateUint(w, name, raw)
+	v, valid := ValidateUint(w, name, trimmed)
 	if !valid {
 		return "", 0, false
 	}
-	return raw, v, true
+	return trimmed, v, true
 }
 
 func UintFromRoute(w http.ResponseWriter, r *http.Request, name string) (string, uint64, bool) {
@@ -58,7 +60,7 @@ func HexFromRoute(w http.ResponseWriter, r *http.Request, name string, length in
 
 func ValidateHex(w http.ResponseWriter, name, s string, length int) ([]byte, bool) {
 	if s == "" {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is required",
 			Code:    http.StatusBadRequest,
 		}
@@ -67,7 +69,7 @@ func ValidateHex(w http.ResponseWriter, name, s string, length int) ([]byte, boo
 	}
 	hexBytes, err := hexutil.Decode(s)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is invalid: " + err.Error(),
 			Code:    http.StatusBadRequest,
 		}
@@ -83,7 +85,7 @@ func ValidateHex(w http.ResponseWriter, name, s string, length int) ([]byte, boo
 
 func ValidateUint(w http.ResponseWriter, name, s string) (uint64, bool) {
 	if s == "" {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is required",
 			Code:    http.StatusBadRequest,
 		}
@@ -92,7 +94,7 @@ func ValidateUint(w http.ResponseWriter, name, s string) (uint64, bool) {
 	}
 	v, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is invalid: " + err.Error(),
 			Code:    http.StatusBadRequest,
 		}
@@ -118,15 +120,15 @@ func IsSyncing(
 	headSlot := headFetcher.HeadSlot()
 	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: "Could not check optimistic status: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 		httputil.WriteError(w, errJson)
 		return true
 	}
-	syncDetails := &SyncDetailsContainer{
-		Data: &SyncDetails{
+	syncDetails := &structs.SyncDetailsContainer{
+		Data: &structs.SyncDetails{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
@@ -139,7 +141,7 @@ func IsSyncing(
 	if err == nil {
 		msg += " Details: " + string(details)
 	}
-	errJson := &httputil.DefaultErrorJson{
+	errJson := &httputil.DefaultJsonError{
 		Message: msg,
 		Code:    http.StatusServiceUnavailable}
 	httputil.WriteError(w, errJson)
@@ -154,7 +156,7 @@ func IsOptimistic(
 ) (bool, error) {
 	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: "Could not check optimistic status: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
@@ -164,7 +166,7 @@ func IsOptimistic(
 	if !isOptimistic {
 		return false, nil
 	}
-	errJson := &httputil.DefaultErrorJson{
+	errJson := &httputil.DefaultJsonError{
 		Code:    http.StatusServiceUnavailable,
 		Message: "Beacon node is currently optimistic and not serving validators",
 	}

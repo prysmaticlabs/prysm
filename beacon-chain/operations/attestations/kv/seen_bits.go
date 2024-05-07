@@ -4,11 +4,11 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 )
 
-func (c *AttCaches) insertSeenBit(att *ethpb.Attestation) error {
-	r, err := hashFn(att.Data)
+func (c *AttCaches) insertSeenBit(att interfaces.Attestation) error {
+	r, err := hashFn(att.GetData())
 	if err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func (c *AttCaches) insertSeenBit(att *ethpb.Attestation) error {
 		}
 		alreadyExists := false
 		for _, bit := range seenBits {
-			if c, err := bit.Contains(att.AggregationBits); err != nil {
+			if c, err := bit.Contains(att.GetAggregationBits()); err != nil {
 				return err
 			} else if c {
 				alreadyExists = true
@@ -29,18 +29,18 @@ func (c *AttCaches) insertSeenBit(att *ethpb.Attestation) error {
 			}
 		}
 		if !alreadyExists {
-			seenBits = append(seenBits, att.AggregationBits)
+			seenBits = append(seenBits, att.GetAggregationBits())
 		}
 		c.seenAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration /* one epoch */)
 		return nil
 	}
 
-	c.seenAtt.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration /* one epoch */)
+	c.seenAtt.Set(string(r[:]), []bitfield.Bitlist{att.GetAggregationBits()}, cache.DefaultExpiration /* one epoch */)
 	return nil
 }
 
-func (c *AttCaches) hasSeenBit(att *ethpb.Attestation) (bool, error) {
-	r, err := hashFn(att.Data)
+func (c *AttCaches) hasSeenBit(att interfaces.Attestation) (bool, error) {
+	r, err := hashFn(att.GetData())
 	if err != nil {
 		return false, err
 	}
@@ -52,7 +52,7 @@ func (c *AttCaches) hasSeenBit(att *ethpb.Attestation) (bool, error) {
 			return false, errors.New("could not convert to bitlist type")
 		}
 		for _, bit := range seenBits {
-			if c, err := bit.Contains(att.AggregationBits); err != nil {
+			if c, err := bit.Contains(att.GetAggregationBits()); err != nil {
 				return false, err
 			} else if c {
 				return true, nil

@@ -8,7 +8,7 @@ go_library(
         "modifiers.go",
         "options.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/api/gateway",
+    importpath = "github.com/prysmaticlabs/prysm/v5/api/gateway",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//validator:__subpackages__",

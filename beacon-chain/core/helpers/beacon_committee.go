@@ -3,24 +3,25 @@
 package helpers
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 var (
@@ -139,7 +140,7 @@ func BeaconCommittee(
 	}
 	count := committeesPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
 
-	return computeCommittee(validatorIndices, seed, indexOffset, count)
+	return ComputeCommittee(validatorIndices, seed, indexOffset, count)
 }
 
 // CommitteeAssignmentContainer represents a committee list, committee index, and to be attested slot for a given epoch.
@@ -256,8 +257,8 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation bitfields is
 // a valid length matching the size of the committee.
-func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyBeaconState, att *ethpb.Attestation) error {
-	committee, err := BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
+func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyBeaconState, att interfaces.Attestation) error {
+	committee, err := BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve beacon committees")
 	}
@@ -266,7 +267,7 @@ func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyB
 		return errors.New("no committee exist for this attestation")
 	}
 
-	if err := VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
+	if err := VerifyBitfieldLength(att.GetAggregationBits(), uint64(len(committee))); err != nil {
 		return errors.Wrap(err, "failed to verify aggregation bitfield")
 	}
 	return nil
@@ -292,6 +293,21 @@ func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]pri
 
 	// UnshuffleList is used as an optimized implementation for raw speed.
 	return UnshuffleList(indices, seed)
+}
+
+// CommitteeIndices return beacon committee indices corresponding to bits that are set on the argument bitfield.
+//
+// Spec pseudocode definition:
+//
+//	def get_committee_indices(committee_bits: Bitvector) -> Sequence[CommitteeIndex]:
+//	   return [CommitteeIndex(index) for index, bit in enumerate(committee_bits) if bit]
+func CommitteeIndices(committeeBits bitfield.Bitfield) []primitives.CommitteeIndex {
+	indices := committeeBits.BitIndices()
+	committeeIndices := make([]primitives.CommitteeIndex, len(indices))
+	for i, ix := range indices {
+		committeeIndices[i] = primitives.CommitteeIndex(uint64(ix))
+	}
+	return committeeIndices
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
@@ -333,59 +349,82 @@ func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, 
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
 // Input state is used to retrieve active validator indices.
+// Input root is to use as key in the cache.
 // Input epoch is the epoch to retrieve proposer indices for.
 func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaconState, epoch primitives.Epoch) error {
-	// The cache uses the state root at the (current epoch - 1)'s slot as key. (e.g. for epoch 2, the key is root at slot 63)
-	// Which is the reason why we skip genesis epoch.
+	// The cache uses the state root at the end of (current epoch - 1) as key.
+	// (e.g. for epoch 2, the key is root at slot 63)
 	if epoch <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
 		return nil
 	}
-
-	// Use state root from (current_epoch - 1))
-	s, err := slots.EpochEnd(epoch - 1)
+	slot, err := slots.EpochEnd(epoch - 1)
 	if err != nil {
 		return err
 	}
-	r, err := state.StateRootAtIndex(uint64(s % params.BeaconConfig().SlotsPerHistoricalRoot))
+	root, err := StateRootAtSlot(state, slot)
 	if err != nil {
 		return err
-	}
-	// Skip cache update if we have an invalid key
-	if r == nil || bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
-		return nil
 	}
 	// Skip cache update if the key already exists
-	exists, err := proposerIndicesCache.HasProposerIndices(bytesutil.ToBytes32(r))
-	if err != nil {
-		return err
-	}
-	if exists {
+	_, ok := proposerIndicesCache.ProposerIndices(epoch, [32]byte(root))
+	if ok {
 		return nil
 	}
-
 	indices, err := ActiveValidatorIndices(ctx, state, epoch)
 	if err != nil {
 		return err
 	}
-	proposerIndices, err := precomputeProposerIndices(state, indices, epoch)
+	proposerIndices, err := PrecomputeProposerIndices(state, indices, epoch)
 	if err != nil {
 		return err
 	}
-	return proposerIndicesCache.AddProposerIndices(&cache.ProposerIndices{
-		BlockRoot:       bytesutil.ToBytes32(r),
-		ProposerIndices: proposerIndices,
-	})
+	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+		return errors.New("invalid proposer length returned from state")
+	}
+	// This is here to deal with tests only
+	var indicesArray [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex
+	copy(indicesArray[:], proposerIndices)
+	proposerIndicesCache.Prune(epoch - 2)
+	proposerIndicesCache.Set(epoch, [32]byte(root), indicesArray)
+	return nil
+}
+
+// UpdateCachedCheckpointToStateRoot updates the map from checkpoints to state root in the proposer indices cache
+func UpdateCachedCheckpointToStateRoot(state state.ReadOnlyBeaconState, cp *forkchoicetypes.Checkpoint) error {
+	if cp.Epoch <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+		return nil
+	}
+	slot, err := slots.EpochEnd(cp.Epoch)
+	if err != nil {
+		return err
+	}
+	root, err := state.StateRootAtIndex(uint64(slot % params.BeaconConfig().SlotsPerHistoricalRoot))
+	if err != nil {
+		return err
+	}
+	proposerIndicesCache.SetCheckpoint(*cp, [32]byte(root))
+	return nil
+}
+
+// ExpandCommitteeCache resizes the cache to a higher limit.
+func ExpandCommitteeCache() {
+	committeeCache.ExpandCommitteeCache()
+}
+
+// CompressCommitteeCache resizes the cache to a lower limit.
+func CompressCommitteeCache() {
+	committeeCache.CompressCommitteeCache()
 }
 
 // ClearCache clears the beacon committee cache and sync committee cache.
 func ClearCache() {
 	committeeCache.Clear()
-	proposerIndicesCache.Clear()
+	proposerIndicesCache.Prune(0)
 	syncCommitteeCache.Clear()
 	balanceCache.Clear()
 }
 
-// computeCommittee returns the requested shuffled committee out of the total committees using
+// ComputeCommittee returns the requested shuffled committee out of the total committees using
 // validator indices and seed.
 //
 // Spec pseudocode definition:
@@ -400,7 +439,7 @@ func ClearCache() {
 //	  start = (len(indices) * index) // count
 //	  end = (len(indices) * uint64(index + 1)) // count
 //	  return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
-func computeCommittee(
+func ComputeCommittee(
 	indices []primitives.ValidatorIndex,
 	seed [32]byte,
 	index, count uint64,
@@ -427,9 +466,9 @@ func computeCommittee(
 	return shuffledList[start:end], nil
 }
 
-// This computes proposer indices of the current epoch and returns a list of proposer indices,
+// PrecomputeProposerIndices computes proposer indices of the current epoch and returns a list of proposer indices,
 // the index of the list represents the slot number.
-func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]primitives.ValidatorIndex, error) {
+func PrecomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]primitives.ValidatorIndex, error) {
 	hashFunc := hash.CustomSHA256Hasher()
 	proposerIndices := make([]primitives.ValidatorIndex, params.BeaconConfig().SlotsPerEpoch)
 

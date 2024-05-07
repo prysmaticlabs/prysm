@@ -8,24 +8,24 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -227,8 +227,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	logFields["validationTime"] = validationTime
 	log.WithFields(logFields).Debug("Received block")
 
-	blockArrivalGossipSummary.Observe(float64(sinceSlotStartTime))
-	blockVerificationGossipSummary.Observe(float64(validationTime))
+	blockArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
+	blockVerificationGossipSummary.Observe(float64(validationTime.Milliseconds()))
 	return pubsub.ValidationAccept, nil
 }
 
@@ -241,34 +241,9 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 		return err
 	}
 
-	if !s.cfg.chain.InForkchoice(blk.Block().ParentRoot()) {
-		s.setBadBlock(ctx, blockRoot)
-		return blockchain.ErrNotDescendantOfFinalized
-	}
-
-	parentState, err := s.cfg.stateGen.StateByRoot(ctx, blk.Block().ParentRoot())
+	parentState, err := s.validatePhase0Block(ctx, blk, blockRoot)
 	if err != nil {
 		return err
-	}
-
-	if err := blocks.VerifyBlockSignatureUsingCurrentFork(parentState, blk); err != nil {
-		s.setBadBlock(ctx, blockRoot)
-		return err
-	}
-	// In the event the block is more than an epoch ahead from its
-	// parent state, we have to advance the state forward.
-	parentRoot := blk.Block().ParentRoot()
-	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot[:], blk.Block().Slot())
-	if err != nil {
-		return err
-	}
-	idx, err := helpers.BeaconProposerIndex(ctx, parentState)
-	if err != nil {
-		return err
-	}
-	if blk.Block().ProposerIndex() != idx {
-		s.setBadBlock(ctx, blockRoot)
-		return errors.New("incorrect proposer index")
 	}
 
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
@@ -280,6 +255,42 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 		return err
 	}
 	return nil
+}
+
+// Validates beacon block according to phase 0 validity conditions.
+// - Checks that the parent is in our forkchoice tree.
+// - Validates that the proposer signature is valid.
+// - Validates that the proposer index is valid.
+func (s *Service) validatePhase0Block(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) (state.BeaconState, error) {
+	if !s.cfg.chain.InForkchoice(blk.Block().ParentRoot()) {
+		s.setBadBlock(ctx, blockRoot)
+		return nil, blockchain.ErrNotDescendantOfFinalized
+	}
+
+	parentState, err := s.cfg.stateGen.StateByRoot(ctx, blk.Block().ParentRoot())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := blocks.VerifyBlockSignatureUsingCurrentFork(parentState, blk, blockRoot); err != nil {
+		return nil, err
+	}
+	// In the event the block is more than an epoch ahead from its
+	// parent state, we have to advance the state forward.
+	parentRoot := blk.Block().ParentRoot()
+	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot[:], blk.Block().Slot())
+	if err != nil {
+		return nil, err
+	}
+	idx, err := helpers.BeaconProposerIndex(ctx, parentState)
+	if err != nil {
+		return nil, err
+	}
+	if blk.Block().ProposerIndex() != idx {
+		s.setBadBlock(ctx, blockRoot)
+		return nil, errors.New("incorrect proposer index")
+	}
+	return parentState, nil
 }
 
 func validateDenebBeaconBlock(blk interfaces.ReadOnlyBeaconBlock) error {
@@ -362,7 +373,7 @@ func (s *Service) verifyPendingBlockSignature(ctx context.Context, blk interface
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if err := blocks.VerifyBlockSignatureUsingCurrentFork(roState, blk); err != nil {
+	if err := blocks.VerifyBlockSignatureUsingCurrentFork(roState, blk, blkRoot); err != nil {
 		s.setBadBlock(ctx, blkRoot)
 		return pubsub.ValidationReject, err
 	}
@@ -428,7 +439,7 @@ func isBlockQueueable(genesisTime uint64, slot primitives.Slot, receivedTime tim
 		return false
 	}
 
-	currentTimeWithDisparity := receivedTime.Add(params.BeaconNetworkConfig().MaximumGossipClockDisparity)
+	currentTimeWithDisparity := receivedTime.Add(params.BeaconConfig().MaximumGossipClockDisparityDuration())
 	return currentTimeWithDisparity.Unix() < slotTime.Unix()
 }
 

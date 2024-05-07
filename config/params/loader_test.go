@@ -7,15 +7,16 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -23,26 +24,22 @@ import (
 // These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
 // IMPORTANT: Use one field per line and sort these alphabetically to reduce conflicts.
 var placeholderFields = []string{
-	"ATTESTATION_PROPAGATION_SLOT_RANGE",
-	"ATTESTATION_SUBNET_COUNT",
+	"BYTES_PER_LOGS_BLOOM", // Compile time constant on ExecutionPayload.logs_bloom.
 	"EIP6110_FORK_EPOCH",
 	"EIP6110_FORK_VERSION",
 	"EIP7002_FORK_EPOCH",
 	"EIP7002_FORK_VERSION",
-	"GOSSIP_MAX_SIZE",
-	"MAXIMUM_GOSSIP_CLOCK_DISPARITY",
+	"EIP7594_FORK_EPOCH",
+	"EIP7594_FORK_VERSION",
+	"FIELD_ELEMENTS_PER_BLOB",              // Compile time constant.
+	"KZG_COMMITMENT_INCLUSION_PROOF_DEPTH", // Compile time constant on BlobSidecar.commitment_inclusion_proof.
 	"MAX_BLOBS_PER_BLOCK",
-	"MAX_CHUNK_SIZE",
-	"MAX_REQUEST_BLOB_SIDECARS",
-	"MAX_REQUEST_BLOCKS",
-	"MAX_REQUEST_BLOCKS_DENEB",
-	"MESSAGE_DOMAIN_INVALID_SNAPPY",
-	"MESSAGE_DOMAIN_VALID_SNAPPY",
-	"MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS",
-	"MIN_EPOCHS_FOR_BLOCK_REQUESTS",
+	"MAX_BLOB_COMMITMENTS_PER_BLOCK",   // Compile time constant on BeaconBlockBodyDeneb.blob_kzg_commitments.
+	"MAX_BYTES_PER_TRANSACTION",        // Used for ssz of EL transactions. Unused in Prysm.
+	"MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD", // Compile time constant on ExecutionPayload.deposit_receipts.
+	"MAX_EXTRA_DATA_BYTES",             // Compile time constant on ExecutionPayload.extra_data.
+	"MAX_TRANSACTIONS_PER_PAYLOAD",     // Compile time constant on ExecutionPayload.transactions.
 	"REORG_HEAD_WEIGHT_THRESHOLD",
-	"RESP_TIMEOUT",
-	"TTFB_TIMEOUT",
 	"UPDATE_TIMEOUT",
 	"WHISK_EPOCHS_PER_SHUFFLING_PHASE",
 	"WHISK_FORK_EPOCH",
@@ -76,9 +73,6 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.HysteresisQuotient, actual.HysteresisQuotient, "%s: HysteresisQuotient", name)
 	assert.Equal(t, expected.HysteresisDownwardMultiplier, actual.HysteresisDownwardMultiplier, "%s: HysteresisDownwardMultiplier", name)
 	assert.Equal(t, expected.HysteresisUpwardMultiplier, actual.HysteresisUpwardMultiplier, "%s: HysteresisUpwardMultiplier", name)
-
-	// Fork Choice params.
-	assert.Equal(t, expected.DeprecatedSafeSlotsToUpdateJustified, actual.DeprecatedSafeSlotsToUpdateJustified, "%s: SafeSlotsToUpdateJustified", name)
 
 	// Validator params.
 	assert.Equal(t, expected.Eth1FollowDistance, actual.Eth1FollowDistance, "%s: Eth1FollowDistance", name)
@@ -356,9 +350,14 @@ func configFilePath(t *testing.T, config string) string {
 func presetsFilePath(t *testing.T, config string) []string {
 	fPath, err := bazel.Runfile("external/consensus_spec")
 	require.NoError(t, err)
+
 	return []string{
 		path.Join(fPath, "presets", config, "phase0.yaml"),
 		path.Join(fPath, "presets", config, "altair.yaml"),
+		path.Join(fPath, "presets", config, "bellatrix.yaml"),
+		path.Join(fPath, "presets", config, "capella.yaml"),
+		path.Join(fPath, "presets", config, "deneb.yaml"),
+		path.Join(fPath, "presets", config, "electra.yaml"),
 	}
 }
 
@@ -416,10 +415,5 @@ func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *p
 }
 
 func isPlaceholderField(field string) bool {
-	for _, f := range placeholderFields {
-		if f == field {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(placeholderFields, field)
 }

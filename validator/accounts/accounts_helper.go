@@ -10,13 +10,13 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/io/prompt"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/petnames"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/prompt"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/petnames"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/userprompt"
 	"github.com/urfave/cli/v2"
 )
 
@@ -42,10 +42,14 @@ func selectAccounts(selectionPrompt string, pubKeys [][fieldparams.BLSPubkeyLeng
 	exit := "Done selecting"
 	results := make([]int, 0)
 	au := aurora.NewAurora(true)
+	if len(pubKeyStrings) > 5 {
+		log.Warnf("there are more than %d potential public keys to exit, please consider using the --%s or --%s flags", 5, flags.VoluntaryExitPublicKeysFlag.Name, flags.ExitAllFlag.Name)
+	}
 	for result != exit {
 		p := promptui.Select{
 			Label:        selectionPrompt,
 			HideSelected: true,
+			Size:         len(pubKeyStrings),
 			Items:        append([]string{exit, allAccountsText}, pubKeyStrings...),
 			Templates:    templates,
 		}

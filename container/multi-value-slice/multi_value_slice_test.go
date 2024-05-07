@@ -4,8 +4,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 type testObject struct {
@@ -324,6 +324,156 @@ func TestDetach(t *testing.T) {
 	}
 	_, ok := s.cachedLengths[obj.id]
 	assert.Equal(t, false, ok)
+}
+
+func TestReset(t *testing.T) {
+	s := setup()
+	obj := &testObject{id: 2}
+
+	reset := s.Reset(obj)
+
+	assert.Equal(t, 8, len(reset.sharedItems))
+	assert.Equal(t, 123, reset.sharedItems[0])
+	assert.Equal(t, 2, reset.sharedItems[1])
+	assert.Equal(t, 3, reset.sharedItems[2])
+	assert.Equal(t, 123, reset.sharedItems[3])
+	assert.Equal(t, 2, reset.sharedItems[4])
+	assert.Equal(t, 2, reset.sharedItems[5])
+	assert.Equal(t, 3, reset.sharedItems[6])
+	assert.Equal(t, 2, reset.sharedItems[7])
+	assert.Equal(t, 0, len(reset.individualItems))
+	assert.Equal(t, 0, len(reset.appendedItems))
+}
+
+func TestFragmentation_IndividualReferences(t *testing.T) {
+	s := &Slice[int]{}
+	s.Init([]int{123, 123, 123, 123, 123})
+	s.individualItems[1] = &MultiValueItem[int]{
+		Values: []*Value[int]{
+			{
+				val: 1,
+				ids: []uint64{1},
+			},
+			{
+				val: 2,
+				ids: []uint64{2},
+			},
+		},
+	}
+	s.individualItems[2] = &MultiValueItem[int]{
+		Values: []*Value[int]{
+			{
+				val: 3,
+				ids: []uint64{1, 2},
+			},
+		},
+	}
+
+	numOfRefs := fragmentationLimit / 2
+	for i := 3; i < numOfRefs; i++ {
+		obj := &testObject{id: uint64(i)}
+		s.Copy(&testObject{id: 1}, obj)
+	}
+
+	assert.Equal(t, false, s.IsFragmented())
+
+	// Add more references to hit fragmentation limit. Id 1
+	// has 2 references above.
+	for i := numOfRefs; i < numOfRefs+3; i++ {
+		obj := &testObject{id: uint64(i)}
+		s.Copy(&testObject{id: 1}, obj)
+	}
+	assert.Equal(t, true, s.IsFragmented())
+}
+
+func TestFragmentation_AppendedReferences(t *testing.T) {
+	s := &Slice[int]{}
+	s.Init([]int{123, 123, 123, 123, 123})
+	s.appendedItems = []*MultiValueItem[int]{
+		{
+			Values: []*Value[int]{
+				{
+					val: 1,
+					ids: []uint64{1},
+				},
+				{
+					val: 2,
+					ids: []uint64{2},
+				},
+			},
+		},
+		{
+			Values: []*Value[int]{
+				{
+					val: 3,
+					ids: []uint64{1, 2},
+				},
+			},
+		},
+	}
+	s.cachedLengths[1] = 7
+	s.cachedLengths[2] = 8
+
+	numOfRefs := fragmentationLimit / 2
+	for i := 3; i < numOfRefs; i++ {
+		obj := &testObject{id: uint64(i)}
+		s.Copy(&testObject{id: 1}, obj)
+	}
+
+	assert.Equal(t, false, s.IsFragmented())
+
+	// Add more references to hit fragmentation limit. Id 1
+	// has 2 references above.
+	for i := numOfRefs; i < numOfRefs+3; i++ {
+		obj := &testObject{id: uint64(i)}
+		s.Copy(&testObject{id: 1}, obj)
+	}
+	assert.Equal(t, true, s.IsFragmented())
+}
+
+func TestFragmentation_IndividualAndAppendedReferences(t *testing.T) {
+	s := &Slice[int]{}
+	s.Init([]int{123, 123, 123, 123, 123})
+	s.individualItems[2] = &MultiValueItem[int]{
+		Values: []*Value[int]{
+			{
+				val: 3,
+				ids: []uint64{1, 2},
+			},
+		},
+	}
+	s.appendedItems = []*MultiValueItem[int]{
+		{
+			Values: []*Value[int]{
+				{
+					val: 1,
+					ids: []uint64{1},
+				},
+				{
+					val: 2,
+					ids: []uint64{2},
+				},
+			},
+		},
+	}
+	s.cachedLengths[1] = 7
+	s.cachedLengths[2] = 8
+
+	numOfRefs := fragmentationLimit / 2
+	for i := 3; i < numOfRefs; i++ {
+		obj := &testObject{id: uint64(i)}
+		s.Copy(&testObject{id: 1}, obj)
+	}
+
+	assert.Equal(t, false, s.IsFragmented())
+
+	// Add more references to hit fragmentation limit. Id 1
+	// has 2 references above.
+	for i := numOfRefs; i < numOfRefs+3; i++ {
+		obj := &testObject{id: uint64(i)}
+		s.Copy(&testObject{id: 1}, obj)
+	}
+	assert.Equal(t, true, s.IsFragmented())
 }
 
 // Share the slice between 2 objects.

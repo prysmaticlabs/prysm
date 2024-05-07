@@ -13,22 +13,23 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	ma "github.com/multiformats/go-multiaddr"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
-	port := 2000
+	const port = 2000
+
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, fieldparams.RootLength)
@@ -46,14 +47,14 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 
 	bootNode := bootListener.Self()
 	cfg := &Config{
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		UDPPort:             uint(port),
-		StateNotifier:       &mock.MockStateNotifier{},
+		Discv5BootStrapAddrs: []string{bootNode.String()},
+		UDPPort:              uint(port),
+		StateNotifier:        &mock.MockStateNotifier{},
 	}
 
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
-		port = 3000 + i
+		port := 3000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 
@@ -98,13 +99,14 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
-	var addrs []ma.Multiaddr
 
-	for _, n := range nodes {
-		if s.filterPeer(n) {
-			addr, err := convertToSingleMultiAddr(n)
+	addrs := make([]ma.Multiaddr, 0)
+
+	for _, node := range nodes {
+		if s.filterPeer(node) {
+			nodeAddrs, err := retrieveMultiAddrsFromNode(node)
 			require.NoError(t, err)
-			addrs = append(addrs, addr)
+			addrs = append(addrs, nodeAddrs...)
 		}
 	}
 
@@ -114,10 +116,11 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 }
 
 func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
+	const port = 2000
+
 	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 	logrus.SetLevel(logrus.TraceLevel)
-	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
@@ -132,13 +135,13 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 
 	bootNode := bootListener.Self()
 	cfg := &Config{
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		UDPPort:             uint(port),
+		Discv5BootStrapAddrs: []string{bootNode.String()},
+		UDPPort:              uint(port),
 	}
 
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
-		port = 3000 + i
+		port := 3000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 
@@ -188,13 +191,13 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
-	var addrs []ma.Multiaddr
+	addrs := make([]ma.Multiaddr, 0, len(nodes))
 
-	for _, n := range nodes {
-		if s.filterPeer(n) {
-			addr, err := convertToSingleMultiAddr(n)
+	for _, node := range nodes {
+		if s.filterPeer(node) {
+			nodeAddrs, err := retrieveMultiAddrsFromNode(node)
 			require.NoError(t, err)
-			addrs = append(addrs, addr)
+			addrs = append(addrs, nodeAddrs...)
 		}
 	}
 	if len(addrs) == 0 {

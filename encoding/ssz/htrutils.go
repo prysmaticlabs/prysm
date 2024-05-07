@@ -5,10 +5,10 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // Uint64Root computes the HashTreeRoot Merkleization of
@@ -134,6 +134,56 @@ func WithdrawalSliceRoot(withdrawals []*enginev1.Withdrawal, limit uint64) ([32]
 	}
 	bytesRootBuf := new(bytes.Buffer)
 	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(withdrawals))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
+// DepositReceiptSliceRoot computes the HTR of a slice of deposit receipts.
+// The limit parameter is used as input to the bitwise merkleization algorithm.
+func DepositReceiptSliceRoot(depositReceipts []*enginev1.DepositReceipt, limit uint64) ([32]byte, error) {
+	roots := make([][32]byte, len(depositReceipts))
+	for i := 0; i < len(depositReceipts); i++ {
+		r, err := depositReceipts[i].HashTreeRoot()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		roots[i] = r
+	}
+
+	bytesRoot, err := BitwiseMerkleize(roots, uint64(len(roots)), limit)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(depositReceipts))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
+// WithdrawalRequestSliceRoot computes the HTR of a slice of withdrawal requests from the EL.
+// The limit parameter is used as input to the bitwise merkleization algorithm.
+func WithdrawalRequestSliceRoot(withdrawalRequests []*enginev1.ExecutionLayerWithdrawalRequest, limit uint64) ([32]byte, error) {
+	roots := make([][32]byte, len(withdrawalRequests))
+	for i := 0; i < len(withdrawalRequests); i++ {
+		r, err := withdrawalRequests[i].HashTreeRoot()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		roots[i] = r
+	}
+
+	bytesRoot, err := BitwiseMerkleize(roots, uint64(len(roots)), limit)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(withdrawalRequests))); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not marshal length")
 	}
 	bytesRootBufRoot := make([]byte, 32)

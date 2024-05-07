@@ -10,7 +10,7 @@ go_library(
         "schema.go",
         "slasher.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/slasherkv",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/slasherkv",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/db/iface:go_default_library",
@@ -48,7 +48,6 @@ go_test(
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_prysmaticlabs_fastssz//:go_default_library",

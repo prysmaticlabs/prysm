@@ -7,17 +7,17 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/verify"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/verify"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -46,7 +46,6 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, requests *t
 		}
 		return nil
 	})
-
 	for _, blk := range blks {
 		// Skip blocks before deneb because they have no blob.
 		if blk.Version() < version.Deneb {
@@ -56,11 +55,17 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, requests *t
 		if err != nil {
 			return err
 		}
-		if err := s.requestPendingBlobs(ctx, blk, blkRoot, id); err != nil {
+		request, err := s.pendingBlobsRequestForBlock(blkRoot, blk)
+		if err != nil {
+			return err
+		}
+		if len(request) == 0 {
+			continue
+		}
+		if err := s.sendAndSaveBlobSidecars(ctx, request, id, blk); err != nil {
 			return err
 		}
 	}
-
 	return err
 }
 
@@ -109,7 +114,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		if blk.Block().IsBlinded() {
 			blk, err = s.cfg.executionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 			if err != nil {
-				if errors.Is(err, execution.EmptyBlockHash) {
+				if errors.Is(err, execution.ErrEmptyBlockHash) {
 					log.WithError(err).Warn("Could not reconstruct block from header with syncing execution client. Waiting to complete syncing")
 				} else {
 					log.WithError(err).Error("Could not get reconstruct full block from blinded body")
@@ -128,41 +133,13 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	return nil
 }
 
-// requestPendingBlobs handles the request for pending blobs based on the given beacon block.
-func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, peerID peer.ID) error {
-	if block.Version() < version.Deneb {
-		return nil // Block before deneb has no blob.
-	}
-
-	commitments, err := block.Block().Body().BlobKzgCommitments()
-	if err != nil {
-		return err
-	}
-
-	if len(commitments) == 0 {
-		return nil // No operation if the block has no blob commitments.
-	}
-
-	contextByte, err := ContextByteVersionsForValRoot(s.cfg.chain.GenesisValidatorsRoot())
-	if err != nil {
-		return err
-	}
-
-	request, err := s.constructPendingBlobsRequest(ctx, blockRoot, len(commitments))
-	if err != nil {
-		return err
-	}
-
-	return s.sendAndSaveBlobSidecars(ctx, request, contextByte, peerID, block)
-}
-
 // sendAndSaveBlobSidecars sends the blob request and saves received sidecars.
-func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.BlobSidecarsByRootReq, contextByte ContextByteVersions, peerID peer.ID, block interfaces.ReadOnlySignedBeaconBlock) error {
+func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.BlobSidecarsByRootReq, peerID peer.ID, block interfaces.ReadOnlySignedBeaconBlock) error {
 	if len(request) == 0 {
 		return nil
 	}
 
-	sidecars, err := SendBlobSidecarByRoot(ctx, s.cfg.clock, s.cfg.p2p, peerID, contextByte, &request)
+	sidecars, err := SendBlobSidecarByRoot(ctx, s.cfg.clock, s.cfg.p2p, peerID, s.ctxMap, &request)
 	if err != nil {
 		return err
 	}
@@ -174,14 +151,14 @@ func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.Blo
 	if len(sidecars) != len(request) {
 		return fmt.Errorf("received %d blob sidecars, expected %d for RPC", len(sidecars), len(request))
 	}
+	bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.PendingQueueSidecarRequirements)
 	for _, sidecar := range sidecars {
 		if err := verify.BlobAlignsWithBlock(sidecar, RoBlock); err != nil {
 			return err
 		}
 		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar RPC")
 	}
-
-	vscs, err := verification.BlobSidecarSliceNoop(sidecars)
+	vscs, err := bv.VerifiedROBlobs(ctx, RoBlock, sidecars)
 	if err != nil {
 		return err
 	}
@@ -193,8 +170,25 @@ func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.Blo
 	return nil
 }
 
+func (s *Service) pendingBlobsRequestForBlock(root [32]byte, b interfaces.ReadOnlySignedBeaconBlock) (types.BlobSidecarsByRootReq, error) {
+	if b.Version() < version.Deneb {
+		return nil, nil // Block before deneb has no blob.
+	}
+	cc, err := b.Block().Body().BlobKzgCommitments()
+	if err != nil {
+		return nil, err
+	}
+	if len(cc) == 0 {
+		return nil, nil
+	}
+	return s.constructPendingBlobsRequest(root, len(cc))
+}
+
 // constructPendingBlobsRequest creates a request for BlobSidecars by root, considering blobs already in DB.
-func (s *Service) constructPendingBlobsRequest(ctx context.Context, root [32]byte, commitments int) (types.BlobSidecarsByRootReq, error) {
+func (s *Service) constructPendingBlobsRequest(root [32]byte, commitments int) (types.BlobSidecarsByRootReq, error) {
+	if commitments == 0 {
+		return nil, nil
+	}
 	stored, err := s.cfg.blobStorage.Indices(root)
 	if err != nil {
 		return nil, err

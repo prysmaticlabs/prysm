@@ -13,34 +13,35 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/api/server"
-	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	prysmtime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
-	blstoexecmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec/mock"
-	slashingsmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings/mock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits/mock"
-	p2pMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/server"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	blockchainmock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	prysmtime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
+	blstoexecmock "github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec/mock"
+	slashingsmock "github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings/mock"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/voluntaryexits/mock"
+	p2pMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestListAttestations(t *testing.T) {
@@ -115,8 +116,8 @@ func TestListAttestations(t *testing.T) {
 	s := &Server{
 		AttestationsPool: attestations.NewPool(),
 	}
-	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]*ethpbv1alpha1.Attestation{att1, att2}))
-	require.NoError(t, s.AttestationsPool.SaveUnaggregatedAttestations([]*ethpbv1alpha1.Attestation{att3, att4}))
+	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]interfaces.Attestation{att1, att2}))
+	require.NoError(t, s.AttestationsPool.SaveUnaggregatedAttestations([]interfaces.Attestation{att3, att4}))
 
 	t.Run("empty request", func(t *testing.T) {
 		url := "http://example.com"
@@ -126,7 +127,7 @@ func TestListAttestations(t *testing.T) {
 
 		s.ListAttestations(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &ListAttestationsResponse{}
+		resp := &structs.ListAttestationsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
@@ -140,7 +141,7 @@ func TestListAttestations(t *testing.T) {
 
 		s.ListAttestations(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &ListAttestationsResponse{}
+		resp := &structs.ListAttestationsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
@@ -157,7 +158,7 @@ func TestListAttestations(t *testing.T) {
 
 		s.ListAttestations(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &ListAttestationsResponse{}
+		resp := &structs.ListAttestationsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
@@ -174,7 +175,7 @@ func TestListAttestations(t *testing.T) {
 
 		s.ListAttestations(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &ListAttestationsResponse{}
+		resp := &structs.ListAttestationsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
@@ -240,15 +241,15 @@ func TestSubmitAttestations(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
 		assert.Equal(t, 1, broadcaster.NumAttestations())
-		assert.Equal(t, "0x03", hexutil.Encode(broadcaster.BroadcastAttestations[0].AggregationBits))
-		assert.Equal(t, "0x8146f4397bfd8fd057ebbcd6a67327bdc7ed5fb650533edcb6377b650dea0b6da64c14ecd60846d5c0a0cd43893d6972092500f82c9d8a955e2b58c5ed3cbe885d84008ace6bd86ba9e23652f58e2ec207cec494c916063257abf285b9b15b15", hexutil.Encode(broadcaster.BroadcastAttestations[0].Signature))
-		assert.Equal(t, primitives.Slot(0), broadcaster.BroadcastAttestations[0].Data.Slot)
-		assert.Equal(t, primitives.CommitteeIndex(0), broadcaster.BroadcastAttestations[0].Data.CommitteeIndex)
-		assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", hexutil.Encode(broadcaster.BroadcastAttestations[0].Data.BeaconBlockRoot))
-		assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", hexutil.Encode(broadcaster.BroadcastAttestations[0].Data.Source.Root))
-		assert.Equal(t, primitives.Epoch(0), broadcaster.BroadcastAttestations[0].Data.Source.Epoch)
-		assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", hexutil.Encode(broadcaster.BroadcastAttestations[0].Data.Target.Root))
-		assert.Equal(t, primitives.Epoch(0), broadcaster.BroadcastAttestations[0].Data.Target.Epoch)
+		assert.Equal(t, "0x03", hexutil.Encode(broadcaster.BroadcastAttestations[0].GetAggregationBits()))
+		assert.Equal(t, "0x8146f4397bfd8fd057ebbcd6a67327bdc7ed5fb650533edcb6377b650dea0b6da64c14ecd60846d5c0a0cd43893d6972092500f82c9d8a955e2b58c5ed3cbe885d84008ace6bd86ba9e23652f58e2ec207cec494c916063257abf285b9b15b15", hexutil.Encode(broadcaster.BroadcastAttestations[0].GetSignature()))
+		assert.Equal(t, primitives.Slot(0), broadcaster.BroadcastAttestations[0].GetData().Slot)
+		assert.Equal(t, primitives.CommitteeIndex(0), broadcaster.BroadcastAttestations[0].GetData().CommitteeIndex)
+		assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", hexutil.Encode(broadcaster.BroadcastAttestations[0].GetData().BeaconBlockRoot))
+		assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", hexutil.Encode(broadcaster.BroadcastAttestations[0].GetData().Source.Root))
+		assert.Equal(t, primitives.Epoch(0), broadcaster.BroadcastAttestations[0].GetData().Source.Epoch)
+		assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", hexutil.Encode(broadcaster.BroadcastAttestations[0].GetData().Target.Root))
+		assert.Equal(t, primitives.Epoch(0), broadcaster.BroadcastAttestations[0].GetData().Target.Epoch)
 		assert.Equal(t, 1, s.AttestationsPool.UnaggregatedAttestationCount())
 	})
 	t.Run("multiple", func(t *testing.T) {
@@ -276,7 +277,7 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -291,7 +292,7 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -340,7 +341,7 @@ func TestListVoluntaryExits(t *testing.T) {
 
 	s.ListVoluntaryExits(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
-	resp := &ListVoluntaryExitsResponse{}
+	resp := &structs.ListVoluntaryExitsResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
@@ -434,7 +435,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		s := &Server{}
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -450,7 +451,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		s := &Server{}
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 	})
@@ -467,7 +468,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Invalid exit"))
@@ -496,7 +497,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Could not get validator"))
@@ -591,7 +592,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		require.NoError(t, err)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		msgsInPool, err := s.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
@@ -611,7 +612,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -625,7 +626,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -660,11 +661,11 @@ func TestListBLSToExecutionChanges(t *testing.T) {
 	s.ListBLSToExecutionChanges(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
 
-	resp := &BLSToExecutionChangesPoolResponse{}
+	resp := &structs.BLSToExecutionChangesPoolResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, 2, len(resp.Data))
-	assert.DeepEqual(t, shared.SignedBLSChangeFromConsensus(change1), resp.Data[0])
-	assert.DeepEqual(t, shared.SignedBLSChangeFromConsensus(change2), resp.Data[1])
+	assert.DeepEqual(t, structs.SignedBLSChangeFromConsensus(change1), resp.Data[0])
+	assert.DeepEqual(t, structs.SignedBLSChangeFromConsensus(change2), resp.Data[1])
 }
 
 func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
@@ -722,12 +723,12 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 	st, err := state_native.InitializeFromProtoCapella(spb)
 	require.NoError(t, err)
 
-	signedChanges := make([]*shared.SignedBLSToExecutionChange, numValidators)
+	signedChanges := make([]*structs.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
 		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
-		signed := &shared.SignedBLSToExecutionChange{
-			Message:   shared.BLSChangeFromConsensus(message),
+		signed := &structs.SignedBLSToExecutionChange{
+			Message:   structs.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		}
 		signedChanges[i] = signed
@@ -834,13 +835,13 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 	stc, err := state_native.InitializeFromProtoCapella(spc)
 	require.NoError(t, err)
 
-	signedChanges := make([]*shared.SignedBLSToExecutionChange, numValidators)
+	signedChanges := make([]*structs.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
 		signature, err := signing.ComputeDomainAndSign(stc, prysmtime.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
-		signedChanges[i] = &shared.SignedBLSToExecutionChange{
-			Message:   shared.BLSChangeFromConsensus(message),
+		signedChanges[i] = &structs.SignedBLSToExecutionChange{
+			Message:   structs.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		}
 	}
@@ -934,15 +935,15 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	st, err := state_native.InitializeFromProtoCapella(spb)
 	require.NoError(t, err)
 
-	signedChanges := make([]*shared.SignedBLSToExecutionChange, numValidators)
+	signedChanges := make([]*structs.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
 		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 		if i == 1 {
 			signature[0] = 0x00
 		}
-		signedChanges[i] = &shared.SignedBLSToExecutionChange{
-			Message:   shared.BLSChangeFromConsensus(message),
+		signedChanges[i] = &structs.SignedBLSToExecutionChange{
+			Message:   structs.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		}
 	}
@@ -975,10 +976,10 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	poolChanges, err := s.BLSChangesPool.PendingBLSToExecChanges()
 	require.Equal(t, len(poolChanges)+1, len(signedChanges))
 	require.NoError(t, err)
-	require.DeepEqual(t, shared.SignedBLSChangeFromConsensus(poolChanges[0]), signedChanges[0])
+	require.DeepEqual(t, structs.SignedBLSChangeFromConsensus(poolChanges[0]), signedChanges[0])
 
 	for i := 2; i < numValidators; i++ {
-		require.DeepEqual(t, shared.SignedBLSChangeFromConsensus(poolChanges[i-1]), signedChanges[i])
+		require.DeepEqual(t, structs.SignedBLSChangeFromConsensus(poolChanges[i-1]), signedChanges[i])
 	}
 }
 
@@ -1060,7 +1061,7 @@ func TestGetAttesterSlashings(t *testing.T) {
 
 	s := &Server{
 		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []*ethpbv1alpha1.AttesterSlashing{slashing1, slashing2}},
+		SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []interfaces.AttesterSlashing{slashing1, slashing2}},
 	}
 
 	request := httptest.NewRequest(http.MethodGet, "http://example.com/beacon/pool/attester_slashings", nil)
@@ -1069,7 +1070,7 @@ func TestGetAttesterSlashings(t *testing.T) {
 
 	s.GetAttesterSlashings(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetAttesterSlashingsResponse{}
+	resp := &structs.GetAttesterSlashingsResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
@@ -1135,7 +1136,7 @@ func TestGetProposerSlashings(t *testing.T) {
 
 	s.GetProposerSlashings(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetProposerSlashingsResponse{}
+	resp := &structs.GetProposerSlashingsResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
@@ -1205,13 +1206,15 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
+	chainmock := &blockchainmock.ChainService{State: bs}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{},
-		Broadcaster:      broadcaster,
+		ChainInfoFetcher:  chainmock,
+		SlashingsPool:     &slashingsmock.PoolMock{},
+		Broadcaster:       broadcaster,
+		OperationNotifier: chainmock.OperationNotifier(),
 	}
 
-	toSubmit := shared.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
+	toSubmit := structs.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
 	b, err := json.Marshal(toSubmit[0])
 	require.NoError(t, err)
 	var body bytes.Buffer
@@ -1295,13 +1298,15 @@ func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
+	chainmock := &blockchainmock.ChainService{State: bs}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{},
-		Broadcaster:      broadcaster,
+		ChainInfoFetcher:  chainmock,
+		SlashingsPool:     &slashingsmock.PoolMock{},
+		Broadcaster:       broadcaster,
+		OperationNotifier: chainmock.OperationNotifier(),
 	}
 
-	toSubmit := shared.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
+	toSubmit := structs.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
 	b, err := json.Marshal(toSubmit[0])
 	require.NoError(t, err)
 	var body bytes.Buffer
@@ -1342,7 +1347,7 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 
 	s.SubmitAttesterSlashing(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
-	e := &httputil.DefaultErrorJson{}
+	e := &httputil.DefaultJsonError{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 	assert.Equal(t, http.StatusBadRequest, e.Code)
 	assert.StringContains(t, "Invalid attester slashing", e.Message)
@@ -1404,13 +1409,15 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
+	chainmock := &blockchainmock.ChainService{State: bs}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{},
-		Broadcaster:      broadcaster,
+		ChainInfoFetcher:  chainmock,
+		SlashingsPool:     &slashingsmock.PoolMock{},
+		Broadcaster:       broadcaster,
+		OperationNotifier: chainmock.OperationNotifier(),
 	}
 
-	toSubmit := shared.ProposerSlashingsFromConsensus([]*ethpbv1alpha1.ProposerSlashing{slashing})
+	toSubmit := structs.ProposerSlashingsFromConsensus([]*ethpbv1alpha1.ProposerSlashing{slashing})
 	b, err := json.Marshal(toSubmit[0])
 	require.NoError(t, err)
 	var body bytes.Buffer
@@ -1486,13 +1493,15 @@ func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
+	chainmock := &blockchainmock.ChainService{State: bs}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{},
-		Broadcaster:      broadcaster,
+		ChainInfoFetcher:  chainmock,
+		SlashingsPool:     &slashingsmock.PoolMock{},
+		Broadcaster:       broadcaster,
+		OperationNotifier: chainmock.OperationNotifier(),
 	}
 
-	toSubmit := shared.ProposerSlashingsFromConsensus([]*ethpbv1alpha1.ProposerSlashing{slashing})
+	toSubmit := structs.ProposerSlashingsFromConsensus([]*ethpbv1alpha1.ProposerSlashing{slashing})
 	b, err := json.Marshal(toSubmit[0])
 	require.NoError(t, err)
 	var body bytes.Buffer
@@ -1533,7 +1542,7 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 
 	s.SubmitProposerSlashing(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
-	e := &httputil.DefaultErrorJson{}
+	e := &httputil.DefaultJsonError{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 	assert.Equal(t, http.StatusBadRequest, e.Code)
 	assert.StringContains(t, "Invalid proposer slashing", e.Message)

@@ -12,22 +12,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/monitor"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime"
-	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/monitor"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime"
+	"github.com/prysmaticlabs/prysm/v5/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -87,6 +88,30 @@ func TestNodeStart_Ok(t *testing.T) {
 		node.Start()
 	}()
 	time.Sleep(3 * time.Second)
+	node.Close()
+	require.LogsContain(t, hook, "Starting beacon node")
+}
+
+func TestNodeStart_SyncChecker(t *testing.T) {
+	hook := logTest.NewGlobal()
+	app := cli.App{}
+	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
+	set := flag.NewFlagSet("test", 0)
+	set.String("datadir", tmp, "node data directory")
+	set.String("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
+	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
+
+	ctx, cancel := newCliContextWithCancel(&app, set)
+	node, err := New(ctx, cancel, WithBlockchainFlagOptions([]blockchain.Option{}),
+		WithBuilderFlagOptions([]builder.Option{}),
+		WithExecutionChainOptions([]execution.Option{}),
+		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)))
+	require.NoError(t, err)
+	go func() {
+		node.Start()
+	}()
+	time.Sleep(3 * time.Second)
+	assert.NotNil(t, node.syncChecker.Svc)
 	node.Close()
 	require.LogsContain(t, hook, "Starting beacon node")
 }
@@ -192,9 +217,9 @@ func Test_hasNetworkFlag(t *testing.T) {
 		want         bool
 	}{
 		{
-			name:         "Prater testnet",
-			networkName:  features.PraterTestnet.Name,
-			networkValue: "prater",
+			name:         "Holesky testnet",
+			networkName:  features.HoleskyTestnet.Name,
+			networkValue: "holesky",
 			want:         true,
 		},
 		{

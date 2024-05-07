@@ -6,21 +6,22 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestGetBlock(t *testing.T) {
@@ -145,8 +146,10 @@ func TestGetBlock(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			pbBlock, err := result.PbPhase0Block()
+			pb, err := result.Proto()
 			require.NoError(t, err)
+			pbBlock, ok := pb.(*ethpbalpha.SignedBeaconBlock)
+			require.Equal(t, true, ok)
 			if !reflect.DeepEqual(pbBlock, tt.want) {
 				t.Error("Expected blocks to equal")
 			}
@@ -163,8 +166,7 @@ func TestGetBlob(t *testing.T) {
 	db := testDB.SetupDB(t)
 	denebBlock, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 123, 4)
 	require.NoError(t, db.SaveBlock(context.Background(), denebBlock))
-	_, bs, err := filesystem.NewEphemeralBlobStorageWithFs(t)
-	require.NoError(t, err)
+	_, bs := filesystem.NewEphemeralBlobStorageWithFs(t)
 	testSidecars, err := verification.BlobSidecarSliceNoop(blobs)
 	require.NoError(t, err)
 	for i := range testSidecars {
@@ -180,8 +182,11 @@ func TestGetBlob(t *testing.T) {
 	t.Run("head", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{Root: blockRoot[:]},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		verifiedBlobs, rpcErr := blocker.Blobs(ctx, "head", nil)
 		assert.Equal(t, rpcErr == nil, true)
@@ -214,8 +219,11 @@ func TestGetBlob(t *testing.T) {
 	t.Run("finalized", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 
 		verifiedBlobs, rpcErr := blocker.Blobs(ctx, "finalized", nil)
@@ -225,8 +233,11 @@ func TestGetBlob(t *testing.T) {
 	t.Run("justified", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{CurrentJustifiedCheckPoint: &ethpbalpha.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 
 		verifiedBlobs, rpcErr := blocker.Blobs(ctx, "justified", nil)
@@ -235,6 +246,9 @@ func TestGetBlob(t *testing.T) {
 	})
 	t.Run("root", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
 			BeaconDB:    db,
 			BlobStorage: bs,
 		}
@@ -244,6 +258,9 @@ func TestGetBlob(t *testing.T) {
 	})
 	t.Run("slot", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
 			BeaconDB:    db,
 			BlobStorage: bs,
 		}
@@ -254,8 +271,11 @@ func TestGetBlob(t *testing.T) {
 	t.Run("one blob only", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		verifiedBlobs, rpcErr := blocker.Blobs(ctx, "123", []uint64{2})
 		assert.Equal(t, rpcErr == nil, true)
@@ -270,8 +290,11 @@ func TestGetBlob(t *testing.T) {
 	t.Run("no blobs returns an empty array", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      filesystem.NewEphemeralBlobStorage(t),
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: filesystem.NewEphemeralBlobStorage(t),
 		}
 		verifiedBlobs, rpcErr := blocker.Blobs(ctx, "123", nil)
 		assert.Equal(t, rpcErr == nil, true)

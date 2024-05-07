@@ -3,20 +3,24 @@ package sync
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 	"strings"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -47,7 +51,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	if err != nil {
 		return pubsub.ValidationReject, errors.Wrap(err, "roblob conversion failure")
 	}
-	vf := s.newBlobVerifier(blob, verification.GossipSidecarRequirements...)
+	vf := s.newBlobVerifier(blob, verification.GossipSidecarRequirements)
 
 	if err := vf.BlobIndexInBounds(); err != nil {
 		return pubsub.ValidationReject, err
@@ -56,20 +60,26 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	// [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id.
 	want := fmt.Sprintf("blob_sidecar_%d", computeSubnetForBlobSidecar(blob.Index))
 	if !strings.Contains(*msg.Topic, want) {
-		log.WithFields(blobFields(blob)).Debug("Sidecar index  does not match topic")
+		log.WithFields(blobFields(blob)).Debug("Sidecar index does not match topic")
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
 	}
 
-	if err := vf.SlotNotTooEarly(); err != nil {
+	if err := vf.NotFromFutureSlot(); err != nil {
 		return pubsub.ValidationIgnore, err
+	}
+
+	startTime, err := slots.ToTime(uint64(s.cfg.chain.GenesisTime().Unix()), blob.Slot())
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+
+	// [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index, sidecar.index) with valid header signature and sidecar inclusion proof
+	if s.hasSeenBlobIndex(blob.Slot(), blob.ProposerIndex(), blob.Index) {
+		return pubsub.ValidationIgnore, nil
 	}
 
 	if err := vf.SlotAboveFinalized(); err != nil {
 		return pubsub.ValidationIgnore, err
-	}
-
-	if err := vf.ValidProposerSignature(ctx); err != nil {
-		return pubsub.ValidationReject, err
 	}
 
 	if err := vf.SidecarParentSeen(s.hasBadBlock); err != nil {
@@ -80,6 +90,10 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		}()
 		missingParentBlobSidecarCount.Inc()
 		return pubsub.ValidationIgnore, err
+	}
+
+	if err := vf.ValidProposerSignature(ctx); err != nil {
+		return pubsub.ValidationReject, err
 	}
 
 	if err := vf.SidecarParentValid(s.hasBadBlock); err != nil {
@@ -99,28 +113,22 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 
 	if err := vf.SidecarKzgProofVerified(); err != nil {
+		saveInvalidBlobToTemp(blob)
 		return pubsub.ValidationReject, err
-	}
-
-	// [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index, sidecar.index) with valid header signature and sidecar inclusion proof
-	if s.hasSeenBlobIndex(blob.Slot(), blob.ProposerIndex(), blob.Index) {
-		return pubsub.ValidationIgnore, nil
 	}
 
 	if err := vf.SidecarProposerExpected(ctx); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
-	startTime, err := slots.ToTime(uint64(s.cfg.chain.GenesisTime().Unix()), blob.Slot())
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
 	fields := blobFields(blob)
 	sinceSlotStartTime := receivedTime.Sub(startTime)
+	validationTime := s.cfg.clock.Now().Sub(receivedTime)
 	fields["sinceSlotStartTime"] = sinceSlotStartTime
-	fields["validationTime"] = s.cfg.clock.Now().Sub(receivedTime)
+	fields["validationTime"] = validationTime
 	log.WithFields(fields).Debug("Received blob sidecar gossip")
 
+	blobSidecarVerificationGossipSummary.Observe(float64(validationTime.Milliseconds()))
 	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
 
 	vBlobData, err := vf.VerifiedROBlob()
@@ -163,4 +171,22 @@ func blobFields(b blocks.ROBlob) logrus.Fields {
 
 func computeSubnetForBlobSidecar(index uint64) uint64 {
 	return index % params.BeaconConfig().BlobsidecarSubnetCount
+}
+
+// saveInvalidBlobToTemp as a block ssz. Writes to temp directory.
+func saveInvalidBlobToTemp(b blocks.ROBlob) {
+	if !features.Get().SaveInvalidBlob {
+		return
+	}
+	filename := fmt.Sprintf("blob_sidecar_%#x_%d_%d.ssz", b.BlockRoot(), b.Slot(), b.Index)
+	fp := path.Join(os.TempDir(), filename)
+	log.Warnf("Writing invalid blob sidecar to disk at %s", fp)
+	enc, err := b.MarshalSSZ()
+	if err != nil {
+		log.WithError(err).Error("Failed to ssz encode blob sidecar")
+		return
+	}
+	if err := file.WriteFile(fp, enc); err != nil {
+		log.WithError(err).Error("Failed to write to disk")
+	}
 }

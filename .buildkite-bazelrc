@@ -10,7 +10,7 @@
 
 # Prysm specific remote-cache properties.
 build:remote-cache --remote_download_minimal
-build:remote-cache --experimental_remote_build_event_upload=minimal
+build:remote-cache --remote_build_event_upload=minimal
 build:remote-cache --remote_cache=grpc://bazel-remote-cache:9092
 # Does not work with rules_oci. See https://github.com/bazel-contrib/rules_oci/issues/292
 #build:remote-cache --experimental_remote_downloader=grpc://bazel-remote-cache:9092

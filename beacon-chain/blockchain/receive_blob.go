@@ -3,11 +3,11 @@ package blockchain
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 )
 
 // SendNewBlobEvent sends a message to the BlobNotifier channel that the blob
-// for the blocroot `root` is ready in the database
+// for the block root `root` is ready in the database
 func (s *Service) sendNewBlobEvent(root [32]byte, index uint64) {
 	s.blobNotifiers.notifyIndex(root, index)
 }

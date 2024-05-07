@@ -10,16 +10,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
-	beacon_api "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	beacon_api "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -153,14 +153,7 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 	if len(rawExitedKeys) > 0 {
 		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
 		for i, key := range rawExitedKeys {
-			var baseUrl string
-			if params.BeaconConfig().ConfigName == params.PraterName || params.BeaconConfig().ConfigName == params.GoerliName {
-				baseUrl = "https://goerli.beaconcha.in/validator/"
-			} else {
-				baseUrl = "https://beaconcha.in/validator/"
-			}
-			// Remove '0x' prefix
-			urlFormattedPubKeys[i] = baseUrl + hexutil.Encode(key)[2:]
+			urlFormattedPubKeys[i] = formatBeaconChaURL(key)
 		}
 
 		ifaceKeys := make([]interface{}, len(urlFormattedPubKeys))
@@ -171,9 +164,23 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 		info := fmt.Sprintf("Voluntary exit was successful for the accounts listed. "+
 			"URLs where you can track each validator's exit:\n"+strings.Repeat("%s\n", len(ifaceKeys)), ifaceKeys...)
 
-		log.WithField("publicKeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
+		log.WithField("pubkeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
 	} else {
 		log.Info("No successful voluntary exits")
+	}
+}
+
+func formatBeaconChaURL(key []byte) string {
+	baseURL := "https://%sbeaconcha.in/validator/%s"
+	keyWithout0x := hexutil.Encode(key)[2:]
+
+	switch env := params.BeaconConfig().ConfigName; env {
+	case params.HoleskyName:
+		return fmt.Sprintf(baseURL, "holesky.", keyWithout0x)
+	case params.SepoliaName:
+		return fmt.Sprintf(baseURL, "sepolia.", keyWithout0x)
+	default:
+		return fmt.Sprintf(baseURL, "", keyWithout0x)
 	}
 }
 

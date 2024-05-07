@@ -6,27 +6,22 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/v4/api/pagination"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
-	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/pagination"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // sortableAttestations implements the Sort interface to sort attestations
 // by slot as the canonical sorting attribute.
-type sortableAttestations []*ethpb.Attestation
+type sortableAttestations []interfaces.Attestation
 
 // Len is the number of elements in the collection.
 func (s sortableAttestations) Len() int { return len(s) }
@@ -36,16 +31,16 @@ func (s sortableAttestations) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 // Less reports whether the element with index i must sort before the element with index j.
 func (s sortableAttestations) Less(i, j int) bool {
-	return s[i].Data.Slot < s[j].Data.Slot
+	return s[i].GetData().Slot < s[j].GetData().Slot
 }
 
-func mapAttestationsByTargetRoot(atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
-	attsMap := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+func mapAttestationsByTargetRoot(atts []interfaces.Attestation) map[[32]byte][]interfaces.Attestation {
+	attsMap := make(map[[32]byte][]interfaces.Attestation, len(atts))
 	if len(atts) == 0 {
 		return attsMap
 	}
 	for _, att := range atts {
-		attsMap[bytesutil.ToBytes32(att.Data.Target.Root)] = append(attsMap[bytesutil.ToBytes32(att.Data.Target.Root)], att)
+		attsMap[bytesutil.ToBytes32(att.GetData().Target.Root)] = append(attsMap[bytesutil.ToBytes32(att.GetData().Target.Root)], att)
 	}
 	return attsMap
 }
@@ -79,7 +74,7 @@ func (bs *Server) ListAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
-	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	atts := make([]interfaces.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, blk := range blocks {
 		atts = append(atts, blk.Block().Body().Attestations()...)
 	}
@@ -101,8 +96,15 @@ func (bs *Server) ListAttestations(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
 	}
+	attestations := make([]*ethpb.Attestation, 0, len(atts))
+	for _, att := range atts {
+		a, ok := att.(*ethpb.Attestation)
+		if ok {
+			attestations = append(attestations, a)
+		}
+	}
 	return &ethpb.ListAttestationsResponse{
-		Attestations:  atts[start:end],
+		Attestations:  attestations[start:end],
 		TotalSize:     int32(numAttestations),
 		NextPageToken: nextPageToken,
 	}, nil
@@ -134,7 +136,7 @@ func (bs *Server) ListIndexedAttestations(
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
 
-	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	attsArray := make([]interfaces.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, b := range blocks {
 		attsArray = append(attsArray, b.Block().Body().Attestations()...)
 	}
@@ -171,7 +173,7 @@ func (bs *Server) ListIndexedAttestations(
 		}
 		for i := 0; i < len(atts); i++ {
 			att := atts[i]
-			committee, err := helpers.BeaconCommitteeFromState(ctx, attState, att.Data.Slot, att.Data.CommitteeIndex)
+			committee, err := helpers.BeaconCommitteeFromState(ctx, attState, att.GetData().Slot, att.GetData().CommitteeIndex)
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
@@ -183,7 +185,10 @@ func (bs *Server) ListIndexedAttestations(
 			if err != nil {
 				return nil, err
 			}
-			indexedAtts = append(indexedAtts, idxAtt)
+			a, ok := idxAtt.(*ethpb.IndexedAttestation)
+			if ok {
+				indexedAtts = append(indexedAtts, a)
+			}
 		}
 	}
 
@@ -196,187 +201,6 @@ func (bs *Server) ListIndexedAttestations(
 		TotalSize:           int32(len(indexedAtts)),
 		NextPageToken:       nextPageToken,
 	}, nil
-}
-
-// StreamAttestations to clients at the end of every slot. This method retrieves the
-// aggregated attestations currently in the pool at the start of a slot and sends
-// them over a gRPC stream.
-// DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-func (bs *Server) StreamAttestations(
-	_ *emptypb.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
-) error {
-	attestationsChannel := make(chan *feed.Event, 1)
-	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
-	defer attSub.Unsubscribe()
-	for {
-		select {
-		case event := <-attestationsChannel:
-			if event.Type == operation.UnaggregatedAttReceived {
-				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
-				if !ok {
-					// Got bad data over the stream.
-					continue
-				}
-				if data.Attestation == nil {
-					// One nil attestation shouldn't stop the stream.
-					continue
-				}
-				if err := stream.Send(data.Attestation); err != nil {
-					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-				}
-			}
-		case <-bs.Ctx.Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		}
-	}
-}
-
-// StreamIndexedAttestations to clients at the end of every slot. This method retrieves the
-// aggregated attestations currently in the pool, converts them into indexed form, and
-// sends them over a gRPC stream.
-// DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
-func (bs *Server) StreamIndexedAttestations(
-	_ *emptypb.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
-) error {
-	attestationsChannel := make(chan *feed.Event, 1)
-	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
-	defer attSub.Unsubscribe()
-	go bs.collectReceivedAttestations(stream.Context())
-	for {
-		select {
-		case event, ok := <-attestationsChannel:
-			if !ok {
-				log.Error("Indexed attestations stream channel closed")
-				continue
-			}
-			if event.Type == operation.UnaggregatedAttReceived {
-				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
-				if !ok {
-					// Got bad data over the stream.
-					log.Warningf("Indexed attestations stream got data of wrong type on stream expected *UnAggregatedAttReceivedData, received %T", event.Data)
-					continue
-				}
-				if data.Attestation == nil {
-					// One nil attestation shouldn't stop the stream.
-					log.Debug("Indexed attestations stream got a nil attestation")
-					continue
-				}
-				bs.ReceivedAttestationsBuffer <- data.Attestation
-			} else if event.Type == operation.AggregatedAttReceived {
-				data, ok := event.Data.(*operation.AggregatedAttReceivedData)
-				if !ok {
-					// Got bad data over the stream.
-					log.Warningf("Indexed attestations stream got data of wrong type on stream expected *AggregatedAttReceivedData, received %T", event.Data)
-					continue
-				}
-				if data.Attestation == nil || data.Attestation.Aggregate == nil {
-					// One nil attestation shouldn't stop the stream.
-					log.Debug("Indexed attestations stream got nil attestation or nil attestation aggregate")
-					continue
-				}
-				bs.ReceivedAttestationsBuffer <- data.Attestation.Aggregate
-			}
-		case aggAtts, ok := <-bs.CollectedAttestationsBuffer:
-			if !ok {
-				log.Error("Indexed attestations stream collected attestations channel closed")
-				continue
-			}
-			if len(aggAtts) == 0 {
-				continue
-			}
-			// All attestations we receive have the same target epoch given they
-			// have the same data root, so we just use the target epoch from
-			// the first one to determine committees for converting into indexed
-			// form.
-			targetRoot := aggAtts[0].Data.Target.Root
-			targetEpoch := aggAtts[0].Data.Target.Epoch
-			committeesBySlot, _, err := bs.retrieveCommitteesForRoot(stream.Context(), targetRoot)
-			if err != nil {
-				return status.Errorf(
-					codes.Internal,
-					"Could not retrieve committees for target root %#x: %v",
-					targetRoot,
-					err,
-				)
-			}
-			// We use the retrieved committees for the epoch to convert all attestations
-			// into indexed form effectively.
-			startSlot, err := slots.EpochStart(targetEpoch)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-			endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
-			for _, att := range aggAtts {
-				// Out of range check, the attestation slot cannot be greater
-				// the last slot of the requested epoch or smaller than its start slot
-				// given committees are accessed as a map of slot -> commitees list, where there are
-				// SLOTS_PER_EPOCH keys in the map.
-				if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
-					continue
-				}
-				committeesForSlot, ok := committeesBySlot[att.Data.Slot]
-				if !ok || committeesForSlot.Committees == nil {
-					continue
-				}
-				committee := committeesForSlot.Committees[att.Data.CommitteeIndex]
-				idxAtt, err := attestation.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
-				if err != nil {
-					continue
-				}
-				if err := stream.Send(idxAtt); err != nil {
-					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-				}
-			}
-		case <-bs.Ctx.Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		}
-	}
-}
-
-// already being done by the attestation pool in the operations service.
-func (bs *Server) collectReceivedAttestations(ctx context.Context) {
-	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
-	twoThirdsASlot := 2 * slots.DivideSlotBy(3) /* 2/3 slot duration */
-	ticker := slots.NewSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
-	for {
-		select {
-		case <-ticker.C():
-			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
-			for root, atts := range attsByRoot {
-				// We aggregate the received attestations, we know they all have the same data root.
-				aggAtts, err := attaggregation.Aggregate(atts)
-				if err != nil {
-					log.WithError(err).Error("Could not aggregate attestations")
-					continue
-				}
-				if len(aggAtts) == 0 {
-					continue
-				}
-				targetRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
-				aggregatedAttsByTarget[targetRoot] = append(aggregatedAttsByTarget[targetRoot], aggAtts...)
-				attsByRoot[root] = make([]*ethpb.Attestation, 0)
-			}
-			for _, atts := range aggregatedAttsByTarget {
-				bs.CollectedAttestationsBuffer <- atts
-			}
-		case att := <-bs.ReceivedAttestationsBuffer:
-			attDataRoot, err := att.Data.HashTreeRoot()
-			if err != nil {
-				log.WithError(err).Error("Could not hash tree root attestation data")
-				continue
-			}
-			attsByRoot[attDataRoot] = append(attsByRoot[attDataRoot], att)
-		case <-ctx.Done():
-			return
-		case <-bs.Ctx.Done():
-			return
-		}
-	}
 }
 
 // AttestationPool retrieves pending attestations.
@@ -412,8 +236,15 @@ func (bs *Server) AttestationPool(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
 	}
+	attestations := make([]*ethpb.Attestation, 0, len(atts))
+	for _, att := range atts {
+		a, ok := att.(*ethpb.Attestation)
+		if ok {
+			attestations = append(attestations, a)
+		}
+	}
 	return &ethpb.AttestationPoolResponse{
-		Attestations:  atts[start:end],
+		Attestations:  attestations[start:end],
 		TotalSize:     int32(numAtts),
 		NextPageToken: nextPageToken,
 	}, nil

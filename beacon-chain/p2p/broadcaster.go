@@ -9,12 +9,15 @@ import (
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -54,7 +57,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
-func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error {
+func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att interfaces.Attestation) error {
 	if att == nil {
 		return errors.New("attempted to broadcast nil attestation")
 	}
@@ -68,7 +71,7 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 	}
 
 	// Non-blocking broadcast, with attempts to discover a subnet peer if none available.
-	go s.broadcastAttestation(ctx, subnet, att, forkDigest)
+	go s.internalBroadcastAttestation(ctx, subnet, att, forkDigest)
 
 	return nil
 }
@@ -94,8 +97,8 @@ func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint
 	return nil
 }
 
-func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation, forkDigest [4]byte) {
-	ctx, span := trace.StartSpan(ctx, "p2p.broadcastAttestation")
+func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint64, att interfaces.Attestation, forkDigest [4]byte) {
+	_, span := trace.StartSpan(ctx, "p2p.internalBroadcastAttestation")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 
@@ -110,8 +113,8 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 
 	span.AddAttributes(
 		trace.BoolAttribute("hasPeer", hasPeer),
-		trace.Int64Attribute("slot", int64(att.Data.Slot)), // lint:ignore uintcast -- It's safe to do this for tracing.
-		trace.Int64Attribute("subnet", int64(subnet)),      // lint:ignore uintcast -- It's safe to do this for tracing.
+		trace.Int64Attribute("slot", int64(att.GetData().Slot)), // lint:ignore uintcast -- It's safe to do this for tracing.
+		trace.Int64Attribute("subnet", int64(subnet)),           // lint:ignore uintcast -- It's safe to do this for tracing.
 	)
 
 	if !hasPeer {
@@ -136,8 +139,11 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 	// In the event our attestation is outdated and beyond the
 	// acceptable threshold, we exit early and do not broadcast it.
 	currSlot := slots.CurrentSlot(uint64(s.genesisTime.Unix()))
-	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < currSlot {
-		log.Warnf("Attestation is too old to broadcast, discarding it. Current Slot: %d , Attestation Slot: %d", currSlot, att.Data.Slot)
+	if err := helpers.ValidateAttestationTime(att.GetData().Slot, s.genesisTime, params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
+		log.WithFields(logrus.Fields{
+			"attestationSlot": att.GetData().Slot,
+			"currentSlot":     currSlot,
+		}).WithError(err).Warning("Attestation is too old to broadcast, discarding it")
 		return
 	}
 
@@ -148,7 +154,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 }
 
 func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMsg *ethpb.SyncCommitteeMessage, forkDigest [4]byte) {
-	ctx, span := trace.StartSpan(ctx, "p2p.broadcastSyncCommittee")
+	_, span := trace.StartSpan(ctx, "p2p.broadcastSyncCommittee")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 
@@ -191,7 +197,7 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 	}
 	// In the event our sync message is outdated and beyond the
 	// acceptable threshold, we exit early and do not broadcast it.
-	if err := altair.ValidateSyncMessageTime(sMsg.Slot, s.genesisTime, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := altair.ValidateSyncMessageTime(sMsg.Slot, s.genesisTime, params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
 		log.WithError(err).Warn("Sync Committee Message is too old to broadcast, discarding it")
 		return
 	}
@@ -218,13 +224,13 @@ func (s *Service) BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.
 	}
 
 	// Non-blocking broadcast, with attempts to discover a subnet peer if none available.
-	go s.broadcastBlob(ctx, subnet, blob, forkDigest)
+	go s.internalBroadcastBlob(ctx, subnet, blob, forkDigest)
 
 	return nil
 }
 
-func (s *Service) broadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.BlobSidecar, forkDigest [4]byte) {
-	_, span := trace.StartSpan(ctx, "p2p.broadcastBlob")
+func (s *Service) internalBroadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.BlobSidecar, forkDigest [4]byte) {
+	_, span := trace.StartSpan(ctx, "p2p.internalBroadcastBlob")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 

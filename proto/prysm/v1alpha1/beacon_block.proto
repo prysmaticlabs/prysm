@@ -19,9 +19,10 @@ import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
+import "proto/prysm/v1alpha1/eip_7251.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconBlockProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -50,10 +51,17 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Deneb fork beacon block content.
         SignedBeaconBlockContentsDeneb deneb  = 7;
 
+        // Representing a signed, post-Deneb fork blinded beacon block.
         SignedBlindedBeaconBlockDeneb blinded_deneb  = 8;
+
+        // Representing a signed, post-Electra fork beacon block content.
+        SignedBeaconBlockContentsElectra electra  = 9;
+
+        // Representing a signed, post-Electra fork blinded beacon block.
+        SignedBlindedBeaconBlockElectra blinded_electra  = 10;
     }
     bool is_blinded = 100;
-    uint64 payload_value = 101;
+    reserved 101; // Deprecated fields
 }
 
 message GenericBeaconBlock {
@@ -79,19 +87,26 @@ message GenericBeaconBlock {
         // Representing a signed, post-Deneb fork beacon block content.
         BeaconBlockContentsDeneb deneb  = 7;
 
+        // Representing a post-Deneb fork blinded beacon block.
         BlindedBeaconBlockDeneb blinded_deneb  = 8;
+
+        // Representing a signed, post-Electra fork beacon block content.
+        BeaconBlockContentsElectra electra  = 9;
+
+        // Representing a post-Electra fork blinded beacon block.
+        BlindedBeaconBlockElectra blinded_electra  = 10;
     }
     bool is_blinded = 100;
-    uint64 payload_value = 101;
+    string payload_value = 101;
 }
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BeaconBlock {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte root of the parent block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -115,10 +130,10 @@ message SignedBeaconBlock {
 // The unsigned version of a (HF1) beacon block. The message does not contain a validator signature.
 message BeaconBlockAltair {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte root of the parent block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -226,6 +241,14 @@ message AttesterSlashing {
     IndexedAttestation attestation_2 = 2;
 }
 
+message AttesterSlashingElectra {
+    // First conflicting attestation.
+    IndexedAttestationElectra attestation_1 = 1;
+
+    // Second conflicting attestation.
+    IndexedAttestationElectra attestation_2 = 2;
+}
+
 // Deposit into the Ethereum consensus from the Ethereum 1.x deposit contract.
 message Deposit {
     // DepositData that is encoded into a deposit signature.
@@ -253,10 +276,10 @@ message Deposit {
 // validator signature.
 message VoluntaryExit {
     // The epoch on when exit request becomes valid.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 
     // Index of the exiting validator.
-    uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 }
 
 // The signed version of voluntary exit.
@@ -289,10 +312,10 @@ message Eth1Data {
 // a validator signature.
 message BeaconBlockHeader {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte merkle tree root of the parent ssz encoded block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -321,6 +344,15 @@ message IndexedAttestation {
     bytes signature = 3 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message IndexedAttestationElectra {
+    repeated uint64 attesting_indices = 1 [(ethereum.eth.ext.ssz_max) = "max_attesting_indices.size"];
+
+    AttestationData data = 2;
+
+    // 96 bytes aggregate signature.
+    bytes signature = 3 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
 // The sync aggregate object for the beacon chain to track sync committee votes and to
 // support light client infra.
 message SyncAggregate {
@@ -341,10 +373,10 @@ message SignedBeaconBlockBellatrix {
 
 message BeaconBlockBellatrix {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte root of the parent block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -402,10 +434,10 @@ message SignedBlindedBeaconBlockBellatrix {
 
 message BlindedBeaconBlockBellatrix {
     // Beacon chain slot that this blinded block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte root of the parent block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -472,10 +504,10 @@ message SignedBeaconBlockDeneb {
 
 message BeaconBlockDeneb {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte root of the parent block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -538,10 +570,10 @@ message SignedBeaconBlockCapella {
 
 message BeaconBlockCapella {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte root of the parent block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -602,10 +634,10 @@ message SignedBlindedBeaconBlockCapella {
 
 message BlindedBeaconBlockCapella {
     // Beacon chain slot that this blinded block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte root of the parent block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -663,10 +695,10 @@ message SignedBlindedBeaconBlockDeneb {
 
 message BlindedBeaconBlockDeneb {
     // Beacon chain slot that this blinded block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte root of the parent block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -710,10 +742,155 @@ message BlindedBeaconBlockBodyDeneb {
     // Execution payload header from the execution chain. New in Bellatrix network upgrade to accommodate MEV interaction.
     ethereum.engine.v1.ExecutionPayloadHeaderDeneb execution_payload_header = 10;
 
-    // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Deneb network upgrade.
+    // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
     repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
+}
+
+message SignedBeaconBlockContentsElectra {
+    SignedBeaconBlockElectra block = 1;
+    repeated bytes kzg_proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4096"];
+    repeated bytes blobs = 3 [(ethereum.eth.ext.ssz_size) = "?,blob.size", (ethereum.eth.ext.ssz_max)  = "4096"];
+}
+
+message BeaconBlockContentsElectra {
+    BeaconBlockElectra block = 1;
+    repeated bytes kzg_proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4096"];
+    repeated bytes blobs = 3 [(ethereum.eth.ext.ssz_size) = "?,blob.size", (ethereum.eth.ext.ssz_max)  = "4096"];
+}
+
+message SignedBeaconBlockElectra {
+    // The unsigned beacon block itself.
+    BeaconBlockElectra block = 1;
+
+    // 96 byte BLS signature from the validator that produced this block.
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BeaconBlockElectra {
+    // Beacon chain slot that this block represents.
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+
+    // Validator index of the validator that proposed the block header.
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
+
+    // 32 byte root of the parent block.
+    bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // 32 byte root of the resulting state after processing this block.
+    bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // The beacon block body.
+    BeaconBlockBodyElectra body = 5;
+}
+
+message BeaconBlockBodyElectra {
+    // The validators RANDAO reveal 96 byte value.
+    bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
+
+    // A reference to the Ethereum 1.x chain.
+    Eth1Data eth1_data = 2;
+
+    // 32 byte field of arbitrary data. This field may contain any data and
+    // is not used for anything other than a fun message.
+    bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // Block operations
+    // Refer to spec constants at https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
+
+    // At most MAX_PROPOSER_SLASHINGS.
+    repeated ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
+
+    // At most MAX_ATTESTER_SLASHINGS_ELECTRA.
+    repeated AttesterSlashingElectra attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "1"];
+
+    // At most MAX_ATTESTATIONS_ELECTRA.
+    repeated AttestationElectra attestations = 6 [(ethereum.eth.ext.ssz_max) = "8"];
+
+    // At most MAX_DEPOSITS.
+    repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
+
+    // At most MAX_VOLUNTARY_EXITS.
+    repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
+
+    // Sync aggregate object for the beacon chain to track sync committee votes. New in Altair network upgrade.
+    SyncAggregate sync_aggregate = 9;
+
+    // Execution payload from the execution chain. New in Bellatrix network upgrade.
+    ethereum.engine.v1.ExecutionPayloadElectra execution_payload = 10;
+
+    // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
+    repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
+
+    repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
+
+    repeated SignedConsolidation consolidations = 13 [(ethereum.eth.ext.ssz_max) = "1"]; // New in Electra EIP-7251.
+}
+
+message SignedBlindedBeaconBlockElectra {
+    // The unsigned blinded beacon block itself.
+    BlindedBeaconBlockElectra message = 1;
+
+    // 96 byte BLS signature from the validator that produced this blinded block.
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BlindedBeaconBlockElectra {
+    // Beacon chain slot that this blinded block represents.
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+
+    // Validator index of the validator that proposed the block header.
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
+
+    // 32 byte root of the parent block.
+    bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // 32 byte root of the resulting state after processing this blinded block.
+    bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // The blinded beacon block body.
+    BlindedBeaconBlockBodyElectra body = 5;
+}
+
+message BlindedBeaconBlockBodyElectra {
+    // The validators RANDAO reveal 96 byte value.
+    bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
+
+    // A reference to the Ethereum 1.x chain.
+    Eth1Data eth1_data = 2;
+
+    // 32 byte field of arbitrary data. This field may contain any data and
+    // is not used for anything other than a fun message.
+    bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // At most MAX_PROPOSER_SLASHINGS.
+    repeated ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
+
+    // At most MAX_ATTESTER_SLASHINGS_ELECTRA.
+    repeated AttesterSlashingElectra attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "1"];
+
+    // At most MAX_ATTESTATIONS_ELECTRA.
+    repeated AttestationElectra attestations = 6 [(ethereum.eth.ext.ssz_max) = "8"];
+
+    // At most MAX_DEPOSITS.
+    repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
+
+    // At most MAX_VOLUNTARY_EXITS.
+    repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
+
+    // Sync aggregate object for the beacon chain to track sync committee votes. New in Altair network upgrade.
+    SyncAggregate sync_aggregate = 9;
+
+    // Execution payload header from the execution chain. New in Bellatrix network upgrade to accommodate MEV interaction.
+    ethereum.engine.v1.ExecutionPayloadHeaderElectra execution_payload_header = 10;
+
+    // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
+    repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
+
+    repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
+
+    repeated SignedConsolidation consolidations = 13 [(ethereum.eth.ext.ssz_max) = "1"]; // New in Electra EIP-7251.
 }
 
 message ValidatorRegistrationV1 {

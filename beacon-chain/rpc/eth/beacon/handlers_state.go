@@ -8,17 +8,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -67,8 +68,8 @@ func (s *Server) GetStateRoot(w http.ResponseWriter, r *http.Request) {
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	resp := &GetStateRootResponse{
-		Data: &StateRoot{
+	resp := &structs.GetStateRootResponse{
+		Data: &structs.StateRoot{
 			Root: hexutil.Encode(stateRoot),
 		},
 		ExecutionOptimistic: isOptimistic,
@@ -137,8 +138,8 @@ func (s *Server) GetRandao(w http.ResponseWriter, r *http.Request) {
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	resp := &GetRandaoResponse{
-		Data:                &Randao{Randao: hexutil.Encode(randao)},
+	resp := &structs.GetRandaoResponse{
+		Data:                &structs.Randao{Randao: hexutil.Encode(randao)},
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           isFinalized,
 	}
@@ -239,8 +240,8 @@ func (s *Server) GetSyncCommittees(w http.ResponseWriter, r *http.Request) {
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	resp := GetSyncCommitteeResponse{
-		Data: &SyncCommitteeValidators{
+	resp := structs.GetSyncCommitteeResponse{
+		Data: &structs.SyncCommitteeValidators{
 			Validators:          committeeIndices,
 			ValidatorAggregates: subcommittees,
 		},

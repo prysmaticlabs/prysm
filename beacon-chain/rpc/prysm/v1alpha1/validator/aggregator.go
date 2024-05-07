@@ -2,13 +2,14 @@ package validator
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -85,22 +86,26 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		// The aggregator should prefer an attestation that they have signed. We check this by
 		// looking at the attestation's committee index against the validator's committee index
 		// and check the aggregate bits to ensure the validator's index is set.
-		if aggregatedAtt.Data.CommitteeIndex == req.CommitteeIndex &&
-			aggregatedAtt.AggregationBits.BitAt(indexInCommittee) &&
-			(!best.AggregationBits.BitAt(indexInCommittee) ||
-				aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count()) {
+		if aggregatedAtt.GetData().CommitteeIndex == req.CommitteeIndex &&
+			aggregatedAtt.GetAggregationBits().BitAt(indexInCommittee) &&
+			(!best.GetAggregationBits().BitAt(indexInCommittee) ||
+				aggregatedAtt.GetAggregationBits().Count() > best.GetAggregationBits().Count()) {
 			best = aggregatedAtt
 		}
 
 		// If the "best" still doesn't contain the validator's index, check the aggregation bits to
 		// choose the attestation with the most bits set.
-		if !best.AggregationBits.BitAt(indexInCommittee) &&
-			aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count() {
+		if !best.GetAggregationBits().BitAt(indexInCommittee) &&
+			aggregatedAtt.GetAggregationBits().Count() > best.GetAggregationBits().Count() {
 			best = aggregatedAtt
 		}
 	}
+	att, ok := best.(*ethpb.Attestation)
+	if !ok {
+		return nil, fmt.Errorf("best attestation has wrong type (expected %T, got %T)", &ethpb.Attestation{}, best)
+	}
 	a := &ethpb.AggregateAttestationAndProof{
-		Aggregate:       best,
+		Aggregate:       att,
 		SelectionProof:  req.SlotSignature,
 		AggregatorIndex: validatorIndex,
 	}

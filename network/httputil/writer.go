@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/prysmaticlabs/prysm/v4/api"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -16,17 +16,17 @@ type HasStatusCode interface {
 	StatusCode() int
 }
 
-// DefaultErrorJson is a JSON representation of a simple error value, containing only a message and an error code.
-type DefaultErrorJson struct {
+// DefaultJsonError is a JSON representation of a simple error value, containing only a message and an error code.
+type DefaultJsonError struct {
 	Message string `json:"message"`
 	Code    int    `json:"code"`
 }
 
-func (e *DefaultErrorJson) StatusCode() int {
+func (e *DefaultJsonError) StatusCode() int {
 	return e.Code
 }
 
-func (e *DefaultErrorJson) Error() string {
+func (e *DefaultJsonError) Error() string {
 	return fmt.Sprintf("HTTP request unsuccessful (%d: %s)", e.Code, e.Message)
 }
 
