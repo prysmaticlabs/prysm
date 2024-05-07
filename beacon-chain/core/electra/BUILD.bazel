@@ -26,7 +26,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["upgrade_test.go"],
+    srcs = [
+        "upgrade_test.go",
+        "validator_test.go",
+    ],
     deps = [
         ":go_default_library",
         "//beacon-chain/core/helpers:go_default_library",

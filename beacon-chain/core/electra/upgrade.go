@@ -18,30 +18,141 @@ import (
 )
 
 // UpgradeToElectra updates inputs a generic state to return the version Electra state.
-func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
-	epoch := time.CurrentEpoch(state)
+// def upgrade_to_electra(pre: deneb.BeaconState) -> BeaconState:
+//
+//	epoch = deneb.get_current_epoch(pre)
+//	latest_execution_payload_header = ExecutionPayloadHeader(
+//	    parent_hash=pre.latest_execution_payload_header.parent_hash,
+//	    fee_recipient=pre.latest_execution_payload_header.fee_recipient,
+//	    state_root=pre.latest_execution_payload_header.state_root,
+//	    receipts_root=pre.latest_execution_payload_header.receipts_root,
+//	    logs_bloom=pre.latest_execution_payload_header.logs_bloom,
+//	    prev_randao=pre.latest_execution_payload_header.prev_randao,
+//	    block_number=pre.latest_execution_payload_header.block_number,
+//	    gas_limit=pre.latest_execution_payload_header.gas_limit,
+//	    gas_used=pre.latest_execution_payload_header.gas_used,
+//	    timestamp=pre.latest_execution_payload_header.timestamp,
+//	    extra_data=pre.latest_execution_payload_header.extra_data,
+//	    base_fee_per_gas=pre.latest_execution_payload_header.base_fee_per_gas,
+//	    block_hash=pre.latest_execution_payload_header.block_hash,
+//	    transactions_root=pre.latest_execution_payload_header.transactions_root,
+//	    withdrawals_root=pre.latest_execution_payload_header.withdrawals_root,
+//	    blob_gas_used=pre.latest_execution_payload_header.blob_gas_used,
+//	    excess_blob_gas=pre.latest_execution_payload_header.excess_blob_gas,
+//	    deposit_receipts_root=Root(),  # [New in Electra:EIP6110]
+//	    withdrawal_requests_root=Root(),  # [New in Electra:EIP7002],
+//	)
+//
+//	exit_epochs = [v.exit_epoch for v in pre.validators if v.exit_epoch != FAR_FUTURE_EPOCH]
+//	if not exit_epochs:
+//	    exit_epochs = [get_current_epoch(pre)]
+//	earliest_exit_epoch = max(exit_epochs) + 1
+//
+//	post = BeaconState(
+//	    # Versioning
+//	    genesis_time=pre.genesis_time,
+//	    genesis_validators_root=pre.genesis_validators_root,
+//	    slot=pre.slot,
+//	    fork=Fork(
+//	        previous_version=pre.fork.current_version,
+//	        current_version=ELECTRA_FORK_VERSION,  # [Modified in Electra:EIP6110]
+//	        epoch=epoch,
+//	    ),
+//	    # History
+//	    latest_block_header=pre.latest_block_header,
+//	    block_roots=pre.block_roots,
+//	    state_roots=pre.state_roots,
+//	    historical_roots=pre.historical_roots,
+//	    # Eth1
+//	    eth1_data=pre.eth1_data,
+//	    eth1_data_votes=pre.eth1_data_votes,
+//	    eth1_deposit_index=pre.eth1_deposit_index,
+//	    # Registry
+//	    validators=pre.validators,
+//	    balances=pre.balances,
+//	    # Randomness
+//	    randao_mixes=pre.randao_mixes,
+//	    # Slashings
+//	    slashings=pre.slashings,
+//	    # Participation
+//	    previous_epoch_participation=pre.previous_epoch_participation,
+//	    current_epoch_participation=pre.current_epoch_participation,
+//	    # Finality
+//	    justification_bits=pre.justification_bits,
+//	    previous_justified_checkpoint=pre.previous_justified_checkpoint,
+//	    current_justified_checkpoint=pre.current_justified_checkpoint,
+//	    finalized_checkpoint=pre.finalized_checkpoint,
+//	    # Inactivity
+//	    inactivity_scores=pre.inactivity_scores,
+//	    # Sync
+//	    current_sync_committee=pre.current_sync_committee,
+//	    next_sync_committee=pre.next_sync_committee,
+//	    # Execution-layer
+//	    latest_execution_payload_header=latest_execution_payload_header,  # [Modified in Electra:EIP6110:EIP7002]
+//	    # Withdrawals
+//	    next_withdrawal_index=pre.next_withdrawal_index,
+//	    next_withdrawal_validator_index=pre.next_withdrawal_validator_index,
+//	    # Deep history valid from Capella onwards
+//	    historical_summaries=pre.historical_summaries,
+//	    # [New in Electra:EIP6110]
+//	    deposit_receipts_start_index=UNSET_DEPOSIT_RECEIPTS_START_INDEX,
+//	    # [New in Electra:EIP7251]
+//	    deposit_balance_to_consume=0,
+//	    exit_balance_to_consume=0,
+//	    earliest_exit_epoch=earliest_exit_epoch,
+//	    consolidation_balance_to_consume=0,
+//	    earliest_consolidation_epoch=compute_activation_exit_epoch(get_current_epoch(pre)),
+//	    pending_balance_deposits=[],
+//	    pending_partial_withdrawals=[],
+//	    pending_consolidations=[],
+//	)
+//
+//	post.exit_balance_to_consume = get_activation_exit_churn_limit(post)
+//	post.consolidation_balance_to_consume = get_consolidation_churn_limit(post)
+//
+//	# [New in Electra:EIP7251]
+//	# add validators that are not yet active to pending balance deposits
+//	pre_activation = sorted([
+//	    index for index, validator in enumerate(post.validators)
+//	    if validator.activation_epoch == FAR_FUTURE_EPOCH
+//	], key=lambda index: (
+//	    post.validators[index].activation_eligibility_epoch,
+//	    index
+//	))
+//
+//	for index in pre_activation:
+//	    queue_entire_balance_and_reset_validator(post, ValidatorIndex(index))
+//
+//	# Ensure early adopters of compounding credentials go through the activation churn
+//	for index, validator in enumerate(post.validators):
+//	    if has_compounding_withdrawal_credential(validator):
+//	        queue_excess_active_balance(post, ValidatorIndex(index))
+//
+//	return post
+func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) {
+	epoch := time.CurrentEpoch(beaconState)
 
-	currentSyncCommittee, err := state.CurrentSyncCommittee()
+	currentSyncCommittee, err := beaconState.CurrentSyncCommittee()
 	if err != nil {
 		return nil, err
 	}
-	nextSyncCommittee, err := state.NextSyncCommittee()
+	nextSyncCommittee, err := beaconState.NextSyncCommittee()
 	if err != nil {
 		return nil, err
 	}
-	prevEpochParticipation, err := state.PreviousEpochParticipation()
+	prevEpochParticipation, err := beaconState.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err
 	}
-	currentEpochParticipation, err := state.CurrentEpochParticipation()
+	currentEpochParticipation, err := beaconState.CurrentEpochParticipation()
 	if err != nil {
 		return nil, err
 	}
-	inactivityScores, err := state.InactivityScores()
+	inactivityScores, err := beaconState.InactivityScores()
 	if err != nil {
 		return nil, err
 	}
-	payloadHeader, err := state.LatestExecutionPayloadHeader()
+	payloadHeader, err := beaconState.LatestExecutionPayloadHeader()
 	if err != nil {
 		return nil, err
 	}
@@ -53,19 +164,19 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	wi, err := state.NextWithdrawalIndex()
+	wi, err := beaconState.NextWithdrawalIndex()
 	if err != nil {
 		return nil, err
 	}
-	vi, err := state.NextWithdrawalValidatorIndex()
+	vi, err := beaconState.NextWithdrawalValidatorIndex()
 	if err != nil {
 		return nil, err
 	}
-	summaries, err := state.HistoricalSummaries()
+	summaries, err := beaconState.HistoricalSummaries()
 	if err != nil {
 		return nil, err
 	}
-	historicalRoots, err := state.HistoricalRoots()
+	historicalRoots, err := beaconState.HistoricalRoots()
 	if err != nil {
 		return nil, err
 	}
@@ -80,13 +191,25 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 
 	// Find the earliest exit epoch
 	exitEpochs := make([]primitives.Epoch, 0)
-	for _, v := range state.Validators() {
-		if v.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			exitEpochs = append(exitEpochs, v.ExitEpoch)
+	// [New in Electra:EIP7251]
+	// add validators that are not yet active to pending balance deposits
+
+	// Creating a slice to store indices of validators whose activation epoch is set to FAR_FUTURE_EPOCH
+	preActivation := make([]primitives.ValidatorIndex, 0)
+
+	if err = beaconState.ReadFromEveryValidator(func(index int, val state.ReadOnlyValidator) error {
+		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch())
 		}
+		if val.ActivationEpoch() == params.BeaconConfig().FarFutureEpoch {
+			preActivation = append(preActivation, primitives.ValidatorIndex(index))
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 	if len(exitEpochs) == 0 {
-		exitEpochs = append(exitEpochs, time.CurrentEpoch(state))
+		exitEpochs = append(exitEpochs, time.CurrentEpoch(beaconState))
 	}
 	var earliestExitEpoch primitives.Epoch
 	for _, e := range exitEpochs {
@@ -96,39 +219,39 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 	}
 	earliestExitEpoch++ // Increment to find the earliest possible exit epoch
 
-	// note: should be the same in prestate and post state.
-	// we are deviating from the specs a bit as it calls for using the post state
-	tab, err := helpers.TotalActiveBalance(state)
+	// note: should be the same in prestate and post beaconState.
+	// we are deviating from the specs a bit as it calls for using the post beaconState
+	tab, err := helpers.TotalActiveBalance(beaconState)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get total active balance")
 	}
 
 	s := &ethpb.BeaconStateElectra{
-		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
-		Slot:                  state.Slot(),
+		GenesisTime:           beaconState.GenesisTime(),
+		GenesisValidatorsRoot: beaconState.GenesisValidatorsRoot(),
+		Slot:                  beaconState.Slot(),
 		Fork: &ethpb.Fork{
-			PreviousVersion: state.Fork().CurrentVersion,
+			PreviousVersion: beaconState.Fork().CurrentVersion,
 			CurrentVersion:  params.BeaconConfig().ElectraForkVersion,
 			Epoch:           epoch,
 		},
-		LatestBlockHeader:           state.LatestBlockHeader(),
-		BlockRoots:                  state.BlockRoots(),
-		StateRoots:                  state.StateRoots(),
+		LatestBlockHeader:           beaconState.LatestBlockHeader(),
+		BlockRoots:                  beaconState.BlockRoots(),
+		StateRoots:                  beaconState.StateRoots(),
 		HistoricalRoots:             historicalRoots,
-		Eth1Data:                    state.Eth1Data(),
-		Eth1DataVotes:               state.Eth1DataVotes(),
-		Eth1DepositIndex:            state.Eth1DepositIndex(),
-		Validators:                  state.Validators(),
-		Balances:                    state.Balances(),
-		RandaoMixes:                 state.RandaoMixes(),
-		Slashings:                   state.Slashings(),
+		Eth1Data:                    beaconState.Eth1Data(),
+		Eth1DataVotes:               beaconState.Eth1DataVotes(),
+		Eth1DepositIndex:            beaconState.Eth1DepositIndex(),
+		Validators:                  beaconState.Validators(),
+		Balances:                    beaconState.Balances(),
+		RandaoMixes:                 beaconState.RandaoMixes(),
+		Slashings:                   beaconState.Slashings(),
 		PreviousEpochParticipation:  prevEpochParticipation,
 		CurrentEpochParticipation:   currentEpochParticipation,
-		JustificationBits:           state.JustificationBits(),
-		PreviousJustifiedCheckpoint: state.PreviousJustifiedCheckpoint(),
-		CurrentJustifiedCheckpoint:  state.CurrentJustifiedCheckpoint(),
-		FinalizedCheckpoint:         state.FinalizedCheckpoint(),
+		JustificationBits:           beaconState.JustificationBits(),
+		PreviousJustifiedCheckpoint: beaconState.PreviousJustifiedCheckpoint(),
+		CurrentJustifiedCheckpoint:  beaconState.CurrentJustifiedCheckpoint(),
+		FinalizedCheckpoint:         beaconState.FinalizedCheckpoint(),
 		InactivityScores:            inactivityScores,
 		CurrentSyncCommittee:        currentSyncCommittee,
 		NextSyncCommittee:           nextSyncCommittee,
@@ -162,22 +285,10 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(math.Gwei(tab)),
 		EarliestExitEpoch:             earliestExitEpoch,
 		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(math.Gwei(tab)),
-		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(state.Slot())),
+		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(beaconState.Slot())),
 		PendingBalanceDeposits:        nil,
 		PendingPartialWithdrawals:     nil,
 		PendingConsolidations:         nil,
-	}
-
-	// [New in Electra:EIP7251]
-	// add validators that are not yet active to pending balance deposits
-
-	// Creating a slice to store indices of validators whose activation epoch is set to FAR_FUTURE_EPOCH
-	var preActivation []primitives.ValidatorIndex
-
-	for index, validator := range s.Validators {
-		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
-			preActivation = append(preActivation, primitives.ValidatorIndex(index))
-		}
 	}
 
 	// Sorting preActivation based on a custom criteria
@@ -189,10 +300,10 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 		return s.Validators[preActivation[i]].ActivationEligibilityEpoch < s.Validators[preActivation[j]].ActivationEligibilityEpoch
 	})
 
-	// need to cast the state to use in helper functions
+	// need to cast the beaconState to use in helper functions
 	post, err := state_native.InitializeFromProtoUnsafeElectra(s)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize post electra state")
+		return nil, errors.Wrap(err, "failed to initialize post electra beaconState")
 	}
 
 	for _, index := range preActivation {
@@ -202,7 +313,7 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 	}
 
 	// Ensure early adopters of compounding credentials go through the activation churn
-	for index, validator := range s.Validators {
+	for index, validator := range post.Validators() {
 		if helpers.HasCompoundingWithdrawalCredential(validator) {
 			if err := QueueEntireBalanceAndResetValidator(post, primitives.ValidatorIndex(index)); err != nil {
 				return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
