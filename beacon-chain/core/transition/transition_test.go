@@ -658,7 +658,7 @@ func TestProcessSlots_ThroughElectraEpoch(t *testing.T) {
 	conf.ElectraForkEpoch = 5
 	params.OverrideBeaconConfig(conf)
 
-	st, _ := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, _ := util.DeterministicGenesisStateDeneb(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
 	require.NoError(t, err)
 	require.Equal(t, version.Electra, st.Version())
