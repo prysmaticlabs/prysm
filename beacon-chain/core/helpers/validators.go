@@ -673,3 +673,55 @@ func ValidatorMaxEffectiveBalance(val *ethpb.Validator) uint64 {
 	}
 	return params.BeaconConfig().MinActivationBalance
 }
+
+// SwitchToCompoundingValidator
+//
+// Spec definition:
+//
+//	 def switch_to_compounding_validator(state: BeaconState, index: ValidatorIndex) -> None:
+//		validator = state.validators[index]
+//		if has_eth1_withdrawal_credential(validator):
+//		    validator.withdrawal_credentials = COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
+//		    queue_excess_active_balance(state, index)
+func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorIndex) error {
+	v, err := s.ValidatorAtIndex(idx)
+	if err != nil {
+		return err
+	}
+	if len(v.WithdrawalCredentials) == 0 {
+		return errors.New("validator has no withdrawal credentials")
+	}
+	if HasETH1WithdrawalCredential(v) {
+		v.WithdrawalCredentials[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
+		return queueExcessActiveBalance(s, idx)
+	}
+	return nil
+}
+
+// queueExcessActiveBalance
+//
+// Spec definition:
+//
+//	def queue_excess_active_balance(state: BeaconState, index: ValidatorIndex) -> None:
+//	    balance = state.balances[index]
+//	    if balance > MIN_ACTIVATION_BALANCE:
+//	        excess_balance = balance - MIN_ACTIVATION_BALANCE
+//	        state.balances[index] = MIN_ACTIVATION_BALANCE
+//	        state.pending_balance_deposits.append(
+//	            PendingBalanceDeposit(index=index, amount=excess_balance)
+//	        )
+func queueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex) error {
+	bal, err := s.BalanceAtIndex(idx)
+	if err != nil {
+		return err
+	}
+
+	if bal > params.BeaconConfig().MinActivationBalance {
+		excessBalance := bal - params.BeaconConfig().MinActivationBalance
+		if err := s.UpdateBalancesAtIndex(idx, params.BeaconConfig().MinActivationBalance); err != nil {
+			return err
+		}
+		return s.AppendPendingBalanceDeposit(idx, excessBalance)
+	}
+	return nil
+}

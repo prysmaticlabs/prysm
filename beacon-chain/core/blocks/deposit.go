@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -204,13 +203,17 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 			if err != nil {
 				return nil, err
 			}
-			// TODO: need to fix this to be used with the verify check above
-			hasValidSignature, err := IsValidDepositSignature(data)
-			if err != nil {
-				return nil, err
+			if verifySignature {
+				valid, err := IsValidDepositSignature(data)
+				if err != nil {
+					return nil, err
+				}
+				if !valid {
+					return beaconState, nil
+				}
 			}
-			if helpers.IsCompoundingWithdrawalCredential(withdrawalCredentials) && helpers.HasETH1WithdrawalCredential(val) && hasValidSignature {
-				if err := electra.SwitchToCompoundingValidator(beaconState, index); err != nil {
+			if helpers.IsCompoundingWithdrawalCredential(withdrawalCredentials) && helpers.HasETH1WithdrawalCredential(val) {
+				if err := helpers.SwitchToCompoundingValidator(beaconState, index); err != nil {
 					return nil, err
 				}
 			}
