@@ -17,15 +17,16 @@ var (
 )
 
 func Start() error {
-	parsedSetup := GoKZG.JSONTrustedSetup{}
-	err := json.Unmarshal(embeddedTrustedSetup, &parsedSetup)
+	parsedSetup := &GoKZG.JSONTrustedSetup{}
+	err := json.Unmarshal(embeddedTrustedSetup, parsedSetup)
 	if err != nil {
 		return errors.Wrap(err, "could not parse trusted setup JSON")
 	}
-	kzgContext, err = GoKZG.NewContext4096(&parsedSetup)
+	kzgContext, err = GoKZG.NewContext4096(parsedSetup)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize go-kzg context")
 	}
+
 	// Length of a G1 point, converted from hex to binary.
 	g1s := make([]byte, len(parsedSetup.SetupG1Lagrange)*(len(parsedSetup.SetupG1Lagrange[0])-2)/2)
 	for i, g1 := range parsedSetup.SetupG1Lagrange {
