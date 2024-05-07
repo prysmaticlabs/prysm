@@ -208,14 +208,12 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			} else if state.Version() >= version.Altair {
+			} else {
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch")
 				}
-			} else {
-				return nil, fmt.Errorf("unsupported beacon state version: %s", version.String(state.Version()))
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
