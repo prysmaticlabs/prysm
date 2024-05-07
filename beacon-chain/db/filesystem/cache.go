@@ -9,7 +9,7 @@ import (
 )
 
 // blobIndexMask is a bitmask representing the set of blob indices that are currently set.
-type blobIndexMask [fieldparams.MaxBlobsPerBlock]bool
+type blobIndexMask [fieldparams.NumberOfColumns]bool
 
 // BlobStorageSummary represents cached information about the BlobSidecars on disk for each root the cache knows about.
 type BlobStorageSummary struct {

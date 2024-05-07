@@ -130,6 +130,7 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 	log.WithFields(logrus.Fields{
 		"sinceSlotStartTime": sinceSlotStartTime,
 		"validationTime":     validationTime,
+		"columnIndex":        ds.ColumnIndex,
 	}).Debug("Received data column sidecar")
 
 	// TODO: Transform this whole function so it looks like to the `validateBlob`

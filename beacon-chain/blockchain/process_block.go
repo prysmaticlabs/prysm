@@ -690,7 +690,12 @@ func (s *Service) isDataAvailableDataColumns(ctx context.Context, root [32]byte,
 			s.blobNotifiers.delete(root)
 			return nil
 		case <-ctx.Done():
-			return errors.Wrapf(ctx.Err(), "context deadline waiting for blob sidecars slot: %d, BlockRoot: %#x", block.Slot(), root)
+			missingIndexes := []uint64{}
+			for val := range missing {
+				copiedVal := val
+				missingIndexes = append(missingIndexes, copiedVal)
+			}
+			return errors.Wrapf(ctx.Err(), "context deadline waiting for blob sidecars slot: %d, BlockRoot: %#x, missing %v", block.Slot(), root, missingIndexes)
 		}
 	}
 }
