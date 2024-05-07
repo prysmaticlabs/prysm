@@ -38,6 +38,8 @@ var (
 	// Custom errors
 	errCustodySubnetCountTooLarge = errors.New("custody subnet count larger than data column sidecar subnet count")
 	errCellNotFound               = errors.New("cell not found (should never happen)")
+	errIndexTooLarge              = errors.New("column index is larger than the specified number of columns")
+	errMismatchLength             = errors.New("mismatch in the length of the commitments and proofs")
 
 	// maxUint256 is the maximum value of a uint256.
 	maxUint256 = &uint256.Int{math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64}
@@ -261,4 +263,40 @@ func DataColumnSidecars(signedBlock interfaces.SignedBeaconBlock, blobs []cKzg48
 	}
 
 	return sidecars, nil
+}
+
+// VerifyDataColumnSidecarKZGProofs verifies the provided KZG Proofs for the particular
+// data column.
+func VerifyDataColumnSidecarKZGProofs(sc *ethpb.DataColumnSidecar) (bool, error) {
+	if sc.ColumnIndex >= params.BeaconConfig().NumberOfColumns {
+		return false, errIndexTooLarge
+	}
+	if len(sc.DataColumn) != len(sc.KzgCommitments) || len(sc.KzgCommitments) != len(sc.KzgProof) {
+		return false, errMismatchLength
+	}
+	var rowIdx []uint64
+	var colIdx []uint64
+	for i := 0; i < len(sc.DataColumn); i++ {
+		copiedI := uint64(i)
+		rowIdx = append(rowIdx, copiedI)
+		colI := sc.ColumnIndex * copiedI
+		colIdx = append(colIdx, colI)
+	}
+	var ckzgComms []cKzg4844.Bytes48
+	for _, com := range sc.KzgCommitments {
+		ckzgComms = append(ckzgComms, cKzg4844.Bytes48(com))
+	}
+	var cells []cKzg4844.Cell
+	for _, ce := range sc.DataColumn {
+		var newCell []cKzg4844.Bytes32
+		for i := 0; i < len(ce); i += 32 {
+			newCell = append(newCell, cKzg4844.Bytes32(ce[i:i+32]))
+		}
+		cells = append(cells, cKzg4844.Cell(newCell))
+	}
+	var proofs []cKzg4844.Bytes48
+	for _, p := range sc.KzgProof {
+		proofs = append(proofs, cKzg4844.Bytes48(p))
+	}
+	return cKzg4844.VerifyCellProofBatch(ckzgComms, rowIdx, colIdx, cells, proofs)
 }

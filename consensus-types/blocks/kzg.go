@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
@@ -41,6 +42,35 @@ func VerifyKZGInclusionProof(blob ROBlob) error {
 	chunks := makeChunk(blob.KzgCommitment)
 	gohashtree.HashChunks(chunks, chunks)
 	verified := trie.VerifyMerkleProof(root, chunks[0][:], blob.Index+KZGOffset, blob.CommitmentInclusionProof)
+	if !verified {
+		return errInvalidInclusionProof
+	}
+	return nil
+}
+
+// VerifyKZGInclusionProofColumn verifies the Merkle proof in a data column sidecar against
+// the beacon block body root.
+func VerifyKZGInclusionProofColumn(sc *ethpb.DataColumnSidecar) error {
+	if sc.SignedBlockHeader == nil {
+		return errNilBlockHeader
+	}
+	if sc.SignedBlockHeader.Header == nil {
+		return errNilBlockHeader
+	}
+	root := sc.SignedBlockHeader.Header.BodyRoot
+	if len(root) != field_params.RootLength {
+		return errInvalidBodyRoot
+	}
+	leaves := leavesFromCommitments(sc.KzgCommitments)
+	sparse, err := trie.GenerateTrieFromItems(leaves, field_params.LogMaxBlobCommitments)
+	if err != nil {
+		return err
+	}
+	rt, err := sparse.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	verified := trie.VerifyMerkleProof(root, rt[:], kzgPosition, sc.KzgCommitmentsInclusionProof)
 	if !verified {
 		return errInvalidInclusionProof
 	}
