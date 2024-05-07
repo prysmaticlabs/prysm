@@ -26,10 +26,11 @@ func Start() error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize go-kzg context")
 	}
+	g1Lagrange := &parsedSetup.SetupG1Lagrange
 
 	// Length of a G1 point, converted from hex to binary.
-	g1s := make([]byte, len(parsedSetup.SetupG1Lagrange)*(len(parsedSetup.SetupG1Lagrange[0])-2)/2)
-	for i, g1 := range parsedSetup.SetupG1Lagrange {
+	g1s := make([]byte, len(g1Lagrange)*(len(g1Lagrange[0])-2)/2)
+	for i, g1 := range g1Lagrange {
 		copy(g1s[i*(len(g1)-2)/2:], hexutil.MustDecode(g1))
 	}
 	// Length of a G2 point, converted from hex to binary.
