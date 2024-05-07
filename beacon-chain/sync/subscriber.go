@@ -248,7 +248,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 	}
 
 	go messageLoop()
-	log.WithField("topic", topic).Info("Subscribed to topic")
+	log.WithField("topic", topic).Info("Subscribed to")
 	return sub
 }
 
@@ -286,6 +286,11 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 			return pubsub.ValidationIgnore
 		}
 		b, err := v(ctx, pid, msg)
+		// We do not penalize peers if we are hitting pubsub timeouts
+		// trying to process those messages.
+		if b == pubsub.ValidationReject && ctx.Err() != nil {
+			b = pubsub.ValidationIgnore
+		}
 		if b == pubsub.ValidationReject {
 			fields := logrus.Fields{
 				"topic":        topic,
@@ -316,7 +321,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 	}
 }
 
-// subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
+// subscribe to a static subnet with the given topic and index. A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte, subnetCount uint64) {
 	genRoot := s.cfg.clock.GenesisValidatorsRoot()
@@ -687,7 +692,7 @@ func (s *Service) retrievePersistentSubs(currSlot primitives.Slot) []uint64 {
 	return slice.SetUint64(append(persistentSubs, wantedSubs...))
 }
 
-func (_ *Service) retrieveActiveSyncSubnets(currEpoch primitives.Epoch) []uint64 {
+func (*Service) retrieveActiveSyncSubnets(currEpoch primitives.Epoch) []uint64 {
 	subs := cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
 	return slice.SetUint64(subs)
 }
@@ -742,17 +747,17 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 }
 
 // Add fork digest to topic.
-func (_ *Service) addDigestToTopic(topic string, digest [4]byte) string {
+func (*Service) addDigestToTopic(topic string, digest [4]byte) string {
 	if !strings.Contains(topic, "%x") {
-		log.Fatal("Topic does not have appropriate formatter for digest")
+		log.Error("Topic does not have appropriate formatter for digest")
 	}
 	return fmt.Sprintf(topic, digest)
 }
 
 // Add the digest and index to subnet topic.
-func (_ *Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uint64) string {
+func (*Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uint64) string {
 	if !strings.Contains(topic, "%x") {
-		log.Fatal("Topic does not have appropriate formatter for digest")
+		log.Error("Topic does not have appropriate formatter for digest")
 	}
 	return fmt.Sprintf(topic, digest, idx)
 }

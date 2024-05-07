@@ -1,4 +1,4 @@
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push", "oci_tarball")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("//tools:multi_arch.bzl", "multi_arch")
 
@@ -73,4 +73,10 @@ def prysm_image_upload(
         image = ":oci_image_index",
         repository = repository,
         tags = tags,
+    )
+
+    oci_tarball(
+        name = "oci_image_tarball",
+        image = ":oci_image",
+        repo_tags = [repository+":latest"],
     )

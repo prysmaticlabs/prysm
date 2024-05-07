@@ -48,7 +48,7 @@ type ServiceConfig struct {
 type Service struct {
 	params                         *Parameters
 	serviceCfg                     *ServiceConfig
-	indexedAttsChan                chan *ethpb.IndexedAttestation
+	indexedAttsChan                chan ethpb.IndexedAtt
 	beaconBlockHeadersChan         chan *ethpb.SignedBeaconBlockHeader
 	attsQueue                      *attestationsQueue
 	blksQueue                      *blocksQueue
@@ -68,7 +68,7 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	return &Service{
 		params:                         DefaultParams(),
 		serviceCfg:                     srvCfg,
-		indexedAttsChan:                make(chan *ethpb.IndexedAttestation, 1),
+		indexedAttsChan:                make(chan ethpb.IndexedAtt, 1),
 		beaconBlockHeadersChan:         make(chan *ethpb.SignedBeaconBlockHeader, 1),
 		attsQueue:                      newAttestationsQueue(),
 		blksQueue:                      newBlocksQueue(),
@@ -117,7 +117,7 @@ func (s *Service) run() {
 		"Finished retrieving last epoch written per validator",
 	)
 
-	indexedAttsChan := make(chan *ethpb.IndexedAttestation, 1)
+	indexedAttsChan := make(chan ethpb.IndexedAtt, 1)
 	beaconBlockHeadersChan := make(chan *ethpb.SignedBeaconBlockHeader, 1)
 
 	s.wg.Add(1)
@@ -161,7 +161,7 @@ func (s *Service) Stop() error {
 	ctx, innerCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer innerCancel()
 	log.Info("Flushing last epoch written for each validator to disk, please wait")
-	if err := s.serviceCfg.Database.SaveLastEpochsWrittenForValidators(
+	if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(
 		ctx, s.latestEpochUpdatedForValidator,
 	); err != nil {
 		log.Error(err)

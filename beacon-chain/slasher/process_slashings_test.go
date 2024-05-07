@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -84,7 +85,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		root, err := slashing.HashTreeRoot()
 		require.NoError(tt, err, "failed to hash tree root")
 
-		slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{
+		slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{
 			root: slashing,
 		}
 
@@ -108,7 +109,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		root, err := slashing.HashTreeRoot()
 		require.NoError(tt, err, "failed to hash tree root")
 
-		slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{
+		slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{
 			root: slashing,
 		}
 
@@ -132,7 +133,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		root, err := slashing.HashTreeRoot()
 		require.NoError(tt, err, "failed to hash tree root")
 
-		slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{
+		slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{
 			root: slashing,
 		}
 

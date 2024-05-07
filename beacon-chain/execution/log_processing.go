@@ -20,9 +20,7 @@ import (
 	coreState "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
 	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -226,16 +224,14 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gethtypes.L
 			"merkleTreeIndex": index,
 		}).Info("Invalid deposit registered in deposit contract")
 	}
-	if features.Get().EnableEIP4881 {
-		// We finalize the trie here so that old deposits are not kept around, as they make
-		// deposit tree htr computation expensive.
-		dTrie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
-		if !ok {
-			return errors.Errorf("wrong trie type initialized: %T", dTrie)
-		}
-		if err := dTrie.Finalize(index, depositLog.BlockHash, depositLog.BlockNumber); err != nil {
-			log.WithError(err).Error("Could not finalize trie")
-		}
+	// We finalize the trie here so that old deposits are not kept around, as they make
+	// deposit tree htr computation expensive.
+	dTrie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
+	if !ok {
+		return errors.Errorf("wrong trie type initialized: %T", dTrie)
+	}
+	if err := dTrie.Finalize(index, depositLog.BlockHash, depositLog.BlockNumber); err != nil {
+		log.WithError(err).Error("Could not finalize trie")
 	}
 
 	return nil
@@ -298,9 +294,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	// Start from the deployment block if our last requested block
 	// is behind it. This is as the deposit logs can only start from the
 	// block of the deployment of the deposit contract.
-	if deploymentBlock > currentBlockNum {
-		currentBlockNum = deploymentBlock
-	}
+	currentBlockNum = max(currentBlockNum, deploymentBlock)
 	// To store all blocks.
 	headersMap := make(map[uint64]*types.HeaderInfo)
 	rawLogCount, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
@@ -384,15 +378,13 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 	end := currentBlockNum + batchSize
 	// Appropriately bound the request, as we do not
 	// want request blocks beyond the current follow distance.
-	if end > latestFollowHeight {
-		end = latestFollowHeight
-	}
+	end = min(end, latestFollowHeight)
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			s.cfg.depositContractAddr,
 		},
-		FromBlock: big.NewInt(0).SetUint64(start),
-		ToBlock:   big.NewInt(0).SetUint64(end),
+		FromBlock: new(big.Int).SetUint64(start),
+		ToBlock:   new(big.Int).SetUint64(end),
 	}
 	remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
 	// only change the end block if the remaining logs are below the required log limit.
@@ -400,7 +392,7 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 	withinLimit := remainingLogs < depositLogRequestLimit
 	aboveFollowHeight := end >= latestFollowHeight
 	if withinLimit && aboveFollowHeight {
-		query.ToBlock = big.NewInt(0).SetUint64(latestFollowHeight)
+		query.ToBlock = new(big.Int).SetUint64(latestFollowHeight)
 		end = latestFollowHeight
 	}
 	logs, err := s.httpLogger.FilterLogs(ctx, query)
@@ -482,11 +474,11 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	}
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		// Cache eth1 block header here.
-		_, err := s.BlockHashByHeight(ctx, big.NewInt(0).SetUint64(i))
+		_, err := s.BlockHashByHeight(ctx, new(big.Int).SetUint64(i))
 		if err != nil {
 			return err
 		}
-		err = s.ProcessETH1Block(ctx, big.NewInt(0).SetUint64(i))
+		err = s.ProcessETH1Block(ctx, new(big.Int).SetUint64(i))
 		if err != nil {
 			return err
 		}
@@ -583,25 +575,17 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 		BeaconState:       pbState, // I promise not to mutate it!
 		DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 	}
-	if features.Get().EnableEIP4881 {
-		fd, err := s.cfg.depositCache.FinalizedDeposits(ctx)
-		if err != nil {
-			return errors.Errorf("could not get finalized deposit tree: %v", err)
-		}
-		tree, ok := fd.Deposits().(*depositsnapshot.DepositTree)
-		if !ok {
-			return errors.New("deposit tree was not EIP4881 DepositTree")
-		}
-		eth1Data.DepositSnapshot, err = tree.ToProto()
-		if err != nil {
-			return err
-		}
-	} else {
-		tree, ok := s.depositTrie.(*trie.SparseMerkleTrie)
-		if !ok {
-			return errors.New("deposit tree was not SparseMerkleTrie")
-		}
-		eth1Data.Trie = tree.ToProto()
+	fd, err := s.cfg.depositCache.FinalizedDeposits(ctx)
+	if err != nil {
+		return errors.Errorf("could not get finalized deposit tree: %v", err)
+	}
+	tree, ok := fd.Deposits().(*depositsnapshot.DepositTree)
+	if !ok {
+		return errors.New("deposit tree was not EIP4881 DepositTree")
+	}
+	eth1Data.DepositSnapshot, err = tree.ToProto()
+	if err != nil {
+		return err
 	}
 	return s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)
 }

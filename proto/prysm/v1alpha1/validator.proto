@@ -188,7 +188,6 @@ service BeaconNodeValidator {
         };
     }
 
-
     // Submit selection proof to the beacon node to aggregate all matching wire attestations with the same data root.
     // the beacon node responses with an aggregate and proof object back to validator to sign over.
     rpc SubmitAggregateSelectionProof(AggregateSelectionRequest) returns (AggregateSelectionResponse) {
@@ -537,6 +536,9 @@ message DutiesResponse {
 
         // Whether the validator belongs in the sync committee and has to perform sync committee duty.
         bool is_sync_committee = 8;
+
+        // The number of committees in the duty's slot.
+        uint64 committees_at_slot = 9;
     }
 }
 

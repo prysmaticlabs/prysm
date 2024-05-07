@@ -12,6 +12,7 @@ package mock
 import (
 	bytes "bytes"
 	context "context"
+	"net/http"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -33,6 +34,14 @@ func NewMockJsonRestHandler(ctrl *gomock.Controller) *MockJsonRestHandler {
 	mock := &MockJsonRestHandler{ctrl: ctrl}
 	mock.recorder = &MockJsonRestHandlerMockRecorder{mock}
 	return mock
+}
+
+func (mr *MockJsonRestHandler) HttpClient() *http.Client {
+	return nil
+}
+
+func (mr *MockJsonRestHandler) Host() string {
+	return ""
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.

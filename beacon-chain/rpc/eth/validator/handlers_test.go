@@ -33,6 +33,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -143,9 +144,9 @@ func TestGetAggregateAttestation(t *testing.T) {
 	}
 
 	pool := attestations.NewPool()
-	err := pool.SaveAggregatedAttestations([]*ethpbalpha.Attestation{attSlot1, attslot21, attslot22})
+	err := pool.SaveAggregatedAttestations([]interfaces.Attestation{attSlot1, attslot21, attslot22})
 	assert.NoError(t, err)
-	err = pool.SaveUnaggregatedAttestations([]*ethpbalpha.Attestation{attslot31, attslot32})
+	err = pool.SaveUnaggregatedAttestations([]interfaces.Attestation{attslot31, attslot32})
 	assert.NoError(t, err)
 
 	s := &Server{
@@ -314,7 +315,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 		Signature: sig,
 	}
 	pool := attestations.NewPool()
-	err := pool.SaveAggregatedAttestations([]*ethpbalpha.Attestation{att1, att2})
+	err := pool.SaveAggregatedAttestations([]interfaces.Attestation{att1, att2})
 	assert.NoError(t, err)
 	s := &Server{
 		AttestationsPool: pool,
@@ -838,10 +839,14 @@ func TestGetAttestationData(t *testing.T) {
 		justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root for justified block")
 		slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
+		beaconState, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetSlot(slot))
 		justifiedCheckpoint := &ethpbalpha.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
 		}
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpoint))
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
 			Optimistic:                 false,
@@ -849,6 +854,7 @@ func TestGetAttestationData(t *testing.T) {
 			Root:                       blockRoot[:],
 			CurrentJustifiedCheckPoint: justifiedCheckpoint,
 			TargetRoot:                 blockRoot,
+			State:                      beaconState,
 		}
 
 		s := &Server{
@@ -1076,10 +1082,14 @@ func TestGetAttestationData(t *testing.T) {
 		justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root for justified block")
 
+		beaconState, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetSlot(slot))
 		justifiedCheckpt := &ethpbalpha.Checkpoint{
 			Epoch: 0,
 			Root:  justifiedRoot[:],
 		}
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpt))
 		require.NoError(t, err)
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
@@ -1087,6 +1097,7 @@ func TestGetAttestationData(t *testing.T) {
 			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
 			CurrentJustifiedCheckPoint: justifiedCheckpt,
 			TargetRoot:                 blockRoot,
+			State:                      beaconState,
 		}
 
 		s := &Server{
@@ -1163,17 +1174,24 @@ func TestGetAttestationData(t *testing.T) {
 		require.NoError(t, err, "Could not hash beacon block")
 		justifiedBlockRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not hash justified block")
+
+		slot := primitives.Slot(10000)
+		beaconState, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetSlot(slot))
 		justifiedCheckpt := &ethpbalpha.Checkpoint{
 			Epoch: slots.ToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
 		}
-		slot := primitives.Slot(10000)
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpt))
+
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
 			Root:                       blockRoot[:],
 			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
 			CurrentJustifiedCheckPoint: justifiedCheckpt,
 			TargetRoot:                 blockRoot,
+			State:                      beaconState,
 		}
 
 		s := &Server{

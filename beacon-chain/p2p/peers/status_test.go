@@ -565,7 +565,7 @@ func TestPeerIPTracker(t *testing.T) {
 
 	badIP := "211.227.218.116"
 	var badPeers []peer.ID
-	for i := 0; i < peers.ColocationLimit+10; i++ {
+	for i := 0; i < peers.CollocationLimit+10; i++ {
 		port := strconv.Itoa(3000 + i)
 		addr, err := ma.NewMultiaddr("/ip4/" + badIP + "/tcp/" + port)
 		if err != nil {
@@ -1111,6 +1111,87 @@ func TestInbound(t *testing.T) {
 	assert.Equal(t, inbound.String(), result[0].String())
 }
 
+func TestInboundConnected(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+
+	addr, err := ma.NewMultiaddr("/ip4/127.0.0.1/tcp/33333")
+	require.NoError(t, err)
+	inbound := createPeer(t, p, addr, network.DirInbound, peers.PeerConnected)
+	createPeer(t, p, addr, network.DirInbound, peers.PeerConnecting)
+
+	result := p.InboundConnected()
+	require.Equal(t, 1, len(result))
+	assert.Equal(t, inbound.String(), result[0].String())
+}
+
+func TestInboundConnectedWithProtocol(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+
+	addrsTCP := []string{
+		"/ip4/127.0.0.1/tcp/33333",
+		"/ip4/127.0.0.2/tcp/44444",
+	}
+
+	addrsQUIC := []string{
+		"/ip4/192.168.1.3/udp/13000/quic-v1",
+		"/ip4/192.168.1.4/udp/14000/quic-v1",
+		"/ip4/192.168.1.5/udp/14000/quic-v1",
+	}
+
+	expectedTCP := make(map[string]bool, len(addrsTCP))
+	for _, addr := range addrsTCP {
+		multiaddr, err := ma.NewMultiaddr(addr)
+		require.NoError(t, err)
+
+		peer := createPeer(t, p, multiaddr, network.DirInbound, peers.PeerConnected)
+		expectedTCP[peer.String()] = true
+	}
+
+	expectedQUIC := make(map[string]bool, len(addrsQUIC))
+	for _, addr := range addrsQUIC {
+		multiaddr, err := ma.NewMultiaddr(addr)
+		require.NoError(t, err)
+
+		peer := createPeer(t, p, multiaddr, network.DirInbound, peers.PeerConnected)
+		expectedQUIC[peer.String()] = true
+	}
+
+	// TCP
+	// ---
+
+	actualTCP := p.InboundConnectedWithProtocol(peers.TCP)
+	require.Equal(t, len(expectedTCP), len(actualTCP))
+
+	for _, actualPeer := range actualTCP {
+		_, ok := expectedTCP[actualPeer.String()]
+		require.Equal(t, true, ok)
+	}
+
+	// QUIC
+	// ----
+	actualQUIC := p.InboundConnectedWithProtocol(peers.QUIC)
+	require.Equal(t, len(expectedQUIC), len(actualQUIC))
+
+	for _, actualPeer := range actualQUIC {
+		_, ok := expectedQUIC[actualPeer.String()]
+		require.Equal(t, true, ok)
+	}
+}
+
 func TestOutbound(t *testing.T) {
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
@@ -1128,6 +1209,87 @@ func TestOutbound(t *testing.T) {
 	result := p.Outbound()
 	require.Equal(t, 1, len(result))
 	assert.Equal(t, outbound.String(), result[0].String())
+}
+
+func TestOutboundConnected(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+
+	addr, err := ma.NewMultiaddr("/ip4/127.0.0.1/tcp/33333")
+	require.NoError(t, err)
+	inbound := createPeer(t, p, addr, network.DirOutbound, peers.PeerConnected)
+	createPeer(t, p, addr, network.DirOutbound, peers.PeerConnecting)
+
+	result := p.OutboundConnected()
+	require.Equal(t, 1, len(result))
+	assert.Equal(t, inbound.String(), result[0].String())
+}
+
+func TestOutboundConnectedWithProtocol(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+
+	addrsTCP := []string{
+		"/ip4/127.0.0.1/tcp/33333",
+		"/ip4/127.0.0.2/tcp/44444",
+	}
+
+	addrsQUIC := []string{
+		"/ip4/192.168.1.3/udp/13000/quic-v1",
+		"/ip4/192.168.1.4/udp/14000/quic-v1",
+		"/ip4/192.168.1.5/udp/14000/quic-v1",
+	}
+
+	expectedTCP := make(map[string]bool, len(addrsTCP))
+	for _, addr := range addrsTCP {
+		multiaddr, err := ma.NewMultiaddr(addr)
+		require.NoError(t, err)
+
+		peer := createPeer(t, p, multiaddr, network.DirOutbound, peers.PeerConnected)
+		expectedTCP[peer.String()] = true
+	}
+
+	expectedQUIC := make(map[string]bool, len(addrsQUIC))
+	for _, addr := range addrsQUIC {
+		multiaddr, err := ma.NewMultiaddr(addr)
+		require.NoError(t, err)
+
+		peer := createPeer(t, p, multiaddr, network.DirOutbound, peers.PeerConnected)
+		expectedQUIC[peer.String()] = true
+	}
+
+	// TCP
+	// ---
+
+	actualTCP := p.OutboundConnectedWithProtocol(peers.TCP)
+	require.Equal(t, len(expectedTCP), len(actualTCP))
+
+	for _, actualPeer := range actualTCP {
+		_, ok := expectedTCP[actualPeer.String()]
+		require.Equal(t, true, ok)
+	}
+
+	// QUIC
+	// ----
+	actualQUIC := p.OutboundConnectedWithProtocol(peers.QUIC)
+	require.Equal(t, len(expectedQUIC), len(actualQUIC))
+
+	for _, actualPeer := range actualQUIC {
+		_, ok := expectedQUIC[actualPeer.String()]
+		require.Equal(t, true, ok)
+	}
 }
 
 // addPeer is a helper to add a peer with a given connection state)

@@ -1,7 +1,7 @@
 // Package peers provides information about peers at the Ethereum consensus protocol level.
 //
 // "Protocol level" is the level above the network level, so this layer never sees or interacts with
-// (for example) hosts that are uncontactable due to being down, firewalled, etc. Instead, this works
+// (for example) hosts that are unreachable due to being down, firewalled, etc. Instead, this works
 // with peers that are contactable but may or may not be of the correct fork version, not currently
 // required due to the number of current connections, etc.
 //
@@ -26,6 +26,7 @@ import (
 	"context"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -59,8 +60,8 @@ const (
 )
 
 const (
-	// ColocationLimit restricts how many peer identities we can see from a single ip or ipv6 subnet.
-	ColocationLimit = 5
+	// CollocationLimit restricts how many peer identities we can see from a single ip or ipv6 subnet.
+	CollocationLimit = 5
 
 	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 	maxLimitBuffer = 150
@@ -74,6 +75,13 @@ const (
 	MinBackOffDuration = 100
 	// MaxBackOffDuration maximum amount (in milliseconds) to wait before peer is re-dialed.
 	MaxBackOffDuration = 5000
+)
+
+type InternetProtocol string
+
+const (
+	TCP  = "tcp"
+	QUIC = "quic"
 )
 
 // Status is the structure holding the peer status information.
@@ -449,6 +457,19 @@ func (p *Status) InboundConnected() []peer.ID {
 	return peers
 }
 
+// InboundConnectedWithProtocol returns the current batch of inbound peers that are connected with a given protocol.
+func (p *Status) InboundConnectedWithProtocol(protocol InternetProtocol) []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound && strings.Contains(peerData.Address.String(), string(protocol)) {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
 // Outbound returns the current batch of outbound peers.
 func (p *Status) Outbound() []peer.ID {
 	p.store.RLock()
@@ -475,7 +496,20 @@ func (p *Status) OutboundConnected() []peer.ID {
 	return peers
 }
 
-// Active returns the peers that are connecting or connected.
+// OutboundConnectedWithProtocol returns the current batch of outbound peers that are connected with a given protocol.
+func (p *Status) OutboundConnectedWithProtocol(protocol InternetProtocol) []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirOutbound && strings.Contains(peerData.Address.String(), string(protocol)) {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// Active returns the peers that are active (connecting or connected).
 func (p *Status) Active() []peer.ID {
 	p.store.RLock()
 	defer p.store.RUnlock()
@@ -514,7 +548,7 @@ func (p *Status) Disconnected() []peer.ID {
 	return peers
 }
 
-// Inactive returns the peers that are disconnecting or disconnected.
+// Inactive returns the peers that are inactive (disconnecting or disconnected).
 func (p *Status) Inactive() []peer.ID {
 	p.store.RLock()
 	defer p.store.RUnlock()
@@ -548,7 +582,7 @@ func (p *Status) Prune() {
 	p.store.Lock()
 	defer p.store.Unlock()
 
-	// Default to old method if flag isnt enabled.
+	// Default to old method if flag isn't enabled.
 	if !features.Get().EnablePeerScorer {
 		p.deprecatedPrune()
 		return
@@ -961,7 +995,7 @@ func (p *Status) isfromBadIP(pid peer.ID) bool {
 		return true
 	}
 	if val, ok := p.ipTracker[ip.String()]; ok {
-		if val > ColocationLimit {
+		if val > CollocationLimit {
 			return true
 		}
 	}
@@ -1012,7 +1046,7 @@ func (p *Status) tallyIPTracker() {
 }
 
 func sameIP(firstAddr, secondAddr ma.Multiaddr) bool {
-	// Exit early if we do get nil multiaddresses
+	// Exit early if we do get nil multi-addresses
 	if firstAddr == nil || secondAddr == nil {
 		return false
 	}

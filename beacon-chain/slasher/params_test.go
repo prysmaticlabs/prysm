@@ -468,7 +468,7 @@ func TestParams_validatorIndicesInChunk(t *testing.T) {
 			c := &Parameters{
 				validatorChunkSize: tt.fields.validatorChunkSize,
 			}
-			if got := c.validatorIndexesInChunk(tt.validatorChunkIdx); !reflect.DeepEqual(got, tt.want) {
+			if got := c.ValidatorIndexesInChunk(tt.validatorChunkIdx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("validatorIndicesInChunk() = %v, want %v", got, tt.want)
 			}
 		})

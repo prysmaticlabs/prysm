@@ -99,7 +99,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 	activationEligibilityEpoch := time.CurrentEpoch(state) + 1
 	for idx, validator := range vals {
 		// Process the validators for activation eligibility.
-		if helpers.IsEligibleForActivationQueue(validator) {
+		if helpers.IsEligibleForActivationQueue(validator, currentEpoch) {
 			validator.ActivationEligibilityEpoch = activationEligibilityEpoch
 			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), validator); err != nil {
 				return nil, err
@@ -474,7 +474,7 @@ func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconSt
 		if err != nil {
 			return nil, err
 		}
-		attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+		attestingIndices, err := attestation.AttestingIndices(att, committee)
 		if err != nil {
 			return nil, err
 		}

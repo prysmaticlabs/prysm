@@ -29,7 +29,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 		},
 		attsQueue: newAttestationsQueue(),
 	}
-	indexedAttsChan := make(chan *ethpb.IndexedAttestation)
+	indexedAttsChan := make(chan ethpb.IndexedAtt)
 	defer close(indexedAttsChan)
 
 	s.wg.Add(1)
@@ -212,7 +212,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 		},
 		attsQueue: newAttestationsQueue(),
 	}
-	indexedAttsChan := make(chan *ethpb.IndexedAttestation)
+	indexedAttsChan := make(chan ethpb.IndexedAtt)
 	defer close(indexedAttsChan)
 
 	s.wg.Add(1)

@@ -13,11 +13,17 @@ type VerificationMultiError struct {
 
 // Unwrap is used by errors.Is to unwrap errors.
 func (ve VerificationMultiError) Unwrap() error {
+	if ve.err == nil {
+		return nil
+	}
 	return ve.err
 }
 
 // Error satisfies the standard error interface.
 func (ve VerificationMultiError) Error() string {
+	if ve.err == nil {
+		return ""
+	}
 	return ve.err.Error()
 }
 

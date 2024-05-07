@@ -208,7 +208,7 @@ func GenerateFullBlockCapella(
 	return &ethpb.SignedBeaconBlockCapella{Block: block, Signature: signature.Marshal()}, nil
 }
 
-// GenerateBLSToExecutionChange generates a valid bls to exec changae for validator `val` and its private key `priv` with the given beacon state `st`.
+// GenerateBLSToExecutionChange generates a valid bls to exec change for validator `val` and its private key `priv` with the given beacon state `st`.
 func GenerateBLSToExecutionChange(st state.BeaconState, priv bls.SecretKey, val primitives.ValidatorIndex) (*ethpb.SignedBLSToExecutionChange, error) {
 	cred := indexToHash(uint64(val))
 	pubkey := priv.PublicKey().Marshal()

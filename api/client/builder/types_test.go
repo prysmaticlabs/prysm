@@ -15,9 +15,11 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -1600,7 +1602,6 @@ func TestBuilderBidUnmarshalUint256(t *testing.T) {
 	require.NoError(t, expectedValue.UnmarshalText([]byte(base10)))
 	r := &ExecHeaderResponse{}
 	require.NoError(t, json.Unmarshal([]byte(testBuilderBid), r))
-	//require.Equal(t, expectedValue, r.Data.Message.Value)
 	marshaled := r.Data.Message.Value.String()
 	require.Equal(t, base10, marshaled)
 	require.Equal(t, 0, expectedValue.Cmp(r.Data.Message.Value.Int))
@@ -1903,6 +1904,43 @@ func TestErrorMessage_non200Err(t *testing.T) {
 			err := non200Err(tt.args)
 			if err != nil && tt.wantMessage != "" {
 				require.ErrorContains(t, tt.wantMessage, err)
+			}
+		})
+	}
+}
+
+func TestEmptyResponseBody(t *testing.T) {
+	t.Run("empty buffer", func(t *testing.T) {
+		var b []byte
+		r := &ExecutionPayloadResponse{}
+		err := json.Unmarshal(b, r)
+		_, ok := err.(*json.SyntaxError)
+		require.Equal(t, true, ok)
+	})
+	t.Run("empty object", func(t *testing.T) {
+		empty := []byte("{}")
+		emptyResponse := &ExecutionPayloadResponse{}
+		require.NoError(t, json.Unmarshal(empty, emptyResponse))
+		_, err := emptyResponse.ParsePayload()
+		require.ErrorIs(t, err, consensusblocks.ErrUnsupportedVersion)
+	})
+	versions := []int{version.Bellatrix, version.Capella, version.Deneb}
+	for i := range versions {
+		vstr := version.String(versions[i])
+		t.Run("populated version without payload"+vstr, func(t *testing.T) {
+			in := &ExecutionPayloadResponse{Version: vstr}
+			encoded, err := json.Marshal(in)
+			require.NoError(t, err)
+			epr := &ExecutionPayloadResponse{}
+			require.NoError(t, json.Unmarshal(encoded, epr))
+			pp, err := epr.ParsePayload()
+			require.NoError(t, err)
+			pb, err := pp.PayloadProto()
+			if err == nil {
+				require.NoError(t, err)
+				require.Equal(t, false, pb == nil)
+			} else {
+				require.ErrorIs(t, err, consensusblocks.ErrNilObject)
 			}
 		})
 	}

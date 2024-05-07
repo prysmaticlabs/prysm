@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
 	prysmnetwork "github.com/prysmaticlabs/prysm/v5/network"
@@ -56,6 +57,7 @@ type Service struct {
 	started               bool
 	isPreGenesis          bool
 	pingMethod            func(ctx context.Context, id peer.ID) error
+	pingMethodLock        sync.RWMutex
 	cancel                context.CancelFunc
 	cfg                   *Config
 	peers                 *peers.Status
@@ -81,67 +83,76 @@ type Service struct {
 // NewService initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
-	var err error
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
+
+	cfg = validateConfig(cfg)
+	privKey, err := privKey(cfg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate p2p private key")
+	}
+
+	metaData, err := metaDataFromConfig(cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to create peer metadata")
+		return nil, err
+	}
+
+	addrFilter, err := configureFilter(cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to create address filter")
+		return nil, err
+	}
+
+	ipLimiter := leakybucket.NewCollector(ipLimit, ipBurst, 30*time.Second, true /* deleteEmptyBuckets */)
 
 	s := &Service{
 		ctx:          ctx,
 		cancel:       cancel,
 		cfg:          cfg,
+		addrFilter:   addrFilter,
+		ipLimiter:    ipLimiter,
+		privKey:      privKey,
+		metaData:     metaData,
 		isPreGenesis: true,
 		joinedTopics: make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
 		subnetsLock:  make(map[uint64]*sync.RWMutex),
 	}
 
-	s.cfg = validateConfig(s.cfg)
-
-	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
-
-	cfg.Discv5BootStrapAddr = dv5Nodes
-
 	ipAddr := prysmnetwork.IPAddr()
-	s.privKey, err = privKey(s.cfg)
-	if err != nil {
-		log.WithError(err).Error("Failed to generate p2p private key")
-		return nil, err
-	}
-	s.metaData, err = metaDataFromConfig(s.cfg)
-	if err != nil {
-		log.WithError(err).Error("Failed to create peer metadata")
-		return nil, err
-	}
-	s.addrFilter, err = configureFilter(s.cfg)
-	if err != nil {
-		log.WithError(err).Error("Failed to create address filter")
-		return nil, err
-	}
-	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, 30*time.Second, true /* deleteEmptyBuckets */)
 
-	opts := s.buildOptions(ipAddr, s.privKey)
+	opts, err := s.buildOptions(ipAddr, s.privKey)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to build p2p options")
+	}
+
+	// Sets mplex timeouts
+	configureMplex()
 	h, err := libp2p.New(opts...)
 	if err != nil {
-		log.WithError(err).Error("Failed to create p2p host")
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to create p2p host")
 	}
 
 	s.host = h
+
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
 	// object.
 	psOpts := s.pubsubOptions()
+
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
+
 	// Reinitialize them in the event we are running a custom config.
 	attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount
 	syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
-		log.WithError(err).Error("Failed to start pubsub")
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to create p2p pubsub")
 	}
+
 	s.pubsub = gs
 
 	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
@@ -206,7 +217,7 @@ func (s *Service) Start() {
 	if len(s.cfg.StaticPeers) > 0 {
 		addrs, err := PeersFromStringAddrs(s.cfg.StaticPeers)
 		if err != nil {
-			log.WithError(err).Error("Could not connect to static peer")
+			log.WithError(err).Error("could not convert ENR to multiaddr")
 		}
 		// Set trusted peers for those that are provided as static addresses.
 		pids := peerIdsFromMultiAddrs(addrs)
@@ -225,11 +236,24 @@ func (s *Service) Start() {
 	async.RunEvery(s.ctx, time.Duration(params.BeaconConfig().RespTimeout)*time.Second, s.updateMetrics)
 	async.RunEvery(s.ctx, refreshRate, s.RefreshENR)
 	async.RunEvery(s.ctx, 1*time.Minute, func() {
-		log.WithFields(logrus.Fields{
-			"inbound":     len(s.peers.InboundConnected()),
-			"outbound":    len(s.peers.OutboundConnected()),
-			"activePeers": len(s.peers.Active()),
-		}).Info("Peer summary")
+		inboundQUICCount := len(s.peers.InboundConnectedWithProtocol(peers.QUIC))
+		inboundTCPCount := len(s.peers.InboundConnectedWithProtocol(peers.TCP))
+		outboundQUICCount := len(s.peers.OutboundConnectedWithProtocol(peers.QUIC))
+		outboundTCPCount := len(s.peers.OutboundConnectedWithProtocol(peers.TCP))
+		total := inboundQUICCount + inboundTCPCount + outboundQUICCount + outboundTCPCount
+
+		fields := logrus.Fields{
+			"inboundTCP":  inboundTCPCount,
+			"outboundTCP": outboundTCPCount,
+			"total":       total,
+		}
+
+		if features.Get().EnableQUIC {
+			fields["inboundQUIC"] = inboundQUICCount
+			fields["outboundQUIC"] = outboundQUICCount
+		}
+
+		log.WithFields(fields).Info("Connected peers")
 	})
 
 	multiAddrs := s.host.Network().ListenAddresses()
@@ -237,9 +261,10 @@ func (s *Service) Start() {
 
 	p2pHostAddress := s.cfg.HostAddress
 	p2pTCPPort := s.cfg.TCPPort
+	p2pQUICPort := s.cfg.QUICPort
 
 	if p2pHostAddress != "" {
-		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort)
+		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort, p2pQUICPort)
 		verifyConnectivity(p2pHostAddress, p2pTCPPort, "tcp")
 	}
 
@@ -284,7 +309,7 @@ func (s *Service) Started() bool {
 }
 
 // Encoding returns the configured networking encoding.
-func (_ *Service) Encoding() encoder.NetworkEncoding {
+func (*Service) Encoding() encoder.NetworkEncoding {
 	return &encoder.SszNetworkEncoder{}
 }
 
@@ -354,10 +379,14 @@ func (s *Service) MetadataSeq() uint64 {
 // AddPingMethod adds the metadata ping rpc method to the p2p service, so that it can
 // be used to refresh ENR.
 func (s *Service) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
+	s.pingMethodLock.Lock()
 	s.pingMethod = reqFunc
+	s.pingMethodLock.Unlock()
 }
 
 func (s *Service) pingPeers() {
+	s.pingMethodLock.RLock()
+	defer s.pingMethodLock.RUnlock()
 	if s.pingMethod == nil {
 		return
 	}
@@ -446,8 +475,8 @@ func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error
 }
 
 func (s *Service) connectToBootnodes() error {
-	nodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddr))
-	for _, addr := range s.cfg.Discv5BootStrapAddr {
+	nodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddrs))
+	for _, addr := range s.cfg.Discv5BootStrapAddrs {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return err

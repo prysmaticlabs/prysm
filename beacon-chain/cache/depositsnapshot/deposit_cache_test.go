@@ -784,7 +784,7 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	depositTrie, err := trie.GenerateTrieFromItems(trieItems, params.BeaconConfig().DepositContractTreeDepth)
 	assert.NoError(t, err)
 
-	// Perform this in a non-sensical ordering
+	// Perform this in a nonsensical ordering
 	err = dc.InsertFinalizedDeposits(context.Background(), 1, [32]byte{}, 0)
 	require.NoError(t, err)
 	err = dc.InsertFinalizedDeposits(context.Background(), 2, [32]byte{}, 0)
@@ -1187,13 +1187,5 @@ func BenchmarkDepositTree_HashTreeRootOldImplementation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err = dt.HashTreeRoot()
 		require.NoError(b, err)
-	}
-}
-
-func emptyEth1data() *ethpb.Eth1Data {
-	return &ethpb.Eth1Data{
-		DepositRoot:  make([]byte, 32),
-		DepositCount: 0,
-		BlockHash:    make([]byte, 32),
 	}
 }

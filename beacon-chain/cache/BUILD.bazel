@@ -6,6 +6,7 @@ go_library(
         "active_balance.go",
         "active_balance_disabled.go",  # keep
         "attestation_data.go",
+        "balance_cache_key.go",
         "checkpoint_state.go",
         "committee.go",
         "committee_disabled.go",  # keep
@@ -70,6 +71,7 @@ go_test(
         "committee_fuzz_test.go",
         "committee_test.go",
         "payload_id_test.go",
+        "private_access_test.go",
         "proposer_indices_test.go",
         "registration_test.go",
         "skip_slot_cache_test.go",
@@ -93,6 +95,7 @@ go_test(
         "//testing/util:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
+        "@com_github_hashicorp_golang_lru//:go_default_library",
         "@com_github_stretchr_testify//require:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
     ],

@@ -7,5 +7,5 @@ import (
 )
 
 func TestMinimal_Capella_Operations_SyncCommittee(t *testing.T) {
-	operations.RunProposerSlashingTest(t, "minimal")
+	operations.RunSyncCommitteeTest(t, "minimal")
 }
