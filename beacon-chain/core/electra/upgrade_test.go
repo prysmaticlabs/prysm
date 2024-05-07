@@ -150,10 +150,16 @@ func TestUpgradeToElectra(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, math.Gwei(0), balance)
 
-	//TODO: need getters for ExitBalanceToConsume and EarliestExitEpoch to test
-
 	tab, err := helpers.TotalActiveBalance(mSt)
 	require.NoError(t, err)
+
+	ebtc, err := mSt.ExitBalanceToConsume()
+	require.NoError(t, err)
+	require.Equal(t, helpers.ActivationExitChurnLimit(math.Gwei(tab)), ebtc)
+
+	eee, err := mSt.EarliestExitEpoch()
+	require.NoError(t, err)
+	require.Equal(t, primitives.Epoch(1), eee)
 
 	cbtc, err := mSt.ConsolidationBalanceToConsume()
 	require.NoError(t, err)

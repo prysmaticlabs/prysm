@@ -49,6 +49,7 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyStateRoots
 	ReadOnlyRandaoMixes
 	ReadOnlyEth1Data
+	ReadOnlyExits
 	ReadOnlyValidators
 	ReadOnlyBalances
 	ReadOnlyCheckpoint
@@ -177,6 +178,12 @@ type ReadOnlyEth1Data interface {
 	Eth1Data() *ethpb.Eth1Data
 	Eth1DataVotes() []*ethpb.Eth1Data
 	Eth1DepositIndex() uint64
+}
+
+// ReadOnlyExits defines a struct which only has read access to Exit related methods.
+type ReadOnlyExits interface {
+	ExitBalanceToConsume() (math.Gwei, error)
+	EarliestExitEpoch() (primitives.Epoch, error)
 }
 
 // ReadOnlyAttestations defines a struct which only has read access to attestations methods.
