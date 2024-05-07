@@ -406,15 +406,7 @@ func altairOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process bls-to-execution changes")
 	}
-	payload, err := beaconBlock.Body().Execution()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload")
-	}
-	receipts, err := payload.DepositReceipts()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get deposit receipts")
-	}
-	return electra.ProcessDepositReceipts(ctx, st, receipts)
+	return electra.ProcessDepositReceipts(st, beaconBlock)
 }
 
 // This calls phase 0 block operations.

@@ -197,14 +197,14 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 		}
 	} else {
 		if beaconState.Version() >= version.Electra {
-			//if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
-			//		return nil, newValidator, err
-			//	}
+			if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
+				return nil, err
+			}
 			val, err := beaconState.ValidatorAtIndex(index)
 			if err != nil {
 				return nil, err
 			}
-
+			// TODO: need to fix this to be used with the verify check above
 			hasValidSignature, err := IsValidDepositSignature(data)
 			if err != nil {
 				return nil, err
@@ -244,13 +244,17 @@ func AddValidatorToRegistry(beaconState state.BeaconState, pubKey []byte, withdr
 		return err
 	}
 	if beaconState.Version() >= version.Electra {
+		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		if !ok {
+			return errors.New("could not find validator in registry")
+		}
 		if err := beaconState.AppendBalance(0); err != nil {
 			return err
 		}
 		// In specs this function is at the end function
-		//	if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
-		//		return nil, newValidator, err
-		//	}
+		if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
+			return err
+		}
 	} else {
 		if err := beaconState.AppendBalance(amount); err != nil {
 			return err
