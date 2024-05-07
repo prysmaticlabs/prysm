@@ -78,7 +78,6 @@ func UpgradeToElectra(state state.BeaconState) (state.BeaconState, error) {
 		return nil, err
 	}
 
-	// RTFM: https://github.com/ethereum/consensus-specs/blob/dev/specs/electra/fork.md
 	// Find the earliest exit epoch
 	exitEpochs := make([]primitives.Epoch, 0)
 	for _, v := range state.Validators() {
