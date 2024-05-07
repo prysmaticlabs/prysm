@@ -316,7 +316,7 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 
 	// Ensure early adopters of compounding credentials go through the activation churn
 	for _, index := range compoundWithdrawalIndices {
-		if err := QueueEntireBalanceAndResetValidator(post, primitives.ValidatorIndex(index)); err != nil {
+		if err := QueueEntireBalanceAndResetValidator(post, index); err != nil {
 			return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
 		}
 	}
