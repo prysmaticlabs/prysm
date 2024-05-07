@@ -84,15 +84,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		tracing.AnnotateError(span, err)
 		return
 	}
-
-	indexedAtt := &ethpb.IndexedAttestation{
-		AttestingIndices: []uint64{uint64(duty.ValidatorIndex)},
-		Data:             data,
-	}
-
-	_, signingRoot, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
+	sig, _, err := v.signAtt(ctx, pubKey, data, slot)
 	if err != nil {
-		log.WithError(err).Error("Could not get domain and signing root from attestation")
+		log.WithError(err).Error("Could not sign attestation")
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -100,9 +94,26 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		return
 	}
 
-	sig, _, err := v.signAtt(ctx, pubKey, data, slot)
+	postElectra := slots.ToEpoch(slot) >= params.BeaconConfig().ElectraForkEpoch
+
+	var indexedAtt ethpb.IndexedAtt
+	if postElectra {
+		indexedAtt = &ethpb.IndexedAttestationElectra{
+			AttestingIndices: []uint64{uint64(duty.ValidatorIndex)},
+			Data:             data,
+			Signature:        sig,
+		}
+	} else {
+		indexedAtt = &ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{uint64(duty.ValidatorIndex)},
+			Data:             data,
+			Signature:        sig,
+		}
+	}
+
+	_, signingRoot, err := v.getDomainAndSigningRoot(ctx, indexedAtt.GetData())
 	if err != nil {
-		log.WithError(err).Error("Could not sign attestation")
+		log.WithError(err).Error("Could not get domain and signing root from attestation")
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -127,16 +138,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		return
 	}
 
-	aggregationBitfield := bitfield.NewBitlist(uint64(len(duty.Committee)))
-	aggregationBitfield.SetBitAt(indexInCommittee, true)
-	attestation := &ethpb.Attestation{
-		Data:            data,
-		AggregationBits: aggregationBitfield,
-		Signature:       sig,
-	}
-
-	// Set the signature of the attestation and send it out to the beacon node.
-	indexedAtt.Signature = sig
+	// Send the attestation to the beacon node.
 	if err := v.db.SlashableAttestationCheck(ctx, indexedAtt, pubKey, signingRoot, v.emitAccountMetrics, ValidatorAttestFailVec); err != nil {
 		log.WithError(err).Error("Failed attestation slashing protection check")
 		log.WithFields(
@@ -145,7 +147,29 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		tracing.AnnotateError(span, err)
 		return
 	}
-	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
+
+	aggregationBitfield := bitfield.NewBitlist(uint64(len(duty.Committee)))
+	aggregationBitfield.SetBitAt(indexInCommittee, true)
+	committeeBits := make([]byte, params.BeaconConfig().MaxCommitteesPerSlot)
+
+	var attResp *ethpb.AttestResponse
+	if postElectra {
+		attestation := &ethpb.AttestationElectra{
+			Data:            data,
+			AggregationBits: aggregationBitfield,
+			CommitteeBits:   committeeBits,
+			Signature:       sig,
+		}
+		attestation.GetCommitteeBitsVal().SetBitAt(uint64(req.CommitteeIndex), true)
+		attResp, err = v.validatorClient.ProposeAttestationElectra(ctx, attestation)
+	} else {
+		attestation := &ethpb.Attestation{
+			Data:            data,
+			AggregationBits: aggregationBitfield,
+			Signature:       sig,
+		}
+		attResp, err = v.validatorClient.ProposeAttestation(ctx, attestation)
+	}
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
 		if v.emitAccountMetrics {
@@ -164,15 +188,27 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		return
 	}
 
-	span.AddAttributes(
-		trace.Int64Attribute("slot", int64(slot)), // lint:ignore uintcast -- This conversion is OK for tracing.
-		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
-		trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)),
-		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
-		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
-		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
-		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
-	)
+	if postElectra {
+		span.AddAttributes(
+			trace.Int64Attribute("slot", int64(slot)), // lint:ignore uintcast -- This conversion is OK for tracing.
+			trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
+			trace.StringAttribute("committeeBitfield", fmt.Sprintf("%#x", committeeBits)),
+			trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
+			trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
+			trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
+			trace.StringAttribute("aggregationBitfield", fmt.Sprintf("%#x", aggregationBitfield)),
+		)
+	} else {
+		span.AddAttributes(
+			trace.Int64Attribute("slot", int64(slot)), // lint:ignore uintcast -- This conversion is OK for tracing.
+			trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
+			trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)),
+			trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
+			trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
+			trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
+			trace.StringAttribute("aggregationBitfield", fmt.Sprintf("%#x", aggregationBitfield)),
+		)
+	}
 
 	if v.emitAccountMetrics {
 		ValidatorAttestSuccessVec.WithLabelValues(fmtKey).Inc()
@@ -293,16 +329,16 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot primitive
 	}
 }
 
-func attestationLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {
+func attestationLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, indexedAtt ethpb.IndexedAtt) logrus.Fields {
 	return logrus.Fields{
 		"pubkey":         fmt.Sprintf("%#x", pubKey),
-		"slot":           indexedAtt.Data.Slot,
-		"committeeIndex": indexedAtt.Data.CommitteeIndex,
-		"blockRoot":      fmt.Sprintf("%#x", indexedAtt.Data.BeaconBlockRoot),
-		"sourceEpoch":    indexedAtt.Data.Source.Epoch,
-		"sourceRoot":     fmt.Sprintf("%#x", indexedAtt.Data.Source.Root),
-		"targetEpoch":    indexedAtt.Data.Target.Epoch,
-		"targetRoot":     fmt.Sprintf("%#x", indexedAtt.Data.Target.Root),
-		"signature":      fmt.Sprintf("%#x", indexedAtt.Signature),
+		"slot":           indexedAtt.GetData().Slot,
+		"committeeIndex": indexedAtt.GetData().CommitteeIndex,
+		"blockRoot":      fmt.Sprintf("%#x", indexedAtt.GetData().BeaconBlockRoot),
+		"sourceEpoch":    indexedAtt.GetData().Source.Epoch,
+		"sourceRoot":     fmt.Sprintf("%#x", indexedAtt.GetData().Source.Root),
+		"targetEpoch":    indexedAtt.GetData().Target.Epoch,
+		"targetRoot":     fmt.Sprintf("%#x", indexedAtt.GetData().Target.Root),
+		"signature":      fmt.Sprintf("%#x", indexedAtt.GetSignature()),
 	}
 }

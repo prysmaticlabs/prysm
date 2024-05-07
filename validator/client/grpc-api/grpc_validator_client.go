@@ -71,6 +71,10 @@ func (c *grpcValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.
 	return c.beaconNodeValidatorClient.ProposeAttestation(ctx, in)
 }
 
+func (c *grpcValidatorClient) ProposeAttestationElectra(ctx context.Context, in *ethpb.AttestationElectra) (*ethpb.AttestResponse, error) {
+	return c.beaconNodeValidatorClient.ProposeAttestationElectra(ctx, in)
+}
+
 func (c *grpcValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	return c.beaconNodeValidatorClient.ProposeBeaconBlock(ctx, in)
 }
