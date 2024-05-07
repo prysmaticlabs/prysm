@@ -277,16 +277,16 @@ func VerifyDataColumnSidecarKZGProofs(sc *ethpb.DataColumnSidecar) (bool, error)
 		return false, errMismatchLength
 	}
 	blobsCount := len(sc.DataColumn)
-	
-	rowIdx:= make([]uint64, 0, blobsCount)
-	colIdx :=make([]uint64, 0, blobsCount)
+
+	rowIdx := make([]uint64, 0, blobsCount)
+	colIdx := make([]uint64, 0, blobsCount)
 	for i := 0; i < len(sc.DataColumn); i++ {
 		copiedI := uint64(i)
 		rowIdx = append(rowIdx, copiedI)
 		colI := sc.ColumnIndex
 		colIdx = append(colIdx, colI)
 	}
-    ckzgComms := make([]cKzg4844.Bytes48, 0, len(sc.KzgCommitments))
+	ckzgComms := make([]cKzg4844.Bytes48, 0, len(sc.KzgCommitments))
 	for _, com := range sc.KzgCommitments {
 		ckzgComms = append(ckzgComms, cKzg4844.Bytes48(com))
 	}
