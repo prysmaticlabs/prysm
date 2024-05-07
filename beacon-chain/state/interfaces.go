@@ -116,10 +116,9 @@ type ReadOnlyValidator interface {
 	WithdrawableEpoch() primitives.Epoch
 	ExitEpoch() primitives.Epoch
 	PublicKey() [fieldparams.BLSPubkeyLength]byte
-	WithdrawalCredentials() []byte
+	GetWithdrawalCredentials() []byte
 	Slashed() bool
 	IsNil() bool
-	Validator() *ethpb.Validator
 }
 
 // ReadOnlyValidators defines a struct which only has read access to validators methods.

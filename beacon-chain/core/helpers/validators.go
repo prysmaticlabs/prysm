@@ -12,6 +12,7 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -520,11 +521,11 @@ func isETH1WithdrawalCredential(creds []byte) bool {
 //	    Check if ``validator`` has an 0x02 prefixed "compounding" withdrawal credential.
 //	    """
 //	    return is_compounding_withdrawal_credential(validator.withdrawal_credentials)
-func HasCompoundingWithdrawalCredential(v *ethpb.Validator) bool {
+func HasCompoundingWithdrawalCredential(v interfaces.WithWithdrawalCredentials) bool {
 	if v == nil {
 		return false
 	}
-	return isCompoundingWithdrawalCredential(v.WithdrawalCredentials)
+	return isCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
 }
 
 // isCompoundingWithdrawalCredential checks if the credentials are a compounding withdrawal credential.
