@@ -130,8 +130,6 @@ import (
 //
 //	return post
 func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) {
-	epoch := time.CurrentEpoch(beaconState)
-
 	currentSyncCommittee, err := beaconState.CurrentSyncCommittee()
 	if err != nil {
 		return nil, err
@@ -237,7 +235,7 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 		Fork: &ethpb.Fork{
 			PreviousVersion: beaconState.Fork().CurrentVersion,
 			CurrentVersion:  params.BeaconConfig().ElectraForkVersion,
-			Epoch:           epoch,
+			Epoch:           time.CurrentEpoch(beaconState),
 		},
 		LatestBlockHeader:           beaconState.LatestBlockHeader(),
 		BlockRoots:                  beaconState.BlockRoots(),
