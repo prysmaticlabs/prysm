@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
-// QueueExcessActiveBalance
+// QueueExcessActiveBalance queues validators with balances above the min activation balance and adds to pending balance deposit.
 //
 // Spec definition:
 //

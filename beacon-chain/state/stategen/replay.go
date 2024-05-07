@@ -27,7 +27,7 @@ import (
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 //
 // WARNING Blocks passed to the function must be in decreasing slots order.
-func (_ *State) replayBlocks(
+func (*State) replayBlocks(
 	ctx context.Context,
 	state state.BeaconState,
 	signed []interfaces.ReadOnlySignedBeaconBlock,
@@ -179,6 +179,7 @@ func executeStateTransitionStateGen(
 // There's no skip slot cache involved given state gen only works with already stored block and state in DB.
 //
 // WARNING: This method should not be used for future slot.
+// skipcq: GO-R1005
 func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stategen.ReplayProcessSlots")
 	defer span.End()

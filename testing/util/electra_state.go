@@ -186,7 +186,7 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 
-		//Electra Data
+		// Electra Data
 		DepositReceiptsStartIndex:     params.BeaconConfig().UnsetDepositReceiptsStartIndex,
 		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(math.Gwei(tab)),
 		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(preState.Slot())),

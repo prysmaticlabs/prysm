@@ -129,6 +129,8 @@ import (
 //	        queue_excess_active_balance(post, ValidatorIndex(index))
 //
 //	return post
+//
+// skipcq: GO-R1005
 func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) {
 	currentSyncCommittee, err := beaconState.CurrentSyncCommittee()
 	if err != nil {

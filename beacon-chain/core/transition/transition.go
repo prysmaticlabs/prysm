@@ -100,6 +100,8 @@ func ExecuteStateTransition(
 //	  # Cache block root
 //	  previous_block_root = hash_tree_root(state.latest_block_header)
 //	  state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
+//
+// skipcq: GO-R1005
 func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlot")
 	defer span.End()
