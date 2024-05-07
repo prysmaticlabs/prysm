@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -368,25 +369,32 @@ func (vs *Server) broadcastReceiveBlock(ctx context.Context, block interfaces.Si
 
 // broadcastAndReceiveBlobs handles the broadcasting and reception of blob sidecars.
 func (vs *Server) broadcastAndReceiveBlobs(ctx context.Context, sidecars []*ethpb.BlobSidecar, root [32]byte) error {
+	eg, eCtx := errgroup.WithContext(ctx)
 	for i, sc := range sidecars {
-		if err := vs.P2P.BroadcastBlob(ctx, uint64(i), sc); err != nil {
-			return errors.Wrap(err, "broadcast blob failed")
-		}
-
-		readOnlySc, err := blocks.NewROBlobWithRoot(sc, root)
-		if err != nil {
-			return errors.Wrap(err, "ROBlob creation failed")
-		}
-		verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
-		if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
-			return errors.Wrap(err, "receive blob failed")
-		}
-		vs.OperationNotifier.OperationFeed().Send(&feed.Event{
-			Type: operation.BlobSidecarReceived,
-			Data: &operation.BlobSidecarReceivedData{Blob: &verifiedBlob},
+		// Copy the iteration instance to a local variable to give each go-routine its own copy to play with.
+		// See https://golang.org/doc/faq#closures_and_goroutines for more details.
+		subIdx := i
+		sCar := sc
+		eg.Go(func() error {
+			if err := vs.P2P.BroadcastBlob(eCtx, uint64(subIdx), sCar); err != nil {
+				return errors.Wrap(err, "broadcast blob failed")
+			}
+			readOnlySc, err := blocks.NewROBlobWithRoot(sCar, root)
+			if err != nil {
+				return errors.Wrap(err, "ROBlob creation failed")
+			}
+			verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
+			if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
+				return errors.Wrap(err, "receive blob failed")
+			}
+			vs.OperationNotifier.OperationFeed().Send(&feed.Event{
+				Type: operation.BlobSidecarReceived,
+				Data: &operation.BlobSidecarReceivedData{Blob: &verifiedBlob},
+			})
+			return nil
 		})
 	}
-	return nil
+	return eg.Wait()
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
