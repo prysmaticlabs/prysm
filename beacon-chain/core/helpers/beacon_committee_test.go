@@ -699,3 +699,12 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	}
 	assert.DeepEqual(t, wantedProposerIndices, proposerIndices, "Did not precompute proposer indices correctly")
 }
+
+func TestCommitteeIndices(t *testing.T) {
+	bitfield := bitfield.NewBitvector4()
+	bitfield.SetBitAt(0, true)
+	bitfield.SetBitAt(1, true)
+	bitfield.SetBitAt(3, true)
+	indices := helpers.CommitteeIndices(bitfield)
+	assert.DeepEqual(t, []primitives.CommitteeIndex{0, 1, 3}, indices)
+}
