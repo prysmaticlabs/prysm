@@ -40,7 +40,6 @@ func TestGetDepositContract(t *testing.T) {
 	assert.Equal(t, "0x4242424242424242424242424242424242424242", response.Data.Address)
 }
 
-// skipcq: GO-R1005
 func TestGetSpec(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig().Copy()
