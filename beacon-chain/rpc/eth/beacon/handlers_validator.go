@@ -404,7 +404,7 @@ func valContainerFromReadOnlyVal(
 		Status:  valStatus.String(),
 		Validator: &structs.Validator{
 			Pubkey:                     hexutil.Encode(pubkey[:]),
-			WithdrawalCredentials:      hexutil.Encode(val.WithdrawalCredentials()),
+			WithdrawalCredentials:      hexutil.Encode(val.GetWithdrawalCredentials()),
 			EffectiveBalance:           strconv.FormatUint(val.EffectiveBalance(), 10),
 			Slashed:                    val.Slashed(),
 			ActivationEligibilityEpoch: strconv.FormatUint(uint64(val.ActivationEligibilityEpoch()), 10),
