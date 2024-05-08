@@ -1,4 +1,4 @@
-package validators
+package validators_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -50,8 +51,8 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 	}}
 	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
-	newState, epoch, err := InitiateValidatorExit(context.Background(), state, 0, 199, 1)
-	require.ErrorIs(t, err, ErrValidatorAlreadyExited)
+	newState, epoch, err := validators.InitiateValidatorExit(context.Background(), state, 0, 199, 1)
+	require.ErrorIs(t, err, validators.ErrValidatorAlreadyExited)
 	require.Equal(t, exitEpoch, epoch)
 	v, err := newState.ValidatorAtIndex(0)
 	require.NoError(t, err)
@@ -69,7 +70,7 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 	}}
 	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
-	newState, epoch, err := InitiateValidatorExit(context.Background(), state, idx, exitedEpoch+2, 1)
+	newState, epoch, err := validators.InitiateValidatorExit(context.Background(), state, idx, exitedEpoch+2, 1)
 	require.NoError(t, err)
 	require.Equal(t, exitedEpoch+2, epoch)
 	v, err := newState.ValidatorAtIndex(idx)
@@ -89,7 +90,7 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 	}}
 	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
-	newState, epoch, err := InitiateValidatorExit(context.Background(), state, idx, exitedEpoch+2, 4)
+	newState, epoch, err := validators.InitiateValidatorExit(context.Background(), state, idx, exitedEpoch+2, 4)
 	require.NoError(t, err)
 	require.Equal(t, exitedEpoch+3, epoch)
 
@@ -111,7 +112,7 @@ func TestInitiateValidatorExit_WithdrawalOverflows(t *testing.T) {
 	}}
 	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
-	_, _, err = InitiateValidatorExit(context.Background(), state, 1, params.BeaconConfig().FarFutureEpoch-1, 1)
+	_, _, err = validators.InitiateValidatorExit(context.Background(), state, 1, params.BeaconConfig().FarFutureEpoch-1, 1)
 	require.ErrorContains(t, "addition overflows", err)
 }
 
@@ -147,7 +148,7 @@ func TestInitiateValidatorExit_ProperExit_Electra(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, math.Gwei(0), ebtc)
 
-	newState, epoch, err := InitiateValidatorExit(context.Background(), state, idx, 0, 0) // exitQueueEpoch and churn are not used in electra
+	newState, epoch, err := validators.InitiateValidatorExit(context.Background(), state, idx, 0, 0) // exitQueueEpoch and churn are not used in electra
 	require.NoError(t, err)
 
 	// Expect that the exit epoch is the next available epoch with max seed lookahead.
@@ -191,8 +192,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	require.NoError(t, err, "Could not get proposer")
 	proposerBal, err := state.BalanceAtIndex(proposer)
 	require.NoError(t, err)
-	cfg := params.BeaconConfig()
-	slashedState, err := SlashValidator(context.Background(), state, slashedIdx, cfg.MinSlashingPenaltyQuotient, cfg.ProposerRewardQuotient)
+	slashedState, err := validators.SlashValidator(context.Background(), state, slashedIdx)
 	require.NoError(t, err, "Could not slash validator")
 	require.Equal(t, true, slashedState.Version() == version.Phase0)
 
@@ -215,6 +215,59 @@ func TestSlashValidator_OK(t *testing.T) {
 	v, err = state.ValidatorAtIndex(slashedIdx)
 	require.NoError(t, err)
 	assert.Equal(t, maxBalance-(v.EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient), bal, "Did not get expected balance for slashed validator")
+}
+
+func TestSlashValidator_Electra(t *testing.T) {
+	validatorCount := 100
+	registry := make([]*ethpb.Validator, 0, validatorCount)
+	balances := make([]uint64, 0, validatorCount)
+	for i := 0; i < validatorCount; i++ {
+		registry = append(registry, &ethpb.Validator{
+			ActivationEpoch:  0,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		})
+		balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
+	}
+
+	base := &ethpb.BeaconStateElectra{
+		Validators:  registry,
+		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Balances:    balances,
+	}
+	state, err := state_native.InitializeFromProtoElectra(base)
+	require.NoError(t, err)
+
+	slashedIdx := primitives.ValidatorIndex(3)
+
+	proposer, err := helpers.BeaconProposerIndex(context.Background(), state)
+	require.NoError(t, err, "Could not get proposer")
+	proposerBal, err := state.BalanceAtIndex(proposer)
+	require.NoError(t, err)
+	slashedState, err := validators.SlashValidator(context.Background(), state, slashedIdx)
+	require.NoError(t, err, "Could not slash validator")
+	require.Equal(t, true, slashedState.Version() == version.Electra)
+
+	v, err := state.ValidatorAtIndex(slashedIdx)
+	require.NoError(t, err)
+	assert.Equal(t, true, v.Slashed, "Validator not slashed despite supposed to being slashed")
+	assert.Equal(t, time.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector, v.WithdrawableEpoch, "Withdrawable epoch not the expected value")
+
+	maxBalance := params.BeaconConfig().MaxEffectiveBalance
+	slashedBalance := state.Slashings()[state.Slot().Mod(uint64(params.BeaconConfig().EpochsPerSlashingsVector))]
+	assert.Equal(t, maxBalance, slashedBalance, "Slashed balance isn't the expected amount")
+
+	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowerRewardQuotientElectra
+	bal, err := state.BalanceAtIndex(proposer)
+	require.NoError(t, err)
+	// The proposer is the whistleblower.
+	assert.Equal(t, proposerBal+whistleblowerReward, bal, "Did not get expected balance for proposer")
+	bal, err = state.BalanceAtIndex(slashedIdx)
+	require.NoError(t, err)
+	v, err = state.ValidatorAtIndex(slashedIdx)
+	require.NoError(t, err)
+	assert.Equal(t, maxBalance-(v.EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotientElectra), bal, "Did not get expected balance for slashed validator")
 }
 
 func TestActivatedValidatorIndices(t *testing.T) {
@@ -269,7 +322,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := state_native.InitializeFromProtoPhase0(tt.state)
 		require.NoError(t, err)
-		activatedIndices := ActivatedValidatorIndices(time.CurrentEpoch(s), tt.state.Validators)
+		activatedIndices := validators.ActivatedValidatorIndices(time.CurrentEpoch(s), tt.state.Validators)
 		assert.DeepEqual(t, tt.wanted, activatedIndices)
 	}
 }
@@ -323,7 +376,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := state_native.InitializeFromProtoPhase0(tt.state)
 		require.NoError(t, err)
-		slashedIndices := SlashedValidatorIndices(time.CurrentEpoch(s), tt.state.Validators)
+		slashedIndices := validators.SlashedValidatorIndices(time.CurrentEpoch(s), tt.state.Validators)
 		assert.DeepEqual(t, tt.wanted, slashedIndices)
 	}
 }
@@ -385,7 +438,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 		require.NoError(t, err)
 		activeCount, err := helpers.ActiveValidatorCount(context.Background(), s, time.PrevEpoch(s))
 		require.NoError(t, err)
-		exitedIndices, err := ExitedValidatorIndices(0, tt.state.Validators, activeCount)
+		exitedIndices, err := validators.ExitedValidatorIndices(0, tt.state.Validators, activeCount)
 		require.NoError(t, err)
 		assert.DeepEqual(t, tt.wanted, exitedIndices)
 	}
@@ -460,7 +513,7 @@ func TestValidatorMaxExitEpochAndChurn(t *testing.T) {
 	for _, tt := range tests {
 		s, err := state_native.InitializeFromProtoPhase0(tt.state)
 		require.NoError(t, err)
-		epoch, churn := MaxExitEpochAndChurn(s)
+		epoch, churn := validators.MaxExitEpochAndChurn(s)
 		require.Equal(t, tt.wantedEpoch, epoch)
 		require.Equal(t, tt.wantedChurn, churn)
 	}
