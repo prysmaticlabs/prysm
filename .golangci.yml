@@ -52,6 +52,7 @@ linters:
     - gofumpt
     - gomnd
     - gomoddirectives
+    - gosec
     - inamedparam
     - interfacebloat
     - ireturn
