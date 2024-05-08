@@ -4,10 +4,13 @@ go_library(
     name = "go_default_library",
     srcs = [
         "blob.go",
-        "ephemeral.go",
+        "cache.go",
+        "log.go",
         "metrics.go",
+        "mock.go",
+        "pruner.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/verification:go_default_library",
@@ -15,6 +18,7 @@ go_library(
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/logging:go_default_library",
@@ -30,7 +34,11 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["blob_test.go"],
+    srcs = [
+        "blob_test.go",
+        "cache_test.go",
+        "pruner_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/verification:go_default_library",
@@ -40,8 +48,6 @@ go_test(
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
-        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_fastssz//:go_default_library",
         "@com_github_spf13_afero//:go_default_library",
     ],

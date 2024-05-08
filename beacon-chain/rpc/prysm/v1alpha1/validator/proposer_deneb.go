@@ -4,12 +4,12 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 var bundleCache = &blobsBundleCache{}
@@ -56,17 +56,17 @@ func (c *blobsBundleCache) prune(minSlot primitives.Slot) {
 	}
 }
 
-// buildBlobSidecars given a block, builds the blob sidecars for the block.
-func buildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgproofs [][]byte) ([]*ethpb.BlobSidecar, error) {
+// BuildBlobSidecars given a block, builds the blob sidecars for the block.
+func BuildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgProofs [][]byte) ([]*ethpb.BlobSidecar, error) {
 	if blk.Version() < version.Deneb {
 		return nil, nil // No blobs before deneb.
 	}
-	denebBlk, err := blk.PbDenebBlock()
+	commits, err := blk.Block().Body().BlobKzgCommitments()
 	if err != nil {
 		return nil, err
 	}
-	cLen := len(denebBlk.Block.Body.BlobKzgCommitments)
-	if cLen != len(blobs) || cLen != len(kzgproofs) {
+	cLen := len(commits)
+	if cLen != len(blobs) || cLen != len(kzgProofs) {
 		return nil, errors.New("blob KZG commitments don't match number of blobs or KZG proofs")
 	}
 	blobSidecars := make([]*ethpb.BlobSidecar, cLen)
@@ -83,8 +83,8 @@ func buildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgproo
 		blobSidecars[i] = &ethpb.BlobSidecar{
 			Index:                    uint64(i),
 			Blob:                     blobs[i],
-			KzgCommitment:            denebBlk.Block.Body.BlobKzgCommitments[i],
-			KzgProof:                 kzgproofs[i],
+			KzgCommitment:            commits[i],
+			KzgProof:                 kzgProofs[i],
 			SignedBlockHeader:        header,
 			CommitmentInclusionProof: proof,
 		}

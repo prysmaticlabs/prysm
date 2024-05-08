@@ -6,20 +6,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestAttestation_IsAggregator(t *testing.T) {
 	t.Run("aggregator", func(t *testing.T) {
+		helpers.ClearCache()
+
 		beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, 0, 0)
 		require.NoError(t, err)
@@ -30,6 +33,8 @@ func TestAttestation_IsAggregator(t *testing.T) {
 	})
 
 	t.Run("not aggregator", func(t *testing.T) {
+		helpers.ClearCache()
+
 		params.SetupTestConfigCleanup(t)
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 		beaconState, privKeys := util.DeterministicGenesisState(t, 2048)
@@ -44,6 +49,8 @@ func TestAttestation_IsAggregator(t *testing.T) {
 }
 
 func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
+	helpers.ClearCache()
+
 	// Create 10 committees
 	committeeCount := uint64(10)
 	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
@@ -191,7 +198,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 					-500 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(200 * time.Millisecond),
 			},
-			wantedErr: "attestation epoch 8 not within current epoch 15 or previous epoch 14",
+			wantedErr: "attestation epoch 8 not within current epoch 15 or previous epoch",
 		},
 		{
 			name: "attestation.slot is well beyond current slot",
@@ -199,11 +206,13 @@ func Test_ValidateAttestationTime(t *testing.T) {
 				attSlot:     1 << 32,
 				genesisTime: prysmTime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
-			wantedErr: "which exceeds max allowed value relative to the local clock",
+			wantedErr: "attestation slot 4294967296 not within attestation propagation range of 0 to 15 (current slot)",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			helpers.ClearCache()
+
 			err := helpers.ValidateAttestationTime(tt.args.attSlot, tt.args.genesisTime,
 				params.BeaconConfig().MaximumGossipClockDisparityDuration())
 			if tt.wantedErr != "" {
@@ -216,6 +225,8 @@ func Test_ValidateAttestationTime(t *testing.T) {
 }
 
 func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
+	helpers.ClearCache()
+
 	// Genesis was 6 epochs ago exactly.
 	offset := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot * 6)
 	genesis := time.Now().Add(-1 * time.Second * time.Duration(offset))
@@ -228,7 +239,7 @@ func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
 func TestValidateNilAttestation(t *testing.T) {
 	tests := []struct {
 		name        string
-		attestation *ethpb.Attestation
+		attestation interfaces.Attestation
 		errString   string
 	}{
 		{
@@ -285,6 +296,8 @@ func TestValidateNilAttestation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			helpers.ClearCache()
+
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, helpers.ValidateNilAttestation(tt.attestation))
 			} else {
@@ -326,6 +339,8 @@ func TestValidateSlotTargetEpoch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			helpers.ClearCache()
+
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, helpers.ValidateSlotTargetEpoch(tt.attestation.Data))
 			} else {

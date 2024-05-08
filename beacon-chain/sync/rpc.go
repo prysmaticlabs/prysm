@@ -11,11 +11,11 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -128,7 +128,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		defer func() {
 			if r := recover(); r != nil {
 				log.WithField("error", r).
-					WithField("recovered_at", "registerRPC").
+					WithField("recoveredAt", "registerRPC").
 					WithField("stack", string(debug.Stack())).
 					Error("Panic occurred")
 			}
@@ -142,7 +142,13 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		// it successfully writes a response. We don't blindly call
 		// Close here because we may have only written a partial
 		// response.
+		// About the special case for quic-v1, please see:
+		// https://github.com/quic-go/quic-go/issues/3291
 		defer func() {
+			if strings.Contains(stream.Conn().RemoteMultiaddr().String(), "quic-v1") {
+				time.Sleep(2 * time.Second)
+			}
+
 			_err := stream.Reset()
 			_ = _err
 		}()
@@ -244,6 +250,9 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 }
 
 func logStreamErrors(err error, topic string) {
+	if isUnwantedError(err) {
+		return
+	}
 	if strings.Contains(topic, p2p.RPCGoodByeTopicV1) {
 		log.WithError(err).WithField("topic", topic).Trace("Could not decode goodbye stream message")
 		return

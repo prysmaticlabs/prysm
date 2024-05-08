@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -42,7 +42,7 @@ func (s *Service) prepareForkChoiceAtts() {
 			switch slotInterval.Interval {
 			case 0:
 				duration := time.Since(t)
-				log.WithField("Duration", duration).Debug("aggregated unaggregated attestations")
+				log.WithField("duration", duration).Debug("Aggregated unaggregated attestations")
 				batchForkChoiceAttsT1.Observe(float64(duration.Milliseconds()))
 			case 1:
 				batchForkChoiceAttsT2.Observe(float64(time.Since(t).Milliseconds()))
@@ -67,7 +67,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
 	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
 
-	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+	attsByDataRoot := make(map[[32]byte][]interfaces.Attestation, len(atts))
 
 	// Consolidate attestations by aggregating them by similar data root.
 	for _, att := range atts {
@@ -79,7 +79,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 			continue
 		}
 
-		attDataRoot, err := att.Data.HashTreeRoot()
+		attDataRoot, err := att.GetData().HashTreeRoot()
 		if err != nil {
 			return err
 		}
@@ -103,10 +103,10 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 
 // This aggregates a list of attestations using the aggregation algorithm defined in AggregateAttestations
 // and saves the attestations for fork choice.
-func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) error {
-	clonedAtts := make([]*ethpb.Attestation, len(atts))
+func (s *Service) aggregateAndSaveForkChoiceAtts(atts []interfaces.Attestation) error {
+	clonedAtts := make([]interfaces.Attestation, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = ethpb.CopyAttestation(a)
+		clonedAtts[i] = interfaces.CopyAttestation(a)
 	}
 	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {
@@ -118,12 +118,12 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
-func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
-	attRoot, err := hash.Proto(att.Data)
+func (s *Service) seen(att interfaces.Attestation) (bool, error) {
+	attRoot, err := hash.Proto(att.GetData())
 	if err != nil {
 		return false, err
 	}
-	incomingBits := att.AggregationBits
+	incomingBits := att.GetAggregationBits()
 	savedBits, ok := s.forkChoiceProcessedRoots.Get(attRoot)
 	if ok {
 		savedBitlist, ok := savedBits.(bitfield.Bitlist)

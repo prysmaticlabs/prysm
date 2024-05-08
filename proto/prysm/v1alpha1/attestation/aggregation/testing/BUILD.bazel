@@ -4,9 +4,10 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = ["bitlistutils.go"],
-    importpath = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/testing",
+    importpath = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/testing",
     visibility = ["//visibility:public"],
     deps = [
+        "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

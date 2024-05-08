@@ -2,10 +2,10 @@ package state_native
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 var (
@@ -70,9 +70,14 @@ func (v readOnlyValidator) PublicKey() [fieldparams.BLSPubkeyLength]byte {
 	return pubkey
 }
 
+// publicKeySlice returns the public key in the slice form for the read only validator.
+func (v readOnlyValidator) publicKeySlice() []byte {
+	return v.validator.PublicKey
+}
+
 // WithdrawalCredentials returns the withdrawal credentials of the
 // read only validator.
-func (v readOnlyValidator) WithdrawalCredentials() []byte {
+func (v readOnlyValidator) GetWithdrawalCredentials() []byte {
 	creds := make([]byte, len(v.validator.WithdrawalCredentials))
 	copy(creds, v.validator.WithdrawalCredentials)
 	return creds

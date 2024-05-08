@@ -10,22 +10,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/api/server"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/server"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	corehelpers "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -55,25 +56,37 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	attestations = append(attestations, unaggAtts...)
 	isEmptyReq := rawSlot == "" && rawCommitteeIndex == ""
 	if isEmptyReq {
-		allAtts := make([]*shared.Attestation, len(attestations))
+		allAtts := make([]*structs.Attestation, len(attestations))
 		for i, att := range attestations {
-			allAtts[i] = shared.AttFromConsensus(att)
+			a, ok := att.(*eth.Attestation)
+			if ok {
+				allAtts[i] = structs.AttFromConsensus(a)
+			} else {
+				httputil.HandleError(w, fmt.Sprintf("unable to convert attestations of type %T", att), http.StatusInternalServerError)
+				return
+			}
 		}
-		httputil.WriteJson(w, &ListAttestationsResponse{Data: allAtts})
+		httputil.WriteJson(w, &structs.ListAttestationsResponse{Data: allAtts})
 		return
 	}
 
 	bothDefined := rawSlot != "" && rawCommitteeIndex != ""
-	filteredAtts := make([]*shared.Attestation, 0, len(attestations))
+	filteredAtts := make([]*structs.Attestation, 0, len(attestations))
 	for _, att := range attestations {
-		committeeIndexMatch := rawCommitteeIndex != "" && att.Data.CommitteeIndex == primitives.CommitteeIndex(committeeIndex)
-		slotMatch := rawSlot != "" && att.Data.Slot == primitives.Slot(slot)
+		committeeIndexMatch := rawCommitteeIndex != "" && att.GetData().CommitteeIndex == primitives.CommitteeIndex(committeeIndex)
+		slotMatch := rawSlot != "" && att.GetData().Slot == primitives.Slot(slot)
 		shouldAppend := (bothDefined && committeeIndexMatch && slotMatch) || (!bothDefined && (committeeIndexMatch || slotMatch))
 		if shouldAppend {
-			filteredAtts = append(filteredAtts, shared.AttFromConsensus(att))
+			a, ok := att.(*eth.Attestation)
+			if ok {
+				filteredAtts = append(filteredAtts, structs.AttFromConsensus(a))
+			} else {
+				httputil.HandleError(w, fmt.Sprintf("unable to convert attestations of type %T", att), http.StatusInternalServerError)
+				return
+			}
 		}
 	}
-	httputil.WriteJson(w, &ListAttestationsResponse{Data: filteredAtts})
+	httputil.WriteJson(w, &structs.ListAttestationsResponse{Data: filteredAtts})
 }
 
 // SubmitAttestations submits an attestation object to node. If the attestation passes all validation
@@ -82,7 +95,7 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttestations")
 	defer span.End()
 
-	var req SubmitAttestationsRequest
+	var req structs.SubmitAttestationsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
 	case err == io.EOF:
@@ -186,12 +199,12 @@ func (s *Server) ListVoluntaryExits(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Could not get exits from the pool: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	exits := make([]*shared.SignedVoluntaryExit, len(sourceExits))
+	exits := make([]*structs.SignedVoluntaryExit, len(sourceExits))
 	for i, e := range sourceExits {
-		exits[i] = shared.SignedExitFromConsensus(e)
+		exits[i] = structs.SignedExitFromConsensus(e)
 	}
 
-	httputil.WriteJson(w, &ListVoluntaryExitsResponse{Data: exits})
+	httputil.WriteJson(w, &structs.ListVoluntaryExitsResponse{Data: exits})
 }
 
 // SubmitVoluntaryExit submits a SignedVoluntaryExit object to node's pool
@@ -200,7 +213,7 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitVoluntaryExit")
 	defer span.End()
 
-	var req shared.SignedVoluntaryExit
+	var req structs.SignedVoluntaryExit
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
 	case err == io.EOF:
@@ -258,7 +271,7 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitPoolSyncCommitteeSignatures")
 	defer span.End()
 
-	var req SubmitSyncCommitteeSignaturesRequest
+	var req structs.SubmitSyncCommitteeSignaturesRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
 	case err == io.EOF:
@@ -317,7 +330,7 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 	var failures []*server.IndexedVerificationFailure
 	var toBroadcast []*eth.SignedBLSToExecutionChange
 
-	var req []*shared.SignedBLSToExecutionChange
+	var req []*structs.SignedBLSToExecutionChange
 	err = json.NewDecoder(r.Body).Decode(&req)
 	switch {
 	case err == io.EOF:
@@ -437,8 +450,8 @@ func (s *Server) ListBLSToExecutionChanges(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	httputil.WriteJson(w, &BLSToExecutionChangesPoolResponse{
-		Data: shared.SignedBLSChangesFromConsensus(sourceChanges),
+	httputil.WriteJson(w, &structs.BLSToExecutionChangesPoolResponse{
+		Data: structs.SignedBLSChangesFromConsensus(sourceChanges),
 	})
 }
 
@@ -454,9 +467,19 @@ func (s *Server) GetAttesterSlashings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
-	slashings := shared.AttesterSlashingsFromConsensus(sourceSlashings)
+	ss := make([]*eth.AttesterSlashing, 0, len(sourceSlashings))
+	for _, slashing := range sourceSlashings {
+		s, ok := slashing.(*eth.AttesterSlashing)
+		if ok {
+			ss = append(ss, s)
+		} else {
+			httputil.HandleError(w, fmt.Sprintf("unable to convert slashing of type %T", slashing), http.StatusInternalServerError)
+			return
+		}
+	}
+	slashings := structs.AttesterSlashingsFromConsensus(ss)
 
-	httputil.WriteJson(w, &GetAttesterSlashingsResponse{Data: slashings})
+	httputil.WriteJson(w, &structs.GetAttesterSlashingsResponse{Data: slashings})
 }
 
 // SubmitAttesterSlashing submits an attester slashing object to node's pool and
@@ -465,7 +488,7 @@ func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) 
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashing")
 	defer span.End()
 
-	var req shared.AttesterSlashing
+	var req structs.AttesterSlashing
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
 	case err == io.EOF:
@@ -501,6 +524,13 @@ func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) 
 		httputil.HandleError(w, "Could not insert attester slashing into pool: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// notify events
+	s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.AttesterSlashingReceived,
+		Data: &operation.AttesterSlashingReceivedData{
+			AttesterSlashing: slashing,
+		},
+	})
 	if !features.Get().DisableBroadcastSlashings {
 		if err = s.Broadcaster.Broadcast(ctx, slashing); err != nil {
 			httputil.HandleError(w, "Could not broadcast slashing object: "+err.Error(), http.StatusInternalServerError)
@@ -521,9 +551,9 @@ func (s *Server) GetProposerSlashings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sourceSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, headState, true /* return unlimited slashings */)
-	slashings := shared.ProposerSlashingsFromConsensus(sourceSlashings)
+	slashings := structs.ProposerSlashingsFromConsensus(sourceSlashings)
 
-	httputil.WriteJson(w, &GetProposerSlashingsResponse{Data: slashings})
+	httputil.WriteJson(w, &structs.GetProposerSlashingsResponse{Data: slashings})
 }
 
 // SubmitProposerSlashing submits a proposer slashing object to node's pool and if
@@ -532,7 +562,7 @@ func (s *Server) SubmitProposerSlashing(w http.ResponseWriter, r *http.Request) 
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitProposerSlashing")
 	defer span.End()
 
-	var req shared.ProposerSlashing
+	var req structs.ProposerSlashing
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
 	case err == io.EOF:
@@ -569,6 +599,15 @@ func (s *Server) SubmitProposerSlashing(w http.ResponseWriter, r *http.Request) 
 		httputil.HandleError(w, "Could not insert proposer slashing into pool: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// notify events
+	s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.ProposerSlashingReceived,
+		Data: &operation.ProposerSlashingReceivedData{
+			ProposerSlashing: slashing,
+		},
+	})
+
 	if !features.Get().DisableBroadcastSlashings {
 		if err = s.Broadcaster.Broadcast(ctx, slashing); err != nil {
 			httputil.HandleError(w, "Could not broadcast slashing object: "+err.Error(), http.StatusInternalServerError)

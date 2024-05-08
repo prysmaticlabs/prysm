@@ -4,20 +4,21 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func testSignedBlockBlobKeys(t *testing.T, valRoot []byte, slot primitives.Slot, nblobs int) (blocks.ROBlock, []blocks.ROBlob, bls.SecretKey, bls.PublicKey) {
 	sks, pks, err := interop.DeterministicallyGenerateKeys(0, 1)
 	require.NoError(t, err)
-	block, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, nblobs, util.WithProposerSigning(0, sks[0], pks[0], valRoot))
+	block, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, nblobs, util.WithProposerSigning(0, sks[0], valRoot))
 	return block, blobs, sks[0], pks[0]
 }
 
@@ -26,7 +27,7 @@ func TestVerifySignature(t *testing.T) {
 	_, blobs, _, pk := testSignedBlockBlobKeys(t, valRoot[:], 0, 1)
 	b := blobs[0]
 
-	sc := newSigCache(valRoot[:], 1)
+	sc := newSigCache(valRoot[:], 1, nil)
 	cb := func(idx primitives.ValidatorIndex) (*eth.Validator, error) {
 		return &eth.Validator{PublicKey: pk.Marshal()}, nil
 	}
@@ -41,7 +42,7 @@ func TestSignatureCacheMissThenHit(t *testing.T) {
 	_, blobs, _, pk := testSignedBlockBlobKeys(t, valRoot[:], 0, 1)
 	b := blobs[0]
 
-	sc := newSigCache(valRoot[:], 1)
+	sc := newSigCache(valRoot[:], 1, nil)
 	cb := func(idx primitives.ValidatorIndex) (*eth.Validator, error) {
 		return &eth.Validator{PublicKey: pk.Marshal()}, nil
 	}
@@ -102,7 +103,7 @@ func TestProposerCache(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateDeneb(t, 3)
 
 	pc := newPropCache()
-	_, cached := pc.Proposer([32]byte{}, 1)
+	_, cached := pc.Proposer(&forkchoicetypes.Checkpoint{}, 1)
 	// should not be cached yet
 	require.Equal(t, false, cached)
 
@@ -112,7 +113,7 @@ func TestProposerCache(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, primitives.ValidatorIndex(expectedIdx), idx)
 
-	idx, cached = pc.Proposer([32]byte{}, 1)
+	idx, cached = pc.Proposer(&forkchoicetypes.Checkpoint{}, 1)
 	// TODO: update this test when we integrate a proposer id cache
 	require.Equal(t, false, cached)
 	require.Equal(t, primitives.ValidatorIndex(0), idx)

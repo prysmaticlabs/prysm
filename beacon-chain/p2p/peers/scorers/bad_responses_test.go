@@ -7,14 +7,16 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestScorers_BadResponses_Score(t *testing.T) {
+	const pid = "peer1"
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -28,15 +30,23 @@ func TestScorers_BadResponses_Score(t *testing.T) {
 	})
 	scorer := peerStatuses.Scorers().BadResponsesScorer()
 
-	assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score for unregistered peer")
-	scorer.Increment("peer1")
-	assert.Equal(t, -2.5, scorer.Score("peer1"))
-	scorer.Increment("peer1")
-	assert.Equal(t, float64(-5), scorer.Score("peer1"))
-	scorer.Increment("peer1")
-	scorer.Increment("peer1")
-	assert.Equal(t, -100.0, scorer.Score("peer1"))
-	assert.Equal(t, true, scorer.IsBadPeer("peer1"))
+	assert.Equal(t, 0., scorer.Score(pid), "Unexpected score for unregistered peer")
+
+	scorer.Increment(pid)
+	assert.Equal(t, false, scorer.IsBadPeer(pid))
+	assert.Equal(t, -2.5, scorer.Score(pid))
+
+	scorer.Increment(pid)
+	assert.Equal(t, false, scorer.IsBadPeer(pid))
+	assert.Equal(t, float64(-5), scorer.Score(pid))
+
+	scorer.Increment(pid)
+	assert.Equal(t, false, scorer.IsBadPeer(pid))
+	assert.Equal(t, float64(-7.5), scorer.Score(pid))
+
+	scorer.Increment(pid)
+	assert.Equal(t, true, scorer.IsBadPeer(pid))
+	assert.Equal(t, -100.0, scorer.Score(pid))
 }
 
 func TestScorers_BadResponses_ParamsThreshold(t *testing.T) {

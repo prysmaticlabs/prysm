@@ -7,11 +7,12 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -37,8 +38,8 @@ func (s *Server) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	headSlot := s.HeadFetcher.HeadSlot()
-	response := &SyncStatusResponse{
-		Data: &SyncStatusResponseData{
+	response := &structs.SyncStatusResponse{
+		Data: &structs.SyncStatusResponseData{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(s.GenesisTimeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    s.SyncChecker.Syncing(),
@@ -75,13 +76,13 @@ func (s *Server) GetIdentity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := &GetIdentityResponse{
-		Data: &Identity{
+	resp := &structs.GetIdentityResponse{
+		Data: &structs.Identity{
 			PeerId:             peerId,
 			Enr:                "enr:" + serializedEnr,
 			P2PAddresses:       p2pAddresses,
 			DiscoveryAddresses: discoveryAddresses,
-			Metadata: &Metadata{
+			Metadata: &structs.Metadata{
 				SeqNumber: strconv.FormatUint(s.MetadataProvider.MetadataSeq(), 10),
 				Attnets:   hexutil.Encode(s.MetadataProvider.Metadata().AttnetsBitfield()),
 			},
@@ -97,8 +98,8 @@ func (*Server) GetVersion(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	v := fmt.Sprintf("Prysm/%s (%s %s)", version.SemanticVersion(), runtime.GOOS, runtime.GOARCH)
-	resp := &GetVersionResponse{
-		Data: &Version{
+	resp := &structs.GetVersionResponse{
+		Data: &structs.Version{
 			Version: v,
 		},
 	}
@@ -107,7 +108,7 @@ func (*Server) GetVersion(w http.ResponseWriter, r *http.Request) {
 
 // GetHealth returns node health status in http status codes. Useful for load balancers.
 func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
-	_, span := trace.StartSpan(r.Context(), "node.GetHealth")
+	ctx, span := trace.StartSpan(r.Context(), "node.GetHealth")
 	defer span.End()
 
 	rawSyncingStatus, syncingStatus, ok := shared.UintFromQuery(w, r, "syncing_status", false)
@@ -118,10 +119,14 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.SyncChecker.Synced() {
+	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		httputil.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
+	}
+	if s.SyncChecker.Synced() && !optimistic {
 		return
 	}
-	if s.SyncChecker.Syncing() || s.SyncChecker.Initialized() {
+	if s.SyncChecker.Syncing() || optimistic {
 		if rawSyncingStatus != "" {
 			w.WriteHeader(intSyncingStatus)
 		} else {
@@ -129,5 +134,6 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
 	w.WriteHeader(http.StatusServiceUnavailable)
 }

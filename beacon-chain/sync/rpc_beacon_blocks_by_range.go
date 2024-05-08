@@ -6,15 +6,15 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
-	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -30,13 +30,20 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	if !ok {
 		return errors.New("message is not type *pb.BeaconBlockByRangeRequest")
 	}
-	log.WithField("start-slot", m.StartSlot).WithField("count", m.Count).Debug("BeaconBlocksByRangeRequest")
+	log.WithField("startSlot", m.StartSlot).WithField("count", m.Count).Debug("Serving block by range request")
 	rp, err := validateRangeRequest(m, s.cfg.clock.CurrentSlot())
 	if err != nil {
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		tracing.AnnotateError(span, err)
 		return err
+	}
+	available := s.validateRangeAvailability(rp)
+	if !available {
+		log.Debug("error in validating range availability")
+		s.writeErrorResponseToStream(responseCodeResourceUnavailable, p2ptypes.ErrResourceUnavailable.Error(), stream)
+		tracing.AnnotateError(span, err)
+		return nil
 	}
 
 	blockLimiter, err := s.rateLimiter.topicCollector(string(stream.Protocol()))
@@ -110,7 +117,7 @@ func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.S
 	if rp.start > maxStart {
 		return rangeParams{}, p2ptypes.ErrInvalidRequest
 	}
-	rp.end, err = rp.start.SafeAdd((rp.size - 1))
+	rp.end, err = rp.start.SafeAdd(rp.size - 1)
 	if err != nil {
 		return rangeParams{}, p2ptypes.ErrInvalidRequest
 	}
@@ -124,6 +131,11 @@ func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.S
 	}
 
 	return rp, nil
+}
+
+func (s *Service) validateRangeAvailability(rp rangeParams) bool {
+	startBlock := rp.start
+	return s.availableBlocker.AvailableBlock(startBlock)
 }
 
 func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch, stream libp2pcore.Stream) error {

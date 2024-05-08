@@ -7,10 +7,10 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
 )
@@ -210,5 +210,5 @@ func (l *limiter) retrieveCollector(topic string) (*leakybucket.Collector, error
 }
 
 func (_ *limiter) topicLogger(topic string) *logrus.Entry {
-	return log.WithField("rate limiter", topic)
+	return log.WithField("rateLimiter", topic)
 }

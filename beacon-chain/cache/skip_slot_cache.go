@@ -9,8 +9,8 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
 	"go.opencensus.io/trace"
 )
 
@@ -109,10 +109,6 @@ func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (state.BeaconState,
 // MarkInProgress a request so that any other similar requests will block on
 // Get until MarkNotInProgress is called.
 func (c *SkipSlotCache) MarkInProgress(r [32]byte) error {
-	if c.disabled {
-		return nil
-	}
-
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -126,10 +122,6 @@ func (c *SkipSlotCache) MarkInProgress(r [32]byte) error {
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
 func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) {
-	if c.disabled {
-		return
-	}
-
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

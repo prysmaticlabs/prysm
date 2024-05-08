@@ -3,9 +3,9 @@ package attestations
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations/kv"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/kv"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // Pool defines the necessary methods for Prysm attestations pool to serve
@@ -15,30 +15,30 @@ import (
 type Pool interface {
 	// For Aggregated attestations
 	AggregateUnaggregatedAttestations(ctx context.Context) error
-	SaveAggregatedAttestation(att *ethpb.Attestation) error
-	SaveAggregatedAttestations(atts []*ethpb.Attestation) error
-	AggregatedAttestations() []*ethpb.Attestation
-	AggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.Attestation
-	DeleteAggregatedAttestation(att *ethpb.Attestation) error
-	HasAggregatedAttestation(att *ethpb.Attestation) (bool, error)
+	SaveAggregatedAttestation(att interfaces.Attestation) error
+	SaveAggregatedAttestations(atts []interfaces.Attestation) error
+	AggregatedAttestations() []interfaces.Attestation
+	AggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []interfaces.Attestation
+	DeleteAggregatedAttestation(att interfaces.Attestation) error
+	HasAggregatedAttestation(att interfaces.Attestation) (bool, error)
 	AggregatedAttestationCount() int
 	// For unaggregated attestations.
-	SaveUnaggregatedAttestation(att *ethpb.Attestation) error
-	SaveUnaggregatedAttestations(atts []*ethpb.Attestation) error
-	UnaggregatedAttestations() ([]*ethpb.Attestation, error)
-	UnaggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.Attestation
-	DeleteUnaggregatedAttestation(att *ethpb.Attestation) error
+	SaveUnaggregatedAttestation(att interfaces.Attestation) error
+	SaveUnaggregatedAttestations(atts []interfaces.Attestation) error
+	UnaggregatedAttestations() ([]interfaces.Attestation, error)
+	UnaggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []interfaces.Attestation
+	DeleteUnaggregatedAttestation(att interfaces.Attestation) error
 	DeleteSeenUnaggregatedAttestations() (int, error)
 	UnaggregatedAttestationCount() int
 	// For attestations that were included in the block.
-	SaveBlockAttestation(att *ethpb.Attestation) error
-	BlockAttestations() []*ethpb.Attestation
-	DeleteBlockAttestation(att *ethpb.Attestation) error
+	SaveBlockAttestation(att interfaces.Attestation) error
+	BlockAttestations() []interfaces.Attestation
+	DeleteBlockAttestation(att interfaces.Attestation) error
 	// For attestations to be passed to fork choice.
-	SaveForkchoiceAttestation(att *ethpb.Attestation) error
-	SaveForkchoiceAttestations(atts []*ethpb.Attestation) error
-	ForkchoiceAttestations() []*ethpb.Attestation
-	DeleteForkchoiceAttestation(att *ethpb.Attestation) error
+	SaveForkchoiceAttestation(att interfaces.Attestation) error
+	SaveForkchoiceAttestations(atts []interfaces.Attestation) error
+	ForkchoiceAttestations() []interfaces.Attestation
+	DeleteForkchoiceAttestation(att interfaces.Attestation) error
 	ForkchoiceAttestationCount() int
 }
 

@@ -10,27 +10,37 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
-// builderGetPayloadMissCount tracks the number of misses when validator tries to get a payload from builder
-var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "builder_get_payload_miss_count",
-	Help: "The number of get payload misses for validator requests to builder",
-})
+var (
+	builderValueGweiGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "builder_value_gwei",
+		Help: "Builder payload value in gwei",
+	})
+	localValueGweiGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "local_value_gwei",
+		Help: "Local payload value in gwei",
+	})
+	builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "builder_get_payload_miss_count",
+		Help: "The number of get payload misses for validator requests to builder",
+	})
+)
 
 // emptyTransactionsRoot represents the returned value of ssz.TransactionsRoot([][]byte{}) and
 // can be used as a constant to avoid recomputing this value in every call.
@@ -41,7 +51,7 @@ var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData, builderKzgCommitments [][]byte) error {
+func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData, builderKzgCommitments [][]byte, builderBoostFactor uint64) error {
 	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
 	defer span.End()
 
@@ -80,16 +90,24 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		}
 
 		// Use builder payload if the following in true:
-		// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
+		// builder_bid_value * builderBoostFactor(default 100) > local_block_value * (local-block-value-boost + 100)
 		boost := params.BeaconConfig().LocalBlockValueBoost
-		higherValueBuilder := builderValueGwei*100 > localValueGwei*(100+boost)
+		higherValueBuilder := builderValueGwei*builderBoostFactor > localValueGwei*(100+boost)
+		if boost > 0 && builderBoostFactor != defaultBuilderBoostFactor {
+			log.WithFields(logrus.Fields{
+				"localGweiValue":       localValueGwei,
+				"localBoostPercentage": boost,
+				"builderGweiValue":     builderValueGwei,
+				"builderBoostFactor":   builderBoostFactor,
+			}).Warn("Proposer: both local boost and builder boost are using non default values")
+		}
+		builderValueGweiGauge.Set(float64(builderValueGwei))
+		localValueGweiGauge.Set(float64(localValueGwei))
 
 		// If we can't get the builder value, just use local block.
 		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
-			blk.SetBlinded(true)
 			if err := setBuilderExecution(blk, builderPayload, builderKzgCommitments); err != nil {
 				log.WithError(err).Warn("Proposer: failed to set builder payload")
-				blk.SetBlinded(false)
 				return setLocalExecution(blk, localPayload)
 			} else {
 				return nil
@@ -100,20 +118,20 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 				"localGweiValue":       localValueGwei,
 				"localBoostPercentage": boost,
 				"builderGweiValue":     builderValueGwei,
+				"builderBoostFactor":   builderBoostFactor,
 			}).Warn("Proposer: using local execution payload because higher value")
 		}
 		span.AddAttributes(
 			trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
-			trace.Int64Attribute("localGweiValue", int64(localValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
-			trace.Int64Attribute("localBoostPercentage", int64(boost)),        // lint:ignore uintcast -- This is OK for tracing.
-			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)), // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("localGweiValue", int64(localValueGwei)),         // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("localBoostPercentage", int64(boost)),            // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("builderBoostFactor", int64(builderBoostFactor)), // lint:ignore uintcast -- This is OK for tracing.
 		)
 		return setLocalExecution(blk, localPayload)
 	default: // Bellatrix case.
-		blk.SetBlinded(true)
 		if err := setBuilderExecution(blk, builderPayload, builderKzgCommitments); err != nil {
 			log.WithError(err).Warn("Proposer: failed to set builder payload")
-			blk.SetBlinded(false)
 			return setLocalExecution(blk, localPayload)
 		} else {
 			return nil
@@ -219,13 +237,13 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		}
 		for _, c := range kzgCommitments {
 			if len(c) != fieldparams.BLSPubkeyLength {
-				return nil, nil, fmt.Errorf("builder returned invalid kzg commitment lenth: %d", len(c))
+				return nil, nil, fmt.Errorf("builder returned invalid kzg commitment length: %d", len(c))
 			}
 		}
 	}
 
 	l := log.WithFields(logrus.Fields{
-		"value":              v.String(),
+		"gweiValue":          math.WeiToGwei(v),
 		"builderPubKey":      fmt.Sprintf("%#x", bid.Pubkey()),
 		"blockHash":          fmt.Sprintf("%#x", header.BlockHash()),
 		"slot":               slot,
@@ -314,9 +332,6 @@ func setExecution(blk interfaces.SignedBeaconBlock, execution interfaces.Executi
 	if execution == nil {
 		return errors.New("execution is nil")
 	}
-
-	// Set the blinded status of the block
-	blk.SetBlinded(isBlinded)
 
 	// Set the execution data for the block
 	errMessage := "failed to set local execution"

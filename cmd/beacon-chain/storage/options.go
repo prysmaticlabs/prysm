@@ -4,11 +4,11 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/node"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/node"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/urfave/cli/v2"
 )
 
@@ -35,11 +35,10 @@ func BeaconNodeOptions(c *cli.Context) ([]node.Option, error) {
 	if err != nil {
 		return nil, err
 	}
-	bs, err := filesystem.NewBlobStorage(blobStoragePath(c), filesystem.WithBlobRetentionEpochs(e))
-	if err != nil {
-		return nil, err
-	}
-	return []node.Option{node.WithBlobStorage(bs), node.WithBlobRetentionEpochs(e)}, nil
+	opts := []node.Option{node.WithBlobStorageOptions(
+		filesystem.WithBlobRetentionEpochs(e), filesystem.WithBasePath(blobStoragePath(c)),
+	)}
+	return opts, nil
 }
 
 func blobStoragePath(c *cli.Context) string {
@@ -53,7 +52,7 @@ func blobStoragePath(c *cli.Context) string {
 
 var errInvalidBlobRetentionEpochs = errors.New("value is smaller than spec minimum")
 
-// blobRetentionEpoch returns the spec deffault MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUEST
+// blobRetentionEpoch returns the spec default MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUEST
 // or a user-specified flag overriding this value. If a user-specified override is
 // smaller than the spec default, an error will be returned.
 func blobRetentionEpoch(cliCtx *cli.Context) (primitives.Epoch, error) {

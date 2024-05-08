@@ -2,13 +2,16 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -51,9 +54,24 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
+	rov, err := headState.ValidatorAtIndexReadOnly(slashing.Header_1.Header.ProposerIndex)
+	if err != nil {
+		return pubsub.ValidationReject, err
+	}
+	if rov.Slashed() {
+		return pubsub.ValidationIgnore, fmt.Errorf("proposer is already slashed: %d", slashing.Header_1.Header.ProposerIndex)
+	}
 	if err := blocks.VerifyProposerSlashing(headState, slashing); err != nil {
 		return pubsub.ValidationReject, err
 	}
+
+	// notify events
+	s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.ProposerSlashingReceived,
+		Data: &operation.ProposerSlashingReceivedData{
+			ProposerSlashing: slashing,
+		},
+	})
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
 	return pubsub.ValidationAccept, nil

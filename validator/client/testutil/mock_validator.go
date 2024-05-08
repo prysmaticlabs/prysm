@@ -5,13 +5,16 @@ import (
 	"context"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	api "github.com/prysmaticlabs/prysm/v5/api/client"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/api/client/event"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -52,9 +55,11 @@ type FakeValidator struct {
 	IndexToPubkeyMap                  map[uint64][fieldparams.BLSPubkeyLength]byte
 	PubkeyToIndexMap                  map[[fieldparams.BLSPubkeyLength]byte]uint64
 	PubkeysToStatusesMap              map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus
-	proposerSettings                  *validatorserviceconfig.ProposerSettings
+	proposerSettings                  *proposer.Settings
 	ProposerSettingWait               time.Duration
 	Km                                keymanager.IKeymanager
+	graffiti                          string
+	Tracker                           *beacon.NodeHealthTracker
 }
 
 // Done for mocking.
@@ -69,13 +74,13 @@ func (fv *FakeValidator) WaitForKeymanagerInitialization(_ context.Context) erro
 }
 
 // LogSyncCommitteeMessagesSubmitted --
-func (fv *FakeValidator) LogSyncCommitteeMessagesSubmitted() {}
+func (fv *FakeValidator) LogSubmittedSyncCommitteeMessages() {}
 
 // WaitForChainStart for mocking.
 func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 	fv.WaitForChainStartCalled++
 	if fv.RetryTillSuccess >= fv.WaitForChainStartCalled {
-		return iface.ErrConnectionIssue
+		return api.ErrConnectionIssue
 	}
 	return nil
 }
@@ -87,7 +92,7 @@ func (fv *FakeValidator) WaitForActivation(_ context.Context, accountChan chan [
 		return nil
 	}
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
-		return iface.ErrConnectionIssue
+		return api.ErrConnectionIssue
 	}
 	return nil
 }
@@ -96,7 +101,7 @@ func (fv *FakeValidator) WaitForActivation(_ context.Context, accountChan chan [
 func (fv *FakeValidator) WaitForSync(_ context.Context) error {
 	fv.WaitForSyncCalled++
 	if fv.RetryTillSuccess >= fv.WaitForSyncCalled {
-		return iface.ErrConnectionIssue
+		return api.ErrConnectionIssue
 	}
 	return nil
 }
@@ -111,7 +116,7 @@ func (fv *FakeValidator) SlasherReady(_ context.Context) error {
 func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (primitives.Slot, error) {
 	fv.CanonicalHeadSlotCalled++
 	if fv.RetryTillSuccess > fv.CanonicalHeadSlotCalled {
-		return 0, iface.ErrConnectionIssue
+		return 0, api.ErrConnectionIssue
 	}
 	return 0, nil
 }
@@ -174,18 +179,18 @@ func (fv *FakeValidator) ProposeBlock(_ context.Context, slot primitives.Slot, _
 }
 
 // SubmitAggregateAndProof for mocking.
-func (_ *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (*FakeValidator) SubmitAggregateAndProof(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
 // SubmitSyncCommitteeMessage for mocking.
-func (_ *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (*FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
-// LogAttestationsSubmitted for mocking.
-func (_ *FakeValidator) LogAttestationsSubmitted() {}
+// LogSubmittedAtts for mocking.
+func (*FakeValidator) LogSubmittedAtts(_ primitives.Slot) {}
 
 // UpdateDomainDataCaches for mocking.
-func (_ *FakeValidator) UpdateDomainDataCaches(context.Context, primitives.Slot) {}
+func (*FakeValidator) UpdateDomainDataCaches(context.Context, primitives.Slot) {}
 
 // BalancesByPubkeys for mocking.
 func (fv *FakeValidator) BalancesByPubkeys(_ context.Context) map[[fieldparams.BLSPubkeyLength]byte]uint64 {
@@ -213,16 +218,8 @@ func (fv *FakeValidator) Keymanager() (keymanager.IKeymanager, error) {
 }
 
 // CheckDoppelGanger for mocking
-func (_ *FakeValidator) CheckDoppelGanger(_ context.Context) error {
+func (*FakeValidator) CheckDoppelGanger(_ context.Context) error {
 	return nil
-}
-
-// ReceiveSlots for mocking
-func (fv *FakeValidator) ReceiveSlots(_ context.Context, connectionErrorChannel chan<- error) {
-	fv.ReceiveBlocksCalled++
-	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
-		connectionErrorChannel <- iface.ErrConnectionIssue
-	}
 }
 
 // HandleKeyReload for mocking
@@ -237,7 +234,7 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldpara
 }
 
 // SubmitSignedContributionAndProof for mocking
-func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (*FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
 // HasProposerSettings for mocking
@@ -266,22 +263,53 @@ func (fv *FakeValidator) PushProposerSettings(ctx context.Context, km keymanager
 }
 
 // SetPubKeyToValidatorIndexMap for mocking
-func (_ *FakeValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
+func (*FakeValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
 	return nil
 }
 
 // SignValidatorRegistrationRequest for mocking
-func (_ *FakeValidator) SignValidatorRegistrationRequest(_ context.Context, _ iface.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
+func (*FakeValidator) SignValidatorRegistrationRequest(_ context.Context, _ iface.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
 	return nil, nil
 }
 
 // ProposerSettings for mocking
-func (f *FakeValidator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
-	return f.proposerSettings
+func (fv *FakeValidator) ProposerSettings() *proposer.Settings {
+	return fv.proposerSettings
 }
 
 // SetProposerSettings for mocking
-func (f *FakeValidator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
-	f.proposerSettings = settings
+func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *proposer.Settings) error {
+	fv.proposerSettings = settings
 	return nil
+}
+
+// GetGraffiti for mocking
+func (f *FakeValidator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	return []byte(f.graffiti), nil
+}
+
+// SetGraffiti for mocking
+func (f *FakeValidator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	f.graffiti = string(graffiti)
+	return nil
+}
+
+// DeleteGraffiti for mocking
+func (f *FakeValidator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
+	f.graffiti = ""
+	return nil
+}
+
+func (*FakeValidator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
+
+}
+
+func (*FakeValidator) ProcessEvent(_ *event.Event) {}
+
+func (*FakeValidator) EventStreamIsRunning() bool {
+	return true
+}
+
+func (fv *FakeValidator) HealthTracker() *beacon.NodeHealthTracker {
+	return fv.Tracker
 }

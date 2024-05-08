@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 )
 
 // IKeymanager defines a general keymanager interface for Prysm wallets.
@@ -74,13 +74,13 @@ type KeyStatus struct {
 type KeyStatusType string
 
 const (
-	StatusImported  KeyStatusType = "IMPORTED"
-	StatusError     KeyStatusType = "ERROR"
-	StatusDuplicate KeyStatusType = "DUPLICATE"
-	StatusUnknown   KeyStatusType = "UNKNOWN"
-	StatusNotFound  KeyStatusType = "NOT_FOUND"
-	StatusDeleted   KeyStatusType = "DELETED"
-	StatusNotActive KeyStatusType = "NOT_ACTIVE"
+	StatusImported  KeyStatusType = "imported"
+	StatusError     KeyStatusType = "error"
+	StatusDuplicate KeyStatusType = "duplicate"
+	StatusUnknown   KeyStatusType = "unknown"
+	StatusNotFound  KeyStatusType = "not_found"
+	StatusDeleted   KeyStatusType = "deleted"
+	StatusNotActive KeyStatusType = "not_active"
 )
 
 // PublicKeyDeleter allows deleting public keys set in keymanager.
@@ -89,7 +89,6 @@ type PublicKeyDeleter interface {
 }
 
 type ListKeymanagerAccountConfig struct {
-	ShowDepositData          bool
 	ShowPrivateKeys          bool
 	WalletAccountsDir        string
 	KeymanagerConfigFileName string
