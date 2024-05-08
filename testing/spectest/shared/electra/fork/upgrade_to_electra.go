@@ -18,7 +18,7 @@ import (
 )
 
 // RunUpgradeToElectra is a helper function that runs Electra's fork spec tests.
-// It unmarshals a pre- and post-state to check `UpgradeToDeneb` comply with spec implementation.
+// It unmarshals a pre- and post-state to check `UpgradeToElectra` comply with spec implementation.
 func RunUpgradeToElectra(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
