@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
-// DeterministicGenesisStateElectra returns a genesis state in Deneb format made using the deterministic deposits.
+// DeterministicGenesisStateElectra returns a genesis state in Electra format made using the deterministic deposits.
 func DeterministicGenesisStateElectra(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
