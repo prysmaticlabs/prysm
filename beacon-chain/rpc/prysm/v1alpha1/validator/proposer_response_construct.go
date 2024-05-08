@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/v5/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -59,12 +60,12 @@ var (
 
 // proposalBlock accumulates data needed to respond to the proposer GetBeaconBlock request.
 type proposalResponseConstructor struct {
-	head            state.BeaconState
-	block           interfaces.SignedBeaconBlock
 	overrideBuilder bool
 	FeeRecipient    primitives.ExecutionAddress
-	local           *PayloadPossibility
 	builder         *PayloadPossibility
+	local           *PayloadPossibility
+	head            state.BeaconState
+	block           interfaces.SignedBeaconBlock
 }
 
 func newProposalResponseConstructor(blk interfaces.SignedBeaconBlock, st state.BeaconState, feeRecipient primitives.ExecutionAddress) *proposalResponseConstructor {
@@ -141,6 +142,7 @@ func (resp *proposalResponseConstructor) buildBlockParallel(ctx context.Context,
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
+
 	return resp.construct(ctx, builderBoostFactor)
 }
 
@@ -217,77 +219,13 @@ func (resp *proposalResponseConstructor) populateBuilderPossibility(ctx context.
 	if err != nil {
 		return err
 	}
-	if signedBid.IsNil() {
-		return errors.New("builder returned nil bid")
-	}
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		return errors.Wrap(err, "unable to get fork information")
-	}
-	forkName, ok := params.BeaconConfig().ForkVersionNames[bytesutil.ToBytes4(fork.CurrentVersion)]
-	if !ok {
-		return errors.New("unable to find current fork in schedule")
-	}
-	if !strings.EqualFold(version.String(signedBid.Version()), forkName) {
-		return fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
-	}
-
-	bid, err := signedBid.Message()
-	if err != nil {
-		return errors.Wrap(err, "could not get bid")
-	}
-	if bid.IsNil() {
-		return errors.New("builder returned nil bid")
-	}
-
-	v := bytesutil.LittleEndianBytesToBigInt(bid.Value())
-	if v.String() == "0" {
-		return errors.New("builder returned header with 0 bid amount")
-	}
-
-	header, err := bid.Header()
-	if err != nil {
-		return errors.Wrap(err, "could not get bid header")
-	}
-	bidWei := math.BigEndianBytesToWei(bid.Value())
-	txRoot, err := header.TransactionsRoot()
-	if err != nil {
-		return errors.Wrap(err, "could not get transaction root")
-	}
-	if bytesutil.ToBytes32(txRoot) == emptyTransactionsRoot {
-		return errors.New("builder returned header with an empty tx root")
-	}
-
-	if !bytes.Equal(header.ParentHash(), h.BlockHash()) {
-		return fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
-	}
-
-	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
+	blockTime, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
 	if err != nil {
 		return err
 	}
-	if header.Timestamp() != uint64(t.Unix()) {
-		return fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
-	}
-
-	if err := validateBuilderSignature(signedBid); err != nil {
-		return errors.Wrap(err, "could not validate builder signature")
-	}
-
-	var kzgCommitments [][]byte
-	if bid.Version() >= version.Deneb {
-		kzgCommitments, err = bid.BlobKzgCommitments()
-		if err != nil {
-			return errors.Wrap(err, "could not get blob kzg commitments")
-		}
-		if len(kzgCommitments) > fieldparams.MaxBlobsPerBlock {
-			return fmt.Errorf("builder returned too many kzg commitments: %d", len(kzgCommitments))
-		}
-		for _, c := range kzgCommitments {
-			if len(c) != fieldparams.BLSPubkeyLength {
-				return fmt.Errorf("builder returned invalid kzg commitment length: %d", len(c))
-			}
-		}
+	header, bid, bidWei, kzgCommitments, err := validatedBuilderPayload(signedBid, b, h, blockTime)
+	if err != nil {
+		return err
 	}
 
 	l := log.WithFields(logrus.Fields{
@@ -296,7 +234,7 @@ func (resp *proposalResponseConstructor) populateBuilderPossibility(ctx context.
 		"blockHash":          fmt.Sprintf("%#x", header.BlockHash()),
 		"slot":               slot,
 		"validator":          vIdx,
-		"sinceSlotStartTime": time.Since(t),
+		"sinceSlotStartTime": time.Since(blockTime),
 	})
 	if len(kzgCommitments) > 0 {
 		l = l.WithField("kzgCommitmentCount", len(kzgCommitments))
@@ -312,6 +250,80 @@ func (resp *proposalResponseConstructor) populateBuilderPossibility(ctx context.
 	pwb, err := NewPayloadPossibility(header, bidWei, nil, kzgCommitments)
 	resp.builder = pwb
 	return err
+}
+
+func validatedBuilderPayload(sb builder.SignedBid, b interfaces.ReadOnlySignedBeaconBlock, headExecution interfaces.ExecutionData, blockTime time.Time) (interfaces.ExecutionData, builder.Bid, math.Wei, [][]byte, error) {
+	slot := b.Block().Slot()
+	if sb.IsNil() {
+		return nil, nil, math.ZeroWei, nil, errors.New("builder returned nil bid")
+	}
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		return nil, nil, math.ZeroWei, nil, errors.Wrap(err, "unable to get fork information")
+	}
+	forkName, ok := params.BeaconConfig().ForkVersionNames[bytesutil.ToBytes4(fork.CurrentVersion)]
+	if !ok {
+		return nil, nil, math.ZeroWei, nil, errors.New("unable to find current fork in schedule")
+	}
+	if !strings.EqualFold(version.String(sb.Version()), forkName) {
+		return nil, nil, math.ZeroWei, nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", sb.Version(), b.Version(), slots.ToEpoch(slot))
+	}
+
+	bid, err := sb.Message()
+	if err != nil {
+		return nil, nil, math.ZeroWei, nil, errors.Wrap(err, "could not get bid")
+	}
+	if bid.IsNil() {
+		return nil, nil, math.ZeroWei, nil, errors.New("builder returned nil bid")
+	}
+
+	v := bytesutil.LittleEndianBytesToBigInt(bid.Value())
+	if v.String() == "0" {
+		return nil, nil, math.ZeroWei, nil, errors.New("builder returned header with 0 bid amount")
+	}
+
+	header, err := bid.Header()
+	if err != nil {
+		return nil, nil, math.ZeroWei, nil, errors.Wrap(err, "could not get bid header")
+	}
+	bidWei := math.BigEndianBytesToWei(bid.Value())
+	txRoot, err := header.TransactionsRoot()
+	if err != nil {
+		return nil, nil, math.ZeroWei, nil, errors.Wrap(err, "could not get transaction root")
+	}
+	if bytesutil.ToBytes32(txRoot) == emptyTransactionsRoot {
+		return nil, nil, math.ZeroWei, nil, errors.New("builder returned header with an empty tx root")
+	}
+
+	if !bytes.Equal(header.ParentHash(), headExecution.BlockHash()) {
+		return nil, nil, math.ZeroWei, nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), headExecution.BlockHash())
+	}
+
+	if header.Timestamp() != uint64(blockTime.Unix()) {
+		return nil, nil, math.ZeroWei, nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(blockTime.Unix()))
+	}
+
+	if err := validateBuilderSignature(sb); err != nil {
+		return nil, nil, math.ZeroWei, nil, errors.Wrap(err, "could not validate builder signature")
+	}
+
+	var kzgCommitments [][]byte
+	if bid.Version() >= version.Deneb {
+		kzgCommitments, err = bid.BlobKzgCommitments()
+		if err != nil {
+			return nil, nil, math.ZeroWei, nil, errors.Wrap(err, "could not get blob kzg commitments")
+		}
+		if len(kzgCommitments) > fieldparams.MaxBlobsPerBlock {
+			return nil, nil, math.ZeroWei, nil, fmt.Errorf("builder returned too many kzg commitments: %d", len(kzgCommitments))
+		}
+		for _, c := range kzgCommitments {
+			if len(c) != fieldparams.BLSPubkeyLength {
+				return nil, nil, math.ZeroWei, nil, fmt.Errorf("builder returned invalid kzg commitment length: %d", len(c))
+			}
+		}
+	}
+
+	return header, nil, bidWei, kzgCommitments, nil
 }
 
 // construct picks the best proposal and sets the execution header/payload attributes for it on the block.
