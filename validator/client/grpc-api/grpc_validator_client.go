@@ -91,8 +91,16 @@ func (c *grpcValidatorClient) SubmitAggregateSelectionProof(ctx context.Context,
 	return c.beaconNodeValidatorClient.SubmitAggregateSelectionProof(ctx, in)
 }
 
+func (c *grpcValidatorClient) SubmitAggregateSelectionProofElectra(ctx context.Context, in *ethpb.AggregateSelectionRequest, _ primitives.ValidatorIndex, _ uint64) (*ethpb.AggregateSelectionElectraResponse, error) {
+	return c.beaconNodeValidatorClient.SubmitAggregateSelectionProofElectra(ctx, in)
+}
+
 func (c *grpcValidatorClient) SubmitSignedAggregateSelectionProof(ctx context.Context, in *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
 	return c.beaconNodeValidatorClient.SubmitSignedAggregateSelectionProof(ctx, in)
+}
+
+func (c *grpcValidatorClient) SubmitSignedAggregateSelectionProofElectra(ctx context.Context, in *ethpb.SignedAggregateSubmitElectraRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
+	return c.beaconNodeValidatorClient.SubmitSignedAggregateSelectionProofElectra(ctx, in)
 }
 
 func (c *grpcValidatorClient) SubmitSignedContributionAndProof(ctx context.Context, in *ethpb.SignedContributionAndProof) (*empty.Empty, error) {
