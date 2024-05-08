@@ -7,6 +7,7 @@ go_library(
         "cast.go",
         "error.go",
         "utils.go",
+        "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces",
     visibility = ["//visibility:public"],
