@@ -15,9 +15,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var ErrNilConsolidations = errors.New("nil consolidations")
-
-// ProcessPendingConsolidations --
+// ProcessPendingConsolidations implements the spec definition below. This method makes mutating
+// calls to the beacon state.
 //
 // Spec definition:
 //
@@ -40,13 +39,15 @@ var ErrNilConsolidations = errors.New("nil consolidations")
 //	        next_pending_consolidation += 1
 //
 //	    state.pending_consolidations = state.pending_consolidations[next_pending_consolidation:]
-func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState, activeBalance uint64) (state.BeaconState, error) {
+func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "electra.ProcessPendingConsolidations")
 	defer span.End()
 
 	if st == nil || st.IsNil() {
 		return nil, errors.New("nil state")
 	}
+
+	currentEpoch := slots.ToEpoch(st.Slot())
 
 	var nextPendingConsolidation uint64
 	pendingConsolidations, err := st.PendingConsolidations()
@@ -62,7 +63,7 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState, act
 			nextPendingConsolidation++
 			continue
 		}
-		if sourceValidator.WithdrawableEpoch > slots.ToEpoch(st.Slot()) {
+		if sourceValidator.WithdrawableEpoch > currentEpoch {
 			break
 		}
 
@@ -70,6 +71,10 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState, act
 			return nil, err
 		}
 
+		activeBalance, err := st.ActiveBalanceAtIndex(pc.SourceIndex)
+		if err != nil {
+			return nil, err
+		}
 		if err := helpers.DecreaseBalance(st, pc.SourceIndex, activeBalance); err != nil {
 			return nil, err
 		}
@@ -79,15 +84,17 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState, act
 		nextPendingConsolidation++
 	}
 
-	// TODO: Check OOB
-	if err := st.SetPendingConsolidations(pendingConsolidations[nextPendingConsolidation:]); err != nil {
-		return nil, err
+	if nextPendingConsolidation > 0 {
+		if err := st.SetPendingConsolidations(pendingConsolidations[nextPendingConsolidation:]); err != nil {
+			return nil, err
+		}
 	}
 
 	return st, nil
 }
 
-// ProcessConsolidations --
+// ProcessConsolidations implements the spec definition below. This method makes mutating calls to
+// the beacon state.
 //
 // Spec definition:
 //
@@ -141,11 +148,21 @@ func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethp
 	if st == nil || st.IsNil() {
 		return nil, errors.New("nil state")
 	}
-	if cs == nil {
-		return nil, ErrNilConsolidations
+
+	if len(cs) == 0 {
+		return st, nil // Nothing to process.
 	}
 
-	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainConsolidation, st.Fork().CurrentVersion, st.GenesisValidatorsRoot())
+	domain, err := signing.ComputeDomain(
+		params.BeaconConfig().DomainConsolidation,
+		nil, // Use genesis fork version
+		st.GenesisValidatorsRoot(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	totalBalance, err := helpers.TotalActiveBalance(st)
 	if err != nil {
 		return nil, err
 	}
@@ -155,22 +172,16 @@ func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethp
 			return nil, errors.New("nil consolidation")
 		}
 
-		// TODO(preston): can these be moved outside of the loop?
 		if n, err := st.NumPendingConsolidations(); err != nil {
 			return nil, err
 		} else if n >= params.BeaconConfig().PendingConsolidationsLimit {
 			return nil, errors.New("pending consolidations queue is full")
 		}
 
-		totalBalance, err := helpers.TotalActiveBalance(st)
-		if err != nil {
-			return nil, err
-		}
 		if helpers.ConsolidationChurnLimit(math.Gwei(totalBalance)) <= math.Gwei(params.BeaconConfig().MinActivationBalance) {
 			return nil, errors.New("too little available consolidation churn limit")
 		}
 		currentEpoch := slots.ToEpoch(st.Slot())
-		// END TODO
 
 		if c.Message.SourceIndex == c.Message.TargetIndex {
 			return nil, errors.New("source and target index are the same")
