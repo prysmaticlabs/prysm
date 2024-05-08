@@ -250,6 +250,7 @@ type BeaconChainConfig struct {
 	MaxPendingPartialsPerWithdrawalsSweep uint64 `yaml:"MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP" spec:"true"` // MaxPendingPartialsPerWithdrawalsSweep is the maximum number of pending partial withdrawals to process per payload.
 	FullExitRequestAmount                 uint64 `yaml:"FULL_EXIT_REQUEST_AMOUNT" spec:"true"`                   // FullExitRequestAmount is the amount of Gwei required to request a full exit.
 	MaxWithdrawalRequestsPerPayload       uint64 `yaml:"MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD" spec:"true"`        // MaxWithdrawalRequestsPerPayload is the maximum number of execution layer withdrawal requests in each payload.
+	UnsetDepositReceiptsStartIndex        uint64 `yaml:"UNSET_DEPOSIT_RECEIPTS_START_INDEX" spec:"true"`         // UnsetDepositReceiptsStartIndex is used to check the start index for eip6110
 
 	// Networking Specific Parameters
 	GossipMaxSize                   uint64          `yaml:"GOSSIP_MAX_SIZE" spec:"true"`                    // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.

@@ -12,6 +12,7 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -520,11 +521,11 @@ func isETH1WithdrawalCredential(creds []byte) bool {
 //	    Check if ``validator`` has an 0x02 prefixed "compounding" withdrawal credential.
 //	    """
 //	    return is_compounding_withdrawal_credential(validator.withdrawal_credentials)
-func HasCompoundingWithdrawalCredential(v *ethpb.Validator) bool {
+func HasCompoundingWithdrawalCredential(v interfaces.WithWithdrawalCredentials) bool {
 	if v == nil {
 		return false
 	}
-	return IsCompoundingWithdrawalCredential(v.WithdrawalCredentials)
+	return isCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
 }
 
 // IsCompoundingWithdrawalCredential checks if the credentials are a compounding withdrawal credential.
@@ -698,7 +699,8 @@ func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorI
 	return nil
 }
 
-// queueExcessActiveBalance
+
+// QueueExcessActiveBalance queues validators with balances above the min activation balance and adds to pending balance deposit.
 //
 // Spec definition:
 //
@@ -710,7 +712,7 @@ func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorI
 //	        state.pending_balance_deposits.append(
 //	            PendingBalanceDeposit(index=index, amount=excess_balance)
 //	        )
-func queueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex) error {
+func QueueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex) error {
 	bal, err := s.BalanceAtIndex(idx)
 	if err != nil {
 		return err
@@ -724,4 +726,41 @@ func queueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex
 		return s.AppendPendingBalanceDeposit(idx, excessBalance)
 	}
 	return nil
+}
+
+// QueueEntireBalanceAndResetValidator queues the entire balance and resets the validator. This is used in electra fork logic.
+//
+// Spec definition:
+//
+//	def queue_entire_balance_and_reset_validator(state: BeaconState, index: ValidatorIndex) -> None:
+//	    balance = state.balances[index]
+//	    validator = state.validators[index]
+//		state.balances[index] = 0
+//	    validator.effective_balance = 0
+//	    validator.activation_eligibility_epoch = FAR_FUTURE_EPOCH
+//	    state.pending_balance_deposits.append(
+//	        PendingBalanceDeposit(index=index, amount=balance)
+//	    )
+func QueueEntireBalanceAndResetValidator(s state.BeaconState, idx primitives.ValidatorIndex) error {
+	bal, err := s.BalanceAtIndex(idx)
+	if err != nil {
+		return err
+	}
+
+	if err := s.UpdateBalancesAtIndex(idx, 0); err != nil {
+		return err
+	}
+
+	v, err := s.ValidatorAtIndex(idx)
+	if err != nil {
+		return err
+	}
+
+	v.EffectiveBalance = 0
+	v.ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
+	if err := s.UpdateValidatorAtIndex(idx, v); err != nil {
+		return err
+	}
+
+	return s.AppendPendingBalanceDeposit(idx, bal)
 }
