@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -183,7 +184,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposit(beaconState, dep[0], true)
+	newState, err := b.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Process deposit failed")
 	require.Equal(t, 2, len(newState.Validators()), "Expected validator list to have length 2")
 	require.Equal(t, 2, len(newState.Balances()), "Expected validator balances list to have length 2")
@@ -226,7 +227,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposit(beaconState, dep[0], true)
+	newState, err := b.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
 
 	if newState.Eth1DepositIndex() != 1 {
