@@ -49,7 +49,7 @@ func RunCustodyColumnsTest(t *testing.T, config string) {
 			nodeId := enode.ID(nodeIdBytes)
 
 			// Compute the custodied columns.
-			actual, err := peerdas.CustodyColumns(nodeId, config.CustodySubnetCount)
+			actual, err := peerdas.GetCustodyColumns(nodeId, config.CustodySubnetCount)
 			require.NoError(t, err, "failed to compute the custody columns")
 
 			// Compare the results.

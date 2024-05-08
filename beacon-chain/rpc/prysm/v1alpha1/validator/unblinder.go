@@ -90,9 +90,9 @@ func unblindDataColumnsSidecars(block interfaces.SignedBeaconBlock, bundle *engi
 	}
 
 	// Retrieve data columns from blobs.
-	dataColumnSidecars, err := peerdas.DataColumnSidecars(block, blobs)
+	dataColumnSidecars, err := peerdas.GetDataColumnSidecars(block, blobs)
 	if err != nil {
-		return nil, errors.Wrap(err, "data column sidecars")
+		return nil, errors.Wrap(err, "get data column sidecars")
 	}
 
 	return dataColumnSidecars, nil

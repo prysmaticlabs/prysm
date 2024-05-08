@@ -43,15 +43,15 @@ var (
 	maxUint256 = &uint256.Int{math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64}
 )
 
-// CustodyColumns computes the columns the node should custody.
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#helper-functions
-func CustodyColumns(nodeId enode.ID, custodySubnetCount uint64) (map[uint64]bool, error) {
+// GetCustodyColumns computes the columns the node should custody.
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#get_custody_columns
+func GetCustodyColumns(nodeId enode.ID, custodySubnetCount uint64) (map[uint64]bool, error) {
 	dataColumnSidecarSubnetCount := params.BeaconConfig().DataColumnSidecarSubnetCount
 
 	// Compute the custodied subnets.
 	subnetIds, err := CustodyColumnSubnets(nodeId, custodySubnetCount)
 	if err != nil {
-		return nil, errors.Wrap(err, "custody subnets")
+		return nil, errors.Wrap(err, "custody column subnets")
 	}
 
 	columnsPerSubnet := cKzg4844.CellsPerExtBlob / dataColumnSidecarSubnetCount
@@ -172,9 +172,9 @@ func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCoun
 	return matrix, nil
 }
 
-// DataColumnSidecars computes the data column sidecars from the signed block and blobs.
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#recover_matrix
-func DataColumnSidecars(signedBlock interfaces.SignedBeaconBlock, blobs []cKzg4844.Blob) ([]*ethpb.DataColumnSidecar, error) {
+// GetDataColumnSidecars computes the data column sidecars from the signed block and blobs.
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#get_data_column_sidecars
+func GetDataColumnSidecars(signedBlock interfaces.SignedBeaconBlock, blobs []cKzg4844.Blob) ([]*ethpb.DataColumnSidecar, error) {
 	blobsCount := len(blobs)
 
 	// Get the signed block header.

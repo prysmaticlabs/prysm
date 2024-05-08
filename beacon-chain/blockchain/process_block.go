@@ -641,7 +641,7 @@ func (s *Service) isDataAvailableDataColumns(ctx context.Context, root [32]byte,
 		return nil
 	}
 
-	colMap, err := peerdas.CustodyColumns(s.cfg.P2P.NodeID(), params.BeaconConfig().CustodyRequirement)
+	colMap, err := peerdas.GetCustodyColumns(s.cfg.P2P.NodeID(), params.BeaconConfig().CustodyRequirement)
 	if err != nil {
 		return err
 	}

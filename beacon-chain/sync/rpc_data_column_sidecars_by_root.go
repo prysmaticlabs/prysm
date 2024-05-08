@@ -62,7 +62,7 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 	}
 
 	// Compute all custodied columns.
-	custodiedColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), params.BeaconConfig().CustodyRequirement)
+	custodiedColumns, err := peerdas.GetCustodyColumns(s.cfg.p2p.NodeID(), params.BeaconConfig().CustodyRequirement)
 	if err != nil {
 		log.WithError(err).Errorf("unexpected error retrieving the node id")
 		s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)

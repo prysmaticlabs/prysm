@@ -384,9 +384,9 @@ func handleUnblidedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericS
 			blobs = append(blobs, cKzg4844.Blob(blob))
 		}
 
-		dataColumnSideCars, err := peerdas.DataColumnSidecars(block, blobs)
+		dataColumnSideCars, err := peerdas.GetDataColumnSidecars(block, blobs)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "data column sidecars")
+			return nil, nil, errors.Wrap(err, "get data column sidecars")
 		}
 
 		return nil, dataColumnSideCars, nil
