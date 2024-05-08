@@ -8,10 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	prysmtime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -19,12 +18,10 @@ import (
 	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 var (
@@ -40,66 +37,27 @@ var (
 	})
 )
 
-func setFeeRecipientIfBurnAddress(val *cache.TrackedValidator) {
-	if val.FeeRecipient == primitives.ExecutionAddress([20]byte{}) && val.Index == 0 {
-		val.FeeRecipient = primitives.ExecutionAddress(params.BeaconConfig().DefaultFeeRecipient)
-	}
-}
-
-// This returns the local execution payload of a given slot. The function has full awareness of pre and post merge.
-// func (vs *Server) setLocalPayloadResp(ctx context.Context, resp *proposalResponseConstructor, st state.BeaconState) (*PayloadOption, bool, error) {
-func (vs *Server) setLocalPayloadResp(ctx context.Context, resp *proposalResponseConstructor, st state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.setLocalPayloadResp")
-	defer span.End()
-
-	blk := resp.block.Block()
-	if blk.Version() < version.Bellatrix {
-		return nil
-	}
-
-	slot := blk.Slot()
-	vIdx := blk.ProposerIndex()
-	headRoot := blk.ParentRoot()
-	logFields := logrus.Fields{
-		"validatorIndex": vIdx,
-		"slot":           slot,
-		"headRoot":       fmt.Sprintf("%#x", headRoot),
-	}
-
-	val, tracked := vs.TrackedValidatorsCache.Validator(vIdx)
-	if !tracked {
-		logrus.WithFields(logFields).Warn("could not find tracked proposer index")
-	}
-	setFeeRecipientIfBurnAddress(&val)
-
-	payloadId, ok := vs.PayloadIDCache.PayloadID(slot, headRoot)
+func (vs *Server) getPayloadID(ctx context.Context, blk interfaces.SignedBeaconBlock, st state.BeaconState, feeRecipient primitives.ExecutionAddress) (primitives.PayloadID, error) {
+	var pid primitives.PayloadID
+	slot := blk.Block().Slot()
+	head := blk.Block().ParentRoot()
+	payloadId, ok := vs.PayloadIDCache.PayloadID(slot, head)
 	if ok && payloadId != [8]byte{} {
-		// Payload ID is cache hit. Return the cached payload ID.
-		var pid primitives.PayloadID
-		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, bid, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
-		if err != nil {
-			if !errors.Is(err, context.DeadlineExceeded) {
-				return err
-			}
-		} else {
-			warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
-			pwb, err := NewPayloadOption(payload, bid, bundle, nil)
-			if err != nil {
-				return err
-			}
-			resp.local = pwb
-			resp.overrideBuilder = overrideBuilder
-			return nil
-		}
+		// Payload ID is cache hit. Return the cached payload ID.
+		copy(pid[:], payloadId[:])
+		return pid, nil
 	}
-	log.WithFields(logFields).Debug("payload ID cache miss")
 	payloadIDCacheMiss.Inc()
+	log.WithFields(logrus.Fields{
+		"validatorIndex": blk.Block().ProposerIndex(),
+		"slot":           slot,
+		"headRoot":       fmt.Sprintf("%#x", head),
+	}).Debug("payload ID cache miss")
 
 	parentHash, err := vs.getParentBlockHash(ctx, st, slot)
 	if err != nil {
-		return err
+		return pid, err
 	}
 	finalizedBlockHash := [32]byte{}
 	justifiedBlockHash := [32]byte{}
@@ -114,36 +72,23 @@ func (vs *Server) setLocalPayloadResp(ctx context.Context, resp *proposalRespons
 		FinalizedBlockHash: finalizedBlockHash[:],
 	}
 
-	attr, err := payloadAttributesForState(slot, headRoot, st, val)
+	attr, err := payloadAttributesForState(slot, head, st, feeRecipient)
 	if err != nil {
-		return err
+		return pid, err
 	}
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
-		return errors.Wrap(err, "could not completeWithBest payload")
+		return pid, errors.Wrap(err, "could not completeWithBest payload")
 	}
 	if payloadID == nil {
-		return fmt.Errorf("nil payload with block hash: %#x", parentHash)
+		return pid, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-
-	payload, bid, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
-	if err != nil {
-		return err
-	}
-	pwb, err := NewPayloadOption(payload, bid, bundle, nil)
-	if err != nil {
-		return err
-	}
-	resp.local = pwb
-	resp.overrideBuilder = overrideBuilder
-
-	warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
-	log.WithField("value", math.WeiToGwei(bid)).Debug("received execution payload from local engine")
-	return nil
+	copy(pid[:], payloadID[:])
+	return pid, nil
 }
 
-func payloadAttributesForState(slot primitives.Slot, pr [32]byte, st state.BeaconState, val cache.TrackedValidator) (payloadattribute.Attributer, error) {
-	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+func payloadAttributesForState(slot primitives.Slot, pr [32]byte, st state.BeaconState, feeRecipient primitives.ExecutionAddress) (payloadattribute.Attributer, error) {
+	random, err := helpers.RandaoMix(st, prysmtime.CurrentEpoch(st))
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +106,7 @@ func payloadAttributesForState(slot primitives.Slot, pr [32]byte, st state.Beaco
 		return payloadattribute.New(&enginev1.PayloadAttributesV3{
 			Timestamp:             uint64(t.Unix()),
 			PrevRandao:            random,
-			SuggestedFeeRecipient: val.FeeRecipient[:],
+			SuggestedFeeRecipient: feeRecipient[:],
 			Withdrawals:           withdrawals,
 			ParentBeaconBlockRoot: pr[:],
 		})
@@ -173,14 +118,14 @@ func payloadAttributesForState(slot primitives.Slot, pr [32]byte, st state.Beaco
 		return payloadattribute.New(&enginev1.PayloadAttributesV2{
 			Timestamp:             uint64(t.Unix()),
 			PrevRandao:            random,
-			SuggestedFeeRecipient: val.FeeRecipient[:],
+			SuggestedFeeRecipient: feeRecipient[:],
 			Withdrawals:           withdrawals,
 		})
 	case version.Bellatrix:
 		return payloadattribute.New(&enginev1.PayloadAttributes{
 			Timestamp:             uint64(t.Unix()),
 			PrevRandao:            random,
-			SuggestedFeeRecipient: val.FeeRecipient[:],
+			SuggestedFeeRecipient: feeRecipient[:],
 		})
 	default:
 		return nil, errors.New("unknown beacon state version")
@@ -229,25 +174,6 @@ func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTi
 	}
 
 	return vs.ExecutionEngineCaller.GetTerminalBlockHash(ctx, transitionTime)
-}
-
-func (vs *Server) setBuilderPayloadResp(ctx context.Context, resp *proposalResponseConstructor, slot primitives.Slot, vIdx primitives.ValidatorIndex) error {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.setBuilderPayloadResp")
-	defer span.End()
-
-	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
-		return nil
-	}
-	canUseBuilder, err := vs.canUseBuilder(ctx, slot, vIdx)
-	if err != nil {
-		return errors.Wrap(err, "failed to check if we can use the builder")
-	}
-	span.AddAttributes(trace.BoolAttribute("canUseBuilder", canUseBuilder))
-	if !canUseBuilder {
-		return nil
-	}
-
-	return vs.setBuilderResponseHeader(ctx, resp, slot, vIdx)
 }
 
 var errActivationNotReached = errors.New("activation epoch not reached")

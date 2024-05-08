@@ -73,39 +73,52 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, err
 	}
-	sBlk, err := getEmptyBlock(req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not completeWithBest block: %v", err)
-	}
-	// Set slot, graffiti, randao reveal, and parent root.
-	sBlk.SetSlot(req.Slot)
-	sBlk.SetGraffiti(req.Graffiti)
-	sBlk.SetRandaoReveal(req.RandaoReveal)
-	sBlk.SetParentRoot(parentRoot[:])
 
 	// Set proposer index.
 	idx, err := helpers.BeaconProposerIndex(ctx, head)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate proposer index %v", err)
 	}
-	sBlk.SetProposerIndex(idx)
-
-	resp := &proposalResponseConstructor{block: sBlk}
-	if err = vs.BuildBlockParallel(ctx, resp, head, req.SkipMevBoost); err != nil {
-		return nil, errors.Wrap(err, "could not build block in parallel")
+	val, tracked := vs.TrackedValidatorsCache.Validator(idx)
+	if !tracked {
+		logrus.WithFields(logrus.Fields{
+			"validatorIndex": idx,
+			"slot":           req.Slot,
+			"headRoot":       fmt.Sprintf("%#x", parentRoot),
+		}).Warn("could not find tracked proposer index")
 	}
 
-	log.WithFields(logrus.Fields{
-		"slot":               req.Slot,
-		"sinceSlotStartTime": time.Since(t),
-		"validator":          sBlk.Block().ProposerIndex(),
-	}).Info("Finished building block")
+	sBlk, err := getEmptyBlock(req.Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not completeWithBest block: %v", err)
+	}
+	// Set values from request & head: slot, graffiti, randao reveal, and parent root.
+	sBlk.SetSlot(req.Slot)
+	sBlk.SetProposerIndex(idx)
+	sBlk.SetGraffiti(req.Graffiti)
+	sBlk.SetRandaoReveal(req.RandaoReveal)
+	sBlk.SetParentRoot(parentRoot[:])
+
+	defer func() {
+		log.WithFields(logrus.Fields{
+			"slot":               req.Slot,
+			"sinceSlotStartTime": time.Since(t),
+			"validator":          sBlk.Block().ProposerIndex(),
+		}).Info("Finished building block")
+	}()
 
 	builderBoostFactor := defaultBuilderBoostFactor
 	if req.BuilderBoostFactor != nil {
 		builderBoostFactor = req.BuilderBoostFactor.Value
 	}
-	return resp.construct(ctx, head, builderBoostFactor)
+	return newProposalResponseConstructor(sBlk, head, defaultIfBurnAddress(val)).buildBlockParallel(ctx, vs, req.SkipMevBoost, builderBoostFactor)
+}
+
+func defaultIfBurnAddress(val cache.TrackedValidator) primitives.ExecutionAddress {
+	if val.FeeRecipient == [20]byte{} && val.Index == 0 {
+		return primitives.ExecutionAddress(params.BeaconConfig().DefaultFeeRecipient)
+	}
+	return val.FeeRecipient
 }
 
 func (vs *Server) handleSuccesfulReorgAttempt(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (state.BeaconState, error) {
@@ -174,73 +187,6 @@ func (vs *Server) getParentState(ctx context.Context, slot primitives.Slot) (sta
 	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
 	head, err := vs.getParentStateFromReorgData(ctx, slot, oldHeadRoot, parentRoot, headRoot)
 	return head, parentRoot, err
-}
-
-func (vs *Server) BuildBlockParallel(ctx context.Context, resp *proposalResponseConstructor, head state.BeaconState, skipMevBoost bool) error {
-	sBlk := resp.block
-	// Build consensus fields in background
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		// Set eth1 data.
-		eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
-		if err != nil {
-			eth1Data = &ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]}
-			log.WithError(err).Error("Could not get eth1data")
-		}
-		sBlk.SetEth1Data(eth1Data)
-
-		// Set deposit and attestation.
-		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
-		if err != nil {
-			sBlk.SetDeposits([]*ethpb.Deposit{})
-			if err := sBlk.SetAttestations([]interfaces.Attestation{}); err != nil {
-				log.WithError(err).Error("Could not set attestations on block")
-			}
-			log.WithError(err).Error("Could not pack deposits and attestations")
-		} else {
-			sBlk.SetDeposits(deposits)
-			if err := sBlk.SetAttestations(atts); err != nil {
-				log.WithError(err).Error("Could not set attestations on block")
-			}
-		}
-
-		// Set slashings.
-		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
-		sBlk.SetProposerSlashings(validProposerSlashings)
-		if err := sBlk.SetAttesterSlashings(validAttSlashings); err != nil {
-			log.WithError(err).Error("Could not set attester slashings on block")
-		}
-
-		// Set exits.
-		sBlk.SetVoluntaryExits(vs.getExits(head, sBlk.Block().Slot()))
-
-		// Set sync aggregate. New in Altair.
-		vs.setSyncAggregate(ctx, sBlk)
-
-		// Set bls to execution change. New in Capella.
-		vs.setBlsToExecData(sBlk, head)
-	}()
-
-	if err := vs.setLocalPayloadResp(ctx, resp, head); err != nil {
-		if !errors.Is(err, errActivationNotReached) && !errors.Is(err, errNoTerminalBlockHash) {
-			return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
-		}
-	}
-
-	defer wg.Wait() // Wait until block is built via consensus and execution fields.
-
-	// There's no reason to try to get a builder bid if local override is true.
-	if !resp.overrideBuilder || skipMevBoost {
-		if err := vs.setBuilderPayloadResp(ctx, resp, sBlk.Block().Slot(), sBlk.Block().ProposerIndex()); err != nil {
-			builderGetPayloadMissCount.Inc()
-			log.WithError(err).Error("Could not get builder payload")
-		}
-	}
-
-	return nil
 }
 
 // ProposeBeaconBlock handles the proposal of beacon blocks.
