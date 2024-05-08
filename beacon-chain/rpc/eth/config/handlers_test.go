@@ -21,6 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
+// Variables defined in the placeholderFields will not be tested in `TestGetSpec`.
+// These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
+var placeholderFields = []string{"DOMAIN_BEACON_BUILDER", "DOMAIN_PTC_ATTESTER"}
+
 func TestGetDepositContract(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig().Copy()
@@ -192,7 +196,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 154, len(data))
+	assert.Equal(t, 156, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
@@ -528,6 +532,12 @@ func TestGetSpec(t *testing.T) {
 			case "UNSET_DEPOSIT_RECEIPTS_START_INDEX":
 				assert.Equal(t, "92", v)
 			default:
+				for _, pf := range placeholderFields {
+					if k == pf {
+						t.Logf("Skipping placeholder field: %s", k)
+						return
+					}
+				}
 				t.Errorf("Incorrect key: %s", k)
 			}
 		})

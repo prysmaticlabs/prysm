@@ -20,6 +20,7 @@ go_library(
         "electra_state.go",
         "helpers.go",
         "merge.go",
+        "payload_attestation.go",
         "state.go",
         "sync_aggregate.go",
         "sync_committee.go",
