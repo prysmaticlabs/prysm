@@ -57,7 +57,7 @@ func genesisBeaconStateElectra(ctx context.Context, deposits []*ethpb.Deposit, g
 	return buildGenesisBeaconStateElectra(genesisTime, st, st.Eth1Data())
 }
 
-// emptyGenesisStateDeneb returns an empty genesis state in Deneb format.
+// emptyGenesisStateDeneb returns an empty genesis state in Electra format.
 func emptyGenesisStateElectra() (state.BeaconState, error) {
 	st := &ethpb.BeaconStateElectra{
 		// Misc fields.
