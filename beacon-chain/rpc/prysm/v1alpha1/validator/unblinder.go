@@ -3,7 +3,7 @@ package validator
 import (
 	"bytes"
 
-	cKzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
+	ckzg "github.com/ethereum/c-kzg-4844/bindings/go"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
@@ -80,13 +80,13 @@ func unblindDataColumnsSidecars(block interfaces.SignedBeaconBlock, bundle *engi
 	}
 
 	// Convert blobs from slices to array.
-	blobs := make([]cKzg4844.Blob, 0, len(bundle.Blobs))
+	blobs := make([]ckzg.Blob, 0, len(bundle.Blobs))
 	for _, blob := range bundle.Blobs {
-		if len(blob) != cKzg4844.BytesPerBlob {
-			return nil, errors.Errorf("invalid blob size. expected %d bytes, got %d bytes", cKzg4844.BytesPerBlob, len(blob))
+		if len(blob) != ckzg.BytesPerBlob {
+			return nil, errors.Errorf("invalid blob size. expected %d bytes, got %d bytes", ckzg.BytesPerBlob, len(blob))
 		}
 
-		blobs = append(blobs, cKzg4844.Blob(blob))
+		blobs = append(blobs, ckzg.Blob(blob))
 	}
 
 	// Retrieve data columns from blobs.

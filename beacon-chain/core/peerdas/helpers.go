@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"math"
 
-	cKzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
+	ckzg "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/holiman/uint256"
 	errors "github.com/pkg/errors"
@@ -19,14 +19,14 @@ import (
 
 const (
 	// Bytes per cell
-	bytesPerCell = cKzg4844.FieldElementsPerCell * cKzg4844.BytesPerFieldElement
+	bytesPerCell = ckzg.FieldElementsPerCell * ckzg.BytesPerFieldElement
 
 	// Number of cells in the extended matrix
-	extendedMatrixSize = fieldparams.MaxBlobsPerBlock * cKzg4844.CellsPerExtBlob
+	extendedMatrixSize = fieldparams.MaxBlobsPerBlock * ckzg.CellsPerExtBlob
 )
 
 type (
-	ExtendedMatrix []cKzg4844.Cell
+	ExtendedMatrix []ckzg.Cell
 
 	cellCoordinate struct {
 		blobIndex uint64
@@ -54,7 +54,7 @@ func CustodyColumns(nodeId enode.ID, custodySubnetCount uint64) (map[uint64]bool
 		return nil, errors.Wrap(err, "custody subnets")
 	}
 
-	columnsPerSubnet := cKzg4844.CellsPerExtBlob / dataColumnSidecarSubnetCount
+	columnsPerSubnet := ckzg.CellsPerExtBlob / dataColumnSidecarSubnetCount
 
 	// Knowing the subnet ID and the number of columns per subnet, select all the columns the node should custody.
 	// Columns belonging to the same subnet are contiguous.
@@ -115,13 +115,13 @@ func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) (map[uint6
 
 // ComputeExtendedMatrix computes the extended matrix from the blobs.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#compute_extended_matrix
-func ComputeExtendedMatrix(blobs []cKzg4844.Blob) (ExtendedMatrix, error) {
+func ComputeExtendedMatrix(blobs []ckzg.Blob) (ExtendedMatrix, error) {
 	matrix := make(ExtendedMatrix, 0, extendedMatrixSize)
 
 	for i := range blobs {
 		// Chunk a non-extended blob into cells representing the corresponding extended blob.
 		blob := &blobs[i]
-		cells, err := cKzg4844.ComputeCells(blob)
+		cells, err := ckzg.ComputeCells(blob)
 		if err != nil {
 			return nil, errors.Wrap(err, "compute cells for blob")
 		}
@@ -134,12 +134,12 @@ func ComputeExtendedMatrix(blobs []cKzg4844.Blob) (ExtendedMatrix, error) {
 
 // RecoverMatrix recovers the extended matrix from some cells.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#recover_matrix
-func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCount uint64) (ExtendedMatrix, error) {
+func RecoverMatrix(cellFromCoordinate map[cellCoordinate]ckzg.Cell, blobCount uint64) (ExtendedMatrix, error) {
 	matrix := make(ExtendedMatrix, 0, extendedMatrixSize)
 
 	for blobIndex := uint64(0); blobIndex < blobCount; blobIndex++ {
 		// Filter all cells that belong to the current blob.
-		cellIds := make([]uint64, 0, cKzg4844.CellsPerExtBlob)
+		cellIds := make([]uint64, 0, ckzg.CellsPerExtBlob)
 		for coordinate := range cellFromCoordinate {
 			if coordinate.blobIndex == blobIndex {
 				cellIds = append(cellIds, coordinate.cellID)
@@ -149,7 +149,7 @@ func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCoun
 		// Retrieve cells corresponding to all `cellIds`.
 		cellIdsCount := len(cellIds)
 
-		cells := make([]cKzg4844.Cell, 0, cellIdsCount)
+		cells := make([]ckzg.Cell, 0, cellIdsCount)
 		for _, cellId := range cellIds {
 			coordinate := cellCoordinate{blobIndex: blobIndex, cellID: cellId}
 			cell, ok := cellFromCoordinate[coordinate]
@@ -161,7 +161,7 @@ func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCoun
 		}
 
 		// Recover all cells.
-		allCellsForRow, err := cKzg4844.RecoverAllCells(cellIds, cells)
+		allCellsForRow, err := ckzg.RecoverAllCells(cellIds, cells)
 		if err != nil {
 			return matrix, errors.Wrap(err, "recover all cells")
 		}
@@ -174,7 +174,7 @@ func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCoun
 
 // DataColumnSidecars computes the data column sidecars from the signed block and blobs.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#recover_matrix
-func DataColumnSidecars(signedBlock interfaces.SignedBeaconBlock, blobs []cKzg4844.Blob) ([]*ethpb.DataColumnSidecar, error) {
+func DataColumnSidecars(signedBlock interfaces.SignedBeaconBlock, blobs []ckzg.Blob) ([]*ethpb.DataColumnSidecar, error) {
 	blobsCount := len(blobs)
 
 	// Get the signed block header.
@@ -200,12 +200,12 @@ func DataColumnSidecars(signedBlock interfaces.SignedBeaconBlock, blobs []cKzg48
 	}
 
 	// Compute cells and proofs.
-	cells := make([][cKzg4844.CellsPerExtBlob]cKzg4844.Cell, 0, blobsCount)
-	proofs := make([][cKzg4844.CellsPerExtBlob]cKzg4844.KZGProof, 0, blobsCount)
+	cells := make([][ckzg.CellsPerExtBlob]ckzg.Cell, 0, blobsCount)
+	proofs := make([][ckzg.CellsPerExtBlob]ckzg.KZGProof, 0, blobsCount)
 
 	for i := range blobs {
 		blob := &blobs[i]
-		blobCells, blobProofs, err := cKzg4844.ComputeCellsAndProofs(blob)
+		blobCells, blobProofs, err := ckzg.ComputeCellsAndProofs(blob)
 		if err != nil {
 			return nil, errors.Wrap(err, "compute cells and proofs")
 		}
@@ -215,10 +215,10 @@ func DataColumnSidecars(signedBlock interfaces.SignedBeaconBlock, blobs []cKzg48
 	}
 
 	// Get the column sidecars.
-	sidecars := make([]*ethpb.DataColumnSidecar, cKzg4844.CellsPerExtBlob)
-	for columnIndex := uint64(0); columnIndex < cKzg4844.CellsPerExtBlob; columnIndex++ {
-		column := make([]cKzg4844.Cell, 0, blobsCount)
-		kzgProofOfColumn := make([]cKzg4844.KZGProof, 0, blobsCount)
+	sidecars := make([]*ethpb.DataColumnSidecar, ckzg.CellsPerExtBlob)
+	for columnIndex := uint64(0); columnIndex < ckzg.CellsPerExtBlob; columnIndex++ {
+		column := make([]ckzg.Cell, 0, blobsCount)
+		kzgProofOfColumn := make([]ckzg.KZGProof, 0, blobsCount)
 
 		for rowIndex := 0; rowIndex < blobsCount; rowIndex++ {
 			cell := cells[rowIndex][columnIndex]
