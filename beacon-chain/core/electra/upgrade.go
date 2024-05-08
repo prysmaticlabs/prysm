@@ -189,18 +189,13 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 		return nil, err
 	}
 
-	// Find the earliest exit epoch
-	exitEpochs := make([]primitives.Epoch, 0)
 	// [New in Electra:EIP7251]
-	// add validators that are not yet active to pending balance deposits
-
-	// Creating a slice to store indices of validators whose activation epoch is set to FAR_FUTURE_EPOCH
+	earliestExitEpoch := time.CurrentEpoch(beaconState)
 	preActivationIndices := make([]primitives.ValidatorIndex, 0)
-	// get all the validators with compound withdrawal indices for eip7521
 	compoundWithdrawalIndices := make([]primitives.ValidatorIndex, 0)
 	if err = beaconState.ReadFromEveryValidator(func(index int, val state.ReadOnlyValidator) error {
-		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
-			exitEpochs = append(exitEpochs, val.ExitEpoch())
+		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch && val.ExitEpoch() > earliestExitEpoch {
+			earliestExitEpoch = val.ExitEpoch()
 		}
 		if val.ActivationEpoch() == params.BeaconConfig().FarFutureEpoch {
 			preActivationIndices = append(preActivationIndices, primitives.ValidatorIndex(index))
@@ -212,15 +207,7 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 	}); err != nil {
 		return nil, err
 	}
-	if len(exitEpochs) == 0 {
-		exitEpochs = append(exitEpochs, time.CurrentEpoch(beaconState))
-	}
-	var earliestExitEpoch primitives.Epoch
-	for _, e := range exitEpochs {
-		if e > earliestExitEpoch {
-			earliestExitEpoch = e
-		}
-	}
+
 	earliestExitEpoch++ // Increment to find the earliest possible exit epoch
 
 	// note: should be the same in prestate and post beaconState.
@@ -290,9 +277,9 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 		EarliestExitEpoch:             earliestExitEpoch,
 		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(math.Gwei(tab)),
 		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(beaconState.Slot())),
-		PendingBalanceDeposits:        nil,
-		PendingPartialWithdrawals:     nil,
-		PendingConsolidations:         nil,
+		PendingBalanceDeposits:        make([]*ethpb.PendingBalanceDeposit, 0),
+		PendingPartialWithdrawals:     make([]*ethpb.PendingPartialWithdrawal, 0),
+		PendingConsolidations:         make([]*ethpb.PendingConsolidation, 0),
 	}
 
 	// Sorting preActivationIndices based on a custom criteria

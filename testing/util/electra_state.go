@@ -191,6 +191,9 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(math.Gwei(tab)),
 		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(preState.Slot())),
 		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(math.Gwei(tab)),
+		PendingBalanceDeposits:        make([]*ethpb.PendingBalanceDeposit, 0),
+		PendingPartialWithdrawals:     make([]*ethpb.PendingPartialWithdrawal, 0),
+		PendingConsolidations:         make([]*ethpb.PendingConsolidation, 0),
 	}
 
 	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
