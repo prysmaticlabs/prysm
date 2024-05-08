@@ -575,3 +575,27 @@ func TestWeiToGwei_CopyOk(t *testing.T) {
 	require.Equal(t, math.Gwei(1), got)
 	require.Equal(t, big.NewInt(1e9).Uint64(), v.Uint64())
 }
+
+func TestLargestPowerOfTwo(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    uint64
+		expected uint64
+	}{
+		{"Zero", 0, 0},
+		{"One", 1, 1},
+		{"Just below power of two", 14, 8},
+		{"Power of two", 16, 16},
+		{"Large number", 123456789, 67108864},
+		{"Max uint64", 18446744073709551615, 9223372036854775808},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := math.LargestPowerOfTwo(tc.input)
+			if result != tc.expected {
+				t.Errorf("For input %d, expected %d but got %d", tc.input, tc.expected, result)
+			}
+		})
+	}
+}
