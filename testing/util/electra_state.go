@@ -139,6 +139,10 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 	if err != nil {
 		return nil, err
 	}
+	pbd, err := preState.PendingBalanceDeposits()
+	if err != nil {
+		return nil, err
+	}
 	st := &ethpb.BeaconStateElectra{
 		// Misc fields.
 		Slot:                  0,
@@ -191,7 +195,7 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(math.Gwei(tab)),
 		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(preState.Slot())),
 		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(math.Gwei(tab)),
-		PendingBalanceDeposits:        make([]*ethpb.PendingBalanceDeposit, 0),
+		PendingBalanceDeposits:        pbd,
 		PendingPartialWithdrawals:     make([]*ethpb.PendingPartialWithdrawal, 0),
 		PendingConsolidations:         make([]*ethpb.PendingConsolidation, 0),
 	}
