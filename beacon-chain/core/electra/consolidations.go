@@ -40,13 +40,15 @@ var ErrNilConsolidations = errors.New("nil consolidations")
 //	        next_pending_consolidation += 1
 //
 //	    state.pending_consolidations = state.pending_consolidations[next_pending_consolidation:]
-func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState, activeBalance uint64) (state.BeaconState, error) {
+func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "electra.ProcessPendingConsolidations")
 	defer span.End()
 
 	if st == nil || st.IsNil() {
 		return nil, errors.New("nil state")
 	}
+
+	currentEpoch := slots.ToEpoch(st.Slot())
 
 	var nextPendingConsolidation uint64
 	pendingConsolidations, err := st.PendingConsolidations()
@@ -62,7 +64,7 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState, act
 			nextPendingConsolidation++
 			continue
 		}
-		if sourceValidator.WithdrawableEpoch > slots.ToEpoch(st.Slot()) {
+		if sourceValidator.WithdrawableEpoch > currentEpoch {
 			break
 		}
 
@@ -70,6 +72,10 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState, act
 			return nil, err
 		}
 
+		activeBalance, err := st.ActiveBalanceAtIndex(pc.SourceIndex)
+		if err != nil {
+			return nil, err
+		}
 		if err := helpers.DecreaseBalance(st, pc.SourceIndex, activeBalance); err != nil {
 			return nil, err
 		}
