@@ -341,10 +341,10 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) SubmitAggregateSelectionPro
 }
 
 // SubmitAggregateSelectionProofElectra mocks base method.
-func (m *MockBeaconNodeValidatorServer) SubmitAggregateSelectionProofElectra(arg0 context.Context, arg1 *eth.AggregateSelectionRequest) (*eth.AggregateSelectionResponseElectra, error) {
+func (m *MockBeaconNodeValidatorServer) SubmitAggregateSelectionProofElectra(arg0 context.Context, arg1 *eth.AggregateSelectionRequest) (*eth.AggregateSelectionElectraResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubmitAggregateSelectionProofElectra", arg0, arg1)
-	ret0, _ := ret[0].(*eth.AggregateSelectionResponseElectra)
+	ret0, _ := ret[0].(*eth.AggregateSelectionElectraResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -371,7 +371,7 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) SubmitSignedAggregateSelect
 }
 
 // SubmitSignedAggregateSelectionProofElectra mocks base method.
-func (m *MockBeaconNodeValidatorServer) SubmitSignedAggregateSelectionProofElectra(arg0 context.Context, arg1 *eth.SignedAggregateSubmitRequestElectra) (*eth.SignedAggregateSubmitResponse, error) {
+func (m *MockBeaconNodeValidatorServer) SubmitSignedAggregateSelectionProofElectra(arg0 context.Context, arg1 *eth.SignedAggregateSubmitElectraRequest) (*eth.SignedAggregateSubmitResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubmitSignedAggregateSelectionProofElectra", arg0, arg1)
 	ret0, _ := ret[0].(*eth.SignedAggregateSubmitResponse)
