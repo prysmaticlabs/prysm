@@ -36,9 +36,26 @@ import (
 // can be used as a constant to avoid recomputing this value in every call.
 var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225}
 
+var errNoProposalSource = errors.New("proposal process did not pick between builder and local block")
+
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
+
+var (
+	builderValueGweiGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "builder_value_gwei",
+		Help: "Builder payload value in gwei",
+	})
+	localValueGweiGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "local_value_gwei",
+		Help: "Local payload value in gwei",
+	})
+	builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "builder_get_payload_miss_count",
+		Help: "The number of get payload misses for validator requests to builder",
+	})
+)
 
 // proposalBlock accumulates data needed to respond to the proposer GetBeaconBlock request.
 type proposalResponseConstructor struct {
@@ -48,144 +65,12 @@ type proposalResponseConstructor struct {
 	FeeRecipient    primitives.ExecutionAddress
 	local           *PayloadPossibility
 	builder         *PayloadPossibility
-	winner          *PayloadPossibility
 }
 
 func newProposalResponseConstructor(blk interfaces.SignedBeaconBlock, st state.BeaconState, feeRecipient primitives.ExecutionAddress) *proposalResponseConstructor {
 	return &proposalResponseConstructor{block: blk, head: st, FeeRecipient: feeRecipient}
 }
 
-var errNoProposalSource = errors.New("proposal process did not pick between builder and local block")
-
-// construct picks the best proposal and sets the execution header/payload attributes for it on the block.
-// It also takes the parent state as an argument so that it can compute and set the state root using the
-// completely updated block.
-func (pc *proposalResponseConstructor) construct(ctx context.Context, builderBoostFactor uint64) (*ethpb.GenericBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "proposalResponseConstructor.construct")
-	defer span.End()
-	if err := blocks.HasNilErr(pc.block); err != nil {
-		return nil, err
-	}
-	best, err := pc.choosePayload(ctx, builderBoostFactor)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Error constructing execution payload for block: %v", err)
-	}
-	best, err = pc.complete(ctx, best)
-	if err != nil {
-		return nil, err
-	}
-	return constructGenericBeaconBlock(pc.block, best.bid, best.bundle)
-}
-
-func (pc *proposalResponseConstructor) complete(ctx context.Context, best *PayloadPossibility) (*PayloadPossibility, error) {
-	err := pc.completeWithBest(ctx, best)
-	if err == nil {
-		return best, nil
-	}
-	// We can fall back from the builder to local, but not the other way. If local fails, we're done.
-	if best == pc.local {
-		return nil, err
-	}
-
-	// Try again with the local payload. If this fails then we're truly done.
-	return pc.local, pc.completeWithBest(ctx, pc.local)
-}
-
-func (pc *proposalResponseConstructor) completeWithBest(ctx context.Context, best *PayloadPossibility) error {
-	ctx, span := trace.StartSpan(ctx, "proposalResponseConstructor.completeWithBest")
-	defer span.End()
-	if best.IsNil() {
-		return errNoProposalSource
-	}
-
-	if err := pc.block.SetExecution(best.ExecutionData); err != nil {
-		return err
-	}
-	if pc.block.Version() >= version.Deneb {
-		kzgc := best.kzgCommitments
-		if best.bundle != nil {
-			kzgc = best.bundle.KzgCommitments
-		}
-		if err := pc.block.SetBlobKzgCommitments(kzgc); err != nil {
-			return err
-		}
-	}
-
-	root, err := transition.CalculateStateRoot(ctx, pc.head, pc.block)
-	if err != nil {
-		return errors.Wrapf(err, "could not calculate state root for proposal with parent root=%#x at slot %d", pc.block.Block().ParentRoot(), pc.head.Slot())
-	}
-	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
-	pc.block.SetStateRoot(root[:])
-
-	return nil
-}
-
-// constructGenericBeaconBlock constructs a `GenericBeaconBlock` based on the block version and other parameters.
-func constructGenericBeaconBlock(blk interfaces.SignedBeaconBlock, bid math.Wei, bundle *enginev1.BlobsBundle) (*ethpb.GenericBeaconBlock, error) {
-	if err := blocks.HasNilErr(blk); err != nil {
-		return nil, err
-	}
-	blockProto, err := blk.Block().Proto()
-	if err != nil {
-		return nil, err
-	}
-	payloadValue := math.WeiToBigInt(bid).String()
-
-	switch pb := blockProto.(type) {
-	case *ethpb.BeaconBlockDeneb:
-		denebContents := &ethpb.BeaconBlockContentsDeneb{Block: pb}
-		if bundle != nil {
-			denebContents.KzgProofs = bundle.Proofs
-			denebContents.Blobs = bundle.Blobs
-		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: denebContents}, IsBlinded: false, PayloadValue: payloadValue}, nil
-	case *ethpb.BlindedBeaconBlockDeneb:
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: pb}, IsBlinded: true, PayloadValue: payloadValue}, nil
-	case *ethpb.BeaconBlockCapella:
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb}, IsBlinded: false, PayloadValue: payloadValue}, nil
-	case *ethpb.BlindedBeaconBlockCapella:
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedCapella{BlindedCapella: pb}, IsBlinded: true, PayloadValue: payloadValue}, nil
-	case *ethpb.BeaconBlockBellatrix:
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb}, IsBlinded: false, PayloadValue: payloadValue}, nil
-	case *ethpb.BlindedBeaconBlockBellatrix:
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb}, IsBlinded: true, PayloadValue: payloadValue}, nil
-	case *ethpb.BeaconBlockAltair:
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: pb}}, nil
-	case *ethpb.BeaconBlock:
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb}}, nil
-	}
-	return nil, fmt.Errorf("unknown .block version: %d", blk.Version())
-}
-
-// PayloadPossibility represents one of the payload possibilities that the proposer may select between (local, builder).
-type PayloadPossibility struct {
-	interfaces.ExecutionData
-	bid            math.Wei
-	bundle         *enginev1.BlobsBundle
-	kzgCommitments [][]byte
-}
-
-// NewPayloadPossibility initializes a PayloadPossibility. This should only be used to represent payloads that have a bid,
-// otherwise directly use an ExecutionData type.
-func NewPayloadPossibility(p interfaces.ExecutionData, bid math.Wei, bundle *enginev1.BlobsBundle, kzgc [][]byte) (*PayloadPossibility, error) {
-	if err := blocks.HasNilErr(p); err != nil {
-		return nil, err
-	}
-	if bid == nil {
-		bid = math.ZeroWei
-	}
-	return &PayloadPossibility{ExecutionData: p, bid: bid, bundle: bundle, kzgCommitments: kzgc}, nil
-}
-
-func (p *PayloadPossibility) IsNil() bool {
-	return p == nil || p.ExecutionData.IsNil()
-}
-
-// ValueInGwei is a helper to converts the bid value to its gwei representation.
-func (p *PayloadPossibility) ValueInGwei() math.Gwei {
-	return math.WeiToGwei(p.bid)
-}
 func (resp *proposalResponseConstructor) buildBlockParallel(ctx context.Context, vs *Server, skipMevBoost bool, builderBoostFactor uint64) (*ethpb.GenericBeaconBlock, error) {
 	sBlk := resp.block
 	// Build consensus fields in background
@@ -429,20 +314,25 @@ func (resp *proposalResponseConstructor) populateBuilderPossibility(ctx context.
 	return err
 }
 
-var (
-	builderValueGweiGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "builder_value_gwei",
-		Help: "Builder payload value in gwei",
-	})
-	localValueGweiGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "local_value_gwei",
-		Help: "Local payload value in gwei",
-	})
-	builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "builder_get_payload_miss_count",
-		Help: "The number of get payload misses for validator requests to builder",
-	})
-)
+// construct picks the best proposal and sets the execution header/payload attributes for it on the block.
+// It also takes the parent state as an argument so that it can compute and set the state root using the
+// completely updated block.
+func (pc *proposalResponseConstructor) construct(ctx context.Context, builderBoostFactor uint64) (*ethpb.GenericBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "proposalResponseConstructor.construct")
+	defer span.End()
+	if err := blocks.HasNilErr(pc.block); err != nil {
+		return nil, err
+	}
+	best, err := pc.choosePayload(ctx, builderBoostFactor)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Error constructing execution payload for block: %v", err)
+	}
+	best, err = pc.complete(ctx, best)
+	if err != nil {
+		return nil, err
+	}
+	return constructGenericBeaconBlock(pc.block, best.bid, best.bundle)
+}
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
 func (resp *proposalResponseConstructor) choosePayload(ctx context.Context, builderBoostFactor uint64) (*PayloadPossibility, error) {
@@ -456,6 +346,9 @@ func (resp *proposalResponseConstructor) choosePayload(ctx context.Context, buil
 
 	if resp.local.IsNil() {
 		return nil, errors.New("local payload is nil")
+	}
+	if resp.overrideBuilder {
+		return resp.local, nil
 	}
 
 	// Use local payload if builder payload is nil.
@@ -518,4 +411,113 @@ func (resp *proposalResponseConstructor) choosePayload(ctx context.Context, buil
 	default: // Bellatrix case.
 		return resp.builder, nil
 	}
+}
+func (pc *proposalResponseConstructor) complete(ctx context.Context, best *PayloadPossibility) (*PayloadPossibility, error) {
+	err := pc.completeWithBest(ctx, best)
+	if err == nil {
+		return best, nil
+	}
+	// We can fall back from the builder to local, but not the other way. If local fails, we're done.
+	if best == pc.local {
+		return nil, err
+	}
+
+	// Try again with the local payload. If this fails then we're truly done.
+	return pc.local, pc.completeWithBest(ctx, pc.local)
+}
+
+func (pc *proposalResponseConstructor) completeWithBest(ctx context.Context, best *PayloadPossibility) error {
+	ctx, span := trace.StartSpan(ctx, "proposalResponseConstructor.completeWithBest")
+	defer span.End()
+	if best.IsNil() {
+		return errNoProposalSource
+	}
+
+	if err := pc.block.SetExecution(best.ExecutionData); err != nil {
+		return err
+	}
+	if pc.block.Version() >= version.Deneb {
+		kzgc := best.kzgCommitments
+		if best.bundle != nil {
+			kzgc = best.bundle.KzgCommitments
+		}
+		if err := pc.block.SetBlobKzgCommitments(kzgc); err != nil {
+			return err
+		}
+	}
+
+	root, err := transition.CalculateStateRoot(ctx, pc.head, pc.block)
+	if err != nil {
+		return errors.Wrapf(err, "could not calculate state root for proposal with parent root=%#x at slot %d", pc.block.Block().ParentRoot(), pc.head.Slot())
+	}
+	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
+	pc.block.SetStateRoot(root[:])
+
+	return nil
+}
+
+// constructGenericBeaconBlock constructs a `GenericBeaconBlock` based on the block version and other parameters.
+func constructGenericBeaconBlock(blk interfaces.SignedBeaconBlock, bid math.Wei, bundle *enginev1.BlobsBundle) (*ethpb.GenericBeaconBlock, error) {
+	if err := blocks.HasNilErr(blk); err != nil {
+		return nil, err
+	}
+	blockProto, err := blk.Block().Proto()
+	if err != nil {
+		return nil, err
+	}
+	payloadValue := math.WeiToBigInt(bid).String()
+
+	switch pb := blockProto.(type) {
+	case *ethpb.BeaconBlockDeneb:
+		denebContents := &ethpb.BeaconBlockContentsDeneb{Block: pb}
+		if bundle != nil {
+			denebContents.KzgProofs = bundle.Proofs
+			denebContents.Blobs = bundle.Blobs
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: denebContents}, IsBlinded: false, PayloadValue: payloadValue}, nil
+	case *ethpb.BlindedBeaconBlockDeneb:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: pb}, IsBlinded: true, PayloadValue: payloadValue}, nil
+	case *ethpb.BeaconBlockCapella:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb}, IsBlinded: false, PayloadValue: payloadValue}, nil
+	case *ethpb.BlindedBeaconBlockCapella:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedCapella{BlindedCapella: pb}, IsBlinded: true, PayloadValue: payloadValue}, nil
+	case *ethpb.BeaconBlockBellatrix:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb}, IsBlinded: false, PayloadValue: payloadValue}, nil
+	case *ethpb.BlindedBeaconBlockBellatrix:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb}, IsBlinded: true, PayloadValue: payloadValue}, nil
+	case *ethpb.BeaconBlockAltair:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: pb}}, nil
+	case *ethpb.BeaconBlock:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb}}, nil
+	}
+	return nil, fmt.Errorf("unknown .block version: %d", blk.Version())
+}
+
+// PayloadPossibility represents one of the payload possibilities that the proposer may select between (local, builder).
+type PayloadPossibility struct {
+	interfaces.ExecutionData
+	bid            math.Wei
+	bundle         *enginev1.BlobsBundle
+	kzgCommitments [][]byte
+}
+
+// NewPayloadPossibility initializes a PayloadPossibility. This should only be used to represent payloads that have a bid,
+// otherwise directly use an ExecutionData type.
+func NewPayloadPossibility(p interfaces.ExecutionData, bid math.Wei, bundle *enginev1.BlobsBundle, kzgc [][]byte) (*PayloadPossibility, error) {
+	if err := blocks.HasNilErr(p); err != nil {
+		return nil, err
+	}
+	if bid == nil {
+		bid = math.ZeroWei
+	}
+	return &PayloadPossibility{ExecutionData: p, bid: bid, bundle: bundle, kzgCommitments: kzgc}, nil
+}
+
+func (p *PayloadPossibility) IsNil() bool {
+	return p == nil || p.ExecutionData.IsNil()
+}
+
+// ValueInGwei is a helper to converts the bid value to its gwei representation.
+func (p *PayloadPossibility) ValueInGwei() math.Gwei {
+	return math.WeiToGwei(p.bid)
 }
