@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // Validators participating in consensus on the beacon chain.
@@ -250,6 +251,21 @@ func (b *BeaconState) NumValidators() int {
 	defer b.lock.RUnlock()
 
 	return b.validatorsLen()
+}
+
+// NumActiveValidators returns the size of the active validators in the
+// registry
+func (b *BeaconState) NumActiveValidators() int {
+	epoch := slots.ToEpoch(b.Slot())
+	total := 0
+	err := b.ReadFromEveryValidator(func(_ int, val state.ReadOnlyValidator) error {
+		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
+			total++
+		}
+		return nil
+	})
+	_ = err
+	return total
 }
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.

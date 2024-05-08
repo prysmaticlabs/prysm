@@ -10,9 +10,11 @@ import (
 	testtmpl "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/testing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Phase0(t *testing.T) {
@@ -68,6 +70,41 @@ func TestValidatorIndexes(t *testing.T) {
 		require.NotEmpty(t, readOnlyBytes)
 		require.Equal(t, hexutil.Encode(readOnlyBytes[:]), hexutil.Encode(byteValue[:]))
 	})
+}
+
+func TestNumActiveValidators(t *testing.T) {
+	currentSlot := primitives.Slot(5 * 32)
+	currentEpoch := slots.ToEpoch(currentSlot)
+	vals := []*ethpb.Validator{
+		{
+			ActivationEpoch: 0,
+			ExitEpoch:       currentEpoch + 1,
+		},
+		{
+			ActivationEpoch: currentEpoch + 1,
+			ExitEpoch:       currentEpoch + 2,
+		},
+		{
+			ActivationEpoch: 0,
+			ExitEpoch:       currentEpoch - 1,
+		},
+	}
+	pb := &ethpb.BeaconStateElectra{
+		Slot:       currentSlot,
+		Validators: vals,
+	}
+	s, err := statenative.InitializeFromProtoElectra(pb)
+	require.NoError(t, err)
+	require.Equal(t, 1, s.NumActiveValidators())
+
+	pb.Validators = append(pb.Validators, &ethpb.Validator{
+		ActivationEpoch: currentEpoch - 1,
+		ExitEpoch:       currentEpoch + 1,
+	})
+
+	s, err = statenative.InitializeFromProtoElectra(pb)
+	require.NoError(t, err)
+	require.Equal(t, 2, s.NumActiveValidators())
 }
 
 func TestActiveBalanceAtIndex(t *testing.T) {

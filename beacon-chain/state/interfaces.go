@@ -131,6 +131,7 @@ type ReadOnlyValidators interface {
 	PublicKeys() ([][fieldparams.BLSPubkeyLength]byte, error)
 	PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte
 	NumValidators() int
+	NumActiveValidators() int
 	ReadFromEveryValidator(f func(idx int, val ReadOnlyValidator) error) error
 }
 
