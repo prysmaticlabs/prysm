@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -257,13 +256,11 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	} else if beaconBlock.Version() >= version.Altair {
+	} else {
 		state, err = altairOperations(ctx, state, beaconBlock)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		return nil, errors.New("block does not have correct version")
 	}
 
 	return state, nil
@@ -406,7 +403,7 @@ func altairOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process bls-to-execution changes")
 	}
-	return electra.ProcessDepositReceipts(st, beaconBlock)
+	return b.ProcessDepositReceipts(st, beaconBlock)
 }
 
 // This calls phase 0 block operations.

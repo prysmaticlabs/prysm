@@ -213,9 +213,8 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, isNewValidator, err := blocks.ProcessDeposit(beaconState, dep[0], true)
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Process deposit failed")
-	assert.Equal(t, true, isNewValidator, "Expected isNewValidator to be true")
 	assert.Equal(t, 2, len(newState.Validators()), "Expected validator list to have length 2")
 	assert.Equal(t, 2, len(newState.Balances()), "Expected validator balances list to have length 2")
 	if newState.Balances()[1] != dep[0].Data.Amount {
@@ -257,9 +256,8 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, isNewValidator, err := blocks.ProcessDeposit(beaconState, dep[0], true)
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
-	assert.Equal(t, false, isNewValidator, "Expected isNewValidator to be false")
 
 	if newState.Eth1DepositIndex() != 1 {
 		t.Errorf(
@@ -392,8 +390,7 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 		},
 	})
 	require.NoError(t, err)
-	newState, isNewValidator, err := blocks.ProcessDeposit(beaconState, deposit, true /*verifySignature*/)
+	newState, err := blocks.ProcessDeposit(beaconState, deposit, true /*verifySignature*/)
 	require.NoError(t, err, "Process deposit failed")
-	assert.Equal(t, false, isNewValidator, "Expected isNewValidator to be false")
 	assert.Equal(t, uint64(1000+50), newState.Balances()[1], "Expected balance at index 1 to be 1050")
 }
