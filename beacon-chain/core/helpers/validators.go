@@ -525,7 +525,7 @@ func HasCompoundingWithdrawalCredential(v interfaces.WithWithdrawalCredentials) 
 	if v == nil {
 		return false
 	}
-	return isCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
+	return IsCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
 }
 
 // IsCompoundingWithdrawalCredential checks if the credentials are a compounding withdrawal credential.
@@ -675,7 +675,7 @@ func ValidatorMaxEffectiveBalance(val *ethpb.Validator) uint64 {
 	return params.BeaconConfig().MinActivationBalance
 }
 
-// SwitchToCompoundingValidator
+// SwitchToCompoundingValidator used to queue excess active balance based on validator.
 //
 // Spec definition:
 //
@@ -694,11 +694,10 @@ func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorI
 	}
 	if HasETH1WithdrawalCredential(v) {
 		v.WithdrawalCredentials[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
-		return queueExcessActiveBalance(s, idx)
+		return QueueExcessActiveBalance(s, idx)
 	}
 	return nil
 }
-
 
 // QueueExcessActiveBalance queues validators with balances above the min activation balance and adds to pending balance deposit.
 //
