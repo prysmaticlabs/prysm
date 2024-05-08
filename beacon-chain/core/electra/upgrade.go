@@ -196,7 +196,7 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 
 	// Creating a slice to store indices of validators whose activation epoch is set to FAR_FUTURE_EPOCH
 	preActivationIndices := make([]primitives.ValidatorIndex, 0)
-	// get all the validators with compound withdrawal indicies for eip7521
+	// get all the validators with compound withdrawal indices for eip7521
 	compoundWithdrawalIndices := make([]primitives.ValidatorIndex, 0)
 	if err = beaconState.ReadFromEveryValidator(func(index int, val state.ReadOnlyValidator) error {
 		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
