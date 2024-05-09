@@ -7,7 +7,12 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -49,6 +54,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	if !ok {
 		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
 	}
+
 	// Handle different message types across forks.
 	if topic == p2p.BlockSubnetTopicFormat {
 		m, err = extractBlockDataType(fDigest[:], s.cfg.clock)
@@ -56,10 +62,83 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 			return nil, err
 		}
 	}
+	if topic == p2p.AttestationSubnetTopicFormat {
+		m, err = extractAttestationType(fDigest[:], s.cfg.clock)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if topic == p2p.AggregateAndProofSubnetTopicFormat {
+		m, err = extractAggregateAndProofType(fDigest[:], s.cfg.clock)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if err := s.cfg.p2p.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
 	}
 	return m, nil
+}
+
+func extractAttestationType(digest []byte, tor blockchain.TemporalOracle) (ethpb.Att, error) {
+	if len(digest) == 0 {
+		aFunc, ok := types.AttestationMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+		if !ok {
+			return nil, errors.New("no attestation type exists for the genesis fork version")
+		}
+		return aFunc()
+	}
+	if len(digest) != forkDigestLength {
+		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
+	}
+	vRoot := tor.GenesisValidatorsRoot()
+	for k, aFunc := range types.AttestationMap {
+		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
+		if err != nil {
+			return nil, err
+		}
+		if rDigest == bytesutil.ToBytes4(digest) {
+			return aFunc()
+		}
+	}
+	return nil, errors.Wrapf(
+		ErrNoValidDigest,
+		"could not extract attestation data type, saw digest=%#x, genesis=%v, vr=%#x",
+		digest,
+		tor.GenesisTime(),
+		tor.GenesisValidatorsRoot(),
+	)
+}
+
+func extractAggregateAndProofType(digest []byte, tor blockchain.TemporalOracle) (ethpb.SignedAggregateAttAndProof, error) {
+	if len(digest) == 0 {
+		aFunc, ok := types.AggregateAttestationMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+		if !ok {
+			return nil, errors.New("no aggregate attestation type exists for the genesis fork version")
+		}
+		return aFunc()
+	}
+	if len(digest) != forkDigestLength {
+		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
+	}
+	vRoot := tor.GenesisValidatorsRoot()
+	for k, aFunc := range types.AggregateAttestationMap {
+		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
+		if err != nil {
+			return nil, err
+		}
+		if rDigest == bytesutil.ToBytes4(digest) {
+			return aFunc()
+		}
+	}
+	return nil, errors.Wrapf(
+		ErrNoValidDigest,
+		"could not extract aggregate attestation data type, saw digest=%#x, genesis=%v, vr=%#x",
+		digest,
+		tor.GenesisTime(),
+		tor.GenesisValidatorsRoot(),
+	)
 }
 
 // Replaces our fork digest with the formatter.

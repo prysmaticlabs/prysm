@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
@@ -125,7 +126,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.SignedAggregateAttestationAndProof) (pubsub.ValidationResult, error) {
+func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.SignedAggregateAttAndProof) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateAggregatedAtt")
 	defer span.End()
 
@@ -133,52 +134,67 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	// This verification is not in the spec, however we guard against it as it opens us up
 	// to weird edge cases during verification. The attestation technically could be used to add value to a block,
 	// but it's invalid in the spirit of the protocol. Here we choose safety over profit.
-	if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, signed.Message.Aggregate); err != nil {
+	if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, signed.GetAggregateAttestationAndProof().GetAggregateVal()); err != nil {
 		tracing.AnnotateError(span, err)
 		attBadLmdConsistencyCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
 	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-	if !s.cfg.chain.InForkchoice(bytesutil.ToBytes32(signed.Message.Aggregate.Data.BeaconBlockRoot)) {
+	if !s.cfg.chain.InForkchoice(bytesutil.ToBytes32(signed.GetAggregateAttestationAndProof().GetAggregateVal().GetData().BeaconBlockRoot)) {
 		tracing.AnnotateError(span, blockchain.ErrNotDescendantOfFinalized)
 		return pubsub.ValidationIgnore, blockchain.ErrNotDescendantOfFinalized
 	}
 
-	bs, err := s.cfg.chain.AttestationTargetState(ctx, signed.Message.Aggregate.Data.Target)
+	bs, err := s.cfg.chain.AttestationTargetState(ctx, signed.GetAggregateAttestationAndProof().GetAggregateVal().GetData().Target)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
 	}
 
 	// Verify validator index is within the beacon committee.
-	result, err := s.validateIndexInCommittee(ctx, bs, signed.Message.Aggregate, signed.Message.AggregatorIndex)
+	result, err := s.validateIndexInCommittee(
+		ctx,
+		bs,
+		signed.GetAggregateAttestationAndProof().GetAggregateVal(),
+		signed.GetAggregateAttestationAndProof().GetAggregatorIndex(),
+	)
 	if result != pubsub.ValidationAccept {
 		wrappedErr := errors.Wrapf(err, "Could not validate index in committee")
 		tracing.AnnotateError(span, wrappedErr)
 		return result, wrappedErr
 	}
 
-	// Verify selection proof reflects to the right validator.
-	selectionSigSet, err := validateSelectionIndex(ctx, bs, signed.Message.Aggregate.Data, signed.Message.AggregatorIndex, signed.Message.SelectionProof)
-	if err != nil {
-		wrappedErr := errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex)
-		tracing.AnnotateError(span, wrappedErr)
-		attBadSelectionProofCount.Inc()
-		return pubsub.ValidationReject, wrappedErr
+	// TODO extend to Electra
+	var selectionSigSet *bls.SignatureBatch
+	if signed.Version() == version.Phase0 {
+		// Verify selection proof reflects to the right validator.
+		selectionSigSet, err = validateSelectionIndex(
+			ctx,
+			bs,
+			signed.GetAggregateAttestationAndProof().GetAggregateVal().GetData(),
+			signed.GetAggregateAttestationAndProof().GetAggregatorIndex(),
+			signed.GetAggregateAttestationAndProof().GetSelectionProof(),
+		)
+		if err != nil {
+			wrappedErr := errors.Wrapf(err, "Could not validate selection for validator %d", signed.GetAggregateAttestationAndProof().GetAggregatorIndex())
+			tracing.AnnotateError(span, wrappedErr)
+			attBadSelectionProofCount.Inc()
+			return pubsub.ValidationReject, wrappedErr
+		}
 	}
 
 	// Verify selection signature, aggregator signature and attestation signature are valid.
 	// We use batch verify here to save compute.
 	aggregatorSigSet, err := aggSigSet(bs, signed)
 	if err != nil {
-		wrappedErr := errors.Wrapf(err, "Could not get aggregator sig set %d", signed.Message.AggregatorIndex)
+		wrappedErr := errors.Wrapf(err, "Could not get aggregator sig set %d", signed.GetAggregateAttestationAndProof().GetAggregatorIndex())
 		tracing.AnnotateError(span, wrappedErr)
 		return pubsub.ValidationIgnore, wrappedErr
 	}
-	attSigSet, err := blocks.AttestationSignatureBatch(ctx, bs, []ethpb.Att{signed.Message.Aggregate})
+	attSigSet, err := blocks.AttestationSignatureBatch(ctx, bs, []ethpb.Att{signed.GetAggregateAttestationAndProof().GetAggregateVal()})
 	if err != nil {
-		wrappedErr := errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex)
+		wrappedErr := errors.Wrapf(err, "Could not verify aggregator signature %d", signed.GetAggregateAttestationAndProof().GetAggregatorIndex())
 		tracing.AnnotateError(span, wrappedErr)
 		return pubsub.ValidationIgnore, wrappedErr
 	}
@@ -188,10 +204,10 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	return s.validateWithBatchVerifier(ctx, "aggregate", set)
 }
 
-func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.SignedAggregateAttestationAndProof) bool {
-	a := satt.Message
+func (s *Service) validateBlockInAttestation(ctx context.Context, satt ethpb.SignedAggregateAttAndProof) bool {
+	a := satt.GetAggregateAttestationAndProof()
 	// Verify the block being voted and the processed state is in beaconDB. The block should have passed validation if it's in the beaconDB.
-	blockRoot := bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)
+	blockRoot := bytesutil.ToBytes32(a.GetAggregateVal().GetData().BeaconBlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(satt)
@@ -234,9 +250,13 @@ func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnl
 		return result, err
 	}
 
-	committee, result, err := s.validateBitLength(ctx, a, bs)
-	if result != pubsub.ValidationAccept {
-		return result, err
+	// TODO Will this work in Electra?
+	var committee []primitives.ValidatorIndex
+	if a.Version() == version.Phase0 {
+		committee, result, err = s.validateBitLength(ctx, a, bs)
+		if result != pubsub.ValidationAccept {
+			return result, err
+		}
 	}
 
 	if a.GetAggregationBits().Count() == 0 {
@@ -312,8 +332,8 @@ func validateSelectionIndex(
 }
 
 // This returns aggregator signature set which can be used to batch verify.
-func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureBatch, error) {
-	v, err := s.ValidatorAtIndex(a.Message.AggregatorIndex)
+func aggSigSet(s state.ReadOnlyBeaconState, a ethpb.SignedAggregateAttAndProof) (*bls.SignatureBatch, error) {
+	v, err := s.ValidatorAtIndex(a.GetAggregateAttestationAndProof().GetAggregatorIndex())
 	if err != nil {
 		return nil, err
 	}
@@ -322,17 +342,17 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 		return nil, err
 	}
 
-	epoch := slots.ToEpoch(a.Message.Aggregate.Data.Slot)
+	epoch := slots.ToEpoch(a.GetAggregateAttestationAndProof().GetAggregateVal().GetData().Slot)
 	d, err := signing.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}
-	root, err := signing.ComputeSigningRoot(a.Message, d)
+	root, err := signing.ComputeSigningRoot(a.GetAggregateAttestationAndProof(), d)
 	if err != nil {
 		return nil, err
 	}
 	return &bls.SignatureBatch{
-		Signatures:   [][]byte{a.Signature},
+		Signatures:   [][]byte{a.GetSignature()},
 		PublicKeys:   []bls.PublicKey{publicKey},
 		Messages:     [][32]byte{root},
 		Descriptions: []string{signing.AggregatorSignature},

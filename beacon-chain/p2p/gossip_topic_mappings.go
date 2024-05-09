@@ -13,11 +13,11 @@ import (
 // lookup.
 var gossipTopicMappings = map[string]proto.Message{
 	BlockSubnetTopicFormat:                    &ethpb.SignedBeaconBlock{},
-	AttestationSubnetTopicFormat:              &ethpb.Attestation{}, // TODO: how to extend to Electra?
+	AttestationSubnetTopicFormat:              &ethpb.Attestation{},
 	ExitSubnetTopicFormat:                     &ethpb.SignedVoluntaryExit{},
 	ProposerSlashingSubnetTopicFormat:         &ethpb.ProposerSlashing{},
-	AttesterSlashingSubnetTopicFormat:         &ethpb.AttesterSlashing{},                   // TODO: how to extend to Electra?
-	AggregateAndProofSubnetTopicFormat:        &ethpb.SignedAggregateAttestationAndProof{}, // TODO: how to extend to Electra?
+	AttesterSlashingSubnetTopicFormat:         &ethpb.AttesterSlashing{},
+	AggregateAndProofSubnetTopicFormat:        &ethpb.SignedAggregateAttestationAndProof{},
 	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
 	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
 	BlsToExecutionChangeSubnetTopicFormat:     &ethpb.SignedBLSToExecutionChange{},
@@ -27,7 +27,12 @@ var gossipTopicMappings = map[string]proto.Message{
 // GossipTopicMappings is a function to return the assigned data type
 // versioned by epoch.
 func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
-	if topic == BlockSubnetTopicFormat {
+	// TODO: not pretty, would be nicer if the map itself supported multiple types
+	switch topic {
+	case BlockSubnetTopicFormat:
+		if epoch >= params.BeaconConfig().ElectraForkEpoch {
+			return &ethpb.SignedBeaconBlockElectra{}
+		}
 		if epoch >= params.BeaconConfig().DenebForkEpoch {
 			return &ethpb.SignedBeaconBlockDeneb{}
 		}
@@ -40,8 +45,25 @@ func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 		if epoch >= params.BeaconConfig().AltairForkEpoch {
 			return &ethpb.SignedBeaconBlockAltair{}
 		}
+		return gossipTopicMappings[topic]
+	case AttestationSubnetTopicFormat:
+		if epoch >= params.BeaconConfig().ElectraForkEpoch {
+			return &ethpb.AttestationElectra{}
+		}
+		return gossipTopicMappings[topic]
+	case AttesterSlashingSubnetTopicFormat:
+		if epoch >= params.BeaconConfig().ElectraForkEpoch {
+			return &ethpb.AttesterSlashingElectra{}
+		}
+		return gossipTopicMappings[topic]
+	case AggregateAndProofSubnetTopicFormat:
+		if epoch >= params.BeaconConfig().ElectraForkEpoch {
+			return &ethpb.SignedAggregateAttestationAndProofElectra{}
+		}
+		return gossipTopicMappings[topic]
+	default:
+		return gossipTopicMappings[topic]
 	}
-	return gossipTopicMappings[topic]
 }
 
 // AllTopics returns all topics stored in our
