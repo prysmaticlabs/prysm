@@ -205,9 +205,9 @@ func DataColumnSidecars(signedBlock interfaces.SignedBeaconBlock, blobs []ckzg.B
 
 	for i := range blobs {
 		blob := &blobs[i]
-		blobCells, blobProofs, err := ckzg.ComputeCellsAndProofs(blob)
+		blobCells, blobProofs, err := ckzg.ComputeCellsAndKZGProofs(blob)
 		if err != nil {
-			return nil, errors.Wrap(err, "compute cells and proofs")
+			return nil, errors.Wrap(err, "compute cells and KZG proofs")
 		}
 
 		cells = append(cells, blobCells)
