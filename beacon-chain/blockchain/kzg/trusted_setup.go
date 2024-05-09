@@ -38,6 +38,9 @@ func Start() error {
 	for i, g2 := range parsedSetup.SetupG2 {
 		copy(g2s[i*(len(g2)-2)/2:], hexutil.MustDecode(g2))
 	}
+	// Free the current trusted setup before running this method. CKZG
+	// panics if the same setup is run multiple times.
+	CKZG.FreeTrustedSetup()
 	if err = CKZG.LoadTrustedSetup(g1s, g2s); err != nil {
 		panic(err)
 	}
