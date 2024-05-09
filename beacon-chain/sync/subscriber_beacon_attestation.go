@@ -15,16 +15,15 @@ import (
 )
 
 func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, msg proto.Message) error {
-	// TODO: should this be an interface? if yes, how to do this? will casting "just work"?
-	a, ok := msg.(*eth.Attestation)
+	a, ok := msg.(eth.Att)
 	if !ok {
-		return fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
+		return fmt.Errorf("message was not type eth.Att, type=%T", msg)
 	}
 
-	if a.Data == nil {
+	if a.GetData() == nil {
 		return errors.New("nil attestation")
 	}
-	s.setSeenCommitteeIndicesSlot(a.Data.Slot, a.Data.CommitteeIndex, a.AggregationBits)
+	s.setSeenCommitteeIndicesSlot(a.GetData().Slot, a.GetData().CommitteeIndex, a.GetAggregationBits())
 
 	exists, err := s.cfg.attPool.HasAggregatedAttestation(a)
 	if err != nil {

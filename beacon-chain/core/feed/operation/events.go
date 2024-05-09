@@ -43,7 +43,7 @@ type UnAggregatedAttReceivedData struct {
 // AggregatedAttReceivedData is the data sent with AggregatedAttReceived events.
 type AggregatedAttReceivedData struct {
 	// Attestation is the aggregated attestation object.
-	Attestation *ethpb.AggregateAttestationAndProof
+	Attestation ethpb.AggregateAttAndProof
 }
 
 // ExitReceivedData is the data sent with ExitReceived events.

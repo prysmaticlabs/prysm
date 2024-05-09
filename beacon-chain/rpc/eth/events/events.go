@@ -164,8 +164,12 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
 		}
-		att := structs.AttFromConsensus(attData.Attestation.Aggregate)
-		return send(w, flusher, AttestationTopic, att)
+		// TODO: extend to Electra
+		a, ok := attData.Attestation.GetAggregateVal().(*eth.Attestation)
+		if ok {
+			att := structs.AttFromConsensus(a)
+			return send(w, flusher, AttestationTopic, att)
+		}
 	case operation.UnaggregatedAttReceived:
 		if _, ok := requestedTopics[AttestationTopic]; !ok {
 			return nil
@@ -234,6 +238,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, AttesterSlashingTopic)
 		}
+		// TODO: extend to Electra
 		if attesterSlashingData.AttesterSlashing.Version() < version.Electra {
 			slashing, ok := attesterSlashingData.AttesterSlashing.(*eth.AttesterSlashing)
 			if !ok {
@@ -241,7 +246,6 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			}
 			return send(w, flusher, AttesterSlashingTopic, structs.AttesterSlashingFromConsensus(slashing))
 		}
-		// TODO: extend to Electra
 	case operation.ProposerSlashingReceived:
 		if _, ok := requestedTopics[ProposerSlashingTopic]; !ok {
 			return nil

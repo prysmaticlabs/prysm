@@ -8,12 +8,14 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/kv"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -46,13 +48,25 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		return nil, err
 	}
 
-	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(atts))
+	attsByDataRoot := make(map[kv.AttestationId][]ethpb.Att, len(atts))
 	for _, att := range atts {
-		attDataRoot, err := att.GetData().HashTreeRoot()
-		if err != nil {
-			return nil, err
+		var attDataRoot [32]byte
+		if att.Version() == version.Phase0 {
+			attDataRoot, err = att.GetData().HashTreeRoot()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			data := ethpb.CopyAttestationData(att.GetData())
+			data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
+			attDataRoot, err = data.HashTreeRoot()
+			if err != nil {
+				return nil, err
+			}
 		}
-		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+
+		key := kv.NewAttestationId(att, attDataRoot)
+		attsByDataRoot[key] = append(attsByDataRoot[key], att)
 	}
 
 	attsForInclusion := proposerAtts(make([]ethpb.Att, 0))
@@ -182,13 +196,26 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
-	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(a))
+	attsByDataRoot := make(map[kv.AttestationId][]ethpb.Att, len(a))
 	for _, att := range a {
-		attDataRoot, err := att.GetData().HashTreeRoot()
-		if err != nil {
-			continue
+		var attDataRoot [32]byte
+		var err error
+		if att.Version() == version.Phase0 {
+			attDataRoot, err = att.GetData().HashTreeRoot()
+			if err != nil {
+				continue
+			}
+		} else {
+			data := ethpb.CopyAttestationData(att.GetData())
+			data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
+			attDataRoot, err = data.HashTreeRoot()
+			if err != nil {
+				continue
+			}
 		}
-		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+
+		key := kv.NewAttestationId(att, attDataRoot)
+		attsByDataRoot[key] = append(attsByDataRoot[key], att)
 	}
 
 	uniqAtts := make([]ethpb.Att, 0, len(a))

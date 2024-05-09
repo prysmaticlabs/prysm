@@ -8,11 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-type versionAndDataRoot struct {
-	version  int
-	dataRoot [32]byte
-}
-
 // Pool defines the necessary methods for Prysm attestations pool to serve
 // fork choice and validators. In the current design, aggregated attestations
 // are used by proposer actor. Unaggregated attestations are used by

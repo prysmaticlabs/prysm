@@ -35,7 +35,7 @@ func (c *AttCaches) SaveUnaggregatedAttestation(att ethpb.Att) error {
 	att = att.Copy() // Copied.
 	c.unAggregateAttLock.Lock()
 	defer c.unAggregateAttLock.Unlock()
-	c.unAggregatedAtt[versionAndDataRoot{att.Version(), r}] = att
+	c.unAggregatedAtt[NewAttestationId(att, r)] = att
 
 	return nil
 }
@@ -147,7 +147,7 @@ func (c *AttCaches) DeleteUnaggregatedAttestation(att ethpb.Att) error {
 
 	c.unAggregateAttLock.Lock()
 	defer c.unAggregateAttLock.Unlock()
-	delete(c.unAggregatedAtt, versionAndDataRoot{att.Version(), r})
+	delete(c.unAggregatedAtt, NewAttestationId(att, r))
 
 	return nil
 }

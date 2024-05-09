@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
@@ -91,7 +92,10 @@ func IsAggregated(attestation ethpb.Att) bool {
 //
 //	return uint64((committees_since_epoch_start + committee_index) % ATTESTATION_SUBNET_COUNT)
 func ComputeSubnetForAttestation(activeValCount uint64, att ethpb.Att) uint64 {
-	return ComputeSubnetFromCommitteeAndSlot(activeValCount, att.GetData().CommitteeIndex, att.GetData().Slot)
+	if att.Version() == version.Phase0 {
+		return ComputeSubnetFromCommitteeAndSlot(activeValCount, att.GetData().CommitteeIndex, att.GetData().Slot)
+	}
+	return ComputeSubnetFromCommitteeAndSlot(activeValCount, primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0]), att.GetData().Slot)
 }
 
 // ComputeSubnetFromCommitteeAndSlot is a flattened version of ComputeSubnetForAttestation where we only pass in

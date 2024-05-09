@@ -7,11 +7,14 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/kv"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -67,7 +70,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
 	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
 
-	attsByVerAndDataRoot := make(map[versionAndDataRoot][]ethpb.Att, len(atts))
+	attsByVerAndDataRoot := make(map[kv.AttestationId][]ethpb.Att, len(atts))
 
 	// Consolidate attestations by aggregating them by similar data root.
 	for _, att := range atts {
@@ -79,11 +82,21 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 			continue
 		}
 
-		attDataRoot, err := att.GetData().HashTreeRoot()
-		if err != nil {
-			return err
+		var attDataRoot [32]byte
+		if att.Version() == version.Phase0 {
+			attDataRoot, err = att.GetData().HashTreeRoot()
+			if err != nil {
+				return err
+			}
+		} else {
+			data := ethpb.CopyAttestationData(att.GetData())
+			data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
+			attDataRoot, err = data.HashTreeRoot()
+			if err != nil {
+				return err
+			}
 		}
-		key := versionAndDataRoot{att.Version(), attDataRoot}
+		key := kv.NewAttestationId(att, attDataRoot)
 		attsByVerAndDataRoot[key] = append(attsByVerAndDataRoot[key], att)
 	}
 
@@ -120,11 +133,22 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []ethpb.Att) error {
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
 func (s *Service) seen(att ethpb.Att) (bool, error) {
-	attRoot, err := hash.Proto(att.GetData())
-	if err != nil {
-		return false, err
+	var attRoot [32]byte
+	var err error
+	if att.Version() == version.Phase0 {
+		attRoot, err = hash.Proto(att.GetData())
+		if err != nil {
+			return false, err
+		}
+	} else {
+		data := ethpb.CopyAttestationData(att.GetData())
+		data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
+		attRoot, err = hash.Proto(data)
+		if err != nil {
+			return false, err
+		}
 	}
-	key := versionAndDataRoot{att.Version(), attRoot}
+	key := kv.NewAttestationId(att, attRoot)
 	incomingBits := att.GetAggregationBits()
 	savedBits, ok := s.forkChoiceProcessedAtts.Get(key)
 	if ok {

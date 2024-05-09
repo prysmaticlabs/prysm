@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // MaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
@@ -171,11 +172,21 @@ func aggregateAttestations(atts []ethpb.Att, keys []int, coverage *bitfield.Bitl
 		}
 	}
 	// Put aggregated attestation at a position of the first selected attestation.
-	atts[targetIdx] = &ethpb.Attestation{
-		// Append size byte, which will be unnecessary on switch to Bitlist64.
-		AggregationBits: coverage.ToBitlist(),
-		Data:            data,
-		Signature:       aggregateSignatures(signs).Marshal(),
+	if atts[0].Version() == version.Phase0 {
+		atts[targetIdx] = &ethpb.Attestation{
+			// Append size byte, which will be unnecessary on switch to Bitlist64.
+			AggregationBits: coverage.ToBitlist(),
+			Data:            data,
+			Signature:       aggregateSignatures(signs).Marshal(),
+		}
+	} else {
+		atts[targetIdx] = &ethpb.AttestationElectra{
+			// Append size byte, which will be unnecessary on switch to Bitlist64.
+			AggregationBits: coverage.ToBitlist(),
+			CommitteeBits:   atts[0].GetCommitteeBitsVal().Bytes(),
+			Data:            data,
+			Signature:       aggregateSignatures(signs).Marshal(),
+		}
 	}
 	return
 }

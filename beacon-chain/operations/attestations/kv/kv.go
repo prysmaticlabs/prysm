@@ -11,13 +11,28 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 var hashFn = hash.Proto
 
-type versionAndDataRoot struct {
-	version  int
-	dataRoot [32]byte
+type AttestationId struct {
+	version int
+	digest  [32]byte
+}
+
+// TODO doesn't make sense to implement like this
+func NewAttestationId(att ethpb.Att, digest [32]byte) AttestationId {
+	if att.Version() == version.Phase0 {
+		return AttestationId{
+			version: att.Version(),
+			digest:  digest,
+		}
+	}
+	return AttestationId{
+		version: att.Version(),
+		digest:  digest,
+	}
 }
 
 // AttCaches defines the caches used to satisfy attestation pool interface.
@@ -25,13 +40,13 @@ type versionAndDataRoot struct {
 // such are unaggregated, aggregated or attestations within a block.
 type AttCaches struct {
 	aggregatedAttLock  sync.RWMutex
-	aggregatedAtt      map[versionAndDataRoot][]ethpb.Att
+	aggregatedAtt      map[AttestationId][]ethpb.Att
 	unAggregateAttLock sync.RWMutex
-	unAggregatedAtt    map[versionAndDataRoot]ethpb.Att
+	unAggregatedAtt    map[AttestationId]ethpb.Att
 	forkchoiceAttLock  sync.RWMutex
-	forkchoiceAtt      map[versionAndDataRoot]ethpb.Att
+	forkchoiceAtt      map[AttestationId]ethpb.Att
 	blockAttLock       sync.RWMutex
-	blockAtt           map[versionAndDataRoot][]ethpb.Att
+	blockAtt           map[AttestationId][]ethpb.Att
 	seenAtt            *cache.Cache
 }
 
@@ -41,10 +56,10 @@ func NewAttCaches() *AttCaches {
 	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	c := cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second)
 	pool := &AttCaches{
-		unAggregatedAtt: make(map[versionAndDataRoot]ethpb.Att),
-		aggregatedAtt:   make(map[versionAndDataRoot][]ethpb.Att),
-		forkchoiceAtt:   make(map[versionAndDataRoot]ethpb.Att),
-		blockAtt:        make(map[versionAndDataRoot][]ethpb.Att),
+		unAggregatedAtt: make(map[AttestationId]ethpb.Att),
+		aggregatedAtt:   make(map[AttestationId][]ethpb.Att),
+		forkchoiceAtt:   make(map[AttestationId]ethpb.Att),
+		blockAtt:        make(map[AttestationId][]ethpb.Att),
 		seenAtt:         c,
 	}
 

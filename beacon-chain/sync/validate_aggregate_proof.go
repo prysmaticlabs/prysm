@@ -48,18 +48,18 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject, err
 	}
-	m, ok := raw.(*ethpb.SignedAggregateAttestationAndProof)
+	m, ok := raw.(ethpb.SignedAggregateAttAndProof)
 	if !ok {
 		return pubsub.ValidationReject, errors.Errorf("invalid message type: %T", raw)
 	}
-	if m.Message == nil {
+	if m.GetAggregateAttestationAndProof() == nil {
 		return pubsub.ValidationReject, errNilMessage
 	}
-	if err := helpers.ValidateNilAttestation(m.Message.Aggregate); err != nil {
+	if err := helpers.ValidateNilAttestation(m.GetAggregateAttestationAndProof().GetAggregateVal()); err != nil {
 		return pubsub.ValidationReject, err
 	}
 	// Do not process slot 0 aggregates.
-	if m.Message.Aggregate.Data.Slot == 0 {
+	if m.GetAggregateAttestationAndProof().GetAggregateVal().GetData().Slot == 0 {
 		return pubsub.ValidationIgnore, nil
 	}
 
@@ -68,18 +68,18 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	s.cfg.attestationNotifier.OperationFeed().Send(&feed.Event{
 		Type: operation.AggregatedAttReceived,
 		Data: &operation.AggregatedAttReceivedData{
-			Attestation: m.Message,
+			Attestation: m.GetAggregateAttestationAndProof(),
 		},
 	})
 
-	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
+	if err := helpers.ValidateSlotTargetEpoch(m.GetAggregateAttestationAndProof().GetAggregateVal().GetData()); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE and early attestation
 	// processing tolerance.
 	if err := helpers.ValidateAttestationTime(
-		m.Message.Aggregate.Data.Slot,
+		m.GetAggregateAttestationAndProof().GetAggregateVal().GetData().Slot,
 		s.cfg.clock.GenesisTime(),
 		earlyAttestationProcessingTolerance,
 	); err != nil {
@@ -88,19 +88,22 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Verify this is the first aggregate received from the aggregator with index and slot.
-	if s.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
+	if s.hasSeenAggregatorIndexEpoch(
+		m.GetAggregateAttestationAndProof().GetAggregateVal().GetData().Target.Epoch,
+		m.GetAggregateAttestationAndProof().GetAggregatorIndex(),
+	) {
 		return pubsub.ValidationIgnore, nil
 	}
 	// Check that the block being voted on isn't invalid.
-	if s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.BeaconBlockRoot)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Target.Root)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Source.Root)) {
+	if s.hasBadBlock(bytesutil.ToBytes32(m.GetAggregateAttestationAndProof().GetAggregateVal().GetData().BeaconBlockRoot)) ||
+		s.hasBadBlock(bytesutil.ToBytes32(m.GetAggregateAttestationAndProof().GetAggregateVal().GetData().Target.Root)) ||
+		s.hasBadBlock(bytesutil.ToBytes32(m.GetAggregateAttestationAndProof().GetAggregateVal().GetData().Source.Root)) {
 		attBadBlockCount.Inc()
 		return pubsub.ValidationReject, errors.New("bad block referenced in attestation data")
 	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-	seen, err := s.cfg.attPool.HasAggregatedAttestation(m.Message.Aggregate)
+	seen, err := s.cfg.attPool.HasAggregatedAttestation(m.GetAggregateAttestationAndProof().GetAggregateVal())
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
@@ -117,7 +120,10 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return validationRes, err
 	}
 
-	s.setAggregatorIndexEpochSeen(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex)
+	s.setAggregatorIndexEpochSeen(
+		m.GetAggregateAttestationAndProof().GetAggregateVal().GetData().Target.Epoch,
+		m.GetAggregateAttestationAndProof().GetAggregatorIndex(),
+	)
 
 	msg.ValidatorData = m
 
@@ -165,23 +171,27 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.Signed
 		return result, wrappedErr
 	}
 
-	// TODO extend to Electra
-	var selectionSigSet *bls.SignatureBatch
+	var committeeIndex primitives.CommitteeIndex
 	if signed.Version() == version.Phase0 {
-		// Verify selection proof reflects to the right validator.
-		selectionSigSet, err = validateSelectionIndex(
-			ctx,
-			bs,
-			signed.GetAggregateAttestationAndProof().GetAggregateVal().GetData(),
-			signed.GetAggregateAttestationAndProof().GetAggregatorIndex(),
-			signed.GetAggregateAttestationAndProof().GetSelectionProof(),
-		)
-		if err != nil {
-			wrappedErr := errors.Wrapf(err, "Could not validate selection for validator %d", signed.GetAggregateAttestationAndProof().GetAggregatorIndex())
-			tracing.AnnotateError(span, wrappedErr)
-			attBadSelectionProofCount.Inc()
-			return pubsub.ValidationReject, wrappedErr
-		}
+		committeeIndex = signed.GetAggregateAttestationAndProof().GetAggregateVal().GetData().CommitteeIndex
+	} else {
+		committeeIndex = primitives.CommitteeIndex(signed.GetAggregateAttestationAndProof().GetAggregateVal().GetCommitteeBitsVal().BitIndices()[0])
+	}
+
+	// Verify selection proof reflects to the right validator.
+	selectionSigSet, err := validateSelectionIndex(
+		ctx,
+		bs,
+		signed.GetAggregateAttestationAndProof().GetAggregateVal().GetData().Slot,
+		committeeIndex,
+		signed.GetAggregateAttestationAndProof().GetAggregatorIndex(),
+		signed.GetAggregateAttestationAndProof().GetSelectionProof(),
+	)
+	if err != nil {
+		wrappedErr := errors.Wrapf(err, "Could not validate selection for validator %d", signed.GetAggregateAttestationAndProof().GetAggregatorIndex())
+		tracing.AnnotateError(span, wrappedErr)
+		attBadSelectionProofCount.Inc()
+		return pubsub.ValidationReject, wrappedErr
 	}
 
 	// Verify selection signature, aggregator signature and attestation signature are valid.
@@ -250,13 +260,9 @@ func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnl
 		return result, err
 	}
 
-	// TODO Will this work in Electra?
-	var committee []primitives.ValidatorIndex
-	if a.Version() == version.Phase0 {
-		committee, result, err = s.validateBitLength(ctx, a, bs)
-		if result != pubsub.ValidationAccept {
-			return result, err
-		}
+	committee, result, err := s.validateBitLength(ctx, a, bs)
+	if result != pubsub.ValidationAccept {
+		return result, err
 	}
 
 	if a.GetAggregationBits().Count() == 0 {
@@ -282,15 +288,15 @@ func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnl
 func validateSelectionIndex(
 	ctx context.Context,
 	bs state.ReadOnlyBeaconState,
-	data *ethpb.AttestationData,
+	slot primitives.Slot,
+	committeeIndex primitives.CommitteeIndex,
 	validatorIndex primitives.ValidatorIndex,
 	proof []byte,
 ) (*bls.SignatureBatch, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 
-	// TODO: Extend to Electra. We can no longer pass AttestationData to the function because CommitteeIndex is always 0.
-	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, data.Slot, data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, slot, committeeIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -299,11 +305,11 @@ func validateSelectionIndex(
 		return nil, err
 	}
 	if !aggregator {
-		return nil, fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
+		return nil, fmt.Errorf("validator is not an aggregator for slot %d", slot)
 	}
 
 	domain := params.BeaconConfig().DomainSelectionProof
-	epoch := slots.ToEpoch(data.Slot)
+	epoch := slots.ToEpoch(slot)
 
 	v, err := bs.ValidatorAtIndex(validatorIndex)
 	if err != nil {
@@ -318,7 +324,7 @@ func validateSelectionIndex(
 	if err != nil {
 		return nil, err
 	}
-	sszUint := primitives.SSZUint64(data.Slot)
+	sszUint := primitives.SSZUint64(slot)
 	root, err := signing.ComputeSigningRoot(&sszUint, d)
 	if err != nil {
 		return nil, err

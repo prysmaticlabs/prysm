@@ -1,8 +1,10 @@
 package kv
 
 import (
-	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // SaveBlockAttestation saves an block attestation in cache.
@@ -10,11 +12,22 @@ func (c *AttCaches) SaveBlockAttestation(att ethpb.Att) error {
 	if att == nil {
 		return nil
 	}
-	r, err := hashFn(att.GetData())
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash attestation")
+	var r [32]byte
+	var err error
+	if att.Version() == version.Phase0 {
+		r, err = hash.Proto(att.GetData())
+		if err != nil {
+			return err
+		}
+	} else {
+		data := ethpb.CopyAttestationData(att.GetData())
+		data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
+		r, err = hash.Proto(data)
+		if err != nil {
+			return err
+		}
 	}
-	key := versionAndDataRoot{att.Version(), r}
+	key := NewAttestationId(att, r)
 
 	c.blockAttLock.Lock()
 	defer c.blockAttLock.Unlock()
@@ -55,14 +68,25 @@ func (c *AttCaches) DeleteBlockAttestation(att ethpb.Att) error {
 	if att == nil {
 		return nil
 	}
-	r, err := hashFn(att.GetData())
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash attestation")
+	var r [32]byte
+	var err error
+	if att.Version() == version.Phase0 {
+		r, err = hash.Proto(att.GetData())
+		if err != nil {
+			return err
+		}
+	} else {
+		data := ethpb.CopyAttestationData(att.GetData())
+		data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
+		r, err = hash.Proto(data)
+		if err != nil {
+			return err
+		}
 	}
 
 	c.blockAttLock.Lock()
 	defer c.blockAttLock.Unlock()
-	delete(c.blockAtt, versionAndDataRoot{att.Version(), r})
+	delete(c.blockAtt, NewAttestationId(att, r))
 
 	return nil
 }
