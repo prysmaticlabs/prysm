@@ -9,10 +9,12 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestHasVoted_OK(t *testing.T) {
@@ -111,6 +113,54 @@ func TestInitiateValidatorExit_WithdrawalOverflows(t *testing.T) {
 	require.NoError(t, err)
 	_, _, err = InitiateValidatorExit(context.Background(), state, 1, params.BeaconConfig().FarFutureEpoch-1, 1)
 	require.ErrorContains(t, "addition overflows", err)
+}
+
+func TestInitiateValidatorExit_ProperExit_Electra(t *testing.T) {
+	exitedEpoch := primitives.Epoch(100)
+	idx := primitives.ValidatorIndex(3)
+	base := &ethpb.BeaconStateElectra{
+		Slot: slots.UnsafeEpochStart(exitedEpoch + 1),
+		Validators: []*ethpb.Validator{
+			{
+				ExitEpoch:        exitedEpoch,
+				EffectiveBalance: params.BeaconConfig().MinActivationBalance,
+			},
+			{
+				ExitEpoch:        exitedEpoch + 1,
+				EffectiveBalance: params.BeaconConfig().MinActivationBalance,
+			},
+			{
+				ExitEpoch:        exitedEpoch + 2,
+				EffectiveBalance: params.BeaconConfig().MinActivationBalance,
+			},
+			{
+				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance: params.BeaconConfig().MinActivationBalance,
+			},
+		},
+	}
+	state, err := state_native.InitializeFromProtoElectra(base)
+	require.NoError(t, err)
+
+	// Pre-check: Exit balance to consume should be zero.
+	ebtc, err := state.ExitBalanceToConsume()
+	require.NoError(t, err)
+	require.Equal(t, math.Gwei(0), ebtc)
+
+	newState, epoch, err := InitiateValidatorExit(context.Background(), state, idx, 0, 0) // exitQueueEpoch and churn are not used in electra
+	require.NoError(t, err)
+
+	// Expect that the exit epoch is the next available epoch with max seed lookahead.
+	want := helpers.ActivationExitEpoch(exitedEpoch + 1)
+	require.Equal(t, want, epoch)
+	v, err := newState.ValidatorAtIndex(idx)
+	require.NoError(t, err)
+	assert.Equal(t, want, v.ExitEpoch, "Exit epoch was not the highest")
+
+	// Check that the exit balance to consume has been updated on the state.
+	ebtc, err = state.ExitBalanceToConsume()
+	require.NoError(t, err)
+	require.NotEqual(t, math.Gwei(0), ebtc, "Exit balance to consume was not updated")
 }
 
 func TestSlashValidator_OK(t *testing.T) {
