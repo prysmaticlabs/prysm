@@ -287,7 +287,7 @@ func SendDataColumnsByRangeRequest(ctx context.Context, tor blockchain.TemporalO
 	if max > req.Count*fieldparams.NumberOfColumns {
 		max = req.Count * fieldparams.NumberOfColumns
 	}
-	vfuncs := []DataColumnResponseValidation{dataColumnValidatorFromRangeReq(req)}
+	vfuncs := []DataColumnResponseValidation{dataColumnValidatorFromRangeReq(req), dataColumnIndexValidatorFromRangeReq(req)}
 
 	// Read the data column sidecars from the stream.
 	roDataColumns := make([]blocks.RODataColumn, 0, max)
@@ -488,6 +488,20 @@ func dataColumnValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) DataCol
 		requested := columnIndices[sc.ColumnIndex]
 		if !requested {
 			return errors.Wrapf(errUnrequested, "root=%#x index=%d", sc.BlockRoot(), sc.Index)
+		}
+		return nil
+	}
+}
+
+func dataColumnIndexValidatorFromRangeReq(req *pb.DataColumnSidecarsByRangeRequest) DataColumnResponseValidation {
+	columnIds := make(map[uint64]bool)
+	for _, col := range req.Columns {
+		columnIds[col] = true
+	}
+	return func(sc blocks.RODataColumn) error {
+		requested := columnIds[sc.ColumnIndex]
+		if !requested {
+			return errors.Wrapf(errUnrequested, "root=%#x index=%d", sc.BlockRoot(), sc.ColumnIndex)
 		}
 		return nil
 	}
