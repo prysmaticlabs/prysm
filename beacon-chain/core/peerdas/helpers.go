@@ -302,5 +302,5 @@ func VerifyDataColumnSidecarKZGProofs(sc *ethpb.DataColumnSidecar) (bool, error)
 	for _, p := range sc.KzgProof {
 		proofs = append(proofs, cKzg4844.Bytes48(p))
 	}
-	return cKzg4844.VerifyCellProofBatch(ckzgComms, rowIdx, colIdx, cells, proofs)
+	return cKzg4844.VerifyCellKZGProofBatch(ckzgComms, rowIdx, colIdx, cells, proofs)
 }
