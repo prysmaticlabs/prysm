@@ -487,7 +487,7 @@ func dataColumnValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) DataCol
 		}
 		requested := columnIndices[sc.ColumnIndex]
 		if !requested {
-			return errors.Wrapf(errUnrequested, "root=%#x index=%d", sc.BlockRoot(), sc.Index)
+			return errors.Wrapf(errUnrequested, "root=%#x index=%d", sc.BlockRoot(), sc.ColumnIndex)
 		}
 		return nil
 	}
