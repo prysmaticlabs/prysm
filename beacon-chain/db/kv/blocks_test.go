@@ -125,6 +125,47 @@ var blockTests = []struct {
 			return blocks.NewSignedBeaconBlock(b)
 		},
 	},
+	{
+		name: "electra",
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+			b := util.NewBeaconBlockElectra()
+			b.Block.Slot = slot
+			if root != nil {
+				b.Block.ParentRoot = root
+				b.Block.Body.Consolidations = []*ethpb.SignedConsolidation{
+					{
+						Message: &ethpb.Consolidation{
+							SourceIndex: 1,
+							TargetIndex: 2,
+							Epoch:       3,
+						},
+						Signature: make([]byte, 96),
+					},
+				}
+			}
+			return blocks.NewSignedBeaconBlock(b)
+		},
+	},
+	{
+		name: "electra blind",
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+			b := util.NewBlindedBeaconBlockElectra()
+			b.Message.Slot = slot
+			if root != nil {
+				b.Message.ParentRoot = root
+				b.Message.Body.Consolidations = []*ethpb.SignedConsolidation{
+					{
+						Message: &ethpb.Consolidation{
+							SourceIndex: 1,
+							TargetIndex: 2,
+							Epoch:       3,
+						},
+						Signature: make([]byte, 96),
+					},
+				}
+			}
+			return blocks.NewSignedBeaconBlock(b)
+		}},
 }
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
