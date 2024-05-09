@@ -182,7 +182,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 				savedSt, err := db.State(context.Background(), root)
 				require.NoError(t, err)
 
-				require.DeepEqual(t, st.ToProtoUnsafe(), savedSt.ToProtoUnsafe())
+				assert.DeepSSZEqual(t, st.ToProtoUnsafe(), savedSt.ToProtoUnsafe())
 			})
 		}
 
