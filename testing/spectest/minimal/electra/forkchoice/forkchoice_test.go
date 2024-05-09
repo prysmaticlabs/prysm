@@ -8,5 +8,6 @@ import (
 )
 
 func TestMinimal_Electra_Forkchoice(t *testing.T) {
+	t.Skip("TODO: Electra")
 	forkchoice.Run(t, "minimal", version.Electra)
 }

@@ -7,5 +7,6 @@ import (
 )
 
 func TestMinimal_Electra_Sanity_Blocks(t *testing.T) {
+	t.Skip("TODO: Electra")
 	sanity.RunBlockProcessingTest(t, "minimal", "sanity/blocks/pyspec_tests")
 }

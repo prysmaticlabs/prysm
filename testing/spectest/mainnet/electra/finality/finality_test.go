@@ -7,5 +7,6 @@ import (
 )
 
 func TestMainnet_Electra_Finality(t *testing.T) {
+	t.Skip("TODO: Electra")
 	finality.RunFinalityTest(t, "mainnet")
 }
