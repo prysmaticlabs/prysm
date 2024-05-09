@@ -154,10 +154,10 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 	if err := beaconState.SetEth1DepositIndex(beaconState.Eth1DepositIndex() + 1); err != nil {
 		return nil, err
 	}
-	return applyDeposit(beaconState, deposit.Data, verifySignature)
+	return ApplyDeposit(beaconState, deposit.Data, verifySignature)
 }
 
-// applyDeposit
+// ApplyDeposit
 // def apply_deposit(state: BeaconState, pubkey: BLSPubkey, withdrawal_credentials: Bytes32, amount: uint64, signature: BLSSignature) -> None:
 // validator_pubkeys = [v.pubkey for v in state.validators]
 // if pubkey not in validator_pubkeys:
@@ -178,7 +178,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 //	 and is_valid_deposit_signature(pubkey, withdrawal_credentials, amount, signature)
 //	):
 //	 switch_to_compounding_validator(state, index)
-func applyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verifySignature bool) (state.BeaconState, error) {
+func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verifySignature bool) (state.BeaconState, error) {
 	pubKey := data.PublicKey
 	amount := data.Amount
 	withdrawalCredentials := data.WithdrawalCredentials
@@ -225,7 +225,6 @@ func applyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 			}
 		}
 	}
-
 	return beaconState, nil
 }
 
@@ -458,7 +457,7 @@ func processDepositReceipt(beaconState state.BeaconState, receipt *enginev1.Depo
 			return nil, errors.Wrap(err, "could not set deposit receipts start index")
 		}
 	}
-	return applyDeposit(beaconState, &ethpb.Deposit_Data{
+	return ApplyDeposit(beaconState, &ethpb.Deposit_Data{
 		PublicKey:             bytesutil.SafeCopyBytes(receipt.Pubkey),
 		WithdrawalCredentials: bytesutil.SafeCopyBytes(receipt.WithdrawalCredentials),
 		Signature:             bytesutil.SafeCopyBytes(receipt.Signature),

@@ -11,7 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -107,14 +109,35 @@ func (vs *Server) deposits(
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*ethpb.DepositContainer
-	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
-			pendingDeps = append(pendingDeps, dep)
+	if beaconState.Version() < version.Electra {
+		for _, dep := range allPendingContainers {
+			if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
+				pendingDeps = append(pendingDeps, dep)
+			}
+			// Don't try to pack more than the max allowed in a block
+			if uint64(len(pendingDeps)) == params.BeaconConfig().MaxDeposits {
+				break
+			}
 		}
-		// Don't try to pack more than the max allowed in a block
-		if uint64(len(pendingDeps)) == params.BeaconConfig().MaxDeposits {
-			break
+	} else {
+		// Do the new spec stuff here
+		startIndex, err := beaconState.DepositReceiptsStartIndex()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve receipts start index")
 		}
+		eth1DepositIndexLimit := math.Min(canonicalEth1Data.DepositCount, startIndex)
+		if beaconState.Eth1DepositIndex() < eth1DepositIndexLimit {
+			for _, dep := range allPendingContainers {
+				if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
+					pendingDeps = append(pendingDeps, dep)
+				}
+				// Don't try to pack more than the max allowed in a block
+				if uint64(len(pendingDeps)) == params.BeaconConfig().MaxDeposits {
+					break
+				}
+			}
+		}
+		// if we don't set the pendingDeps it can be assumed as count 0
 	}
 
 	for i := range pendingDeps {

@@ -9,6 +9,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	blocks2 "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -393,4 +394,26 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 	newState, err := blocks.ProcessDeposit(beaconState, deposit, true /*verifySignature*/)
 	require.NoError(t, err, "Process deposit failed")
 	assert.Equal(t, uint64(1000+50), newState.Balances()[1], "Expected balance at index 1 to be 1050")
+}
+
+func TestProcessDeposit_Electra(t *testing.T) {
+
+}
+
+func TestAddValidatorToRegistry_Electra(t *testing.T) {
+
+}
+
+func TestGetValidatorFromDeposit_Electra(t *testing.T) {
+
+}
+
+func TestProcessDepositReceipts(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateElectra(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	block := util.NewBeaconBlockElectra()
+	roBlock, err := blocks2.NewBeaconBlock(block)
+	require.NoError(t, err)
+	st, err = blocks.ProcessDepositReceipts(st, roBlock)
+	require.NoError(t, err)
+	// TODO: check the state
 }
