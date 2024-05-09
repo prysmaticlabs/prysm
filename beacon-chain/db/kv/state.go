@@ -249,7 +249,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 				return err
 			}
 		case *ethpb.BeaconStateElectra:
-			if err := s.processEPBS(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
+			if err := s.processElectra(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
 				return err
 			}
 		default:
@@ -349,7 +349,7 @@ func (s *Store) processDeneb(ctx context.Context, pbState *ethpb.BeaconStateDene
 	return nil
 }
 
-func (s *Store) processEPBS(ctx context.Context, pbState *ethpb.BeaconStateElectra, rootHash []byte, bucket, valIdxBkt *bolt.Bucket, validatorKey []byte) error {
+func (s *Store) processElectra(ctx context.Context, pbState *ethpb.BeaconStateElectra, rootHash []byte, bucket, valIdxBkt *bolt.Bucket, validatorKey []byte) error {
 	valEntries := pbState.Validators
 	pbState.Validators = make([]*ethpb.Validator, 0)
 	rawObj, err := pbState.MarshalSSZ()
