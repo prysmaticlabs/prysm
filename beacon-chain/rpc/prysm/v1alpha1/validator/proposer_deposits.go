@@ -142,8 +142,6 @@ func (vs *Server) deposits(
 		}
 	}
 
-	// if we don't set the pendingDeps it can be assumed as count 0
-
 	for i := range pendingDeps {
 		pendingDeps[i].Deposit, err = constructMerkleProof(depositTrie, int(pendingDeps[i].Index), pendingDeps[i].Deposit)
 		if err != nil {
