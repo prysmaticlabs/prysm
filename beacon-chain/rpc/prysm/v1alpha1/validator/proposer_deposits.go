@@ -111,6 +111,18 @@ func (vs *Server) deposits(
 	var pendingDeps []*ethpb.DepositContainer
 	for _, dep := range allPendingContainers {
 		if beaconState.Version() < version.Electra {
+			// min(MAX_DEPOSITS, eth1_data.deposit_count - state.eth1_deposit_index)
+			if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
+				pendingDeps = append(pendingDeps, dep)
+			}
+		} else {
+			// Electra change EIP6110
+			// def get_eth1_pending_deposit_count(state: BeaconState) -> uint64:
+			//    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_receipts_start_index)
+			//    if state.eth1_deposit_index < eth1_deposit_index_limit:
+			//        return min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
+			//    else:
+			//        return uint64(0)
 			receiptsStartIndex, err := beaconState.DepositReceiptsStartIndex()
 			if err != nil {
 				return nil, errors.Wrap(err, "could not retrieve receipts start index")
@@ -121,10 +133,7 @@ func (vs *Server) deposits(
 					pendingDeps = append(pendingDeps, dep)
 				}
 			}
-		} else {
-			if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
-				pendingDeps = append(pendingDeps, dep)
-			}
+			// just don't add any pending deps if it's not state.eth1_deposit_index < eth1_deposit_index_limit
 		}
 
 		// Don't try to pack more than the max allowed in a block
