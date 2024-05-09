@@ -112,14 +112,6 @@ func VerifyAttestationNoVerifySignature(
 
 	var indexedAtt ethpb.IndexedAtt
 
-	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.GetData().Target.Epoch)
-	if err != nil {
-		return err
-	}
-	c := helpers.SlotCommitteeCount(activeValidatorCount)
-
-	var indexedAtt ethpb.IndexedAtt
-
 	if att.Version() < version.Electra {
 		if uint64(att.GetData().CommitteeIndex) >= c {
 			return fmt.Errorf("committee index %d >= committee count %d", att.GetData().CommitteeIndex, c)
@@ -160,7 +152,7 @@ func VerifyAttestationNoVerifySignature(
 		if att.GetAggregationBits().Len() != uint64(participantsCount) {
 			return fmt.Errorf("aggregation bits count %d is different than participant count %d", att.GetAggregationBits().Len(), participantsCount)
 		}
-		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committees)
+		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committees...)
 		if err != nil {
 			return err
 		}
@@ -236,7 +228,7 @@ func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyB
 		}
 	}
 
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees...)
 	if err != nil {
 		return err
 	}

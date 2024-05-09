@@ -213,7 +213,7 @@ func createAttestationSignatureBatch(
 			}
 		}
 
-		ia, err := attestation.ConvertToIndexed(ctx, a, committees)
+		ia, err := attestation.ConvertToIndexed(ctx, a, committees...)
 		if err != nil {
 			return nil, err
 		}

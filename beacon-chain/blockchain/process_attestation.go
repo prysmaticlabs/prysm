@@ -100,7 +100,7 @@ func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time
 		}
 	}
 
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committees)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committees...)
 	if err != nil {
 		return err
 	}

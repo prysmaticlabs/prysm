@@ -86,7 +86,7 @@ func ProcessAttestationNoVerifySignature(
 		}
 	}
 
-	indices, err := attestation.AttestingIndices(att, committees)
+	indices, err := attestation.AttestingIndices(att, committees...)
 	if err != nil {
 		return nil, err
 	}

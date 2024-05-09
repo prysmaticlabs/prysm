@@ -384,7 +384,7 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Re
 				}
 			}
 		}
-		indices, err := attestation.AttestingIndices(a, committees)
+		indices, err := attestation.AttestingIndices(a, committees...)
 		if err != nil {
 			return err
 		}

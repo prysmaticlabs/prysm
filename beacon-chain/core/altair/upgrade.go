@@ -173,7 +173,7 @@ func TranslateParticipation(ctx context.Context, state state.BeaconState, atts [
 				}
 			}
 		}
-		indices, err := attestation.AttestingIndices(att, committees)
+		indices, err := attestation.AttestingIndices(att, committees...)
 		if err != nil {
 			return nil, err
 		}

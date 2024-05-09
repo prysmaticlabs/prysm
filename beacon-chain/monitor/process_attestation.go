@@ -53,7 +53,7 @@ func attestingIndices(ctx context.Context, state state.BeaconState, att ethpb.At
 		}
 	}
 
-	return attestation.AttestingIndices(att, committees)
+	return attestation.AttestingIndices(att, committees...)
 }
 
 // logMessageTimelyFlagsForIndex returns the log message with performance info for the attestation (head, source, target)

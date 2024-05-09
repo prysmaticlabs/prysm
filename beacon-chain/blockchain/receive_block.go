@@ -499,7 +499,7 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 				}
 			}
 		}
-		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees)
+		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees...)
 		if err != nil {
 			log.WithError(err).Error("Could not convert to indexed attestation")
 			return

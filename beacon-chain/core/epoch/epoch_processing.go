@@ -488,7 +488,7 @@ func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconSt
 				}
 			}
 		}
-		attestingIndices, err := attestation.AttestingIndices(att, committees)
+		attestingIndices, err := attestation.AttestingIndices(att, committees...)
 		if err != nil {
 			return nil, err
 		}
