@@ -625,6 +625,7 @@ func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecar
 	}
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
+
 	return prysmsync.SendBlobsByRangeRequest(ctx, f.clock, f.p2p, pid, f.ctxMap, req)
 }
 
