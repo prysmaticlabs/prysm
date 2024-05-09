@@ -112,14 +112,6 @@ func VerifyAttestationNoVerifySignature(
 
 	var indexedAtt ethpb.IndexedAtt
 
-	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.GetData().Target.Epoch)
-	if err != nil {
-		return err
-	}
-	c := helpers.SlotCommitteeCount(activeValidatorCount)
-
-	var indexedAtt ethpb.IndexedAtt
-
 	if att.Version() < version.Electra {
 		if uint64(att.GetData().CommitteeIndex) >= c {
 			return fmt.Errorf("committee index %d >= committee count %d", att.GetData().CommitteeIndex, c)
