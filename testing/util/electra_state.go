@@ -83,6 +83,10 @@ func emptyGenesisStateElectra() (state.BeaconState, error) {
 		Eth1DepositIndex: 0,
 
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderElectra{},
+
+		DepositBalanceToConsume:       math.Gwei(0),
+		ExitBalanceToConsume:          math.Gwei(0),
+		ConsolidationBalanceToConsume: math.Gwei(0),
 	}
 	return state_native.InitializeFromProtoElectra(st)
 }
