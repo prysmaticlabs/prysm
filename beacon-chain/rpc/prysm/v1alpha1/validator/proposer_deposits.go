@@ -109,7 +109,15 @@ func (vs *Server) deposits(
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*ethpb.DepositContainer
+	var receiptsStartIndex uint64
 	if beaconState.Version() < version.Electra {
+		receiptsStartIndex, err = beaconState.DepositReceiptsStartIndex()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve receipts start index")
+		}
+	}
+	eth1DepositIndexLimit := math.Min(canonicalEth1Data.DepositCount, receiptsStartIndex)
+	if beaconState.Eth1DepositIndex() < eth1DepositIndexLimit {
 		for _, dep := range allPendingContainers {
 			if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 				pendingDeps = append(pendingDeps, dep)
@@ -119,26 +127,8 @@ func (vs *Server) deposits(
 				break
 			}
 		}
-	} else {
-		// Do the new spec stuff here
-		startIndex, err := beaconState.DepositReceiptsStartIndex()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve receipts start index")
-		}
-		eth1DepositIndexLimit := math.Min(canonicalEth1Data.DepositCount, startIndex)
-		if beaconState.Eth1DepositIndex() < eth1DepositIndexLimit {
-			for _, dep := range allPendingContainers {
-				if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
-					pendingDeps = append(pendingDeps, dep)
-				}
-				// Don't try to pack more than the max allowed in a block
-				if uint64(len(pendingDeps)) == params.BeaconConfig().MaxDeposits {
-					break
-				}
-			}
-		}
-		// if we don't set the pendingDeps it can be assumed as count 0
 	}
+	// if we don't set the pendingDeps it can be assumed as count 0
 
 	for i := range pendingDeps {
 		pendingDeps[i].Deposit, err = constructMerkleProof(depositTrie, int(pendingDeps[i].Index), pendingDeps[i].Deposit)
