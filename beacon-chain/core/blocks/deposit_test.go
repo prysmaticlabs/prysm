@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -396,24 +397,110 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 	assert.Equal(t, uint64(1000+50), newState.Balances()[1], "Expected balance at index 1 to be 1050")
 }
 
-func TestProcessDeposit_Electra(t *testing.T) {
-
+func TestProcessDeposit_Electra_Simple(t *testing.T) {
+	deps, _, err := util.DeterministicDepositsAndKeysSameValidator(3)
+	require.NoError(t, err)
+	eth1Data, err := util.DeterministicEth1Data(len(deps))
+	require.NoError(t, err)
+	registry := []*ethpb.Validator{
+		{
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
+		},
+	}
+	balances := []uint64{0}
+	st, err := state_native.InitializeFromProtoElectra(&ethpb.BeaconStateElectra{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().ElectraForkVersion,
+			CurrentVersion:  params.BeaconConfig().ElectraForkVersion,
+		},
+	})
+	require.NoError(t, err)
+	pdSt, err := blocks.ProcessDeposits(context.Background(), st, deps)
+	require.NoError(t, err)
+	pbd, err := pdSt.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MinActivationBalance, pbd[2].Amount)
+	require.Equal(t, 3, len(pbd))
 }
 
-func TestAddValidatorToRegistry_Electra(t *testing.T) {
-
-}
-
-func TestGetValidatorFromDeposit_Electra(t *testing.T) {
-
+func TestApplyDeposit_Electra_SwitchToCompoundingValidator(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateElectra(t, 3)
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	withdrawalCred := make([]byte, 32)
+	withdrawalCred[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
+	depositData := &ethpb.Deposit_Data{
+		PublicKey:             sk.PublicKey().Marshal(),
+		Amount:                1000,
+		WithdrawalCredentials: withdrawalCred,
+		Signature:             make([]byte, fieldparams.BLSSignatureLength),
+	}
+	vals := st.Validators()
+	vals[0].PublicKey = sk.PublicKey().Marshal()
+	vals[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	require.NoError(t, st.SetValidators(vals))
+	bals := st.Balances()
+	bals[0] = params.BeaconConfig().MinActivationBalance + 2000
+	require.NoError(t, st.SetBalances(bals))
+	sr, err := signing.ComputeSigningRoot(depositData, bytesutil.ToBytes(3, 32))
+	require.NoError(t, err)
+	sig := sk.Sign(sr[:])
+	depositData.Signature = sig.Marshal()
+	adSt, err := blocks.ApplyDeposit(st, depositData, false)
+	require.NoError(t, err)
+	pbd, err := adSt.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 5, len(pbd))
+	require.Equal(t, uint64(1000), pbd[3].Amount)
+	require.Equal(t, uint64(2000), pbd[4].Amount)
 }
 
 func TestProcessDepositReceipts(t *testing.T) {
-	st, _ := util.DeterministicGenesisStateElectra(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, _ := util.DeterministicGenesisStateElectra(t, 1)
 	block := util.NewBeaconBlockElectra()
-	roBlock, err := blocks2.NewBeaconBlock(block)
+	sk, err := bls.RandKey()
 	require.NoError(t, err)
-	st, err = blocks.ProcessDepositReceipts(st, roBlock)
+	vals := st.Validators()
+	vals[0].PublicKey = sk.PublicKey().Marshal()
+	vals[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	require.NoError(t, st.SetValidators(vals))
+	bals := st.Balances()
+	bals[0] = params.BeaconConfig().MinActivationBalance + 2000
+	require.NoError(t, st.SetBalances(bals))
+	require.NoError(t, st.SetPendingBalanceDeposits(make([]*ethpb.PendingBalanceDeposit, 0))) // reset pbd as the determinitstic state populates this already
+	withdrawalCred := make([]byte, 32)
+	withdrawalCred[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
+	depositMessage := &ethpb.DepositMessage{
+		PublicKey:             sk.PublicKey().Marshal(),
+		Amount:                1000,
+		WithdrawalCredentials: withdrawalCred,
+	}
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	require.NoError(t, err)
-	// TODO: check the state
+	sr, err := signing.ComputeSigningRoot(depositMessage, domain)
+	require.NoError(t, err)
+	sig := sk.Sign(sr[:])
+	block.Block.Body.ExecutionPayload.DepositReceipts = []*enginev1.DepositReceipt{
+		{
+			Pubkey:                depositMessage.PublicKey,
+			Index:                 0,
+			WithdrawalCredentials: depositMessage.WithdrawalCredentials,
+			Amount:                depositMessage.Amount,
+			Signature:             sig.Marshal(),
+		},
+	}
+	roBlock, err := blocks2.NewSignedBeaconBlock(block)
+	require.NoError(t, err)
+	st, err = blocks.ProcessDepositReceipts(st, roBlock.Block())
+	require.NoError(t, err)
+
+	pbd, err := st.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 2, len(pbd))
+	require.Equal(t, uint64(1000), pbd[0].Amount)
+	require.Equal(t, uint64(2000), pbd[1].Amount)
 }

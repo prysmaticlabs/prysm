@@ -459,6 +459,7 @@ func processDepositReceipt(beaconState state.BeaconState, receipt *enginev1.Depo
 	}
 	return ApplyDeposit(beaconState, &ethpb.Deposit_Data{
 		PublicKey:             bytesutil.SafeCopyBytes(receipt.Pubkey),
+		Amount:                receipt.Amount,
 		WithdrawalCredentials: bytesutil.SafeCopyBytes(receipt.WithdrawalCredentials),
 		Signature:             bytesutil.SafeCopyBytes(receipt.Signature),
 	}, true) // individually verify signatures instead of batch verify
