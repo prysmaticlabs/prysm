@@ -16,6 +16,47 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
+const (
+	BlsPubKeyLen = 48
+	BlsSignLen   = 96
+)
+
+// BlsPubkey represents a 48 byte BLS public key.
+type BlsPubkey [BlsPubKeyLen]byte
+
+// MarshalText returns the hex representation of a.
+func (v BlsPubkey) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(v[:]).MarshalText()
+}
+
+// UnmarshalText parses a hash in hex syntax.
+func (v *BlsPubkey) UnmarshalText(input []byte) error {
+	return hexutil.UnmarshalFixedText("BlsPubkey", input, v[:])
+}
+
+// Bytes is a convenient way to get the byte slice for a BlsPubkey.
+func (v BlsPubkey) Bytes() []byte {
+	return v[:]
+}
+
+// BlsSig represents a 96 byte BLS signature.
+type BlsSig [BlsSignLen]byte
+
+// BlsSig returns the hex representation of a BlsSig.
+func (v BlsSig) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(v[:]).MarshalText()
+}
+
+// UnmarshalText parses a BlsSig in hex encoding.
+func (v *BlsSig) UnmarshalText(input []byte) error {
+	return hexutil.UnmarshalFixedText("BlsSig", input, v[:])
+}
+
+// Bytes is a convenient way to get the byte slice for a BlsSig.
+func (v BlsSig) Bytes() []byte {
+	return v[:]
+}
+
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
 // client with proper JSON Marshal and Unmarshal methods to hex.
 type PayloadIDBytes [8]byte
@@ -254,6 +295,69 @@ type GetPayloadV3ResponseJson struct {
 	ShouldOverrideBuilder bool                       `json:"shouldOverrideBuilder"`
 }
 
+type GetPayloadV4ResponseJson struct {
+	ExecutionPayload      *ExecutionPayloadElectraJSON `json:"executionPayload"`
+	BlockValue            string                       `json:"blockValue"`
+	BlobsBundle           *BlobBundleJSON              `json:"blobsBundle"`
+	ShouldOverrideBuilder bool                         `json:"shouldOverrideBuilder"`
+}
+
+func (j *GetPayloadV4ResponseJson) Validate() error {
+	if j.ExecutionPayload == nil {
+		return errors.New("nil ExecutionPayload")
+	}
+	return j.ExecutionPayload.Validate()
+}
+
+func (j *ExecutionPayloadElectraJSON) Validate() error {
+	if j.ParentHash == nil {
+		return errors.New("missing required field 'parentHash' for ExecutionPayload")
+	}
+	if j.FeeRecipient == nil {
+		return errors.New("missing required field 'feeRecipient' for ExecutionPayload")
+	}
+	if j.StateRoot == nil {
+		return errors.New("missing required field 'stateRoot' for ExecutionPayload")
+	}
+	if j.ReceiptsRoot == nil {
+		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
+	}
+	if j.LogsBloom == nil {
+		return errors.New("missing required field 'logsBloom' for ExecutionPayload")
+	}
+	if j.PrevRandao == nil {
+		return errors.New("missing required field 'prevRandao' for ExecutionPayload")
+	}
+	if j.ExtraData == nil {
+		return errors.New("missing required field 'extraData' for ExecutionPayload")
+	}
+	if j.BlockHash == nil {
+		return errors.New("missing required field 'blockHash' for ExecutionPayload")
+	}
+	if j.Transactions == nil {
+		return errors.New("missing required field 'transactions' for ExecutionPayload")
+	}
+	if j.BlockNumber == nil {
+		return errors.New("missing required field 'blockNumber' for ExecutionPayload")
+	}
+	if j.Timestamp == nil {
+		return errors.New("missing required field 'timestamp' for ExecutionPayload")
+	}
+	if j.GasUsed == nil {
+		return errors.New("missing required field 'gasUsed' for ExecutionPayload")
+	}
+	if j.GasLimit == nil {
+		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
+	}
+	if j.BlobGasUsed == nil {
+		return errors.New("missing required field 'blobGasUsed' for ExecutionPayload")
+	}
+	if j.ExcessBlobGas == nil {
+		return errors.New("missing required field 'excessBlobGas' for ExecutionPayload")
+	}
+	return nil
+}
+
 type ExecutionPayloadDenebJSON struct {
 	ParentHash    *common.Hash    `json:"parentHash"`
 	FeeRecipient  *common.Address `json:"feeRecipient"`
@@ -272,6 +376,51 @@ type ExecutionPayloadDenebJSON struct {
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 	Withdrawals   []*Withdrawal   `json:"withdrawals"`
+}
+
+type ExecutionPayloadElectraJSON struct {
+	ParentHash         *common.Hash          `json:"parentHash"`
+	FeeRecipient       *common.Address       `json:"feeRecipient"`
+	StateRoot          *common.Hash          `json:"stateRoot"`
+	ReceiptsRoot       *common.Hash          `json:"receiptsRoot"`
+	LogsBloom          *hexutil.Bytes        `json:"logsBloom"`
+	PrevRandao         *common.Hash          `json:"prevRandao"`
+	BlockNumber        *hexutil.Uint64       `json:"blockNumber"`
+	GasLimit           *hexutil.Uint64       `json:"gasLimit"`
+	GasUsed            *hexutil.Uint64       `json:"gasUsed"`
+	Timestamp          *hexutil.Uint64       `json:"timestamp"`
+	ExtraData          hexutil.Bytes         `json:"extraData"`
+	BaseFeePerGas      string                `json:"baseFeePerGas"`
+	BlobGasUsed        *hexutil.Uint64       `json:"blobGasUsed"`
+	ExcessBlobGas      *hexutil.Uint64       `json:"excessBlobGas"`
+	BlockHash          *common.Hash          `json:"blockHash"`
+	Transactions       []hexutil.Bytes       `json:"transactions"`
+	Withdrawals        []*Withdrawal         `json:"withdrawals"`
+	WithdrawalRequests []WithdrawalRequestV1 `json:"withdrawalRequests"`
+	DepositRequests    []DepositRequestV1    `json:"depositRequests"`
+}
+
+// WithdrawalRequestV1 represents an execution engine WithdrawalRequestV1 value
+// https://github.com/ethereum/execution-apis/blob/main/src/engine/prague.md#withdrawalrequestv1
+type WithdrawalRequestV1 struct {
+	SourceAddress   *common.Address `json:"sourceAddress"`
+	ValidatorPubkey *BlsPubkey      `json:"validatorPublicKey"`
+	Amount          *hexutil.Uint64 `json:"amount"`
+}
+
+// DepositRequestV1 represents an execution engine DepositRequestV1 value
+// https://github.com/ethereum/execution-apis/blob/main/src/engine/prague.md#depositrequestv1
+type DepositRequestV1 struct {
+	// pubkey: DATA, 48 Bytes
+	PubKey *BlsPubkey `json:"pubkey"`
+	// withdrawalCredentials: DATA, 32 Bytes
+	WithdrawalCredentials *common.Hash `json:"withdrawalCredentials"`
+	// amount: QUANTITY, 64 Bits
+	Amount *hexutil.Uint64 `json:"amount"`
+	// signature: DATA, 96 Bytes
+	Signature *BlsSig `json:"signature"`
+	// index: QUANTITY, 64 Bits
+	Index *hexutil.Uint64 `json:"index"`
 }
 
 // MarshalJSON --
@@ -744,6 +893,183 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 		BlobGasUsed:   &blobGasUsed,
 		ExcessBlobGas: &excessBlobGas,
 	})
+}
+
+func (e *ExecutionPayloadElectra) MarshalJSON() ([]byte, error) {
+	transactions := make([]hexutil.Bytes, len(e.Transactions))
+	for i, tx := range e.Transactions {
+		transactions[i] = tx
+	}
+	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
+	baseFeeHex := hexutil.EncodeBig(baseFee)
+	pHash := common.BytesToHash(e.ParentHash)
+	sRoot := common.BytesToHash(e.StateRoot)
+	recRoot := common.BytesToHash(e.ReceiptsRoot)
+	prevRan := common.BytesToHash(e.PrevRandao)
+	bHash := common.BytesToHash(e.BlockHash)
+	blockNum := hexutil.Uint64(e.BlockNumber)
+	gasLimit := hexutil.Uint64(e.GasLimit)
+	gasUsed := hexutil.Uint64(e.GasUsed)
+	timeStamp := hexutil.Uint64(e.Timestamp)
+	recipient := common.BytesToAddress(e.FeeRecipient)
+	logsBloom := hexutil.Bytes(e.LogsBloom)
+	withdrawals := e.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
+	}
+	blobGasUsed := hexutil.Uint64(e.BlobGasUsed)
+	excessBlobGas := hexutil.Uint64(e.ExcessBlobGas)
+
+	return json.Marshal(ExecutionPayloadElectraJSON{
+		ParentHash:    &pHash,
+		FeeRecipient:  &recipient,
+		StateRoot:     &sRoot,
+		ReceiptsRoot:  &recRoot,
+		LogsBloom:     &logsBloom,
+		PrevRandao:    &prevRan,
+		BlockNumber:   &blockNum,
+		GasLimit:      &gasLimit,
+		GasUsed:       &gasUsed,
+		Timestamp:     &timeStamp,
+		ExtraData:     e.ExtraData,
+		BaseFeePerGas: baseFeeHex,
+		BlockHash:     &bHash,
+		Transactions:  transactions,
+		Withdrawals:   withdrawals,
+		BlobGasUsed:   &blobGasUsed,
+		ExcessBlobGas: &excessBlobGas,
+	})
+}
+
+func (j *ExecutionPayloadElectraJSON) ElectraDepositReceipts() []*DepositReceipt {
+	rcpt := make([]*DepositReceipt, 0, len(j.DepositRequests))
+	if len(j.DepositRequests) == 0 {
+		return rcpt
+	}
+
+	for i := range j.DepositRequests {
+		req := j.DepositRequests[i]
+		rcpt = append(rcpt, &DepositReceipt{
+			Pubkey:                req.PubKey.Bytes(),
+			WithdrawalCredentials: req.WithdrawalCredentials.Bytes(),
+			Amount:                uint64(*req.Amount),
+			Signature:             req.Signature.Bytes(),
+			Index:                 uint64(*req.Index),
+		})
+	}
+
+	return rcpt
+}
+
+func (j *ExecutionPayloadElectraJSON) ElectraExecutionLayerWithdrawalRequests() []*ExecutionLayerWithdrawalRequest {
+	reqs := make([]*ExecutionLayerWithdrawalRequest, 0, len(j.WithdrawalRequests))
+	if len(j.WithdrawalRequests) == 0 {
+		return reqs
+	}
+
+	for i := range j.WithdrawalRequests {
+		req := j.WithdrawalRequests[i]
+		reqs = append(reqs, &ExecutionLayerWithdrawalRequest{
+			SourceAddress:   req.SourceAddress.Bytes(),
+			ValidatorPubkey: req.ValidatorPubkey.Bytes(),
+			Amount:          uint64(*req.Amount),
+		})
+	}
+
+	return reqs
+}
+
+func (j *ExecutionPayloadElectraJSON) ElectraPayload() (*ExecutionPayloadElectra, error) {
+	baseFeeBigEnd, err := hexutil.DecodeBig(j.BaseFeePerGas)
+	if err != nil {
+		return nil, err
+	}
+	baseFee := bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFeeBigEnd.Bytes()), fieldparams.RootLength)
+
+	transactions := make([][]byte, len(j.Transactions))
+	for i, tx := range j.Transactions {
+		transactions[i] = tx
+	}
+	if j.Withdrawals == nil {
+		j.Withdrawals = make([]*Withdrawal, 0)
+	}
+	return &ExecutionPayloadElectra{
+		ParentHash:         j.ParentHash.Bytes(),
+		FeeRecipient:       j.FeeRecipient.Bytes(),
+		StateRoot:          j.StateRoot.Bytes(),
+		ReceiptsRoot:       j.ReceiptsRoot.Bytes(),
+		LogsBloom:          *j.LogsBloom,
+		PrevRandao:         j.PrevRandao.Bytes(),
+		BlockNumber:        uint64(*j.BlockNumber),
+		GasLimit:           uint64(*j.GasLimit),
+		GasUsed:            uint64(*j.GasUsed),
+		Timestamp:          uint64(*j.Timestamp),
+		ExtraData:          j.ExtraData,
+		BaseFeePerGas:      baseFee,
+		BlockHash:          j.BlockHash.Bytes(),
+		Transactions:       transactions,
+		Withdrawals:        j.Withdrawals,
+		BlobGasUsed:        uint64(*j.BlobGasUsed),
+		ExcessBlobGas:      uint64(*j.ExcessBlobGas),
+		DepositReceipts:    j.ElectraDepositReceipts(),
+		WithdrawalRequests: j.ElectraExecutionLayerWithdrawalRequests(),
+	}, nil
+}
+
+func (j *BlobBundleJSON) ElectraBlobsBundle() *BlobsBundle {
+	if j == nil {
+		return nil
+	}
+
+	commitments := make([][]byte, len(j.Commitments))
+	for i, kzg := range j.Commitments {
+		k := kzg
+		commitments[i] = bytesutil.PadTo(k[:], fieldparams.BLSPubkeyLength)
+	}
+
+	proofs := make([][]byte, len(j.Proofs))
+	for i, proof := range j.Proofs {
+		p := proof
+		proofs[i] = bytesutil.PadTo(p[:], fieldparams.BLSPubkeyLength)
+	}
+
+	blobs := make([][]byte, len(j.Blobs))
+	for i, blob := range j.Blobs {
+		b := make([]byte, fieldparams.BlobLength)
+		copy(b, blob)
+		blobs[i] = b
+	}
+
+	return &BlobsBundle{
+		KzgCommitments: commitments,
+		Proofs:         proofs,
+		Blobs:          blobs,
+	}
+}
+
+func (e *ExecutionPayloadElectraWithValueAndBlobsBundle) UnmarshalJSON(enc []byte) error {
+	dec := &GetPayloadV4ResponseJson{}
+	if err := json.Unmarshal(enc, dec); err != nil {
+		return err
+	}
+	if err := dec.Validate(); err != nil {
+		return err
+	}
+
+	*e = ExecutionPayloadElectraWithValueAndBlobsBundle{Payload: &ExecutionPayloadElectra{}}
+	e.ShouldOverrideBuilder = dec.ShouldOverrideBuilder
+	blockValueBigEnd, err := hexutil.DecodeBig(dec.BlockValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to parse blockValue=%s", dec.BlockValue)
+	}
+	e.Value = bytesutil.PadTo(bytesutil.ReverseByteOrder(blockValueBigEnd.Bytes()), fieldparams.RootLength)
+	e.Payload, err = dec.ExecutionPayload.ElectraPayload()
+	if err != nil {
+		return err
+	}
+	e.BlobsBundle = dec.BlobsBundle.ElectraBlobsBundle()
+
+	return nil
 }
 
 func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte) error {
