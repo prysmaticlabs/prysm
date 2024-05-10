@@ -289,13 +289,54 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		bgu := hexutil.Uint64(5)
 		ebg := hexutil.Uint64(6)
 
+		withdrawalReq := []*enginev1.ExecutionLayerWithdrawalRequest{
+			{
+				SourceAddress:   bytesutil.PadTo([]byte("sourceAddress-1"), 20),
+				ValidatorPubkey: bytesutil.PadTo([]byte("pubKey-1"), 48),
+				Amount:          1,
+			},
+			{
+				SourceAddress:   bytesutil.PadTo([]byte("sourceAddress-2"), 20),
+				ValidatorPubkey: bytesutil.PadTo([]byte("pubKey-2"), 48),
+				Amount:          2,
+			},
+			{
+				SourceAddress:   bytesutil.PadTo([]byte("sourceAddress-3"), 20),
+				ValidatorPubkey: bytesutil.PadTo([]byte("pubKey-3"), 48),
+				Amount:          3,
+			},
+		}
+		depositReq := []*enginev1.DepositReceipt{
+			{
+				Pubkey:                bytesutil.PadTo([]byte("pubKey-1"), 48),
+				WithdrawalCredentials: bytesutil.PadTo([]byte("creds-1"), 32),
+				Amount:                1,
+				Signature:             bytesutil.PadTo([]byte("sig-1"), 96),
+				Index:                 11,
+			},
+			{
+				Pubkey:                bytesutil.PadTo([]byte("pubKey-2"), 48),
+				WithdrawalCredentials: bytesutil.PadTo([]byte("creds-2"), 32),
+				Amount:                2,
+				Signature:             bytesutil.PadTo([]byte("sig-2"), 96),
+				Index:                 12,
+			},
+			{
+				Pubkey:                bytesutil.PadTo([]byte("pubKey-3"), 48),
+				WithdrawalCredentials: bytesutil.PadTo([]byte("creds-3"), 32),
+				Amount:                3,
+				Signature:             bytesutil.PadTo([]byte("sig-3"), 96),
+				Index:                 13,
+			},
+		}
+
 		resp := &enginev1.GetPayloadV4ResponseJson{
 			BlobsBundle: &enginev1.BlobBundleJSON{
 				Commitments: []hexutil.Bytes{{'a'}, {'b'}, {'c'}, {'d'}},
 				Proofs:      []hexutil.Bytes{{'e'}, {'f'}, {'g'}, {'h'}},
 				Blobs:       []hexutil.Bytes{{'i'}, {'j'}, {'k'}, {'l'}},
 			},
-			BlockValue: fmt.Sprint("0x123"),
+			BlockValue: "0x123",
 			ExecutionPayload: &enginev1.ExecutionPayloadElectraJSON{
 				ParentHash:    &parentHash,
 				FeeRecipient:  &feeRecipient,
@@ -317,8 +358,10 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 					Address:        bytesutil.PadTo([]byte("address"), 20),
 					Amount:         1,
 				}},
-				BlobGasUsed:   &bgu,
-				ExcessBlobGas: &ebg,
+				BlobGasUsed:        &bgu,
+				ExcessBlobGas:      &ebg,
+				WithdrawalRequests: enginev1.WithdrawalRequestProtoToJson(withdrawalReq),
+				DepositRequests:    enginev1.DepositRequestProtoToJson(depositReq),
 			},
 		}
 		enc, err := json.Marshal(resp)
@@ -363,6 +406,14 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			bytesutil.PadTo([]byte{'j'}, 131072),
 			bytesutil.PadTo([]byte{'k'}, 131072),
 			bytesutil.PadTo([]byte{'l'}, 131072)}, pb.BlobsBundle.Blobs)
+		require.Equal(t, len(pb.Payload.WithdrawalRequests), len(withdrawalReq))
+		for i := range pb.Payload.WithdrawalRequests {
+			require.DeepEqual(t, pb.Payload.WithdrawalRequests[i], withdrawalReq[i])
+		}
+		require.Equal(t, len(pb.Payload.DepositReceipts), len(depositReq))
+		for i := range pb.Payload.DepositReceipts {
+			require.DeepEqual(t, pb.Payload.DepositReceipts[i], depositReq[i])
+		}
 	})
 	t.Run("execution block", func(t *testing.T) {
 		baseFeePerGas := big.NewInt(1770307273)
