@@ -921,23 +921,25 @@ func (e *ExecutionPayloadElectra) MarshalJSON() ([]byte, error) {
 	excessBlobGas := hexutil.Uint64(e.ExcessBlobGas)
 
 	return json.Marshal(ExecutionPayloadElectraJSON{
-		ParentHash:    &pHash,
-		FeeRecipient:  &recipient,
-		StateRoot:     &sRoot,
-		ReceiptsRoot:  &recRoot,
-		LogsBloom:     &logsBloom,
-		PrevRandao:    &prevRan,
-		BlockNumber:   &blockNum,
-		GasLimit:      &gasLimit,
-		GasUsed:       &gasUsed,
-		Timestamp:     &timeStamp,
-		ExtraData:     e.ExtraData,
-		BaseFeePerGas: baseFeeHex,
-		BlockHash:     &bHash,
-		Transactions:  transactions,
-		Withdrawals:   withdrawals,
-		BlobGasUsed:   &blobGasUsed,
-		ExcessBlobGas: &excessBlobGas,
+		ParentHash:         &pHash,
+		FeeRecipient:       &recipient,
+		StateRoot:          &sRoot,
+		ReceiptsRoot:       &recRoot,
+		LogsBloom:          &logsBloom,
+		PrevRandao:         &prevRan,
+		BlockNumber:        &blockNum,
+		GasLimit:           &gasLimit,
+		GasUsed:            &gasUsed,
+		Timestamp:          &timeStamp,
+		ExtraData:          e.ExtraData,
+		BaseFeePerGas:      baseFeeHex,
+		BlockHash:          &bHash,
+		Transactions:       transactions,
+		Withdrawals:        withdrawals,
+		BlobGasUsed:        &blobGasUsed,
+		ExcessBlobGas:      &excessBlobGas,
+		WithdrawalRequests: WithdrawalRequestProtoToJson(e.WithdrawalRequests),
+		DepositRequests:    DepositRequestProtoToJson(e.DepositReceipts),
 	})
 }
 
@@ -961,6 +963,28 @@ func (j *ExecutionPayloadElectraJSON) ElectraDepositReceipts() []*DepositReceipt
 	return rcpt
 }
 
+func DepositRequestProtoToJson(reqs []*DepositReceipt) []DepositRequestV1 {
+	j := make([]DepositRequestV1, 0, len(reqs))
+	for i := range reqs {
+		r := reqs[i]
+		pk := BlsPubkey{}
+		copy(pk[:], r.Pubkey)
+		creds := common.BytesToHash(r.WithdrawalCredentials)
+		amt := hexutil.Uint64(r.Amount)
+		sig := BlsSig{}
+		copy(sig[:], r.Signature)
+		idx := hexutil.Uint64(r.Index)
+		j = append(j, DepositRequestV1{
+			PubKey:                &pk,
+			WithdrawalCredentials: &creds,
+			Amount:                &amt,
+			Signature:             &sig,
+			Index:                 &idx,
+		})
+	}
+	return j
+}
+
 func (j *ExecutionPayloadElectraJSON) ElectraExecutionLayerWithdrawalRequests() []*ExecutionLayerWithdrawalRequest {
 	reqs := make([]*ExecutionLayerWithdrawalRequest, 0, len(j.WithdrawalRequests))
 	if len(j.WithdrawalRequests) == 0 {
@@ -977,6 +1001,23 @@ func (j *ExecutionPayloadElectraJSON) ElectraExecutionLayerWithdrawalRequests() 
 	}
 
 	return reqs
+}
+
+func WithdrawalRequestProtoToJson(reqs []*ExecutionLayerWithdrawalRequest) []WithdrawalRequestV1 {
+	j := make([]WithdrawalRequestV1, 0, len(reqs))
+	for i := range reqs {
+		r := reqs[i]
+		pk := BlsPubkey{}
+		amt := hexutil.Uint64(r.Amount)
+		copy(pk[:], r.ValidatorPubkey)
+		address := common.BytesToAddress(r.SourceAddress)
+		j = append(j, WithdrawalRequestV1{
+			SourceAddress:   &address,
+			ValidatorPubkey: &pk,
+			Amount:          &amt,
+		})
+	}
+	return j
 }
 
 func (j *ExecutionPayloadElectraJSON) ElectraPayload() (*ExecutionPayloadElectra, error) {
