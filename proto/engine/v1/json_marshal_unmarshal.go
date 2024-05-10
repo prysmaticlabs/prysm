@@ -42,7 +42,7 @@ func (v BlsPubkey) Bytes() []byte {
 // BlsSig represents a 96 byte BLS signature.
 type BlsSig [BlsSignLen]byte
 
-// BlsSig returns the hex representation of a BlsSig.
+// MarshalText returns the hex representation of a BlsSig.
 func (v BlsSig) MarshalText() ([]byte, error) {
 	return hexutil.Bytes(v[:]).MarshalText()
 }
@@ -378,6 +378,7 @@ type ExecutionPayloadDenebJSON struct {
 	Withdrawals   []*Withdrawal   `json:"withdrawals"`
 }
 
+// ExecutionPayloadElectraJSON represents the engine API ExecutionPayloadV4 type.
 type ExecutionPayloadElectraJSON struct {
 	ParentHash         *common.Hash          `json:"parentHash"`
 	FeeRecipient       *common.Address       `json:"feeRecipient"`
