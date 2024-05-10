@@ -549,6 +549,132 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 	require.DeepEqual(t, got.GetDeneb().Block.Body.BlobKzgCommitments, kc)
 }
 
+func TestServer_GetBeaconBlock_Electra(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+	transition.SkipSlotCache.Disable()
+
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.ElectraForkEpoch = 5
+	cfg.DenebForkEpoch = 4
+	cfg.CapellaForkEpoch = 3
+	cfg.BellatrixForkEpoch = 2
+	cfg.AltairForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
+
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	util.SaveBlock(t, ctx, db, genesis)
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	electraSlot, err := slots.EpochStart(params.BeaconConfig().ElectraForkEpoch)
+	require.NoError(t, err)
+
+	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
+	blk := &ethpb.SignedBeaconBlockElectra{
+		Block: &ethpb.BeaconBlockElectra{
+			Slot:       electraSlot + 1,
+			ParentRoot: parentRoot[:],
+			StateRoot:  genesis.Block.StateRoot,
+			Body: &ethpb.BeaconBlockBodyElectra{
+				Consolidations: []*ethpb.SignedConsolidation{
+					{
+						Message: &ethpb.Consolidation{
+							SourceIndex: 1,
+							TargetIndex: 2,
+							Epoch:       3,
+						},
+						Signature: bytesutil.PadTo([]byte("sig"), 96),
+					},
+				},
+				RandaoReveal:  genesis.Block.Body.RandaoReveal,
+				Graffiti:      genesis.Block.Body.Graffiti,
+				Eth1Data:      genesis.Block.Body.Eth1Data,
+				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
+				ExecutionPayload: &enginev1.ExecutionPayloadElectra{
+					ParentHash:    make([]byte, fieldparams.RootLength),
+					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:     make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:    make([]byte, fieldparams.RootLength),
+					BaseFeePerGas: make([]byte, fieldparams.RootLength),
+					BlockHash:     make([]byte, fieldparams.RootLength),
+				},
+			},
+		},
+	}
+
+	blkRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
+
+	random, err := helpers.RandaoMix(beaconState, slots.ToEpoch(beaconState.Slot()))
+	require.NoError(t, err)
+	timeStamp, err := slots.ToTime(beaconState.GenesisTime(), electraSlot+1)
+	require.NoError(t, err)
+	dr := []*enginev1.DepositReceipt{{
+		Pubkey:                bytesutil.PadTo(privKeys[0].PublicKey().Marshal(), 48),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("wc"), 32),
+		Amount:                123,
+		Signature:             bytesutil.PadTo([]byte("sig"), 96),
+		Index:                 456,
+	}}
+	wr := []*enginev1.ExecutionLayerWithdrawalRequest{
+		{
+			SourceAddress:   bytesutil.PadTo([]byte("sa"), 20),
+			ValidatorPubkey: bytesutil.PadTo(privKeys[1].PublicKey().Marshal(), 48),
+			Amount:          789,
+		},
+	}
+	payload := &enginev1.ExecutionPayloadElectra{
+		Timestamp:          uint64(timeStamp.Unix()),
+		ParentHash:         make([]byte, fieldparams.RootLength),
+		FeeRecipient:       make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:          make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:       make([]byte, fieldparams.RootLength),
+		LogsBloom:          make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:         random,
+		BaseFeePerGas:      make([]byte, fieldparams.RootLength),
+		BlockHash:          make([]byte, fieldparams.RootLength),
+		DepositReceipts:    dr,
+		WithdrawalRequests: wr,
+	}
+
+	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
+		PayloadIDBytes:          &enginev1.PayloadIDBytes{1},
+		ExecutionPayloadElectra: payload,
+	}
+
+	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
+	require.NoError(t, err)
+
+	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	require.NoError(t, err)
+	req := &ethpb.BlockRequest{
+		Slot:         electraSlot + 1,
+		RandaoReveal: randaoReveal,
+		Graffiti:     graffiti[:],
+	}
+
+	got, err := proposerServer.GetBeaconBlock(ctx, req)
+	require.NoError(t, err)
+	p := got.GetElectra().Block.Body.ExecutionPayload
+	require.DeepEqual(t, dr, p.DepositReceipts)
+	require.DeepEqual(t, wr, p.WithdrawalRequests)
+}
+
 func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig().Copy()
@@ -743,6 +869,33 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 			err: "blob KZG commitments don't match number of blobs or KZG proofs",
+		},
+		{
+			name: "electra block no blob",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				sb := &ethpb.SignedBeaconBlockContentsElectra{
+					Block: &ethpb.SignedBeaconBlockElectra{
+						Block: &ethpb.BeaconBlockElectra{Slot: 5, ParentRoot: parent[:], Body: util.HydrateBeaconBlockBodyElectra(&ethpb.BeaconBlockBodyElectra{})},
+					},
+				}
+				blk := &ethpb.GenericSignedBeaconBlock_Electra{Electra: sb}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk, IsBlinded: false}
+			},
+		},
+		{
+			name: "electra block some blob",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+
+				sb := &ethpb.SignedBeaconBlockContentsElectra{
+					Block: &ethpb.SignedBeaconBlockElectra{
+						Block: &ethpb.BeaconBlockElectra{Slot: 5, ParentRoot: parent[:], Body: util.HydrateBeaconBlockBodyElectra(&ethpb.BeaconBlockBodyElectra{})},
+					},
+					KzgProofs: [][]byte{{0x01}, {0x02}, {0x03}},
+					Blobs:     [][]byte{{0x01}, {0x02}, {0x03}},
+				}
+				blk := &ethpb.GenericSignedBeaconBlock_Electra{Electra: sb}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk, IsBlinded: false}
+			},
 		},
 		{
 			name: "blind deneb block some blobs",

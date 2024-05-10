@@ -127,7 +127,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	}
 	var attr payloadattribute.Attributer
 	switch st.Version() {
-	case version.Deneb:
+	case version.Deneb, version.Electra:
 		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			return nil, false, err
