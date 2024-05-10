@@ -14,6 +14,7 @@ var (
 	//go:embed trusted_setup.json
 	embeddedTrustedSetup []byte // 1.2Mb
 	kzgContext           *GoKZG.Context
+	kzgLoaded            bool
 )
 
 func Start() error {
@@ -38,11 +39,13 @@ func Start() error {
 	for i, g2 := range parsedSetup.SetupG2 {
 		copy(g2s[i*(len(g2)-2)/2:], hexutil.MustDecode(g2))
 	}
-	// Free the current trusted setup before running this method. CKZG
-	// panics if the same setup is run multiple times.
-	CKZG.FreeTrustedSetup()
-	if err = CKZG.LoadTrustedSetup(g1s, g2s); err != nil {
-		panic(err)
+	if !kzgLoaded {
+		// Free the current trusted setup before running this method. CKZG
+		// panics if the same setup is run multiple times.
+		if err = CKZG.LoadTrustedSetup(g1s, g2s); err != nil {
+			panic(err)
+		}
 	}
+	kzgLoaded = true
 	return nil
 }
