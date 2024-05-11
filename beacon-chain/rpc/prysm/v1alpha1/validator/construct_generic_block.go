@@ -26,6 +26,8 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 	payloadValue := sBlk.ValueInWei()
 
 	switch sBlk.Version() {
+	case version.Electra:
+		return vs.constructElectraBlock(blockProto, isBlinded, payloadValue, blobsBundle), nil
 	case version.Deneb:
 		return vs.constructDenebBlock(blockProto, isBlinded, payloadValue, blobsBundle), nil
 	case version.Capella:
@@ -42,6 +44,18 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 }
 
 // Helper functions for constructing blocks for each version
+func (vs *Server) constructElectraBlock(blockProto proto.Message, isBlinded bool, payloadValue math.Wei, bundle *enginev1.BlobsBundle) *ethpb.GenericBeaconBlock {
+	if isBlinded {
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedElectra{BlindedElectra: blockProto.(*ethpb.BlindedBeaconBlockElectra)}, IsBlinded: true, PayloadValue: (*payloadValue).String()}
+	}
+	electraContents := &ethpb.BeaconBlockContentsElectra{Block: blockProto.(*ethpb.BeaconBlockElectra)}
+	if bundle != nil {
+		electraContents.KzgProofs = bundle.Proofs
+		electraContents.Blobs = bundle.Blobs
+	}
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Electra{Electra: electraContents}, IsBlinded: false, PayloadValue: (*payloadValue).String()}
+}
+
 func (vs *Server) constructDenebBlock(blockProto proto.Message, isBlinded bool, payloadValue math.Wei, bundle *enginev1.BlobsBundle) *ethpb.GenericBeaconBlock {
 	if isBlinded {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blockProto.(*ethpb.BlindedBeaconBlockDeneb)}, IsBlinded: true, PayloadValue: (*payloadValue).String()}
