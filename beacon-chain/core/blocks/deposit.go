@@ -9,12 +9,15 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // ProcessPreGenesisDeposits processes a deposit for the beacon state before chainstart.
@@ -90,7 +93,7 @@ func ProcessDeposits(
 		if d == nil || d.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, _, err = ProcessDeposit(beaconState, d, batchVerified)
+		beaconState, err = ProcessDeposit(beaconState, d, batchVerified)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(d.Data.PublicKey))
 		}
@@ -122,91 +125,214 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 // Spec pseudocode definition:
 // def process_deposit(state: BeaconState, deposit: Deposit) -> None:
 //
-//	# Verify the Merkle branch
-//	assert is_valid_merkle_branch(
-//	    leaf=hash_tree_root(deposit.data),
-//	    branch=deposit.proof,
-//	    depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,  # Add 1 for the List length mix-in
-//	    index=state.eth1_deposit_index,
-//	    root=state.eth1_data.deposit_root,
-//	)
+//		# Verify the Merkle branch
+//		assert is_valid_merkle_branch(
+//		    leaf=hash_tree_root(deposit.data),
+//		    branch=deposit.proof,
+//		    depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,  # Add 1 for the List length mix-in
+//		    index=state.eth1_deposit_index,
+//		    root=state.eth1_data.deposit_root,
+//		)
 //
-//	# Deposits must be processed in order
-//	state.eth1_deposit_index += 1
+//	 # Deposits must be processed in order
+//	 state.eth1_deposit_index += 1
 //
-//	pubkey = deposit.data.pubkey
-//	amount = deposit.data.amount
-//	validator_pubkeys = [v.pubkey for v in state.validators]
-//	if pubkey not in validator_pubkeys:
-//	    # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
-//	    deposit_message = DepositMessage(
-//	        pubkey=deposit.data.pubkey,
-//	        withdrawal_credentials=deposit.data.withdrawal_credentials,
-//	        amount=deposit.data.amount,
-//	    )
-//	    domain = compute_domain(DOMAIN_DEPOSIT)  # Fork-agnostic domain since deposits are valid across forks
-//	    signing_root = compute_signing_root(deposit_message, domain)
-//	    if not bls.Verify(pubkey, signing_root, deposit.data.signature):
-//	        return
-//
-//	    # Add validator and balance entries
-//	    state.validators.append(get_validator_from_deposit(state, deposit))
-//	    state.balances.append(amount)
-//	else:
-//	    # Increase balance by deposit amount
-//	    index = ValidatorIndex(validator_pubkeys.index(pubkey))
-//	    increase_balance(state, index, amount)
-func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, bool, error) {
-	var newValidator bool
+//	 apply_deposit(
+//	  state=state,
+//	  pubkey=deposit.data.pubkey,
+//	  withdrawal_credentials=deposit.data.withdrawal_credentials,
+//	  amount=deposit.data.amount,
+//	  signature=deposit.data.signature,
+//	 )
+func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
-			return nil, newValidator, err
+			return nil, err
 		}
-		return nil, newValidator, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 	}
 	if err := beaconState.SetEth1DepositIndex(beaconState.Eth1DepositIndex() + 1); err != nil {
-		return nil, newValidator, err
+		return nil, err
 	}
-	pubKey := deposit.Data.PublicKey
-	amount := deposit.Data.Amount
+	return ApplyDeposit(beaconState, deposit.Data, verifySignature)
+}
+
+// ApplyDeposit
+// def apply_deposit(state: BeaconState, pubkey: BLSPubkey, withdrawal_credentials: Bytes32, amount: uint64, signature: BLSSignature) -> None:
+// validator_pubkeys = [v.pubkey for v in state.validators]
+// if pubkey not in validator_pubkeys:
+//
+//	# Verify the deposit signature (proof of possession) which is not checked by the deposit contract
+//	if is_valid_deposit_signature(pubkey, withdrawal_credentials, amount, signature):
+//	  add_validator_to_registry(state, pubkey, withdrawal_credentials, amount)
+//
+// else:
+//
+//	# Increase balance by deposit amount
+//	index = ValidatorIndex(validator_pubkeys.index(pubkey))
+//	state.pending_balance_deposits.append(PendingBalanceDeposit(index=index, amount=amount))  # [Modified in Electra:EIP-7251]
+//	# Check if valid deposit switch to compounding credentials
+//
+// if ( is_compounding_withdrawal_credential(withdrawal_credentials) and has_eth1_withdrawal_credential(state.validators[index])
+//
+//	 and is_valid_deposit_signature(pubkey, withdrawal_credentials, amount, signature)
+//	):
+//	 switch_to_compounding_validator(state, index)
+func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verifySignature bool) (state.BeaconState, error) {
+	pubKey := data.PublicKey
+	amount := data.Amount
+	withdrawalCredentials := data.WithdrawalCredentials
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
 		if verifySignature {
-			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+			valid, err := IsValidDepositSignature(data)
 			if err != nil {
-				return nil, newValidator, err
+				return nil, err
 			}
-			if err := verifyDepositDataSigningRoot(deposit.Data, domain); err != nil {
-				// Ignore this error as in the spec pseudo code.
-				log.WithError(err).Debug("Skipping deposit: could not verify deposit data signature")
-				return beaconState, newValidator, nil
+			if !valid {
+				return beaconState, nil
 			}
 		}
+		if err := AddValidatorToRegistry(beaconState, pubKey, withdrawalCredentials, amount); err != nil {
+			return nil, err
+		}
+	} else {
+		if beaconState.Version() >= version.Electra {
+			if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
+				return nil, err
+			}
+			val, err := beaconState.ValidatorAtIndex(index)
+			if err != nil {
+				return nil, err
+			}
+			if verifySignature {
+				valid, err := IsValidDepositSignature(data)
+				if err != nil {
+					return nil, err
+				}
+				if !valid {
+					return beaconState, nil
+				}
+			}
+			if helpers.IsCompoundingWithdrawalCredential(withdrawalCredentials) && helpers.HasETH1WithdrawalCredential(val) {
+				if err := helpers.SwitchToCompoundingValidator(beaconState, index); err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return beaconState, nil
+}
 
-		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
+// AddValidatorToRegistry updates the beacon state with validator information
+// def add_validator_to_registry(state: BeaconState,
+//
+//	                          pubkey: BLSPubkey,
+//	                          withdrawal_credentials: Bytes32,
+//	                          amount: uint64) -> None:
+//	index = get_index_for_new_validator(state)
+//	validator = get_validator_from_deposit(pubkey, withdrawal_credentials)
+//	set_or_append_list(state.validators, index, validator)
+//	set_or_append_list(state.balances, index, 0)  # [Modified in Electra:EIP7251]
+//	set_or_append_list(state.previous_epoch_participation, index, ParticipationFlags(0b0000_0000))
+//	set_or_append_list(state.current_epoch_participation, index, ParticipationFlags(0b0000_0000))
+//	set_or_append_list(state.inactivity_scores, index, uint64(0))
+//	state.pending_balance_deposits.append(PendingBalanceDeposit(index=index, amount=amount))  # [New in Electra:EIP7251]
+func AddValidatorToRegistry(beaconState state.BeaconState, pubKey []byte, withdrawalCredentials []byte, amount uint64) error {
+	val := GetValidatorFromDeposit(beaconState.Version(), pubKey, withdrawalCredentials, amount)
+	if err := beaconState.AppendValidator(val); err != nil {
+		return err
+	}
+	if beaconState.Version() >= version.Electra {
+		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		if !ok {
+			return errors.New("could not find validator in registry")
+		}
+		if err := beaconState.AppendBalance(0); err != nil {
+			return err
+		}
+		// In specs this function is at the end function
+		if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
+			return err
+		}
+	} else {
+		if err := beaconState.AppendBalance(amount); err != nil {
+			return err
+		}
+	}
+	// only active in altair and only when it's a new validator (after append balance)
+	if beaconState.Version() >= version.Altair {
+		if err := beaconState.AppendInactivityScore(0); err != nil {
+			return err
+		}
+		if err := beaconState.AppendPreviousParticipationBits(0); err != nil {
+			return err
+		}
+		if err := beaconState.AppendCurrentParticipationBits(0); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetValidatorFromDeposit gets a new validator object with provided parameters
+//
+// def get_validator_from_deposit(pubkey: BLSPubkey, withdrawal_credentials: Bytes32) -> Validator:
+//
+//	return Validator(
+//	pubkey=pubkey,
+//	withdrawal_credentials=withdrawal_credentials,
+//	activation_eligibility_epoch=FAR_FUTURE_EPOCH,
+//	activation_epoch=FAR_FUTURE_EPOCH,
+//	exit_epoch=FAR_FUTURE_EPOCH,
+//	withdrawable_epoch=FAR_FUTURE_EPOCH,
+//	effective_balance=0,  # [Modified in Electra:EIP7251]
+//
+// )
+func GetValidatorFromDeposit(stateVersion int, pubKey []byte, withdrawalCredentials []byte, amount uint64) *ethpb.Validator {
+	var effectiveBalance uint64
+	if stateVersion >= version.Electra {
+		effectiveBalance = 0 // [Modified in Electra:EIP7251]
+	} else {
+		effectiveBalance = amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
 			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
 		}
-		if err := beaconState.AppendValidator(&ethpb.Validator{
-			PublicKey:                  pubKey,
-			WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
-			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
-			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance:           effectiveBalance,
-		}); err != nil {
-			return nil, newValidator, err
-		}
-		newValidator = true
-		if err := beaconState.AppendBalance(amount); err != nil {
-			return nil, newValidator, err
-		}
-	} else if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
-		return nil, newValidator, err
 	}
 
-	return beaconState, newValidator, nil
+	return &ethpb.Validator{
+		PublicKey:                  pubKey,
+		WithdrawalCredentials:      withdrawalCredentials,
+		ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+		ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+		ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+		WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
+		EffectiveBalance:           effectiveBalance,
+	}
+}
+
+// IsValidDepositSignature returns whether deposit_data is valid
+// def is_valid_deposit_signature(pubkey: BLSPubkey, withdrawal_credentials: Bytes32, amount: uint64, signature: BLSSignature) -> bool:
+//
+//	deposit_message = DepositMessage( pubkey=pubkey, withdrawal_credentials=withdrawal_credentials, amount=amount, )
+//	domain = compute_domain(DOMAIN_DEPOSIT)  # Fork-agnostic domain since deposits are valid across forks
+//	signing_root = compute_signing_root(deposit_message, domain)
+//	return bls.Verify(pubkey, signing_root, signature)
+func IsValidDepositSignature(data *ethpb.Deposit_Data) (bool, error) {
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	if err != nil {
+		return false, err
+	}
+	if err := verifyDepositDataSigningRoot(data, domain); err != nil {
+		// Ignore this error as in the spec pseudo code.
+		log.WithError(err).Debug("Skipping deposit: could not verify deposit data signature")
+		return false, nil
+	}
+	return true, nil
 }
 
 func verifyDeposit(beaconState state.ReadOnlyBeaconState, deposit *ethpb.Deposit) error {
@@ -283,4 +409,58 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		return errors.New("one or more deposit signatures did not verify")
 	}
 	return nil
+}
+
+// ProcessDepositReceipts is a function as part of electra to process execution layer deposits
+func ProcessDepositReceipts(beaconState state.BeaconState, beaconBlock interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+	if beaconState.Version() < version.Electra {
+		return beaconState, nil
+	}
+	payload, err := beaconBlock.Body().Execution()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get execution payload")
+	}
+	ede, ok := payload.(interfaces.ExecutionDataElectra)
+	if !ok {
+		return nil, errors.New("invalid electra execution payload")
+	}
+	for _, receipt := range ede.DepositReceipts() {
+		beaconState, err = processDepositReceipt(beaconState, receipt)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not apply deposit receipt")
+		}
+	}
+	return beaconState, nil
+}
+
+// processDepositReceipt processes the specific deposit receipt
+// def process_deposit_receipt(state: BeaconState, deposit_receipt: DepositReceipt) -> None:
+//
+//	# Set deposit receipt start index
+//	if state.deposit_receipts_start_index == UNSET_DEPOSIT_RECEIPTS_START_INDEX:
+//	    state.deposit_receipts_start_index = deposit_receipt.index
+//
+//	apply_deposit(
+//	    state=state,
+//	    pubkey=deposit_receipt.pubkey,
+//	    withdrawal_credentials=deposit_receipt.withdrawal_credentials,
+//	    amount=deposit_receipt.amount,
+//	    signature=deposit_receipt.signature,
+//	)
+func processDepositReceipt(beaconState state.BeaconState, receipt *enginev1.DepositReceipt) (state.BeaconState, error) {
+	receiptsStartIndex, err := beaconState.DepositReceiptsStartIndex()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get deposit receipts start index")
+	}
+	if receiptsStartIndex == params.BeaconConfig().UnsetDepositReceiptsStartIndex {
+		if err := beaconState.SetDepositReceiptsStartIndex(receipt.Index); err != nil {
+			return nil, errors.Wrap(err, "could not set deposit receipts start index")
+		}
+	}
+	return ApplyDeposit(beaconState, &ethpb.Deposit_Data{
+		PublicKey:             bytesutil.SafeCopyBytes(receipt.Pubkey),
+		Amount:                receipt.Amount,
+		WithdrawalCredentials: bytesutil.SafeCopyBytes(receipt.WithdrawalCredentials),
+		Signature:             bytesutil.SafeCopyBytes(receipt.Signature),
+	}, true) // individually verify signatures instead of batch verify
 }

@@ -525,16 +525,16 @@ func HasCompoundingWithdrawalCredential(v interfaces.WithWithdrawalCredentials) 
 	if v == nil {
 		return false
 	}
-	return isCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
+	return IsCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
 }
 
-// isCompoundingWithdrawalCredential checks if the credentials are a compounding withdrawal credential.
+// IsCompoundingWithdrawalCredential checks if the credentials are a compounding withdrawal credential.
 //
 // Spec definition:
 //
 //	def is_compounding_withdrawal_credential(withdrawal_credentials: Bytes32) -> bool:
 //	    return withdrawal_credentials[:1] == COMPOUNDING_WITHDRAWAL_PREFIX
-func isCompoundingWithdrawalCredential(creds []byte) bool {
+func IsCompoundingWithdrawalCredential(creds []byte) bool {
 	return bytes.HasPrefix(creds, []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte})
 }
 
@@ -673,6 +673,30 @@ func ValidatorMaxEffectiveBalance(val *ethpb.Validator) uint64 {
 		return params.BeaconConfig().MaxEffectiveBalanceElectra
 	}
 	return params.BeaconConfig().MinActivationBalance
+}
+
+// SwitchToCompoundingValidator used to queue excess active balance based on validator.
+//
+// Spec definition:
+//
+//	 def switch_to_compounding_validator(state: BeaconState, index: ValidatorIndex) -> None:
+//		validator = state.validators[index]
+//		if has_eth1_withdrawal_credential(validator):
+//		    validator.withdrawal_credentials = COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
+//		    queue_excess_active_balance(state, index)
+func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorIndex) error {
+	v, err := s.ValidatorAtIndex(idx)
+	if err != nil {
+		return err
+	}
+	if len(v.WithdrawalCredentials) == 0 {
+		return errors.New("validator has no withdrawal credentials")
+	}
+	if HasETH1WithdrawalCredential(v) {
+		v.WithdrawalCredentials[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
+		return QueueExcessActiveBalance(s, idx)
+	}
+	return nil
 }
 
 // QueueExcessActiveBalance queues validators with balances above the min activation balance and adds to pending balance deposit.

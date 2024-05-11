@@ -251,19 +251,16 @@ func ProcessOperationsNoVerifyAttsSigs(
 	}
 
 	var err error
-	switch beaconBlock.Version() {
-	case version.Phase0:
+	if beaconBlock.Version() == version.Phase0 {
 		state, err = phase0Operations(ctx, state, beaconBlock)
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Bellatrix, version.Capella, version.Deneb, version.Electra:
+	} else {
 		state, err = altairOperations(ctx, state, beaconBlock)
 		if err != nil {
 			return nil, err
 		}
-	default:
-		return nil, errors.New("block does not have correct version")
 	}
 
 	return state, nil
@@ -402,7 +399,11 @@ func altairOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process voluntary exits")
 	}
-	return b.ProcessBLSToExecutionChanges(st, beaconBlock)
+	st, err = b.ProcessBLSToExecutionChanges(st, beaconBlock)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process bls-to-execution changes")
+	}
+	return b.ProcessDepositReceipts(st, beaconBlock)
 }
 
 // This calls phase 0 block operations.

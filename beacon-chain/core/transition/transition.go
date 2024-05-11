@@ -374,14 +374,43 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interf
 	if eth1Data == nil {
 		return nil, errors.New("nil eth1data in state")
 	}
-	if state.Eth1DepositIndex() > eth1Data.DepositCount {
-		return nil, fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), eth1Data.DepositCount)
-	}
-	maxDeposits := math.Min(params.BeaconConfig().MaxDeposits, eth1Data.DepositCount-state.Eth1DepositIndex())
-	// Verify outstanding deposits are processed up to max number of deposits
-	if uint64(len(body.Deposits())) != maxDeposits {
-		return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
-			maxDeposits, len(body.Deposits()))
+
+	if state.Version() < version.Electra {
+		// Deneb specs
+		//  # Verify that outstanding deposits are processed up to the maximum number of deposits
+		//    assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
+		if state.Eth1DepositIndex() > eth1Data.DepositCount {
+			return nil, fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), eth1Data.DepositCount)
+		}
+		maxDeposits := math.Min(params.BeaconConfig().MaxDeposits, eth1Data.DepositCount-state.Eth1DepositIndex())
+		// Verify outstanding deposits are processed up to max number of deposits
+		if uint64(len(body.Deposits())) != maxDeposits {
+			return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
+				maxDeposits, len(body.Deposits()))
+		}
+	} else {
+		// Electra and beyond
+		//  # [Modified in Electra:EIP6110]
+		//    # Disable former deposit mechanism once all prior deposits are processed
+		//    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_receipts_start_index)
+		//    if state.eth1_deposit_index < eth1_deposit_index_limit:
+		//        assert len(body.deposits) == min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
+		//    else:
+		//        assert len(body.deposits) == 0
+		receiptsStartIndex, err := state.DepositReceiptsStartIndex()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get receipts start index")
+		}
+		eth1DepositIndexLimit := math.Min(eth1Data.DepositCount, receiptsStartIndex)
+		if state.Eth1DepositIndex() < eth1DepositIndexLimit {
+			if uint64(len(body.Deposits())) != math.Min(params.BeaconConfig().MaxDeposits, eth1DepositIndexLimit-state.Eth1DepositIndex()) {
+				return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d", math.Min(params.BeaconConfig().MaxDeposits, eth1DepositIndexLimit-state.Eth1DepositIndex()), len(body.Deposits()))
+			}
+		} else {
+			if len(body.Deposits()) != 0 {
+				return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d", 0, len(body.Deposits()))
+			}
+		}
 	}
 
 	return state, nil
