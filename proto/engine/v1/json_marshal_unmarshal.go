@@ -302,6 +302,30 @@ type GetPayloadV4ResponseJson struct {
 	ShouldOverrideBuilder bool                         `json:"shouldOverrideBuilder"`
 }
 
+// ExecutionPayloadElectraJSON represents the engine API ExecutionPayloadV4 type.
+type ExecutionPayloadElectraJSON struct {
+	ParentHash         *common.Hash          `json:"parentHash"`
+	FeeRecipient       *common.Address       `json:"feeRecipient"`
+	StateRoot          *common.Hash          `json:"stateRoot"`
+	ReceiptsRoot       *common.Hash          `json:"receiptsRoot"`
+	LogsBloom          *hexutil.Bytes        `json:"logsBloom"`
+	PrevRandao         *common.Hash          `json:"prevRandao"`
+	BlockNumber        *hexutil.Uint64       `json:"blockNumber"`
+	GasLimit           *hexutil.Uint64       `json:"gasLimit"`
+	GasUsed            *hexutil.Uint64       `json:"gasUsed"`
+	Timestamp          *hexutil.Uint64       `json:"timestamp"`
+	ExtraData          hexutil.Bytes         `json:"extraData"`
+	BaseFeePerGas      string                `json:"baseFeePerGas"`
+	BlobGasUsed        *hexutil.Uint64       `json:"blobGasUsed"`
+	ExcessBlobGas      *hexutil.Uint64       `json:"excessBlobGas"`
+	BlockHash          *common.Hash          `json:"blockHash"`
+	Transactions       []hexutil.Bytes       `json:"transactions"`
+	Withdrawals        []*Withdrawal         `json:"withdrawals"`
+	WithdrawalRequests []WithdrawalRequestV1 `json:"withdrawalRequests"`
+	DepositRequests    []DepositRequestV1    `json:"depositRequests"`
+}
+
+// Validate returns an error if key fields in GetPayloadV4ResponseJson are nil or invalid.
 func (j *GetPayloadV4ResponseJson) Validate() error {
 	if j.ExecutionPayload == nil {
 		return errors.New("nil ExecutionPayload")
@@ -309,6 +333,7 @@ func (j *GetPayloadV4ResponseJson) Validate() error {
 	return j.ExecutionPayload.Validate()
 }
 
+// Validate returns an error if key fields in ExecutionPayloadElectraJSON are nil or invalid.
 func (j *ExecutionPayloadElectraJSON) Validate() error {
 	if j.ParentHash == nil {
 		return errors.New("missing required field 'parentHash' for ExecutionPayload")
@@ -376,29 +401,6 @@ type ExecutionPayloadDenebJSON struct {
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 	Withdrawals   []*Withdrawal   `json:"withdrawals"`
-}
-
-// ExecutionPayloadElectraJSON represents the engine API ExecutionPayloadV4 type.
-type ExecutionPayloadElectraJSON struct {
-	ParentHash         *common.Hash          `json:"parentHash"`
-	FeeRecipient       *common.Address       `json:"feeRecipient"`
-	StateRoot          *common.Hash          `json:"stateRoot"`
-	ReceiptsRoot       *common.Hash          `json:"receiptsRoot"`
-	LogsBloom          *hexutil.Bytes        `json:"logsBloom"`
-	PrevRandao         *common.Hash          `json:"prevRandao"`
-	BlockNumber        *hexutil.Uint64       `json:"blockNumber"`
-	GasLimit           *hexutil.Uint64       `json:"gasLimit"`
-	GasUsed            *hexutil.Uint64       `json:"gasUsed"`
-	Timestamp          *hexutil.Uint64       `json:"timestamp"`
-	ExtraData          hexutil.Bytes         `json:"extraData"`
-	BaseFeePerGas      string                `json:"baseFeePerGas"`
-	BlobGasUsed        *hexutil.Uint64       `json:"blobGasUsed"`
-	ExcessBlobGas      *hexutil.Uint64       `json:"excessBlobGas"`
-	BlockHash          *common.Hash          `json:"blockHash"`
-	Transactions       []hexutil.Bytes       `json:"transactions"`
-	Withdrawals        []*Withdrawal         `json:"withdrawals"`
-	WithdrawalRequests []WithdrawalRequestV1 `json:"withdrawalRequests"`
-	DepositRequests    []DepositRequestV1    `json:"depositRequests"`
 }
 
 // WithdrawalRequestV1 represents an execution engine WithdrawalRequestV1 value
