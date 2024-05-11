@@ -170,6 +170,8 @@ func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServe
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_ElectraBlock{ElectraBlock: phBlk}
+	default:
+		log.Error("Unknown block version")
 	}
 
 	if err := stream.Send(b); err != nil {

@@ -4,9 +4,12 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
+        "attestation.go",
         "attester_slashing.go",
         "block_header.go",
         "bls_to_execution_changes.go",
+        "consolidations.go",
+        "deposit.go",
         "deposit_receipt.go",
         "execution_layer_withdrawal_request.go",
         "execution_payload.go",

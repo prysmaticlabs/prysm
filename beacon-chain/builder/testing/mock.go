@@ -29,6 +29,7 @@ type MockBuilderService struct {
 	Payload               *v1.ExecutionPayload
 	PayloadCapella        *v1.ExecutionPayloadCapella
 	PayloadDeneb          *v1.ExecutionPayloadDeneb
+	PayloadElectra        *v1.ExecutionPayloadElectra
 	BlobBundle            *v1.BlobsBundle
 	ErrSubmitBlindedBlock error
 	Bid                   *ethpb.SignedBuilderBid
@@ -64,6 +65,12 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, b interfaces.
 		w, err := blocks.WrappedExecutionPayloadDeneb(s.PayloadDeneb, big.NewInt(0))
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not wrap deneb payload")
+		}
+		return w, s.BlobBundle, s.ErrSubmitBlindedBlock
+	case version.Electra:
+		w, err := blocks.WrappedExecutionPayloadElectra(s.PayloadElectra, big.NewInt(0))
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not wrap electra payload")
 		}
 		return w, s.BlobBundle, s.ErrSubmitBlindedBlock
 	default:
