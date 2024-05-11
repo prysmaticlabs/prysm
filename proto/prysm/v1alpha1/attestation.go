@@ -1,9 +1,11 @@
 package eth
 
 import (
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"google.golang.org/protobuf/proto"
 )
 
 type Att interface {
