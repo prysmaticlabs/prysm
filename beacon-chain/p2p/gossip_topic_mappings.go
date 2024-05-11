@@ -28,6 +28,9 @@ var gossipTopicMappings = map[string]proto.Message{
 // versioned by epoch.
 func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 	if topic == BlockSubnetTopicFormat {
+		if epoch >= params.BeaconConfig().ElectraForkEpoch {
+			return &ethpb.SignedBeaconBlockElectra{}
+		}
 		if epoch >= params.BeaconConfig().DenebForkEpoch {
 			return &ethpb.SignedBeaconBlockDeneb{}
 		}
@@ -70,4 +73,6 @@ func init() {
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockCapella{})] = BlockSubnetTopicFormat
 	// Specially handle Deneb objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockDeneb{})] = BlockSubnetTopicFormat
+	// Specially handle Electra objects.
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockElectra{})] = BlockSubnetTopicFormat
 }
