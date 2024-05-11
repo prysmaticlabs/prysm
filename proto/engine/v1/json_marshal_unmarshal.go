@@ -945,27 +945,24 @@ func (e *ExecutionPayloadElectra) MarshalJSON() ([]byte, error) {
 }
 
 func (j *ExecutionPayloadElectraJSON) ElectraDepositReceipts() []*DepositReceipt {
-	rcpt := make([]*DepositReceipt, 0, len(j.DepositRequests))
-	if len(j.DepositRequests) == 0 {
-		return rcpt
-	}
+	rcpt := make([]*DepositReceipt, len(j.DepositRequests))
 
 	for i := range j.DepositRequests {
 		req := j.DepositRequests[i]
-		rcpt = append(rcpt, &DepositReceipt{
+		rcpt[i] = &DepositReceipt{
 			Pubkey:                req.PubKey.Bytes(),
 			WithdrawalCredentials: req.WithdrawalCredentials.Bytes(),
 			Amount:                uint64(*req.Amount),
 			Signature:             req.Signature.Bytes(),
 			Index:                 uint64(*req.Index),
-		})
+		}
 	}
 
 	return rcpt
 }
 
 func DepositRequestProtoToJson(reqs []*DepositReceipt) []DepositRequestV1 {
-	j := make([]DepositRequestV1, 0, len(reqs))
+	j := make([]DepositRequestV1, len(reqs))
 	for i := range reqs {
 		r := reqs[i]
 		pk := BlsPubkey{}
@@ -975,48 +972,45 @@ func DepositRequestProtoToJson(reqs []*DepositReceipt) []DepositRequestV1 {
 		sig := BlsSig{}
 		copy(sig[:], r.Signature)
 		idx := hexutil.Uint64(r.Index)
-		j = append(j, DepositRequestV1{
+		j[i] = DepositRequestV1{
 			PubKey:                &pk,
 			WithdrawalCredentials: &creds,
 			Amount:                &amt,
 			Signature:             &sig,
 			Index:                 &idx,
-		})
+		}
 	}
 	return j
 }
 
 func (j *ExecutionPayloadElectraJSON) ElectraExecutionLayerWithdrawalRequests() []*ExecutionLayerWithdrawalRequest {
-	reqs := make([]*ExecutionLayerWithdrawalRequest, 0, len(j.WithdrawalRequests))
-	if len(j.WithdrawalRequests) == 0 {
-		return reqs
-	}
+	reqs := make([]*ExecutionLayerWithdrawalRequest, len(j.WithdrawalRequests))
 
 	for i := range j.WithdrawalRequests {
 		req := j.WithdrawalRequests[i]
-		reqs = append(reqs, &ExecutionLayerWithdrawalRequest{
+		reqs[i] = &ExecutionLayerWithdrawalRequest{
 			SourceAddress:   req.SourceAddress.Bytes(),
 			ValidatorPubkey: req.ValidatorPubkey.Bytes(),
 			Amount:          uint64(*req.Amount),
-		})
+		}
 	}
 
 	return reqs
 }
 
 func WithdrawalRequestProtoToJson(reqs []*ExecutionLayerWithdrawalRequest) []WithdrawalRequestV1 {
-	j := make([]WithdrawalRequestV1, 0, len(reqs))
+	j := make([]WithdrawalRequestV1, len(reqs))
 	for i := range reqs {
 		r := reqs[i]
 		pk := BlsPubkey{}
 		amt := hexutil.Uint64(r.Amount)
 		copy(pk[:], r.ValidatorPubkey)
 		address := common.BytesToAddress(r.SourceAddress)
-		j = append(j, WithdrawalRequestV1{
+		j[i] = WithdrawalRequestV1{
 			SourceAddress:   &address,
 			ValidatorPubkey: &pk,
 			Amount:          &amt,
-		})
+		}
 	}
 	return j
 }
