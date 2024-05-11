@@ -34,6 +34,8 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	bCfg.AltairForkEpoch = altairForkEpoch
 	bCfg.BellatrixForkEpoch = BellatrixForkEpoch
 	bCfg.CapellaForkEpoch = CapellaForkEpoch
+	bCfg.DenebForkEpoch = DenebForkEpoch
+	bCfg.ElectraForkEpoch = ElectraForkEpoch
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = primitives.Epoch(100)
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.BellatrixForkVersion)] = primitives.Epoch(200)
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.CapellaForkVersion)] = primitives.Epoch(300)
