@@ -16,12 +16,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
 type proposerAtts []ethpb.Att
 
-func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState) ([]ethpb.Att, error) {
+func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState, blkSlot primitives.Slot) ([]ethpb.Att, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
 	defer span.End()
 
@@ -41,15 +42,30 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	}
 	atts = append(atts, uAtts...)
 
+	versionAtts := make([]ethpb.Att, 0, len(atts))
+	if slots.ToEpoch(blkSlot) < params.BeaconConfig().ElectraForkEpoch {
+		for _, a := range atts {
+			if a.Version() == version.Phase0 {
+				versionAtts = append(versionAtts, a)
+			}
+		}
+	} else {
+		for _, a := range atts {
+			if a.Version() == version.Electra {
+				versionAtts = append(versionAtts, a)
+			}
+		}
+	}
+
 	// Remove duplicates from both aggregated/unaggregated attestations. This
 	// prevents inefficient aggregates being created.
-	atts, err = proposerAtts(atts).dedup()
+	versionAtts, err = proposerAtts(versionAtts).dedup()
 	if err != nil {
 		return nil, err
 	}
 
-	attsByDataRoot := make(map[kv.AttestationId][]ethpb.Att, len(atts))
-	for _, att := range atts {
+	attsByDataRoot := make(map[kv.AttestationId][]ethpb.Att, len(versionAtts))
+	for _, att := range versionAtts {
 		var attDataRoot [32]byte
 		if att.Version() == version.Phase0 {
 			attDataRoot, err = att.GetData().HashTreeRoot()
