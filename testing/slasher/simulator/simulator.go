@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -238,7 +237,7 @@ func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
 		ctx, nil, true, /* no limit */
 	)
 	detectedProposerSlashings := make(map[[32]byte]*ethpb.ProposerSlashing)
-	detectedAttesterSlashings := make(map[[32]byte]interfaces.AttesterSlashing)
+	detectedAttesterSlashings := make(map[[32]byte]ethpb.AttSlashing)
 	for _, slashing := range poolProposerSlashings {
 		slashingRoot, err := slashing.HashTreeRoot()
 		if err != nil {

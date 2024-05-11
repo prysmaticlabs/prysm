@@ -1078,13 +1078,13 @@ func (b *BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 }
 
 // AttesterSlashings returns the attester slashings in the block.
-func (b *BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
-	var slashings []interfaces.AttesterSlashing
+func (b *BeaconBlockBody) AttesterSlashings() []eth.AttSlashing {
+	var slashings []eth.AttSlashing
 	if b.version < version.Electra {
 		if b.attesterSlashings == nil {
 			return nil
 		}
-		slashings = make([]interfaces.AttesterSlashing, len(b.attesterSlashings))
+		slashings = make([]eth.AttSlashing, len(b.attesterSlashings))
 		for i, s := range b.attesterSlashings {
 			slashings[i] = s
 		}
@@ -1092,7 +1092,7 @@ func (b *BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
 		if b.attesterSlashingsElectra == nil {
 			return nil
 		}
-		slashings = make([]interfaces.AttesterSlashing, len(b.attesterSlashingsElectra))
+		slashings = make([]eth.AttSlashing, len(b.attesterSlashingsElectra))
 		for i, s := range b.attesterSlashingsElectra {
 			slashings[i] = s
 		}
@@ -1101,13 +1101,13 @@ func (b *BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
 }
 
 // Attestations returns the stored attestations in the block.
-func (b *BeaconBlockBody) Attestations() []interfaces.Attestation {
-	var atts []interfaces.Attestation
+func (b *BeaconBlockBody) Attestations() []eth.Att {
+	var atts []eth.Att
 	if b.version < version.Electra {
 		if b.attestations == nil {
 			return nil
 		}
-		atts = make([]interfaces.Attestation, len(b.attestations))
+		atts = make([]eth.Att, len(b.attestations))
 		for i, a := range b.attestations {
 			atts[i] = a
 		}
@@ -1115,7 +1115,7 @@ func (b *BeaconBlockBody) Attestations() []interfaces.Attestation {
 		if b.attestationsElectra == nil {
 			return nil
 		}
-		atts = make([]interfaces.Attestation, len(b.attestationsElectra))
+		atts = make([]eth.Att, len(b.attestationsElectra))
 		for i, a := range b.attestations {
 			atts[i] = a
 		}

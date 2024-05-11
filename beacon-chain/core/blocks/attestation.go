@@ -43,10 +43,11 @@ func ProcessAttestationsNoVerifySignature(
 
 // VerifyAttestationNoVerifySignature verifies the attestation without verifying the attestation signature. This is
 // used before processing attestation with the beacon state.
+// TODO: eip-7549-beacon-spec
 func VerifyAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.ReadOnlyBeaconState,
-	att interfaces.Attestation,
+	att ethpb.Att,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestationNoVerifySignature")
 	defer span.End()
@@ -54,6 +55,7 @@ func VerifyAttestationNoVerifySignature(
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
+
 	currEpoch := time.CurrentEpoch(beaconState)
 	prevEpoch := time.PrevEpoch(beaconState)
 	data := att.GetData()
@@ -164,7 +166,7 @@ func VerifyAttestationNoVerifySignature(
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	att interfaces.Attestation,
+	att ethpb.Att,
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
 	defer span.End()
@@ -202,15 +204,31 @@ func ProcessAttestationNoVerifySignature(
 
 // VerifyAttestationSignature converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyBeaconState, att interfaces.Attestation) error {
+func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyBeaconState, att ethpb.Att) error {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
-	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
-	if err != nil {
-		return err
+
+	var committees [][]primitives.ValidatorIndex
+	if att.Version() < version.Electra {
+		committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
+		if err != nil {
+			return err
+		}
+		committees = [][]primitives.ValidatorIndex{committee}
+	} else {
+		committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBitsVal())
+		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
+		var err error
+		for i, ci := range committeeIndices {
+			committees[i], err = helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, ci)
+			if err != nil {
+				return err
+			}
+		}
 	}
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
+
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees...)
 	if err != nil {
 		return err
 	}

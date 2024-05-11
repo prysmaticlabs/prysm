@@ -1,19 +1,35 @@
 package kv
 
 import (
+	"strconv"
+
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
-func (c *AttCaches) insertSeenBit(att interfaces.Attestation) error {
-	r, err := hashFn(att.GetData())
-	if err != nil {
-		return err
+func (c *AttCaches) insertSeenBit(att ethpb.Att) error {
+	var h [32]byte
+	var err error
+	if att.Version() == version.Phase0 {
+		h, err = hashFn(att.GetData())
+		if err != nil {
+			return err
+		}
+	} else {
+		data := ethpb.CopyAttestationData(att.GetData())
+		data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
+		h, err = hashFn(data)
+		if err != nil {
+			return err
+		}
 	}
+	r := h
 
-	v, ok := c.seenAtt.Get(string(r[:]))
+	v, ok := c.seenAtt.Get(string(r[:]) + strconv.Itoa(att.Version()))
 	if ok {
 		seenBits, ok := v.([]bitfield.Bitlist)
 		if !ok {
@@ -31,21 +47,33 @@ func (c *AttCaches) insertSeenBit(att interfaces.Attestation) error {
 		if !alreadyExists {
 			seenBits = append(seenBits, att.GetAggregationBits())
 		}
-		c.seenAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration /* one epoch */)
+		c.seenAtt.Set(string(r[:])+strconv.Itoa(att.Version()), seenBits, cache.DefaultExpiration /* one epoch */)
 		return nil
 	}
 
-	c.seenAtt.Set(string(r[:]), []bitfield.Bitlist{att.GetAggregationBits()}, cache.DefaultExpiration /* one epoch */)
+	c.seenAtt.Set(string(r[:])+strconv.Itoa(att.Version()), []bitfield.Bitlist{att.GetAggregationBits()}, cache.DefaultExpiration /* one epoch */)
 	return nil
 }
 
-func (c *AttCaches) hasSeenBit(att interfaces.Attestation) (bool, error) {
-	r, err := hashFn(att.GetData())
-	if err != nil {
-		return false, err
+func (c *AttCaches) hasSeenBit(att ethpb.Att) (bool, error) {
+	var h [32]byte
+	var err error
+	if att.Version() == version.Phase0 {
+		h, err = hashFn(att.GetData())
+		if err != nil {
+			return false, err
+		}
+	} else {
+		data := ethpb.CopyAttestationData(att.GetData())
+		data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
+		h, err = hashFn(data)
+		if err != nil {
+			return false, err
+		}
 	}
+	r := h
 
-	v, ok := c.seenAtt.Get(string(r[:]))
+	v, ok := c.seenAtt.Get(string(r[:]) + strconv.Itoa(att.Version()))
 	if ok {
 		seenBits, ok := v.([]bitfield.Bitlist)
 		if !ok {

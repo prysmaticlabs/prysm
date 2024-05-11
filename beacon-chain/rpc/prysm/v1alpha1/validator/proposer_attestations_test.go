@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -15,7 +14,7 @@ import (
 )
 
 func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
-	atts := proposerAtts([]interfaces.Attestation{
+	atts := proposerAtts([]ethpb.Att{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11000000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11100000}}),
@@ -23,7 +22,7 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}}),
 	})
-	want := proposerAtts([]interfaces.Attestation{
+	want := proposerAtts([]ethpb.Att{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11110000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}}),

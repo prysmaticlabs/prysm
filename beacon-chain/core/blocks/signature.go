@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -179,7 +180,7 @@ func randaoSigningData(ctx context.Context, beaconState state.ReadOnlyBeaconStat
 func createAttestationSignatureBatch(
 	ctx context.Context,
 	beaconState state.ReadOnlyBeaconState,
-	atts []interfaces.Attestation,
+	atts []ethpb.Att,
 	domain []byte,
 ) (*bls.SignatureBatch, error) {
 	if len(atts) == 0 {
@@ -192,11 +193,27 @@ func createAttestationSignatureBatch(
 	descs := make([]string, len(atts))
 	for i, a := range atts {
 		sigs[i] = a.GetSignature()
-		c, err := helpers.BeaconCommitteeFromState(ctx, beaconState, a.GetData().Slot, a.GetData().CommitteeIndex)
-		if err != nil {
-			return nil, err
+
+		var committees [][]primitives.ValidatorIndex
+		if a.Version() < version.Electra {
+			committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, a.GetData().Slot, a.GetData().CommitteeIndex)
+			if err != nil {
+				return nil, err
+			}
+			committees = [][]primitives.ValidatorIndex{committee}
+		} else {
+			committeeIndices := helpers.CommitteeIndices(a.GetCommitteeBitsVal())
+			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
+			var err error
+			for j, ci := range committeeIndices {
+				committees[j], err = helpers.BeaconCommitteeFromState(ctx, beaconState, a.GetData().Slot, ci)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
-		ia, err := attestation.ConvertToIndexed(ctx, a, c)
+
+		ia, err := attestation.ConvertToIndexed(ctx, a, committees...)
 		if err != nil {
 			return nil, err
 		}
@@ -233,7 +250,7 @@ func createAttestationSignatureBatch(
 
 // AttestationSignatureBatch retrieves all the related attestation signature data such as the relevant public keys,
 // signatures and attestation signing data and collate it into a signature batch object.
-func AttestationSignatureBatch(ctx context.Context, beaconState state.ReadOnlyBeaconState, atts []interfaces.Attestation) (*bls.SignatureBatch, error) {
+func AttestationSignatureBatch(ctx context.Context, beaconState state.ReadOnlyBeaconState, atts []ethpb.Att) (*bls.SignatureBatch, error) {
 	if len(atts) == 0 {
 		return bls.NewSet(), nil
 	}
@@ -243,8 +260,8 @@ func AttestationSignatureBatch(ctx context.Context, beaconState state.ReadOnlyBe
 	dt := params.BeaconConfig().DomainBeaconAttester
 
 	// Split attestations by fork. Note: the signature domain will differ based on the fork.
-	var preForkAtts []interfaces.Attestation
-	var postForkAtts []interfaces.Attestation
+	var preForkAtts []ethpb.Att
+	var postForkAtts []ethpb.Att
 	for _, a := range atts {
 		if slots.ToEpoch(a.GetData().Slot) < fork.Epoch {
 			preForkAtts = append(preForkAtts, a)

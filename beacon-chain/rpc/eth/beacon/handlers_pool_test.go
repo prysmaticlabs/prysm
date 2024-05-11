@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls/common"
@@ -116,8 +115,8 @@ func TestListAttestations(t *testing.T) {
 	s := &Server{
 		AttestationsPool: attestations.NewPool(),
 	}
-	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]interfaces.Attestation{att1, att2}))
-	require.NoError(t, s.AttestationsPool.SaveUnaggregatedAttestations([]interfaces.Attestation{att3, att4}))
+	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]ethpbv1alpha1.Att{att1, att2}))
+	require.NoError(t, s.AttestationsPool.SaveUnaggregatedAttestations([]ethpbv1alpha1.Att{att3, att4}))
 
 	t.Run("empty request", func(t *testing.T) {
 		url := "http://example.com"
@@ -1061,7 +1060,7 @@ func TestGetAttesterSlashings(t *testing.T) {
 
 	s := &Server{
 		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []interfaces.AttesterSlashing{slashing1, slashing2}},
+		SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []ethpbv1alpha1.AttSlashing{slashing1, slashing2}},
 	}
 
 	request := httptest.NewRequest(http.MethodGet, "http://example.com/beacon/pool/attester_slashings", nil)

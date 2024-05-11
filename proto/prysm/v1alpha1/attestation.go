@@ -3,12 +3,24 @@ package eth
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
-// TODO: it would be nicer to declare this inside consensus-types, but this will result in a circular dependency
-// (because the interface method returns another interface, the implementation also returns an interface)
+type Att interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	Copy() Att
+	GetAggregationBits() bitfield.Bitlist
+	GetData() *AttestationData
+	GetCommitteeBitsVal() bitfield.Bitfield
+	GetSignature() []byte
+}
+
 type IndexedAtt interface {
 	proto.Message
 	ssz.Marshaler
@@ -20,8 +32,43 @@ type IndexedAtt interface {
 	GetSignature() []byte
 }
 
+type SignedAggregateAttAndProof interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	GetAggregateAttestationAndProof() AggregateAttAndProof
+	GetSignature() []byte
+}
+
+type AggregateAttAndProof interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	GetAggregatorIndex() primitives.ValidatorIndex
+	GetAggregateVal() Att
+	GetSelectionProof() []byte
+}
+
+type AttSlashing interface {
+	proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	Version() int
+	GetFirstAttestation() IndexedAtt
+	GetSecondAttestation() IndexedAtt
+}
+
 func (a *Attestation) Version() int {
 	return version.Phase0
+}
+
+func (a *Attestation) Copy() Att {
+	return CopyAttestation(a)
 }
 
 func (a *Attestation) GetCommitteeBitsVal() bitfield.Bitfield {
@@ -30,6 +77,10 @@ func (a *Attestation) GetCommitteeBitsVal() bitfield.Bitfield {
 
 func (a *PendingAttestation) Version() int {
 	return version.Phase0
+}
+
+func (a *PendingAttestation) Copy() Att {
+	return CopyPendingAttestation(a)
 }
 
 func (a *PendingAttestation) GetCommitteeBitsVal() bitfield.Bitfield {
@@ -42,6 +93,10 @@ func (a *PendingAttestation) GetSignature() []byte {
 
 func (a *AttestationElectra) Version() int {
 	return version.Electra
+}
+
+func (a *AttestationElectra) Copy() Att {
+	return CopyAttestationElectra(a)
 }
 
 func (a *AttestationElectra) GetCommitteeBitsVal() bitfield.Bitfield {
@@ -78,4 +133,36 @@ func (a *AttesterSlashingElectra) GetFirstAttestation() IndexedAtt {
 
 func (a *AttesterSlashingElectra) GetSecondAttestation() IndexedAtt {
 	return a.Attestation_2
+}
+
+func (a *AggregateAttestationAndProof) Version() int {
+	return version.Phase0
+}
+
+func (a *AggregateAttestationAndProof) GetAggregateVal() Att {
+	return a.Aggregate
+}
+
+func (a *AggregateAttestationAndProofElectra) Version() int {
+	return version.Electra
+}
+
+func (a *AggregateAttestationAndProofElectra) GetAggregateVal() Att {
+	return a.Aggregate
+}
+
+func (a *SignedAggregateAttestationAndProof) Version() int {
+	return version.Phase0
+}
+
+func (a *SignedAggregateAttestationAndProof) GetAggregateAttestationAndProof() AggregateAttAndProof {
+	return a.Message
+}
+
+func (a *SignedAggregateAttestationAndProofElectra) Version() int {
+	return version.Electra
+}
+
+func (a *SignedAggregateAttestationAndProofElectra) GetAggregateAttestationAndProof() AggregateAttAndProof {
+	return a.Message
 }

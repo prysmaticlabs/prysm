@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -21,10 +21,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []interfaces.Attestation, error) {
+func (vs *Server) packDepositsAndAttestations(
+	ctx context.Context,
+	head state.BeaconState,
+	blkSlot primitives.Slot,
+	eth1Data *ethpb.Eth1Data,
+) ([]*ethpb.Deposit, []ethpb.Att, error) {
 	eg, egctx := errgroup.WithContext(ctx)
 	var deposits []*ethpb.Deposit
-	var atts []interfaces.Attestation
+	var atts []ethpb.Att
 
 	eg.Go(func() error {
 		// Pack ETH1 deposits which have not been included in the beacon chain.
@@ -44,7 +49,7 @@ func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.Be
 
 	eg.Go(func() error {
 		// Pack aggregated attestations which have not been included in the beacon chain.
-		localAtts, err := vs.packAttestations(egctx, head)
+		localAtts, err := vs.packAttestations(egctx, head, blkSlot)
 		if err != nil {
 			return status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
 		}

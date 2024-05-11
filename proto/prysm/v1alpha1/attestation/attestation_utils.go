@@ -6,14 +6,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"slices"
 	"sort"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -40,7 +38,7 @@ import (
 //	     data=attestation.data,
 //	     signature=attestation.signature,
 //	 )
-func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committees ...[]primitives.ValidatorIndex) (ethpb.IndexedAtt, error) {
+func ConvertToIndexed(ctx context.Context, attestation ethpb.Att, committees ...[]primitives.ValidatorIndex) (ethpb.IndexedAtt, error) {
 	attIndices, err := AttestingIndices(attestation, committees...)
 	if err != nil {
 		return nil, err
@@ -49,12 +47,19 @@ func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, c
 	sort.Slice(attIndices, func(i, j int) bool {
 		return attIndices[i] < attIndices[j]
 	})
-	inAtt := &ethpb.IndexedAttestation{
+
+	if attestation.Version() < version.Electra {
+		return &ethpb.IndexedAttestation{
+			Data:             attestation.GetData(),
+			Signature:        attestation.GetSignature(),
+			AttestingIndices: attIndices,
+		}, nil
+	}
+	return &ethpb.IndexedAttestationElectra{
 		Data:             attestation.GetData(),
 		Signature:        attestation.GetSignature(),
 		AttestingIndices: attIndices,
-	}
-	return inAtt, err
+	}, nil
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data.
@@ -79,7 +84,7 @@ func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, c
 //	        committee_offset += len(committee)
 //
 //	    return output
-func AttestingIndices(att interfaces.Attestation, committees ...[]primitives.ValidatorIndex) ([]uint64, error) {
+func AttestingIndices(att ethpb.Att, committees ...[]primitives.ValidatorIndex) ([]uint64, error) {
 	if len(committees) == 0 {
 		return []uint64{}, nil
 	}
@@ -87,7 +92,18 @@ func AttestingIndices(att interfaces.Attestation, committees ...[]primitives.Val
 	aggBits := att.GetAggregationBits()
 
 	if att.Version() < version.Electra {
-		return attestingIndicesPhase0(aggBits, committees[0])
+		committee := committees[0]
+		if aggBits.Len() != uint64(len(committee)) {
+			return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", aggBits.Len(), len(committee))
+		}
+		indices := make([]uint64, 0, aggBits.Count())
+		p := aggBits.BitIndices()
+		for _, idx := range p {
+			if idx < len(committee) {
+				indices = append(indices, uint64(committee[idx]))
+			}
+		}
+		return indices, nil
 	}
 
 	committeesLen := 0
@@ -111,8 +127,7 @@ func AttestingIndices(att interfaces.Attestation, committees ...[]primitives.Val
 		committeeOffset += len(c)
 	}
 
-	slices.Sort(attesters)
-	return slices.Compact(attesters), nil
+	return attesters, nil
 }
 
 // VerifyIndexedAttestationSig this helper function performs the last part of the
@@ -175,6 +190,8 @@ func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt ethpb.IndexedAt
 //	  domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //	  signing_root = compute_signing_root(indexed_attestation.data, domain)
 //	  return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
+//
+// TODO: eip-7549-beacon-spec
 func IsValidAttestationIndices(ctx context.Context, indexedAttestation ethpb.IndexedAtt) error {
 	_, span := trace.StartSpan(ctx, "attestationutil.IsValidAttestationIndices")
 	defer span.End()

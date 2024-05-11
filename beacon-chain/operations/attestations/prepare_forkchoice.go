@@ -7,11 +7,14 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/kv"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -67,7 +70,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
 	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
 
-	attsByDataRoot := make(map[[32]byte][]interfaces.Attestation, len(atts))
+	attsByVerAndDataRoot := make(map[kv.AttestationId][]ethpb.Att, len(atts))
 
 	// Consolidate attestations by aggregating them by similar data root.
 	for _, att := range atts {
@@ -79,14 +82,25 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 			continue
 		}
 
-		attDataRoot, err := att.GetData().HashTreeRoot()
-		if err != nil {
-			return err
+		var attDataRoot [32]byte
+		if att.Version() == version.Phase0 {
+			attDataRoot, err = att.GetData().HashTreeRoot()
+			if err != nil {
+				return err
+			}
+		} else {
+			data := ethpb.CopyAttestationData(att.GetData())
+			data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
+			attDataRoot, err = data.HashTreeRoot()
+			if err != nil {
+				return err
+			}
 		}
-		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+		key := kv.NewAttestationId(att, attDataRoot)
+		attsByVerAndDataRoot[key] = append(attsByVerAndDataRoot[key], att)
 	}
 
-	for _, atts := range attsByDataRoot {
+	for _, atts := range attsByVerAndDataRoot {
 		if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
 			return err
 		}
@@ -103,10 +117,10 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 
 // This aggregates a list of attestations using the aggregation algorithm defined in AggregateAttestations
 // and saves the attestations for fork choice.
-func (s *Service) aggregateAndSaveForkChoiceAtts(atts []interfaces.Attestation) error {
-	clonedAtts := make([]interfaces.Attestation, len(atts))
+func (s *Service) aggregateAndSaveForkChoiceAtts(atts []ethpb.Att) error {
+	clonedAtts := make([]ethpb.Att, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = interfaces.CopyAttestation(a)
+		clonedAtts[i] = a.Copy()
 	}
 	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {
@@ -118,13 +132,25 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []interfaces.Attestation) 
 
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
-func (s *Service) seen(att interfaces.Attestation) (bool, error) {
-	attRoot, err := hash.Proto(att.GetData())
-	if err != nil {
-		return false, err
+func (s *Service) seen(att ethpb.Att) (bool, error) {
+	var attRoot [32]byte
+	var err error
+	if att.Version() == version.Phase0 {
+		attRoot, err = hash.Proto(att.GetData())
+		if err != nil {
+			return false, err
+		}
+	} else {
+		data := ethpb.CopyAttestationData(att.GetData())
+		data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
+		attRoot, err = hash.Proto(data)
+		if err != nil {
+			return false, err
+		}
 	}
+	key := kv.NewAttestationId(att, attRoot)
 	incomingBits := att.GetAggregationBits()
-	savedBits, ok := s.forkChoiceProcessedRoots.Get(attRoot)
+	savedBits, ok := s.forkChoiceProcessedAtts.Get(key)
 	if ok {
 		savedBitlist, ok := savedBits.(bitfield.Bitlist)
 		if !ok {
@@ -149,6 +175,6 @@ func (s *Service) seen(att interfaces.Attestation) (bool, error) {
 		}
 	}
 
-	s.forkChoiceProcessedRoots.Add(attRoot, incomingBits)
+	s.forkChoiceProcessedAtts.Add(key, incomingBits)
 	return false, nil
 }

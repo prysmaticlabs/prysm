@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	aggtesting "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -45,7 +44,7 @@ func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
 		},
 	}
 
-	runner := func(atts []interfaces.Attestation) {
+	runner := func(atts []ethpb.Att) {
 		attsCopy := make(proposerAtts, len(atts))
 		for i, att := range atts {
 			attsCopy[i] = ethpb.CopyAttestation(att.(*ethpb.Attestation))

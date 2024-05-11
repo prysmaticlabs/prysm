@@ -26,7 +26,9 @@ var (
 	BlockMap map[[4]byte]func() (interfaces.ReadOnlySignedBeaconBlock, error)
 	// MetaDataMap maps the fork-version to the underlying data type for that
 	// particular fork period.
-	MetaDataMap map[[4]byte]func() metadata.Metadata
+	MetaDataMap             map[[4]byte]func() metadata.Metadata
+	AttestationMap          map[[4]byte]func() (ethpb.Att, error)
+	AggregateAttestationMap map[[4]byte]func() (ethpb.SignedAggregateAttAndProof, error)
 )
 
 // InitializeDataMaps initializes all the relevant object maps. This function is called to
@@ -85,6 +87,48 @@ func InitializeDataMaps() {
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().ElectraForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
+		},
+	}
+
+	AttestationMap = map[[4]byte]func() (ethpb.Att, error){
+		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (ethpb.Att, error) {
+			return &ethpb.Attestation{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (ethpb.Att, error) {
+			return &ethpb.Attestation{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (ethpb.Att, error) {
+			return &ethpb.Attestation{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion): func() (ethpb.Att, error) {
+			return &ethpb.Attestation{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() (ethpb.Att, error) {
+			return &ethpb.Attestation{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().ElectraForkVersion): func() (ethpb.Att, error) {
+			return &ethpb.AttestationElectra{}, nil
+		},
+	}
+
+	AggregateAttestationMap = map[[4]byte]func() (ethpb.SignedAggregateAttAndProof, error){
+		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (ethpb.SignedAggregateAttAndProof, error) {
+			return &ethpb.SignedAggregateAttestationAndProof{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (ethpb.SignedAggregateAttAndProof, error) {
+			return &ethpb.SignedAggregateAttestationAndProof{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (ethpb.SignedAggregateAttAndProof, error) {
+			return &ethpb.SignedAggregateAttestationAndProof{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion): func() (ethpb.SignedAggregateAttAndProof, error) {
+			return &ethpb.SignedAggregateAttestationAndProof{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() (ethpb.SignedAggregateAttAndProof, error) {
+			return &ethpb.SignedAggregateAttestationAndProof{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().ElectraForkVersion): func() (ethpb.SignedAggregateAttAndProof, error) {
+			return &ethpb.SignedAggregateAttestationAndProofElectra{}, nil
 		},
 	}
 }

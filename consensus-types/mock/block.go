@@ -192,7 +192,7 @@ func (BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
+func (BeaconBlockBody) AttesterSlashings() []eth.AttSlashing {
 	panic("implement me")
 }
 
@@ -248,7 +248,7 @@ func (b *BeaconBlockBody) SetProposerSlashings([]*eth.ProposerSlashing) {
 	panic("implement me")
 }
 
-func (b *BeaconBlockBody) SetAttesterSlashings([]interfaces.AttesterSlashing) {
+func (b *BeaconBlockBody) SetAttesterSlashings([]eth.AttSlashing) {
 	panic("implement me")
 }
 
@@ -281,7 +281,7 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	panic("implement me")
 }
 
-func (b *BeaconBlockBody) Attestations() []interfaces.Attestation {
+func (b *BeaconBlockBody) Attestations() []eth.Att {
 	panic("implement me")
 }
 func (b *BeaconBlockBody) Consolidations() []*eth.SignedConsolidation {

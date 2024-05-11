@@ -470,11 +470,25 @@ func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconSt
 	seen := make(map[uint64]bool)
 
 	for _, att := range atts {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			return nil, err
+		var committees [][]primitives.ValidatorIndex
+		if att.Version() < version.Electra {
+			committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
+			if err != nil {
+				return nil, err
+			}
+			committees = [][]primitives.ValidatorIndex{committee}
+		} else {
+			committeeIndices := helpers.CommitteeIndices(att.GetCommitteeBitsVal())
+			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
+			var err error
+			for i, ci := range committeeIndices {
+				committees[i], err = helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, ci)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
-		attestingIndices, err := attestation.AttestingIndices(att, committee)
+		attestingIndices, err := attestation.AttestingIndices(att, committees...)
 		if err != nil {
 			return nil, err
 		}

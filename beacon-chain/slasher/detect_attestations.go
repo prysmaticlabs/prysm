@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
 	"golang.org/x/exp/maps"
 )
@@ -19,8 +19,8 @@ import (
 // found attester slashings to the caller.
 func (s *Service) checkSlashableAttestations(
 	ctx context.Context, currentEpoch primitives.Epoch, atts []*slashertypes.IndexedAttestationWrapper,
-) (map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing, error) {
-	slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{}
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// Double votes
 	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, atts)
@@ -57,13 +57,13 @@ func (s *Service) checkSurroundVotes(
 	ctx context.Context,
 	attWrappers []*slashertypes.IndexedAttestationWrapper,
 	currentEpoch primitives.Epoch,
-) (map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing, error) {
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
 	// With 256 validators and 16 epochs per chunk, there is 4096 `uint16` elements per chunk.
 	// 4096 `uint16` elements = 8192 bytes = 8KB
 	// 25_600 chunks * 8KB = 200MB
 	const maxChunkBeforeFlush = 25_600
 
-	slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{}
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// Group attestation wrappers by validator chunk index.
 	attWrappersByValidatorChunkIndex := s.groupByValidatorChunkIndex(attWrappers)
@@ -154,7 +154,7 @@ func (s *Service) checkSurroundVotes(
 // Check for double votes in our database given a list of incoming attestations.
 func (s *Service) checkDoubleVotes(
 	ctx context.Context, incomingAttWrappers []*slashertypes.IndexedAttestationWrapper,
-) (map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing, error) {
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotesOnDisk")
 	defer span.End()
 
@@ -163,7 +163,7 @@ func (s *Service) checkDoubleVotes(
 		epoch          primitives.Epoch
 	}
 
-	slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{}
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// Check each incoming attestation for double votes against other incoming attestations.
 	existingAttWrappers := make(map[attestationInfo]*slashertypes.IndexedAttestationWrapper)
@@ -194,33 +194,72 @@ func (s *Service) checkDoubleVotes(
 			// This is a double vote.
 			doubleVotesTotal.Inc()
 
-			existing, ok := existingAttWrapper.IndexedAttestation.(*ethpb.IndexedAttestation)
-			if !ok {
-				return nil, fmt.Errorf(
-					"existing attestation has wrong type (expected %T, got %T)",
-					&ethpb.IndexedAttestation{},
-					existingAttWrapper.IndexedAttestation,
-				)
+			var slashing ethpb.AttSlashing
+
+			// Both attestations should have the same type
+			if existingAttWrapper.IndexedAttestation.Version() >= version.Electra && incomingAttWrapper.IndexedAttestation.Version() < version.Electra {
+				incomingAttWrapper = &slashertypes.IndexedAttestationWrapper{
+					IndexedAttestation: &ethpb.IndexedAttestationElectra{
+						AttestingIndices: incomingAttWrapper.IndexedAttestation.GetAttestingIndices(),
+						Data:             incomingAttWrapper.IndexedAttestation.GetData(),
+						Signature:        incomingAttWrapper.IndexedAttestation.GetSignature(),
+					},
+					DataRoot: incomingAttWrapper.DataRoot,
+				}
 			}
-			incoming, ok := incomingAttWrapper.IndexedAttestation.(*ethpb.IndexedAttestation)
-			if !ok {
-				return nil, fmt.Errorf(
-					"incoming attestation has wrong type (expected %T, got %T)",
-					&ethpb.IndexedAttestation{},
-					incomingAttWrapper.IndexedAttestation,
-				)
+			if incomingAttWrapper.IndexedAttestation.Version() >= version.Electra && existingAttWrapper.IndexedAttestation.Version() < version.Electra {
+				existingAttWrapper = &slashertypes.IndexedAttestationWrapper{
+					IndexedAttestation: &ethpb.IndexedAttestationElectra{
+						AttestingIndices: existingAttWrapper.IndexedAttestation.GetAttestingIndices(),
+						Data:             existingAttWrapper.IndexedAttestation.GetData(),
+						Signature:        existingAttWrapper.IndexedAttestation.GetSignature(),
+					},
+					DataRoot: existingAttWrapper.DataRoot,
+				}
 			}
 
-			slashing := &ethpb.AttesterSlashing{
-				Attestation_1: existing,
-				Attestation_2: incoming,
-			}
+			postElectra := incomingAttWrapper.IndexedAttestation.Version() >= version.Electra
+			if postElectra {
+				existing, ok := existingAttWrapper.IndexedAttestation.(*ethpb.IndexedAttestationElectra)
+				if !ok {
+					return nil, fmt.Errorf("wrong existing attestation type (expected %T, got %T)", &ethpb.IndexedAttestationElectra{}, existing)
+				}
+				incoming, ok := incomingAttWrapper.IndexedAttestation.(*ethpb.IndexedAttestationElectra)
+				if !ok {
+					return nil, fmt.Errorf("wrong incoming attestation type (expected %T, got %T)", &ethpb.IndexedAttestationElectra{}, incoming)
+				}
+				slashing = &ethpb.AttesterSlashingElectra{
+					Attestation_1: existing,
+					Attestation_2: incoming,
+				}
 
-			// Ensure the attestation with the lower data root is the first attestation.
-			if bytes.Compare(existingAttWrapper.DataRoot[:], incomingAttWrapper.DataRoot[:]) > 0 {
+				// Ensure the attestation with the lower data root is the first attestation.
+				if bytes.Compare(existingAttWrapper.DataRoot[:], incomingAttWrapper.DataRoot[:]) > 0 {
+					slashing = &ethpb.AttesterSlashingElectra{
+						Attestation_1: incoming,
+						Attestation_2: existing,
+					}
+				}
+			} else {
+				existing, ok := existingAttWrapper.IndexedAttestation.(*ethpb.IndexedAttestation)
+				if !ok {
+					return nil, fmt.Errorf("wrong existing attestation type (expected %T, got %T)", &ethpb.IndexedAttestation{}, existing)
+				}
+				incoming, ok := incomingAttWrapper.IndexedAttestation.(*ethpb.IndexedAttestation)
+				if !ok {
+					return nil, fmt.Errorf("wrong incoming attestation type (expected %T, got %T)", &ethpb.IndexedAttestation{}, incoming)
+				}
 				slashing = &ethpb.AttesterSlashing{
-					Attestation_1: incoming,
-					Attestation_2: existing,
+					Attestation_1: existing,
+					Attestation_2: incoming,
+				}
+
+				// Ensure the attestation with the lower data root is the first attestation.
+				if bytes.Compare(existingAttWrapper.DataRoot[:], incomingAttWrapper.DataRoot[:]) > 0 {
+					slashing = &ethpb.AttesterSlashing{
+						Attestation_1: incoming,
+						Attestation_2: existing,
+					}
 				}
 			}
 
@@ -246,33 +285,72 @@ func (s *Service) checkDoubleVotes(
 		wrapper_1 := doubleVote.Wrapper_1
 		wrapper_2 := doubleVote.Wrapper_2
 
-		att_1, ok := wrapper_1.IndexedAttestation.(*ethpb.IndexedAttestation)
-		if !ok {
-			return nil, fmt.Errorf(
-				"first attestation has wrong type (expected %T, got %T)",
-				&ethpb.IndexedAttestation{},
-				wrapper_1.IndexedAttestation,
-			)
+		var slashing ethpb.AttSlashing
+
+		// Both attestations should have the same type
+		if wrapper_1.IndexedAttestation.Version() >= version.Electra && wrapper_2.IndexedAttestation.Version() < version.Electra {
+			wrapper_2 = &slashertypes.IndexedAttestationWrapper{
+				IndexedAttestation: &ethpb.IndexedAttestationElectra{
+					AttestingIndices: wrapper_2.IndexedAttestation.GetAttestingIndices(),
+					Data:             wrapper_2.IndexedAttestation.GetData(),
+					Signature:        wrapper_2.IndexedAttestation.GetSignature(),
+				},
+				DataRoot: wrapper_2.DataRoot,
+			}
 		}
-		att_2, ok := wrapper_2.IndexedAttestation.(*ethpb.IndexedAttestation)
-		if !ok {
-			return nil, fmt.Errorf(
-				"second attestation has wrong type (expected %T, got %T)",
-				&ethpb.IndexedAttestation{},
-				wrapper_2.IndexedAttestation,
-			)
+		if wrapper_2.IndexedAttestation.Version() >= version.Electra && wrapper_1.IndexedAttestation.Version() < version.Electra {
+			wrapper_1 = &slashertypes.IndexedAttestationWrapper{
+				IndexedAttestation: &ethpb.IndexedAttestationElectra{
+					AttestingIndices: wrapper_1.IndexedAttestation.GetAttestingIndices(),
+					Data:             wrapper_1.IndexedAttestation.GetData(),
+					Signature:        wrapper_1.IndexedAttestation.GetSignature(),
+				},
+				DataRoot: wrapper_1.DataRoot,
+			}
 		}
 
-		slashing := &ethpb.AttesterSlashing{
-			Attestation_1: att_1,
-			Attestation_2: att_2,
-		}
+		postElectra := wrapper_2.IndexedAttestation.Version() >= version.Electra
+		if postElectra {
+			existing, ok := wrapper_1.IndexedAttestation.(*ethpb.IndexedAttestationElectra)
+			if !ok {
+				return nil, fmt.Errorf("wrong existing attestation type (expected %T, got %T)", &ethpb.IndexedAttestationElectra{}, existing)
+			}
+			incoming, ok := wrapper_2.IndexedAttestation.(*ethpb.IndexedAttestationElectra)
+			if !ok {
+				return nil, fmt.Errorf("wrong incoming attestation type (expected %T, got %T)", &ethpb.IndexedAttestationElectra{}, incoming)
+			}
+			slashing = &ethpb.AttesterSlashingElectra{
+				Attestation_1: existing,
+				Attestation_2: incoming,
+			}
 
-		// Ensure the attestation with the lower data root is the first attestation.
-		if bytes.Compare(wrapper_1.DataRoot[:], wrapper_2.DataRoot[:]) > 0 {
+			// Ensure the attestation with the lower data root is the first attestation.
+			if bytes.Compare(wrapper_1.DataRoot[:], wrapper_2.DataRoot[:]) > 0 {
+				slashing = &ethpb.AttesterSlashingElectra{
+					Attestation_1: incoming,
+					Attestation_2: existing,
+				}
+			}
+		} else {
+			att_1, ok := wrapper_1.IndexedAttestation.(*ethpb.IndexedAttestation)
+			if !ok {
+				return nil, fmt.Errorf("wrong first attestation type (expected %T, got %T)", &ethpb.IndexedAttestation{}, wrapper_1.IndexedAttestation)
+			}
+			att_2, ok := wrapper_2.IndexedAttestation.(*ethpb.IndexedAttestation)
+			if !ok {
+				return nil, fmt.Errorf("wrong second attestation type (expected %T, got %T)", &ethpb.IndexedAttestation{}, wrapper_2.IndexedAttestation)
+			}
 			slashing = &ethpb.AttesterSlashing{
-				Attestation_1: att_2,
-				Attestation_2: att_1,
+				Attestation_1: att_1,
+				Attestation_2: att_2,
+			}
+
+			// Ensure the attestation with the lower data root is the first attestation.
+			if bytes.Compare(wrapper_1.DataRoot[:], wrapper_2.DataRoot[:]) > 0 {
+				slashing = &ethpb.AttesterSlashing{
+					Attestation_1: att_2,
+					Attestation_2: att_1,
+				}
 			}
 		}
 
@@ -462,13 +540,13 @@ func (s *Service) updateSpans(
 	kind slashertypes.ChunkKind,
 	validatorChunkIndex uint64,
 	currentEpoch primitives.Epoch,
-) (map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing, error) {
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.updateSpans")
 	defer span.End()
 
 	// Apply the attestations to the related chunks and find any
 	// slashings along the way.
-	slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{}
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	for _, attWrappers := range attWrapperByChunkIdx {
 		for _, attWrapper := range attWrappers {
@@ -527,7 +605,7 @@ func (s *Service) applyAttestationForValidator(
 	validatorChunkIndex uint64,
 	validatorIndex primitives.ValidatorIndex,
 	currentEpoch primitives.Epoch,
-) (interfaces.AttesterSlashing, error) {
+) (ethpb.AttSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
 	defer span.End()
 
