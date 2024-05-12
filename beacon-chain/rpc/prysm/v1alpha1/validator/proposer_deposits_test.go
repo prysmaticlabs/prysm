@@ -54,3 +54,7 @@ func TestShouldFallback(t *testing.T) {
 		})
 	}
 }
+
+func TestDepositPacking_Electra(t *testing.T) {
+	// TODO: there are no tests for deposit packing
+}
