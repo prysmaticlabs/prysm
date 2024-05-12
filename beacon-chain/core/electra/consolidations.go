@@ -147,9 +147,6 @@ func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethp
 	if st == nil || st.IsNil() {
 		return nil, errors.New("nil state")
 	}
-	if cs == nil {
-		return nil, ErrNilConsolidations
-	}
 
 	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainConsolidation, st.Fork().CurrentVersion, st.GenesisValidatorsRoot())
 	if err != nil {
