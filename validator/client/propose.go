@@ -148,7 +148,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 				log.WithError(err).Error("Failed to build generic signed block")
 				return
 			}
-
 		}
 	} else {
 		genericSignedBlock, err = blk.PbGenericBlock()
