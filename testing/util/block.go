@@ -1160,6 +1160,13 @@ func HydrateSignedBeaconBlockContentsDeneb(b *ethpb.SignedBeaconBlockContentsDen
 	return b
 }
 
+// HydrateSignedBeaconBlockContentsElectra hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockContentsElectra(b *ethpb.SignedBeaconBlockContentsElectra) *ethpb.SignedBeaconBlockContentsElectra {
+	b.Block = HydrateSignedBeaconBlockElectra(b.Block)
+	return b
+}
+
 // HydrateV2SignedBeaconBlockDeneb hydrates a v2 signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateV2SignedBeaconBlockDeneb(b *v2.SignedBeaconBlockDeneb) *v2.SignedBeaconBlockDeneb {
