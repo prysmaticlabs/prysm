@@ -21,6 +21,31 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 		require.ErrorContains(t, "block cannot be nil", err)
 	})
 
+	// Test for Electra version
+	t.Run("electra block", func(t *testing.T) {
+		eb := util.NewBeaconBlockElectra()
+		eb.Block.Body.Consolidations = []*eth.SignedConsolidation{
+			{
+				Signature: make([]byte, 96),
+				Message: &eth.Consolidation{
+					SourceIndex: 1,
+					TargetIndex: 2,
+					Epoch:       3,
+				},
+			},
+		}
+		b, err := blocks.NewSignedBeaconBlock(eb)
+		require.NoError(t, err)
+		r1, err := eb.Block.HashTreeRoot()
+		require.NoError(t, err)
+		result, err := vs.constructGenericBeaconBlock(b, nil)
+		require.NoError(t, err)
+		r2, err := result.GetElectra().Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.Equal(t, r1, r2)
+		require.Equal(t, result.IsBlinded, false)
+	})
+
 	// Test for Deneb version
 	t.Run("deneb block", func(t *testing.T) {
 		eb := util.NewBeaconBlockDeneb()
