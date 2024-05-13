@@ -126,10 +126,6 @@ func GethPragueTime(genesisTime uint64, cfg *clparams.BeaconChainConfig) *uint64
 // like in an e2e test. The parameters are minimal but the full value is returned unmarshaled so that it can be
 // customized as desired.
 func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *core.Genesis {
-	ttd, ok := big.NewInt(0).SetString(clparams.BeaconConfig().TerminalTotalDifficulty, 10)
-	if !ok {
-		panic(fmt.Sprintf("unable to parse TerminalTotalDifficulty as an integer = %s", clparams.BeaconConfig().TerminalTotalDifficulty))
-	}
 
 	shanghaiTime := GethShanghaiTime(genesisTime, cfg)
 	cancunTime := GethCancunTime(genesisTime, cfg)
@@ -151,14 +147,10 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 		ArrowGlacierBlock:             bigz,
 		GrayGlacierBlock:              bigz,
 		MergeNetsplitBlock:            bigz,
-		TerminalTotalDifficulty:       ttd,
-		TerminalTotalDifficultyPassed: false,
-		Clique: &params.CliqueConfig{
-			Period: cfg.SecondsPerETH1Block,
-			Epoch:  20000,
-		},
-		ShanghaiTime: shanghaiTime,
-		CancunTime:   cancunTime,
+		TerminalTotalDifficultyPassed: true,
+		TerminalTotalDifficulty:       bigz,
+		ShanghaiTime:                  shanghaiTime,
+		CancunTime:                    cancunTime,
 		PragueTime:   pragueTime,
 	}
 	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
