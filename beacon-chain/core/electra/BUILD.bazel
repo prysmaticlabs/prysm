@@ -6,6 +6,7 @@ go_library(
         "churn.go",
         "transition.go",
         "upgrade.go",
+        "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra",
     visibility = ["//visibility:public"],
@@ -32,6 +33,7 @@ go_test(
     srcs = [
         "churn_test.go",
         "upgrade_test.go",
+        "validator_test.go",
     ],
     deps = [
         ":go_default_library",
