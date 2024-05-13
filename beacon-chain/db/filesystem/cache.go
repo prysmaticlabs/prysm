@@ -9,7 +9,7 @@ import (
 )
 
 // blobIndexMask is a bitmask representing the set of blob indices that are currently set.
-type blobIndexMask [fieldparams.MaxBlobsPerBlock]bool
+type blobIndexMask [fieldparams.NumberOfColumns]bool
 
 // BlobStorageSummary represents cached information about the BlobSidecars on disk for each root the cache knows about.
 type BlobStorageSummary struct {
@@ -69,9 +69,12 @@ func (s *blobStorageCache) Summary(root [32]byte) BlobStorageSummary {
 }
 
 func (s *blobStorageCache) ensure(key string, slot primitives.Slot, idx uint64) error {
-	if idx >= fieldparams.MaxBlobsPerBlock {
-		return errIndexOutOfBounds
-	}
+	// TODO: Separate blob index checks from data column index checks
+	/*
+		if idx >= fieldparams.MaxBlobsPerBlock {
+			return errIndexOutOfBounds
+		}
+	*/
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	v := s.cache[key]
