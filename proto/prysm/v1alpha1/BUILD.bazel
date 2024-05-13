@@ -156,8 +156,8 @@ ssz_gen_marshal(
         "PayloadAttestationData",
         "PayloadAttestation",
         "PayloadAttestationMessage",
-        "SignedExecutionPayloadEnvelopeBlind",
-        "ExecutionPayloadEnvelopeBlind",
+        "SignedBlindPayloadEnvelope",
+        "BlindPayloadEnvelope",
     ],
 )
 

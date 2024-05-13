@@ -20988,20 +20988,20 @@ func (h *HistoricalSummary) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the SignedExecutionPayloadEnvelopeBlind object
-func (s *SignedExecutionPayloadEnvelopeBlind) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the SignedBlindPayloadEnvelope object
+func (s *SignedBlindPayloadEnvelope) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(s)
 }
 
-// MarshalSSZTo ssz marshals the SignedExecutionPayloadEnvelopeBlind object to a target array
-func (s *SignedExecutionPayloadEnvelopeBlind) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the SignedBlindPayloadEnvelope object to a target array
+func (s *SignedBlindPayloadEnvelope) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(100)
 
 	// Offset (0) 'Message'
 	dst = ssz.WriteOffset(dst, offset)
 	if s.Message == nil {
-		s.Message = new(ExecutionPayloadEnvelopeBlind)
+		s.Message = new(BlindPayloadEnvelope)
 	}
 	offset += s.Message.SizeSSZ()
 
@@ -21020,8 +21020,8 @@ func (s *SignedExecutionPayloadEnvelopeBlind) MarshalSSZTo(buf []byte) (dst []by
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the SignedExecutionPayloadEnvelopeBlind object
-func (s *SignedExecutionPayloadEnvelopeBlind) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the SignedBlindPayloadEnvelope object
+func (s *SignedBlindPayloadEnvelope) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 100 {
@@ -21050,7 +21050,7 @@ func (s *SignedExecutionPayloadEnvelopeBlind) UnmarshalSSZ(buf []byte) error {
 	{
 		buf = tail[o0:]
 		if s.Message == nil {
-			s.Message = new(ExecutionPayloadEnvelopeBlind)
+			s.Message = new(BlindPayloadEnvelope)
 		}
 		if err = s.Message.UnmarshalSSZ(buf); err != nil {
 			return err
@@ -21059,26 +21059,26 @@ func (s *SignedExecutionPayloadEnvelopeBlind) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the SignedExecutionPayloadEnvelopeBlind object
-func (s *SignedExecutionPayloadEnvelopeBlind) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the SignedBlindPayloadEnvelope object
+func (s *SignedBlindPayloadEnvelope) SizeSSZ() (size int) {
 	size = 100
 
 	// Field (0) 'Message'
 	if s.Message == nil {
-		s.Message = new(ExecutionPayloadEnvelopeBlind)
+		s.Message = new(BlindPayloadEnvelope)
 	}
 	size += s.Message.SizeSSZ()
 
 	return
 }
 
-// HashTreeRoot ssz hashes the SignedExecutionPayloadEnvelopeBlind object
-func (s *SignedExecutionPayloadEnvelopeBlind) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the SignedBlindPayloadEnvelope object
+func (s *SignedBlindPayloadEnvelope) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(s)
 }
 
-// HashTreeRootWith ssz hashes the SignedExecutionPayloadEnvelopeBlind object with a hasher
-func (s *SignedExecutionPayloadEnvelopeBlind) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the SignedBlindPayloadEnvelope object with a hasher
+func (s *SignedBlindPayloadEnvelope) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Message'
@@ -21101,13 +21101,13 @@ func (s *SignedExecutionPayloadEnvelopeBlind) HashTreeRootWith(hh *ssz.Hasher) (
 	return
 }
 
-// MarshalSSZ ssz marshals the ExecutionPayloadEnvelopeBlind object
-func (e *ExecutionPayloadEnvelopeBlind) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the BlindPayloadEnvelope object
+func (e *BlindPayloadEnvelope) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(e)
 }
 
-// MarshalSSZTo ssz marshals the ExecutionPayloadEnvelopeBlind object to a target array
-func (e *ExecutionPayloadEnvelopeBlind) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the BlindPayloadEnvelope object to a target array
+func (e *BlindPayloadEnvelope) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(221)
 
@@ -21171,8 +21171,8 @@ func (e *ExecutionPayloadEnvelopeBlind) MarshalSSZTo(buf []byte) (dst []byte, er
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the ExecutionPayloadEnvelopeBlind object
-func (e *ExecutionPayloadEnvelopeBlind) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the BlindPayloadEnvelope object
+func (e *BlindPayloadEnvelope) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 221 {
@@ -21245,8 +21245,8 @@ func (e *ExecutionPayloadEnvelopeBlind) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the ExecutionPayloadEnvelopeBlind object
-func (e *ExecutionPayloadEnvelopeBlind) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the BlindPayloadEnvelope object
+func (e *BlindPayloadEnvelope) SizeSSZ() (size int) {
 	size = 221
 
 	// Field (3) 'BlobKzgCommitments'
@@ -21255,13 +21255,13 @@ func (e *ExecutionPayloadEnvelopeBlind) SizeSSZ() (size int) {
 	return
 }
 
-// HashTreeRoot ssz hashes the ExecutionPayloadEnvelopeBlind object
-func (e *ExecutionPayloadEnvelopeBlind) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the BlindPayloadEnvelope object
+func (e *BlindPayloadEnvelope) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(e)
 }
 
-// HashTreeRootWith ssz hashes the ExecutionPayloadEnvelopeBlind object with a hasher
-func (e *ExecutionPayloadEnvelopeBlind) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the BlindPayloadEnvelope object with a hasher
+func (e *BlindPayloadEnvelope) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'PayloadRoot'

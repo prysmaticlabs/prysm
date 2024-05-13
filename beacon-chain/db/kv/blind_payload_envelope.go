@@ -8,9 +8,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SaveSignedExecutionPayloadEnvelopeBlind saves a signed execution payload envelope blind in the database.
-func (s *Store) SaveSignedExecutionPayloadEnvelopeBlind(ctx context.Context, env *ethpb.SignedExecutionPayloadEnvelopeBlind) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveSignedExecutionPayloadEnvelopeBlind")
+// SaveBlindPayloadEnvelope saves a signed execution payload envelope blind in the database.
+func (s *Store) SaveBlindPayloadEnvelope(ctx context.Context, env *ethpb.SignedBlindPayloadEnvelope) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlindPayloadEnvelope")
 	defer span.End()
 
 	enc, err := encode(ctx, env)
@@ -27,12 +27,12 @@ func (s *Store) SaveSignedExecutionPayloadEnvelopeBlind(ctx context.Context, env
 	return err
 }
 
-// SignedExecutionPayloadEnvelopeBlind retrieves a signed execution payload envelope blind from the database.
-func (s *Store) SignedExecutionPayloadEnvelopeBlind(ctx context.Context, blockRoot []byte) (*ethpb.SignedExecutionPayloadEnvelopeBlind, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SignedExecutionPayloadEnvelopeBlind")
+// SignedBlindPayloadEnvelope retrieves a signed execution payload envelope blind from the database.
+func (s *Store) SignedBlindPayloadEnvelope(ctx context.Context, blockRoot []byte) (*ethpb.SignedBlindPayloadEnvelope, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SignedBlindPayloadEnvelope")
 	defer span.End()
 
-	env := &ethpb.SignedExecutionPayloadEnvelopeBlind{}
+	env := &ethpb.SignedBlindPayloadEnvelope{}
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(executionPayloadEnvelopeBucket)
 		enc := bkt.Get(blockRoot)

@@ -438,18 +438,18 @@ func InclusionSummary(t *testing.T) *enginev1.InclusionListSummary {
 	}
 }
 
-// SignedExecutionPayloadEnvelopeBlind creates a random SignedExecutionPayloadEnvelopeBlind for testing purposes.
-func SignedExecutionPayloadEnvelopeBlind(t *testing.T) *ethpb.SignedExecutionPayloadEnvelopeBlind {
-	return &ethpb.SignedExecutionPayloadEnvelopeBlind{
-		Message:   ExecutionPayloadEnvelopeBlind(t),
+// SignedBlindPayloadEnvelope creates a random SignedBlindPayloadEnvelope for testing purposes.
+func SignedBlindPayloadEnvelope(t *testing.T) *ethpb.SignedBlindPayloadEnvelope {
+	return &ethpb.SignedBlindPayloadEnvelope{
+		Message:   BlindPayloadEnvelope(t),
 		Signature: randomBytes(96, t),
 	}
 }
 
-// ExecutionPayloadEnvelopeBlind creates a random ExecutionPayloadEnvelopeBlind for testing purposes.
-func ExecutionPayloadEnvelopeBlind(t *testing.T) *ethpb.ExecutionPayloadEnvelopeBlind {
+// BlindPayloadEnvelope creates a random BlindPayloadEnvelope for testing purposes.
+func BlindPayloadEnvelope(t *testing.T) *ethpb.BlindPayloadEnvelope {
 	withheld := randomUint64(t)%2 == 0
-	return &ethpb.ExecutionPayloadEnvelopeBlind{
+	return &ethpb.BlindPayloadEnvelope{
 		PayloadRoot:                randomBytes(32, t),
 		BuilderIndex:               primitives.ValidatorIndex(randomUint64(t)),
 		BeaconBlockRoot:            randomBytes(32, t),

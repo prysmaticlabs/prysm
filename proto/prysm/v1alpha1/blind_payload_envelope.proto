@@ -24,12 +24,12 @@ option java_outer_classname = "BlindPayloadEnvelopeProto";
 option java_package = "org.ethereum.eth.v1alpha1";
 option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
-message SignedExecutionPayloadEnvelopeBlind {
-    ExecutionPayloadEnvelopeBlind message = 1;
+message SignedBlindPayloadEnvelope {
+    BlindPayloadEnvelope message = 1;
     bytes signature 		 = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message ExecutionPayloadEnvelopeBlind {
+message BlindPayloadEnvelope {
     bytes payload_root 		= 1 [(ethereum.eth.ext.ssz_size) = "32"];
     uint64 builder_index 	     		= 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
     bytes beacon_block_root 		= 3 [(ethereum.eth.ext.ssz_size) = "32"];

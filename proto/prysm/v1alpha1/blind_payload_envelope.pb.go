@@ -23,17 +23,17 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type SignedExecutionPayloadEnvelopeBlind struct {
+type SignedBlindPayloadEnvelope struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message   *ExecutionPayloadEnvelopeBlind `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Message   *BlindPayloadEnvelope `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	Signature []byte                         `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
-func (x *SignedExecutionPayloadEnvelopeBlind) Reset() {
-	*x = SignedExecutionPayloadEnvelopeBlind{}
+func (x *SignedBlindPayloadEnvelope) Reset() {
+	*x = SignedBlindPayloadEnvelope{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_prysm_v1alpha1_blind_payload_envelope_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -41,13 +41,13 @@ func (x *SignedExecutionPayloadEnvelopeBlind) Reset() {
 	}
 }
 
-func (x *SignedExecutionPayloadEnvelopeBlind) String() string {
+func (x *SignedBlindPayloadEnvelope) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignedExecutionPayloadEnvelopeBlind) ProtoMessage() {}
+func (*SignedBlindPayloadEnvelope) ProtoMessage() {}
 
-func (x *SignedExecutionPayloadEnvelopeBlind) ProtoReflect() protoreflect.Message {
+func (x *SignedBlindPayloadEnvelope) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_prysm_v1alpha1_blind_payload_envelope_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -59,26 +59,26 @@ func (x *SignedExecutionPayloadEnvelopeBlind) ProtoReflect() protoreflect.Messag
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SignedExecutionPayloadEnvelopeBlind.ProtoReflect.Descriptor instead.
-func (*SignedExecutionPayloadEnvelopeBlind) Descriptor() ([]byte, []int) {
+// Deprecated: Use SignedBlindPayloadEnvelope.ProtoReflect.Descriptor instead.
+func (*SignedBlindPayloadEnvelope) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_blind_payload_envelope_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SignedExecutionPayloadEnvelopeBlind) GetMessage() *ExecutionPayloadEnvelopeBlind {
+func (x *SignedBlindPayloadEnvelope) GetMessage() *BlindPayloadEnvelope {
 	if x != nil {
 		return x.Message
 	}
 	return nil
 }
 
-func (x *SignedExecutionPayloadEnvelopeBlind) GetSignature() []byte {
+func (x *SignedBlindPayloadEnvelope) GetSignature() []byte {
 	if x != nil {
 		return x.Signature
 	}
 	return nil
 }
 
-type ExecutionPayloadEnvelopeBlind struct {
+type BlindPayloadEnvelope struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -94,8 +94,8 @@ type ExecutionPayloadEnvelopeBlind struct {
 	StateRoot                  []byte                                                                      `protobuf:"bytes,9,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) Reset() {
-	*x = ExecutionPayloadEnvelopeBlind{}
+func (x *BlindPayloadEnvelope) Reset() {
+	*x = BlindPayloadEnvelope{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_prysm_v1alpha1_blind_payload_envelope_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -103,13 +103,13 @@ func (x *ExecutionPayloadEnvelopeBlind) Reset() {
 	}
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) String() string {
+func (x *BlindPayloadEnvelope) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExecutionPayloadEnvelopeBlind) ProtoMessage() {}
+func (*BlindPayloadEnvelope) ProtoMessage() {}
 
-func (x *ExecutionPayloadEnvelopeBlind) ProtoReflect() protoreflect.Message {
+func (x *BlindPayloadEnvelope) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_prysm_v1alpha1_blind_payload_envelope_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -121,68 +121,68 @@ func (x *ExecutionPayloadEnvelopeBlind) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ExecutionPayloadEnvelopeBlind.ProtoReflect.Descriptor instead.
-func (*ExecutionPayloadEnvelopeBlind) Descriptor() ([]byte, []int) {
+// Deprecated: Use BlindPayloadEnvelope.ProtoReflect.Descriptor instead.
+func (*BlindPayloadEnvelope) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_blind_payload_envelope_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) GetPayloadRoot() []byte {
+func (x *BlindPayloadEnvelope) GetPayloadRoot() []byte {
 	if x != nil {
 		return x.PayloadRoot
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) GetBuilderIndex() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex {
+func (x *BlindPayloadEnvelope) GetBuilderIndex() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex {
 	if x != nil {
 		return x.BuilderIndex
 	}
 	return github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex(0)
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) GetBeaconBlockRoot() []byte {
+func (x *BlindPayloadEnvelope) GetBeaconBlockRoot() []byte {
 	if x != nil {
 		return x.BeaconBlockRoot
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) GetBlobKzgCommitments() [][]byte {
+func (x *BlindPayloadEnvelope) GetBlobKzgCommitments() [][]byte {
 	if x != nil {
 		return x.BlobKzgCommitments
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) GetInclusionListProposerIndex() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex {
+func (x *BlindPayloadEnvelope) GetInclusionListProposerIndex() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex {
 	if x != nil {
 		return x.InclusionListProposerIndex
 	}
 	return github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex(0)
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) GetInclusionListSlot() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Slot {
+func (x *BlindPayloadEnvelope) GetInclusionListSlot() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Slot {
 	if x != nil {
 		return x.InclusionListSlot
 	}
 	return github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Slot(0)
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) GetInclusionListSignature() []byte {
+func (x *BlindPayloadEnvelope) GetInclusionListSignature() []byte {
 	if x != nil {
 		return x.InclusionListSignature
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) GetPayloadWithheld() bool {
+func (x *BlindPayloadEnvelope) GetPayloadWithheld() bool {
 	if x != nil {
 		return x.PayloadWithheld
 	}
 	return false
 }
 
-func (x *ExecutionPayloadEnvelopeBlind) GetStateRoot() []byte {
+func (x *BlindPayloadEnvelope) GetStateRoot() []byte {
 	if x != nil {
 		return x.StateRoot
 	}
@@ -281,11 +281,11 @@ func file_proto_prysm_v1alpha1_blind_payload_envelope_proto_rawDescGZIP() []byte
 
 var file_proto_prysm_v1alpha1_blind_payload_envelope_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_proto_prysm_v1alpha1_blind_payload_envelope_proto_goTypes = []interface{}{
-	(*SignedExecutionPayloadEnvelopeBlind)(nil), // 0: ethereum.eth.v1alpha1.SignedExecutionPayloadEnvelopeBlind
-	(*ExecutionPayloadEnvelopeBlind)(nil),       // 1: ethereum.eth.v1alpha1.ExecutionPayloadEnvelopeBlind
+	(*SignedBlindPayloadEnvelope)(nil), // 0: ethereum.eth.v1alpha1.SignedBlindPayloadEnvelope
+	(*BlindPayloadEnvelope)(nil),       // 1: ethereum.eth.v1alpha1.BlindPayloadEnvelope
 }
 var file_proto_prysm_v1alpha1_blind_payload_envelope_proto_depIdxs = []int32{
-	1, // 0: ethereum.eth.v1alpha1.SignedExecutionPayloadEnvelopeBlind.message:type_name -> ethereum.eth.v1alpha1.ExecutionPayloadEnvelopeBlind
+	1, // 0: ethereum.eth.v1alpha1.SignedBlindPayloadEnvelope.message:type_name -> ethereum.eth.v1alpha1.BlindPayloadEnvelope
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -300,7 +300,7 @@ func file_proto_prysm_v1alpha1_blind_payload_envelope_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_proto_prysm_v1alpha1_blind_payload_envelope_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignedExecutionPayloadEnvelopeBlind); i {
+			switch v := v.(*SignedBlindPayloadEnvelope); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -312,7 +312,7 @@ func file_proto_prysm_v1alpha1_blind_payload_envelope_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_blind_payload_envelope_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ExecutionPayloadEnvelopeBlind); i {
+			switch v := v.(*BlindPayloadEnvelope); i {
 			case 0:
 				return &v.state
 			case 1:

@@ -53,7 +53,7 @@ type ReadOnlyDatabase interface {
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// ExecutionChainData operations.
 	ExecutionChainData(ctx context.Context) (*ethpb.ETH1ChainData, error)
-	SignedExecutionPayloadEnvelopeBlind(ctx context.Context, blockRoot []byte) (*ethpb.SignedExecutionPayloadEnvelopeBlind, error)
+	SignedBlindPayloadEnvelope(ctx context.Context, blockRoot []byte) (*ethpb.SignedBlindPayloadEnvelope, error)
 	// Fee recipients operations.
 	FeeRecipientByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (common.Address, error)
 	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
@@ -88,7 +88,7 @@ type NoHeadAccessDatabase interface {
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// SaveExecutionChainData operations.
 	SaveExecutionChainData(ctx context.Context, data *ethpb.ETH1ChainData) error
-	SaveSignedExecutionPayloadEnvelopeBlind(ctx context.Context, envelope *ethpb.SignedExecutionPayloadEnvelopeBlind) error
+	SaveBlindPayloadEnvelope(ctx context.Context, envelope *ethpb.SignedBlindPayloadEnvelope) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 	// Fee recipients operations.

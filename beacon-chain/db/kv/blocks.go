@@ -303,7 +303,7 @@ func prepareBlockBatch(blks []blocks.ROBlock, shouldBlind bool) ([]blockBatchEnt
 				if !errors.Is(err, blocks.ErrUnsupportedVersion) {
 					return nil, errors.Wrapf(err, "could not convert block to blinded format for root %#x", batch[i].root)
 				}
-				// Pre-bellatrix and ePBS blocks give ErrUnsupportedVersion; use the full block already in the batch entry.
+				// Pre-deneb blocks give ErrUnsupportedVersion; use the full block already in the batch entry.
 			} else {
 				batch[i].block = blinded
 			}

@@ -78,7 +78,7 @@ func isSSZStorageFormat(obj interface{}) bool {
 		return true
 	case *ethpb.VoluntaryExit:
 		return true
-	case *ethpb.SignedExecutionPayloadEnvelopeBlind:
+	case *ethpb.SignedBlindPayloadEnvelope:
 		return true
 	case *ethpb.ValidatorRegistrationV1:
 		return true

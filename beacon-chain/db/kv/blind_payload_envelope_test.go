@@ -8,16 +8,16 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util/random"
 )
 
-func TestStore_SignedExecutionPayloadEnvelopeBlind(t *testing.T) {
+func TestStore_SignedBlindPayloadEnvelope(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	_, err := db.SignedExecutionPayloadEnvelopeBlind(ctx, []byte("test"))
+	_, err := db.SignedBlindPayloadEnvelope(ctx, []byte("test"))
 	require.ErrorIs(t, err, ErrNotFound)
 
-	env := random.SignedExecutionPayloadEnvelopeBlind(t)
-	err = db.SaveSignedExecutionPayloadEnvelopeBlind(ctx, env)
+	env := random.SignedBlindPayloadEnvelope(t)
+	err = db.SaveBlindPayloadEnvelope(ctx, env)
 	require.NoError(t, err)
-	got, err := db.SignedExecutionPayloadEnvelopeBlind(ctx, env.Message.BeaconBlockRoot)
+	got, err := db.SignedBlindPayloadEnvelope(ctx, env.Message.BeaconBlockRoot)
 	require.NoError(t, err)
 	require.DeepEqual(t, got, env)
 }
