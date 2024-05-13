@@ -78,6 +78,8 @@ func queueExcessActiveBalance(ctx context.Context, s state.BeaconState, idx prim
 //	    state.pending_balance_deposits.append(
 //	        PendingBalanceDeposit(index=index, amount=balance)
 //	    )
+//
+//nolint:dupword
 func QueueEntireBalanceAndResetValidator(ctx context.Context, s state.BeaconState, idx primitives.ValidatorIndex) error {
 	bal, err := s.BalanceAtIndex(idx)
 	if err != nil {
