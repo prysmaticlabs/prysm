@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -160,6 +161,7 @@ func TestClient_HTTP(t *testing.T) {
 	cfg := params.BeaconConfig().Copy()
 	cfg.CapellaForkEpoch = 1
 	cfg.DenebForkEpoch = 2
+	cfg.ElectraForkEpoch = 2
 	params.OverrideBeaconConfig(cfg)
 
 	t.Run(GetPayloadMethod, func(t *testing.T) {
@@ -266,6 +268,61 @@ func TestClient_HTTP(t *testing.T) {
 	t.Run(GetPayloadMethodV3, func(t *testing.T) {
 		payloadId := [8]byte{1}
 		want, ok := fix["ExecutionPayloadDenebWithValue"].(*pb.GetPayloadV3ResponseJson)
+		require.Equal(t, true, ok)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			enc, err := io.ReadAll(r.Body)
+			require.NoError(t, err)
+			jsonRequestString := string(enc)
+
+			reqArg, err := json.Marshal(pb.PayloadIDBytes(payloadId))
+			require.NoError(t, err)
+
+			// We expect the JSON string RPC request contains the right arguments.
+			require.Equal(t, true, strings.Contains(
+				jsonRequestString, string(reqArg),
+			))
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  want,
+			}
+			err = json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		client := &Service{}
+		client.rpcClient = rpcClient
+
+		// We call the RPC method via HTTP and expect a proper result.
+		resp, blobsBundle, override, err := client.GetPayload(ctx, payloadId, 2*params.BeaconConfig().SlotsPerEpoch)
+		require.NoError(t, err)
+		require.Equal(t, true, override)
+		g, err := resp.ExcessBlobGas()
+		require.NoError(t, err)
+		require.DeepEqual(t, uint64(3), g)
+		g, err = resp.BlobGasUsed()
+		require.NoError(t, err)
+		require.DeepEqual(t, uint64(2), g)
+
+		commitments := [][]byte{bytesutil.PadTo([]byte("commitment1"), fieldparams.BLSPubkeyLength), bytesutil.PadTo([]byte("commitment2"), fieldparams.BLSPubkeyLength)}
+		require.DeepEqual(t, commitments, blobsBundle.KzgCommitments)
+		proofs := [][]byte{bytesutil.PadTo([]byte("proof1"), fieldparams.BLSPubkeyLength), bytesutil.PadTo([]byte("proof2"), fieldparams.BLSPubkeyLength)}
+		require.DeepEqual(t, proofs, blobsBundle.Proofs)
+		blobs := [][]byte{bytesutil.PadTo([]byte("a"), fieldparams.BlobLength), bytesutil.PadTo([]byte("b"), fieldparams.BlobLength)}
+		require.DeepEqual(t, blobs, blobsBundle.Blobs)
+	})
+	t.Run(GetPayloadMethodV4, func(t *testing.T) {
+		payloadId := [8]byte{1}
+		want, ok := fix["ExecutionPayloadElectraWithValue"].(*pb.GetPayloadV4ResponseJson)
 		require.Equal(t, true, ok)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -500,6 +557,20 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
 	})
+	t.Run(NewPayloadMethodV4+" VALID status", func(t *testing.T) {
+		execPayload, ok := fix["ExecutionPayloadElectra"].(*pb.ExecutionPayloadElectra)
+		require.Equal(t, true, ok)
+		want, ok := fix["ValidPayloadStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
+		client := newPayloadV4Setup(t, want, execPayload)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload, big.NewInt(0))
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
+		require.NoError(t, err)
+		require.DeepEqual(t, want.LatestValidHash, resp)
+	})
 	t.Run(NewPayloadMethod+" SYNCING status", func(t *testing.T) {
 		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
@@ -537,6 +608,20 @@ func TestClient_HTTP(t *testing.T) {
 
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
+		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
+		require.DeepEqual(t, []uint8(nil), resp)
+	})
+	t.Run(NewPayloadMethodV4+" SYNCING status", func(t *testing.T) {
+		execPayload, ok := fix["ExecutionPayloadElectra"].(*pb.ExecutionPayloadElectra)
+		require.Equal(t, true, ok)
+		want, ok := fix["SyncingStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
+		client := newPayloadV4Setup(t, want, execPayload)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -584,6 +669,20 @@ func TestClient_HTTP(t *testing.T) {
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
+	t.Run(NewPayloadMethodV4+" INVALID_BLOCK_HASH status", func(t *testing.T) {
+		execPayload, ok := fix["ExecutionPayloadElectra"].(*pb.ExecutionPayloadElectra)
+		require.Equal(t, true, ok)
+		want, ok := fix["InvalidBlockHashStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
+		client := newPayloadV4Setup(t, want, execPayload)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload, big.NewInt(0))
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
+		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
+		require.DeepEqual(t, []uint8(nil), resp)
+	})
 	t.Run(NewPayloadMethod+" INVALID status", func(t *testing.T) {
 		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
@@ -621,6 +720,20 @@ func TestClient_HTTP(t *testing.T) {
 
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
+		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
+		require.DeepEqual(t, want.LatestValidHash, resp)
+	})
+	t.Run(NewPayloadMethodV4+" INVALID status", func(t *testing.T) {
+		execPayload, ok := fix["ExecutionPayloadElectra"].(*pb.ExecutionPayloadElectra)
+		require.Equal(t, true, ok)
+		want, ok := fix["InvalidStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
+		client := newPayloadV4Setup(t, want, execPayload)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -1352,6 +1465,62 @@ func fixtures() map[string]interface{} {
 		BlobGasUsed:   2,
 		ExcessBlobGas: 3,
 	}
+	withdrawalRequests := make([]pb.WithdrawalRequestV1, 3)
+	for i := range withdrawalRequests {
+		amount := hexutil.Uint64(i)
+		address := &common.Address{}
+		address.SetBytes([]byte{0, 0, byte(i)})
+		pubkey := pb.BlsPubkey{}
+		copy(pubkey[:], []byte{0, byte(i)})
+		withdrawalRequests[i] = pb.WithdrawalRequestV1{
+			SourceAddress:   address,
+			ValidatorPubkey: &pubkey,
+			Amount:          &amount,
+		}
+	}
+	depositRequests := make([]pb.DepositRequestV1, 3)
+	for i := range depositRequests {
+		amount := hexutil.Uint64(math.MaxUint16 - i)
+		creds := &common.Hash{}
+		creds.SetBytes([]byte{0, 0, byte(i)})
+		pubkey := pb.BlsPubkey{}
+		copy(pubkey[:], []byte{0, byte(i)})
+		sig := pb.BlsSig{}
+		copy(sig[:], []byte{0, 0, 0, byte(i)})
+		idx := hexutil.Uint64(i)
+		depositRequests[i] = pb.DepositRequestV1{
+			PubKey:                &pubkey,
+			WithdrawalCredentials: creds,
+			Amount:                &amount,
+			Signature:             &sig,
+			Index:                 &idx,
+		}
+	}
+	outer := &pb.ExecutionPayloadElectraJSON{
+		WithdrawalRequests: withdrawalRequests,
+		DepositRequests:    depositRequests,
+	}
+	executionPayloadFixtureElectra := &pb.ExecutionPayloadElectra{
+		ParentHash:         foo[:],
+		FeeRecipient:       bar,
+		StateRoot:          foo[:],
+		ReceiptsRoot:       foo[:],
+		LogsBloom:          baz,
+		PrevRandao:         foo[:],
+		BlockNumber:        1,
+		GasLimit:           1,
+		GasUsed:            1,
+		Timestamp:          1,
+		ExtraData:          foo[:],
+		BaseFeePerGas:      bytesutil.PadTo(baseFeePerGas.Bytes(), fieldparams.RootLength),
+		BlockHash:          foo[:],
+		Transactions:       [][]byte{foo[:]},
+		Withdrawals:        []*pb.Withdrawal{},
+		BlobGasUsed:        2,
+		ExcessBlobGas:      3,
+		DepositReceipts:    outer.ElectraDepositReceipts(),
+		WithdrawalRequests: outer.ElectraExecutionLayerWithdrawalRequests(),
+	}
 	hexUint := hexutil.Uint64(1)
 	executionPayloadWithValueFixtureCapella := &pb.GetPayloadV2ResponseJson{
 		ExecutionPayload: &pb.ExecutionPayloadCapellaJSON{
@@ -1377,6 +1546,33 @@ func fixtures() map[string]interface{} {
 	executionPayloadWithValueFixtureDeneb := &pb.GetPayloadV3ResponseJson{
 		ShouldOverrideBuilder: true,
 		ExecutionPayload: &pb.ExecutionPayloadDenebJSON{
+			ParentHash:    &common.Hash{'a'},
+			FeeRecipient:  &common.Address{'b'},
+			StateRoot:     &common.Hash{'c'},
+			ReceiptsRoot:  &common.Hash{'d'},
+			LogsBloom:     &hexutil.Bytes{'e'},
+			PrevRandao:    &common.Hash{'f'},
+			BaseFeePerGas: "0x123",
+			BlockHash:     &common.Hash{'g'},
+			Transactions:  []hexutil.Bytes{{'h'}},
+			Withdrawals:   []*pb.Withdrawal{},
+			BlockNumber:   &hexUint,
+			GasLimit:      &hexUint,
+			GasUsed:       &hexUint,
+			Timestamp:     &hexUint,
+			BlobGasUsed:   &bgu,
+			ExcessBlobGas: &ebg,
+		},
+		BlockValue: "0x11fffffffff",
+		BlobsBundle: &pb.BlobBundleJSON{
+			Commitments: []hexutil.Bytes{[]byte("commitment1"), []byte("commitment2")},
+			Proofs:      []hexutil.Bytes{[]byte("proof1"), []byte("proof2")},
+			Blobs:       []hexutil.Bytes{{'a'}, {'b'}},
+		},
+	}
+	executionPayloadWithValueFixtureElectra := &pb.GetPayloadV4ResponseJson{
+		ShouldOverrideBuilder: true,
+		ExecutionPayload: &pb.ExecutionPayloadElectraJSON{
 			ParentHash:    &common.Hash{'a'},
 			FeeRecipient:  &common.Address{'b'},
 			StateRoot:     &common.Hash{'c'},
@@ -1491,8 +1687,10 @@ func fixtures() map[string]interface{} {
 		"ExecutionPayload":                  executionPayloadFixture,
 		"ExecutionPayloadCapella":           executionPayloadFixtureCapella,
 		"ExecutionPayloadDeneb":             executionPayloadFixtureDeneb,
+		"ExecutionPayloadElectra":           executionPayloadFixtureElectra,
 		"ExecutionPayloadCapellaWithValue":  executionPayloadWithValueFixtureCapella,
 		"ExecutionPayloadDenebWithValue":    executionPayloadWithValueFixtureDeneb,
+		"ExecutionPayloadElectraWithValue":  executionPayloadWithValueFixtureElectra,
 		"ValidPayloadStatus":                validStatus,
 		"InvalidBlockHashStatus":            inValidBlockHashStatus,
 		"AcceptedStatus":                    acceptedStatus,
@@ -1503,189 +1701,6 @@ func fixtures() map[string]interface{} {
 		"ForkchoiceUpdatedSyncingResponse":  forkChoiceSyncingResp,
 		"ForkchoiceUpdatedAcceptedResponse": forkChoiceAcceptedResp,
 		"ForkchoiceUpdatedInvalidResponse":  forkChoiceInvalidResp,
-	}
-}
-
-func Test_fullPayloadFromExecutionBlock(t *testing.T) {
-	type args struct {
-		header  *pb.ExecutionPayloadHeader
-		block   *pb.ExecutionBlock
-		version int
-	}
-	wantedHash := common.BytesToHash([]byte("foo"))
-	tests := []struct {
-		name string
-		args args
-		want func() interfaces.ExecutionData
-		err  string
-	}{
-		{
-			name: "block hash field in header and block hash mismatch",
-			args: args{
-				header: &pb.ExecutionPayloadHeader{
-					BlockHash: []byte("foo"),
-				},
-				block: &pb.ExecutionBlock{
-					Hash: common.BytesToHash([]byte("bar")),
-				},
-				version: version.Bellatrix,
-			},
-			err: "does not match execution block hash",
-		},
-		{
-			name: "ok",
-			args: args{
-				header: &pb.ExecutionPayloadHeader{
-					BlockHash: wantedHash[:],
-				},
-				block: &pb.ExecutionBlock{
-					Hash: wantedHash,
-				},
-				version: version.Bellatrix,
-			},
-			want: func() interfaces.ExecutionData {
-				p, err := blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
-					BlockHash:    wantedHash[:],
-					Transactions: [][]byte{},
-				})
-				require.NoError(t, err)
-				return p
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			wrapped, err := blocks.WrappedExecutionPayloadHeader(tt.args.header)
-			require.NoError(t, err)
-			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
-			if err != nil {
-				assert.ErrorContains(t, tt.err, err)
-			} else {
-				assert.DeepEqual(t, tt.want(), got)
-			}
-		})
-	}
-}
-
-func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
-	type args struct {
-		header  *pb.ExecutionPayloadHeaderCapella
-		block   *pb.ExecutionBlock
-		version int
-	}
-	wantedHash := common.BytesToHash([]byte("foo"))
-	tests := []struct {
-		name string
-		args args
-		want func() interfaces.ExecutionData
-		err  string
-	}{
-		{
-			name: "block hash field in header and block hash mismatch",
-			args: args{
-				header: &pb.ExecutionPayloadHeaderCapella{
-					BlockHash: []byte("foo"),
-				},
-				block: &pb.ExecutionBlock{
-					Hash: common.BytesToHash([]byte("bar")),
-				},
-				version: version.Capella,
-			},
-			err: "does not match execution block hash",
-		},
-		{
-			name: "ok",
-			args: args{
-				header: &pb.ExecutionPayloadHeaderCapella{
-					BlockHash: wantedHash[:],
-				},
-				block: &pb.ExecutionBlock{
-					Hash: wantedHash,
-				},
-				version: version.Capella,
-			},
-			want: func() interfaces.ExecutionData {
-				p, err := blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
-					BlockHash:    wantedHash[:],
-					Transactions: [][]byte{},
-				}, big.NewInt(0))
-				require.NoError(t, err)
-				return p
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			wrapped, err := blocks.WrappedExecutionPayloadHeaderCapella(tt.args.header, big.NewInt(0))
-			require.NoError(t, err)
-			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
-			if err != nil {
-				assert.ErrorContains(t, tt.err, err)
-			} else {
-				assert.DeepEqual(t, tt.want(), got)
-			}
-		})
-	}
-}
-
-func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
-	type args struct {
-		header  *pb.ExecutionPayloadHeaderDeneb
-		block   *pb.ExecutionBlock
-		version int
-	}
-	wantedHash := common.BytesToHash([]byte("foo"))
-	tests := []struct {
-		name string
-		args args
-		want func() interfaces.ExecutionData
-		err  string
-	}{
-		{
-			name: "block hash field in header and block hash mismatch",
-			args: args{
-				header: &pb.ExecutionPayloadHeaderDeneb{
-					BlockHash: []byte("foo"),
-				},
-				block: &pb.ExecutionBlock{
-					Hash: common.BytesToHash([]byte("bar")),
-				},
-				version: version.Deneb,
-			},
-			err: "does not match execution block hash",
-		},
-		{
-			name: "ok",
-			args: args{
-				header: &pb.ExecutionPayloadHeaderDeneb{
-					BlockHash: wantedHash[:],
-				},
-				block: &pb.ExecutionBlock{
-					Hash: wantedHash,
-				},
-				version: version.Deneb,
-			},
-			want: func() interfaces.ExecutionData {
-				p, err := blocks.WrappedExecutionPayloadDeneb(&pb.ExecutionPayloadDeneb{
-					BlockHash:    wantedHash[:],
-					Transactions: [][]byte{},
-				}, big.NewInt(0))
-				require.NoError(t, err)
-				return p
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			wrapped, err := blocks.WrappedExecutionPayloadHeaderDeneb(tt.args.header, big.NewInt(0))
-			require.NoError(t, err)
-			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
-			if err != nil {
-				assert.ErrorContains(t, tt.err, err)
-			} else {
-				assert.DeepEqual(t, tt.want(), got)
-			}
-		})
 	}
 }
 
@@ -2002,6 +2017,40 @@ func newPayloadV2Setup(t *testing.T, status *pb.PayloadStatus, payload *pb.Execu
 }
 
 func newPayloadV3Setup(t *testing.T, status *pb.PayloadStatus, payload *pb.ExecutionPayloadDeneb) *Service {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+		enc, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		jsonRequestString := string(enc)
+
+		reqArg, err := json.Marshal(payload)
+		require.NoError(t, err)
+
+		// We expect the JSON string RPC request contains the right arguments.
+		require.Equal(t, true, strings.Contains(
+			jsonRequestString, string(reqArg),
+		))
+		resp := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  status,
+		}
+		err = json.NewEncoder(w).Encode(resp)
+		require.NoError(t, err)
+	}))
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+
+	service := &Service{}
+	service.rpcClient = rpcClient
+	return service
+}
+
+func newPayloadV4Setup(t *testing.T, status *pb.PayloadStatus, payload *pb.ExecutionPayloadElectra) *Service {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		defer func() {
