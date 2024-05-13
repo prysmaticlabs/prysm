@@ -198,6 +198,7 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 		}
 	} else {
 		if beaconState.Version() >= version.Electra {
+			// phase0 bug: no validation on top ups. not something we need to fix here
 			if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
 				return nil, err
 			}
