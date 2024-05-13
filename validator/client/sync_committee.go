@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync/atomic"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
@@ -16,7 +15,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
@@ -83,15 +81,15 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primiti
 		return
 	}
 
-	msgSlot := msg.Slot
-	slotTime := time.Unix(int64(v.genesisTime+uint64(msgSlot)*params.BeaconConfig().SecondsPerSlot), 0)
-	log.WithFields(logrus.Fields{
-		"slot":               msg.Slot,
-		"slotStartTime":      slotTime,
-		"timeSinceSlotStart": time.Since(slotTime),
-		"blockRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
-		"validatorIndex":     msg.ValidatorIndex,
-	}).Info("Submitted new sync message")
+	//msgSlot := msg.Slot
+	//slotTime := time.Unix(int64(v.genesisTime+uint64(msgSlot)*params.BeaconConfig().SecondsPerSlot), 0)
+	//log.WithFields(logrus.Fields{
+	//	"slot":               msg.Slot,
+	//	"slotStartTime":      slotTime,
+	//	"timeSinceSlotStart": time.Since(slotTime),
+	//	"blockRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
+	//	"validatorIndex":     msg.ValidatorIndex,
+	//}).Info("Submitted new sync message")
 	atomic.AddUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 1)
 }
 
@@ -176,17 +174,17 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 			return
 		}
 
-		contributionSlot := contributionAndProof.Contribution.Slot
-		slotTime := time.Unix(int64(v.genesisTime+uint64(contributionSlot)*params.BeaconConfig().SecondsPerSlot), 0)
-		log.WithFields(logrus.Fields{
-			"slot":               contributionAndProof.Contribution.Slot,
-			"slotStartTime":      slotTime,
-			"timeSinceSlotStart": time.Since(slotTime),
-			"blockRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(contributionAndProof.Contribution.BlockRoot)),
-			"subcommitteeIndex":  contributionAndProof.Contribution.SubcommitteeIndex,
-			"aggregatorIndex":    contributionAndProof.AggregatorIndex,
-			"bitsCount":          contributionAndProof.Contribution.AggregationBits.Count(),
-		}).Info("Submitted new sync contribution and proof")
+		//contributionSlot := contributionAndProof.Contribution.Slot
+		//slotTime := time.Unix(int64(v.genesisTime+uint64(contributionSlot)*params.BeaconConfig().SecondsPerSlot), 0)
+		//log.WithFields(logrus.Fields{
+		//	"slot":               contributionAndProof.Contribution.Slot,
+		//	"slotStartTime":      slotTime,
+		//	"timeSinceSlotStart": time.Since(slotTime),
+		//	"blockRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(contributionAndProof.Contribution.BlockRoot)),
+		//	"subcommitteeIndex":  contributionAndProof.Contribution.SubcommitteeIndex,
+		//	"aggregatorIndex":    contributionAndProof.AggregatorIndex,
+		//	"bitsCount":          contributionAndProof.Contribution.AggregationBits.Count(),
+		//}).Info("Submitted new sync contribution and proof")
 	}
 }
 
