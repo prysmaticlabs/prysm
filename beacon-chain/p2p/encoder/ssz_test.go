@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	gogo "github.com/gogo/protobuf/proto"
+	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -18,8 +19,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type ProtoCreator interface {
-	Create() proto.Message
+// Define an interface that combines fastssz.Marshaler and proto.Message
+type MarshalerProtoMessage interface {
+	fastssz.Marshaler
+	proto.Message
+	fastssz.Unmarshaler
+}
+
+type MarshalerProtoCreator interface {
+	Create() MarshalerProtoMessage
 }
 
 type AttestationCreator struct{}
@@ -119,174 +127,202 @@ type ValidatorCreator struct{}
 type BLSToExecutionChangeCreator struct{}
 type SignedBLSToExecutionChangeCreator struct{}
 
-func (a AttestationCreator) Create() proto.Message        { return &ethpb.Attestation{} }
-func (a AttestationElectraCreator) Create() proto.Message { return &ethpb.AttestationElectra{} }
-func (a AggregateAttestationAndProofCreator) Create() proto.Message {
+func (a AttestationCreator) Create() MarshalerProtoMessage        { return &ethpb.Attestation{} }
+func (a AttestationElectraCreator) Create() MarshalerProtoMessage { return &ethpb.AttestationElectra{} }
+func (a AggregateAttestationAndProofCreator) Create() MarshalerProtoMessage {
 	return &ethpb.AggregateAttestationAndProof{}
 }
-func (a AggregateAttestationAndProofElectraCreator) Create() proto.Message {
+func (a AggregateAttestationAndProofElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.AggregateAttestationAndProofElectra{}
 }
-func (a SignedAggregateAttestationAndProofCreator) Create() proto.Message {
+func (a SignedAggregateAttestationAndProofCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedAggregateAttestationAndProof{}
 }
-func (a SignedAggregateAttestationAndProofElectraCreator) Create() proto.Message {
+func (a SignedAggregateAttestationAndProofElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedAggregateAttestationAndProofElectra{}
 }
-func (a AttestationDataCreator) Create() proto.Message   { return &ethpb.AttestationData{} }
-func (a CheckpointCreator) Create() proto.Message        { return &ethpb.Checkpoint{} }
-func (b BeaconBlockCreator) Create() proto.Message       { return &ethpb.BeaconBlock{} }
-func (b SignedBeaconBlockCreator) Create() proto.Message { return &ethpb.SignedBeaconBlock{} }
-func (b BeaconBlockAltairCreator) Create() proto.Message { return &ethpb.BeaconBlockAltair{} }
-func (b SignedBeaconBlockAltairCreator) Create() proto.Message {
+func (a AttestationDataCreator) Create() MarshalerProtoMessage   { return &ethpb.AttestationData{} }
+func (a CheckpointCreator) Create() MarshalerProtoMessage        { return &ethpb.Checkpoint{} }
+func (b BeaconBlockCreator) Create() MarshalerProtoMessage       { return &ethpb.BeaconBlock{} }
+func (b SignedBeaconBlockCreator) Create() MarshalerProtoMessage { return &ethpb.SignedBeaconBlock{} }
+func (b BeaconBlockAltairCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockAltair{} }
+func (b SignedBeaconBlockAltairCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockAltair{}
 }
-func (b BeaconBlockBodyCreator) Create() proto.Message       { return &ethpb.BeaconBlockBody{} }
-func (b BeaconBlockBodyAltairCreator) Create() proto.Message { return &ethpb.BeaconBlockBodyAltair{} }
-func (b ProposerSlashingCreator) Create() proto.Message      { return &ethpb.ProposerSlashing{} }
-func (b AttesterSlashingCreator) Create() proto.Message      { return &ethpb.AttesterSlashing{} }
-func (b AttesterSlashingElectraCreator) Create() proto.Message {
+func (b BeaconBlockBodyCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockBody{} }
+func (b BeaconBlockBodyAltairCreator) Create() MarshalerProtoMessage {
+	return &ethpb.BeaconBlockBodyAltair{}
+}
+func (b ProposerSlashingCreator) Create() MarshalerProtoMessage { return &ethpb.ProposerSlashing{} }
+func (b AttesterSlashingCreator) Create() MarshalerProtoMessage { return &ethpb.AttesterSlashing{} }
+func (b AttesterSlashingElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.AttesterSlashingElectra{}
 }
-func (b DepositCreator) Create() proto.Message             { return &ethpb.Deposit{} }
-func (b VoluntaryExitCreator) Create() proto.Message       { return &ethpb.VoluntaryExit{} }
-func (b SignedVoluntaryExitCreator) Create() proto.Message { return &ethpb.SignedVoluntaryExit{} }
-func (b Eth1DataCreator) Create() proto.Message            { return &ethpb.Eth1Data{} }
-func (b BeaconBlockHeaderCreator) Create() proto.Message   { return &ethpb.BeaconBlockHeader{} }
-func (b SignedBeaconBlockHeaderCreator) Create() proto.Message {
+func (b DepositCreator) Create() MarshalerProtoMessage       { return &ethpb.Deposit{} }
+func (b VoluntaryExitCreator) Create() MarshalerProtoMessage { return &ethpb.VoluntaryExit{} }
+func (b SignedVoluntaryExitCreator) Create() MarshalerProtoMessage {
+	return &ethpb.SignedVoluntaryExit{}
+}
+func (b Eth1DataCreator) Create() MarshalerProtoMessage          { return &ethpb.Eth1Data{} }
+func (b BeaconBlockHeaderCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockHeader{} }
+func (b SignedBeaconBlockHeaderCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockHeader{}
 }
-func (b IndexedAttestationCreator) Create() proto.Message { return &ethpb.IndexedAttestation{} }
-func (b IndexedAttestationElectraCreator) Create() proto.Message {
+func (b IndexedAttestationCreator) Create() MarshalerProtoMessage { return &ethpb.IndexedAttestation{} }
+func (b IndexedAttestationElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.IndexedAttestationElectra{}
 }
-func (b SyncAggregateCreator) Create() proto.Message { return &ethpb.SyncAggregate{} }
-func (b SignedBeaconBlockBellatrixCreator) Create() proto.Message {
+func (b SyncAggregateCreator) Create() MarshalerProtoMessage { return &ethpb.SyncAggregate{} }
+func (b SignedBeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockBellatrix{}
 }
-func (b BeaconBlockBellatrixCreator) Create() proto.Message { return &ethpb.BeaconBlockBellatrix{} }
-func (b BeaconBlockBodyBellatrixCreator) Create() proto.Message {
+func (b BeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
+	return &ethpb.BeaconBlockBellatrix{}
+}
+func (b BeaconBlockBodyBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlockBodyBellatrix{}
 }
-func (b SignedBlindedBeaconBlockBellatrixCreator) Create() proto.Message {
+func (b SignedBlindedBeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBlindedBeaconBlockBellatrix{}
 }
-func (b BlindedBeaconBlockBellatrixCreator) Create() proto.Message {
+func (b BlindedBeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockBellatrix{}
 }
-func (b BlindedBeaconBlockBodyBellatrixCreator) Create() proto.Message {
+func (b BlindedBeaconBlockBodyBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockBodyBellatrix{}
 }
-func (b SignedBeaconBlockContentsDenebCreator) Create() proto.Message {
+func (b SignedBeaconBlockContentsDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockContentsDeneb{}
 }
-func (b BeaconBlockContentsDenebCreator) Create() proto.Message {
+func (b BeaconBlockContentsDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlockContentsDeneb{}
 }
-func (b SignedBeaconBlockDenebCreator) Create() proto.Message { return &ethpb.SignedBeaconBlockDeneb{} }
-func (b BeaconBlockDenebCreator) Create() proto.Message       { return &ethpb.BeaconBlockDeneb{} }
-func (b BeaconBlockBodyDenebCreator) Create() proto.Message   { return &ethpb.BeaconBlockBodyDeneb{} }
-func (b SignedBeaconBlockCapellaCreator) Create() proto.Message {
+func (b SignedBeaconBlockDenebCreator) Create() MarshalerProtoMessage {
+	return &ethpb.SignedBeaconBlockDeneb{}
+}
+func (b BeaconBlockDenebCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockDeneb{} }
+func (b BeaconBlockBodyDenebCreator) Create() MarshalerProtoMessage {
+	return &ethpb.BeaconBlockBodyDeneb{}
+}
+func (b SignedBeaconBlockCapellaCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockCapella{}
 }
-func (b BeaconBlockCapellaCreator) Create() proto.Message     { return &ethpb.BeaconBlockCapella{} }
-func (b BeaconBlockBodyCapellaCreator) Create() proto.Message { return &ethpb.BeaconBlockBodyCapella{} }
-func (b SignedBlindedBeaconBlockCapellaCreator) Create() proto.Message {
+func (b BeaconBlockCapellaCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockCapella{} }
+func (b BeaconBlockBodyCapellaCreator) Create() MarshalerProtoMessage {
+	return &ethpb.BeaconBlockBodyCapella{}
+}
+func (b SignedBlindedBeaconBlockCapellaCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBlindedBeaconBlockCapella{}
 }
-func (b BlindedBeaconBlockCapellaCreator) Create() proto.Message {
+func (b BlindedBeaconBlockCapellaCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockCapella{}
 }
-func (b BlindedBeaconBlockBodyCapellaCreator) Create() proto.Message {
+func (b BlindedBeaconBlockBodyCapellaCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockBodyCapella{}
 }
-func (b SignedBlindedBeaconBlockDenebCreator) Create() proto.Message {
+func (b SignedBlindedBeaconBlockDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBlindedBeaconBlockDeneb{}
 }
-func (b BlindedBeaconBlockDenebCreator) Create() proto.Message {
+func (b BlindedBeaconBlockDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockDeneb{}
 }
-func (b BlindedBeaconBlockBodyDenebCreator) Create() proto.Message {
+func (b BlindedBeaconBlockBodyDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockBodyDeneb{}
 }
-func (b SignedBeaconBlockElectraCreator) Create() proto.Message {
+func (b SignedBeaconBlockElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockElectra{}
 }
-func (b BeaconBlockElectraCreator) Create() proto.Message     { return &ethpb.BeaconBlockElectra{} }
-func (b BeaconBlockBodyElectraCreator) Create() proto.Message { return &ethpb.BeaconBlockBodyElectra{} }
-func (b SignedBlindedBeaconBlockElectraCreator) Create() proto.Message {
+func (b BeaconBlockElectraCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockElectra{} }
+func (b BeaconBlockBodyElectraCreator) Create() MarshalerProtoMessage {
+	return &ethpb.BeaconBlockBodyElectra{}
+}
+func (b SignedBlindedBeaconBlockElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBlindedBeaconBlockElectra{}
 }
-func (b BlindedBeaconBlockElectraCreator) Create() proto.Message {
+func (b BlindedBeaconBlockElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockElectra{}
 }
-func (b BlindedBeaconBlockBodyElectraCreator) Create() proto.Message {
+func (b BlindedBeaconBlockBodyElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockBodyElectra{}
 }
-func (b ValidatorRegistrationV1Creator) Create() proto.Message {
+func (b ValidatorRegistrationV1Creator) Create() MarshalerProtoMessage {
 	return &ethpb.ValidatorRegistrationV1{}
 }
-func (b SignedValidatorRegistrationV1Creator) Create() proto.Message {
+func (b SignedValidatorRegistrationV1Creator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedValidatorRegistrationV1{}
 }
-func (b BuilderBidCreator) Create() proto.Message         { return &ethpb.BuilderBid{} }
-func (b BuilderBidCapellaCreator) Create() proto.Message  { return &ethpb.BuilderBidCapella{} }
-func (b BuilderBidDenebCreator) Create() proto.Message    { return &ethpb.BuilderBidDeneb{} }
-func (b BlobSidecarCreator) Create() proto.Message        { return &ethpb.BlobSidecar{} }
-func (b BlobSidecarsCreator) Create() proto.Message       { return &ethpb.BlobSidecars{} }
-func (b Deposit_DataCreator) Create() proto.Message       { return &ethpb.Deposit_Data{} }
-func (b BeaconStateCreator) Create() proto.Message        { return &ethpb.BeaconState{} }
-func (b BeaconStateAltairCreator) Create() proto.Message  { return &ethpb.BeaconStateAltair{} }
-func (b ForkCreator) Create() proto.Message               { return &ethpb.Fork{} }
-func (b PendingAttestationCreator) Create() proto.Message { return &ethpb.PendingAttestation{} }
-func (b HistoricalBatchCreator) Create() proto.Message    { return &ethpb.HistoricalBatch{} }
-func (b SigningDataCreator) Create() proto.Message        { return &ethpb.SigningData{} }
-func (b ForkDataCreator) Create() proto.Message           { return &ethpb.ForkData{} }
-func (b DepositMessageCreator) Create() proto.Message     { return &ethpb.DepositMessage{} }
-func (b SyncCommitteeCreator) Create() proto.Message      { return &ethpb.SyncCommittee{} }
-func (b SyncAggregatorSelectionDataCreator) Create() proto.Message {
+func (b BuilderBidCreator) Create() MarshalerProtoMessage         { return &ethpb.BuilderBid{} }
+func (b BuilderBidCapellaCreator) Create() MarshalerProtoMessage  { return &ethpb.BuilderBidCapella{} }
+func (b BuilderBidDenebCreator) Create() MarshalerProtoMessage    { return &ethpb.BuilderBidDeneb{} }
+func (b BlobSidecarCreator) Create() MarshalerProtoMessage        { return &ethpb.BlobSidecar{} }
+func (b BlobSidecarsCreator) Create() MarshalerProtoMessage       { return &ethpb.BlobSidecars{} }
+func (b Deposit_DataCreator) Create() MarshalerProtoMessage       { return &ethpb.Deposit_Data{} }
+func (b BeaconStateCreator) Create() MarshalerProtoMessage        { return &ethpb.BeaconState{} }
+func (b BeaconStateAltairCreator) Create() MarshalerProtoMessage  { return &ethpb.BeaconStateAltair{} }
+func (b ForkCreator) Create() MarshalerProtoMessage               { return &ethpb.Fork{} }
+func (b PendingAttestationCreator) Create() MarshalerProtoMessage { return &ethpb.PendingAttestation{} }
+func (b HistoricalBatchCreator) Create() MarshalerProtoMessage    { return &ethpb.HistoricalBatch{} }
+func (b SigningDataCreator) Create() MarshalerProtoMessage        { return &ethpb.SigningData{} }
+func (b ForkDataCreator) Create() MarshalerProtoMessage           { return &ethpb.ForkData{} }
+func (b DepositMessageCreator) Create() MarshalerProtoMessage     { return &ethpb.DepositMessage{} }
+func (b SyncCommitteeCreator) Create() MarshalerProtoMessage      { return &ethpb.SyncCommittee{} }
+func (b SyncAggregatorSelectionDataCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SyncAggregatorSelectionData{}
 }
-func (b BeaconStateBellatrixCreator) Create() proto.Message  { return &ethpb.BeaconStateBellatrix{} }
-func (b BeaconStateCapellaCreator) Create() proto.Message    { return &ethpb.BeaconStateCapella{} }
-func (b BeaconStateDenebCreator) Create() proto.Message      { return &ethpb.BeaconStateDeneb{} }
-func (b BeaconStateElectraCreator) Create() proto.Message    { return &ethpb.BeaconStateElectra{} }
-func (b PowBlockCreator) Create() proto.Message              { return &ethpb.PowBlock{} }
-func (b HistoricalSummaryCreator) Create() proto.Message     { return &ethpb.HistoricalSummary{} }
-func (b BlobIdentifierCreator) Create() proto.Message        { return &ethpb.BlobIdentifier{} }
-func (b PendingBalanceDepositCreator) Create() proto.Message { return &ethpb.PendingBalanceDeposit{} }
-func (b PendingPartialWithdrawalCreator) Create() proto.Message {
+func (b BeaconStateBellatrixCreator) Create() MarshalerProtoMessage {
+	return &ethpb.BeaconStateBellatrix{}
+}
+func (b BeaconStateCapellaCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconStateCapella{} }
+func (b BeaconStateDenebCreator) Create() MarshalerProtoMessage   { return &ethpb.BeaconStateDeneb{} }
+func (b BeaconStateElectraCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconStateElectra{} }
+func (b PowBlockCreator) Create() MarshalerProtoMessage           { return &ethpb.PowBlock{} }
+func (b HistoricalSummaryCreator) Create() MarshalerProtoMessage  { return &ethpb.HistoricalSummary{} }
+func (b BlobIdentifierCreator) Create() MarshalerProtoMessage     { return &ethpb.BlobIdentifier{} }
+func (b PendingBalanceDepositCreator) Create() MarshalerProtoMessage {
+	return &ethpb.PendingBalanceDeposit{}
+}
+func (b PendingPartialWithdrawalCreator) Create() MarshalerProtoMessage {
 	return &ethpb.PendingPartialWithdrawal{}
 }
-func (b ConsolidationCreator) Create() proto.Message        { return &ethpb.Consolidation{} }
-func (b SignedConsolidationCreator) Create() proto.Message  { return &ethpb.SignedConsolidation{} }
-func (b PendingConsolidationCreator) Create() proto.Message { return &ethpb.PendingConsolidation{} }
-func (b StatusCreator) Create() proto.Message               { return &ethpb.Status{} }
-func (b BeaconBlocksByRangeRequestCreator) Create() proto.Message {
+func (b ConsolidationCreator) Create() MarshalerProtoMessage { return &ethpb.Consolidation{} }
+func (b SignedConsolidationCreator) Create() MarshalerProtoMessage {
+	return &ethpb.SignedConsolidation{}
+}
+func (b PendingConsolidationCreator) Create() MarshalerProtoMessage {
+	return &ethpb.PendingConsolidation{}
+}
+func (b StatusCreator) Create() MarshalerProtoMessage { return &ethpb.Status{} }
+func (b BeaconBlocksByRangeRequestCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlocksByRangeRequest{}
 }
-func (b ENRForkIDCreator) Create() proto.Message  { return &ethpb.ENRForkID{} }
-func (b MetaDataV0Creator) Create() proto.Message { return &ethpb.MetaDataV0{} }
-func (b MetaDataV1Creator) Create() proto.Message { return &ethpb.MetaDataV1{} }
-func (b BlobSidecarsByRangeRequestCreator) Create() proto.Message {
+func (b ENRForkIDCreator) Create() MarshalerProtoMessage  { return &ethpb.ENRForkID{} }
+func (b MetaDataV0Creator) Create() MarshalerProtoMessage { return &ethpb.MetaDataV0{} }
+func (b MetaDataV1Creator) Create() MarshalerProtoMessage { return &ethpb.MetaDataV1{} }
+func (b BlobSidecarsByRangeRequestCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlobSidecarsByRangeRequest{}
 }
-func (b DepositSnapshotCreator) Create() proto.Message      { return &ethpb.DepositSnapshot{} }
-func (b SyncCommitteeMessageCreator) Create() proto.Message { return &ethpb.SyncCommitteeMessage{} }
-func (b SyncCommitteeContributionCreator) Create() proto.Message {
+func (b DepositSnapshotCreator) Create() MarshalerProtoMessage { return &ethpb.DepositSnapshot{} }
+func (b SyncCommitteeMessageCreator) Create() MarshalerProtoMessage {
+	return &ethpb.SyncCommitteeMessage{}
+}
+func (b SyncCommitteeContributionCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SyncCommitteeContribution{}
 }
-func (b ContributionAndProofCreator) Create() proto.Message { return &ethpb.ContributionAndProof{} }
-func (b SignedContributionAndProofCreator) Create() proto.Message {
+func (b ContributionAndProofCreator) Create() MarshalerProtoMessage {
+	return &ethpb.ContributionAndProof{}
+}
+func (b SignedContributionAndProofCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedContributionAndProof{}
 }
-func (b ValidatorCreator) Create() proto.Message            { return &ethpb.Validator{} }
-func (b BLSToExecutionChangeCreator) Create() proto.Message { return &ethpb.BLSToExecutionChange{} }
-func (b SignedBLSToExecutionChangeCreator) Create() proto.Message {
+func (b ValidatorCreator) Create() MarshalerProtoMessage { return &ethpb.Validator{} }
+func (b BLSToExecutionChangeCreator) Create() MarshalerProtoMessage {
+	return &ethpb.BLSToExecutionChange{}
+}
+func (b SignedBLSToExecutionChangeCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBLSToExecutionChange{}
 }
 
-var creators = []ProtoCreator{
+var creators = []MarshalerProtoCreator{
 	AttestationCreator{},
 	AttestationElectraCreator{},
 	AggregateAttestationAndProofCreator{},
@@ -385,6 +421,67 @@ var creators = []ProtoCreator{
 	SignedBLSToExecutionChangeCreator{},
 }
 
+// Refactor the comparison logic into a private function.
+func assertProtoMessagesEqual(t *testing.T, decoded, msg proto.Message) {
+	// Here we are checking if proto.Equal is false, but the unknown fields are equal.
+	// This means that the decoded message is not the same as the original message.
+	if !proto.Equal(decoded, msg) {
+		a := decoded.ProtoReflect().GetUnknown()
+		b := msg.ProtoReflect().GetUnknown()
+		if bytes.Equal(a, b) {
+			t.Fatalf("Decoded message: %#+v is not the same as original: %#+v", decoded, msg)
+		}
+	}
+}
+
+// Refactor the unmarshal logic into a private function.
+func unmarshalProtoMessage(data []byte, creator MarshalerProtoCreator) (MarshalerProtoMessage, error) {
+	msg := creator.Create()
+	if err := proto.Unmarshal(data, msg); err != nil {
+		return nil, err
+	}
+	return msg, nil
+}
+
+func gossipRoundTripHelper(t *testing.T, msg MarshalerProtoMessage, creator MarshalerProtoCreator) {
+	e := &encoder.SszNetworkEncoder{}
+	buf := new(bytes.Buffer)
+
+	// Example of calling a function that requires MarshalerProtoMessage
+	_, err := e.EncodeGossip(buf, msg)
+	if err != nil {
+		t.Logf("Failed to encode: %v", err)
+		return
+	}
+
+	decoded := creator.Create()
+
+	if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
+		t.Fatalf("Failed to decode: %v", err)
+	}
+	assertProtoMessagesEqual(t, decoded, msg)
+}
+
+func lengthRoundTripHelper(t *testing.T, msg MarshalerProtoMessage, creator MarshalerProtoCreator) {
+	e := &encoder.SszNetworkEncoder{}
+	buf := new(bytes.Buffer)
+
+	// Example of calling a function that requires MarshalerProtoMessage
+	_, err := e.EncodeWithMaxLength(buf, msg)
+	if err != nil {
+		t.Logf("Failed to encode: %v", err)
+		return
+	}
+
+	decoded := creator.Create()
+
+	if err := e.DecodeWithMaxLength(buf, decoded); err != nil {
+		t.Fatalf("Failed to decode: %v", err)
+	}
+
+	assertProtoMessagesEqual(t, decoded, msg)
+}
+
 func FuzzRoundTripWithGossip(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte, index int) {
 		if index < 0 {
@@ -392,992 +489,13 @@ func FuzzRoundTripWithGossip(f *testing.F) {
 		}
 		// Select a random creator from the list.
 		creator := creators[index%len(creators)]
-		msg := creator.Create()
-
-		e := &encoder.SszNetworkEncoder{}
-		buf := new(bytes.Buffer)
-
-		if err := proto.Unmarshal(data, msg); err != nil {
+		msg, err := unmarshalProtoMessage(data, creator)
+		if err != nil {
 			t.Logf("Failed to unmarshal: %v", err)
 			return
 		}
-
-		switch msg := msg.(type) {
-		case *ethpb.Attestation:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.AttestationElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.AggregateAttestationAndProof:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.AggregateAttestationAndProofElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedAggregateAttestationAndProof:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedAggregateAttestationAndProofElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.AttestationData:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.Checkpoint:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlock:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBeaconBlock:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockAltair:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBeaconBlockAltair:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockBody:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockBodyAltair:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.ProposerSlashing:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.AttesterSlashing:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.AttesterSlashingElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.Deposit:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.VoluntaryExit:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedVoluntaryExit:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.Eth1Data:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockHeader:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBeaconBlockHeader:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.IndexedAttestation:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.IndexedAttestationElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SyncAggregate:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBeaconBlockBellatrix:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockBellatrix:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockBodyBellatrix:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBlindedBeaconBlockBellatrix:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlindedBeaconBlockBellatrix:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlindedBeaconBlockBodyBellatrix:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBeaconBlockContentsDeneb:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockContentsDeneb:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBeaconBlockDeneb:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockDeneb:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockBodyDeneb:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBeaconBlockCapella:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockCapella:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockBodyCapella:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBlindedBeaconBlockCapella:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlindedBeaconBlockCapella:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlindedBeaconBlockBodyCapella:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBlindedBeaconBlockDeneb:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlindedBeaconBlockDeneb:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlindedBeaconBlockBodyDeneb:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBeaconBlockElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlockBodyElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBlindedBeaconBlockElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlindedBeaconBlockElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlindedBeaconBlockBodyElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.ValidatorRegistrationV1:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedValidatorRegistrationV1:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BuilderBid:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BuilderBidCapella:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BuilderBidDeneb:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlobSidecar:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlobSidecars:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.Deposit_Data:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconState:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconStateAltair:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.Fork:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.PendingAttestation:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.HistoricalBatch:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SigningData:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.ForkData:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.DepositMessage:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SyncCommittee:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SyncAggregatorSelectionData:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconStateBellatrix:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconStateCapella:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconStateDeneb:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconStateElectra:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.PowBlock:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.HistoricalSummary:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlobIdentifier:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.PendingBalanceDeposit:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.PendingPartialWithdrawal:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.Consolidation:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedConsolidation:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.PendingConsolidation:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.Status:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BeaconBlocksByRangeRequest:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.ENRForkID:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.MetaDataV0:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.MetaDataV1:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BlobSidecarsByRangeRequest:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.DepositSnapshot:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SyncCommitteeMessage:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SyncCommitteeContribution:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.ContributionAndProof:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedContributionAndProof:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.Validator:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.BLSToExecutionChange:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		case *ethpb.SignedBLSToExecutionChange:
-			_, err := e.EncodeGossip(buf, msg)
-			if err != nil {
-				t.Logf("Failed to encode: %v", err)
-				return
-			}
-		default:
-			t.Fatalf("Unknown type: %T", msg)
-		}
-
-		decoded := creator.Create()
-
-		// Use type assertion to handle decoded based on its type
-		switch decoded := decoded.(type) {
-		case *ethpb.Attestation:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.AttestationElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.AggregateAttestationAndProof:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.AggregateAttestationAndProofElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedAggregateAttestationAndProof:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedAggregateAttestationAndProofElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.AttestationData:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.Checkpoint:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlock:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBeaconBlock:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockAltair:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBeaconBlockAltair:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockBody:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockBodyAltair:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.ProposerSlashing:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.AttesterSlashing:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.AttesterSlashingElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.Deposit:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.VoluntaryExit:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedVoluntaryExit:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.Eth1Data:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockHeader:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBeaconBlockHeader:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.IndexedAttestation:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.IndexedAttestationElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SyncAggregate:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBeaconBlockBellatrix:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockBellatrix:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockBodyBellatrix:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBlindedBeaconBlockBellatrix:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlindedBeaconBlockBellatrix:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlindedBeaconBlockBodyBellatrix:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBeaconBlockContentsDeneb:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockContentsDeneb:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBeaconBlockDeneb:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockDeneb:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockBodyDeneb:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBeaconBlockCapella:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockCapella:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockBodyCapella:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBlindedBeaconBlockCapella:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlindedBeaconBlockCapella:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlindedBeaconBlockBodyCapella:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBlindedBeaconBlockDeneb:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlindedBeaconBlockDeneb:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlindedBeaconBlockBodyDeneb:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBeaconBlockElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlockBodyElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBlindedBeaconBlockElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlindedBeaconBlockElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlindedBeaconBlockBodyElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.ValidatorRegistrationV1:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedValidatorRegistrationV1:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BuilderBid:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BuilderBidCapella:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BuilderBidDeneb:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlobSidecar:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlobSidecars:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.Deposit_Data:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconState:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconStateAltair:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.Fork:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.PendingAttestation:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.HistoricalBatch:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SigningData:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.ForkData:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.DepositMessage:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SyncCommittee:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SyncAggregatorSelectionData:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconStateBellatrix:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconStateCapella:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconStateDeneb:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconStateElectra:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.PowBlock:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.HistoricalSummary:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlobIdentifier:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.PendingBalanceDeposit:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.PendingPartialWithdrawal:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.Consolidation:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedConsolidation:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.PendingConsolidation:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.Status:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BeaconBlocksByRangeRequest:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.ENRForkID:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.MetaDataV0:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.MetaDataV1:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BlobSidecarsByRangeRequest:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.DepositSnapshot:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SyncCommitteeMessage:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SyncCommitteeContribution:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.ContributionAndProof:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedContributionAndProof:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.Validator:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.BLSToExecutionChange:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		case *ethpb.SignedBLSToExecutionChange:
-			if err := e.DecodeGossip(buf.Bytes(), decoded); err != nil {
-				t.Fatalf("Failed to decode: %v", err)
-			}
-		default:
-			t.Fatalf("Unknown type: %T", decoded)
-		}
-
-		if !proto.Equal(decoded, msg) {
-			t.Logf("Decoded message: %#+v is not the same as original: %#+v", decoded, msg)
-		}
+		gossipRoundTripHelper(t, msg, creator)
+		lengthRoundTripHelper(t, msg, creator)
 	})
 }
 
