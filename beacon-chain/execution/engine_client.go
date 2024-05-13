@@ -64,7 +64,7 @@ const (
 	// GetPayloadMethodV3 is the get payload method added for deneb
 	GetPayloadMethodV3 = "engine_getPayloadV3"
 	// GetPayloadMethodV4 is the get payload method added for electra
-	GetPayloadMethodV4 = "engine_getPayloadV3"
+	GetPayloadMethodV4 = "engine_getPayloadV4"
 	// BlockByHashMethod request string for JSON-RPC.
 	BlockByHashMethod = "eth_getBlockByHash"
 	// BlockByNumberMethod request string for JSON-RPC.
