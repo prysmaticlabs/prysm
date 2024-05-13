@@ -6,10 +6,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"slices"
 	"sort"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
