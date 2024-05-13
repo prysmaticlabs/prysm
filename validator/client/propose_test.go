@@ -652,6 +652,19 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				},
 			},
 		},
+		{
+			name:    "electra block",
+			version: version.Electra,
+			block: &ethpb.GenericBeaconBlock{
+				Block: &ethpb.GenericBeaconBlock_Electra{
+					Electra: func() *ethpb.BeaconBlockContentsElectra {
+						blk := util.NewBeaconBlockContentsElectra()
+						blk.Block.Block.Body.Graffiti = graffiti
+						return &ethpb.BeaconBlockContentsElectra{Block: blk.Block.Block, KzgProofs: blk.KzgProofs, Blobs: blk.Blobs}
+					}(),
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
