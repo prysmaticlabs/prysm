@@ -1116,7 +1116,7 @@ func (b *BeaconBlockBody) Attestations() []eth.Att {
 			return nil
 		}
 		atts = make([]eth.Att, len(b.attestationsElectra))
-		for i, a := range b.attestations {
+		for i, a := range b.attestationsElectra {
 			atts[i] = a
 		}
 	}

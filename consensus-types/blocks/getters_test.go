@@ -369,6 +369,19 @@ func Test_BeaconBlockBody_Attestations(t *testing.T) {
 	assert.DeepSSZEqual(t, a, bb.Block().Body().Attestations())
 }
 
+func Test_BeaconBlockBody_ElectraAttestations(t *testing.T) {
+	bb := &SignedBeaconBlock{
+		block: &BeaconBlock{body: &BeaconBlockBody{
+			version: version.Electra,
+			attestationsElectra: []*eth.AttestationElectra{{
+				Signature: []byte("electra"),
+			}},
+		}}}
+	a := bb.Block().Body().Attestations()
+	require.Equal(t, 1, len(a))
+	require.DeepEqual(t, a[0].GetSignature(), []byte("electra"))
+}
+
 func Test_BeaconBlockBody_Deposits(t *testing.T) {
 	d := make([]*eth.Deposit, 0)
 	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
