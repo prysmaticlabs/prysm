@@ -260,17 +260,14 @@ func TestProcessConsolidations(t *testing.T) {
 		},
 		{
 			name: "nil consolidation in slice",
-			state: func() state.BeaconState {
-				st, _ := util.DeterministicGenesisStateElectra(t, 1)
-				return st
-			}(),
+			state: stateWithActiveBalanceETH(t, 19_000_000),
 			scs:     []*eth.SignedConsolidation{nil, nil},
 			wantErr: "nil consolidation",
 		},
 		{
 			name: "state is 100% full of pending consolidations",
 			state: func() state.BeaconState {
-				st, _ := util.DeterministicGenesisStateElectra(t, 1)
+				st := stateWithActiveBalanceETH(t, 19_000_000)
 				pc := make([]*eth.PendingConsolidation, params.BeaconConfig().PendingConsolidationsLimit)
 				require.NoError(t, st.SetPendingConsolidations(pc))
 				return st

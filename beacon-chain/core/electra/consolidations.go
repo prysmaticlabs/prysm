@@ -166,6 +166,10 @@ func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethp
 		return err
 	}
 
+	if helpers.ConsolidationChurnLimit(math.Gwei(totalBalance)) <= math.Gwei(params.BeaconConfig().MinActivationBalance) {
+		return errors.New("too little available consolidation churn limit")
+	}
+
 	currentEpoch := slots.ToEpoch(st.Slot())
 
 	for _, c := range cs {
@@ -177,10 +181,6 @@ func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethp
 			return err
 		} else if n >= params.BeaconConfig().PendingConsolidationsLimit {
 			return errors.New("pending consolidations queue is full")
-		}
-
-		if helpers.ConsolidationChurnLimit(math.Gwei(totalBalance)) <= math.Gwei(params.BeaconConfig().MinActivationBalance) {
-			return errors.New("too little available consolidation churn limit")
 		}
 
 		if c.Message.SourceIndex == c.Message.TargetIndex {
