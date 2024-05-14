@@ -16,7 +16,6 @@ import (
 )
 
 func RunConsolidationTest(t *testing.T, config string) {
-	t.Skip("These tests were temporarily deleted in v1.5.0-alpha.2. See https://github.com/ethereum/consensus-specs/pull/3736")
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", "operations/consolidation/pyspec_tests")
 	require.NotEqual(t, 0, len(testFolders), "missing tests for consolidation operation in folder")
