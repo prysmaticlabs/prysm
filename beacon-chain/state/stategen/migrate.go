@@ -116,7 +116,6 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	}
 	if ok {
 		s.SaveFinalizedState(fSlot, fRoot, fInfo.state)
-		fInfo.state.SaveValidatorIndices() // used to handle Validator index invariant from EIP6110
 	}
 
 	return nil
