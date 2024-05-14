@@ -313,6 +313,9 @@ func (c *AttCaches) DeleteAggregatedAttestation(att ethpb.Att) error {
 
 	filtered := make([]ethpb.Att, 0)
 	for _, a := range attList {
+		if a.Version() != att.Version() {
+			continue
+		}
 		if c, err := att.GetAggregationBits().Contains(a.GetAggregationBits()); err != nil {
 			return err
 		} else if !c {
