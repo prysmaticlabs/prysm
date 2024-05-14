@@ -7,6 +7,7 @@ go_library(
         "attester_slashing.go",
         "block_header.go",
         "bls_to_execution_changes.go",
+        "deposit.go",
         "deposit_receipt.go",
         "execution_layer_withdrawal_request.go",
         "execution_payload.go",
@@ -19,6 +20,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/testing/spectest/shared/electra/operations",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/electra:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
