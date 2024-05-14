@@ -39,12 +39,12 @@ import (
 //	        next_pending_consolidation += 1
 //
 //	    state.pending_consolidations = state.pending_consolidations[next_pending_consolidation:]
-func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) (state.BeaconState, error) {
+func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "electra.ProcessPendingConsolidations")
 	defer span.End()
 
 	if st == nil || st.IsNil() {
-		return nil, errors.New("nil state")
+		return errors.New("nil state")
 	}
 
 	currentEpoch := slots.ToEpoch(st.Slot())
@@ -52,12 +52,13 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) (st
 	var nextPendingConsolidation uint64
 	pendingConsolidations, err := st.PendingConsolidations()
 	if err != nil {
-		return nil, err
+		return err
 	}
+
 	for _, pc := range pendingConsolidations {
 		sourceValidator, err := st.ValidatorAtIndex(pc.SourceIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if sourceValidator.Slashed {
 			nextPendingConsolidation++
@@ -68,29 +69,27 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) (st
 		}
 
 		if err := SwitchToCompoundingValidator(ctx, st, pc.TargetIndex); err != nil {
-			return nil, err
+			return err
 		}
 
 		activeBalance, err := st.ActiveBalanceAtIndex(pc.SourceIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if err := helpers.DecreaseBalance(st, pc.SourceIndex, activeBalance); err != nil {
-			return nil, err
+			return err
 		}
 		if err := helpers.IncreaseBalance(st, pc.TargetIndex, activeBalance); err != nil {
-			return nil, err
+			return err
 		}
 		nextPendingConsolidation++
 	}
 
 	if nextPendingConsolidation > 0 {
-		if err := st.SetPendingConsolidations(pendingConsolidations[nextPendingConsolidation:]); err != nil {
-			return nil, err
-		}
+		return st.SetPendingConsolidations(pendingConsolidations[nextPendingConsolidation:])
 	}
 
-	return st, nil
+	return nil
 }
 
 // ProcessConsolidations implements the spec definition below. This method makes mutating calls to
@@ -141,16 +140,16 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) (st
 //	        source_index=consolidation.source_index,
 //	        target_index=consolidation.target_index
 //	    ))
-func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethpb.SignedConsolidation) (state.BeaconState, error) {
+func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethpb.SignedConsolidation) error {
 	_, span := trace.StartSpan(ctx, "electra.ProcessConsolidations")
 	defer span.End()
 
 	if st == nil || st.IsNil() {
-		return nil, errors.New("nil state")
+		return errors.New("nil state")
 	}
 
 	if len(cs) == 0 {
-		return st, nil // Nothing to process.
+		return nil // Nothing to process.
 	}
 
 	domain, err := signing.ComputeDomain(
@@ -159,100 +158,101 @@ func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethp
 		st.GenesisValidatorsRoot(),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	totalBalance, err := helpers.TotalActiveBalance(st)
 	if err != nil {
-		return nil, err
+		return err
 	}
+
+	currentEpoch := slots.ToEpoch(st.Slot())
 
 	for _, c := range cs {
 		if c == nil || c.Message == nil {
-			return nil, errors.New("nil consolidation")
+			return errors.New("nil consolidation")
 		}
 
 		if n, err := st.NumPendingConsolidations(); err != nil {
-			return nil, err
+			return err
 		} else if n >= params.BeaconConfig().PendingConsolidationsLimit {
-			return nil, errors.New("pending consolidations queue is full")
+			return errors.New("pending consolidations queue is full")
 		}
 
 		if helpers.ConsolidationChurnLimit(math.Gwei(totalBalance)) <= math.Gwei(params.BeaconConfig().MinActivationBalance) {
-			return nil, errors.New("too little available consolidation churn limit")
+			return errors.New("too little available consolidation churn limit")
 		}
-		currentEpoch := slots.ToEpoch(st.Slot())
 
 		if c.Message.SourceIndex == c.Message.TargetIndex {
-			return nil, errors.New("source and target index are the same")
+			return errors.New("source and target index are the same")
 		}
 		source, err := st.ValidatorAtIndex(c.Message.SourceIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		target, err := st.ValidatorAtIndex(c.Message.TargetIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if !helpers.IsActiveValidator(source, currentEpoch) {
-			return nil, errors.New("source is not active")
+			return errors.New("source is not active")
 		}
 		if !helpers.IsActiveValidator(target, currentEpoch) {
-			return nil, errors.New("target is not active")
+			return errors.New("target is not active")
 		}
 		if source.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			return nil, errors.New("source exit epoch has been initiated")
+			return errors.New("source exit epoch has been initiated")
 		}
 		if target.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			return nil, errors.New("target exit epoch has been initiated")
+			return errors.New("target exit epoch has been initiated")
 		}
 		if currentEpoch < c.Message.Epoch {
-			return nil, errors.New("consolidation is not valid yet")
+			return errors.New("consolidation is not valid yet")
 		}
 
 		if !helpers.HasExecutionWithdrawalCredentials(source) {
-			return nil, errors.New("source does not have execution withdrawal credentials")
+			return errors.New("source does not have execution withdrawal credentials")
 		}
 		if !helpers.HasExecutionWithdrawalCredentials(target) {
-			return nil, errors.New("target does not have execution withdrawal credentials")
+			return errors.New("target does not have execution withdrawal credentials")
 		}
 		if !helpers.IsSameWithdrawalCredentials(source, target) {
-			return nil, errors.New("source and target have different withdrawal credentials")
+			return errors.New("source and target have different withdrawal credentials")
 		}
 
 		sr, err := signing.ComputeSigningRoot(c.Message, domain)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		sourcePk, err := bls.PublicKeyFromBytes(source.PublicKey)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not convert bytes to public key")
+			return errors.Wrap(err, "could not convert source public key bytes to bls public key")
 		}
 		targetPk, err := bls.PublicKeyFromBytes(target.PublicKey)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not convert bytes to public key")
+			return errors.Wrap(err, "could not convert target public key bytes to bls public key")
 		}
 		sig, err := bls.SignatureFromBytes(c.Signature)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not convert bytes to signature")
+			return errors.Wrap(err, "could not convert bytes to signature")
 		}
 		if !sig.FastAggregateVerify([]bls.PublicKey{sourcePk, targetPk}, sr) {
-			return nil, errors.New("consolidation signature verification failed")
+			return errors.New("consolidation signature verification failed")
 		}
 
 		sEE, err := ComputeConsolidationEpochAndUpdateChurn(ctx, st, math.Gwei(source.EffectiveBalance))
 		if err != nil {
-			return nil, err
+			return err
 		}
 		source.ExitEpoch = sEE
 		source.WithdrawableEpoch = sEE + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 		if err := st.UpdateValidatorAtIndex(c.Message.SourceIndex, source); err != nil {
-			return nil, err
+			return err
 		}
 		if err := st.AppendPendingConsolidation(c.Message.ToPendingConsolidation()); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return st, nil
+	return nil
 }

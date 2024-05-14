@@ -39,7 +39,7 @@ func RunConsolidationTest(t *testing.T, config string) {
 				if len(cs) == 0 {
 					t.Error("no consolidations to test")
 				}
-				return electra.ProcessConsolidations(ctx, s, cs)
+				return s, electra.ProcessConsolidations(ctx, s, cs)
 			}
 			RunBlockOperationTest(t, folderPath, body, processConsolidationFunc)
 		})

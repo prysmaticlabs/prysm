@@ -197,10 +197,10 @@ func TestProcessPendingConsolidations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := electra.ProcessPendingConsolidations(context.TODO(), tt.state)
+			err := electra.ProcessPendingConsolidations(context.TODO(), tt.state)
 			require.Equal(t, tt.wantErr, err != nil)
 			if tt.check != nil {
-				tt.check(t, res)
+				tt.check(t, tt.state)
 			}
 		})
 	}
@@ -430,14 +430,14 @@ func TestProcessConsolidations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := electra.ProcessConsolidations(context.TODO(), tt.state, tt.scs)
+			err := electra.ProcessConsolidations(context.TODO(), tt.state, tt.scs)
 			if len(tt.wantErr) > 0 {
 				require.ErrorContains(t, tt.wantErr, err)
 			} else {
 				require.NoError(t, err)
 			}
 			if tt.check != nil {
-				tt.check(t, res)
+				tt.check(t, tt.state)
 			}
 		})
 	}
