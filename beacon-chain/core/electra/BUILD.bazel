@@ -3,6 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "balance_deposits.go",
         "churn.go",
         "consolidations.go",
         "transition.go",
@@ -35,6 +36,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "balance_deposits_test.go",
         "churn_test.go",
         "consolidations_test.go",
         "upgrade_test.go",
