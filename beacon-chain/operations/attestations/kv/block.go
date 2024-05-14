@@ -38,6 +38,9 @@ func (c *AttCaches) SaveBlockAttestation(att ethpb.Att) error {
 
 	// Ensure that this attestation is not already fully contained in an existing attestation.
 	for _, a := range atts {
+		if a.Version() != att.Version() {
+			continue
+		}
 		if c, err := a.GetAggregationBits().Contains(att.GetAggregationBits()); err != nil {
 			return err
 		} else if c {

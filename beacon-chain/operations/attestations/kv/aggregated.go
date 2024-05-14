@@ -358,6 +358,9 @@ func (c *AttCaches) HasAggregatedAttestation(att ethpb.Att) (bool, error) {
 	defer c.aggregatedAttLock.RUnlock()
 	if atts, ok := c.aggregatedAtt[key]; ok {
 		for _, a := range atts {
+			if a.Version() != att.Version() {
+				continue
+			}
 			if c, err := a.GetAggregationBits().Contains(att.GetAggregationBits()); err != nil {
 				return false, err
 			} else if c {
@@ -370,6 +373,9 @@ func (c *AttCaches) HasAggregatedAttestation(att ethpb.Att) (bool, error) {
 	defer c.blockAttLock.RUnlock()
 	if atts, ok := c.blockAtt[key]; ok {
 		for _, a := range atts {
+			if a.Version() != att.Version() {
+				continue
+			}
 			if c, err := a.GetAggregationBits().Contains(att.GetAggregationBits()); err != nil {
 				return false, err
 			} else if c {
