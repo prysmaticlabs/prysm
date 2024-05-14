@@ -735,11 +735,14 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 			if duty.IsSyncCommittee {
 				roles = append(roles, iface.RoleSyncCommittee)
 				inSyncCommittee = true
-				syncCommitteeValidators[duty.ValidatorIndex] = bytesutil.ToBytes48(duty.PublicKey)
 			}
 		}
 
-		if len(roles) == 0 && !inSyncCommittee {
+		if inSyncCommittee {
+			syncCommitteeValidators[duty.ValidatorIndex] = bytesutil.ToBytes48(duty.PublicKey)
+		}
+
+		if len(roles) == 0 {
 			roles = append(roles, iface.RoleUnknown)
 		}
 
