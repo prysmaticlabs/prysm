@@ -320,7 +320,7 @@ func TestProcessConsolidations(t *testing.T) {
 			wantErr: "target is not active",
 		},
 		{
-			name: "consolidation with exiting source",
+			name: "consolidation with exiting source is rejected",
 			state: func() state.BeaconState {
 				st := stateWithActiveBalanceETH(t, 19_000_000)
 				val, err := st.ValidatorAtIndex(25)
