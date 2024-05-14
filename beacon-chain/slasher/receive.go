@@ -249,7 +249,7 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 		ctx, maxPruningEpoch,
 	)
 	if err != nil {
-		return errors.Wrap(err, "Could not prune attestations")
+		return errors.Wrap(err, " Could not prune attestations")
 	}
 	numPrunedProposals, err := s.serviceCfg.Database.PruneProposalsAtEpoch(
 		ctx, maxPruningEpoch,
