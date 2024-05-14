@@ -1258,9 +1258,11 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 				},
 			).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
 
-			aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 0)
+			aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, map[primitives.ValidatorIndex][fieldparams.BLSPubkeyLength]byte{
+				0: bytesutil.ToBytes48(pubKey),
+			})
 			require.NoError(t, err)
-			require.Equal(t, false, aggregator)
+			require.Equal(t, false, aggregator[0])
 
 			c := params.BeaconConfig().Copy()
 			c.TargetAggregatorsPerSyncSubcommittee = math.MaxUint64
@@ -1279,9 +1281,11 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 				},
 			).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []primitives.CommitteeIndex{0}}, nil /*err*/)
 
-			aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 0)
+			aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, map[primitives.ValidatorIndex][fieldparams.BLSPubkeyLength]byte{
+				0: bytesutil.ToBytes48(pubKey),
+			})
 			require.NoError(t, err)
-			require.Equal(t, true, aggregator)
+			require.Equal(t, true, aggregator[0])
 		})
 	}
 }
@@ -1305,9 +1309,11 @@ func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
 				},
 			).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
 
-			aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 0)
+			aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, map[primitives.ValidatorIndex][fieldparams.BLSPubkeyLength]byte{
+				0: bytesutil.ToBytes48(pubKey),
+			})
 			require.NoError(t, err)
-			require.Equal(t, false, aggregator)
+			require.Equal(t, false, aggregator[0])
 
 			c := params.BeaconConfig().Copy()
 			c.TargetAggregatorsPerSyncSubcommittee = math.MaxUint64
@@ -1340,9 +1346,11 @@ func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
 				[]iface.SyncCommitteeSelection{selection},
 			).Return([]iface.SyncCommitteeSelection{selection}, nil)
 
-			aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 123)
+			aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, map[primitives.ValidatorIndex][fieldparams.BLSPubkeyLength]byte{
+				123: bytesutil.ToBytes48(pubKey),
+			})
 			require.NoError(t, err)
-			require.Equal(t, true, aggregator)
+			require.Equal(t, true, aggregator[123])
 		})
 	}
 }

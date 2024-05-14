@@ -848,7 +848,6 @@ func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot primitiv
 				ValidatorIndex:    valIdx,
 			})
 		}
-
 	}
 
 	// Override selections with aggregated ones if the node is part of a Distributed Validator.
