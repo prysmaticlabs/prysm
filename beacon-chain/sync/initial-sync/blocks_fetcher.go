@@ -574,8 +574,9 @@ func populateBlockWithColumns(bw blocks2.BlockWithROBlobs, columns []blocks.RODa
 	if len(commits) == 0 {
 		return bw, errDidntPopulate
 	}
-	if len(columns) != int(params.BeaconConfig().CustodyRequirement) {
-		return bw, errors.New("unequal custodied columns provided")
+	colsPersub := params.BeaconConfig().NumberOfColumns / params.BeaconConfig().DataColumnSidecarSubnetCount
+	if len(columns) != int(params.BeaconConfig().CustodyRequirement*colsPersub) {
+		return bw, errors.Errorf("unequal custodied columns provided, got %d instead of %d", len(columns), int(params.BeaconConfig().CustodyRequirement))
 	}
 	for ci := range columns {
 		if err := verify.ColumnAlignsWithBlock(columns[ci], blk); err != nil {
@@ -673,6 +674,18 @@ func (f *blocksFetcher) fetchColumnsFromPeer(ctx context.Context, bwb []blocks2.
 	peers = append(bestPeers, pid)
 	for i := 0; i < len(peers); i++ {
 		p := peers[i]
+		nid, err := p2p.ConvertPeerIDToNodeID(pid)
+		if err != nil {
+			return nil, err
+		}
+		remoteCustody, err := peerdas.CustodyColumns(nid, params.BeaconConfig().CustodyRequirement)
+		if err != nil {
+			return nil, err
+		}
+		if !remotePeerHasCustody(req.Columns, remoteCustody) {
+			// TODO: For easier interop we do not skip for now
+			log.Warnf("Remote peer %s does not have wanted columns", p.String())
+		}
 		columns, err := f.requestColumns(ctx, req, p)
 		if err != nil {
 			log.WithField("peer", p).WithError(err).Debug("Could not request data columns by range from peer")
@@ -874,4 +887,13 @@ func dedupPeers(peers []peer.ID) []peer.ID {
 		peerExists[peers[i]] = true
 	}
 	return newPeerList
+}
+
+func remotePeerHasCustody(wantedIdxs []uint64, remoteCustMap map[uint64]bool) bool {
+	for _, wIdx := range wantedIdxs {
+		if !remoteCustMap[wIdx] {
+			return false
+		}
+	}
+	return true
 }

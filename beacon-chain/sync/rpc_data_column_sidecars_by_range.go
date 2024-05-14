@@ -18,7 +18,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (s *Service) streamDataColumnBatch(ctx context.Context, batch blockBatch, wQuota uint64, stream libp2pcore.Stream) (uint64, error) {
+func (s *Service) streamDataColumnBatch(ctx context.Context, batch blockBatch, wQuota uint64, wantedIndexes map[uint64]bool, stream libp2pcore.Stream) (uint64, error) {
 	// Defensive check to guard against underflow.
 	if wQuota == 0 {
 		return 0, nil
@@ -33,8 +33,8 @@ func (s *Service) streamDataColumnBatch(ctx context.Context, batch blockBatch, w
 			return wQuota, errors.Wrapf(err, "could not retrieve sidecars for block root %#x", root)
 		}
 		for i, l := uint64(0), uint64(len(idxs)); i < l; i++ {
-			// index not available, skip
-			if !idxs[i] {
+			// index not available or unwanted, skip
+			if !idxs[i] || !wantedIndexes[i] {
 				continue
 			}
 			// We won't check for file not found since the .Indices method should normally prevent that from happening.
@@ -96,12 +96,17 @@ func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg i
 		tracing.AnnotateError(span, err)
 		return err
 	}
+	// Derive the wanted columns for the request.
+	wantedColumns := map[uint64]bool{}
+	for _, c := range r.Columns {
+		wantedColumns[c] = true
+	}
 
 	var batch blockBatch
 	wQuota := params.BeaconConfig().MaxRequestDataColumnSidecars
 	for batch, ok = batcher.next(ctx, stream); ok; batch, ok = batcher.next(ctx, stream) {
 		batchStart := time.Now()
-		wQuota, err = s.streamBlobBatch(ctx, batch, wQuota, stream)
+		wQuota, err = s.streamDataColumnBatch(ctx, batch, wQuota, wantedColumns, stream)
 		rpcBlobsByRangeResponseLatency.Observe(float64(time.Since(batchStart).Milliseconds()))
 		if err != nil {
 			return err

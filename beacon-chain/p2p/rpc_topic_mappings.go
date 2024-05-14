@@ -113,6 +113,10 @@ var RPCTopicMappings = map[string]interface{}{
 	RPCBlobSidecarsByRangeTopicV1: new(pb.BlobSidecarsByRangeRequest),
 	// BlobSidecarsByRoot v1 Message
 	RPCBlobSidecarsByRootTopicV1: new(p2ptypes.BlobSidecarsByRootReq),
+	// DataColumnSidecarsByRange v1 Message
+	RPCDataColumnSidecarsByRangeTopicV1: new(pb.DataColumnSidecarsByRangeRequest),
+	// DataColumnSidecarsByRoot v1 Message
+	RPCDataColumnSidecarsByRootTopicV1: new(p2ptypes.BlobSidecarsByRootReq),
 }
 
 // Maps all registered protocol prefixes.
@@ -131,6 +135,8 @@ var messageMapping = map[string]bool{
 	MetadataMessageName:            true,
 	BlobSidecarsByRangeName:        true,
 	BlobSidecarsByRootName:         true,
+	DataColumnSidecarsByRootName:   true,
+	DataColumnSidecarsByRangeName:  true,
 }
 
 // Maps all the RPC messages which are to updated in altair.
