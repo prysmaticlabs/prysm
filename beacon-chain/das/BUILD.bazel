@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "availability.go",
-        "availbility_columns.go",
+        "availability_columns.go",
         "cache.go",
         "iface.go",
         "mock.go",

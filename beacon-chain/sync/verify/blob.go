@@ -56,7 +56,7 @@ func ColumnAlignsWithBlock(col blocks.RODataColumn, block blocks.ROBlock) error 
 		return nil
 	}
 	if col.ColumnIndex >= fieldparams.NumberOfColumns {
-		return errors.Wrapf(ErrIncorrectColumnIndex, "index %d exceeds NUMBERS_OF_COLUMN %d", col.ColumnIndex, fieldparams.MaxBlobsPerBlock)
+		return errors.Wrapf(ErrIncorrectColumnIndex, "index %d exceeds NUMBERS_OF_COLUMN %d", col.ColumnIndex, fieldparams.NumberOfColumns)
 	}
 
 	if col.BlockRoot() != block.Root() {
