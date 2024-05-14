@@ -333,7 +333,7 @@ func TestProcessConsolidations(t *testing.T) {
 			wantErr: "source exit epoch has been initiated",
 		},
 		{
-			name: "consolidation with exiting target",
+			name: "consolidation with exiting target is rejected",
 			state: func() state.BeaconState {
 				st := stateWithActiveBalanceETH(t, 19_000_000)
 				val, err := st.ValidatorAtIndex(25)
