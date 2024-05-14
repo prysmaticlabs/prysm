@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
@@ -256,6 +257,11 @@ func (s *Service) createLocalNode(
 
 	if features.Get().EnablePeerDAS {
 		custodySubnetEntry := custodySubnetCount(params.BeaconConfig().CustodyRequirement)
+
+		if flags.Get().SubscribeToAllSubnets {
+			custodySubnetEntry = custodySubnetCount(params.BeaconConfig().DataColumnSidecarSubnetCount)
+		}
+
 		localNode.Set(custodySubnetEntry)
 	}
 
