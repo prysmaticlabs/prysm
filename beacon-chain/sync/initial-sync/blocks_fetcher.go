@@ -655,13 +655,13 @@ func (f *blocksFetcher) fetchColumnsFromPeer(ctx context.Context, bwb []blocks2.
 		return bwb, nil
 	}
 	// Construct request message based on required custodied columns.
-	custodyColumns, err := peerdas.CustodyColumns(f.p2p.NodeID(), params.BeaconConfig().CustodyRequirement)
+	custodyCols, err := peerdas.CustodyColumns(f.p2p.NodeID(), params.BeaconConfig().CustodyRequirement)
 	if err != nil {
 		return nil, err
 	}
 
 	var colIdxs []uint64
-	for c, _ := range custodyColumns {
+	for c, _ := range custodyCols {
 		colIdxs = append(colIdxs, c)
 	}
 	req.Columns = colIdxs
