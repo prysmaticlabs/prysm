@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
-func RunDepositReceiptsTest(t *testing.T, config string) {
+func RunDepositTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", "operations/deposit/pyspec_tests")
 	for _, folder := range testFolders {
