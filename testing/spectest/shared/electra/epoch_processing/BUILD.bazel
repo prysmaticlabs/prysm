@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
+        "effective_balance_updates.go",
         "eth1_data_reset.go",
         "helpers.go",
         "historical_summaries_update.go",
