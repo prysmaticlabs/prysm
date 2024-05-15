@@ -13,6 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
@@ -43,7 +44,7 @@ const (
 
 type (
 	quicProtocol       uint16
-	custodySubnetCount uint64
+	custodySubnetCount []byte
 )
 
 // quicProtocol is the "quic" key, which holds the QUIC port of the node.
@@ -256,10 +257,14 @@ func (s *Service) createLocalNode(
 	}
 
 	if features.Get().EnablePeerDAS {
-		custodySubnetEntry := custodySubnetCount(params.BeaconConfig().CustodyRequirement)
+		var custodyBytes []byte
+		custodyBytes = ssz.MarshalUint64(custodyBytes, params.BeaconConfig().CustodyRequirement)
+		custodySubnetEntry := custodySubnetCount(custodyBytes)
 
 		if flags.Get().SubscribeToAllSubnets {
-			custodySubnetEntry = custodySubnetCount(params.BeaconConfig().DataColumnSidecarSubnetCount)
+			var allCustodyBytes []byte
+			allCustodyBytes = ssz.MarshalUint64(allCustodyBytes, params.BeaconConfig().DataColumnSidecarSubnetCount)
+			custodySubnetEntry = custodySubnetCount(allCustodyBytes)
 		}
 
 		localNode.Set(custodySubnetEntry)
