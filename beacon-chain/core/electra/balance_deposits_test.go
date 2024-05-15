@@ -120,7 +120,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 			}
 			require.NoError(t, err)
 			err = electra.ProcessPendingBalanceDeposits(context.TODO(), tt.state, math.Gwei(tab))
-			require.Equal(t, tt.wantErr, err != nil)
+			require.Equal(t, tt.wantErr, err != nil, "wantErr=%v, got err=%s", tt.wantErr, err)
 			if tt.check != nil {
 				tt.check(t, tt.state)
 			}

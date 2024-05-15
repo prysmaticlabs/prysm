@@ -53,9 +53,6 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	if err != nil {
 		return err
 	}
-	if deposits == nil {
-		return errors.New("nil pending balance deposit slice from state") // This should never happen.
-	}
 
 	for _, deposit := range deposits {
 		if processedAmount+math.Gwei(deposit.Amount) > availableForProcessing {
