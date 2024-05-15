@@ -6,9 +6,10 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/spectest/utils"
@@ -17,22 +18,22 @@ import (
 
 func RunDepositReceiptsTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", "operations/deposit/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", "operations/deposit_receipt/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			depositFile, err := util.BazelFileBytes(folderPath, "deposit.ssz_snappy")
+			depositReceiptFile, err := util.BazelFileBytes(folderPath, "deposit_receipt.ssz_snappy")
 			require.NoError(t, err)
-			depositSSZ, err := snappy.Decode(nil /* dst */, depositFile)
+			depositReceiptSSZ, err := snappy.Decode(nil /* dst */, depositReceiptFile)
 			require.NoError(t, err, "Failed to decompress")
-			deposit := &ethpb.Deposit{}
-			require.NoError(t, deposit.UnmarshalSSZ(depositSSZ), "Failed to unmarshal")
+			depositReceipt := &enginev1.DepositReceipt{}
+			require.NoError(t, depositReceipt.UnmarshalSSZ(depositReceiptSSZ), "failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBodyElectra{Deposits: []*ethpb.Deposit{deposit}}
-			processDepositsFunc := func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
-				return altair.ProcessDeposits(ctx, s, b.Block().Body().Deposits())
+			body := &ethpb.BeaconBlockBodyElectra{ExecutionPayload: &enginev1.ExecutionPayloadElectra{DepositReceipts: []*enginev1.DepositReceipt{depositReceipt}}}
+			processDepositReceiptsFunc := func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+				return blocks.ProcessDepositReceipts(s, b.Block())
 			}
-			RunBlockOperationTest(t, folderPath, body, processDepositsFunc)
+			RunBlockOperationTest(t, folderPath, body, processDepositReceiptsFunc)
 		})
 	}
 }
