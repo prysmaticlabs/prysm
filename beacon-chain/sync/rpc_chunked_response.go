@@ -66,7 +66,11 @@ func WriteBlockChunk(stream libp2pcore.Stream, tor blockchain.TemporalOracle, en
 		}
 		obtainedCtx = digest[:]
 	case version.Electra:
-		panic("implement me")
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().ElectraForkEpoch, valRoot[:])
+		if err != nil {
+			return err
+		}
+		obtainedCtx = digest[:]
 	default:
 		return errors.Wrapf(ErrUnrecognizedVersion, "block version %d is not recognized", blk.Version())
 	}
