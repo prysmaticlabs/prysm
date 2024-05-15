@@ -42,16 +42,18 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	}
 	atts = append(atts, uAtts...)
 
+	postElectra := slots.ToEpoch(blkSlot) >= params.BeaconConfig().ElectraForkEpoch
+
 	versionAtts := make([]ethpb.Att, 0, len(atts))
-	if slots.ToEpoch(blkSlot) < params.BeaconConfig().ElectraForkEpoch {
+	if postElectra {
 		for _, a := range atts {
-			if a.Version() == version.Phase0 {
+			if a.Version() == version.Electra {
 				versionAtts = append(versionAtts, a)
 			}
 		}
 	} else {
 		for _, a := range atts {
-			if a.Version() == version.Electra {
+			if a.Version() == version.Phase0 {
 				versionAtts = append(versionAtts, a)
 			}
 		}
@@ -66,33 +68,35 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 
 	attsByDataRoot := make(map[kv.AttestationId][]ethpb.Att, len(versionAtts))
 	for _, att := range versionAtts {
-		var attDataRoot [32]byte
-		if att.Version() == version.Phase0 {
-			attDataRoot, err = att.GetData().HashTreeRoot()
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			data := ethpb.CopyAttestationData(att.GetData())
-			data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
-			attDataRoot, err = data.HashTreeRoot()
-			if err != nil {
-				return nil, err
-			}
+		attDataRoot, err := att.GetData().HashTreeRoot()
+		if err != nil {
+			return nil, err
 		}
-
 		key := kv.NewAttestationId(att, attDataRoot)
 		attsByDataRoot[key] = append(attsByDataRoot[key], att)
 	}
 
-	attsForInclusion := proposerAtts(make([]ethpb.Att, 0))
-	for _, as := range attsByDataRoot {
+	for r, as := range attsByDataRoot {
 		as, err := attaggregation.Aggregate(as)
 		if err != nil {
 			return nil, err
 		}
-		attsForInclusion = append(attsForInclusion, as...)
+		attsByDataRoot[r] = as
 	}
+
+	var attsForInclusion proposerAtts
+	if postElectra {
+		attsForInclusion, err = computeOnChainAggregate(attsByDataRoot)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		attsForInclusion = make([]ethpb.Att, 0)
+		for _, as := range attsByDataRoot {
+			attsForInclusion = append(attsForInclusion, as...)
+		}
+	}
+
 	deduped, err := attsForInclusion.dedup()
 	if err != nil {
 		return nil, err
@@ -199,8 +203,18 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 
 // limitToMaxAttestations limits attestations to maximum attestations per block.
 func (a proposerAtts) limitToMaxAttestations() proposerAtts {
-	if uint64(len(a)) > params.BeaconConfig().MaxAttestations {
-		return a[:params.BeaconConfig().MaxAttestations]
+	if len(a) == 0 {
+		return a
+	}
+
+	var limit uint64
+	if a[0].Version() == version.Phase0 {
+		limit = params.BeaconConfig().MaxAttestations
+	} else {
+		limit = params.BeaconConfig().MaxAttestationsElectra
+	}
+	if uint64(len(a)) > limit {
+		return a[:limit]
 	}
 	return a
 }
@@ -214,22 +228,10 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 	}
 	attsByDataRoot := make(map[kv.AttestationId][]ethpb.Att, len(a))
 	for _, att := range a {
-		var attDataRoot [32]byte
-		var err error
-		if att.Version() == version.Phase0 {
-			attDataRoot, err = att.GetData().HashTreeRoot()
-			if err != nil {
-				continue
-			}
-		} else {
-			data := ethpb.CopyAttestationData(att.GetData())
-			data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
-			attDataRoot, err = data.HashTreeRoot()
-			if err != nil {
-				continue
-			}
+		attDataRoot, err := att.GetData().HashTreeRoot()
+		if err != nil {
+			continue
 		}
-
 		key := kv.NewAttestationId(att, attDataRoot)
 		attsByDataRoot[key] = append(attsByDataRoot[key], att)
 	}

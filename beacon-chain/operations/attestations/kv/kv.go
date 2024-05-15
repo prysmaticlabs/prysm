@@ -4,10 +4,12 @@
 package kv
 
 import (
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/patrickmn/go-cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -17,22 +19,27 @@ import (
 var hashFn = hash.Proto
 
 type AttestationId struct {
-	version int
-	digest  [32]byte
+	Version              int
+	CommitteeIndicesRoot [32]byte
+	Digest               [32]byte
 }
 
-// TODO doesn't make sense to implement like this
 func NewAttestationId(att ethpb.Att, digest [32]byte) AttestationId {
+	id := AttestationId{
+		Version: att.Version(),
+		Digest:  digest,
+	}
 	if att.Version() == version.Phase0 {
-		return AttestationId{
-			version: att.Version(),
-			digest:  digest,
+		id.CommitteeIndicesRoot = hash.Hash([]byte(strconv.Itoa(int(att.GetData().CommitteeIndex))))
+	} else {
+		indices := helpers.CommitteeIndices(att.GetCommitteeBitsVal())
+		b := make([]byte, 0)
+		for _, ix := range indices {
+			b = append(b, []byte(strconv.FormatUint(uint64(ix), 10))...)
 		}
+		id.CommitteeIndicesRoot = hash.Hash(b)
 	}
-	return AttestationId{
-		version: att.Version(),
-		digest:  digest,
-	}
+	return id
 }
 
 // AttCaches defines the caches used to satisfy attestation pool interface.

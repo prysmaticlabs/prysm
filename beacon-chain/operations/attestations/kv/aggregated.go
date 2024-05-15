@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -36,22 +35,10 @@ func (c *AttCaches) aggregateUnaggregatedAtts(ctx context.Context, unaggregatedA
 
 	attsByVerAndDataRoot := make(map[AttestationId][]ethpb.Att, len(unaggregatedAtts))
 	for _, att := range unaggregatedAtts {
-		var attDataRoot [32]byte
-		var err error
-		if att.Version() == version.Phase0 {
-			attDataRoot, err = att.GetData().HashTreeRoot()
-			if err != nil {
-				return err
-			}
-		} else {
-			data := ethpb.CopyAttestationData(att.GetData())
-			data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
-			attDataRoot, err = data.HashTreeRoot()
-			if err != nil {
-				return err
-			}
+		attDataRoot, err := att.GetData().HashTreeRoot()
+		if err != nil {
+			return err
 		}
-
 		key := NewAttestationId(att, attDataRoot)
 		attsByVerAndDataRoot[key] = append(attsByVerAndDataRoot[key], att)
 	}
@@ -155,19 +142,9 @@ func (c *AttCaches) SaveAggregatedAttestation(att ethpb.Att) error {
 		return nil
 	}
 
-	var r [32]byte
-	if att.Version() == version.Phase0 {
-		r, err = hash.Proto(att.GetData())
-		if err != nil {
-			return err
-		}
-	} else {
-		data := ethpb.CopyAttestationData(att.GetData())
-		data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
-		r, err = hash.Proto(data)
-		if err != nil {
-			return err
-		}
+	r, err := hashFn(att.GetData())
+	if err != nil {
+		return err
 	}
 	key := NewAttestationId(att, r)
 
@@ -283,20 +260,9 @@ func (c *AttCaches) DeleteAggregatedAttestation(att ethpb.Att) error {
 	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
 	}
-	var r [32]byte
-	var err error
-	if att.Version() == version.Phase0 {
-		r, err = hash.Proto(att.GetData())
-		if err != nil {
-			return err
-		}
-	} else {
-		data := ethpb.CopyAttestationData(att.GetData())
-		data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
-		r, err = hash.Proto(data)
-		if err != nil {
-			return err
-		}
+	r, err := hashFn(att.GetData())
+	if err != nil {
+		return err
 	}
 	key := NewAttestationId(att, r)
 
@@ -336,21 +302,9 @@ func (c *AttCaches) HasAggregatedAttestation(att ethpb.Att) (bool, error) {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return false, err
 	}
-	var r [32]byte
-	var err error
-	if att.Version() == version.Phase0 {
-		r, err = hash.Proto(att.GetData())
-		if err != nil {
-			return false, err
-		}
-	} else {
-		data := ethpb.CopyAttestationData(att.GetData())
-		ci := primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
-		data.CommitteeIndex = ci
-		r, err = hash.Proto(data)
-		if err != nil {
-			return false, err
-		}
+	r, err := hashFn(att.GetData())
+	if err != nil {
+		return false, err
 	}
 	key := NewAttestationId(att, r)
 

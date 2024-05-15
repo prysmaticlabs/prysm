@@ -10,11 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/kv"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -82,19 +80,9 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 			continue
 		}
 
-		var attDataRoot [32]byte
-		if att.Version() == version.Phase0 {
-			attDataRoot, err = att.GetData().HashTreeRoot()
-			if err != nil {
-				return err
-			}
-		} else {
-			data := ethpb.CopyAttestationData(att.GetData())
-			data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
-			attDataRoot, err = data.HashTreeRoot()
-			if err != nil {
-				return err
-			}
+		attDataRoot, err := att.GetData().HashTreeRoot()
+		if err != nil {
+			return err
 		}
 		key := kv.NewAttestationId(att, attDataRoot)
 		attsByVerAndDataRoot[key] = append(attsByVerAndDataRoot[key], att)
@@ -133,20 +121,9 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []ethpb.Att) error {
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
 func (s *Service) seen(att ethpb.Att) (bool, error) {
-	var attRoot [32]byte
-	var err error
-	if att.Version() == version.Phase0 {
-		attRoot, err = hash.Proto(att.GetData())
-		if err != nil {
-			return false, err
-		}
-	} else {
-		data := ethpb.CopyAttestationData(att.GetData())
-		data.CommitteeIndex = primitives.CommitteeIndex(att.GetCommitteeBitsVal().BitIndices()[0])
-		attRoot, err = hash.Proto(data)
-		if err != nil {
-			return false, err
-		}
+	attRoot, err := hash.Proto(att.GetData())
+	if err != nil {
+		return false, err
 	}
 	key := kv.NewAttestationId(att, attRoot)
 	incomingBits := att.GetAggregationBits()
