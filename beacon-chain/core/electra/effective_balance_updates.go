@@ -30,7 +30,7 @@ import (
 //	            or validator.effective_balance + UPWARD_THRESHOLD < balance
 //	        ):
 //	            validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, EFFECTIVE_BALANCE_LIMIT)
-func ProcessEffectiveBalanceUpdates(state state.BeaconState) (state.BeaconState, error) {
+func ProcessEffectiveBalanceUpdates(state state.BeaconState) error {
 	effBalanceInc := params.BeaconConfig().EffectiveBalanceIncrement
 	hysteresisInc := effBalanceInc / params.BeaconConfig().HysteresisQuotient
 	downwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisDownwardMultiplier
@@ -55,19 +55,11 @@ func ProcessEffectiveBalanceUpdates(state state.BeaconState) (state.BeaconState,
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
 			effectiveBal := min(balance-balance%effBalanceInc, effectiveBalanceLimit)
-			if effectiveBal != val.EffectiveBalance {
-				newVal := ethpb.CopyValidator(val)
-				newVal.EffectiveBalance = effectiveBal
-				return true, newVal, nil
-			}
+			val.EffectiveBalance = effectiveBal
 			return false, val, nil
 		}
 		return false, val, nil
 	}
 
-	if err := state.ApplyToEveryValidator(validatorFunc); err != nil {
-		return nil, err
-	}
-
-	return state, nil
+	return state.ApplyToEveryValidator(validatorFunc)
 }

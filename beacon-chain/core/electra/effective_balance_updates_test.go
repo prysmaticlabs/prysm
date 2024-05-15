@@ -53,7 +53,7 @@ func TestProcessEffectiveBalnceUpdates(t *testing.T) {
 				pb := &eth.BeaconStateElectra{
 					Validators: []*eth.Validator{
 						{
-							EffectiveBalance:      params.BeaconConfig().MinActivationBalance,
+							EffectiveBalance:      params.BeaconConfig().MinActivationBalance / 2,
 							WithdrawalCredentials: nil,
 						},
 					},
@@ -94,10 +94,10 @@ func TestProcessEffectiveBalnceUpdates(t *testing.T) {
 						},
 					},
 					Balances: []uint64{
-						params.BeaconConfig().MinActivationBalance - downwardThreshold - 1,
-						params.BeaconConfig().MinActivationBalance - downwardThreshold + 1,
-						params.BeaconConfig().MinActivationBalance + upwardThreshold + 1,
-						params.BeaconConfig().MinActivationBalance + upwardThreshold - 1,
+						params.BeaconConfig().MinActivationBalance - downwardThreshold - 1, // beyond downward threshold
+						params.BeaconConfig().MinActivationBalance - downwardThreshold + 1, // within downward threshold
+						params.BeaconConfig().MinActivationBalance + upwardThreshold + 1,   // beyond upward threshold
+						params.BeaconConfig().MinActivationBalance + upwardThreshold - 1,   // within upward threshold
 					},
 				}
 				st, err := state_native.InitializeFromProtoElectra(pb)
@@ -123,6 +123,8 @@ func TestProcessEffectiveBalnceUpdates(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, params.BeaconConfig().MinActivationBalance+params.BeaconConfig().EffectiveBalanceIncrement, val.EffectiveBalance)
 
+				// Validator 3 has a balance diff within the threshold so the effective balance should not
+				// have changed.
 				val, err = bs.ValidatorAtIndex(3)
 				require.NoError(t, err)
 				require.Equal(t, params.BeaconConfig().MinActivationBalance, val.EffectiveBalance)
@@ -132,10 +134,10 @@ func TestProcessEffectiveBalnceUpdates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := electra.ProcessEffectiveBalanceUpdates(tt.state)
-			require.Equal(t, tt.wantErr, err != nil)
+			err := electra.ProcessEffectiveBalanceUpdates(tt.state)
+			require.Equal(t, tt.wantErr, err != nil, "unexpected error returned wanted error=nil (%s), got error=%s", tt.wantErr, err)
 			if tt.check != nil {
-				tt.check(t, res)
+				tt.check(t, tt.state)
 			}
 		})
 	}
