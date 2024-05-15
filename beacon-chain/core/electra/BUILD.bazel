@@ -43,6 +43,7 @@ go_test(
         "churn_test.go",
         "consolidations_test.go",
         "deposits_test.go",
+        "effective_balance_updates_test.go",
         "upgrade_test.go",
         "validator_test.go",
     ],
