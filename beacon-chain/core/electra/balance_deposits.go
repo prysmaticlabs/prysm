@@ -3,7 +3,6 @@ package electra
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -47,7 +46,6 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	}
 
 	availableForProcessing := depBalToConsume + helpers.ActivationExitChurnLimit(activeBalance)
-	processedAmount := math.Gwei(0)
 	nextDepositIndex := 0
 
 	deposits, err := st.PendingBalanceDeposits()
@@ -56,13 +54,13 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	}
 
 	for _, deposit := range deposits {
-		if processedAmount+math.Gwei(deposit.Amount) > availableForProcessing {
+		if math.Gwei(deposit.Amount) > availableForProcessing {
 			break
 		}
 		if err := helpers.IncreaseBalance(st, deposit.Index, deposit.Amount); err != nil {
 			return err
 		}
-		processedAmount += math.Gwei(deposit.Amount)
+		availableForProcessing -= math.Gwei(deposit.Amount)
 		nextDepositIndex++
 	}
 
@@ -74,10 +72,6 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	if len(deposits) == 0 {
 		return st.SetDepositBalanceToConsume(0)
 	} else {
-		dbtc, err := math.Sub64(uint64(availableForProcessing), uint64(processedAmount))
-		if err != nil {
-			return fmt.Errorf("failed to compute new deposit balance to consume: %w", err)
-		}
-		return st.SetDepositBalanceToConsume(math.Gwei(dbtc))
+		return st.SetDepositBalanceToConsume(availableForProcessing)
 	}
 }
