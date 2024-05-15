@@ -101,7 +101,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 					require.Equal(t, params.BeaconConfig().MinActivationBalance+uint64(amountAvailForProcessing)/5, b)
 				}
 
-				// Half of the balance deposits should have been processed.
+				// All of the balance deposits should have been processed.
 				remaining, err := st.PendingBalanceDeposits()
 				require.NoError(t, err)
 				require.Equal(t, 0, len(remaining))
