@@ -48,6 +48,7 @@ go_test(
         "consolidations_test.go",
         "deposits_test.go",
         "effective_balance_updates_test.go",
+        "registry_updates_test.go",
         "upgrade_test.go",
         "validator_test.go",
         "withdrawals_test.go",
