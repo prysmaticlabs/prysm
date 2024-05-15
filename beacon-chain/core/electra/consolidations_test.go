@@ -259,8 +259,8 @@ func TestProcessConsolidations(t *testing.T) {
 			wantErr: "nil state",
 		},
 		{
-			name: "nil consolidation in slice",
-			state: stateWithActiveBalanceETH(t, 19_000_000),
+			name:    "nil consolidation in slice",
+			state:   stateWithActiveBalanceETH(t, 19_000_000),
 			scs:     []*eth.SignedConsolidation{nil, nil},
 			wantErr: "nil consolidation",
 		},
