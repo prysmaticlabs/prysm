@@ -7,5 +7,5 @@ import (
 )
 
 func TestMainnet_Electra_Transition(t *testing.T) {
-	fork.RunForkTransitionTest(t, "mainnet")
+	fork.RunForkTransitionTest(t, "minimal")
 }
