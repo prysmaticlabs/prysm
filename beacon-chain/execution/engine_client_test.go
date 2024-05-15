@@ -49,7 +49,15 @@ func (RPCClientBad) BatchCall([]rpc.BatchElem) error {
 	return errors.New("rpc client is not initialized")
 }
 
-func (RPCClientBad) CallContext(context.Context, interface{}, string, ...interface{}) error {
+func (RPCClientBad) CallContext(_ context.Context, result interface{}, method string, _ ...interface{}) error {
+	if method == EthSyncingMethod {
+		assertResult, ok := result.(*interface{})
+		if !ok {
+			return errors.Errorf("wrong argument type provided: %T", result)
+		}
+		*assertResult = false
+		return nil
+	}
 	return ethereum.NotFound
 }
 
@@ -2656,4 +2664,37 @@ func Test_ExchangeCapabilities(t *testing.T) {
 			require.NotNil(t, item)
 		}
 	})
+}
+
+func TestEthSyncing(t *testing.T) {
+	srv := &Service{}
+	srv.rpcClient = &mocks.RPCClient{}
+
+	expectResult := map[string]interface{}{
+		"currentBlock":        "0x3cf522",
+		"healedBytecodeBytes": "0x0",
+		"healedBytecodes":     "0x0",
+		"healedTrienodes":     "0x0",
+		"healingBytecode":     "0x0",
+		"healingTrienodes":    "0x0",
+		"highestBlock":        "0x3e0e41",
+		"startingBlock":       "0x3cbed5",
+		"syncedAccountBytes":  "0x0",
+		"syncedAccounts":      "0x0",
+		"syncedBytecodeBytes": "0x0",
+		"syncedBytecodes":     "0x0",
+		"syncedStorage":       "0x0",
+		"syncedStorageBytes":  "0x0",
+	}
+	result, err := srv.EthSyncing(context.Background())
+	assert.Equal(t, nil, err)
+	assert.DeepEqual(t, expectResult, result, "result not match")
+}
+
+func TestEthSyncing_NotSyncing(t *testing.T) {
+	srv := &Service{}
+	srv.rpcClient = &RPCClientBad{}
+
+	_, err := srv.EthSyncing(context.Background())
+	assert.ErrorContains(t, "execution client is not syncing, please check", err)
 }
