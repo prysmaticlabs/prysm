@@ -75,15 +75,29 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		}
 		attsByDataRoot[id] = append(attsByDataRoot[id], att)
 	}
+	}
 
-	attsForInclusion := proposerAtts(make([]ethpb.Att, 0))
-	for _, as := range attsByDataRoot {
+	for r, as := range attsByDataRoot {
 		as, err := attaggregation.Aggregate(as)
 		if err != nil {
 			return nil, err
 		}
-		attsForInclusion = append(attsForInclusion, as...)
+		attsByDataRoot[r] = as
 	}
+
+	var attsForInclusion proposerAtts
+	if postElectra {
+		attsForInclusion, err = computeOnChainAggregate(attsByDataRoot)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		attsForInclusion = make([]ethpb.Att, 0)
+		for _, as := range attsByDataRoot {
+			attsForInclusion = append(attsForInclusion, as...)
+		}
+	}
+
 	deduped, err := attsForInclusion.dedup()
 	if err != nil {
 		return nil, err
