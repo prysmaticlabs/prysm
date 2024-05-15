@@ -3,6 +3,7 @@ package electra
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -73,6 +74,10 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	if len(deposits) == 0 {
 		return st.SetDepositBalanceToConsume(0)
 	} else {
-		return st.SetDepositBalanceToConsume(availableForProcessing - processedAmount)
+		dbtc, err := math.Sub64(uint64(availableForProcessing), uint64(processedAmount))
+		if err != nil {
+			return fmt.Errorf("failed to compute new deposit balance to consume: %w", err)
+		}
+		return st.SetDepositBalanceToConsume(math.Gwei(dbtc))
 	}
 }
