@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "churn.go",
+        "registry_updates.go",
         "transition.go",
         "upgrade.go",
         "validator.go",
@@ -15,6 +16,7 @@ go_library(
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
+        "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
         "//config/params:go_default_library",
@@ -32,6 +34,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "churn_test.go",
+        "registry_updates_test.go",
         "upgrade_test.go",
         "validator_test.go",
     ],
@@ -41,6 +44,7 @@ go_test(
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
