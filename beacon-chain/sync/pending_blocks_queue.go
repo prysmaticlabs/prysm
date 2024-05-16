@@ -224,13 +224,13 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 	if features.Get().EnablePeerDAS {
 		if len(request) > 0 {
 			peers := s.getBestPeers()
-			peerCount := len(peers)
-			if peerCount == 0 {
-				return errors.Wrapf(errNoPeersForPending, "block root=%#x", blkRoot)
-			}
 			peers, err = s.getValidCustodyPeers(peers)
 			if err != nil {
 				return err
+			}
+			peerCount := len(peers)
+			if peerCount == 0 {
+				return errors.Wrapf(errNoPeersForPending, "block root=%#x", blkRoot)
 			}
 			if err := s.sendAndSaveDataColumnSidecars(ctx, request, peers[rand.NewGenerator().Int()%peerCount], b); err != nil {
 				return err
