@@ -8,6 +8,7 @@ go_library(
         "block_header.go",
         "bls_to_execution_changes.go",
         "deposit.go",
+        "consolidations.go",
         "deposit_receipt.go",
         "execution_layer_withdrawal_request.go",
         "execution_payload.go",
