@@ -18916,6 +18916,326 @@ func (b *BlobIdentifier) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
+// MarshalSSZ ssz marshals the DataColumnSidecar object
+func (d *DataColumnSidecar) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(d)
+}
+
+// MarshalSSZTo ssz marshals the DataColumnSidecar object to a target array
+func (d *DataColumnSidecar) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+	offset := int(356)
+
+	// Field (0) 'ColumnIndex'
+	dst = ssz.MarshalUint64(dst, d.ColumnIndex)
+
+	// Offset (1) 'DataColumn'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(d.DataColumn) * 2048
+
+	// Offset (2) 'KzgCommitments'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(d.KzgCommitments) * 48
+
+	// Offset (3) 'KzgProof'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(d.KzgProof) * 48
+
+	// Field (4) 'SignedBlockHeader'
+	if d.SignedBlockHeader == nil {
+		d.SignedBlockHeader = new(SignedBeaconBlockHeader)
+	}
+	if dst, err = d.SignedBlockHeader.MarshalSSZTo(dst); err != nil {
+		return
+	}
+
+	// Field (5) 'KzgCommitmentsInclusionProof'
+	if size := len(d.KzgCommitmentsInclusionProof); size != 4 {
+		err = ssz.ErrVectorLengthFn("--.KzgCommitmentsInclusionProof", size, 4)
+		return
+	}
+	for ii := 0; ii < 4; ii++ {
+		if size := len(d.KzgCommitmentsInclusionProof[ii]); size != 32 {
+			err = ssz.ErrBytesLengthFn("--.KzgCommitmentsInclusionProof[ii]", size, 32)
+			return
+		}
+		dst = append(dst, d.KzgCommitmentsInclusionProof[ii]...)
+	}
+
+	// Field (1) 'DataColumn'
+	if size := len(d.DataColumn); size > 4096 {
+		err = ssz.ErrListTooBigFn("--.DataColumn", size, 4096)
+		return
+	}
+	for ii := 0; ii < len(d.DataColumn); ii++ {
+		if size := len(d.DataColumn[ii]); size != 2048 {
+			err = ssz.ErrBytesLengthFn("--.DataColumn[ii]", size, 2048)
+			return
+		}
+		dst = append(dst, d.DataColumn[ii]...)
+	}
+
+	// Field (2) 'KzgCommitments'
+	if size := len(d.KzgCommitments); size > 4096 {
+		err = ssz.ErrListTooBigFn("--.KzgCommitments", size, 4096)
+		return
+	}
+	for ii := 0; ii < len(d.KzgCommitments); ii++ {
+		if size := len(d.KzgCommitments[ii]); size != 48 {
+			err = ssz.ErrBytesLengthFn("--.KzgCommitments[ii]", size, 48)
+			return
+		}
+		dst = append(dst, d.KzgCommitments[ii]...)
+	}
+
+	// Field (3) 'KzgProof'
+	if size := len(d.KzgProof); size > 4096 {
+		err = ssz.ErrListTooBigFn("--.KzgProof", size, 4096)
+		return
+	}
+	for ii := 0; ii < len(d.KzgProof); ii++ {
+		if size := len(d.KzgProof[ii]); size != 48 {
+			err = ssz.ErrBytesLengthFn("--.KzgProof[ii]", size, 48)
+			return
+		}
+		dst = append(dst, d.KzgProof[ii]...)
+	}
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the DataColumnSidecar object
+func (d *DataColumnSidecar) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 356 {
+		return ssz.ErrSize
+	}
+
+	tail := buf
+	var o1, o2, o3 uint64
+
+	// Field (0) 'ColumnIndex'
+	d.ColumnIndex = ssz.UnmarshallUint64(buf[0:8])
+
+	// Offset (1) 'DataColumn'
+	if o1 = ssz.ReadOffset(buf[8:12]); o1 > size {
+		return ssz.ErrOffset
+	}
+
+	if o1 < 356 {
+		return ssz.ErrInvalidVariableOffset
+	}
+
+	// Offset (2) 'KzgCommitments'
+	if o2 = ssz.ReadOffset(buf[12:16]); o2 > size || o1 > o2 {
+		return ssz.ErrOffset
+	}
+
+	// Offset (3) 'KzgProof'
+	if o3 = ssz.ReadOffset(buf[16:20]); o3 > size || o2 > o3 {
+		return ssz.ErrOffset
+	}
+
+	// Field (4) 'SignedBlockHeader'
+	if d.SignedBlockHeader == nil {
+		d.SignedBlockHeader = new(SignedBeaconBlockHeader)
+	}
+	if err = d.SignedBlockHeader.UnmarshalSSZ(buf[20:228]); err != nil {
+		return err
+	}
+
+	// Field (5) 'KzgCommitmentsInclusionProof'
+	d.KzgCommitmentsInclusionProof = make([][]byte, 4)
+	for ii := 0; ii < 4; ii++ {
+		if cap(d.KzgCommitmentsInclusionProof[ii]) == 0 {
+			d.KzgCommitmentsInclusionProof[ii] = make([]byte, 0, len(buf[228:356][ii*32:(ii+1)*32]))
+		}
+		d.KzgCommitmentsInclusionProof[ii] = append(d.KzgCommitmentsInclusionProof[ii], buf[228:356][ii*32:(ii+1)*32]...)
+	}
+
+	// Field (1) 'DataColumn'
+	{
+		buf = tail[o1:o2]
+		num, err := ssz.DivideInt2(len(buf), 2048, 4096)
+		if err != nil {
+			return err
+		}
+		d.DataColumn = make([][]byte, num)
+		for ii := 0; ii < num; ii++ {
+			if cap(d.DataColumn[ii]) == 0 {
+				d.DataColumn[ii] = make([]byte, 0, len(buf[ii*2048:(ii+1)*2048]))
+			}
+			d.DataColumn[ii] = append(d.DataColumn[ii], buf[ii*2048:(ii+1)*2048]...)
+		}
+	}
+
+	// Field (2) 'KzgCommitments'
+	{
+		buf = tail[o2:o3]
+		num, err := ssz.DivideInt2(len(buf), 48, 4096)
+		if err != nil {
+			return err
+		}
+		d.KzgCommitments = make([][]byte, num)
+		for ii := 0; ii < num; ii++ {
+			if cap(d.KzgCommitments[ii]) == 0 {
+				d.KzgCommitments[ii] = make([]byte, 0, len(buf[ii*48:(ii+1)*48]))
+			}
+			d.KzgCommitments[ii] = append(d.KzgCommitments[ii], buf[ii*48:(ii+1)*48]...)
+		}
+	}
+
+	// Field (3) 'KzgProof'
+	{
+		buf = tail[o3:]
+		num, err := ssz.DivideInt2(len(buf), 48, 4096)
+		if err != nil {
+			return err
+		}
+		d.KzgProof = make([][]byte, num)
+		for ii := 0; ii < num; ii++ {
+			if cap(d.KzgProof[ii]) == 0 {
+				d.KzgProof[ii] = make([]byte, 0, len(buf[ii*48:(ii+1)*48]))
+			}
+			d.KzgProof[ii] = append(d.KzgProof[ii], buf[ii*48:(ii+1)*48]...)
+		}
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the DataColumnSidecar object
+func (d *DataColumnSidecar) SizeSSZ() (size int) {
+	size = 356
+
+	// Field (1) 'DataColumn'
+	size += len(d.DataColumn) * 2048
+
+	// Field (2) 'KzgCommitments'
+	size += len(d.KzgCommitments) * 48
+
+	// Field (3) 'KzgProof'
+	size += len(d.KzgProof) * 48
+
+	return
+}
+
+// HashTreeRoot ssz hashes the DataColumnSidecar object
+func (d *DataColumnSidecar) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(d)
+}
+
+// HashTreeRootWith ssz hashes the DataColumnSidecar object with a hasher
+func (d *DataColumnSidecar) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'ColumnIndex'
+	hh.PutUint64(d.ColumnIndex)
+
+	// Field (1) 'DataColumn'
+	{
+		if size := len(d.DataColumn); size > 4096 {
+			err = ssz.ErrListTooBigFn("--.DataColumn", size, 4096)
+			return
+		}
+		subIndx := hh.Index()
+		for _, i := range d.DataColumn {
+			if len(i) != 2048 {
+				err = ssz.ErrBytesLength
+				return
+			}
+			hh.PutBytes(i)
+		}
+
+		numItems := uint64(len(d.DataColumn))
+		if ssz.EnableVectorizedHTR {
+			hh.MerkleizeWithMixinVectorizedHTR(subIndx, numItems, 4096)
+		} else {
+			hh.MerkleizeWithMixin(subIndx, numItems, 4096)
+		}
+	}
+
+	// Field (2) 'KzgCommitments'
+	{
+		if size := len(d.KzgCommitments); size > 4096 {
+			err = ssz.ErrListTooBigFn("--.KzgCommitments", size, 4096)
+			return
+		}
+		subIndx := hh.Index()
+		for _, i := range d.KzgCommitments {
+			if len(i) != 48 {
+				err = ssz.ErrBytesLength
+				return
+			}
+			hh.PutBytes(i)
+		}
+
+		numItems := uint64(len(d.KzgCommitments))
+		if ssz.EnableVectorizedHTR {
+			hh.MerkleizeWithMixinVectorizedHTR(subIndx, numItems, 4096)
+		} else {
+			hh.MerkleizeWithMixin(subIndx, numItems, 4096)
+		}
+	}
+
+	// Field (3) 'KzgProof'
+	{
+		if size := len(d.KzgProof); size > 4096 {
+			err = ssz.ErrListTooBigFn("--.KzgProof", size, 4096)
+			return
+		}
+		subIndx := hh.Index()
+		for _, i := range d.KzgProof {
+			if len(i) != 48 {
+				err = ssz.ErrBytesLength
+				return
+			}
+			hh.PutBytes(i)
+		}
+
+		numItems := uint64(len(d.KzgProof))
+		if ssz.EnableVectorizedHTR {
+			hh.MerkleizeWithMixinVectorizedHTR(subIndx, numItems, 4096)
+		} else {
+			hh.MerkleizeWithMixin(subIndx, numItems, 4096)
+		}
+	}
+
+	// Field (4) 'SignedBlockHeader'
+	if err = d.SignedBlockHeader.HashTreeRootWith(hh); err != nil {
+		return
+	}
+
+	// Field (5) 'KzgCommitmentsInclusionProof'
+	{
+		if size := len(d.KzgCommitmentsInclusionProof); size != 4 {
+			err = ssz.ErrVectorLengthFn("--.KzgCommitmentsInclusionProof", size, 4)
+			return
+		}
+		subIndx := hh.Index()
+		for _, i := range d.KzgCommitmentsInclusionProof {
+			if len(i) != 32 {
+				err = ssz.ErrBytesLength
+				return
+			}
+			hh.Append(i)
+		}
+
+		if ssz.EnableVectorizedHTR {
+			hh.MerkleizeVectorizedHTR(subIndx)
+		} else {
+			hh.Merkleize(subIndx)
+		}
+	}
+
+	if ssz.EnableVectorizedHTR {
+		hh.MerkleizeVectorizedHTR(indx)
+	} else {
+		hh.Merkleize(indx)
+	}
+	return
+}
+
 // MarshalSSZ ssz marshals the PendingBalanceDeposit object
 func (p *PendingBalanceDeposit) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(p)
@@ -19794,6 +20114,132 @@ func (b *BlobSidecarsByRangeRequest) HashTreeRootWith(hh *ssz.Hasher) (err error
 
 	// Field (1) 'Count'
 	hh.PutUint64(b.Count)
+
+	if ssz.EnableVectorizedHTR {
+		hh.MerkleizeVectorizedHTR(indx)
+	} else {
+		hh.Merkleize(indx)
+	}
+	return
+}
+
+// MarshalSSZ ssz marshals the DataColumnSidecarsByRangeRequest object
+func (d *DataColumnSidecarsByRangeRequest) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(d)
+}
+
+// MarshalSSZTo ssz marshals the DataColumnSidecarsByRangeRequest object to a target array
+func (d *DataColumnSidecarsByRangeRequest) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+	offset := int(20)
+
+	// Field (0) 'StartSlot'
+	dst = ssz.MarshalUint64(dst, uint64(d.StartSlot))
+
+	// Field (1) 'Count'
+	dst = ssz.MarshalUint64(dst, d.Count)
+
+	// Offset (2) 'Columns'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(d.Columns) * 8
+
+	// Field (2) 'Columns'
+	if size := len(d.Columns); size > 128 {
+		err = ssz.ErrListTooBigFn("--.Columns", size, 128)
+		return
+	}
+	for ii := 0; ii < len(d.Columns); ii++ {
+		dst = ssz.MarshalUint64(dst, d.Columns[ii])
+	}
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the DataColumnSidecarsByRangeRequest object
+func (d *DataColumnSidecarsByRangeRequest) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 20 {
+		return ssz.ErrSize
+	}
+
+	tail := buf
+	var o2 uint64
+
+	// Field (0) 'StartSlot'
+	d.StartSlot = github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Slot(ssz.UnmarshallUint64(buf[0:8]))
+
+	// Field (1) 'Count'
+	d.Count = ssz.UnmarshallUint64(buf[8:16])
+
+	// Offset (2) 'Columns'
+	if o2 = ssz.ReadOffset(buf[16:20]); o2 > size {
+		return ssz.ErrOffset
+	}
+
+	if o2 < 20 {
+		return ssz.ErrInvalidVariableOffset
+	}
+
+	// Field (2) 'Columns'
+	{
+		buf = tail[o2:]
+		num, err := ssz.DivideInt2(len(buf), 8, 128)
+		if err != nil {
+			return err
+		}
+		d.Columns = ssz.ExtendUint64(d.Columns, num)
+		for ii := 0; ii < num; ii++ {
+			d.Columns[ii] = ssz.UnmarshallUint64(buf[ii*8 : (ii+1)*8])
+		}
+	}
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the DataColumnSidecarsByRangeRequest object
+func (d *DataColumnSidecarsByRangeRequest) SizeSSZ() (size int) {
+	size = 20
+
+	// Field (2) 'Columns'
+	size += len(d.Columns) * 8
+
+	return
+}
+
+// HashTreeRoot ssz hashes the DataColumnSidecarsByRangeRequest object
+func (d *DataColumnSidecarsByRangeRequest) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(d)
+}
+
+// HashTreeRootWith ssz hashes the DataColumnSidecarsByRangeRequest object with a hasher
+func (d *DataColumnSidecarsByRangeRequest) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'StartSlot'
+	hh.PutUint64(uint64(d.StartSlot))
+
+	// Field (1) 'Count'
+	hh.PutUint64(d.Count)
+
+	// Field (2) 'Columns'
+	{
+		if size := len(d.Columns); size > 128 {
+			err = ssz.ErrListTooBigFn("--.Columns", size, 128)
+			return
+		}
+		subIndx := hh.Index()
+		for _, i := range d.Columns {
+			hh.AppendUint64(i)
+		}
+		hh.FillUpTo32()
+
+		numItems := uint64(len(d.Columns))
+		if ssz.EnableVectorizedHTR {
+			hh.MerkleizeWithMixinVectorizedHTR(subIndx, numItems, ssz.CalculateLimit(128, numItems, 8))
+		} else {
+			hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(128, numItems, 8))
+		}
+	}
 
 	if ssz.EnableVectorizedHTR {
 		hh.MerkleizeVectorizedHTR(indx)
