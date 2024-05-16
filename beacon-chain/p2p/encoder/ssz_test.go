@@ -130,198 +130,198 @@ type ValidatorCreator struct{}
 type BLSToExecutionChangeCreator struct{}
 type SignedBLSToExecutionChangeCreator struct{}
 
-func (a AttestationCreator) Create() MarshalerProtoMessage        { return &ethpb.Attestation{} }
-func (a AttestationElectraCreator) Create() MarshalerProtoMessage { return &ethpb.AttestationElectra{} }
-func (a AggregateAttestationAndProofCreator) Create() MarshalerProtoMessage {
+func (AttestationCreator) Create() MarshalerProtoMessage        { return &ethpb.Attestation{} }
+func (AttestationElectraCreator) Create() MarshalerProtoMessage { return &ethpb.AttestationElectra{} }
+func (AggregateAttestationAndProofCreator) Create() MarshalerProtoMessage {
 	return &ethpb.AggregateAttestationAndProof{}
 }
-func (a AggregateAttestationAndProofElectraCreator) Create() MarshalerProtoMessage {
+func (AggregateAttestationAndProofElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.AggregateAttestationAndProofElectra{}
 }
-func (a SignedAggregateAttestationAndProofCreator) Create() MarshalerProtoMessage {
+func (SignedAggregateAttestationAndProofCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedAggregateAttestationAndProof{}
 }
-func (a SignedAggregateAttestationAndProofElectraCreator) Create() MarshalerProtoMessage {
+func (SignedAggregateAttestationAndProofElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedAggregateAttestationAndProofElectra{}
 }
-func (a AttestationDataCreator) Create() MarshalerProtoMessage   { return &ethpb.AttestationData{} }
-func (a CheckpointCreator) Create() MarshalerProtoMessage        { return &ethpb.Checkpoint{} }
-func (b BeaconBlockCreator) Create() MarshalerProtoMessage       { return &ethpb.BeaconBlock{} }
-func (b SignedBeaconBlockCreator) Create() MarshalerProtoMessage { return &ethpb.SignedBeaconBlock{} }
-func (b BeaconBlockAltairCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockAltair{} }
-func (b SignedBeaconBlockAltairCreator) Create() MarshalerProtoMessage {
+func (AttestationDataCreator) Create() MarshalerProtoMessage   { return &ethpb.AttestationData{} }
+func (CheckpointCreator) Create() MarshalerProtoMessage        { return &ethpb.Checkpoint{} }
+func (BeaconBlockCreator) Create() MarshalerProtoMessage       { return &ethpb.BeaconBlock{} }
+func (SignedBeaconBlockCreator) Create() MarshalerProtoMessage { return &ethpb.SignedBeaconBlock{} }
+func (BeaconBlockAltairCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockAltair{} }
+func (SignedBeaconBlockAltairCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockAltair{}
 }
-func (b BeaconBlockBodyCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockBody{} }
-func (b BeaconBlockBodyAltairCreator) Create() MarshalerProtoMessage {
+func (BeaconBlockBodyCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockBody{} }
+func (BeaconBlockBodyAltairCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlockBodyAltair{}
 }
-func (b ProposerSlashingCreator) Create() MarshalerProtoMessage { return &ethpb.ProposerSlashing{} }
-func (b AttesterSlashingCreator) Create() MarshalerProtoMessage { return &ethpb.AttesterSlashing{} }
-func (b AttesterSlashingElectraCreator) Create() MarshalerProtoMessage {
+func (ProposerSlashingCreator) Create() MarshalerProtoMessage { return &ethpb.ProposerSlashing{} }
+func (AttesterSlashingCreator) Create() MarshalerProtoMessage { return &ethpb.AttesterSlashing{} }
+func (AttesterSlashingElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.AttesterSlashingElectra{}
 }
-func (b DepositCreator) Create() MarshalerProtoMessage       { return &ethpb.Deposit{} }
-func (b VoluntaryExitCreator) Create() MarshalerProtoMessage { return &ethpb.VoluntaryExit{} }
-func (b SignedVoluntaryExitCreator) Create() MarshalerProtoMessage {
+func (DepositCreator) Create() MarshalerProtoMessage       { return &ethpb.Deposit{} }
+func (VoluntaryExitCreator) Create() MarshalerProtoMessage { return &ethpb.VoluntaryExit{} }
+func (SignedVoluntaryExitCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedVoluntaryExit{}
 }
-func (b Eth1DataCreator) Create() MarshalerProtoMessage          { return &ethpb.Eth1Data{} }
-func (b BeaconBlockHeaderCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockHeader{} }
-func (b SignedBeaconBlockHeaderCreator) Create() MarshalerProtoMessage {
+func (Eth1DataCreator) Create() MarshalerProtoMessage          { return &ethpb.Eth1Data{} }
+func (BeaconBlockHeaderCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockHeader{} }
+func (SignedBeaconBlockHeaderCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockHeader{}
 }
-func (b IndexedAttestationCreator) Create() MarshalerProtoMessage { return &ethpb.IndexedAttestation{} }
-func (b IndexedAttestationElectraCreator) Create() MarshalerProtoMessage {
+func (IndexedAttestationCreator) Create() MarshalerProtoMessage { return &ethpb.IndexedAttestation{} }
+func (IndexedAttestationElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.IndexedAttestationElectra{}
 }
-func (b SyncAggregateCreator) Create() MarshalerProtoMessage { return &ethpb.SyncAggregate{} }
-func (b SignedBeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
+func (SyncAggregateCreator) Create() MarshalerProtoMessage { return &ethpb.SyncAggregate{} }
+func (SignedBeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockBellatrix{}
 }
-func (b BeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
+func (BeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlockBellatrix{}
 }
-func (b BeaconBlockBodyBellatrixCreator) Create() MarshalerProtoMessage {
+func (BeaconBlockBodyBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlockBodyBellatrix{}
 }
-func (b SignedBlindedBeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
+func (SignedBlindedBeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBlindedBeaconBlockBellatrix{}
 }
-func (b BlindedBeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
+func (BlindedBeaconBlockBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockBellatrix{}
 }
-func (b BlindedBeaconBlockBodyBellatrixCreator) Create() MarshalerProtoMessage {
+func (BlindedBeaconBlockBodyBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockBodyBellatrix{}
 }
-func (b SignedBeaconBlockContentsDenebCreator) Create() MarshalerProtoMessage {
+func (SignedBeaconBlockContentsDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockContentsDeneb{}
 }
-func (b BeaconBlockContentsDenebCreator) Create() MarshalerProtoMessage {
+func (BeaconBlockContentsDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlockContentsDeneb{}
 }
-func (b SignedBeaconBlockDenebCreator) Create() MarshalerProtoMessage {
+func (SignedBeaconBlockDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockDeneb{}
 }
-func (b BeaconBlockDenebCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockDeneb{} }
-func (b BeaconBlockBodyDenebCreator) Create() MarshalerProtoMessage {
+func (BeaconBlockDenebCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockDeneb{} }
+func (BeaconBlockBodyDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlockBodyDeneb{}
 }
-func (b SignedBeaconBlockCapellaCreator) Create() MarshalerProtoMessage {
+func (SignedBeaconBlockCapellaCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockCapella{}
 }
-func (b BeaconBlockCapellaCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockCapella{} }
-func (b BeaconBlockBodyCapellaCreator) Create() MarshalerProtoMessage {
+func (BeaconBlockCapellaCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockCapella{} }
+func (BeaconBlockBodyCapellaCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlockBodyCapella{}
 }
-func (b SignedBlindedBeaconBlockCapellaCreator) Create() MarshalerProtoMessage {
+func (SignedBlindedBeaconBlockCapellaCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBlindedBeaconBlockCapella{}
 }
-func (b BlindedBeaconBlockCapellaCreator) Create() MarshalerProtoMessage {
+func (BlindedBeaconBlockCapellaCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockCapella{}
 }
-func (b BlindedBeaconBlockBodyCapellaCreator) Create() MarshalerProtoMessage {
+func (BlindedBeaconBlockBodyCapellaCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockBodyCapella{}
 }
-func (b SignedBlindedBeaconBlockDenebCreator) Create() MarshalerProtoMessage {
+func (SignedBlindedBeaconBlockDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBlindedBeaconBlockDeneb{}
 }
-func (b BlindedBeaconBlockDenebCreator) Create() MarshalerProtoMessage {
+func (BlindedBeaconBlockDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockDeneb{}
 }
-func (b BlindedBeaconBlockBodyDenebCreator) Create() MarshalerProtoMessage {
+func (BlindedBeaconBlockBodyDenebCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockBodyDeneb{}
 }
-func (b SignedBeaconBlockElectraCreator) Create() MarshalerProtoMessage {
+func (SignedBeaconBlockElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBeaconBlockElectra{}
 }
-func (b BeaconBlockElectraCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockElectra{} }
-func (b BeaconBlockBodyElectraCreator) Create() MarshalerProtoMessage {
+func (BeaconBlockElectraCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconBlockElectra{} }
+func (BeaconBlockBodyElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlockBodyElectra{}
 }
-func (b SignedBlindedBeaconBlockElectraCreator) Create() MarshalerProtoMessage {
+func (SignedBlindedBeaconBlockElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBlindedBeaconBlockElectra{}
 }
-func (b BlindedBeaconBlockElectraCreator) Create() MarshalerProtoMessage {
+func (BlindedBeaconBlockElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockElectra{}
 }
-func (b BlindedBeaconBlockBodyElectraCreator) Create() MarshalerProtoMessage {
+func (BlindedBeaconBlockBodyElectraCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlindedBeaconBlockBodyElectra{}
 }
-func (b ValidatorRegistrationV1Creator) Create() MarshalerProtoMessage {
+func (ValidatorRegistrationV1Creator) Create() MarshalerProtoMessage {
 	return &ethpb.ValidatorRegistrationV1{}
 }
-func (b SignedValidatorRegistrationV1Creator) Create() MarshalerProtoMessage {
+func (SignedValidatorRegistrationV1Creator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedValidatorRegistrationV1{}
 }
-func (b BuilderBidCreator) Create() MarshalerProtoMessage         { return &ethpb.BuilderBid{} }
-func (b BuilderBidCapellaCreator) Create() MarshalerProtoMessage  { return &ethpb.BuilderBidCapella{} }
-func (b BuilderBidDenebCreator) Create() MarshalerProtoMessage    { return &ethpb.BuilderBidDeneb{} }
-func (b BlobSidecarCreator) Create() MarshalerProtoMessage        { return &ethpb.BlobSidecar{} }
-func (b BlobSidecarsCreator) Create() MarshalerProtoMessage       { return &ethpb.BlobSidecars{} }
-func (b Deposit_DataCreator) Create() MarshalerProtoMessage       { return &ethpb.Deposit_Data{} }
-func (b BeaconStateCreator) Create() MarshalerProtoMessage        { return &ethpb.BeaconState{} }
-func (b BeaconStateAltairCreator) Create() MarshalerProtoMessage  { return &ethpb.BeaconStateAltair{} }
-func (b ForkCreator) Create() MarshalerProtoMessage               { return &ethpb.Fork{} }
-func (b PendingAttestationCreator) Create() MarshalerProtoMessage { return &ethpb.PendingAttestation{} }
-func (b HistoricalBatchCreator) Create() MarshalerProtoMessage    { return &ethpb.HistoricalBatch{} }
-func (b SigningDataCreator) Create() MarshalerProtoMessage        { return &ethpb.SigningData{} }
-func (b ForkDataCreator) Create() MarshalerProtoMessage           { return &ethpb.ForkData{} }
-func (b DepositMessageCreator) Create() MarshalerProtoMessage     { return &ethpb.DepositMessage{} }
-func (b SyncCommitteeCreator) Create() MarshalerProtoMessage      { return &ethpb.SyncCommittee{} }
-func (b SyncAggregatorSelectionDataCreator) Create() MarshalerProtoMessage {
+func (BuilderBidCreator) Create() MarshalerProtoMessage         { return &ethpb.BuilderBid{} }
+func (BuilderBidCapellaCreator) Create() MarshalerProtoMessage  { return &ethpb.BuilderBidCapella{} }
+func (BuilderBidDenebCreator) Create() MarshalerProtoMessage    { return &ethpb.BuilderBidDeneb{} }
+func (BlobSidecarCreator) Create() MarshalerProtoMessage        { return &ethpb.BlobSidecar{} }
+func (BlobSidecarsCreator) Create() MarshalerProtoMessage       { return &ethpb.BlobSidecars{} }
+func (Deposit_DataCreator) Create() MarshalerProtoMessage       { return &ethpb.Deposit_Data{} }
+func (BeaconStateCreator) Create() MarshalerProtoMessage        { return &ethpb.BeaconState{} }
+func (BeaconStateAltairCreator) Create() MarshalerProtoMessage  { return &ethpb.BeaconStateAltair{} }
+func (ForkCreator) Create() MarshalerProtoMessage               { return &ethpb.Fork{} }
+func (PendingAttestationCreator) Create() MarshalerProtoMessage { return &ethpb.PendingAttestation{} }
+func (HistoricalBatchCreator) Create() MarshalerProtoMessage    { return &ethpb.HistoricalBatch{} }
+func (SigningDataCreator) Create() MarshalerProtoMessage        { return &ethpb.SigningData{} }
+func (ForkDataCreator) Create() MarshalerProtoMessage           { return &ethpb.ForkData{} }
+func (DepositMessageCreator) Create() MarshalerProtoMessage     { return &ethpb.DepositMessage{} }
+func (SyncCommitteeCreator) Create() MarshalerProtoMessage      { return &ethpb.SyncCommittee{} }
+func (SyncAggregatorSelectionDataCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SyncAggregatorSelectionData{}
 }
-func (b BeaconStateBellatrixCreator) Create() MarshalerProtoMessage {
+func (BeaconStateBellatrixCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconStateBellatrix{}
 }
-func (b BeaconStateCapellaCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconStateCapella{} }
-func (b BeaconStateDenebCreator) Create() MarshalerProtoMessage   { return &ethpb.BeaconStateDeneb{} }
-func (b BeaconStateElectraCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconStateElectra{} }
-func (b PowBlockCreator) Create() MarshalerProtoMessage           { return &ethpb.PowBlock{} }
-func (b HistoricalSummaryCreator) Create() MarshalerProtoMessage  { return &ethpb.HistoricalSummary{} }
-func (b BlobIdentifierCreator) Create() MarshalerProtoMessage     { return &ethpb.BlobIdentifier{} }
-func (b PendingBalanceDepositCreator) Create() MarshalerProtoMessage {
+func (BeaconStateCapellaCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconStateCapella{} }
+func (BeaconStateDenebCreator) Create() MarshalerProtoMessage   { return &ethpb.BeaconStateDeneb{} }
+func (BeaconStateElectraCreator) Create() MarshalerProtoMessage { return &ethpb.BeaconStateElectra{} }
+func (PowBlockCreator) Create() MarshalerProtoMessage           { return &ethpb.PowBlock{} }
+func (HistoricalSummaryCreator) Create() MarshalerProtoMessage  { return &ethpb.HistoricalSummary{} }
+func (BlobIdentifierCreator) Create() MarshalerProtoMessage     { return &ethpb.BlobIdentifier{} }
+func (PendingBalanceDepositCreator) Create() MarshalerProtoMessage {
 	return &ethpb.PendingBalanceDeposit{}
 }
-func (b PendingPartialWithdrawalCreator) Create() MarshalerProtoMessage {
+func (PendingPartialWithdrawalCreator) Create() MarshalerProtoMessage {
 	return &ethpb.PendingPartialWithdrawal{}
 }
-func (b ConsolidationCreator) Create() MarshalerProtoMessage { return &ethpb.Consolidation{} }
-func (b SignedConsolidationCreator) Create() MarshalerProtoMessage {
+func (ConsolidationCreator) Create() MarshalerProtoMessage { return &ethpb.Consolidation{} }
+func (SignedConsolidationCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedConsolidation{}
 }
-func (b PendingConsolidationCreator) Create() MarshalerProtoMessage {
+func (PendingConsolidationCreator) Create() MarshalerProtoMessage {
 	return &ethpb.PendingConsolidation{}
 }
-func (b StatusCreator) Create() MarshalerProtoMessage { return &ethpb.Status{} }
-func (b BeaconBlocksByRangeRequestCreator) Create() MarshalerProtoMessage {
+func (StatusCreator) Create() MarshalerProtoMessage { return &ethpb.Status{} }
+func (BeaconBlocksByRangeRequestCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BeaconBlocksByRangeRequest{}
 }
-func (b ENRForkIDCreator) Create() MarshalerProtoMessage  { return &ethpb.ENRForkID{} }
-func (b MetaDataV0Creator) Create() MarshalerProtoMessage { return &ethpb.MetaDataV0{} }
-func (b MetaDataV1Creator) Create() MarshalerProtoMessage { return &ethpb.MetaDataV1{} }
-func (b BlobSidecarsByRangeRequestCreator) Create() MarshalerProtoMessage {
+func (ENRForkIDCreator) Create() MarshalerProtoMessage  { return &ethpb.ENRForkID{} }
+func (MetaDataV0Creator) Create() MarshalerProtoMessage { return &ethpb.MetaDataV0{} }
+func (MetaDataV1Creator) Create() MarshalerProtoMessage { return &ethpb.MetaDataV1{} }
+func (BlobSidecarsByRangeRequestCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BlobSidecarsByRangeRequest{}
 }
-func (b DepositSnapshotCreator) Create() MarshalerProtoMessage { return &ethpb.DepositSnapshot{} }
-func (b SyncCommitteeMessageCreator) Create() MarshalerProtoMessage {
+func (DepositSnapshotCreator) Create() MarshalerProtoMessage { return &ethpb.DepositSnapshot{} }
+func (SyncCommitteeMessageCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SyncCommitteeMessage{}
 }
-func (b SyncCommitteeContributionCreator) Create() MarshalerProtoMessage {
+func (SyncCommitteeContributionCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SyncCommitteeContribution{}
 }
-func (b ContributionAndProofCreator) Create() MarshalerProtoMessage {
+func (ContributionAndProofCreator) Create() MarshalerProtoMessage {
 	return &ethpb.ContributionAndProof{}
 }
-func (b SignedContributionAndProofCreator) Create() MarshalerProtoMessage {
+func (SignedContributionAndProofCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedContributionAndProof{}
 }
-func (b ValidatorCreator) Create() MarshalerProtoMessage { return &ethpb.Validator{} }
-func (b BLSToExecutionChangeCreator) Create() MarshalerProtoMessage {
+func (ValidatorCreator) Create() MarshalerProtoMessage { return &ethpb.Validator{} }
+func (BLSToExecutionChangeCreator) Create() MarshalerProtoMessage {
 	return &ethpb.BLSToExecutionChange{}
 }
-func (b SignedBLSToExecutionChangeCreator) Create() MarshalerProtoMessage {
+func (SignedBLSToExecutionChangeCreator) Create() MarshalerProtoMessage {
 	return &ethpb.SignedBLSToExecutionChange{}
 }
 
@@ -519,11 +519,11 @@ func lengthRoundTripHelper(t *testing.T, msg MarshalerProtoMessage, creator Mars
 
 func FuzzRoundTripWithGossip(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte, index int) {
-		if index < 0 {
+		if index < 0 || index >= len(creators) {
 			t.Skip()
 		}
 		// Select a random creator from the list.
-		creator := creators[index%len(creators)]
+		creator := creators[index]
 		msg, err := unmarshalProtoMessage(data, creator)
 		if err != nil {
 			t.Logf("Failed to unmarshal: %v", err)
@@ -565,7 +565,6 @@ func TestSszNetworkEncoder_RoundTrip_Consolidation(t *testing.T) {
 		return
 	}
 
-	fmt.Printf("msg=%#+v\n", msg)
 	_, err := e.EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	decoded := &ethpb.Consolidation{}
