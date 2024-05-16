@@ -598,10 +598,11 @@ func TestComputeProposerIndex(t *testing.T) {
 		seed       [32]byte
 	}
 	tests := []struct {
-		name      string
-		args      args
-		want      primitives.ValidatorIndex
-		wantedErr string
+		name             string
+		isElectraOrAbove bool
+		args             args
+		want             primitives.ValidatorIndex
+		wantedErr        string
 	}{
 		{
 			name: "all_active_indices",
@@ -683,6 +684,54 @@ func TestComputeProposerIndex(t *testing.T) {
 			},
 			want: 7,
 		},
+		{
+			name:             "electra_probability_changes",
+			isElectraOrAbove: true,
+			args: args{
+				validators: []*ethpb.Validator{
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+				},
+				indices: []primitives.ValidatorIndex{3},
+				seed:    seed,
+			},
+			want: 3,
+		},
+		{
+			name:             "electra_probability_changes_all_active",
+			isElectraOrAbove: true,
+			args: args{
+				validators: []*ethpb.Validator{
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance}, // skip this one
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+				},
+				indices: []primitives.ValidatorIndex{0, 1, 2, 3, 4},
+				seed:    seed,
+			},
+			want: 4,
+		},
+		{
+			name:             "electra_probability_returns_first_validator_with_criteria",
+			isElectraOrAbove: true,
+			args: args{
+				validators: []*ethpb.Validator{
+					{EffectiveBalance: 1},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: 1},
+					{EffectiveBalance: 1},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+				},
+				indices: []primitives.ValidatorIndex{1},
+				seed:    seed,
+			},
+			want: 1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -691,6 +740,11 @@ func TestComputeProposerIndex(t *testing.T) {
 			bState := &ethpb.BeaconState{Validators: tt.args.validators}
 			stTrie, err := state_native.InitializeFromProtoUnsafePhase0(bState)
 			require.NoError(t, err)
+			if tt.isElectraOrAbove {
+				stTrie, err = state_native.InitializeFromProtoUnsafeElectra(&ethpb.BeaconStateElectra{Validators: tt.args.validators})
+				require.NoError(t, err)
+			}
+
 			got, err := helpers.ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
