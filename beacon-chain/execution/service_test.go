@@ -824,11 +824,6 @@ func TestService_migrateOldDepositTree(t *testing.T) {
 	)
 	require.NoError(t, err)
 	eth1Data := &ethpb.ETH1ChainData{
-		BeaconState: &ethpb.BeaconState{
-			Eth1Data: &ethpb.Eth1Data{
-				DepositCount: 800,
-			},
-		},
 		CurrentEth1Data: &ethpb.LatestETH1Data{
 			BlockHeight: 100,
 		},

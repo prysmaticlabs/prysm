@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"reflect"
 	"runtime/debug"
 	"sort"
 	"sync"
@@ -743,12 +742,6 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 		return err
 	}
 	s.chainStartData = eth1DataInDB.ChainstartData
-	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {
-		s.preGenesisState, err = native.InitializeFromProtoPhase0(eth1DataInDB.BeaconState)
-		if err != nil {
-			return errors.Wrap(err, "Could not initialize state trie")
-		}
-	}
 	s.latestEth1Data = eth1DataInDB.CurrentEth1Data
 	ctrs := eth1DataInDB.DepositContainers
 	// Look at previously finalized index, as we are building off a finalized
@@ -812,10 +805,6 @@ func (s *Service) validPowchainData(ctx context.Context) (*ethpb.ETH1ChainData, 
 		return eth1Data, nil
 	}
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !validateDepositContainers(eth1Data.DepositContainers) {
-		pbState, err := native.ProtobufBeaconStatePhase0(s.preGenesisState.ToProtoUnsafe())
-		if err != nil {
-			return nil, err
-		}
 		s.chainStartData = &ethpb.ChainStartData{
 			Chainstarted:       true,
 			GenesisTime:        genState.GenesisTime(),
@@ -826,7 +815,6 @@ func (s *Service) validPowchainData(ctx context.Context) (*ethpb.ETH1ChainData, 
 		eth1Data = &ethpb.ETH1ChainData{
 			CurrentEth1Data:   s.latestEth1Data,
 			ChainstartData:    s.chainStartData,
-			BeaconState:       pbState,
 			DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 		}
 		trie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
