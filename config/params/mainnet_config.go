@@ -293,8 +293,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	UnsetDepositReceiptsStartIndex:        math.MaxUint64,
 
 	// PeerDAS
-	SamplesPerSlot:                        8,
-	CustodyRequirement:                    1,
+	SamplesPerSlot:                        16,
+	CustodyRequirement:                    4,
 	MinEpochsForDataColumnSidecarsRequest: 4096,
 	NumberOfColumns:                       128,
 	MaxCellsInExtendedMatrix:              768,
