@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	gogo "github.com/gogo/protobuf/proto"
+	"github.com/google/go-cmp/cmp"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -17,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 // Define an interface that combines fastssz.Marshaler and proto.Message
@@ -421,16 +424,48 @@ var creators = []MarshalerProtoCreator{
 	SignedBLSToExecutionChangeCreator{},
 }
 
-// Refactor the comparison logic into a private function.
 func assertProtoMessagesEqual(t *testing.T, decoded, msg proto.Message) {
-	// Here we are checking if proto.Equal is false, but the unknown fields are equal.
-	// This means that the decoded message is not the same as the original message.
-	if !proto.Equal(decoded, msg) {
-		a := decoded.ProtoReflect().GetUnknown()
-		b := msg.ProtoReflect().GetUnknown()
-		if bytes.Equal(a, b) {
-			t.Fatalf("Decoded message: %#+v is not the same as original: %#+v", decoded, msg)
+	// Check if two proto messages are equal
+	if proto.Equal(decoded, msg) {
+		return
+	}
+
+	// If they are not equal, check if their unknown values are equal
+	// Ignore unknown fields when comparing proto messages
+	a := decoded.ProtoReflect().GetUnknown()
+	b := msg.ProtoReflect().GetUnknown()
+	if !bytes.Equal(a, b) {
+		return
+	}
+
+	// If unknown values are equal, check if any of the fields of the proto message are proto messages themselves
+	containsNestedProtoMessage := false
+	decoded.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		// Check if the field is a message
+		if fd.Kind() == protoreflect.MessageKind {
+			containsNestedProtoMessage = true
+
+			// Get the corresponding field from the other message
+			otherValue := msg.ProtoReflect().Get(fd)
+
+			// If the field is not set in the other message, skip it
+			if !otherValue.IsValid() {
+				return true
+			}
+
+			// Recursively compare the fields
+			assertProtoMessagesEqual(t, v.Message().Interface(), otherValue.Message().Interface())
 		}
+
+		return true
+	})
+
+	// If there are no proto messages contained inside, then throw an error
+	// The error is thrown iff the decoded message is not equal to the original message
+	// after ignoring unknown fields in (nested) proto message(s).
+	if !containsNestedProtoMessage {
+		t.Log(cmp.Diff(decoded, msg, protocmp.Transform()))
+		t.Fatal("Decoded message is not the same as original")
 	}
 }
 
@@ -499,6 +534,25 @@ func FuzzRoundTripWithGossip(f *testing.F) {
 	})
 }
 
+func TestSszNetworkEncoder_RoundTrip_SignedVoluntaryExit(t *testing.T) {
+	e := &encoder.SszNetworkEncoder{}
+	buf := new(bytes.Buffer)
+
+	data := []byte("\x12`000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n\n0000000000")
+	msg := &ethpb.SignedVoluntaryExit{}
+
+	if err := proto.Unmarshal(data, msg); err != nil {
+		t.Logf("Failed to unmarshal: %v", err)
+		return
+	}
+
+	_, err := e.EncodeGossip(buf, msg)
+	require.NoError(t, err)
+	decoded := &ethpb.SignedVoluntaryExit{}
+	require.NoError(t, e.DecodeGossip(buf.Bytes(), decoded))
+	assertProtoMessagesEqual(t, decoded, msg)
+}
+
 func TestSszNetworkEncoder_RoundTrip_Consolidation(t *testing.T) {
 	e := &encoder.SszNetworkEncoder{}
 	buf := new(bytes.Buffer)
@@ -517,13 +571,7 @@ func TestSszNetworkEncoder_RoundTrip_Consolidation(t *testing.T) {
 	decoded := &ethpb.Consolidation{}
 	require.NoError(t, e.DecodeGossip(buf.Bytes(), decoded))
 
-	if !proto.Equal(decoded, msg) {
-		fmt.Printf("decoded=%#+v\n", decoded)
-		t.Logf("decoded=%+v\n", decoded)
-		fmt.Printf("msg=%+v\n", msg)
-		t.Logf("msg=%+v\n", msg)
-		//t.Error("Decoded message is not the same as original")
-	}
+	assertProtoMessagesEqual(t, decoded, msg)
 }
 
 func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
