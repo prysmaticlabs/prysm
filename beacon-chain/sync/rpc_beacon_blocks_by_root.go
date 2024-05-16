@@ -185,7 +185,6 @@ func (s *Service) pendingBlobsRequestForBlock(root [32]byte, b interfaces.ReadOn
 	blobIdentifiers, err := s.constructPendingBlobsRequest(root, len(cc))
 	if err != nil {
 		return nil, errors.Wrap(err, "construct pending blobs request")
-
 	}
 
 	return blobIdentifiers, nil
