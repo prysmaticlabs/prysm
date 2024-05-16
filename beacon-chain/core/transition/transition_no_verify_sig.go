@@ -454,8 +454,7 @@ func electraOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
-	st, err = electra.ProcessConsolidations(ctx, st, bod.Consolidations())
-	if err != nil {
+	if err := electra.ProcessConsolidations(ctx, st, bod.Consolidations()); err != nil {
 		return nil, errors.Wrap(err, "could not process consolidations")
 	}
 

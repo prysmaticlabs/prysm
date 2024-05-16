@@ -104,11 +104,10 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 	if err = ProcessPendingBalanceDeposits(ctx, state, math.Gwei(bp.ActiveCurrentEpoch)); err != nil {
 		return nil, err
 	}
-  if err := ProcessPendingConsolidations(ctx, state); err != nil {
+	if err := ProcessPendingConsolidations(ctx, state); err != nil {
 		return nil, err
 	}
-	state, err = ProcessEffectiveBalanceUpdates(state)
-	if err != nil {
+	if err := ProcessEffectiveBalanceUpdates(state); err != nil {
 		return nil, err
 	}
 	state, err = ProcessSlashingsReset(state)
