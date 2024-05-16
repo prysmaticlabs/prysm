@@ -3,9 +3,9 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "balance_deposits.go",
         "churn.go",
         "consolidations.go",
-        "epoch_processing.go",
         "transition.go",
         "upgrade.go",
         "validator.go",
@@ -38,6 +38,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "balance_deposits_test.go",
         "churn_test.go",
         "consolidations_test.go",
         "upgrade_test.go",
@@ -46,15 +47,20 @@ go_test(
     deps = [
         ":go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//crypto/bls/blst:go_default_library",
+        "//crypto/bls/common:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//math:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//runtime/interop:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "//time/slots:go_default_library",

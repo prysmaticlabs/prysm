@@ -3,7 +3,6 @@ package electra
 import (
 	"bytes"
 	"context"
-	"slices"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
@@ -102,12 +101,10 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 	if err != nil {
 		return nil, err
 	}
-	state, err = ProcessPendingBalanceDeposits(ctx, state, math.Gwei(bp.ActiveCurrentEpoch))
-	if err != nil {
+	if err = ProcessPendingBalanceDeposits(ctx, state, math.Gwei(bp.ActiveCurrentEpoch)); err != nil {
 		return nil, err
 	}
-	state, err = ProcessPendingConsolidations(ctx, state)
-	if err != nil {
+  if err := ProcessPendingConsolidations(ctx, state); err != nil {
 		return nil, err
 	}
 	state, err = ProcessEffectiveBalanceUpdates(state)
@@ -138,80 +135,6 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 	}
 
 	return state, nil
-}
-
-// ProcessPendingBalanceUpdates --
-//
-// Spec definition:
-//
-//	def process_pending_balance_deposits(state: BeaconState) -> None:
-//	    available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(state)
-//	    processed_amount = 0
-//	    next_deposit_index = 0
-//
-//	    for deposit in state.pending_balance_deposits:
-//	        if processed_amount + deposit.amount > available_for_processing:
-//	            break
-//	        increase_balance(state, deposit.index, deposit.amount)
-//	        processed_amount += deposit.amount
-//	        next_deposit_index += 1
-//
-//	    state.pending_balance_deposits = state.pending_balance_deposits[next_deposit_index:]
-//
-//	    if len(state.pending_balance_deposits) == 0:
-//	        state.deposit_balance_to_consume = Gwei(0)
-//	    else:
-//	        state.deposit_balance_to_consume = available_for_processing - processed_amount
-func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, activeBalance math.Gwei) (state.BeaconState, error) {
-	_, span := trace.StartSpan(ctx, "electra.ProcessPendingBalanceDeposits")
-	defer span.End()
-
-	if st == nil || st.IsNil() {
-		return nil, errors.New("nil state")
-	}
-
-	depBalToConsume, err := st.DepositBalanceToConsume()
-	if err != nil {
-		return nil, err
-	}
-	var activeBalGwei math.Gwei // TODO: get_active_balance(state)
-
-	availableForProcessing := depBalToConsume + helpers.ActivationExitChurnLimit(activeBalGwei)
-	processedAmount := math.Gwei(0)
-	nextDepositIndex := 0
-
-	deposits, err := st.PendingBalanceDeposits()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, deposit := range deposits {
-		if processedAmount+math.Gwei(deposit.Amount) > availableForProcessing {
-			break
-		}
-		if err := helpers.IncreaseBalance(st, deposit.Index, deposit.Amount); err != nil {
-			return nil, err
-		}
-		processedAmount += math.Gwei(deposit.Amount)
-		nextDepositIndex++
-	}
-
-	deposits = slices.Clip(deposits[nextDepositIndex:]) // TODO: Does clip make sense here or can it clip on copy?
-	if err := st.SetPendingBalanceDeposits(deposits); err != nil {
-		return nil, err
-	}
-
-	if len(deposits) == 0 {
-		if err := st.SetDepositBalanceToConsume(0); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := st.SetDepositBalanceToConsume(availableForProcessing - processedAmount); err != nil {
-			return nil, err
-		}
-	}
-
-	return st, nil
 }
 
 // ProcessExecutionLayerWithdrawRequests

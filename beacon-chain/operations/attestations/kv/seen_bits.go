@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/patrickmn/go-cache"
@@ -38,7 +39,7 @@ func (c *AttCaches) insertSeenBit(att ethpb.Att) error {
 		alreadyExists := false
 		for _, bit := range seenBits {
 			if c, err := bit.Contains(att.GetAggregationBits()); err != nil {
-				return err
+				return fmt.Errorf("failed to check seen bits on attestation when inserting bit: %w", err)
 			} else if c {
 				alreadyExists = true
 				break
@@ -81,7 +82,7 @@ func (c *AttCaches) hasSeenBit(att ethpb.Att) (bool, error) {
 		}
 		for _, bit := range seenBits {
 			if c, err := bit.Contains(att.GetAggregationBits()); err != nil {
-				return false, err
+				return false, fmt.Errorf("failed to check seen bits on attestation when reading bit: %w", err)
 			} else if c {
 				return true, nil
 			}

@@ -24,5 +24,5 @@ func RunPendingConsolidationsTests(t *testing.T, config string) {
 }
 
 func processPendingConsolidations(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
-	return electra.ProcessPendingConsolidations(context.TODO(), st)
+	return st, electra.ProcessPendingConsolidations(context.TODO(), st)
 }
