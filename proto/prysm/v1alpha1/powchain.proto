@@ -17,9 +17,9 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
 // ETH1ChainData is a container which holds all the relevant eth1
 // information
 message ETH1ChainData {
-    LatestETH1Data current_eth1_data = 1 ;
+    reserved 3;
+    LatestETH1Data current_eth1_data = 1;
     ChainStartData chainstart_data = 2;
-    BeaconState beacon_state = 3;
     SparseMerkleTrie trie = 4;
     repeated DepositContainer deposit_containers = 5;
     DepositSnapshot deposit_snapshot = 6;
