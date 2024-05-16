@@ -236,7 +236,6 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 				return err
 			}
 		}
-
 	} else {
 		if len(request) > 0 {
 			peers := s.getBestPeers()
