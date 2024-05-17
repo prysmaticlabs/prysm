@@ -58,13 +58,6 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	slot := blk.Slot()
 	vIdx := blk.ProposerIndex()
 	headRoot := blk.ParentRoot()
-	var err error
-	if headRoot == [32]byte{} {
-		headRoot, err = vs.BeaconDB.GenesisBlockRoot(ctx)
-		if err != nil {
-			return nil, false, err
-		}
-	}
 	logFields := logrus.Fields{
 		"validatorIndex": vIdx,
 		"slot":           slot,
