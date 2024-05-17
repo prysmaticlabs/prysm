@@ -59,7 +59,8 @@ func (s *Service) CustodyCountFromRemotePeer(pid peer.ID) (uint64, error) {
 	if peerRecord != nil {
 		// Load the `custody_subnet_count`
 		custodyBytes := make([]byte, 8)
-		if err := peerRecord.Load(CustodySubnetCount(custodyBytes)); err != nil {
+		custodyObj := CustodySubnetCount(custodyBytes)
+		if err := peerRecord.Load(&custodyObj); err != nil {
 			return 0, errors.Wrap(err, "load custody_subnet_count")
 		}
 		actualCustodyCount := ssz.UnmarshallUint64(custodyBytes)
