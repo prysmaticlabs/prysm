@@ -418,6 +418,9 @@ func (s *Service) fetchOriginColumns(pids []peer.ID) error {
 	}
 	shufflePeers(pids)
 	pids, err = s.cfg.P2P.GetValidCustodyPeers(pids)
+	if err != nil {
+		return err
+	}
 	for i := range pids {
 		sidecars, err := sync.SendDataColumnSidecarByRoot(s.ctx, s.clock, s.cfg.P2P, pids[i], s.ctxMap, &req)
 		if err != nil {

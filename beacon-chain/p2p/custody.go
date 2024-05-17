@@ -58,7 +58,6 @@ func (s *Service) CustodyCountFromRemotePeer(pid peer.ID) (uint64, error) {
 	peerCustodiedSubnetCount := params.BeaconConfig().CustodyRequirement
 	if peerRecord != nil {
 		// Load the `custody_subnet_count`
-		// TODO: Do not harcode `custody_subnet_count`
 		custodyBytes := make([]byte, 8)
 		if err := peerRecord.Load(CustodySubnetCount(custodyBytes)); err != nil {
 			return 0, errors.Wrap(err, "load custody_subnet_count")

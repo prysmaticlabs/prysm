@@ -204,21 +204,11 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 			return err
 		}
 	}
-
-	var request p2ptypes.BlobSidecarsByRootReq
-	var err error
 	if features.Get().EnablePeerDAS {
-		request, err = s.pendingDataColumnRequestForBlock(blkRoot, b)
+		request, err := s.pendingDataColumnRequestForBlock(blkRoot, b)
 		if err != nil {
 			return err
 		}
-	} else {
-		request, err = s.pendingBlobsRequestForBlock(blkRoot, b)
-		if err != nil {
-			return err
-		}
-	}
-	if features.Get().EnablePeerDAS {
 		if len(request) > 0 {
 			peers := s.getBestPeers()
 			peers, err = s.cfg.p2p.GetValidCustodyPeers(peers)
@@ -234,6 +224,10 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 			}
 		}
 	} else {
+		request, err := s.pendingBlobsRequestForBlock(blkRoot, b)
+		if err != nil {
+			return err
+		}
 		if len(request) > 0 {
 			peers := s.getBestPeers()
 			peerCount := len(peers)
