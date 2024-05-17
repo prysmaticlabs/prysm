@@ -412,7 +412,7 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(ctx context.Context, jc *forkchoi
 	f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 	f.store.justifiedCheckpoint = jc
 	if err := f.updateJustifiedBalances(ctx, jc.Root); err != nil {
-		return errors.Wrap(err, "could not update justified balances")
+		log.WithError(err).Warn("could not update justified balances")
 	}
 	return nil
 }
