@@ -2,7 +2,7 @@ package helpers_test
 
 import (
 	"context"
-	"fmt"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
@@ -18,7 +19,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestComputeCommittee_WithoutCache(t *testing.T) {
@@ -108,145 +108,6 @@ func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 	assert.ErrorContains(t, "can't be greater than next epoch", err)
 }
 
-func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
-	helpers.ClearCache()
-
-	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(validators); i++ {
-		var activationEpoch primitives.Epoch
-		if i >= len(validators)/2 {
-			activationEpoch = 3
-		}
-		validators[i] = &ethpb.Validator{
-			ActivationEpoch: activationEpoch,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
-		Validators:  validators,
-		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	require.NoError(t, err)
-	_, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), state, 0)
-	require.NoError(t, err, "Failed to determine CommitteeAssignments")
-	for _, ss := range proposerIndexToSlots {
-		for _, s := range ss {
-			assert.NotEqual(t, uint64(0), s, "No proposer should be assigned to slot 0")
-		}
-	}
-}
-
-func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
-	// Initialize test with 256 validators, each slot and each index gets 4 validators.
-	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(validators); i++ {
-		// First 2 epochs only half validators are activated.
-		var activationEpoch primitives.Epoch
-		if i >= len(validators)/2 {
-			activationEpoch = 3
-		}
-		validators[i] = &ethpb.Validator{
-			ActivationEpoch: activationEpoch,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
-		Validators:  validators,
-		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	require.NoError(t, err)
-
-	tests := []struct {
-		index          primitives.ValidatorIndex
-		slot           primitives.Slot
-		committee      []primitives.ValidatorIndex
-		committeeIndex primitives.CommitteeIndex
-		isProposer     bool
-		proposerSlot   primitives.Slot
-	}{
-		{
-			index:          0,
-			slot:           78,
-			committee:      []primitives.ValidatorIndex{0, 38},
-			committeeIndex: 0,
-			isProposer:     false,
-		},
-		{
-			index:          1,
-			slot:           71,
-			committee:      []primitives.ValidatorIndex{1, 4},
-			committeeIndex: 0,
-			isProposer:     true,
-			proposerSlot:   79,
-		},
-		{
-			index:          11,
-			slot:           90,
-			committee:      []primitives.ValidatorIndex{31, 11},
-			committeeIndex: 0,
-			isProposer:     false,
-		}, {
-			index:          2,
-			slot:           127, // 3rd epoch has more active validators
-			committee:      []primitives.ValidatorIndex{89, 2, 81, 5},
-			committeeIndex: 0,
-			isProposer:     false,
-		},
-	}
-
-	for i, tt := range tests {
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			helpers.ClearCache()
-
-			validatorIndexToCommittee, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), state, slots.ToEpoch(tt.slot))
-			require.NoError(t, err, "Failed to determine CommitteeAssignments")
-			cac := validatorIndexToCommittee[tt.index]
-			assert.Equal(t, tt.committeeIndex, cac.CommitteeIndex, "Unexpected committeeIndex for validator index %d", tt.index)
-			assert.Equal(t, tt.slot, cac.AttesterSlot, "Unexpected slot for validator index %d", tt.index)
-			if len(proposerIndexToSlots[tt.index]) > 0 && proposerIndexToSlots[tt.index][0] != tt.proposerSlot {
-				t.Errorf("wanted proposer slot %d, got proposer slot %d for validator index %d",
-					tt.proposerSlot, proposerIndexToSlots[tt.index][0], tt.index)
-			}
-			assert.DeepEqual(t, tt.committee, cac.Committee, "Unexpected committee for validator index %d", tt.index)
-		})
-	}
-}
-
-func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
-	helpers.ClearCache()
-
-	// Initialize test with 256 validators, each slot and each index gets 4 validators.
-	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(validators); i++ {
-		// First 2 epochs only half validators are activated.
-		var activationEpoch primitives.Epoch
-		if i >= len(validators)/2 {
-			activationEpoch = 3
-		}
-		validators[i] = &ethpb.Validator{
-			ActivationEpoch: activationEpoch,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
-		Validators:  validators,
-		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	require.NoError(t, err)
-	_, proposerIndxs, err := helpers.CommitteeAssignments(context.Background(), state, time.CurrentEpoch(state))
-	require.NoError(t, err)
-	require.NotEqual(t, 0, len(proposerIndxs), "wanted non-zero proposer index set")
-
-	_, proposerIndxs, err = helpers.CommitteeAssignments(context.Background(), state, time.CurrentEpoch(state)+1)
-	require.NoError(t, err)
-	require.NotEqual(t, 0, len(proposerIndxs), "wanted non-zero proposer index set")
-}
-
 func TestCommitteeAssignments_CannotRetrieveOlderThanSlotsPerHistoricalRoot(t *testing.T) {
 	helpers.ClearCache()
 
@@ -266,44 +127,6 @@ func TestCommitteeAssignments_CannotRetrieveOlderThanSlotsPerHistoricalRoot(t *t
 	require.NoError(t, err)
 	_, _, err = helpers.CommitteeAssignments(context.Background(), state, 0)
 	require.ErrorContains(t, "start slot 0 is smaller than the minimum valid start slot 1", err)
-}
-
-func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
-	helpers.ClearCache()
-
-	// Initialize test with 256 validators, each slot and each index gets 4 validators.
-	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ActivationEpoch: 0,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
-		Validators:  validators,
-		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	require.NoError(t, err)
-	epoch := primitives.Epoch(1)
-	_, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), state, epoch)
-	require.NoError(t, err, "Failed to determine CommitteeAssignments")
-
-	slotsWithProposers := make(map[primitives.Slot]bool)
-	for _, proposerSlots := range proposerIndexToSlots {
-		for _, slot := range proposerSlots {
-			slotsWithProposers[slot] = true
-		}
-	}
-	assert.Equal(t, uint64(params.BeaconConfig().SlotsPerEpoch), uint64(len(slotsWithProposers)), "Unexpected slots")
-	startSlot, err := slots.EpochStart(epoch)
-	require.NoError(t, err)
-	endSlot, err := slots.EpochStart(epoch + 1)
-	require.NoError(t, err)
-	for i := startSlot; i < endSlot; i++ {
-		hasProposer := slotsWithProposers[i]
-		assert.Equal(t, true, hasProposer, "Expected every slot in epoch 1 to have a proposer, slot %d did not", i)
-	}
 }
 
 func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
@@ -707,4 +530,53 @@ func TestCommitteeIndices(t *testing.T) {
 	bitfield.SetBitAt(3, true)
 	indices := helpers.CommitteeIndices(bitfield)
 	assert.DeepEqual(t, []primitives.CommitteeIndex{0, 1, 3}, indices)
+}
+
+func TestCommitteeAssignments_PTC(t *testing.T) {
+	// Create 10 committees. Total 40960 validators.
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize * uint64(params.BeaconConfig().SlotsPerEpoch)
+	validators := make([]*ethpb.Validator, validatorCount)
+
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey:             k,
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state, err := state_native.InitializeFromProtoEpbs(&ethpb.BeaconStateEPBS{
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	require.NoError(t, err)
+
+	as, _, err := helpers.CommitteeAssignments(context.Background(), state, 1)
+	require.NoError(t, err)
+
+	// Capture all the slots and all the validator index that belonged in a PTC using a map for verification later.
+	slotValidatorMap := make(map[primitives.Slot][]primitives.ValidatorIndex)
+	for i, a := range as {
+		slotValidatorMap[a.PtcSlot] = append(slotValidatorMap[a.PtcSlot], i)
+	}
+
+	// Verify that all the slots have the correct number of PTC.
+	for s, v := range slotValidatorMap {
+		if s == 0 {
+			continue
+		}
+		// Make sure all the PTC are the correct size from the map.
+		require.Equal(t, len(v), field_params.PTCSize)
+
+		// Get the actual PTC from the beacon state using the helper function
+		ptc, err := helpers.GetPayloadTimelinessCommittee(context.Background(), state, s)
+		require.NoError(t, err)
+		for _, index := range ptc {
+			i := slices.Index(v, index)
+			require.NotEqual(t, -1, i) // PTC not found from the assignment map
+		}
+	}
 }

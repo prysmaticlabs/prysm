@@ -1,8 +1,9 @@
+//go:build minimal
+
 package validator
 
 import (
 	"context"
-	"encoding/binary"
 	"testing"
 	"time"
 
@@ -24,13 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
-
-// pubKey is a helper to generate a well-formed public key.
-func pubKey(i uint64) []byte {
-	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.LittleEndian.PutUint64(pubKey, i)
-	return pubKey
-}
 
 func TestGetDuties_OK(t *testing.T) {
 	genesis := util.NewBeaconBlock()

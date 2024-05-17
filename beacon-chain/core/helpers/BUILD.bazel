@@ -93,3 +93,33 @@ go_test(
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
+
+go_test(
+    name = "go_minimal_test",
+    srcs = ["beacon_committee_minimal_test.go"],
+    eth_network = "minimal",
+    tags = ["minimal"],
+    deps = [
+        "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/time:go_default_library",
+        "//beacon-chain/forkchoice/types:go_default_library",
+        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/state-native:go_default_library",
+        "//config/fieldparams:go_default_library",
+        "//config/params:go_default_library",
+        "//consensus-types/interfaces:go_default_library",
+        "//consensus-types/primitives:go_default_library",
+        "//container/slice:go_default_library",
+        "//crypto/hash:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//math:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
+        "//testing/util:go_default_library",
+        "//time:go_default_library",
+        "//time/slots:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
+)

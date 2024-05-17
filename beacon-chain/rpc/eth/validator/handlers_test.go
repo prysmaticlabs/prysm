@@ -1410,7 +1410,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	helpers.ClearCache()
 
 	genesis := util.NewBeaconBlock()
-	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount + 1
 	deposits, _, err := util.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
 	eth1Data, err := util.DeterministicEth1Data(len(deposits))
@@ -1472,13 +1472,13 @@ func TestGetAttesterDuties(t *testing.T) {
 		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, "1", duty.CommitteeIndex)
-		assert.Equal(t, "0", duty.Slot)
+		assert.Equal(t, "2", duty.CommitteeIndex)
+		assert.Equal(t, "5", duty.Slot)
 		assert.Equal(t, "0", duty.ValidatorIndex)
 		assert.Equal(t, hexutil.Encode(pubKeys[0]), duty.Pubkey)
-		assert.Equal(t, "171", duty.CommitteeLength)
-		assert.Equal(t, "3", duty.CommitteesAtSlot)
-		assert.Equal(t, "80", duty.ValidatorCommitteeIndex)
+		assert.Equal(t, "128", duty.CommitteeLength)
+		assert.Equal(t, "4", duty.CommitteesAtSlot)
+		assert.Equal(t, "71", duty.ValidatorCommitteeIndex)
 	})
 	t.Run("multiple validators", func(t *testing.T) {
 		var body bytes.Buffer
@@ -1556,12 +1556,12 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
 		assert.Equal(t, "0", duty.CommitteeIndex)
-		assert.Equal(t, "62", duty.Slot)
+		assert.Equal(t, "59", duty.Slot)
 		assert.Equal(t, "0", duty.ValidatorIndex)
 		assert.Equal(t, hexutil.Encode(pubKeys[0]), duty.Pubkey)
-		assert.Equal(t, "170", duty.CommitteeLength)
-		assert.Equal(t, "3", duty.CommitteesAtSlot)
-		assert.Equal(t, "110", duty.ValidatorCommitteeIndex)
+		assert.Equal(t, "128", duty.CommitteeLength)
+		assert.Equal(t, "4", duty.CommitteesAtSlot)
+		assert.Equal(t, "33", duty.ValidatorCommitteeIndex)
 	})
 	t.Run("epoch out of bounds", func(t *testing.T) {
 		var body bytes.Buffer

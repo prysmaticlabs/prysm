@@ -14,7 +14,7 @@ const (
 	CurrentEpochAttestationsLength        = 1024          // MAX_ATTESTATIONS * SLOTS_PER_EPOCH
 	SlashingsLength                       = 64            // EPOCHS_PER_SLASHINGS_VECTOR
 	SyncCommitteeLength                   = 32            // SYNC_COMMITTEE_SIZE
-	PTCSize                               = 32            // PTC_SIZE [New in ePBS]
+	PTCSize                               = 2             // PTC_SIZE [New in ePBS]
 	RootLength                            = 32            // RootLength defines the byte length of a Merkle root.
 	BLSSignatureLength                    = 96            // BLSSignatureLength defines the byte length of a BLSSignature.
 	BLSPubkeyLength                       = 48            // BLSPubkeyLength defines the byte length of a BLSSignature.

@@ -148,6 +148,7 @@ type CommitteeAssignmentContainer struct {
 	Committee      []primitives.ValidatorIndex
 	AttesterSlot   primitives.Slot
 	CommitteeIndex primitives.CommitteeIndex
+	PtcSlot        primitives.Slot
 }
 
 // CommitteeAssignments is a map of validator indices pointing to the appropriate committee
@@ -220,6 +221,7 @@ func CommitteeAssignments(
 	numCommitteesPerSlot := SlotCommitteeCount(uint64(len(activeValidatorIndices)))
 	validatorIndexToCommittee := make(map[primitives.ValidatorIndex]*CommitteeAssignmentContainer, len(activeValidatorIndices))
 
+	committeesPerSlot, membersPerCommittee := PtcAllocation(uint64(len(activeValidatorIndices)))
 	// Compute all committees for all slots.
 	for i := primitives.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		// Compute committees.
@@ -235,8 +237,28 @@ func CommitteeAssignments(
 				CommitteeIndex: primitives.CommitteeIndex(j),
 				AttesterSlot:   slot,
 			}
-			for _, vIndex := range committee {
+
+			committeLength := uint64(len(committee))
+			if committeLength < membersPerCommittee {
+				return nil, nil, fmt.Errorf(
+					"committee length %d is smaller than member per committee size %d",
+					committeLength,
+					membersPerCommittee,
+				)
+			}
+
+			for cIndex, vIndex := range committee {
 				validatorIndexToCommittee[vIndex] = cac
+				PtcStartIndex := committeLength - membersPerCommittee
+				if uint64(cIndex) >= PtcStartIndex && j < committeesPerSlot {
+					// Create a new CommitteeAssignmentContainer to avoid mutating the previous reference if they belong to the same committee.
+					validatorIndexToCommittee[vIndex] = &CommitteeAssignmentContainer{
+						Committee:      committee,
+						CommitteeIndex: primitives.CommitteeIndex(j),
+						AttesterSlot:   slot,
+						PtcSlot:        slot,
+					}
+				}
 			}
 		}
 	}
