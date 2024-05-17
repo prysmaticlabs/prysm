@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 
@@ -642,8 +643,12 @@ func (s *Service) isDataAvailableDataColumns(ctx context.Context, root [32]byte,
 	if len(kzgCommitments) == 0 {
 		return nil
 	}
+	custodiedSubnetCount := params.BeaconConfig().CustodyRequirement
+	if flags.Get().SubscribeToAllSubnets {
+		custodiedSubnetCount = params.BeaconConfig().DataColumnSidecarSubnetCount
+	}
 
-	colMap, err := peerdas.CustodyColumns(s.cfg.P2P.NodeID(), params.BeaconConfig().CustodyRequirement)
+	colMap, err := peerdas.CustodyColumns(s.cfg.P2P.NodeID(), custodiedSubnetCount)
 	if err != nil {
 		return err
 	}
