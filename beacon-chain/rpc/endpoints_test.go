@@ -130,7 +130,7 @@ func Test_endpoints(t *testing.T) {
 	s := &Service{cfg: &Config{}}
 
 	routesMap := combineMaps(beaconRoutes, builderRoutes, configRoutes, debugRoutes, eventsRoutes, nodeRoutes, validatorRoutes, rewardsRoutes, lightClientRoutes, blobRoutes, prysmValidatorRoutes, prysmNodeRoutes, prysmBeaconRoutes)
-	actual := s.endpoints(true, nil, nil, nil, nil, nil, nil)
+	actual := s.endpoints(nil, nil, nil, nil, nil, nil)
 	for _, e := range actual {
 		methods, ok := routesMap[e.template]
 		assert.Equal(t, true, ok, "endpoint "+e.template+" not found")
