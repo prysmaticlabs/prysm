@@ -52,6 +52,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableDebugRPCEndpoints = &cli.BoolFlag{
+		Name:   "enable-debug-rpc-endpoints",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.

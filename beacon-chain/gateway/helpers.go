@@ -16,7 +16,7 @@ type MuxConfig struct {
 }
 
 // DefaultConfig returns a fully configured MuxConfig with standard gateway behavior.
-func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
+func DefaultConfig(httpModules string) MuxConfig {
 	var v1AlphaPbHandler, ethPbHandler *gateway.PbMux
 	if flags.EnableHTTPPrysmAPI(httpModules) {
 		v1AlphaRegistrations := []gateway.PbHandlerRegistration{
@@ -24,9 +24,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 			ethpbalpha.RegisterBeaconChainHandler,
 			ethpbalpha.RegisterBeaconNodeValidatorHandler,
 			ethpbalpha.RegisterHealthHandler,
-		}
-		if enableDebugRPCEndpoints {
-			v1AlphaRegistrations = append(v1AlphaRegistrations, ethpbalpha.RegisterDebugHandler)
+			ethpbalpha.RegisterDebugHandler,
 		}
 		v1AlphaMux := gwruntime.NewServeMux(
 			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{

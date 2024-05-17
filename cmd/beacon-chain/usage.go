@@ -116,7 +116,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.BlockBatchLimitBurstFactor,
 			flags.BlobBatchLimit,
 			flags.BlobBatchLimitBurstFactor,
-			flags.EnableDebugRPCEndpoints,
 			flags.SubscribeToAllSubnets,
 			flags.HistoricalSlasherNode,
 			flags.ChainID,

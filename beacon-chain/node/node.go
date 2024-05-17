@@ -967,7 +967,6 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
 
 	maxMsgSize := b.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
@@ -1012,7 +1011,6 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		StateNotifier:                 b,
 		OperationNotifier:             b,
 		StateGen:                      b.stateGen,
-		EnableDebugRPCEndpoints:       enableDebugRPCEndpoints,
 		MaxMsgSize:                    maxMsgSize,
 		BlockBuilder:                  b.fetchBuilderService(),
 		Router:                        router,
@@ -1060,13 +1058,12 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 	selfAddress := net.JoinHostPort(rpcHost, strconv.Itoa(rpcPort))
 	gatewayAddress := net.JoinHostPort(gatewayHost, strconv.Itoa(gatewayPort))
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	httpModules := b.cliCtx.String(flags.HTTPModules.Name)
 	timeout := b.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 
-	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, httpModules)
+	gatewayConfig := gateway.DefaultConfig(httpModules)
 	muxs := make([]*apigateway.PbMux, 0)
 	if gatewayConfig.V1AlphaPbMux != nil {
 		muxs = append(muxs, gatewayConfig.V1AlphaPbMux)

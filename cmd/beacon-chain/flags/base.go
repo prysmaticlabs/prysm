@@ -174,11 +174,6 @@ var (
 		Usage: "The factor by which blob batch limit may increase on burst.",
 		Value: 2,
 	}
-	// EnableDebugRPCEndpoints as /v1/beacon/state.
-	EnableDebugRPCEndpoints = &cli.BoolFlag{
-		Name:  "enable-debug-rpc-endpoints",
-		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state.",
-	}
 	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation/sync subnets or not.
 	SubscribeToAllSubnets = &cli.BoolFlag{
 		Name:  "subscribe-all-subnets",
