@@ -151,7 +151,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 		TerminalTotalDifficulty:       bigz,
 		ShanghaiTime:                  shanghaiTime,
 		CancunTime:                    cancunTime,
-		PragueTime:   pragueTime,
+		PragueTime:                    pragueTime,
 	}
 	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
 	ma := minerAllocation()
