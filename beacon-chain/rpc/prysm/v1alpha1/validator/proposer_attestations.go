@@ -86,7 +86,11 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 
 	var attsForInclusion proposerAtts
 	if postElectra {
-		attsForInclusion, err = computeOnChainAggregate(attsByDataRoot)
+		abdr := make(map[kv.AttestationId][]ethpb.Att)
+		for k, v := range attsByDataRoot {
+			abdr[k] = []ethpb.Att{v[0]}
+		}
+		attsForInclusion, err = computeOnChainAggregate(abdr)
 		if err != nil {
 			return nil, err
 		}
