@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -412,19 +411,9 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 }
 
 // ProcessDepositReceipts is a function as part of electra to process execution layer deposits
-func ProcessDepositReceipts(beaconState state.BeaconState, beaconBlock interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
-	if beaconState.Version() < version.Electra {
-		return beaconState, nil
-	}
-	payload, err := beaconBlock.Body().Execution()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload")
-	}
-	ede, ok := payload.(interfaces.ExecutionDataElectra)
-	if !ok {
-		return nil, errors.New("invalid electra execution payload")
-	}
-	for _, receipt := range ede.DepositReceipts() {
+func ProcessDepositReceipts(beaconState state.BeaconState, receipts []*enginev1.DepositReceipt) (state.BeaconState, error) {
+	var err error
+	for _, receipt := range receipts {
 		beaconState, err = processDepositReceipt(beaconState, receipt)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not apply deposit receipt")

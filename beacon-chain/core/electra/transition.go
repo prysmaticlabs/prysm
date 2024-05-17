@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
@@ -285,6 +284,6 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 }
 
 // ProcessDepositReceipts is a function as part of electra to process execution layer deposits
-func ProcessDepositReceipts(beaconState state.BeaconState, beaconBlock interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
-	return b.ProcessDepositReceipts(beaconState, beaconBlock)
+func ProcessDepositReceipts(beaconState state.BeaconState, receipts []*enginev1.DepositReceipt) (state.BeaconState, error) {
+	return b.ProcessDepositReceipts(beaconState, receipts)
 }

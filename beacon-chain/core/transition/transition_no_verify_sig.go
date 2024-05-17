@@ -450,7 +450,7 @@ func electraOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
 	}
-	st, err = electra.ProcessDepositReceipts(ctx, st, exe.DepositReceipts())
+	st, err = electra.ProcessDepositReceipts(st, exe.DepositReceipts())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
@@ -485,11 +485,7 @@ func altairOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process voluntary exits")
 	}
-	st, err = b.ProcessBLSToExecutionChanges(st, beaconBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process bls-to-execution changes")
-	}
-	return b.ProcessDepositReceipts(st, beaconBlock)
+	return b.ProcessBLSToExecutionChanges(st, beaconBlock)
 }
 
 // This calls phase 0 block operations.

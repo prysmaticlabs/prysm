@@ -9,7 +9,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	blocks2 "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -493,9 +492,8 @@ func TestProcessDepositReceipts(t *testing.T) {
 			Signature:             sig.Marshal(),
 		},
 	}
-	roBlock, err := blocks2.NewSignedBeaconBlock(block)
-	require.NoError(t, err)
-	st, err = blocks.ProcessDepositReceipts(st, roBlock.Block())
+
+	st, err = blocks.ProcessDepositReceipts(st, block.Block.Body.ExecutionPayload.DepositReceipts)
 	require.NoError(t, err)
 
 	pbd, err := st.PendingBalanceDeposits()
