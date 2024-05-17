@@ -12,10 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/async"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -224,7 +221,7 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 	if features.Get().EnablePeerDAS {
 		if len(request) > 0 {
 			peers := s.getBestPeers()
-			peers, err = s.getValidCustodyPeers(peers)
+			peers, err = s.cfg.p2p.GetValidCustodyPeers(peers)
 			if err != nil {
 				return err
 			}
@@ -280,46 +277,6 @@ func (s *Service) handleBlockProcessingError(ctx context.Context, err error, b i
 func (s *Service) getBestPeers() []core.PeerID {
 	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
 	return bestPeers
-}
-
-func (s *Service) getValidCustodyPeers(peers []core.PeerID) ([]core.PeerID, error) {
-	custodiedSubnetCount := params.BeaconConfig().CustodyRequirement
-	if flags.Get().SubscribeToAllSubnets {
-		custodiedSubnetCount = params.BeaconConfig().DataColumnSidecarSubnetCount
-	}
-	custodiedColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), custodiedSubnetCount)
-	if err != nil {
-		return nil, err
-	}
-	var validPeers []core.PeerID
-	for _, pid := range peers {
-		remoteCount, err := s.custodyCountFromRemotePeer(pid)
-		if err != nil {
-			return nil, err
-		}
-		nodeId, err := p2p.ConvertPeerIDToNodeID(pid)
-		if err != nil {
-			return nil, err
-		}
-		remoteCustodiedColumns, err := peerdas.CustodyColumns(nodeId, remoteCount)
-		if err != nil {
-			return nil, err
-		}
-		invalidPeer := false
-		for c := range custodiedColumns {
-			if !remoteCustodiedColumns[c] {
-				invalidPeer = true
-				break
-			}
-		}
-		if invalidPeer {
-			continue
-		}
-		copiedId := pid
-		// Add valid peer to list
-		validPeers = append(validPeers, copiedId)
-	}
-	return validPeers, nil
 }
 
 func (s *Service) checkIfBlockIsBad(
