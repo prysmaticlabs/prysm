@@ -297,7 +297,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SamplesPerSlot:                        8,
 	CustodyRequirement:                    1,
 	MinEpochsForDataColumnSidecarsRequest: 4096,
-	MaxCellsInExtendMatrix:                768,
+	NumberOfColumns:                       128,
+	MaxCellsInExtendedMatrix:              768,
 
 	// Values related to networking parameters.
 	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
@@ -316,10 +317,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AttestationSubnetPrefixBits:     6,
 	SubnetsPerNode:                  2,
 	NodeIdBits:                      256,
-
-	// PeerDAS
-	NumberOfColumns:          128,
-	MaxCellsInExtendedMatrix: 768,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name
