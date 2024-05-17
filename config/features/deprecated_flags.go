@@ -70,6 +70,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableEIP4881,
 	deprecatedDisableEIP4881,
 	deprecatedVerboseSigVerification,
+	deprecatedEnableDebugRPCEndpoints,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
