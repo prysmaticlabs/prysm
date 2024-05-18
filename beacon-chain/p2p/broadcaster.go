@@ -138,12 +138,12 @@ func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint6
 	}
 	// In the event our attestation is outdated and beyond the
 	// acceptable threshold, we exit early and do not broadcast it.
-	currSlot := slots.CurrentSlot(uint64(s.genesisTime.Unix()))
 	if err := helpers.ValidateAttestationTime(att.GetData().Slot, s.genesisTime, params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
+		currSlot := slots.CurrentSlot(uint64(s.genesisTime.Unix()))
 		log.WithFields(logrus.Fields{
 			"attestationSlot": att.GetData().Slot,
 			"currentSlot":     currSlot,
-		}).WithError(err).Warning("Attestation is too old to broadcast, discarding it")
+		}).WithError(err).Debug("Attestation is too old to broadcast, discarding it")
 		return
 	}
 
