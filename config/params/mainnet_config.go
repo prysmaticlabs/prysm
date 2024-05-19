@@ -275,21 +275,22 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxRequestBlocksDeneb:            128,
 
 	// Values related to electra
-	MaxRequestDataColumnSidecars:         16384,
-	DataColumnSidecarSubnetCount:         32,
-	MinPerEpochChurnLimitElectra:         128_000_000_000,
-	MaxPerEpochActivationExitChurnLimit:  256_000_000_000,
-	MaxEffectiveBalanceElectra:           2048_000_000_000,
-	MinSlashingPenaltyQuotientElectra:    4096,
-	WhistleBlowerRewardQuotientElectra:   4096,
-	PendingBalanceDepositLimit:           134_217_728,
-	PendingPartialWithdrawalsLimit:       134_217_728,
-	PendingConsolidationsLimit:           262_144,
-	MinActivationBalance:                 32_000_000_000,
-	MaxConsolidations:                    1,
-	MaxPendingPartialsPerWithdrawalSweep: 8,
-	FullExitRequestAmount:                0,
-	MaxWithdrawalRequestsPerPayload:      16,
+	MaxRequestDataColumnSidecars:          16384,
+	DataColumnSidecarSubnetCount:          32,
+	MinPerEpochChurnLimitElectra:          128_000_000_000,
+	MaxPerEpochActivationExitChurnLimit:   256_000_000_000,
+	MaxEffectiveBalanceElectra:            2048_000_000_000,
+	MinSlashingPenaltyQuotientElectra:     4096,
+	WhistleBlowerRewardQuotientElectra:    4096,
+	PendingBalanceDepositLimit:            134_217_728,
+	PendingPartialWithdrawalsLimit:        134_217_728,
+	PendingConsolidationsLimit:            262_144,
+	MinActivationBalance:                  32_000_000_000,
+	MaxConsolidations:                     1,
+	MaxPendingPartialsPerWithdrawalsSweep: 8,
+	FullExitRequestAmount:                 0,
+	MaxWithdrawalRequestsPerPayload:       16,
+	UnsetDepositReceiptsStartIndex:        math.MaxUint64,
 
 	// Values related to networking parameters.
 	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
@@ -310,7 +311,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	NodeIdBits:                      256,
 
 	// PeerDAS
-	NumberOfColumns: 128,
+	NumberOfColumns:          128,
+	MaxCellsInExtendedMatrix: 768,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name
@@ -331,16 +333,19 @@ func FillTestVersions(c *BeaconChainConfig, b byte) {
 	c.BellatrixForkVersion = make([]byte, fieldparams.VersionLength)
 	c.CapellaForkVersion = make([]byte, fieldparams.VersionLength)
 	c.DenebForkVersion = make([]byte, fieldparams.VersionLength)
+	c.ElectraForkVersion = make([]byte, fieldparams.VersionLength)
 
 	c.GenesisForkVersion[fieldparams.VersionLength-1] = b
 	c.AltairForkVersion[fieldparams.VersionLength-1] = b
 	c.BellatrixForkVersion[fieldparams.VersionLength-1] = b
 	c.CapellaForkVersion[fieldparams.VersionLength-1] = b
 	c.DenebForkVersion[fieldparams.VersionLength-1] = b
+	c.ElectraForkVersion[fieldparams.VersionLength-1] = b
 
 	c.GenesisForkVersion[0] = 0
 	c.AltairForkVersion[0] = 1
 	c.BellatrixForkVersion[0] = 2
 	c.CapellaForkVersion[0] = 3
 	c.DenebForkVersion[0] = 4
+	c.ElectraForkVersion[0] = 5
 }

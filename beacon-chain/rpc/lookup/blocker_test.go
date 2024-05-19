@@ -146,8 +146,10 @@ func TestGetBlock(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			pbBlock, err := result.PbPhase0Block()
+			pb, err := result.Proto()
 			require.NoError(t, err)
+			pbBlock, ok := pb.(*ethpbalpha.SignedBeaconBlock)
+			require.Equal(t, true, ok)
 			if !reflect.DeepEqual(pbBlock, tt.want) {
 				t.Error("Expected blocks to equal")
 			}

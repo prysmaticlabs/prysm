@@ -48,7 +48,7 @@ func ProcessAttestationsNoVerifySignature(
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	att *ethpb.Attestation,
+	att interfaces.Attestation,
 	totalBalance uint64,
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
@@ -58,24 +58,24 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 
-	delay, err := beaconState.Slot().SafeSubSlot(att.Data.Slot)
+	delay, err := beaconState.Slot().SafeSubSlot(att.GetData().Slot)
 	if err != nil {
-		return nil, fmt.Errorf("att slot %d can't be greater than state slot %d", att.Data.Slot, beaconState.Slot())
+		return nil, fmt.Errorf("att slot %d can't be greater than state slot %d", att.GetData().Slot, beaconState.Slot())
 	}
-	participatedFlags, err := AttestationParticipationFlagIndices(beaconState, att.Data, delay)
-	if err != nil {
-		return nil, err
-	}
-	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	participatedFlags, err := AttestationParticipationFlagIndices(beaconState, att.GetData(), delay)
 	if err != nil {
 		return nil, err
 	}
-	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+	indices, err := attestation.AttestingIndices(att, committee)
 	if err != nil {
 		return nil, err
 	}
 
-	return SetParticipationAndRewardProposer(ctx, beaconState, att.Data.Target.Epoch, indices, participatedFlags, totalBalance)
+	return SetParticipationAndRewardProposer(ctx, beaconState, att.GetData().Target.Epoch, indices, participatedFlags, totalBalance)
 }
 
 // SetParticipationAndRewardProposer retrieves and sets the epoch participation bits in state. Based on the epoch participation, it rewards

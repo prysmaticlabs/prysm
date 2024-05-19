@@ -236,20 +236,21 @@ type BeaconChainConfig struct {
 	MaxRequestBlocksDeneb            uint64           `yaml:"MAX_REQUEST_BLOCKS_DENEB" spec:"true"`              // MaxRequestBlocksDeneb is the maximum number of blocks in a single request after the deneb epoch.
 
 	// Values introduce in Electra upgrade
-	DataColumnSidecarSubnetCount         uint64 `yaml:"DATA_COLUMN_SIDECAR_SUBNET_COUNT" spec:"true"`           // DataColumnSidecarSubnetCount is the number of data column sidecar subnets used in the gossipsub protocol
-	MaxPerEpochActivationExitChurnLimit  uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT" spec:"true"`  // MaxPerEpochActivationExitChurnLimit represents the maximum combined activation and exit churn.
-	MinPerEpochChurnLimitElectra         uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA" spec:"true"`          // MinPerEpochChurnLimitElectra is the minimum amount of churn allotted for validator rotations for electra.
-	MaxRequestDataColumnSidecars         uint64 `yaml:"MAX_REQUEST_DATA_COLUMN_SIDECARS" spec:"true"`           // MaxRequestDataColumnSidecars is the maximum number of data column sidecars in a single request
-	MaxEffectiveBalanceElectra           uint64 `yaml:"MAX_EFFECTIVE_BALANCE_ELECTRA" spec:"true"`              // MaxEffectiveBalanceElectra is the maximal amount of Gwei that is effective for staking, increased in electra.
-	MinSlashingPenaltyQuotientElectra    uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA" spec:"true"`      // MinSlashingPenaltyQuotientElectra is used to calculate the minimum penalty to prevent DoS attacks, modified for electra.
-	WhistleBlowerRewardQuotientElectra   uint64 `yaml:"WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA" spec:"true"`      // WhistleBlowerRewardQuotientElectra is used to calculate whistle blower reward, modified in electra.
-	PendingBalanceDepositLimit           uint64 `yaml:"PENDING_BALANCE_DEPOSITS_LIMIT" spec:"true"`             // PendingBalanceDepositLimit is the maximum number of pending balance deposits allowed in the beacon state.
-	PendingPartialWithdrawalsLimit       uint64 `yaml:"PENDING_PARTIAL_WITHDRAWALS_LIMIT" spec:"true"`          // PendingPartialWithdrawalsLimit is the maximum number of pending partial withdrawals allowed in the beacon state.
-	PendingConsolidationsLimit           uint64 `yaml:"PENDING_CONSOLIDATIONS_LIMIT" spec:"true"`               // PendingConsolidationsLimit is the maximum number of pending validator consolidations allowed in the beacon state.
-	MaxConsolidations                    uint64 `yaml:"MAX_CONSOLIDATIONS" spec:"true"`                         // MaxConsolidations is the maximum number of consolidations in a block.
-	MaxPendingPartialsPerWithdrawalSweep uint64 `yaml:"MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP" spec:"true"` // MaxPendingPartialsPerWithdrawalSweep is the maximum number of pending partial withdrawals to process per payload.
-	FullExitRequestAmount                uint64 `yaml:"FULL_EXIT_REQUEST_AMOUNT" spec:"true"`                   // FullExitRequestAmount is the amount of Gwei required to request a full exit.
-	MaxWithdrawalRequestsPerPayload      uint64 `yaml:"MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD" spec:"true"`        // MaxWithdrawalRequestsPerPayload is the maximum number of execution layer withdrawal requests in each payload.
+	DataColumnSidecarSubnetCount          uint64 `yaml:"DATA_COLUMN_SIDECAR_SUBNET_COUNT" spec:"true"`           // DataColumnSidecarSubnetCount is the number of data column sidecar subnets used in the gossipsub protocol
+	MaxPerEpochActivationExitChurnLimit   uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT" spec:"true"`  // MaxPerEpochActivationExitChurnLimit represents the maximum combined activation and exit churn.
+	MinPerEpochChurnLimitElectra          uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA" spec:"true"`          // MinPerEpochChurnLimitElectra is the minimum amount of churn allotted for validator rotations for electra.
+	MaxRequestDataColumnSidecars          uint64 `yaml:"MAX_REQUEST_DATA_COLUMN_SIDECARS" spec:"true"`           // MaxRequestDataColumnSidecars is the maximum number of data column sidecars in a single request
+	MaxEffectiveBalanceElectra            uint64 `yaml:"MAX_EFFECTIVE_BALANCE_ELECTRA" spec:"true"`              // MaxEffectiveBalanceElectra is the maximal amount of Gwei that is effective for staking, increased in electra.
+	MinSlashingPenaltyQuotientElectra     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA" spec:"true"`      // MinSlashingPenaltyQuotientElectra is used to calculate the minimum penalty to prevent DoS attacks, modified for electra.
+	WhistleBlowerRewardQuotientElectra    uint64 `yaml:"WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA" spec:"true"`      // WhistleBlowerRewardQuotientElectra is used to calculate whistle blower reward, modified in electra.
+	PendingBalanceDepositLimit            uint64 `yaml:"PENDING_BALANCE_DEPOSITS_LIMIT" spec:"true"`             // PendingBalanceDepositLimit is the maximum number of pending balance deposits allowed in the beacon state.
+	PendingPartialWithdrawalsLimit        uint64 `yaml:"PENDING_PARTIAL_WITHDRAWALS_LIMIT" spec:"true"`          // PendingPartialWithdrawalsLimit is the maximum number of pending partial withdrawals allowed in the beacon state.
+	PendingConsolidationsLimit            uint64 `yaml:"PENDING_CONSOLIDATIONS_LIMIT" spec:"true"`               // PendingConsolidationsLimit is the maximum number of pending validator consolidations allowed in the beacon state.
+	MaxConsolidations                     uint64 `yaml:"MAX_CONSOLIDATIONS" spec:"true"`                         // MaxConsolidations is the maximum number of consolidations in a block.
+	MaxPendingPartialsPerWithdrawalsSweep uint64 `yaml:"MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP" spec:"true"` // MaxPendingPartialsPerWithdrawalsSweep is the maximum number of pending partial withdrawals to process per payload.
+	FullExitRequestAmount                 uint64 `yaml:"FULL_EXIT_REQUEST_AMOUNT" spec:"true"`                   // FullExitRequestAmount is the amount of Gwei required to request a full exit.
+	MaxWithdrawalRequestsPerPayload       uint64 `yaml:"MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD" spec:"true"`        // MaxWithdrawalRequestsPerPayload is the maximum number of execution layer withdrawal requests in each payload.
+	UnsetDepositReceiptsStartIndex        uint64 `yaml:"UNSET_DEPOSIT_RECEIPTS_START_INDEX" spec:"true"`         // UnsetDepositReceiptsStartIndex is used to check the start index for eip6110
 
 	// Networking Specific Parameters
 	GossipMaxSize                   uint64          `yaml:"GOSSIP_MAX_SIZE" spec:"true"`                    // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.
@@ -270,7 +271,8 @@ type BeaconChainConfig struct {
 	NodeIdBits                      uint64          `yaml:"NODE_ID_BITS" spec:"true"`                       // NodeIdBits defines the bit length of a node id.
 
 	// PeerDAS
-	NumberOfColumns uint64 `yaml:"NUMBER_OF_COLUMNS" spec:"true"` // NumberOfColumns in the extended data matrix.
+	NumberOfColumns          uint64 `yaml:"NUMBER_OF_COLUMNS" spec:"true"`            // NumberOfColumns in the extended data matrix.
+	MaxCellsInExtendedMatrix uint64 `yaml:"MAX_CELLS_IN_EXTENDED_MATRIX" spec:"true"` // MaxCellsInExtendedMatrix is the full data of one-dimensional erasure coding extended blobs (in row major format).
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
@@ -287,6 +289,7 @@ func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
 	fvs[bytesutil.ToBytes4(b.CapellaForkVersion)] = b.CapellaForkEpoch
 	fvs[bytesutil.ToBytes4(b.DenebForkVersion)] = b.DenebForkEpoch
+	fvs[bytesutil.ToBytes4(b.ElectraForkVersion)] = b.ElectraForkEpoch
 	return fvs
 }
 
@@ -308,6 +311,7 @@ func ConfigForkVersions(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 		bytesutil.ToBytes4(b.BellatrixForkVersion): version.Bellatrix,
 		bytesutil.ToBytes4(b.CapellaForkVersion):   version.Capella,
 		bytesutil.ToBytes4(b.DenebForkVersion):     version.Deneb,
+		bytesutil.ToBytes4(b.ElectraForkVersion):   version.Electra,
 	}
 }
 

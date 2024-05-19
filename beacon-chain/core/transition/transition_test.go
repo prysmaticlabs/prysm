@@ -311,7 +311,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 
 	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
 	assert.NoError(t, err)
-	attestingIndices, err := attestation.AttestingIndices(blockAtt.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(blockAtt, committee)
 	require.NoError(t, err)
 	assert.NoError(t, err)
 	hashTreeRoot, err = signing.ComputeSigningRoot(blockAtt.Data, domain)
@@ -648,6 +648,20 @@ func TestProcessSlots_ThroughDenebEpoch(t *testing.T) {
 	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
 	require.NoError(t, err)
 	require.Equal(t, version.Deneb, st.Version())
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
+}
+
+func TestProcessSlots_ThroughElectraEpoch(t *testing.T) {
+	transition.SkipSlotCache.Disable()
+	params.SetupTestConfigCleanup(t)
+	conf := params.BeaconConfig()
+	conf.ElectraForkEpoch = 5
+	params.OverrideBeaconConfig(conf)
+
+	st, _ := util.DeterministicGenesisStateDeneb(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	require.NoError(t, err)
+	require.Equal(t, version.Electra, st.Version())
 	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
 }
 
