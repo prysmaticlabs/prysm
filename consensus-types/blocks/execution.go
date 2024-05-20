@@ -28,15 +28,24 @@ func NewWrappedExecutionData(v proto.Message, weiValue primitives.Wei) (interfac
 	if weiValue == nil {
 		weiValue = new(big.Int).SetInt64(0)
 	}
+	if v == nil {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
 	switch pbStruct := v.(type) {
 	case *enginev1.ExecutionPayload:
 		return WrappedExecutionPayload(pbStruct)
 	case *enginev1.ExecutionPayloadCapella:
 		return WrappedExecutionPayloadCapella(pbStruct, weiValue)
+	case *enginev1.ExecutionPayloadCapellaWithValue:
+		return WrappedExecutionPayloadCapella(pbStruct.Payload, weiValue)
 	case *enginev1.ExecutionPayloadDeneb:
 		return WrappedExecutionPayloadDeneb(pbStruct, weiValue)
+	case *enginev1.ExecutionPayloadDenebWithValueAndBlobsBundle:
+		return WrappedExecutionPayloadDeneb(pbStruct.Payload, weiValue)
 	case *enginev1.ExecutionPayloadElectra:
 		return WrappedExecutionPayloadElectra(pbStruct, weiValue)
+	case *enginev1.ExecutionPayloadElectraWithValueAndBlobsBundle:
+		return WrappedExecutionPayloadElectra(pbStruct.Payload, weiValue)
 	default:
 		return nil, ErrUnsupportedVersion
 	}

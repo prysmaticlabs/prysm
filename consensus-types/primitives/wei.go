@@ -75,8 +75,8 @@ func Uint64ToWei(v uint64) Wei {
 func BigEndianBytesToWei(value []byte) Wei {
 	v := make([]byte, len(value))
 	copy(v, value)
-	slices.Reverse(v)
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
+	slices.Reverse(v)
 	return big.NewInt(0).SetBytes(v)
 }
 

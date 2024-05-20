@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "execution.go",
         "factory.go",
+        "get_payload.go",
         "getters.go",
         "kzg.go",
         "proto.go",

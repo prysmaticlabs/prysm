@@ -77,8 +77,14 @@ func TestServer_setExecutionData(t *testing.T) {
 		Amount:         3,
 	}}
 	id := &v1.PayloadIDBytes{0x1}
+
+	ed, err := blocks.NewWrappedExecutionData(&v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, primitives.ZeroWei)
+	require.NoError(t, err)
 	vs := &Server{
-		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, BlockValue: 0},
+		ExecutionEngineCaller: &powtesting.EngineClient{
+			GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed},
+			PayloadIDBytes:     id,
+		},
 		HeadFetcher:            &blockchainTest.ChainService{State: capellaTransitionState},
 		FinalizationFetcher:    &blockchainTest.ChainService{},
 		BeaconDB:               beaconDB,
@@ -356,7 +362,10 @@ func TestServer_setExecutionData(t *testing.T) {
 	t.Run("Builder configured. Local block has higher value", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 2 * 1e9}
+		elBid := primitives.Uint64ToWei(2 * 1e9)
+		ed, err := blocks.NewWrappedExecutionData(&v1.ExecutionPayloadCapella{BlockNumber: 3}, elBid)
+		require.NoError(t, err)
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed, Bid: elBid}}
 		b := blk.Block()
 		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
@@ -377,7 +386,11 @@ func TestServer_setExecutionData(t *testing.T) {
 
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 1 * 1e9}
+		elBid := primitives.Uint64ToWei(1 * 1e9)
+		ed, err := blocks.NewWrappedExecutionData(&v1.ExecutionPayloadCapella{BlockNumber: 3}, elBid)
+		require.NoError(t, err)
+
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed, Bid: elBid}}
 		b := blk.Block()
 		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
@@ -399,7 +412,9 @@ func TestServer_setExecutionData(t *testing.T) {
 			HasConfigured: true,
 			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
 		}
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 4}, BlockValue: 0}
+		ed, err := blocks.NewWrappedExecutionData(&v1.ExecutionPayloadCapella{BlockNumber: 4}, primitives.ZeroWei)
+		require.NoError(t, err)
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed}}
 		b := blk.Block()
 		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
@@ -428,11 +443,16 @@ func TestServer_setExecutionData(t *testing.T) {
 			Proofs:         [][]byte{{4, 5, 6}},
 			Blobs:          [][]byte{{7, 8, 9}},
 		}
+		ed, err := blocks.NewWrappedExecutionData(&v1.ExecutionPayloadDeneb{BlockNumber: 4}, primitives.ZeroWei)
+		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{
-			PayloadIDBytes:        id,
-			BlobsBundle:           blobsBundle,
-			ExecutionPayloadDeneb: &v1.ExecutionPayloadDeneb{BlockNumber: 4},
-			BlockValue:            0}
+			PayloadIDBytes: id,
+			GetPayloadResponse: &blocks.GetPayloadResponse{
+				ExecutionData: ed,
+				BlobsBundle:   blobsBundle,
+				Bid:           primitives.ZeroWei,
+			},
+		}
 		blk.SetSlot(primitives.Slot(params.BeaconConfig().DenebForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
 		localPayload, _, err := vs.getLocalPayload(ctx, blk.Block(), capellaTransitionState)
 		require.NoError(t, err)
@@ -502,7 +522,13 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadDeneb: &v1.ExecutionPayloadDeneb{BlockNumber: 4, Withdrawals: withdrawals}, BlockValue: 0}
+
+		ed, err := blocks.NewWrappedExecutionData(&v1.ExecutionPayloadDeneb{BlockNumber: 4, Withdrawals: withdrawals}, primitives.ZeroWei)
+		require.NoError(t, err)
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{
+			PayloadIDBytes:     id,
+			GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed},
+		}
 
 		require.NoError(t, err)
 		blk.SetSlot(primitives.Slot(params.BeaconConfig().DenebForkEpoch) * params.BeaconConfig().SlotsPerEpoch)

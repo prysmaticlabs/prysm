@@ -77,14 +77,17 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		var pid primitives.PayloadID
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
-		switch {
-		case err == nil:
+		res, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
+		if err == nil {
+			payload, bundle, overrideBuilder := res.ExecutionData, res.BlobsBundle, res.OverrideBuilder
 			bundleCache.add(slot, bundle)
-			warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
+			warnIfFeeRecipientDiffers(payload.FeeRecipient(), val.FeeRecipient[:])
 			return payload, overrideBuilder, nil
-		case errors.Is(err, context.DeadlineExceeded):
-		default:
+		}
+		// TODO: TestServer_getExecutionPayloadContextTimeout expects this behavior.
+		// We need to figure out if it is actually important to "retry" by falling through to the code below when
+		// we get a timeout when trying to retrieve the cached payload id.
+		if !errors.Is(err, context.DeadlineExceeded) {
 			return nil, false, errors.Wrap(err, "could not get cached payload from execution client")
 		}
 	}
@@ -175,27 +178,26 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	if payloadID == nil {
 		return nil, false, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
+	res, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
 		return nil, false, err
 	}
-	bundleCache.add(slot, bundle)
-	warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
-	localValueGwei, err := payload.ValueInGwei()
-	if err == nil {
-		log.WithField("value", localValueGwei).Debug("received execution payload from local engine")
-	}
-	return payload, overrideBuilder, nil
+
+	// TODO: remove bundleCache and use the blobs directly in the payload.
+	bundleCache.add(slot, res.BlobsBundle)
+	warnIfFeeRecipientDiffers(res.ExecutionData.FeeRecipient(), val.FeeRecipient[:])
+	log.WithField("value", res.Bid).Debug("received execution payload from local engine")
+	return res.ExecutionData, res.OverrideBuilder, nil
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
 // match the requested one.
-func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient primitives.ExecutionAddress) {
+func warnIfFeeRecipientDiffers(payload, val []byte) {
 	// Warn if the fee recipient is not the value we expect.
-	if payload != nil && !bytes.Equal(payload.FeeRecipient(), feeRecipient[:]) {
+	if !bytes.Equal(payload, val) {
 		logrus.WithFields(logrus.Fields{
-			"wantedFeeRecipient": fmt.Sprintf("%#x", feeRecipient),
-			"received":           fmt.Sprintf("%#x", payload.FeeRecipient()),
+			"wantedFeeRecipient": fmt.Sprintf("%#x", val),
+			"received":           fmt.Sprintf("%#x", payload),
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
 			"It is possible someone has compromised your client to try and take your transaction fees")
 	}

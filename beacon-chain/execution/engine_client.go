@@ -118,7 +118,7 @@ type EngineCaller interface {
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
-	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error)
+	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (*blocks.GetPayloadResponse, error)
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error)
 	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
 }
@@ -266,9 +266,23 @@ func (s *Service) ForkchoiceUpdated(
 	}
 }
 
+func getPayloadMethodAndMessage(slot primitives.Slot) (string, proto.Message) {
+	pe := slots.ToEpoch(slot)
+	if pe >= params.BeaconConfig().ElectraForkEpoch {
+		return GetPayloadMethodV4, &pb.ExecutionPayloadElectraWithValueAndBlobsBundle{}
+	}
+	if pe >= params.BeaconConfig().DenebForkEpoch {
+		return GetPayloadMethodV3, &pb.ExecutionPayloadDenebWithValueAndBlobsBundle{}
+	}
+	if pe >= params.BeaconConfig().CapellaForkEpoch {
+		return GetPayloadMethodV2, &pb.ExecutionPayloadCapellaWithValue{}
+	}
+	return GetPayloadMethod, &pb.ExecutionPayload{}
+}
+
 // GetPayload calls the engine_getPayloadVX method via JSON-RPC.
 // It returns the execution data as well as the blobs bundle.
-func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
+func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (*blocks.GetPayloadResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
@@ -276,59 +290,16 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
-	d := time.Now().Add(defaultEngineTimeout)
-	ctx, cancel := context.WithDeadline(ctx, d)
-	defer cancel()
-
-	if slots.ToEpoch(slot) >= params.BeaconConfig().ElectraForkEpoch {
-		result := &pb.ExecutionPayloadElectraWithValueAndBlobsBundle{}
-		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV4, pb.PayloadIDBytes(payloadId))
-		if err != nil {
-			return nil, nil, false, handleRPCError(err)
-		}
-		ed, err := blocks.WrappedExecutionPayloadElectra(result.Payload, blocks.PayloadValueToWei(result.Value))
-		if err != nil {
-			return nil, nil, false, err
-		}
-		return ed, result.BlobsBundle, result.ShouldOverrideBuilder, nil
-	}
-
-	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
-		result := &pb.ExecutionPayloadDenebWithValueAndBlobsBundle{}
-		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV3, pb.PayloadIDBytes(payloadId))
-		if err != nil {
-			return nil, nil, false, handleRPCError(err)
-		}
-		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, blocks.PayloadValueToWei(result.Value))
-		if err != nil {
-			return nil, nil, false, err
-		}
-		return ed, result.BlobsBundle, result.ShouldOverrideBuilder, nil
-	}
-
-	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
-		result := &pb.ExecutionPayloadCapellaWithValue{}
-		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV2, pb.PayloadIDBytes(payloadId))
-		if err != nil {
-			return nil, nil, false, handleRPCError(err)
-		}
-		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, blocks.PayloadValueToWei(result.Value))
-		if err != nil {
-			return nil, nil, false, err
-		}
-		return ed, nil, false, nil
-	}
-
-	result := &pb.ExecutionPayload{}
-	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
+	method, result := getPayloadMethodAndMessage(slot)
+	err := s.rpcClient.CallContext(ctx, result, method, pb.PayloadIDBytes(payloadId))
 	if err != nil {
-		return nil, nil, false, handleRPCError(err)
+		return nil, handleRPCError(err)
 	}
-	ed, err := blocks.WrappedExecutionPayload(result)
+	res, err := blocks.NewGetPayloadResponse(result)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, err
 	}
-	return ed, nil, false, nil
+	return res, nil
 }
 
 func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {

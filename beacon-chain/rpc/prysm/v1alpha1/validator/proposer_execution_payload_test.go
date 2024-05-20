@@ -146,8 +146,10 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			cfg.TerminalBlockHashActivationEpoch = tt.activationEpoch
 			params.OverrideBeaconConfig(cfg)
 
+			ed, err := blocks.NewWrappedExecutionData(&pb.ExecutionPayload{}, primitives.ZeroWei)
+			require.NoError(t, err)
 			vs := &Server{
-				ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr, ExecutionPayload: &pb.ExecutionPayload{}, BuilderOverride: tt.override},
+				ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed, OverrideBuilder: tt.override}},
 				HeadFetcher:            &chainMock.ChainService{State: tt.st},
 				FinalizationFetcher:    &chainMock.ChainService{},
 				BeaconDB:               beaconDB,
@@ -194,8 +196,10 @@ func TestServer_getExecutionPayloadContextTimeout(t *testing.T) {
 	cfg.TerminalBlockHashActivationEpoch = 1
 	params.OverrideBeaconConfig(cfg)
 
+	ed, err := blocks.NewWrappedExecutionData(&pb.ExecutionPayload{}, primitives.ZeroWei)
+	require.NoError(t, err)
 	vs := &Server{
-		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: &pb.PayloadIDBytes{}, ErrGetPayload: context.DeadlineExceeded, ExecutionPayload: &pb.ExecutionPayload{}},
+		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: &pb.PayloadIDBytes{}, ErrGetPayload: context.DeadlineExceeded, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed}},
 		HeadFetcher:            &chainMock.ChainService{State: nonTransitionSt},
 		BeaconDB:               beaconDB,
 		PayloadIDCache:         cache.NewPayloadIDCache(),
@@ -241,10 +245,12 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	payloadID := &pb.PayloadIDBytes{0x1}
 	payload := emptyPayload()
 	payload.FeeRecipient = feeRecipient[:]
+	ed, err := blocks.NewWrappedExecutionData(payload, primitives.ZeroWei)
+	require.NoError(t, err)
 	vs := &Server{
 		ExecutionEngineCaller: &powtesting.EngineClient{
-			PayloadIDBytes:   payloadID,
-			ExecutionPayload: payload,
+			PayloadIDBytes:     payloadID,
+			GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed},
 		},
 		HeadFetcher:            &chainMock.ChainService{State: transitionSt},
 		FinalizationFetcher:    &chainMock.ChainService{},
