@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/spectest/utils"
 )
@@ -31,5 +31,5 @@ func processPendingBalanceDeposits(t *testing.T, st state.BeaconState) (state.Be
 	// balance from the given state.
 	tab, err := helpers.TotalActiveBalance(st)
 	require.NoError(t, err)
-	return st, electra.ProcessPendingBalanceDeposits(context.TODO(), st, math.Gwei(tab))
+	return st, electra.ProcessPendingBalanceDeposits(context.TODO(), st, primitives.Gwei(tab))
 }

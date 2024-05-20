@@ -9,14 +9,13 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
-func createValidatorsWithTotalActiveBalance(totalBal math.Gwei) []*eth.Validator {
-	num := totalBal / math.Gwei(params.BeaconConfig().MinActivationBalance)
+func createValidatorsWithTotalActiveBalance(totalBal primitives.Gwei) []*eth.Validator {
+	num := totalBal / primitives.Gwei(params.BeaconConfig().MinActivationBalance)
 	vals := make([]*eth.Validator, num)
 	for i := range vals {
 		vals[i] = &eth.Validator{
@@ -25,7 +24,7 @@ func createValidatorsWithTotalActiveBalance(totalBal math.Gwei) []*eth.Validator
 			EffectiveBalance: params.BeaconConfig().MinActivationBalance,
 		}
 	}
-	if totalBal%math.Gwei(params.BeaconConfig().MinActivationBalance) != 0 {
+	if totalBal%primitives.Gwei(params.BeaconConfig().MinActivationBalance) != 0 {
 		vals = append(vals, &eth.Validator{
 			ActivationEpoch:  primitives.Epoch(0),
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -41,9 +40,9 @@ func TestComputeConsolidationEpochAndUpdateChurn(t *testing.T) {
 	tests := []struct {
 		name                                  string
 		state                                 state.BeaconState
-		consolidationBalance                  math.Gwei
+		consolidationBalance                  primitives.Gwei
 		expectedEpoch                         primitives.Epoch
-		expectedConsolidationBalanceToConsume math.Gwei
+		expectedConsolidationBalanceToConsume primitives.Gwei
 	}{
 		{
 			name: "compute consolidation with no consolidation balance",

@@ -10,7 +10,6 @@ import (
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
@@ -329,7 +328,7 @@ func (b *SignedBeaconBlock) IsBlinded() bool {
 }
 
 // ValueInWei metadata on the payload value returned by the builder.
-func (b *SignedBeaconBlock) ValueInWei() math.Wei {
+func (b *SignedBeaconBlock) ValueInWei() primitives.Wei {
 	exec, err := b.block.body.Execution()
 	if err != nil {
 		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
