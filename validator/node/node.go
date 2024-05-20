@@ -149,10 +149,10 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 func newRouter(cliCtx *cli.Context) *mux.Router {
 	var allowedOrigins []string
-	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	if cliCtx.IsSet(flags.GRPCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.GRPCGatewayCorsDomain.Name), ",")
 	} else {
-		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+		allowedOrigins = strings.Split(flags.GRPCGatewayCorsDomain.Value, ",")
 	}
 	r := mux.NewRouter()
 	r.Use(server.NormalizeQueryValuesHandler)
@@ -492,8 +492,8 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		cert                 string        = c.cliCtx.String(flags.CertFlag.Name)
 		graffiti             string        = c.cliCtx.String(flags.GraffitiFlag.Name)
 		maxCallRecvMsgSize   int           = c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-		grpcRetries          uint          = c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-		grpcRetryDelay       time.Duration = c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+		grpcRetries          uint          = c.cliCtx.Uint(flags.GRPCRetriesFlag.Name)
+		grpcRetryDelay       time.Duration = c.cliCtx.Duration(flags.GRPCRetryDelayFlag.Name)
 
 		interopKeysConfig *local.InteropKeymanagerConfig
 		err               error
@@ -538,7 +538,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
-		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		GrpcHeadersFlag:            c.cliCtx.String(flags.GRPCHeadersFlag.Name),
 		ValDB:                      c.db,
 		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
 		InteropKeysConfig:          interopKeysConfig,
@@ -634,10 +634,10 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 	nodeGatewayEndpoint := c.cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
 	beaconClientEndpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+	grpcRetries := c.cliCtx.Uint(flags.GRPCRetriesFlag.Name)
+	grpcRetryDelay := c.cliCtx.Duration(flags.GRPCRetryDelayFlag.Name)
 	walletDir := c.cliCtx.String(flags.WalletDirFlag.Name)
-	grpcHeaders := c.cliCtx.String(flags.GrpcHeadersFlag.Name)
+	grpcHeaders := c.cliCtx.String(flags.GRPCHeadersFlag.Name)
 	clientCert := c.cliCtx.String(flags.CertFlag.Name)
 
 	authTokenPath := c.cliCtx.String(flags.AuthTokenPathFlag.Name)
@@ -694,10 +694,10 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 	gatewayAddress := net.JoinHostPort(gatewayHost, fmt.Sprintf("%d", gatewayPort))
 	timeout := c.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	var allowedOrigins []string
-	if c.cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(c.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	if c.cliCtx.IsSet(flags.GRPCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(c.cliCtx.String(flags.GRPCGatewayCorsDomain.Name), ",")
 	} else {
-		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+		allowedOrigins = strings.Split(flags.GRPCGatewayCorsDomain.Value, ",")
 	}
 	maxCallSize := c.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 

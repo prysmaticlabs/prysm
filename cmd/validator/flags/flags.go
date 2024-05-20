@@ -91,20 +91,20 @@ var (
 		Name:  "graffiti",
 		Usage: "String to include in proposed blocks.",
 	}
-	// GrpcRetriesFlag defines the number of times to retry a failed gRPC request.
-	GrpcRetriesFlag = &cli.UintFlag{
+	// GRPCRetriesFlag defines the number of times to retry a failed gRPC request.
+	GRPCRetriesFlag = &cli.UintFlag{
 		Name:  "grpc-retries",
 		Usage: "Number of attempts to retry gRPC requests.",
 		Value: 5,
 	}
-	// GrpcRetryDelayFlag defines the interval to retry a failed gRPC request.
-	GrpcRetryDelayFlag = &cli.DurationFlag{
+	// GRPCRetryDelayFlag defines the interval to retry a failed gRPC request.
+	GRPCRetryDelayFlag = &cli.DurationFlag{
 		Name:  "grpc-retry-delay",
 		Usage: "Amount of time between gRPC retry requests.",
 		Value: 1 * time.Second,
 	}
-	// GrpcHeadersFlag defines a list of headers to send with all gRPC requests.
-	GrpcHeadersFlag = &cli.StringFlag{
+	// GRPCHeadersFlag defines a list of headers to send with all gRPC requests.
+	GRPCHeadersFlag = &cli.StringFlag{
 		Name: "grpc-headers",
 		Usage: `Comma separated list of key value pairs to pass as gRPC headers for all gRPC calls.
 		Example: --grpc-headers=key=value`,
@@ -121,8 +121,8 @@ var (
 		Usage: "Enables gRPC gateway for JSON requests.",
 		Value: 7500,
 	}
-	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
-	GPRCGatewayCorsDomain = &cli.StringFlag{
+	// GRPCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
+	GRPCGatewayCorsDomain = &cli.StringFlag{
 		Name: "grpc-gateway-corsdomain",
 		Usage: `Comma separated list of domains from which to accept cross origin requests (browser enforced).
 		This flag has no effect if not used with --grpc-gateway-port.
@@ -236,14 +236,15 @@ var (
 		Name:  "force-exit",
 		Usage: "Exits without displaying the confirmation prompt.",
 	}
-	VoluntaryExitJSONOutputPath = &cli.StringFlag{
+	// VoluntaryExitJSONOutputPathFlag to write voluntary exits as JSON files instead of broadcasting them.
+	VoluntaryExitJSONOutputPathFlag = &cli.StringFlag{
 		Name: "exit-json-output-dir",
 		Usage: "Output directory to write voluntary exits as individual unencrypted JSON " +
 			"files. If this flag is provided, voluntary exits will be written to the provided " +
 			"directory and will not be broadcasted.",
 	}
-	// BackupPasswordFile for encrypting accounts a user wishes to back up.
-	BackupPasswordFile = &cli.StringFlag{
+	// BackupPasswordFileFlag for encrypting accounts a user wishes to back up.
+	BackupPasswordFileFlag = &cli.StringFlag{
 		Name:  "backup-password-file",
 		Usage: "Path to a plain-text, .txt file containing the desired password for your backed up accounts.",
 		Value: "",
