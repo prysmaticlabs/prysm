@@ -8,7 +8,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -30,7 +29,7 @@ func TestExitEpochAndUpdateChurn_SpectestCase(t *testing.T) {
 	val, err := s.ValidatorAtIndex(0)
 	require.NoError(t, err)
 
-	ee, err := s.ExitEpochAndUpdateChurn(math.Gwei(val.EffectiveBalance))
+	ee, err := s.ExitEpochAndUpdateChurn(primitives.Gwei(val.EffectiveBalance))
 	require.NoError(t, err)
 	require.Equal(t, primitives.Epoch(262), ee)
 
@@ -39,7 +38,7 @@ func TestExitEpochAndUpdateChurn_SpectestCase(t *testing.T) {
 	if !ok {
 		t.Fatal("wrong proto")
 	}
-	require.Equal(t, math.Gwei(127000000000), pb.ExitBalanceToConsume)
+	require.Equal(t, primitives.Gwei(127000000000), pb.ExitBalanceToConsume)
 	require.Equal(t, primitives.Epoch(262), pb.EarliestExitEpoch)
 
 	// Fails for versions older than electra
@@ -62,15 +61,15 @@ func TestExitEpochAndUpdateChurn(t *testing.T) {
 			},
 			Balances:             []uint64{params.BeaconConfig().MaxEffectiveBalanceElectra},
 			EarliestExitEpoch:    epoch - params.BeaconConfig().MaxSeedLookahead*2, // Old, relative to slot.
-			ExitBalanceToConsume: math.Gwei(20_000_000),
+			ExitBalanceToConsume: primitives.Gwei(20_000_000),
 		})
 		require.NoError(t, err)
 		activeBal, err := helpers.TotalActiveBalance(st)
 		require.NoError(t, err)
 
-		exitBal := math.Gwei(10_000_000)
+		exitBal := primitives.Gwei(10_000_000)
 
-		wantExitBalToConsume := helpers.ActivationExitChurnLimit(math.Gwei(activeBal)) - exitBal
+		wantExitBalToConsume := helpers.ActivationExitChurnLimit(primitives.Gwei(activeBal)) - exitBal
 
 		ee, err := st.ExitEpochAndUpdateChurn(exitBal)
 		require.NoError(t, err)
@@ -97,16 +96,16 @@ func TestExitEpochAndUpdateChurn(t *testing.T) {
 			},
 			Balances:             []uint64{params.BeaconConfig().MaxEffectiveBalanceElectra},
 			EarliestExitEpoch:    epoch,
-			ExitBalanceToConsume: math.Gwei(20_000_000),
+			ExitBalanceToConsume: primitives.Gwei(20_000_000),
 		})
 		require.NoError(t, err)
 		activeBal, err := helpers.TotalActiveBalance(st)
 		require.NoError(t, err)
 
-		activationExitChurnLimit := helpers.ActivationExitChurnLimit(math.Gwei(activeBal))
+		activationExitChurnLimit := helpers.ActivationExitChurnLimit(primitives.Gwei(activeBal))
 		exitBal := activationExitChurnLimit * 2
 
-		wantExitBalToConsume := math.Gwei(0)
+		wantExitBalToConsume := primitives.Gwei(0)
 
 		ee, err := st.ExitEpochAndUpdateChurn(exitBal)
 		require.NoError(t, err)
@@ -133,13 +132,13 @@ func TestExitEpochAndUpdateChurn(t *testing.T) {
 			},
 			Balances:             []uint64{params.BeaconConfig().MaxEffectiveBalanceElectra},
 			EarliestExitEpoch:    epoch + 10_000,
-			ExitBalanceToConsume: math.Gwei(20_000_000),
+			ExitBalanceToConsume: primitives.Gwei(20_000_000),
 		})
 		require.NoError(t, err)
 
-		exitBal := math.Gwei(10_000_000)
+		exitBal := primitives.Gwei(10_000_000)
 
-		wantExitBalToConsume := math.Gwei(20_000_000) - exitBal
+		wantExitBalToConsume := primitives.Gwei(20_000_000) - exitBal
 
 		ee, err := st.ExitEpochAndUpdateChurn(exitBal)
 		require.NoError(t, err)
@@ -166,14 +165,14 @@ func TestExitEpochAndUpdateChurn(t *testing.T) {
 			},
 			Balances:             []uint64{params.BeaconConfig().MaxEffectiveBalanceElectra},
 			EarliestExitEpoch:    epoch + 10_000,
-			ExitBalanceToConsume: math.Gwei(20_000_000),
+			ExitBalanceToConsume: primitives.Gwei(20_000_000),
 		})
 		require.NoError(t, err)
 
-		exitBal := math.Gwei(40_000_000)
+		exitBal := primitives.Gwei(40_000_000)
 		activeBal, err := helpers.TotalActiveBalance(st)
 		require.NoError(t, err)
-		activationExitChurnLimit := helpers.ActivationExitChurnLimit(math.Gwei(activeBal))
+		activationExitChurnLimit := helpers.ActivationExitChurnLimit(primitives.Gwei(activeBal))
 		wantExitBalToConsume := activationExitChurnLimit - 20_000_000
 
 		ee, err := st.ExitEpochAndUpdateChurn(exitBal)
