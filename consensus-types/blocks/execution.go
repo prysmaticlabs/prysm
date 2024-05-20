@@ -1667,16 +1667,3 @@ func (e executionPayloadElectra) WithdrawalRequests() []*enginev1.ExecutionLayer
 func (e executionPayloadElectra) IsBlinded() bool {
 	return false
 }
-
-// PayloadValueToWei returns a Wei value given the payload's value
-func PayloadValueToWei(value []byte) primitives.Wei {
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
-}
-
-// PayloadValueToGwei returns a Gwei value given the payload's value
-func PayloadValueToGwei(value []byte) primitives.Gwei {
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
-	return primitives.WeiToGwei(v)
-}
