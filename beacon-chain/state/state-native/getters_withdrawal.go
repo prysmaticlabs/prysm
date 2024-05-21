@@ -146,7 +146,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 	validatorsLen := b.validatorsLen()
 	bound := mathutil.Min(uint64(validatorsLen), params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
 	for i := uint64(0); i < bound; i++ {
-		val, err := b.validatorAtIndex(validatorIndex)
+		val, err := b.ValidatorAtIndex(validatorIndex)
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "could not retrieve validator at index %d", validatorIndex)
 		}
@@ -158,7 +158,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				Index:          withdrawalIndex,
 				ValidatorIndex: validatorIndex,
-				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Address:        bytesutil.SafeCopyBytes(val.GetWithdrawalCredentials()[ETH1AddressOffset:]),
 				Amount:         balance,
 			})
 			withdrawalIndex++
@@ -166,7 +166,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				Index:          withdrawalIndex,
 				ValidatorIndex: validatorIndex,
-				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Address:        bytesutil.SafeCopyBytes(val.GetWithdrawalCredentials()[ETH1AddressOffset:]),
 				Amount:         balance - helpers.ValidatorMaxEffectiveBalance(val),
 			})
 			withdrawalIndex++
