@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
@@ -14,9 +13,9 @@ import (
 // Verifies attester slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
 func (s *Service) processAttesterSlashings(
-	ctx context.Context, slashings map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing,
-) (map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing, error) {
-	processedSlashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{}
+	ctx context.Context, slashings map[[fieldparams.RootLength]byte]ethpb.AttSlashing,
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
+	processedSlashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// If no slashings, return early.
 	if len(slashings) == 0 {
@@ -31,8 +30,8 @@ func (s *Service) processAttesterSlashings(
 
 	for root, slashing := range slashings {
 		// Verify the signature of the first attestation.
-		if err := s.verifyAttSignature(ctx, slashing.GetFirstAttestation()); err != nil {
-			log.WithError(err).WithField("a", slashing.GetFirstAttestation()).Warn(
+		if err := s.verifyAttSignature(ctx, slashing.FirstAttestation()); err != nil {
+			log.WithError(err).WithField("a", slashing.FirstAttestation()).Warn(
 				"Invalid signature for attestation in detected slashing offense",
 			)
 
@@ -40,8 +39,8 @@ func (s *Service) processAttesterSlashings(
 		}
 
 		// Verify the signature of the second attestation.
-		if err := s.verifyAttSignature(ctx, slashing.GetSecondAttestation()); err != nil {
-			log.WithError(err).WithField("b", slashing.GetSecondAttestation()).Warn(
+		if err := s.verifyAttSignature(ctx, slashing.SecondAttestation()); err != nil {
+			log.WithError(err).WithField("b", slashing.SecondAttestation()).Warn(
 				"Invalid signature for attestation in detected slashing offense",
 			)
 

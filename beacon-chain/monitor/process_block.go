@@ -124,14 +124,14 @@ func (s *Service) processSlashings(blk interfaces.ReadOnlyBeaconBlock) {
 				log.WithFields(logrus.Fields{
 					"attesterIndex":      idx,
 					"blockInclusionSlot": blk.Slot(),
-					"attestationSlot1":   slashing.GetFirstAttestation().GetData().Slot,
-					"beaconBlockRoot1":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.GetFirstAttestation().GetData().BeaconBlockRoot)),
-					"sourceEpoch1":       slashing.GetFirstAttestation().GetData().Source.Epoch,
-					"targetEpoch1":       slashing.GetFirstAttestation().GetData().Target.Epoch,
-					"attestationSlot2":   slashing.GetSecondAttestation().GetData().Slot,
-					"beaconBlockRoot2":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.GetSecondAttestation().GetData().BeaconBlockRoot)),
-					"sourceEpoch2":       slashing.GetSecondAttestation().GetData().Source.Epoch,
-					"targetEpoch2":       slashing.GetSecondAttestation().GetData().Target.Epoch,
+					"attestationSlot1":   slashing.FirstAttestation().GetData().Slot,
+					"beaconBlockRoot1":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.FirstAttestation().GetData().BeaconBlockRoot)),
+					"sourceEpoch1":       slashing.FirstAttestation().GetData().Source.Epoch,
+					"targetEpoch1":       slashing.FirstAttestation().GetData().Target.Epoch,
+					"attestationSlot2":   slashing.SecondAttestation().GetData().Slot,
+					"beaconBlockRoot2":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.SecondAttestation().GetData().BeaconBlockRoot)),
+					"sourceEpoch2":       slashing.SecondAttestation().GetData().Source.Epoch,
+					"targetEpoch2":       slashing.SecondAttestation().GetData().Target.Epoch,
 				}).Info("Attester slashing was included")
 			}
 		}

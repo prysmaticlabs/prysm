@@ -9,7 +9,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -58,7 +57,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	ss := make([]interfaces.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
@@ -97,7 +96,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		},
 	}
 
-	ss := make([]interfaces.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
@@ -153,7 +152,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	ss := make([]interfaces.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
@@ -226,7 +225,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 		},
 	}
 
-	ss := make([]interfaces.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
@@ -299,7 +298,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusBellatrix(t *testing.T) {
 		},
 	}
 
-	ss := make([]interfaces.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
@@ -372,7 +371,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusCapella(t *testing.T) {
 		},
 	}
 
-	ss := make([]interfaces.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}

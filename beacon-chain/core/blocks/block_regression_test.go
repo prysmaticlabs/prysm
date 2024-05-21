@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	v "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -92,7 +91,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		},
 	}
 
-	ss := make([]interfaces.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
