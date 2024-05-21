@@ -5,7 +5,6 @@ import (
 	"unsafe"
 
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -232,7 +231,7 @@ func deepValueBaseTypeEqual(v1, v2 reflect.Value) bool {
 		case "CommitteeIndex":
 			return v1.Interface().(primitives.CommitteeIndex) == v2.Interface().(primitives.CommitteeIndex)
 		case "Gwei":
-			return v1.Interface().(math.Gwei) == v2.Interface().(math.Gwei)
+			return v1.Interface().(primitives.Gwei) == v2.Interface().(primitives.Gwei)
 		}
 		return v1.Interface().(uint64) == v2.Interface().(uint64)
 	case reflect.Uint32:

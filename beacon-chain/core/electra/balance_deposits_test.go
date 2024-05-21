@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -36,7 +35,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 			check: func(t *testing.T, st state.BeaconState) {
 				res, err := st.DepositBalanceToConsume()
 				require.NoError(t, err)
-				require.Equal(t, math.Gwei(0), res)
+				require.Equal(t, primitives.Gwei(0), res)
 			},
 		},
 		{
@@ -59,7 +58,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
 				res, err := st.DepositBalanceToConsume()
 				require.NoError(t, err)
-				require.Equal(t, math.Gwei(100), res)
+				require.Equal(t, primitives.Gwei(100), res)
 				// Validators 0..9 should have their balance increased
 				for i := primitives.ValidatorIndex(0); i < 10; i++ {
 					b, err := st.BalanceAtIndex(i)
@@ -93,7 +92,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
 				res, err := st.DepositBalanceToConsume()
 				require.NoError(t, err)
-				require.Equal(t, math.Gwei(0), res)
+				require.Equal(t, primitives.Gwei(0), res)
 				// Validators 0..4 should have their balance increased
 				for i := primitives.ValidatorIndex(0); i < 4; i++ {
 					b, err := st.BalanceAtIndex(i)
@@ -119,7 +118,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				tab, err = helpers.TotalActiveBalance(tt.state)
 			}
 			require.NoError(t, err)
-			err = electra.ProcessPendingBalanceDeposits(context.TODO(), tt.state, math.Gwei(tab))
+			err = electra.ProcessPendingBalanceDeposits(context.TODO(), tt.state, primitives.Gwei(tab))
 			require.Equal(t, tt.wantErr, err != nil, "wantErr=%v, got err=%s", tt.wantErr, err)
 			if tt.check != nil {
 				tt.check(t, tt.state)

@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"go.opencensus.io/trace"
 )
 
@@ -32,7 +32,7 @@ import (
 //	        state.deposit_balance_to_consume = Gwei(0)
 //	    else:
 //	        state.deposit_balance_to_consume = available_for_processing - processed_amount
-func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, activeBalance math.Gwei) error {
+func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, activeBalance primitives.Gwei) error {
 	_, span := trace.StartSpan(ctx, "electra.ProcessPendingBalanceDeposits")
 	defer span.End()
 
@@ -54,13 +54,13 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	}
 
 	for _, deposit := range deposits {
-		if math.Gwei(deposit.Amount) > availableForProcessing {
+		if primitives.Gwei(deposit.Amount) > availableForProcessing {
 			break
 		}
 		if err := helpers.IncreaseBalance(st, deposit.Index, deposit.Amount); err != nil {
 			return err
 		}
-		availableForProcessing -= math.Gwei(deposit.Amount)
+		availableForProcessing -= primitives.Gwei(deposit.Amount)
 		nextDepositIndex++
 	}
 
