@@ -79,7 +79,7 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 
 // ProcessDepositReceipts is a function as part of electra to process execution layer deposits
 func ProcessDepositReceipts(ctx context.Context, beaconState state.BeaconState, receipts []*enginev1.DepositReceipt) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "electra.ProcessDepositReceipts")
+	_, span := trace.StartSpan(ctx, "electra.ProcessDepositReceipts")
 	defer span.End()
 	// TODO: replace with 6110 logic
 	// return b.ProcessDepositReceipts(beaconState, receipts)

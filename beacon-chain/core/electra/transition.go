@@ -47,7 +47,7 @@ var (
 //	    process_slashings_reset(state)
 //	    process_randao_mixes_reset(state)
 func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "electra.ProcessEpoch")
+	_, span := trace.StartSpan(ctx, "electra.ProcessEpoch")
 	defer span.End()
 
 	// TODO: uncomment this
