@@ -4,7 +4,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
@@ -34,7 +33,7 @@ import (
 //	    state.earliest_exit_epoch = earliest_exit_epoch
 //
 //	    return state.earliest_exit_epoch
-func (b *BeaconState) ExitEpochAndUpdateChurn(exitBalance math.Gwei) (primitives.Epoch, error) {
+func (b *BeaconState) ExitEpochAndUpdateChurn(exitBalance primitives.Gwei) (primitives.Epoch, error) {
 	if b.version < version.Electra {
 		return 0, errNotSupported("ExitEpochAndUpdateChurn", b.version)
 	}
@@ -49,10 +48,10 @@ func (b *BeaconState) ExitEpochAndUpdateChurn(exitBalance math.Gwei) (primitives
 	defer b.lock.Unlock()
 
 	earliestExitEpoch := max(b.earliestExitEpoch, helpers.ActivationExitEpoch(slots.ToEpoch(b.slot)))
-	perEpochChurn := helpers.ActivationExitChurnLimit(math.Gwei(activeBal)) // Guaranteed to be non-zero.
+	perEpochChurn := helpers.ActivationExitChurnLimit(primitives.Gwei(activeBal)) // Guaranteed to be non-zero.
 
 	// New epoch for exits
-	var exitBalanceToConsume math.Gwei
+	var exitBalanceToConsume primitives.Gwei
 	if b.earliestExitEpoch < earliestExitEpoch {
 		exitBalanceToConsume = perEpochChurn
 	} else {
@@ -64,7 +63,7 @@ func (b *BeaconState) ExitEpochAndUpdateChurn(exitBalance math.Gwei) (primitives
 		balanceToProcess := exitBalance - exitBalanceToConsume
 		additionalEpochs := primitives.Epoch((balanceToProcess-1)/perEpochChurn + 1)
 		earliestExitEpoch += additionalEpochs
-		exitBalanceToConsume += math.Gwei(additionalEpochs) * perEpochChurn
+		exitBalanceToConsume += primitives.Gwei(additionalEpochs) * perEpochChurn
 	}
 
 	// Consume the balance and update state variables.

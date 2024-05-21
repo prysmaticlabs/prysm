@@ -1,0 +1,93 @@
+package primitives
+
+import (
+	"fmt"
+	"math/big"
+	"slices"
+
+	fssz "github.com/prysmaticlabs/fastssz"
+)
+
+// ZeroWei is a non-nil zero value for primitives.Wei
+var ZeroWei Wei = big.NewInt(0)
+
+// Wei is the smallest unit of Ether, represented as a pointer to a bigInt.
+type Wei *big.Int
+
+// Gwei is a denomination of 1e9 Wei represented as an uint64.
+type Gwei uint64
+
+var _ fssz.HashRoot = (Gwei)(0)
+var _ fssz.Marshaler = (*Gwei)(nil)
+var _ fssz.Unmarshaler = (*Gwei)(nil)
+
+// HashTreeRoot --
+func (g Gwei) HashTreeRoot() ([32]byte, error) {
+	return fssz.HashWithDefaultHasher(g)
+}
+
+// HashTreeRootWith --
+func (g Gwei) HashTreeRootWith(hh *fssz.Hasher) error {
+	hh.PutUint64(uint64(g))
+	return nil
+}
+
+// UnmarshalSSZ --
+func (g *Gwei) UnmarshalSSZ(buf []byte) error {
+	if len(buf) != g.SizeSSZ() {
+		return fmt.Errorf("expected buffer of length %d received %d", g.SizeSSZ(), len(buf))
+	}
+	*g = Gwei(fssz.UnmarshallUint64(buf))
+	return nil
+}
+
+// MarshalSSZTo --
+func (g *Gwei) MarshalSSZTo(dst []byte) ([]byte, error) {
+	marshalled, err := g.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	return append(dst, marshalled...), nil
+}
+
+// MarshalSSZ --
+func (g *Gwei) MarshalSSZ() ([]byte, error) {
+	marshalled := fssz.MarshalUint64([]byte{}, uint64(*g))
+	return marshalled, nil
+}
+
+// SizeSSZ --
+func (g *Gwei) SizeSSZ() int {
+	return 8
+}
+
+// WeiToBigInt is a convenience method to cast a wei back to a big int
+func WeiToBigInt(w Wei) *big.Int {
+	return w
+}
+
+// Uint64ToWei creates a new Wei (aka big.Int) representing the given uint64 value.
+func Uint64ToWei(v uint64) Wei {
+	return big.NewInt(0).SetUint64(v)
+}
+
+// BigEndianBytesToWei returns a Wei value given a big-endian binary representation (eg engine api payload bids).
+func BigEndianBytesToWei(value []byte) Wei {
+	v := make([]byte, len(value))
+	copy(v, value)
+	slices.Reverse(v)
+	// We have to convert big endian to little endian because the value is coming from the execution layer.
+	return big.NewInt(0).SetBytes(v)
+}
+
+// WeiToGwei converts big int wei to uint64 gwei.
+// The input `v` is copied before being modified.
+func WeiToGwei(v Wei) Gwei {
+	if v == nil {
+		return 0
+	}
+	gweiPerEth := big.NewInt(1e9)
+	copied := big.NewInt(0).Set(v)
+	copied.Div(copied, gweiPerEth)
+	return Gwei(copied.Uint64())
+}

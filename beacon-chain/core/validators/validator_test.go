@@ -10,7 +10,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -146,7 +145,7 @@ func TestInitiateValidatorExit_ProperExit_Electra(t *testing.T) {
 	// Pre-check: Exit balance to consume should be zero.
 	ebtc, err := state.ExitBalanceToConsume()
 	require.NoError(t, err)
-	require.Equal(t, math.Gwei(0), ebtc)
+	require.Equal(t, primitives.Gwei(0), ebtc)
 
 	newState, epoch, err := validators.InitiateValidatorExit(context.Background(), state, idx, 0, 0) // exitQueueEpoch and churn are not used in electra
 	require.NoError(t, err)
@@ -161,7 +160,7 @@ func TestInitiateValidatorExit_ProperExit_Electra(t *testing.T) {
 	// Check that the exit balance to consume has been updated on the state.
 	ebtc, err = state.ExitBalanceToConsume()
 	require.NoError(t, err)
-	require.NotEqual(t, math.Gwei(0), ebtc, "Exit balance to consume was not updated")
+	require.NotEqual(t, primitives.Gwei(0), ebtc, "Exit balance to consume was not updated")
 }
 
 func TestSlashValidator_OK(t *testing.T) {
