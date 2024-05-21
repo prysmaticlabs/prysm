@@ -25,30 +25,30 @@ import (
 func (s *Server) GetBeaconStatus(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.web.beacon.GetBeaconStatus")
 	defer span.End()
-	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
+	syncStatus, err := s.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.WithError(err).Error("beacon node call to get sync status failed")
 		httputil.WriteJson(w, &BeaconStatusResponse{
-			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
+			BeaconNodeEndpoint: s.beaconNodeEndpoint,
 			Connected:          false,
 			Syncing:            false,
 		})
 		return
 	}
-	genesis, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	genesis, err := s.nodeClient.GetGenesis(ctx, &emptypb.Empty{})
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "GetGenesis call failed").Error(), http.StatusInternalServerError)
 		return
 	}
 	genesisTime := uint64(time.Unix(genesis.GenesisTime.Seconds, 0).Unix())
 	address := genesis.DepositContractAddress
-	chainHead, err := s.beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
+	chainHead, err := s.chainClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "GetChainHead").Error(), http.StatusInternalServerError)
 		return
 	}
 	httputil.WriteJson(w, &BeaconStatusResponse{
-		BeaconNodeEndpoint:     s.beaconClientEndpoint,
+		BeaconNodeEndpoint:     s.beaconNodeEndpoint,
 		Connected:              true,
 		Syncing:                syncStatus.Syncing,
 		GenesisTime:            fmt.Sprintf("%d", genesisTime),
@@ -85,7 +85,7 @@ func (s *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request)
 	req := &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: pubkeys,
 	}
-	validatorPerformance, err := s.beaconChainClient.GetValidatorPerformance(ctx, req)
+	validatorPerformance, err := s.chainClient.GetValidatorPerformance(ctx, req)
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "GetValidatorPerformance call failed").Error(), http.StatusInternalServerError)
 		return
@@ -133,7 +133,7 @@ func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 		PageSize:   int32(ps),
 		PageToken:  pageToken,
 	}
-	listValidatorBalances, err := s.beaconChainClient.ListValidatorBalances(ctx, req)
+	listValidatorBalances, err := s.chainClient.ListValidatorBalances(ctx, req)
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "ListValidatorBalances call failed").Error(), http.StatusInternalServerError)
 		return
@@ -187,7 +187,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		PageSize:   int32(ps),
 		PageToken:  pageToken,
 	}
-	validators, err := s.beaconChainClient.ListValidators(ctx, req)
+	validators, err := s.chainClient.ListValidators(ctx, req)
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "ListValidators call failed").Error(), http.StatusInternalServerError)
 		return
@@ -204,7 +204,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.web.beacon.GetPeers")
 	defer span.End()
-	peers, err := s.beaconNodeClient.ListPeers(ctx, &emptypb.Empty{})
+	peers, err := s.nodeClient.ListPeers(ctx, &emptypb.Empty{})
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "ListPeers call failed").Error(), http.StatusInternalServerError)
 		return

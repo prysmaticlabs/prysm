@@ -94,7 +94,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey, isSlashingProtection
 
 	validator := &validator{
 		db:                             valDB,
-		keyManager:                     newMockKeymanager(t, keypair{pub: pubKey, pri: validatorKey}),
+		km:                             newMockKeymanager(t, keypair{pub: pubKey, pri: validatorKey}),
 		validatorClient:                m.validatorClient,
 		graffiti:                       []byte{},
 		submittedAtts:                  make(map[submittedAttKey]*submittedAtt),
@@ -866,7 +866,7 @@ func TestSignBlock(t *testing.T) {
 
 			kp := testKeyFromBytes(t, []byte{1})
 
-			validator.keyManager = newMockKeymanager(t, kp)
+			validator.km = newMockKeymanager(t, kp)
 			b, err := blocks.NewBeaconBlock(blk.Block)
 			require.NoError(t, err)
 			sig, blockRoot, err := validator.signBlock(ctx, kp.pub, 0, 0, b)
@@ -902,7 +902,7 @@ func TestSignAltairBlock(t *testing.T) {
 			blk := util.NewBeaconBlockAltair()
 			blk.Block.Slot = 1
 			blk.Block.ProposerIndex = 100
-			validator.keyManager = newMockKeymanager(t, kp)
+			validator.km = newMockKeymanager(t, kp)
 			wb, err := blocks.NewBeaconBlock(blk.Block)
 			require.NoError(t, err)
 			sig, blockRoot, err := validator.signBlock(ctx, kp.pub, 0, 0, wb)
@@ -935,7 +935,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 			blk.Block.ProposerIndex = 100
 
 			kp := randKeypair(t)
-			validator.keyManager = newMockKeymanager(t, kp)
+			validator.km = newMockKeymanager(t, kp)
 			wb, err := blocks.NewBeaconBlock(blk.Block)
 			require.NoError(t, err)
 			sig, blockRoot, err := validator.signBlock(ctx, kp.pub, 0, 0, wb)
