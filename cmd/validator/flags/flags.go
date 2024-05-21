@@ -142,7 +142,6 @@ var (
 		Value:   filepath.Join(filepath.Join(DefaultValidatorDir(), WalletDefaultDirName), api.AuthTokenFileName),
 		Aliases: []string{"validator-api-bearer-file"},
 	}
-
 	// WalletDirFlag defines the path to a wallet directory for Prysm accounts.
 	WalletDirFlag = &cli.StringFlag{
 		Name:  "wallet-dir",
@@ -184,7 +183,6 @@ var (
 		Name:  "mnemonic-language",
 		Usage: "Allows specifying mnemonic language. Supported languages are: english|chinese_traditional|chinese_simplified|czech|french|japanese|korean|italian|spanish.",
 	}
-
 	// ShowPrivateKeysFlag for accounts.
 	ShowPrivateKeysFlag = &cli.BoolFlag{
 		Name:  "show-private-keys",
@@ -265,7 +263,6 @@ var (
 		Name:  "keys-dir",
 		Usage: "Path to a directory where keystores to be imported are stored.",
 	}
-
 	// RemoteSignerCertPathFlag defines the path to a client.crt file for a wallet to connect to
 	// a secure signer via TLS and gRPC.
 	RemoteSignerCertPathFlag = &cli.StringFlag{
@@ -295,7 +292,6 @@ var (
 		Usage: "URL for consensys' web3signer software to use with the Prysm validator client.",
 		Value: "",
 	}
-
 	// Web3SignerPublicValidatorKeysFlag defines a comma-separated list of hex string public keys or external url for web3signer to use for validator signing.
 	// example with external url: --validators-external-signer-public-keys= https://web3signer.com/api/v1/eth2/publicKeys
 	// example with public key: --validators-external-signer-public-keys=0xa99a...e44c,0xb89b...4a0b
@@ -304,7 +300,6 @@ var (
 		Name:  "validators-external-signer-public-keys",
 		Usage: "Comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer.",
 	}
-
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
 	KeymanagerKindFlag = &cli.StringFlag{
 		Name:  "keymanager-kind",
@@ -349,7 +344,6 @@ var (
 		fee recipient and gas limit. File format found in docs`,
 		Value: "",
 	}
-
 	// SuggestedFeeRecipientFlag defines the address of the fee recipient.
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
 		Name: "suggested-fee-recipient",
@@ -359,7 +353,6 @@ var (
 		--` + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " flags.",
 		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
-
 	// EnableBuilderFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
 	EnableBuilderFlag = &cli.BoolFlag{
 		Name: "enable-builder",
@@ -369,21 +362,18 @@ var (
 		Value:   false,
 		Aliases: []string{"enable-validator-registration"},
 	}
-
 	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
 	BuilderGasLimitFlag = &cli.StringFlag{
 		Name:  "suggested-gas-limit",
 		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators.",
 		Value: fmt.Sprint(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
-
 	// ValidatorsRegistrationBatchSizeFlag sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.
 	ValidatorsRegistrationBatchSizeFlag = &cli.IntFlag{
 		Name:  "validators-registration-batch-size",
 		Usage: "Sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.",
 		Value: 0,
 	}
-
 	// EnableDistributed enables the usage of prysm validator client in a Distributed Validator Cluster.
 	EnableDistributed = &cli.BoolFlag{
 		Name:  "distributed",
