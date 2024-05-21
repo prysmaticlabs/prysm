@@ -24,6 +24,7 @@ type Bid interface {
 	Header() (interfaces.ExecutionData, error)
 	BlobKzgCommitments() ([][]byte, error)
 	Value() []byte
+	WeiValue() primitives.Wei
 	Pubkey() []byte
 	Version() int
 	IsNil() bool
@@ -130,6 +131,11 @@ func (b builderBid) Value() []byte {
 	return b.p.Value
 }
 
+// WeiValue --
+func (b builderBid) WeiValue() primitives.Wei {
+	return primitives.LittleEndianBytesToWei(b.p.Value)
+}
+
 // Pubkey --
 func (b builderBid) Pubkey() []byte {
 	return b.p.Pubkey
@@ -166,7 +172,7 @@ func WrappedBuilderBidCapella(p *ethpb.BuilderBidCapella) (Bid, error) {
 // Header returns the execution data interface.
 func (b builderBidCapella) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, primitives.BigEndianBytesToWei(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, primitives.LittleEndianBytesToWei(b.p.Value))
 }
 
 // BlobKzgCommitments --
@@ -182,6 +188,11 @@ func (b builderBidCapella) Version() int {
 // Value --
 func (b builderBidCapella) Value() []byte {
 	return b.p.Value
+}
+
+// WeiValue --
+func (b builderBidCapella) WeiValue() primitives.Wei {
+	return primitives.LittleEndianBytesToWei(b.p.Value)
 }
 
 // Pubkey --
@@ -227,6 +238,11 @@ func (b builderBidDeneb) Value() []byte {
 	return b.p.Value
 }
 
+// WeiValue --
+func (b builderBidDeneb) WeiValue() primitives.Wei {
+	return primitives.LittleEndianBytesToWei(b.p.Value)
+}
+
 // Pubkey --
 func (b builderBidDeneb) Pubkey() []byte {
 	return b.p.Pubkey
@@ -250,7 +266,7 @@ func (b builderBidDeneb) HashTreeRootWith(hh *ssz.Hasher) error {
 // Header --
 func (b builderBidDeneb) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return blocks.WrappedExecutionPayloadHeaderDeneb(b.p.Header, primitives.BigEndianBytesToWei(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderDeneb(b.p.Header, primitives.LittleEndianBytesToWei(b.p.Value))
 }
 
 // BlobKzgCommitments --

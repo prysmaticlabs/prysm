@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -51,7 +52,7 @@ var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, local *blocks.GetPayloadResponse, builderPayload interfaces.ExecutionData, builderKzgCommitments [][]byte, builderBoostFactor primitives.Gwei) error {
+func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, local *blocks.GetPayloadResponse, bid builder.Bid, builderBoostFactor primitives.Gwei) error {
 	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
 	defer span.End()
 
@@ -65,22 +66,25 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 	}
 
 	// Use local payload if builder payload is nil.
-	if builderPayload == nil {
+	if bid == nil {
 		return setLocalExecution(blk, local)
+	}
+
+	var builderKzgCommitments [][]byte
+	builderPayload, err := bid.Header()
+	if err != nil {
+		log.WithError(err).Warn("Proposer: failed to retrieve header from BuilderBid")
+		return setLocalExecution(blk, local)
+	}
+	if bid.Version() >= version.Deneb {
+		builderKzgCommitments, err = bid.BlobKzgCommitments()
+		if err != nil {
+			log.WithError(err).Warn("Proposer: failed to retrieve kzg commitments from BuilderBid")
+		}
 	}
 
 	switch {
 	case blk.Version() >= version.Capella:
-		// Compare payload values between local and builder. Default to the local value if it is higher.
-		localValueGwei := primitives.WeiToGwei(local.Bid)
-		// TODO: plumb builder gwei value through the bid instead of getting from ExecutionData.
-		buildValueUint, err := builderPayload.ValueInGwei()
-		if err != nil {
-			log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-			return setLocalExecution(blk, local)
-		}
-		builderValueGwei := primitives.Gwei(buildValueUint)
-
 		withdrawalsMatched, err := matchingWithdrawalsRoot(local.ExecutionData, builderPayload)
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -88,6 +92,9 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 			return setLocalExecution(blk, local)
 		}
 
+		// Compare payload values between local and builder. Default to the local value if it is higher.
+		localValueGwei := primitives.WeiToGwei(local.Bid)
+		builderValueGwei := primitives.WeiToGwei(bid.WeiValue())
 		// Use builder payload if the following in true:
 		// builder_bid_value * builderBoostFactor(default 100) > local_block_value * (local-block-value-boost + 100)
 		boost := primitives.Gwei(params.BeaconConfig().LocalBlockValueBoost)
@@ -192,8 +199,8 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, errors.New("builder returned nil bid")
 	}
 
-	v := bytesutil.LittleEndianBytesToBigInt(bid.Value())
-	if v.String() == "0" {
+	v := bid.WeiValue()
+	if big.NewInt(0).Cmp(v) == 0 {
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
 
@@ -255,7 +262,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	l.Info("Received header with bid")
 
 	span.AddAttributes(
-		trace.StringAttribute("value", v.String()),
+		trace.StringAttribute("value", primitives.WeiToBigInt(v).String()),
 		trace.StringAttribute("builderPubKey", fmt.Sprintf("%#x", bid.Pubkey())),
 		trace.StringAttribute("blockHash", fmt.Sprintf("%#x", header.BlockHash())),
 	)

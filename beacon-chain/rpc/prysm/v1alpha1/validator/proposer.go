@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	builderapi "github.com/prysmaticlabs/prysm/v5/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
@@ -239,32 +240,19 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		}
 
 		// There's no reason to try to get a builder bid if local override is true.
-		var builderPayload interfaces.ExecutionData
-		var builderKzgCommitments [][]byte
+		var builderBid builderapi.Bid
 		if local.OverrideBuilder || skipMevBoost {
-			builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
+			builderBid, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
 			if err != nil {
 				builderGetPayloadMissCount.Inc()
 				log.WithError(err).Error("Could not get builder payload")
-			}
-			// getBuidlerPayloadAndBlobs can return `nil, nil` for the condition where no builder is configured...
-			if builderBid != nil {
-				builderPayload, err = builderBid.Header()
-				if err != nil {
-					builderGetPayloadMissCount.Inc()
-					log.WithError(err).Error("Could not get builder payload")
-				}
-				if builderBid.Version() > version.Deneb {
-					builderKzgCommitments, err = builderBid.BlobKzgCommitments()
-					if err != nil {
-						builderGetPayloadMissCount.Inc()
-						log.WithError(err).Error("deneb payload does not have commitments")
-					}
-				}
+			} else if builderBid == nil {
+				builderGetPayloadMissCount.Inc()
+				log.WithError(err).Error("Could not get builder payload")
 			}
 		}
 
-		if err := setExecutionData(ctx, sBlk, local, builderPayload, builderKzgCommitments, builderBoostFactor); err != nil {
+		if err := setExecutionData(ctx, sBlk, local, builderBid, builderBoostFactor); err != nil {
 			return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 		}
 	}

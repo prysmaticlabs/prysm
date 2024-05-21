@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
@@ -200,7 +201,7 @@ func TestClient_GetHeader(t *testing.T) {
 		require.Equal(t, uint64(1), bidHeader.GasUsed())
 		value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
 		require.NoError(t, err)
-		require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", bid.Value()))
+		require.Equal(t, fmt.Sprintf("%#x", value.Bytes()), fmt.Sprintf("%#x", primitives.WeiToBigInt(bid.WeiValue()).Bytes()))
 		bidValue := bytesutil.ReverseByteOrder(bid.Value())
 		require.DeepEqual(t, bidValue, value.Bytes())
 		require.DeepEqual(t, big.NewInt(0).SetBytes(bidValue), value.Int)

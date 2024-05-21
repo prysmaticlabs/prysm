@@ -103,11 +103,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		var builderKzgCommitments [][]byte
-		var builderPayload interfaces.ExecutionData
 		require.IsNil(t, builderBid)
-		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderBid, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block
@@ -167,14 +164,14 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		builderPayload, err := builderBid.Header()
+		_, err = builderBid.Header()
 		require.NoError(t, err)
 		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
 		if builderBid.Version() >= version.Deneb {
 			require.NoError(t, err)
 		}
 		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderBid, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block because incorrect withdrawals
@@ -237,14 +234,14 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		builderPayload, err := builderBid.Header()
+		_, err = builderBid.Header()
 		require.NoError(t, err)
 		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
 		if builderBid.Version() >= version.Deneb {
 			require.NoError(t, err)
 		}
 		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderBid, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(2), e.BlockNumber()) // Builder block
@@ -306,14 +303,14 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		builderPayload, err := builderBid.Header()
+		_, err = builderBid.Header()
 		require.NoError(t, err)
 		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
 		if builderBid.Version() >= version.Deneb {
 			require.NoError(t, err)
 		}
 		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, math.MaxUint64))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderBid, math.MaxUint64))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(2), e.BlockNumber()) // builder block
@@ -375,14 +372,14 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		builderPayload, err := builderBid.Header()
+		_, err = builderBid.Header()
 		require.NoError(t, err)
 		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
 		if builderBid.Version() >= version.Deneb {
 			require.NoError(t, err)
 		}
 		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, 0))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderBid, 0))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // local block
@@ -399,14 +396,14 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		builderPayload, err := builderBid.Header()
+		_, err = builderBid.Header()
 		require.NoError(t, err)
 		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
 		if builderBid.Version() >= version.Deneb {
 			require.NoError(t, err)
 		}
 		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderBid, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -434,10 +431,10 @@ func TestServer_setExecutionData(t *testing.T) {
 		if builderBid.Version() >= version.Deneb {
 			require.NoError(t, err)
 		}
-		builderPayload, err := builderBid.Header()
+		_, err = builderBid.Header()
 		require.NoError(t, err)
 		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderBid, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -461,7 +458,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.ErrorIs(t, consensus_types.ErrNilObjectWrapped, err) // Builder returns fault. Use local block
 		require.IsNil(t, builderBid)
-		require.NoError(t, setExecutionData(context.Background(), blk, res, nil, nil, defaultBuilderBoostFactor))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, nil, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(4), e.BlockNumber()) // Local block
@@ -577,15 +574,13 @@ func TestServer_setExecutionData(t *testing.T) {
 		builderPayload, err := builderBid.Header()
 		require.NoError(t, err)
 		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
-		if builderBid.Version() >= version.Deneb {
-			require.NoError(t, err)
-		}
+		require.NoError(t, err)
 		require.DeepEqual(t, bid.BlobKzgCommitments, builderKzgCommitments)
 		require.Equal(t, bid.Header.BlockNumber, builderPayload.BlockNumber()) // header should be the same from block
 
 		res, err := vs.getLocalPayload(ctx, blk.Block(), denebTransitionState)
 		require.NoError(t, err)
-		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderBid, defaultBuilderBoostFactor))
 
 		got, err := blk.Block().Body().BlobKzgCommitments()
 		require.NoError(t, err)

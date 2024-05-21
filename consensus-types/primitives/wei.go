@@ -71,11 +71,11 @@ func Uint64ToWei(v uint64) Wei {
 	return big.NewInt(0).SetUint64(v)
 }
 
-// BigEndianBytesToWei returns a Wei value given a big-endian binary representation (eg engine api payload bids).
-func BigEndianBytesToWei(value []byte) Wei {
+// LittleEndianBytesToWei returns a Wei value given a little-endian binary representation.
+func LittleEndianBytesToWei(value []byte) Wei {
 	v := make([]byte, len(value))
 	copy(v, value)
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
+	// SetBytes expects a big-endian representation of the value, so we reverse the byte slice.
 	slices.Reverse(v)
 	return big.NewInt(0).SetBytes(v)
 }

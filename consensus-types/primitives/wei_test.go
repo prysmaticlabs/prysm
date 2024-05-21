@@ -39,3 +39,8 @@ func TestWeiToGwei_CopyOk(t *testing.T) {
 	require.Equal(t, primitives.Gwei(1), got)
 	require.Equal(t, big.NewInt(1e9).Uint64(), v.Uint64())
 }
+
+func TestZero(t *testing.T) {
+	z := primitives.ZeroWei
+	require.Equal(t, 0, big.NewInt(0).Cmp(z))
+}
