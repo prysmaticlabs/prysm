@@ -14,7 +14,8 @@ type GetPayloadResponse struct {
 	ExecutionData   interfaces.ExecutionData
 	BlobsBundle     *enginev1.BlobsBundle
 	OverrideBuilder bool
-	Bid             primitives.Wei
+	// todo: should we convert this to Gwei up front?
+	Bid primitives.Wei
 }
 
 // bundleGetter is an interface satisfied by get payload responses that have a blobs bundle.

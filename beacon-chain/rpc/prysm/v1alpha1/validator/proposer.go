@@ -40,7 +40,7 @@ var eth1DataNotification bool
 
 const (
 	eth1dataTimeout           = 2 * time.Second
-	defaultBuilderBoostFactor = uint64(100)
+	defaultBuilderBoostFactor = primitives.Gwei(100)
 )
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
@@ -93,7 +93,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 
 	builderBoostFactor := defaultBuilderBoostFactor
 	if req.BuilderBoostFactor != nil {
-		builderBoostFactor = req.BuilderBoostFactor.Value
+		builderBoostFactor = primitives.Gwei(req.BuilderBoostFactor.Value)
 	}
 
 	if err = vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost, builderBoostFactor); err != nil {
@@ -184,7 +184,7 @@ func (vs *Server) getParentState(ctx context.Context, slot primitives.Slot) (sta
 	return head, parentRoot, err
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor uint64) error {
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor primitives.Gwei) error {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -231,25 +231,42 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	localPayload, overrideBuilder, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
-	}
-
-	// There's no reason to try to get a builder bid if local override is true.
-	var builderPayload interfaces.ExecutionData
-	var builderKzgCommitments [][]byte
-	overrideBuilder = overrideBuilder || skipMevBoost // Skip using mev-boost if requested by the caller.
-	if !overrideBuilder {
-		builderPayload, builderKzgCommitments, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
+	blockEpoch := slots.ToEpoch(sBlk.Block().Slot())
+	if blockEpoch >= params.BeaconConfig().BellatrixForkEpoch {
+		local, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
 		if err != nil {
-			builderGetPayloadMissCount.Inc()
-			log.WithError(err).Error("Could not get builder payload")
+			return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 		}
-	}
 
-	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload, builderKzgCommitments, builderBoostFactor); err != nil {
-		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
+		// There's no reason to try to get a builder bid if local override is true.
+		var builderPayload interfaces.ExecutionData
+		var builderKzgCommitments [][]byte
+		if local.OverrideBuilder || skipMevBoost {
+			builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
+			if err != nil {
+				builderGetPayloadMissCount.Inc()
+				log.WithError(err).Error("Could not get builder payload")
+			}
+			// getBuidlerPayloadAndBlobs can return `nil, nil` for the condition where no builder is configured...
+			if builderBid != nil {
+				builderPayload, err = builderBid.Header()
+				if err != nil {
+					builderGetPayloadMissCount.Inc()
+					log.WithError(err).Error("Could not get builder payload")
+				}
+				if builderBid.Version() > version.Deneb {
+					builderKzgCommitments, err = builderBid.BlobKzgCommitments()
+					if err != nil {
+						builderGetPayloadMissCount.Inc()
+						log.WithError(err).Error("deneb payload does not have commitments")
+					}
+				}
+			}
+		}
+
+		if err := setExecutionData(ctx, sBlk, local, builderPayload, builderKzgCommitments, builderBoostFactor); err != nil {
+			return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
+		}
 	}
 
 	wg.Wait() // Wait until block is built via consensus and execution fields.

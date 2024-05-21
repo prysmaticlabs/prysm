@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -98,12 +99,15 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
+		var builderKzgCommitments [][]byte
+		var builderPayload interfaces.ExecutionData
+		require.IsNil(t, builderBid)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block
@@ -159,12 +163,18 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.HeadFetcher = chain
 		b := blk.Block()
 
-		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		builderPayload, err := builderBid.Header()
+		require.NoError(t, err)
+		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
+		if builderBid.Version() >= version.Deneb {
+			require.NoError(t, err)
+		}
+		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block because incorrect withdrawals
@@ -223,12 +233,18 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.HeadFetcher = chain
 
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		builderPayload, err := builderBid.Header()
+		require.NoError(t, err)
+		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
+		if builderBid.Version() >= version.Deneb {
+			require.NoError(t, err)
+		}
+		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(2), e.BlockNumber()) // Builder block
@@ -286,12 +302,18 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.HeadFetcher = chain
 
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, math.MaxUint64))
+		builderPayload, err := builderBid.Header()
+		require.NoError(t, err)
+		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
+		if builderBid.Version() >= version.Deneb {
+			require.NoError(t, err)
+		}
+		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, math.MaxUint64))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(2), e.BlockNumber()) // builder block
@@ -349,12 +371,18 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.HeadFetcher = chain
 
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, 0))
+		builderPayload, err := builderBid.Header()
+		require.NoError(t, err)
+		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
+		if builderBid.Version() >= version.Deneb {
+			require.NoError(t, err)
+		}
+		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, 0))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // local block
@@ -367,12 +395,18 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed, Bid: elBid}}
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		builderPayload, err := builderBid.Header()
+		require.NoError(t, err)
+		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
+		if builderBid.Version() >= version.Deneb {
+			require.NoError(t, err)
+		}
+		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -392,12 +426,18 @@ func TestServer_setExecutionData(t *testing.T) {
 
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed, Bid: elBid}}
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
+		if builderBid.Version() >= version.Deneb {
+			require.NoError(t, err)
+		}
+		builderPayload, err := builderBid.Header()
+		require.NoError(t, err)
+		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -416,12 +456,12 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed}}
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.ErrorIs(t, consensus_types.ErrNilObjectWrapped, err) // Builder returns fault. Use local block
-		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		require.IsNil(t, builderBid)
+		require.NoError(t, setExecutionData(context.Background(), blk, res, nil, nil, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(4), e.BlockNumber()) // Local block
@@ -454,11 +494,10 @@ func TestServer_setExecutionData(t *testing.T) {
 			},
 		}
 		blk.SetSlot(primitives.Slot(params.BeaconConfig().DenebForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
-		localPayload, _, err := vs.getLocalPayload(ctx, blk.Block(), capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, blk.Block(), capellaTransitionState)
 		require.NoError(t, err)
-		require.Equal(t, uint64(4), localPayload.BlockNumber())
-		cachedBundle := bundleCache.get(blk.Block().Slot())
-		require.DeepEqual(t, cachedBundle, blobsBundle)
+		require.Equal(t, uint64(4), res.ExecutionData.BlockNumber())
+		require.DeepEqual(t, res.BlobsBundle, blobsBundle)
 	})
 	t.Run("Can get builder payload and blobs in Deneb", func(t *testing.T) {
 		cfg := params.BeaconConfig().Copy()
@@ -533,14 +572,20 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		blk.SetSlot(primitives.Slot(params.BeaconConfig().DenebForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
-		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, blk.Block().Slot(), blk.Block().ProposerIndex())
+		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, blk.Block().Slot(), blk.Block().ProposerIndex())
 		require.NoError(t, err)
+		builderPayload, err := builderBid.Header()
+		require.NoError(t, err)
+		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
+		if builderBid.Version() >= version.Deneb {
+			require.NoError(t, err)
+		}
 		require.DeepEqual(t, bid.BlobKzgCommitments, builderKzgCommitments)
 		require.Equal(t, bid.Header.BlockNumber, builderPayload.BlockNumber()) // header should be the same from block
 
-		localPayload, _, err := vs.getLocalPayload(ctx, blk.Block(), denebTransitionState)
+		res, err := vs.getLocalPayload(ctx, blk.Block(), denebTransitionState)
 		require.NoError(t, err)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
+		require.NoError(t, setExecutionData(context.Background(), blk, res, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 
 		got, err := blk.Block().Body().BlobKzgCommitments()
 		require.NoError(t, err)
@@ -763,10 +808,12 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			}}
 			hb, err := vs.HeadFetcher.HeadBlock(context.Background())
 			require.NoError(t, err)
-			h, _, err := vs.getPayloadHeaderFromBuilder(context.Background(), hb.Block().Slot(), 0)
+			bid, err := vs.getPayloadHeaderFromBuilder(context.Background(), hb.Block().Slot(), 0)
 			if tc.err != "" {
 				require.ErrorContains(t, tc.err, err)
 			} else {
+				require.NoError(t, err)
+				h, err := bid.Header()
 				require.NoError(t, err)
 				if tc.returnedHeader != nil {
 					want, err := blocks.WrappedExecutionPayloadHeader(tc.returnedHeader)
