@@ -356,14 +356,14 @@ func Test_BeaconBlockBody_ProposerSlashings(t *testing.T) {
 }
 
 func Test_BeaconBlockBody_AttesterSlashings(t *testing.T) {
-	as := make([]ethpb.AttesterSlashing, 0)
+	as := make([]eth.AttSlashing, 0)
 	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
 	require.NoError(t, bb.SetAttesterSlashings(as))
 	assert.DeepSSZEqual(t, as, bb.Block().Body().AttesterSlashings())
 }
 
 func Test_BeaconBlockBody_Attestations(t *testing.T) {
-	a := make([]ethpb.Att, 0)
+	a := make([]eth.Att, 0)
 	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
 	require.NoError(t, bb.SetAttestations(a))
 	assert.DeepSSZEqual(t, a, bb.Block().Body().Attestations())
