@@ -7,21 +7,22 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -176,7 +177,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		tracing.AnnotateError(span, wrappedErr)
 		return pubsub.ValidationIgnore, wrappedErr
 	}
-	attSigSet, err := blocks.AttestationSignatureBatch(ctx, bs, []*ethpb.Attestation{signed.Message.Aggregate})
+	attSigSet, err := blocks.AttestationSignatureBatch(ctx, bs, []interfaces.Attestation{signed.Message.Aggregate})
 	if err != nil {
 		wrappedErr := errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex)
 		tracing.AnnotateError(span, wrappedErr)
@@ -225,7 +226,7 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch primitives.Epoch, aggregator
 //   - [REJECT] The aggregate attestation has participants -- that is, len(get_attesting_indices(state, aggregate.data, aggregate.aggregation_bits)) >= 1.
 //   - [REJECT] The aggregator's validator index is within the committee --
 //     i.e. `aggregate_and_proof.aggregator_index in get_beacon_committee(state, aggregate.data.slot, aggregate.data.index)`.
-func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex primitives.ValidatorIndex) (pubsub.ValidationResult, error) {
+func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a interfaces.Attestation, validatorIndex primitives.ValidatorIndex) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
@@ -239,7 +240,7 @@ func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnl
 		return result, err
 	}
 
-	if a.AggregationBits.Count() == 0 {
+	if a.GetAggregationBits().Count() == 0 {
 		return pubsub.ValidationReject, errors.New("no attesting indices")
 	}
 

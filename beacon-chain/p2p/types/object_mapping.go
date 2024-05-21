@@ -1,14 +1,14 @@
 package types
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
 )
 
 func init() {
@@ -59,6 +59,11 @@ func InitializeDataMaps() {
 				&ethpb.SignedBeaconBlockDeneb{Block: &ethpb.BeaconBlockDeneb{Body: &ethpb.BeaconBlockBodyDeneb{ExecutionPayload: &enginev1.ExecutionPayloadDeneb{}}}},
 			)
 		},
+		bytesutil.ToBytes4(params.BeaconConfig().ElectraForkVersion): func() (interfaces.ReadOnlySignedBeaconBlock, error) {
+			return blocks.NewSignedBeaconBlock(
+				&ethpb.SignedBeaconBlockElectra{Block: &ethpb.BeaconBlockElectra{Body: &ethpb.BeaconBlockBodyElectra{ExecutionPayload: &enginev1.ExecutionPayloadElectra{}}}},
+			)
+		},
 	}
 
 	// Reset our metadata map.
@@ -76,6 +81,9 @@ func InitializeDataMaps() {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() metadata.Metadata {
+			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().ElectraForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 	}

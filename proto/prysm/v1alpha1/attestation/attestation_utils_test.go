@@ -5,19 +5,20 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestAttestingIndices(t *testing.T) {
 	type args struct {
-		bf        bitfield.Bitfield
-		committee []primitives.ValidatorIndex
+		att        interfaces.Attestation
+		committees [][]primitives.ValidatorIndex
 	}
 	tests := []struct {
 		name string
@@ -28,31 +29,63 @@ func TestAttestingIndices(t *testing.T) {
 		{
 			name: "Full committee attested",
 			args: args{
-				bf:        bitfield.Bitlist{0b1111},
-				committee: []primitives.ValidatorIndex{0, 1, 2},
+				att:        &eth.Attestation{AggregationBits: bitfield.Bitlist{0b1111}},
+				committees: [][]primitives.ValidatorIndex{{0, 1, 2}},
 			},
 			want: []uint64{0, 1, 2},
 		},
 		{
 			name: "Partial committee attested",
 			args: args{
-				bf:        bitfield.Bitlist{0b1101},
-				committee: []primitives.ValidatorIndex{0, 1, 2},
+				att:        &eth.Attestation{AggregationBits: bitfield.Bitlist{0b1101}},
+				committees: [][]primitives.ValidatorIndex{{0, 1, 2}},
 			},
 			want: []uint64{0, 2},
 		},
 		{
 			name: "Invalid bit length",
 			args: args{
-				bf:        bitfield.Bitlist{0b11111},
-				committee: []primitives.ValidatorIndex{0, 1, 2},
+				att:        &eth.Attestation{AggregationBits: bitfield.Bitlist{0b11111}},
+				committees: [][]primitives.ValidatorIndex{{0, 1, 2}},
 			},
 			err: "bitfield length 4 is not equal to committee length 3",
+		},
+		{
+			name: "Electra - Full committee attested",
+			args: args{
+				att:        &eth.AttestationElectra{AggregationBits: bitfield.Bitlist{0b11111}},
+				committees: [][]primitives.ValidatorIndex{{0, 1}, {2, 3}},
+			},
+			want: []uint64{0, 1, 2, 3},
+		},
+		{
+			name: "Electra - Partial committee attested",
+			args: args{
+				att:        &eth.AttestationElectra{AggregationBits: bitfield.Bitlist{0b10110}},
+				committees: [][]primitives.ValidatorIndex{{0, 1}, {2, 3}},
+			},
+			want: []uint64{1, 2},
+		},
+		{
+			name: "Electra - Invalid bit length",
+			args: args{
+				att:        &eth.AttestationElectra{AggregationBits: bitfield.Bitlist{0b111111}},
+				committees: [][]primitives.ValidatorIndex{{0, 1}, {2, 3}},
+			},
+			err: "bitfield length 5 is not equal to committee length 4",
+		},
+		{
+			name: "Electra - No duplicates",
+			args: args{
+				att:        &eth.AttestationElectra{AggregationBits: bitfield.Bitlist{0b11111}},
+				committees: [][]primitives.ValidatorIndex{{0, 1}, {0, 1}},
+			},
+			want: []uint64{0, 1},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := attestation.AttestingIndices(tt.args.bf, tt.args.committee)
+			got, err := attestation.AttestingIndices(tt.args.att, tt.args.committees...)
 			if tt.err == "" {
 				require.NoError(t, err)
 				assert.DeepEqual(t, tt.want, got)
@@ -66,7 +99,7 @@ func TestAttestingIndices(t *testing.T) {
 func TestIsValidAttestationIndices(t *testing.T) {
 	tests := []struct {
 		name      string
-		att       *eth.IndexedAttestation
+		att       eth.IndexedAtt
 		wantedErr string
 	}{
 		{
@@ -142,6 +175,17 @@ func TestIsValidAttestationIndices(t *testing.T) {
 				Signature: make([]byte, fieldparams.BLSSignatureLength),
 			},
 		},
+		{
+			name: "Electra - Greater than max validators per slot",
+			att: &eth.IndexedAttestationElectra{
+				AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee*params.BeaconConfig().MaxCommitteesPerSlot+1),
+				Data: &eth.AttestationData{
+					Target: &eth.Checkpoint{},
+				},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
+			},
+			wantedErr: "indices count exceeds",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -161,7 +205,7 @@ func BenchmarkAttestingIndices_PartialCommittee(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := attestation.AttestingIndices(bf, committee)
+		_, err := attestation.AttestingIndices(&eth.Attestation{AggregationBits: bf}, committee)
 		require.NoError(b, err)
 	}
 }

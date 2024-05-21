@@ -1,10 +1,10 @@
 package historycmd
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/runtime/tos"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/runtime/tos"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -22,9 +22,9 @@ var Commands = &cli.Command{
 				cmd.DataDirFlag,
 				flags.SlashingProtectionExportDirFlag,
 				features.Mainnet,
-				features.PraterTestnet,
 				features.SepoliaTestnet,
 				features.HoleskyTestnet,
+				features.EnableMinimalSlashingProtection,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -50,9 +50,9 @@ var Commands = &cli.Command{
 				cmd.DataDirFlag,
 				flags.SlashingProtectionJSONFileFlag,
 				features.Mainnet,
-				features.PraterTestnet,
 				features.SepoliaTestnet,
 				features.HoleskyTestnet,
+				features.EnableMinimalSlashingProtection,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {

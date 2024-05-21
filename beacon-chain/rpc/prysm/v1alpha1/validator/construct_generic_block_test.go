@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestConstructGenericBeaconBlock(t *testing.T) {
@@ -19,6 +19,31 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 	t.Run("NilBlock", func(t *testing.T) {
 		_, err := vs.constructGenericBeaconBlock(nil, nil)
 		require.ErrorContains(t, "block cannot be nil", err)
+	})
+
+	// Test for Electra version
+	t.Run("electra block", func(t *testing.T) {
+		eb := util.NewBeaconBlockElectra()
+		eb.Block.Body.Consolidations = []*eth.SignedConsolidation{
+			{
+				Signature: make([]byte, 96),
+				Message: &eth.Consolidation{
+					SourceIndex: 1,
+					TargetIndex: 2,
+					Epoch:       3,
+				},
+			},
+		}
+		b, err := blocks.NewSignedBeaconBlock(eb)
+		require.NoError(t, err)
+		r1, err := eb.Block.HashTreeRoot()
+		require.NoError(t, err)
+		result, err := vs.constructGenericBeaconBlock(b, nil)
+		require.NoError(t, err)
+		r2, err := result.GetElectra().Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.Equal(t, r1, r2)
+		require.Equal(t, result.IsBlinded, false)
 	})
 
 	// Test for Deneb version

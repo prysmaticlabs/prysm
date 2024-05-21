@@ -7,15 +7,15 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -123,10 +123,10 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 	return nil
 }
 
-// BlobsByRangeMinStartSlot returns the lowest slot that we should expect peers to respect as the
+// BlobRPCMinValidSlot returns the lowest slot that we should expect peers to respect as the
 // start slot in a BlobSidecarsByRange request. This can be used to validate incoming requests and
 // to avoid pestering peers with requests for blobs that are outside the retention window.
-func BlobsByRangeMinStartSlot(current primitives.Slot) (primitives.Slot, error) {
+func BlobRPCMinValidSlot(current primitives.Slot) (primitives.Slot, error) {
 	// Avoid overflow if we're running on a config where deneb is set to far future epoch.
 	if params.BeaconConfig().DenebForkEpoch == math.MaxUint64 {
 		return primitives.Slot(math.MaxUint64), nil
@@ -176,9 +176,9 @@ func validateBlobsByRange(r *pb.BlobSidecarsByRangeRequest, current primitives.S
 	// [max(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
 	// where current_epoch is defined by the current wall-clock time,
 	// and clients MUST support serving requests of blobs on this range.
-	minStartSlot, err := BlobsByRangeMinStartSlot(current)
+	minStartSlot, err := BlobRPCMinValidSlot(current)
 	if err != nil {
-		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "BlobsByRangeMinStartSlot error")
+		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "BlobRPCMinValidSlot error")
 	}
 	if rp.start > maxStart {
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "start > maxStart")

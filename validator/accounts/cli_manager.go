@@ -8,16 +8,16 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	beaconApi "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
-	iface "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
-	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
+	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
+	beaconApi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
+	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	nodeClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/node-client-factory"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v5/validator/helpers"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/derived"
 	"google.golang.org/grpc"
 )
 
@@ -41,7 +41,6 @@ type CLIManager struct {
 	wallet               *wallet.Wallet
 	keymanager           keymanager.IKeymanager
 	keymanagerKind       keymanager.Kind
-	showDepositData      bool
 	showPrivateKeys      bool
 	listValidatorIndices bool
 	deletePublicKeys     bool
@@ -88,10 +87,7 @@ func (acm *CLIManager) prepareBeaconClients(ctx context.Context) (*iface.Validat
 		acm.beaconApiTimeout,
 	)
 
-	restHandler := &beaconApi.BeaconApiJsonRestHandler{
-		HttpClient: http.Client{Timeout: acm.beaconApiTimeout},
-		Host:       acm.beaconApiEndpoint,
-	}
+	restHandler := beaconApi.NewBeaconApiJsonRestHandler(http.Client{Timeout: acm.beaconApiTimeout}, acm.beaconApiEndpoint)
 	validatorClient := validatorClientFactory.NewValidatorClient(conn, restHandler)
 	nodeClient := nodeClientFactory.NewNodeClient(conn, restHandler)
 

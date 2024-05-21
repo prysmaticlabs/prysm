@@ -4,12 +4,12 @@ import (
 	"reflect"
 	"testing"
 
-	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -271,22 +271,22 @@ func Test_logSlashingEvent(t *testing.T) {
 		{
 			name: "Surrounding vote",
 			slashing: &ethpb.AttesterSlashing{
-				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
+				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
 			},
 		},
 		{
 			name: "Surrounded vote",
 			slashing: &ethpb.AttesterSlashing{
-				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
+				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
 			},
 		},
 		{
 			name: "Double vote",
 			slashing: &ethpb.AttesterSlashing{
-				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
+				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
 			},
 		},
 	}

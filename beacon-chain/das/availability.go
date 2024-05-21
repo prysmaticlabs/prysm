@@ -5,14 +5,14 @@ import (
 	"fmt"
 
 	errors "github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/runtime/logging"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -94,6 +94,15 @@ func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current pri
 	entry := s.cache.ensure(key)
 	defer s.cache.delete(key)
 	root := b.Root()
+	sumz, err := s.store.WaitForSummarizer(ctx)
+	if err != nil {
+		log.WithField("root", fmt.Sprintf("%#x", b.Root())).
+			WithError(err).
+			Debug("Failed to receive BlobStorageSummarizer within IsDataAvailable")
+	} else {
+		entry.setDiskSummary(sumz.Summary(root))
+	}
+
 	// Verify we have all the expected sidecars, and fail fast if any are missing or inconsistent.
 	// We don't try to salvage problematic batches because this indicates a misbehaving peer and we'd rather
 	// ignore their response and decrease their peer score.

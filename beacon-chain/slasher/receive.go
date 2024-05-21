@@ -5,10 +5,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,7 +23,7 @@ const (
 // Receive indexed attestations from some source event feed,
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
-func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan *ethpb.IndexedAttestation) {
+func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan ethpb.IndexedAtt) {
 	defer s.wg.Done()
 
 	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(indexedAttsChan)
@@ -32,7 +34,7 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
-			dataRoot, err := att.Data.HashTreeRoot()
+			dataRoot, err := att.GetData().HashTreeRoot()
 			if err != nil {
 				log.WithError(err).Error("Could not get hash tree root of attestation")
 				continue
@@ -107,7 +109,7 @@ func (s *Service) processAttestations(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
 	currentSlot primitives.Slot,
-) []*ethpb.AttesterSlashing {
+) map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing {
 	// Get the current epoch from the current slot.
 	currentEpoch := slots.ToEpoch(currentSlot)
 
@@ -128,7 +130,7 @@ func (s *Service) processAttestations(
 	validAttestationsCount := len(validAttestations)
 	validInFutureAttestationsCount := len(validInFutureAttestations)
 
-	// Log useful infrormation
+	// Log useful information.
 	log.WithFields(logrus.Fields{
 		"currentSlot":     currentSlot,
 		"currentEpoch":    currentEpoch,
@@ -136,15 +138,9 @@ func (s *Service) processAttestations(
 		"numDeferredAtts": validInFutureAttestationsCount,
 		"numDroppedAtts":  numDropped,
 		"attsQueueSize":   queuedAttestationsCount,
-	}).Info("Processing queued attestations for slashing detection")
+	}).Info("Start processing queued attestations")
 
-	// Save the attestation records to our database.
-	// If multiple attestations are provided for the same validator index + target epoch combination,
-	// then the first (validator index + target epoch) => signing root) link is kept into the database.
-	if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(ctx, validAttestations); err != nil {
-		log.WithError(err).Error(couldNotSaveAttRecord)
-		return nil
-	}
+	start := time.Now()
 
 	// Check for attestatinos slashings (double, sourrounding, surrounded votes).
 	slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAttestations)
@@ -159,6 +155,13 @@ func (s *Service) processAttestations(
 	if err != nil {
 		log.WithError(err).Error(couldNotProcessAttesterSlashings)
 		return nil
+	}
+
+	end := time.Since(start)
+	log.WithField("elapsed", end).Info("Done processing queued attestations")
+
+	if len(slashings) > 0 {
+		log.WithField("numSlashings", len(slashings)).Warn("Slashable attestation offenses found")
 	}
 
 	return processedAttesterSlashings

@@ -5,7 +5,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -13,7 +14,7 @@ import (
 type MockBroadcaster struct {
 	BroadcastCalled       atomic.Bool
 	BroadcastMessages     []proto.Message
-	BroadcastAttestations []*ethpb.Attestation
+	BroadcastAttestations []interfaces.Attestation
 	msgLock               sync.Mutex
 	attLock               sync.Mutex
 }
@@ -28,7 +29,7 @@ func (m *MockBroadcaster) Broadcast(_ context.Context, msg proto.Message) error 
 }
 
 // BroadcastAttestation records a broadcast occurred.
-func (m *MockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, a *ethpb.Attestation) error {
+func (m *MockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, a interfaces.Attestation) error {
 	m.BroadcastCalled.Store(true)
 	m.attLock.Lock()
 	defer m.attLock.Unlock()

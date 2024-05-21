@@ -3,17 +3,11 @@ package features
 import (
 	"time"
 
-	backfill "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill/flags"
+	backfill "github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/sync/backfill/flags"
 	"github.com/urfave/cli/v2"
 )
 
 var (
-	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
-	PraterTestnet = &cli.BoolFlag{
-		Name:    "prater",
-		Usage:   "Runs Prysm configured for the Prater / Goerli test network.",
-		Aliases: []string{"goerli"},
-	}
 	// SepoliaTestnet flag for the multiclient Ethereum consensus testnet.
 	SepoliaTestnet = &cli.BoolFlag{
 		Name:  "sepolia",
@@ -41,6 +35,14 @@ var (
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Writes SSZ states to disk after attempted state transitio.",
+	}
+	saveInvalidBlockTempFlag = &cli.BoolFlag{
+		Name:  "save-invalid-block-temp",
+		Usage: "Writes invalid blocks to temp directory.",
+	}
+	saveInvalidBlobTempFlag = &cli.BoolFlag{
+		Name:  "save-invalid-blob-temp",
+		Usage: "Writes invalid blobs to temp directory.",
 	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
@@ -95,10 +97,14 @@ var (
 		Name:  "enable-slashing-protection-history-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protection database.",
 	}
+	EnableMinimalSlashingProtection = &cli.BoolFlag{
+		Name:  "enable-minimal-slashing-protection",
+		Usage: "(Experimental): Enables the minimal slashing protection. See EIP-3076 for more details.",
+	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
-		Usage: `Enables the validator to perform a doppelganger check.
-		This is not "a foolproof method to find duplicate instances in the network.
+		Usage: `Enables the validator to perform a doppelganger check. 
+		This is not a foolproof method to find duplicate instances in the network. 
 		Your validator will still be vulnerable if it is being run in unsafe configurations.`,
 	}
 	disableStakinContractCheck = &cli.BoolFlag{
@@ -137,10 +143,6 @@ var (
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders.",
 	}
-	DisableEIP4881 = &cli.BoolFlag{
-		Name:  "disable-eip-4881",
-		Usage: "Disables the deposit tree specified in EIP-4881.",
-	}
 	EnableLightClient = &cli.BoolFlag{
 		Name:  "enable-lightclient",
 		Usage: "Enables the light client support in the beacon node",
@@ -149,11 +151,25 @@ var (
 		Name:  "disable-resource-manager",
 		Usage: "Disables running the libp2p resource manager.",
 	}
-
 	// DisableRegistrationCache a flag for disabling the validator registration cache and use db instead.
 	DisableRegistrationCache = &cli.BoolFlag{
 		Name:  "disable-registration-cache",
 		Usage: "Temporary flag for disabling the validator registration cache instead of using the DB. Note: registrations do not clear on restart while using the DB.",
+	}
+	// BlobSaveFsync enforces durable filesystem writes for use cases where blob availability is critical.
+	BlobSaveFsync = &cli.BoolFlag{
+		Name:  "blob-save-fsync",
+		Usage: "Forces new blob files to be fysnc'd before continuing, ensuring durable blob writes.",
+	}
+	// EnableQUIC enables connection using the QUIC protocol for peers which support it.
+	EnableQUIC = &cli.BoolFlag{
+		Name:  "enable-quic",
+		Usage: "Enables connection using the QUIC protocol for peers which support it.",
+	}
+	// eip6110ValidatorCache is a flag for enabling the EIP-6110 validator cache.
+	eip6110ValidatorCache = &cli.BoolFlag{
+		Name:  "eip6110-validator-cache",
+		Usage: "Enables the EIP-6110 validator cache.",
 	}
 )
 
@@ -161,18 +177,19 @@ var (
 var devModeFlags = []cli.Flag{
 	enableExperimentalState,
 	backfill.EnableExperimentalBackfill,
+	EnableQUIC,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	HoleskyTestnet,
-	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
 	enableSlashingProtectionPruning,
+	EnableMinimalSlashingProtection,
 	enableDoppelGangerProtection,
 	EnableBeaconRESTApi,
 }...)
@@ -187,9 +204,10 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	devModeFlag,
 	enableExperimentalState,
 	writeSSZStateTransitionsFlag,
+	saveInvalidBlockTempFlag,
+	saveInvalidBlobTempFlag,
 	disableGRPCConnectionLogging,
 	HoleskyTestnet,
-	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
 	disablePeerScorer,
@@ -205,10 +223,12 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
-	DisableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
 	EnableLightClient,
+	BlobSaveFsync,
+	EnableQUIC,
+	eip6110ValidatorCache,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -219,7 +239,6 @@ var E2EBeaconChainFlags = []string{
 // NetworkFlags contains a list of network flags.
 var NetworkFlags = []cli.Flag{
 	Mainnet,
-	PraterTestnet,
 	SepoliaTestnet,
 	HoleskyTestnet,
 }

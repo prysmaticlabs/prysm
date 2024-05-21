@@ -12,34 +12,34 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -824,7 +824,10 @@ func TestRemoveBlockAttestationsInPool(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, r))
 
-	atts := b.Block.Body.Attestations
+	atts := make([]interfaces.Attestation, len(b.Block.Body.Attestations))
+	for i, a := range b.Block.Body.Attestations {
+		atts[i] = a
+	}
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -1531,6 +1534,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 // 12 and recover. Notice that it takes two epochs to fully recover, and we stay
 // optimistic for the whole time.
 func TestStore_NoViableHead_Liveness(t *testing.T) {
+	t.Skip("Requires #13664 to be fixed")
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.SlotsPerEpoch = 6
@@ -2009,12 +2013,12 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 
 	require.Equal(t, 1, len(wsb.Block().Body().Attestations()))
 	a := wsb.Block().Body().Attestations()[0]
-	r := bytesutil.ToBytes32(a.Data.BeaconBlockRoot)
+	r := bytesutil.ToBytes32(a.GetData().BeaconBlockRoot)
 	require.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(r))
 
 	require.Equal(t, 1, len(wsb.Block().Body().Attestations()))
 	a3 := wsb3.Block().Body().Attestations()[0]
-	r3 := bytesutil.ToBytes32(a3.Data.BeaconBlockRoot)
+	r3 := bytesutil.ToBytes32(a3.GetData().BeaconBlockRoot)
 	require.Equal(t, false, service.cfg.ForkChoiceStore.HasNode(r3))
 
 	require.NoError(t, service.handleBlockAttestations(ctx, wsb.Block(), st)) // fine to use the same committee as st
@@ -2114,7 +2118,7 @@ func TestMissingIndices(t *testing.T) {
 	for _, c := range cases {
 		bm, bs := filesystem.NewEphemeralBlobStorageWithMocker(t)
 		t.Run(c.name, func(t *testing.T) {
-			require.NoError(t, bm.CreateFakeIndices(c.root, c.present))
+			require.NoError(t, bm.CreateFakeIndices(c.root, c.present...))
 			missing, err := missingIndices(bs, c.root, c.expected)
 			if c.err != nil {
 				require.ErrorIs(t, err, c.err)

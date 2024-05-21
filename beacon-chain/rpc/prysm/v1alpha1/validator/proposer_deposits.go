@@ -6,11 +6,12 @@ import (
 	"math/big"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -18,10 +19,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
+func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []interfaces.Attestation, error) {
 	eg, egctx := errgroup.WithContext(ctx)
 	var deposits []*ethpb.Deposit
-	var atts []*ethpb.Attestation
+	var atts []interfaces.Attestation
 
 	eg.Go(func() error {
 		// Pack ETH1 deposits which have not been included in the beacon chain.
@@ -146,8 +147,8 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 
 	if shouldRebuildTrie(canonicalEth1Data.DepositCount, uint64(len(upToEth1DataDeposits))) {
 		log.WithFields(logrus.Fields{
-			"unfinalized deposits": len(upToEth1DataDeposits),
-			"total deposit count":  canonicalEth1Data.DepositCount,
+			"unfinalizedDeposits": len(upToEth1DataDeposits),
+			"totalDepositCount":   canonicalEth1Data.DepositCount,
 		}).Warn("Too many unfinalized deposits, building a deposit trie from scratch.")
 		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
 	}

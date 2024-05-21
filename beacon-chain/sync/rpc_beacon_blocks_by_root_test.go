@@ -13,29 +13,29 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	db "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	db "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
@@ -370,12 +370,16 @@ func TestRequestPendingBlobs(t *testing.T) {
 	t.Run("old block should not fail", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
-		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, "test"))
+		request, err := s.pendingBlobsRequestForBlock([32]byte{}, b)
+		require.NoError(t, err)
+		require.NoError(t, s.sendAndSaveBlobSidecars(context.Background(), request, "test", b))
 	})
 	t.Run("empty commitment block should not fail", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
-		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, "test"))
+		request, err := s.pendingBlobsRequestForBlock([32]byte{}, b)
+		require.NoError(t, err)
+		require.NoError(t, s.sendAndSaveBlobSidecars(context.Background(), request, "test", b))
 	})
 	t.Run("unsupported protocol", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
@@ -406,7 +410,9 @@ func TestRequestPendingBlobs(t *testing.T) {
 		b.Block.Body.BlobKzgCommitments = make([][]byte, 1)
 		b1, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		require.ErrorContains(t, "protocols not supported", s.requestPendingBlobs(context.Background(), b1, [32]byte{}, p2.PeerID()))
+		request, err := s.pendingBlobsRequestForBlock([32]byte{}, b1)
+		require.NoError(t, err)
+		require.ErrorContains(t, "protocols not supported", s.sendAndSaveBlobSidecars(context.Background(), request, p2.PeerID(), b1))
 	})
 }
 
@@ -414,12 +420,11 @@ func TestConstructPendingBlobsRequest(t *testing.T) {
 	d := db.SetupDB(t)
 	bs := filesystem.NewEphemeralBlobStorage(t)
 	s := &Service{cfg: &config{beaconDB: d, blobStorage: bs}}
-	ctx := context.Background()
 
 	// No unknown indices.
 	root := [32]byte{1}
 	count := 3
-	actual, err := s.constructPendingBlobsRequest(ctx, root, count)
+	actual, err := s.constructPendingBlobsRequest(root, count)
 	require.NoError(t, err)
 	require.Equal(t, 3, len(actual))
 	for i, id := range actual {
@@ -449,7 +454,7 @@ func TestConstructPendingBlobsRequest(t *testing.T) {
 	expected := []*eth.BlobIdentifier{
 		{Index: 1, BlockRoot: root[:]},
 	}
-	actual, err = s.constructPendingBlobsRequest(ctx, root, count)
+	actual, err = s.constructPendingBlobsRequest(root, count)
 	require.NoError(t, err)
 	require.Equal(t, expected[0].Index, actual[0].Index)
 	require.DeepEqual(t, expected[0].BlockRoot, actual[0].BlockRoot)

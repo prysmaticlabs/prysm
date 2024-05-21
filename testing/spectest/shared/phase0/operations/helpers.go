@@ -9,16 +9,17 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/google/go-cmp/cmp"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/d4l3k/messagediff.v1"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 type blockOperation func(context.Context, state.BeaconState, interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error)
@@ -72,8 +73,7 @@ func RunBlockOperationTest(
 		pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
-			diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)
-			t.Log(diff)
+			t.Log(cmp.Diff(postBeaconState, pbState, protocmp.Transform()))
 			t.Fatal("Post state does not match expected")
 		}
 	} else {

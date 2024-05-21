@@ -1,8 +1,8 @@
 package types
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // ChunkKind to differentiate what kind of span we are working
@@ -14,20 +14,32 @@ const (
 	MaxSpan
 )
 
+// String returns the string representation of the chunk kind.
+func (c ChunkKind) String() string {
+	switch c {
+	case MinSpan:
+		return "minspan"
+	case MaxSpan:
+		return "maxspan"
+	default:
+		return "unknown"
+	}
+}
+
 // IndexedAttestationWrapper contains an indexed attestation with its
 // data root to reduce duplicated computation.
 type IndexedAttestationWrapper struct {
-	IndexedAttestation *ethpb.IndexedAttestation
+	IndexedAttestation ethpb.IndexedAtt
 	DataRoot           [32]byte
 }
 
 // AttesterDoubleVote represents a double vote instance
 // which is a slashable event for attesters.
 type AttesterDoubleVote struct {
-	Target                 primitives.Epoch
-	ValidatorIndex         primitives.ValidatorIndex
-	PrevAttestationWrapper *IndexedAttestationWrapper
-	AttestationWrapper     *IndexedAttestationWrapper
+	Target         primitives.Epoch
+	ValidatorIndex primitives.ValidatorIndex
+	Wrapper_1      *IndexedAttestationWrapper
+	Wrapper_2      *IndexedAttestationWrapper
 }
 
 // DoubleBlockProposal containing an incoming and an existing proposal's signing root.

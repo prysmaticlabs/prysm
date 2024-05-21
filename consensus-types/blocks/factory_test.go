@@ -6,13 +6,14 @@ import (
 	"math/big"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func Test_NewSignedBeaconBlock(t *testing.T) {
@@ -535,5 +536,28 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		require.DeepEqual(t, payload, got.Proto())
 		require.DeepEqual(t, uint64(123), payload.ExcessBlobGas)
 		require.DeepEqual(t, uint64(321), payload.BlobGasUsed)
+	})
+}
+
+func TestElectraBlockBodyCast(t *testing.T) {
+	t.Run("deneb cast fails", func(t *testing.T) {
+		pb := &eth.BeaconBlockBodyDeneb{}
+		i, err := NewBeaconBlockBody(pb)
+		require.NoError(t, err)
+		b, ok := i.(*BeaconBlockBody)
+		require.Equal(t, true, ok)
+		assert.Equal(t, version.Deneb, b.version)
+		_, err = interfaces.AsROBlockBodyElectra(b)
+		require.ErrorIs(t, err, interfaces.ErrInvalidCast)
+	})
+	t.Run("electra cast succeeds", func(t *testing.T) {
+		pb := &eth.BeaconBlockBodyElectra{}
+		i, err := NewBeaconBlockBody(pb)
+		require.NoError(t, err)
+		b, ok := i.(*BeaconBlockBody)
+		require.Equal(t, true, ok)
+		assert.Equal(t, version.Electra, b.version)
+		_, err = interfaces.AsROBlockBodyElectra(b)
+		require.NoError(t, err)
 	})
 }

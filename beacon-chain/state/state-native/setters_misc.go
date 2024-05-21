@@ -2,14 +2,16 @@ package state_native
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -106,6 +108,18 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	return nil
 }
 
+// SaveValidatorIndices save validator indices of beacon chain to cache
+func (b *BeaconState) SaveValidatorIndices() {
+	if !features.Get().EIP6110ValidatorIndexCache {
+		return
+	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.saveValidatorIndices()
+}
+
 // AppendHistoricalRoots for the beacon state. Appends the new value
 // to the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
@@ -198,9 +212,14 @@ func (b *BeaconState) addDirtyIndices(index types.FieldIndex, indices []uint64) 
 		return
 	}
 	totalIndicesLen := len(b.dirtyIndices[index]) + len(indices)
+	// Reduce duplicates to verify that these are indeed unique.
+	if totalIndicesLen > indicesLimit {
+		b.dirtyIndices[index] = slice.SetUint64(b.dirtyIndices[index])
+		totalIndicesLen = len(b.dirtyIndices[index]) + len(indices)
+	}
 	if totalIndicesLen > indicesLimit {
 		b.rebuildTrie[index] = true
-		b.dirtyIndices[index] = []uint64{}
+		b.dirtyIndices[index] = make([]uint64, 0, indicesLimit)
 	} else {
 		b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
 	}

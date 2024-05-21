@@ -3,8 +3,8 @@
 package flags
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -29,6 +29,7 @@ var (
 		Name: "local-block-value-boost",
 		Usage: "A percentage boost for local block construction as a Uint64. This is used to prioritize local block construction over relay/builder block construction" +
 			"Boost is an additional percentage to multiple local block value. Use builder block if: builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)",
+		Value: 10,
 	}
 	// ExecutionEngineEndpoint provides an HTTP access endpoint to connect to an execution client on the execution layer
 	ExecutionEngineEndpoint = &cli.StringFlag{
@@ -142,12 +143,6 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
-	// SafeSlotsToImportOptimistically is deprecated. It should be removed in the next major release.
-	SafeSlotsToImportOptimistically = &cli.IntFlag{
-		Name:   "safe-slots-to-import-optimistically",
-		Usage:  "DEPRECATED. DO NOT USE",
-		Hidden: true,
-	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.
 	SlotsPerArchivedPoint = &cli.IntFlag{
@@ -158,7 +153,7 @@ var (
 	// BlockBatchLimit specifies the requested block batch size.
 	BlockBatchLimit = &cli.IntFlag{
 		Name:  "block-batch-limit",
-		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
+		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch. Maximum 128",
 		Value: 64,
 	}
 	// BlockBatchLimitBurstFactor specifies the factor by which block batch size may increase.

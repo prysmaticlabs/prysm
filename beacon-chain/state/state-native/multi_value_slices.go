@@ -5,11 +5,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	multi_value_slice "github.com/prysmaticlabs/prysm/v5/container/multi-value-slice"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 var (

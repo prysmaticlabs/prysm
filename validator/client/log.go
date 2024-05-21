@@ -6,9 +6,9 @@ import (
 	"sync/atomic"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -138,7 +138,9 @@ func (v *validator) LogSubmittedAtts(slot primitives.Slot) {
 
 // LogSubmittedSyncCommitteeMessages logs info about submitted sync committee messages.
 func (v *validator) LogSubmittedSyncCommitteeMessages() {
-	log.WithField("messages", v.syncCommitteeStats.totalMessagesSubmitted).Debug("Submitted sync committee messages successfully to beacon node")
-	// Reset the amount.
-	atomic.StoreUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 0)
+	if v.syncCommitteeStats.totalMessagesSubmitted > 0 {
+		log.WithField("messages", v.syncCommitteeStats.totalMessagesSubmitted).Debug("Submitted sync committee messages successfully to beacon node")
+		// Reset the amount.
+		atomic.StoreUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 0)
+	}
 }

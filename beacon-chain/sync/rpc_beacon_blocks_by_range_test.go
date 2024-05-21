@@ -12,28 +12,28 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	db2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	db "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	db2 "github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	db "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -440,9 +440,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			if !validateBlocks {
 				return
 			}
-			// Use a step of 1 to be inline with our specs.
-			req.Step = 1
-			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += primitives.Slot(req.Step) {
 				if !success {
 					continue
 				}
@@ -471,20 +469,21 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		p1.Connect(p2)
 		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
-		capacity := int64(flags.Get().BlockBatchLimit * 3)
 		clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
+		reqSize := params.MaxRequestBlock(slots.ToEpoch(clock.CurrentSlot()))
 		r := &Service{cfg: &config{p2p: p1, beaconDB: d, chain: &chainMock.ChainService{}, clock: clock}, availableBlocker: mockBlocker{avail: true}, rateLimiter: newRateLimiter(p1)}
 
 		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
 		topic := string(pcl)
-		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, capacity, time.Second, false)
+		defaultBlockBurstFactor := 2 // TODO: can we update the default value set in TestMain to match flags?
+		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, int64(flags.Get().BlockBatchLimit*defaultBlockBurstFactor), time.Second, false)
 		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
-			Step:      5,
-			Count:     uint64(capacity),
+			Count:     reqSize,
 		}
 		saveBlocks(req)
 
+		// This doesn't error because reqSize by default is 128, which is exactly the burst factor * batch limit
 		assert.NoError(t, sendRequest(p1, p2, r, req, true, true))
 
 		remainingCapacity := r.rateLimiter.limiterMap[topic].Remaining(p2.PeerID().String())
@@ -498,18 +497,17 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		p1.Connect(p2)
 		assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
-		capacity := int64(flags.Get().BlockBatchLimit * 3)
 		clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
+		reqSize := params.MaxRequestBlock(slots.ToEpoch(clock.CurrentSlot())) - 1
 		r := &Service{cfg: &config{p2p: p1, beaconDB: d, clock: clock, chain: &chainMock.ChainService{}}, availableBlocker: mockBlocker{avail: true}, rateLimiter: newRateLimiter(p1)}
 
 		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
 		topic := string(pcl)
-		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, capacity, time.Second, false)
+		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, int64(flags.Get().BlockBatchLimit), time.Second, false)
 
 		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
-			Step:      5,
-			Count:     uint64(capacity + 1),
+			Count:     reqSize,
 		}
 		saveBlocks(req)
 
@@ -538,7 +536,6 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 
 		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
-			Step:      1,
 			Count:     uint64(flags.Get().BlockBatchLimit),
 		}
 		saveBlocks(req)

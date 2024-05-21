@@ -9,20 +9,20 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
@@ -482,7 +482,10 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 func TestBlobValidatorFromRootReq(t *testing.T) {
 	rootA := bytesutil.PadTo([]byte("valid"), 32)
 	rootB := bytesutil.PadTo([]byte("invalid"), 32)
-	header := &ethpb.SignedBeaconBlockHeader{}
+	header := &ethpb.SignedBeaconBlockHeader{
+		Header:    &ethpb.BeaconBlockHeader{Slot: 0},
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
+	}
 	blobSidecarA0 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootA), header, 0, []byte{}, make([][]byte, 0))
 	blobSidecarA1 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootA), header, 1, []byte{}, make([][]byte, 0))
 	blobSidecarB0 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootB), header, 0, []byte{}, make([][]byte, 0))
@@ -590,7 +593,8 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			vf := blobValidatorFromRangeReq(c.req)
 			header := &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{Slot: c.responseSlot},
+				Header:    &ethpb.BeaconBlockHeader{Slot: c.responseSlot},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
 			}
 			sc := util.GenerateTestDenebBlobSidecar(t, [32]byte{}, header, 0, []byte{}, make([][]byte, 0))
 			err := vf(sc)

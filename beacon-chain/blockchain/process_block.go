@@ -6,31 +6,32 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // A custom slot deadline for processing state slots in our cache.
@@ -307,16 +308,16 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 	if err := helpers.UpdateProposerIndicesInCache(ctx, st, e); err != nil {
 		return errors.Wrap(err, "could not update proposer index cache")
 	}
-	go func() {
+	go func(ep primitives.Epoch) {
 		// Use a custom deadline here, since this method runs asynchronously.
 		// We ignore the parent method's context and instead create a new one
 		// with a custom deadline, therefore using the background context instead.
 		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 		defer cancel()
-		if err := helpers.UpdateCommitteeCache(slotCtx, st, e+1); err != nil {
+		if err := helpers.UpdateCommitteeCache(slotCtx, st, ep+1); err != nil {
 			log.WithError(err).Warn("Could not update committee cache")
 		}
-	}()
+	}(e)
 	// The latest block header is from the previous epoch
 	r, err := st.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
@@ -365,17 +366,17 @@ func (s *Service) handleEpochBoundary(ctx context.Context, slot primitives.Slot,
 func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) error {
 	// Feed in block's attestations to fork choice store.
 	for _, a := range blk.Body().Attestations() {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.Data.Slot, a.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.GetData().Slot, a.GetData().CommitteeIndex)
 		if err != nil {
 			return err
 		}
-		indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
+		indices, err := attestation.AttestingIndices(a, committee)
 		if err != nil {
 			return err
 		}
-		r := bytesutil.ToBytes32(a.Data.BeaconBlockRoot)
+		r := bytesutil.ToBytes32(a.GetData().BeaconBlockRoot)
 		if s.cfg.ForkChoiceStore.HasNode(r) {
-			s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, r, a.Data.Target.Epoch)
+			s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, r, a.GetData().Target.Epoch)
 		} else if err := s.cfg.AttPool.SaveBlockAttestation(a); err != nil {
 			return err
 		}
@@ -386,7 +387,7 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Re
 // InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
 // This function requires a write lock on forkchoice.
-func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
+func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []interfaces.AttesterSlashing) {
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
 		for _, index := range indices {
@@ -558,6 +559,20 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	// The gossip handler for blobs writes the index of each verified blob referencing the given
 	// root to the channel returned by blobNotifiers.forRoot.
 	nc := s.blobNotifiers.forRoot(root)
+
+	// Log for DA checks that cross over into the next slot; helpful for debugging.
+	nextSlot := slots.BeginsAt(signed.Block().Slot()+1, s.genesisTime)
+	// Avoid logging if DA check is called after next slot start.
+	if nextSlot.After(time.Now()) {
+		nst := time.AfterFunc(time.Until(nextSlot), func() {
+			if len(missing) == 0 {
+				return
+			}
+			log.WithFields(daCheckLogFields(root, signed.Block().Slot(), expected, len(missing))).
+				Error("Still waiting for DA check at slot end.")
+		})
+		defer nst.Stop()
+	}
 	for {
 		select {
 		case idx := <-nc:
@@ -571,8 +586,17 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			s.blobNotifiers.delete(root)
 			return nil
 		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), "context deadline waiting for blob sidecars")
+			return errors.Wrapf(ctx.Err(), "context deadline waiting for blob sidecars slot: %d, BlockRoot: %#x", block.Slot(), root)
 		}
+	}
+}
+
+func daCheckLogFields(root [32]byte, slot primitives.Slot, expected, missing int) logrus.Fields {
+	return logrus.Fields{
+		"slot":          slot,
+		"root":          fmt.Sprintf("%#x", root),
+		"blobsExpected": expected,
+		"blobsWaiting":  missing,
 	}
 }
 

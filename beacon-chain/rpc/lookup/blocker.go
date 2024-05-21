@@ -8,17 +8,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -223,7 +223,7 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64
 		return nil, &core.RpcError{Err: errors.Wrap(err, "failed to retrieve block from db"), Reason: core.Internal}
 	}
 	// if block is not in the retention window  return 200 w/ empty list
-	if !params.WithinDAPeriod(slots.ToEpoch(b.Block().Slot()), slots.ToEpoch(p.GenesisTimeFetcher.CurrentSlot())) {
+	if !p.BlobStorage.WithinRetentionPeriod(slots.ToEpoch(b.Block().Slot()), slots.ToEpoch(p.GenesisTimeFetcher.CurrentSlot())) {
 		return make([]*blocks.VerifiedROBlob, 0), nil
 	}
 	commitments, err := b.Block().Body().BlobKzgCommitments()
@@ -238,7 +238,7 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64
 		m, err := p.BlobStorage.Indices(bytesutil.ToBytes32(root))
 		if err != nil {
 			log.WithFields(log.Fields{
-				"block root": hexutil.Encode(root),
+				"blockRoot": hexutil.Encode(root),
 			}).Error(errors.Wrapf(err, "could not retrieve blob indices for root %#x", root))
 			return nil, &core.RpcError{Err: fmt.Errorf("could not retrieve blob indices for root %#x", root), Reason: core.Internal}
 		}
@@ -254,8 +254,8 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64
 		vblob, err := p.BlobStorage.Get(bytesutil.ToBytes32(root), index)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"block root": hexutil.Encode(root),
-				"blob index": index,
+				"blockRoot": hexutil.Encode(root),
+				"blobIndex": index,
 			}).Error(errors.Wrapf(err, "could not retrieve blob for block root %#x at index %d", root, index))
 			return nil, &core.RpcError{Err: fmt.Errorf("could not retrieve blob for block root %#x at index %d", root, index), Reason: core.Internal}
 		}

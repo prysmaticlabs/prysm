@@ -1,8 +1,32 @@
 package structs
 
+import "encoding/json"
+
+// MessageJsoner describes a signed consensus type wrapper that can return the `.Message` field in a json envelope
+// encoded as a []byte, for use as a json.RawMessage value when encoding the outer envelope.
+type MessageJsoner interface {
+	MessageRawJson() ([]byte, error)
+}
+
+// SignedMessageJsoner embeds MessageJsoner and adds a method to also retrieve the Signature field as a string.
+type SignedMessageJsoner interface {
+	MessageJsoner
+	SigString() string
+}
+
 type SignedBeaconBlock struct {
 	Message   *BeaconBlock `json:"message"`
 	Signature string       `json:"signature"`
+}
+
+var _ SignedMessageJsoner = &SignedBeaconBlock{}
+
+func (s *SignedBeaconBlock) MessageRawJson() ([]byte, error) {
+	return json.Marshal(s.Message)
+}
+
+func (s *SignedBeaconBlock) SigString() string {
+	return s.Signature
 }
 
 type BeaconBlock struct {
@@ -29,6 +53,16 @@ type SignedBeaconBlockAltair struct {
 	Signature string             `json:"signature"`
 }
 
+var _ SignedMessageJsoner = &SignedBeaconBlockAltair{}
+
+func (s *SignedBeaconBlockAltair) MessageRawJson() ([]byte, error) {
+	return json.Marshal(s.Message)
+}
+
+func (s *SignedBeaconBlockAltair) SigString() string {
+	return s.Signature
+}
+
 type BeaconBlockAltair struct {
 	Slot          string                 `json:"slot"`
 	ProposerIndex string                 `json:"proposer_index"`
@@ -52,6 +86,16 @@ type BeaconBlockBodyAltair struct {
 type SignedBeaconBlockBellatrix struct {
 	Message   *BeaconBlockBellatrix `json:"message"`
 	Signature string                `json:"signature"`
+}
+
+var _ SignedMessageJsoner = &SignedBeaconBlockBellatrix{}
+
+func (s *SignedBeaconBlockBellatrix) MessageRawJson() ([]byte, error) {
+	return json.Marshal(s.Message)
+}
+
+func (s *SignedBeaconBlockBellatrix) SigString() string {
+	return s.Signature
 }
 
 type BeaconBlockBellatrix struct {
@@ -80,6 +124,16 @@ type SignedBlindedBeaconBlockBellatrix struct {
 	Signature string                       `json:"signature"`
 }
 
+var _ SignedMessageJsoner = &SignedBlindedBeaconBlockBellatrix{}
+
+func (s *SignedBlindedBeaconBlockBellatrix) MessageRawJson() ([]byte, error) {
+	return json.Marshal(s.Message)
+}
+
+func (s *SignedBlindedBeaconBlockBellatrix) SigString() string {
+	return s.Signature
+}
+
 type BlindedBeaconBlockBellatrix struct {
 	Slot          string                           `json:"slot"`
 	ProposerIndex string                           `json:"proposer_index"`
@@ -104,6 +158,16 @@ type BlindedBeaconBlockBodyBellatrix struct {
 type SignedBeaconBlockCapella struct {
 	Message   *BeaconBlockCapella `json:"message"`
 	Signature string              `json:"signature"`
+}
+
+var _ SignedMessageJsoner = &SignedBeaconBlockCapella{}
+
+func (s *SignedBeaconBlockCapella) MessageRawJson() ([]byte, error) {
+	return json.Marshal(s.Message)
+}
+
+func (s *SignedBeaconBlockCapella) SigString() string {
+	return s.Signature
 }
 
 type BeaconBlockCapella struct {
@@ -131,6 +195,16 @@ type BeaconBlockBodyCapella struct {
 type SignedBlindedBeaconBlockCapella struct {
 	Message   *BlindedBeaconBlockCapella `json:"message"`
 	Signature string                     `json:"signature"`
+}
+
+var _ SignedMessageJsoner = &SignedBlindedBeaconBlockCapella{}
+
+func (s *SignedBlindedBeaconBlockCapella) MessageRawJson() ([]byte, error) {
+	return json.Marshal(s.Message)
+}
+
+func (s *SignedBlindedBeaconBlockCapella) SigString() string {
+	return s.Signature
 }
 
 type BlindedBeaconBlockCapella struct {
@@ -172,6 +246,16 @@ type SignedBeaconBlockDeneb struct {
 	Signature string            `json:"signature"`
 }
 
+var _ SignedMessageJsoner = &SignedBeaconBlockDeneb{}
+
+func (s *SignedBeaconBlockDeneb) MessageRawJson() ([]byte, error) {
+	return json.Marshal(s.Message)
+}
+
+func (s *SignedBeaconBlockDeneb) SigString() string {
+	return s.Signature
+}
+
 type BeaconBlockDeneb struct {
 	Slot          string                `json:"slot"`
 	ProposerIndex string                `json:"proposer_index"`
@@ -206,6 +290,16 @@ type BlindedBeaconBlockDeneb struct {
 type SignedBlindedBeaconBlockDeneb struct {
 	Message   *BlindedBeaconBlockDeneb `json:"message"`
 	Signature string                   `json:"signature"`
+}
+
+var _ SignedMessageJsoner = &SignedBlindedBeaconBlockDeneb{}
+
+func (s *SignedBlindedBeaconBlockDeneb) MessageRawJson() ([]byte, error) {
+	return json.Marshal(s.Message)
+}
+
+func (s *SignedBlindedBeaconBlockDeneb) SigString() string {
+	return s.Signature
 }
 
 type BlindedBeaconBlockBodyDeneb struct {

@@ -5,18 +5,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -83,7 +84,11 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
-	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
+	attsToSave := make([]interfaces.Attestation, len(atts))
+	for i, a := range atts {
+		attsToSave[i] = a
+	}
+	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(attsToSave))
 	service.processAttestations(ctx, 0)
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations()))
 	require.LogsDoNotContain(t, hook, "Could not process attestation for fork choice")
@@ -121,7 +126,11 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	// Generate attestations for this block in Slot 1
 	atts, err := util.GenerateAttestations(copied, pks, 1, 1, false)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
+	attsToSave := make([]interfaces.Attestation, len(atts))
+	for i, a := range atts {
+		attsToSave[i] = a
+	}
+	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(attsToSave))
 	// Verify the target is in forkchoice
 	require.Equal(t, true, fcs.HasNode(bytesutil.ToBytes32(atts[0].Data.BeaconBlockRoot)))
 	require.Equal(t, tRoot, bytesutil.ToBytes32(atts[0].Data.BeaconBlockRoot))

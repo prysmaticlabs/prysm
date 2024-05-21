@@ -9,18 +9,18 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/v4/contracts/deposit/mock"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	contracts "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v5/contracts/deposit/mock"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -31,7 +31,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 
 	beaconDB := testDB.SetupDB(t)
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	server, endpoint, err := mockExecution.SetupRPCServer()
@@ -100,7 +100,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	server, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
@@ -216,7 +216,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	server, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
@@ -291,7 +291,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	server, endpoint, err := mockExecution.SetupRPCServer()
@@ -384,7 +384,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	kvStore := testDB.SetupDB(t)
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	server, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
@@ -481,7 +481,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	kvStore := testDB.SetupDB(t)
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	server, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
@@ -593,7 +593,7 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 }
 
 func newPowchainService(t *testing.T, eth1Backend *mock.TestAccount, beaconDB db.Database) *Service {
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	server, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)

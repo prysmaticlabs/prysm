@@ -16,6 +16,8 @@ go_library(
         "deneb.go",
         "deneb_state.go",
         "deposits.go",
+        "electra.go",
+        "electra_state.go",
         "helpers.go",
         "merge.go",
         "state.go",
@@ -23,7 +25,7 @@ go_library(
         "sync_committee.go",
         "wait_timeout.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/testing/util",
+    importpath = "github.com/prysmaticlabs/prysm/v5/testing/util",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/altair:go_default_library",

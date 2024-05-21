@@ -11,25 +11,26 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -115,13 +116,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return vs.constructGenericBeaconBlock(sBlk, bundleCache.get(req.Slot))
 }
 
-func (vs *Server) handleFailedReorgAttempt(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (state.BeaconState, error) {
-	blockchain.LateBlockAttemptedReorgCount.Inc()
-	log.WithFields(logrus.Fields{
-		"slot":       slot,
-		"parentRoot": fmt.Sprintf("%#x", parentRoot),
-		"headRoot":   fmt.Sprintf("%#x", headRoot),
-	}).Warn("late block attempted reorg failed")
+func (vs *Server) handleSuccesfulReorgAttempt(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (state.BeaconState, error) {
 	// Try to get the state from the NSC
 	head := transition.NextSlotState(parentRoot[:], slot)
 	if head != nil {
@@ -135,7 +130,16 @@ func (vs *Server) handleFailedReorgAttempt(ctx context.Context, slot primitives.
 	return head, nil
 }
 
-func (vs *Server) getHeadNoFailedReorg(ctx context.Context, slot primitives.Slot, parentRoot [32]byte) (state.BeaconState, error) {
+func logFailedReorgAttempt(slot primitives.Slot, oldHeadRoot, headRoot [32]byte) {
+	blockchain.LateBlockAttemptedReorgCount.Inc()
+	log.WithFields(logrus.Fields{
+		"slot":        slot,
+		"oldHeadRoot": fmt.Sprintf("%#x", oldHeadRoot),
+		"headRoot":    fmt.Sprintf("%#x", headRoot),
+	}).Warn("late block attempted reorg failed")
+}
+
+func (vs *Server) getHeadNoReorg(ctx context.Context, slot primitives.Slot, parentRoot [32]byte) (state.BeaconState, error) {
 	// Try to get the state from the NSC
 	head := transition.NextSlotState(parentRoot[:], slot)
 	if head != nil {
@@ -148,11 +152,14 @@ func (vs *Server) getHeadNoFailedReorg(ctx context.Context, slot primitives.Slot
 	return head, nil
 }
 
-func (vs *Server) getParentStateFromReorgData(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (head state.BeaconState, err error) {
+func (vs *Server) getParentStateFromReorgData(ctx context.Context, slot primitives.Slot, oldHeadRoot, parentRoot, headRoot [32]byte) (head state.BeaconState, err error) {
 	if parentRoot != headRoot {
-		head, err = vs.handleFailedReorgAttempt(ctx, slot, parentRoot, headRoot)
+		head, err = vs.handleSuccesfulReorgAttempt(ctx, slot, parentRoot, headRoot)
 	} else {
-		head, err = vs.getHeadNoFailedReorg(ctx, slot, parentRoot)
+		if oldHeadRoot != headRoot {
+			logFailedReorgAttempt(slot, oldHeadRoot, headRoot)
+		}
+		head, err = vs.getHeadNoReorg(ctx, slot, parentRoot)
 	}
 	if err != nil {
 		return nil, err
@@ -169,10 +176,11 @@ func (vs *Server) getParentStateFromReorgData(ctx context.Context, slot primitiv
 
 func (vs *Server) getParentState(ctx context.Context, slot primitives.Slot) (state.BeaconState, [32]byte, error) {
 	// process attestations and update head in forkchoice
+	oldHeadRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
 	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
 	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
 	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
-	head, err := vs.getParentStateFromReorgData(ctx, slot, parentRoot, headRoot)
+	head, err := vs.getParentStateFromReorgData(ctx, slot, oldHeadRoot, parentRoot, headRoot)
 	return head, parentRoot, err
 }
 
@@ -195,17 +203,23 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
 		if err != nil {
 			sBlk.SetDeposits([]*ethpb.Deposit{})
-			sBlk.SetAttestations([]*ethpb.Attestation{})
+			if err := sBlk.SetAttestations([]interfaces.Attestation{}); err != nil {
+				log.WithError(err).Error("Could not set attestations on block")
+			}
 			log.WithError(err).Error("Could not pack deposits and attestations")
 		} else {
 			sBlk.SetDeposits(deposits)
-			sBlk.SetAttestations(atts)
+			if err := sBlk.SetAttestations(atts); err != nil {
+				log.WithError(err).Error("Could not set attestations on block")
+			}
 		}
 
 		// Set slashings.
 		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
 		sBlk.SetProposerSlashings(validProposerSlashings)
-		sBlk.SetAttesterSlashings(validAttSlashings)
+		if err := sBlk.SetAttesterSlashings(validAttSlashings); err != nil {
+			log.WithError(err).Error("Could not set attester slashings on block")
+		}
 
 		// Set exits.
 		sBlk.SetVoluntaryExits(vs.getExits(head, sBlk.Block().Slot()))
@@ -334,7 +348,7 @@ func (vs *Server) handleUnblindedBlock(block interfaces.SignedBeaconBlock, req *
 	if dbBlockContents == nil {
 		return nil, nil
 	}
-	return buildBlobSidecars(block, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
+	return BuildBlobSidecars(block, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
 }
 
 // broadcastReceiveBlock broadcasts a block and handles its reception.
@@ -355,25 +369,32 @@ func (vs *Server) broadcastReceiveBlock(ctx context.Context, block interfaces.Si
 
 // broadcastAndReceiveBlobs handles the broadcasting and reception of blob sidecars.
 func (vs *Server) broadcastAndReceiveBlobs(ctx context.Context, sidecars []*ethpb.BlobSidecar, root [32]byte) error {
+	eg, eCtx := errgroup.WithContext(ctx)
 	for i, sc := range sidecars {
-		if err := vs.P2P.BroadcastBlob(ctx, uint64(i), sc); err != nil {
-			return errors.Wrap(err, "broadcast blob failed")
-		}
-
-		readOnlySc, err := blocks.NewROBlobWithRoot(sc, root)
-		if err != nil {
-			return errors.Wrap(err, "ROBlob creation failed")
-		}
-		verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
-		if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
-			return errors.Wrap(err, "receive blob failed")
-		}
-		vs.OperationNotifier.OperationFeed().Send(&feed.Event{
-			Type: operation.BlobSidecarReceived,
-			Data: &operation.BlobSidecarReceivedData{Blob: &verifiedBlob},
+		// Copy the iteration instance to a local variable to give each go-routine its own copy to play with.
+		// See https://golang.org/doc/faq#closures_and_goroutines for more details.
+		subIdx := i
+		sCar := sc
+		eg.Go(func() error {
+			if err := vs.P2P.BroadcastBlob(eCtx, uint64(subIdx), sCar); err != nil {
+				return errors.Wrap(err, "broadcast blob failed")
+			}
+			readOnlySc, err := blocks.NewROBlobWithRoot(sCar, root)
+			if err != nil {
+				return errors.Wrap(err, "ROBlob creation failed")
+			}
+			verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
+			if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
+				return errors.Wrap(err, "receive blob failed")
+			}
+			vs.OperationNotifier.OperationFeed().Send(&feed.Event{
+				Type: operation.BlobSidecarReceived,
+				Data: &operation.BlobSidecarReceivedData{Blob: &verifiedBlob},
+			})
+			return nil
 		})
 	}
-	return nil
+	return eg.Wait()
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.

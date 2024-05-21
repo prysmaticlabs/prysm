@@ -8,8 +8,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -133,6 +134,15 @@ var (
 		Usage: "Port used to listening and respond metrics for Prometheus.",
 		Value: 8081,
 	}
+
+	// AuthTokenPathFlag defines the path to the auth token used to secure the validator api.
+	AuthTokenPathFlag = &cli.StringFlag{
+		Name:    "keymanager-token-file",
+		Usage:   "Path to auth token file used for validator apis.",
+		Value:   filepath.Join(filepath.Join(DefaultValidatorDir(), WalletDefaultDirName), api.AuthTokenFileName),
+		Aliases: []string{"validator-api-bearer-file"},
+	}
+
 	// WalletDirFlag defines the path to a wallet directory for Prysm accounts.
 	WalletDirFlag = &cli.StringFlag{
 		Name:  "wallet-dir",
@@ -174,12 +184,7 @@ var (
 		Name:  "mnemonic-language",
 		Usage: "Allows specifying mnemonic language. Supported languages are: english|chinese_traditional|chinese_simplified|czech|french|japanese|korean|italian|spanish.",
 	}
-	// ShowDepositDataFlag for accounts.
-	ShowDepositDataFlag = &cli.BoolFlag{
-		Name:  "show-deposit-data",
-		Usage: "Displays raw eth1 tx deposit data for validator accounts.",
-		Value: false,
-	}
+
 	// ShowPrivateKeysFlag for accounts.
 	ShowPrivateKeysFlag = &cli.BoolFlag{
 		Name:  "show-private-keys",
@@ -317,7 +322,7 @@ var (
 		Usage: "(Work in progress): Enables the web portal for the validator client.",
 		Value: false,
 	}
-	// SlashingProtectionExportDirFlag allows specifying the outpt directory
+	// SlashingProtectionExportDirFlag allows specifying the output directory
 	// for a validator's slashing protection history.
 	SlashingProtectionExportDirFlag = &cli.StringFlag{
 		Name:  "slashing-protection-export-dir",

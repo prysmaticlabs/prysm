@@ -9,27 +9,27 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
-	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	forkchoice2 "github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
+	opfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	forkchoice2 "github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -414,8 +414,8 @@ func (*ChainService) HeadGenesisValidatorsRoot() [32]byte {
 }
 
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
-func (*ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
-	if !bytes.Equal(a.Data.BeaconBlockRoot, a.Data.Target.Root) {
+func (*ChainService) VerifyLmdFfgConsistency(_ context.Context, a interfaces.Attestation) error {
+	if !bytes.Equal(a.GetData().BeaconBlockRoot, a.GetData().Target.Root) {
 		return errors.New("LMD and FFG miss matched")
 	}
 	return nil
@@ -495,7 +495,7 @@ func (s *ChainService) UpdateHead(ctx context.Context, slot primitives.Slot) {
 }
 
 // ReceiveAttesterSlashing mocks the same method in the chain service.
-func (*ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {}
+func (*ChainService) ReceiveAttesterSlashing(context.Context, interfaces.AttesterSlashing) {}
 
 // IsFinalized mocks the same method in the chain service.
 func (s *ChainService) IsFinalized(_ context.Context, blockRoot [32]byte) bool {

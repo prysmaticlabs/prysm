@@ -6,14 +6,15 @@ import (
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/build/bazel"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/build/bazel"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -22,6 +23,14 @@ func TestDisplayExitInfo(t *testing.T) {
 	key := []byte("0x123456")
 	displayExitInfo([][]byte{key}, []string{string(key)})
 	assert.LogsContain(t, logHook, "https://beaconcha.in/validator/3078313233343536")
+
+	params.BeaconConfig().ConfigName = params.HoleskyName
+	displayExitInfo([][]byte{key}, []string{string(key)})
+	assert.LogsContain(t, logHook, "https://holesky.beaconcha.in/validator/3078313233343536")
+
+	params.BeaconConfig().ConfigName = params.SepoliaName
+	displayExitInfo([][]byte{key}, []string{string(key)})
+	assert.LogsContain(t, logHook, "https://sepolia.beaconcha.in/validator/3078313233343536")
 }
 
 func TestDisplayExitInfo_NoKeys(t *testing.T) {

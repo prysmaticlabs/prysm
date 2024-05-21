@@ -7,23 +7,23 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -256,7 +256,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 // reportInvalidBlock deals with the event that an invalid block was detected by the execution layer
 func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
 	newPayloadInvalidNodeCount.Inc()
-	invalidRoots, err := s.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
+	invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
 	if err != nil {
 		return err
 	}
@@ -325,7 +325,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	var attr payloadattribute.Attributer
 	switch st.Version() {
 	case version.Deneb:
-		withdrawals, err := st.ExpectedWithdrawals()
+		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
 			return emptyAttri
@@ -342,7 +342,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 			return emptyAttri
 		}
 	case version.Capella:
-		withdrawals, err := st.ExpectedWithdrawals()
+		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
 			return emptyAttri

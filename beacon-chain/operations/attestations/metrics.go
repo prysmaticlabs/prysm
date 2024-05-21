@@ -34,7 +34,7 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "aggregate_attestations_t1",
 			Help:    "Captures times of attestation aggregation in milliseconds during the first interval per slot",
-			Buckets: []float64{100, 200, 500, 1000, 1500, 2000, 2500, 3500},
+			Buckets: []float64{10, 20, 50, 100, 200, 300, 500, 1000},
 		},
 	)
 	batchForkChoiceAttsT2 = promauto.NewHistogram(

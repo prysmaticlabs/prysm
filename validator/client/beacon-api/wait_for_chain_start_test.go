@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v4/network/httputil"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -40,7 +40,7 @@ func TestWaitForChainStart_ValidGenesis(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}
+	validatorClient := beaconApiValidatorClient{genesisProvider: &genesisProvider}
 	resp, err := validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	assert.NoError(t, err)
 
@@ -104,7 +104,7 @@ func TestWaitForChainStart_BadGenesis(t *testing.T) {
 			).Times(1)
 
 			genesisProvider := beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-			validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}
+			validatorClient := beaconApiValidatorClient{genesisProvider: &genesisProvider}
 			_, err := validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 			assert.ErrorContains(t, testCase.errorMessage, err)
 		})
@@ -127,7 +127,7 @@ func TestWaitForChainStart_JsonResponseError(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}
+	validatorClient := beaconApiValidatorClient{genesisProvider: &genesisProvider}
 	_, err := validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	assert.ErrorContains(t, "failed to get genesis data", err)
 	assert.ErrorContains(t, "some specific json error", err)
@@ -172,7 +172,7 @@ func TestWaitForChainStart_JsonResponseError404(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}
+	validatorClient := beaconApiValidatorClient{genesisProvider: &genesisProvider}
 	resp, err := validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	assert.NoError(t, err)
 

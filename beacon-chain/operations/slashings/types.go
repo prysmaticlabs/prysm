@@ -4,9 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // PoolInserter is capable of inserting new slashing objects into the operations pool.
@@ -14,7 +15,7 @@ type PoolInserter interface {
 	InsertAttesterSlashing(
 		ctx context.Context,
 		state state.ReadOnlyBeaconState,
-		slashing *ethpb.AttesterSlashing,
+		slashing interfaces.AttesterSlashing,
 	) error
 	InsertProposerSlashing(
 		ctx context.Context,
@@ -27,9 +28,9 @@ type PoolInserter interface {
 // This pool is used by proposers to insert data into new blocks.
 type PoolManager interface {
 	PoolInserter
-	PendingAttesterSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []*ethpb.AttesterSlashing
+	PendingAttesterSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []interfaces.AttesterSlashing
 	PendingProposerSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []*ethpb.ProposerSlashing
-	MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing)
+	MarkIncludedAttesterSlashing(as interfaces.AttesterSlashing)
 	MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing)
 }
 
@@ -44,6 +45,6 @@ type Pool struct {
 // PendingAttesterSlashing represents an attester slashing in the operation pool.
 // Allows for easy binary searching of included validator indexes.
 type PendingAttesterSlashing struct {
-	attesterSlashing *ethpb.AttesterSlashing
+	attesterSlashing interfaces.AttesterSlashing
 	validatorToSlash primitives.ValidatorIndex
 }

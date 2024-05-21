@@ -9,11 +9,11 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/spf13/afero"
 )
 
@@ -25,11 +25,11 @@ func TestTryPruneDir_CachedNotExpired(t *testing.T) {
 	_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, fieldparams.MaxBlobsPerBlock)
 	sc, err := verification.BlobSidecarNoop(sidecars[0])
 	require.NoError(t, err)
-	root := fmt.Sprintf("%#x", sc.BlockRoot())
+	rootStr := rootString(sc.BlockRoot())
 	// This slot is right on the edge of what would need to be pruned, so by adding it to the cache and
 	// skipping any other test setup, we can be certain the hot cache path never touches the filesystem.
-	pr.slotMap.ensure(root, sc.Slot())
-	pruned, err := pr.tryPruneDir(root, pr.windowSize)
+	require.NoError(t, pr.cache.ensure(sc.BlockRoot(), sc.Slot(), 0))
+	pruned, err := pr.tryPruneDir(rootStr, pr.windowSize)
 	require.NoError(t, err)
 	require.Equal(t, 0, pruned)
 }
@@ -43,16 +43,15 @@ func TestTryPruneDir_CachedExpired(t *testing.T) {
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, 1)
 		sc, err := verification.BlobSidecarNoop(sidecars[0])
 		require.NoError(t, err)
-		root := fmt.Sprintf("%#x", sc.BlockRoot())
-		require.NoError(t, fs.Mkdir(root, directoryPermissions)) // make empty directory
-		pr.slotMap.ensure(root, sc.Slot())
-		pruned, err := pr.tryPruneDir(root, slot+1)
+		rootStr := rootString(sc.BlockRoot())
+		require.NoError(t, fs.Mkdir(rootStr, directoryPermissions)) // make empty directory
+		require.NoError(t, pr.cache.ensure(sc.BlockRoot(), sc.Slot(), 0))
+		pruned, err := pr.tryPruneDir(rootStr, slot+1)
 		require.NoError(t, err)
 		require.Equal(t, 0, pruned)
 	})
 	t.Run("blobs to delete", func(t *testing.T) {
-		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-		require.NoError(t, err)
+		fs, bs := NewEphemeralBlobStorageWithFs(t)
 		var slot primitives.Slot = 0
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, 2)
 		scs, err := verification.BlobSidecarSliceNoop(sidecars)
@@ -62,20 +61,21 @@ func TestTryPruneDir_CachedExpired(t *testing.T) {
 		require.NoError(t, bs.Save(scs[1]))
 
 		// check that the root->slot is cached
-		root := fmt.Sprintf("%#x", scs[0].BlockRoot())
-		cs, cok := bs.pruner.slotMap.slot(root)
+		root := scs[0].BlockRoot()
+		rootStr := rootString(root)
+		cs, cok := bs.pruner.cache.slot(scs[0].BlockRoot())
 		require.Equal(t, true, cok)
 		require.Equal(t, slot, cs)
 
 		// ensure that we see the saved files in the filesystem
-		files, err := listDir(fs, root)
+		files, err := listDir(fs, rootStr)
 		require.NoError(t, err)
 		require.Equal(t, 2, len(files))
 
-		pruned, err := bs.pruner.tryPruneDir(root, slot+1)
+		pruned, err := bs.pruner.tryPruneDir(rootStr, slot+1)
 		require.NoError(t, err)
 		require.Equal(t, 2, pruned)
-		files, err = listDir(fs, root)
+		files, err = listDir(fs, rootStr)
 		require.ErrorIs(t, err, os.ErrNotExist)
 		require.Equal(t, 0, len(files))
 	})
@@ -83,8 +83,7 @@ func TestTryPruneDir_CachedExpired(t *testing.T) {
 
 func TestTryPruneDir_SlotFromFile(t *testing.T) {
 	t.Run("expired blobs deleted", func(t *testing.T) {
-		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-		require.NoError(t, err)
+		fs, bs := NewEphemeralBlobStorageWithFs(t)
 		var slot primitives.Slot = 0
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, 2)
 		scs, err := verification.BlobSidecarSliceNoop(sidecars)
@@ -94,32 +93,32 @@ func TestTryPruneDir_SlotFromFile(t *testing.T) {
 		require.NoError(t, bs.Save(scs[1]))
 
 		// check that the root->slot is cached
-		root := fmt.Sprintf("%#x", scs[0].BlockRoot())
-		cs, ok := bs.pruner.slotMap.slot(root)
+		root := scs[0].BlockRoot()
+		rootStr := rootString(root)
+		cs, ok := bs.pruner.cache.slot(root)
 		require.Equal(t, true, ok)
 		require.Equal(t, slot, cs)
 		// evict it from the cache so that we trigger the file read path
-		bs.pruner.slotMap.evict(root)
-		_, ok = bs.pruner.slotMap.slot(root)
+		bs.pruner.cache.evict(root)
+		_, ok = bs.pruner.cache.slot(root)
 		require.Equal(t, false, ok)
 
 		// ensure that we see the saved files in the filesystem
-		files, err := listDir(fs, root)
+		files, err := listDir(fs, rootStr)
 		require.NoError(t, err)
 		require.Equal(t, 2, len(files))
 
-		pruned, err := bs.pruner.tryPruneDir(root, slot+1)
+		pruned, err := bs.pruner.tryPruneDir(rootStr, slot+1)
 		require.NoError(t, err)
 		require.Equal(t, 2, pruned)
-		files, err = listDir(fs, root)
+		files, err = listDir(fs, rootStr)
 		require.ErrorIs(t, err, os.ErrNotExist)
 		require.Equal(t, 0, len(files))
 	})
 	t.Run("not expired, intact", func(t *testing.T) {
-		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-		require.NoError(t, err)
+		fs, bs := NewEphemeralBlobStorageWithFs(t)
 		// Set slot equal to the window size, so it should be retained.
-		var slot primitives.Slot = bs.pruner.windowSize
+		slot := bs.pruner.windowSize
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, 2)
 		scs, err := verification.BlobSidecarSliceNoop(sidecars)
 		require.NoError(t, err)
@@ -128,24 +127,25 @@ func TestTryPruneDir_SlotFromFile(t *testing.T) {
 		require.NoError(t, bs.Save(scs[1]))
 
 		// Evict slot mapping from the cache so that we trigger the file read path.
-		root := fmt.Sprintf("%#x", scs[0].BlockRoot())
-		bs.pruner.slotMap.evict(root)
-		_, ok := bs.pruner.slotMap.slot(root)
+		root := scs[0].BlockRoot()
+		rootStr := rootString(root)
+		bs.pruner.cache.evict(root)
+		_, ok := bs.pruner.cache.slot(root)
 		require.Equal(t, false, ok)
 
 		// Ensure that we see the saved files in the filesystem.
-		files, err := listDir(fs, root)
+		files, err := listDir(fs, rootStr)
 		require.NoError(t, err)
 		require.Equal(t, 2, len(files))
 
 		// This should use the slotFromFile code (simulating restart).
 		// Setting pruneBefore == slot, so that the slot will be outside the window (at the boundary).
-		pruned, err := bs.pruner.tryPruneDir(root, slot)
+		pruned, err := bs.pruner.tryPruneDir(rootStr, slot)
 		require.NoError(t, err)
 		require.Equal(t, 0, pruned)
 
 		// Ensure files are still present.
-		files, err = listDir(fs, root)
+		files, err = listDir(fs, rootStr)
 		require.NoError(t, err)
 		require.Equal(t, 2, len(files))
 	})
@@ -184,8 +184,7 @@ func TestSlotFromFile(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("slot %d", c.slot), func(t *testing.T) {
-			fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-			require.NoError(t, err)
+			fs, bs := NewEphemeralBlobStorageWithFs(t)
 			_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, c.slot, 1)
 			sc, err := verification.BlobSidecarNoop(sidecars[0])
 			require.NoError(t, err)
@@ -243,10 +242,8 @@ func TestListDir(t *testing.T) {
 	}
 	blobWithSszAndTmp := dirFiles{name: "0x1234567890", isDir: true,
 		children: []dirFiles{{name: "5.ssz"}, {name: "0.part"}}}
-	fsLayout.children = append(fsLayout.children, notABlob)
-	fsLayout.children = append(fsLayout.children, childlessBlob)
-	fsLayout.children = append(fsLayout.children, blobWithSsz)
-	fsLayout.children = append(fsLayout.children, blobWithSszAndTmp)
+	fsLayout.children = append(fsLayout.children,
+		notABlob, childlessBlob, blobWithSsz, blobWithSszAndTmp)
 
 	topChildren := make([]string, len(fsLayout.children))
 	for i := range fsLayout.children {
@@ -282,10 +279,7 @@ func TestListDir(t *testing.T) {
 			dirPath:  ".",
 			expected: []string{notABlob.name},
 			filter: func(s string) bool {
-				if s == notABlob.name {
-					return true
-				}
-				return false
+				return s == notABlob.name
 			},
 		},
 		{
@@ -322,6 +316,48 @@ func TestListDir(t *testing.T) {
 				sort.Strings(result)
 				require.DeepEqual(t, c.expected, result)
 			}
+		})
+	}
+}
+
+func TestRootFromDir(t *testing.T) {
+	cases := []struct {
+		name string
+		dir  string
+		err  error
+		root [32]byte
+	}{
+		{
+			name: "happy path",
+			dir:  "0xffff875e1d985c5ccb214894983f2428edb271f0f87b68ba7010e4a99df3b5cb",
+			root: [32]byte{255, 255, 135, 94, 29, 152, 92, 92, 203, 33, 72, 148, 152, 63, 36, 40,
+				237, 178, 113, 240, 248, 123, 104, 186, 112, 16, 228, 169, 157, 243, 181, 203},
+		},
+		{
+			name: "too short",
+			dir:  "0xffff875e1d985c5ccb214894983f2428edb271f0f87b68ba7010e4a99df3b5c",
+			err:  errInvalidRootString,
+		},
+		{
+			name: "too log",
+			dir:  "0xffff875e1d985c5ccb214894983f2428edb271f0f87b68ba7010e4a99df3b5cbb",
+			err:  errInvalidRootString,
+		},
+		{
+			name: "missing prefix",
+			dir:  "ffff875e1d985c5ccb214894983f2428edb271f0f87b68ba7010e4a99df3b5cb",
+			err:  errInvalidRootString,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			root, err := stringToRoot(c.dir)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, c.root, root)
 		})
 	}
 }

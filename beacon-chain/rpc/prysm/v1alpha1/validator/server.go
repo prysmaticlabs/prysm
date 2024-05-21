@@ -7,32 +7,32 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
-	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
+	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
+	opfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -69,7 +69,7 @@ type Server struct {
 	BlobReceiver           blockchain.BlobReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       execution.POWBlockFetcher
-	PendingDepositsFetcher depositcache.PendingDepositsFetcher
+	PendingDepositsFetcher depositsnapshot.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
 	ReplayerBuilder        stategen.ReplayerBuilder
@@ -99,10 +99,15 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 		return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
 	}
 
+	waitTime := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	timer := time.NewTimer(waitTime)
+	defer timer.Stop()
+
 	for {
+		timer.Reset(waitTime)
 		select {
 		// Pinging every slot for activation.
-		case <-time.After(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second):
+		case <-timer.C:
 			activeValidatorExists, validatorStatuses, err := vs.activationStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)
@@ -193,7 +198,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 	if err != nil {
 		return status.Error(codes.Canceled, "Context canceled")
 	}
-	log.WithField("starttime", clock.GenesisTime()).Debug("Received chain started event")
+	log.WithField("startTime", clock.GenesisTime()).Debug("Received chain started event")
 	log.Debug("Sending genesis time notification to connected validator clients")
 	gvr := clock.GenesisValidatorsRoot()
 	res := &ethpb.ChainStartResponse{

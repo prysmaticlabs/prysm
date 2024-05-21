@@ -10,47 +10,48 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
-	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
-	b "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	coretime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
-	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
-	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
+	builderTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/builder/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
+	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	coretime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/voluntaryexits"
+	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -548,6 +549,132 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 	require.DeepEqual(t, got.GetDeneb().Block.Body.BlobKzgCommitments, kc)
 }
 
+func TestServer_GetBeaconBlock_Electra(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+	transition.SkipSlotCache.Disable()
+
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.ElectraForkEpoch = 5
+	cfg.DenebForkEpoch = 4
+	cfg.CapellaForkEpoch = 3
+	cfg.BellatrixForkEpoch = 2
+	cfg.AltairForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
+
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	util.SaveBlock(t, ctx, db, genesis)
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	electraSlot, err := slots.EpochStart(params.BeaconConfig().ElectraForkEpoch)
+	require.NoError(t, err)
+
+	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
+	blk := &ethpb.SignedBeaconBlockElectra{
+		Block: &ethpb.BeaconBlockElectra{
+			Slot:       electraSlot + 1,
+			ParentRoot: parentRoot[:],
+			StateRoot:  genesis.Block.StateRoot,
+			Body: &ethpb.BeaconBlockBodyElectra{
+				Consolidations: []*ethpb.SignedConsolidation{
+					{
+						Message: &ethpb.Consolidation{
+							SourceIndex: 1,
+							TargetIndex: 2,
+							Epoch:       3,
+						},
+						Signature: bytesutil.PadTo([]byte("sig"), 96),
+					},
+				},
+				RandaoReveal:  genesis.Block.Body.RandaoReveal,
+				Graffiti:      genesis.Block.Body.Graffiti,
+				Eth1Data:      genesis.Block.Body.Eth1Data,
+				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
+				ExecutionPayload: &enginev1.ExecutionPayloadElectra{
+					ParentHash:    make([]byte, fieldparams.RootLength),
+					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:     make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:    make([]byte, fieldparams.RootLength),
+					BaseFeePerGas: make([]byte, fieldparams.RootLength),
+					BlockHash:     make([]byte, fieldparams.RootLength),
+				},
+			},
+		},
+	}
+
+	blkRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
+
+	random, err := helpers.RandaoMix(beaconState, slots.ToEpoch(beaconState.Slot()))
+	require.NoError(t, err)
+	timeStamp, err := slots.ToTime(beaconState.GenesisTime(), electraSlot+1)
+	require.NoError(t, err)
+	dr := []*enginev1.DepositReceipt{{
+		Pubkey:                bytesutil.PadTo(privKeys[0].PublicKey().Marshal(), 48),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("wc"), 32),
+		Amount:                123,
+		Signature:             bytesutil.PadTo([]byte("sig"), 96),
+		Index:                 456,
+	}}
+	wr := []*enginev1.ExecutionLayerWithdrawalRequest{
+		{
+			SourceAddress:   bytesutil.PadTo([]byte("sa"), 20),
+			ValidatorPubkey: bytesutil.PadTo(privKeys[1].PublicKey().Marshal(), 48),
+			Amount:          789,
+		},
+	}
+	payload := &enginev1.ExecutionPayloadElectra{
+		Timestamp:          uint64(timeStamp.Unix()),
+		ParentHash:         make([]byte, fieldparams.RootLength),
+		FeeRecipient:       make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:          make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:       make([]byte, fieldparams.RootLength),
+		LogsBloom:          make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:         random,
+		BaseFeePerGas:      make([]byte, fieldparams.RootLength),
+		BlockHash:          make([]byte, fieldparams.RootLength),
+		DepositReceipts:    dr,
+		WithdrawalRequests: wr,
+	}
+
+	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
+		PayloadIDBytes:          &enginev1.PayloadIDBytes{1},
+		ExecutionPayloadElectra: payload,
+	}
+
+	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
+	require.NoError(t, err)
+
+	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	require.NoError(t, err)
+	req := &ethpb.BlockRequest{
+		Slot:         electraSlot + 1,
+		RandaoReveal: randaoReveal,
+		Graffiti:     graffiti[:],
+	}
+
+	got, err := proposerServer.GetBeaconBlock(ctx, req)
+	require.NoError(t, err)
+	p := got.GetElectra().Block.Body.ExecutionPayload
+	require.DeepEqual(t, dr, p.DepositReceipts)
+	require.DeepEqual(t, wr, p.WithdrawalRequests)
+}
+
 func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig().Copy()
@@ -744,6 +871,33 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			err: "blob KZG commitments don't match number of blobs or KZG proofs",
 		},
 		{
+			name: "electra block no blob",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				sb := &ethpb.SignedBeaconBlockContentsElectra{
+					Block: &ethpb.SignedBeaconBlockElectra{
+						Block: &ethpb.BeaconBlockElectra{Slot: 5, ParentRoot: parent[:], Body: util.HydrateBeaconBlockBodyElectra(&ethpb.BeaconBlockBodyElectra{})},
+					},
+				}
+				blk := &ethpb.GenericSignedBeaconBlock_Electra{Electra: sb}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk, IsBlinded: false}
+			},
+		},
+		{
+			name: "electra block some blob",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+
+				sb := &ethpb.SignedBeaconBlockContentsElectra{
+					Block: &ethpb.SignedBeaconBlockElectra{
+						Block: &ethpb.BeaconBlockElectra{Slot: 5, ParentRoot: parent[:], Body: util.HydrateBeaconBlockBodyElectra(&ethpb.BeaconBlockBodyElectra{})},
+					},
+					KzgProofs: [][]byte{{0x01}, {0x02}, {0x03}},
+					Blobs:     [][]byte{{0x01}, {0x02}, {0x03}},
+				}
+				blk := &ethpb.GenericSignedBeaconBlock_Electra{Electra: sb}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk, IsBlinded: false}
+			},
+		},
+		{
 			name: "blind deneb block some blobs",
 			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBlindedBeaconBlockDeneb()
@@ -838,7 +992,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
-	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
+	require.NoError(t, beaconState.SetSlot(slots.PrevSlot(beaconState.Slot())))
 	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := coretime.CurrentEpoch(beaconState)
 	req.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
@@ -1000,7 +1154,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 	}
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -1139,7 +1293,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		},
 	}
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -1244,7 +1398,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -1344,7 +1498,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -1442,7 +1596,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -1553,7 +1707,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		},
 	}
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -1669,7 +1823,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 		},
 	}
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -1810,7 +1964,7 @@ func TestProposer_Eth1Data_MajorityVote_SpansGenesis(t *testing.T) {
 		InsertBlock(100, latestValidTime, []byte("latest"))
 
 	headBlockHash := []byte("headb")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	ps := &Server{
 		ChainStartFetcher: p,
@@ -1851,7 +2005,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 	}
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	root, err := depositTrie.HashTreeRoot()
 	require.NoError(t, err)
@@ -2351,7 +2505,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			BlockHash: []byte("eth1data"),
 		}
 
-		depositCache, err := depositcache.New()
+		depositCache, err := depositsnapshot.New()
 		require.NoError(t, err)
 
 		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
@@ -2396,22 +2550,22 @@ func TestProposer_FilterAttestation(t *testing.T) {
 	tests := []struct {
 		name         string
 		wantedErr    string
-		inputAtts    func() []*ethpb.Attestation
-		expectedAtts func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation
+		inputAtts    func() []interfaces.Attestation
+		expectedAtts func(inputAtts []interfaces.Attestation) []interfaces.Attestation
 	}{
 		{
 			name: "nil attestations",
-			inputAtts: func() []*ethpb.Attestation {
+			inputAtts: func() []interfaces.Attestation {
 				return nil
 			},
-			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
-				return []*ethpb.Attestation{}
+			expectedAtts: func(inputAtts []interfaces.Attestation) []interfaces.Attestation {
+				return []interfaces.Attestation{}
 			},
 		},
 		{
 			name: "invalid attestations",
-			inputAtts: func() []*ethpb.Attestation {
-				atts := make([]*ethpb.Attestation, 10)
+			inputAtts: func() []interfaces.Attestation {
+				atts := make([]interfaces.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
 					atts[i] = util.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
@@ -2421,14 +2575,14 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				}
 				return atts
 			},
-			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
-				return []*ethpb.Attestation{}
+			expectedAtts: func(inputAtts []interfaces.Attestation) []interfaces.Attestation {
+				return []interfaces.Attestation{}
 			},
 		},
 		{
 			name: "filter aggregates ok",
-			inputAtts: func() []*ethpb.Attestation {
-				atts := make([]*ethpb.Attestation, 10)
+			inputAtts: func() []interfaces.Attestation {
+				atts := make([]interfaces.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
 					atts[i] = util.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
@@ -2437,29 +2591,29 @@ func TestProposer_FilterAttestation(t *testing.T) {
 						},
 						AggregationBits: bitfield.Bitlist{0b00010010},
 					})
-					committee, err := helpers.BeaconCommitteeFromState(context.Background(), st, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
+					committee, err := helpers.BeaconCommitteeFromState(context.Background(), st, atts[i].GetData().Slot, atts[i].GetData().CommitteeIndex)
 					assert.NoError(t, err)
-					attestingIndices, err := attestation.AttestingIndices(atts[i].AggregationBits, committee)
+					attestingIndices, err := attestation.AttestingIndices(atts[i], committee)
 					require.NoError(t, err)
 					assert.NoError(t, err)
 					domain, err := signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 					require.NoError(t, err)
 					sigs := make([]bls.Signature, len(attestingIndices))
 					var zeroSig [96]byte
-					atts[i].Signature = zeroSig[:]
+					atts[i].(*ethpb.Attestation).Signature = zeroSig[:]
 
 					for i, indice := range attestingIndices {
-						hashTreeRoot, err := signing.ComputeSigningRoot(atts[i].Data, domain)
+						hashTreeRoot, err := signing.ComputeSigningRoot(atts[i].GetData(), domain)
 						require.NoError(t, err)
 						sig := privKeys[indice].Sign(hashTreeRoot[:])
 						sigs[i] = sig
 					}
-					atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()
+					atts[i].(*ethpb.Attestation).Signature = bls.AggregateSignatures(sigs).Marshal()
 				}
 				return atts
 			},
-			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
-				return []*ethpb.Attestation{inputAtts[0], inputAtts[1]}
+			expectedAtts: func(inputAtts []interfaces.Attestation) []interfaces.Attestation {
+				return []interfaces.Attestation{inputAtts[0], inputAtts[1]}
 			},
 		},
 	}
@@ -2547,7 +2701,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	for _, dp := range append(readyDeposits, recentDeposits...) {
@@ -2589,10 +2743,10 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sig := priv.Sign([]byte("foo")).Marshal()
-	aggregatedAtts := []*ethpb.Attestation{
+	aggregatedAtts := []interfaces.Attestation{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig})}
-	unaggregatedAtts := []*ethpb.Attestation{
+	unaggregatedAtts := []interfaces.Attestation{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10010}, Signature: sig}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10100}, Signature: sig})}
 
@@ -2697,10 +2851,13 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 				BeaconDB:               db,
 				TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
 			}
+			require.Equal(t, false, proposerServer.TrackedValidatorsCache.Validating())
 			_, err := proposerServer.PrepareBeaconProposer(ctx, tt.args.request)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, tt.wantErr, err)
 				return
+			} else {
+				require.Equal(t, true, proposerServer.TrackedValidatorsCache.Validating())
 			}
 			require.NoError(t, err)
 			val, tracked := proposerServer.TrackedValidatorsCache.Validator(1)
@@ -2874,8 +3031,8 @@ func TestProposer_GetParentHeadState(t *testing.T) {
 		Eth1BlockFetcher:  &mockExecution.Chain{},
 		StateGen:          stategen.New(db, doublylinkedtree.New()),
 	}
-	t.Run("failed reorg", func(tt *testing.T) {
-		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, parentRoot, headRoot)
+	t.Run("successful reorg", func(tt *testing.T) {
+		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, parentRoot, parentRoot, headRoot)
 		require.NoError(t, err)
 		st := parentState.Copy()
 		st, err = transition.ProcessSlots(ctx, st, st.Slot()+1)
@@ -2892,7 +3049,7 @@ func TestProposer_GetParentHeadState(t *testing.T) {
 
 	t.Run("no reorg", func(tt *testing.T) {
 		require.NoError(t, transition.UpdateNextSlotCache(ctx, headRoot[:], headState))
-		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, headRoot, headRoot)
+		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, headRoot, headRoot, headRoot)
 		require.NoError(t, err)
 		st := headState.Copy()
 		st, err = transition.ProcessSlots(ctx, st, st.Slot()+1)
@@ -2905,5 +3062,24 @@ func TestProposer_GetParentHeadState(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, [32]byte(str), [32]byte(headStr))
 		require.NotEqual(t, [32]byte(str), [32]byte(genesisStr))
+	})
+
+	t.Run("failed reorg", func(tt *testing.T) {
+		hook := logTest.NewGlobal()
+		require.NoError(t, transition.UpdateNextSlotCache(ctx, headRoot[:], headState))
+		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, parentRoot, headRoot, headRoot)
+		require.NoError(t, err)
+		st := headState.Copy()
+		st, err = transition.ProcessSlots(ctx, st, st.Slot()+1)
+		require.NoError(t, err)
+		str, err := st.StateRootAtIndex(0)
+		require.NoError(t, err)
+		headStr, err := head.StateRootAtIndex(0)
+		require.NoError(t, err)
+		genesisStr, err := parentState.StateRootAtIndex(0)
+		require.NoError(t, err)
+		require.Equal(t, [32]byte(str), [32]byte(headStr))
+		require.NotEqual(t, [32]byte(str), [32]byte(genesisStr))
+		require.LogsContain(t, hook, "late block attempted reorg failed")
 	})
 }

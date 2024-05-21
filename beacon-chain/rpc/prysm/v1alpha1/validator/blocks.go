@@ -2,14 +2,14 @@ package validator
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -159,6 +159,17 @@ func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServe
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_DenebBlock{DenebBlock: phBlk}
+	case version.Electra:
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockElectra)
+		if !ok {
+			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockElectra")
+			return nil
+		}
+		b.Block = &ethpb.StreamBlocksResponse_ElectraBlock{ElectraBlock: phBlk}
 	}
 
 	if err := stream.Send(b); err != nil {
@@ -210,6 +221,8 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		b.Block = &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: p}
 	case *ethpb.SignedBeaconBlockDeneb:
 		b.Block = &ethpb.StreamBlocksResponse_DenebBlock{DenebBlock: p}
+	case *ethpb.SignedBeaconBlockElectra:
+		b.Block = &ethpb.StreamBlocksResponse_ElectraBlock{ElectraBlock: p}
 	default:
 		log.Errorf("Unknown block type %T", p)
 	}

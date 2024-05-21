@@ -1,20 +1,21 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/v4/async"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/async"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -157,7 +158,8 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb
 
 // This defines how pending attestations is saved in the map. The key is the
 // root of the missing block. The value is the list of pending attestations
-// that voted for that block root.
+// that voted for that block root. The caller of this function is responsible
+// for not sending repeated attestations to the pending queue.
 func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) {
 	root := bytesutil.ToBytes32(att.Message.Aggregate.Data.BeaconBlockRoot)
 
@@ -175,18 +177,35 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
+		pendingAttCount.Inc()
 		s.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{att}
 		return
 	}
-
-	// Skip if the attestation from the same aggregator already exists in the pending queue.
+	// Skip if the attestation from the same aggregator already exists in
+	// the pending queue.
 	for _, a := range s.blkRootToPendingAtts[root] {
-		if a.Message.AggregatorIndex == att.Message.AggregatorIndex {
+		if attsAreEqual(att, a) {
 			return
 		}
 	}
-
+	pendingAttCount.Inc()
 	s.blkRootToPendingAtts[root] = append(s.blkRootToPendingAtts[root], att)
+}
+
+func attsAreEqual(a, b *ethpb.SignedAggregateAttestationAndProof) bool {
+	if a.Signature != nil {
+		return b.Signature != nil && a.Message.AggregatorIndex == b.Message.AggregatorIndex
+	}
+	if b.Signature != nil {
+		return false
+	}
+	if a.Message.Aggregate.Data.Slot != b.Message.Aggregate.Data.Slot {
+		return false
+	}
+	if a.Message.Aggregate.Data.CommitteeIndex != b.Message.Aggregate.Data.CommitteeIndex {
+		return false
+	}
+	return bytes.Equal(a.Message.Aggregate.AggregationBits, b.Message.Aggregate.AggregationBits)
 }
 
 // This validates the pending attestations in the queue are still valid.

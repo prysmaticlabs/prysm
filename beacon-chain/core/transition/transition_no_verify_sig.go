@@ -6,17 +6,17 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	b "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition/interop"
-	v "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition/interop"
+	v "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -257,7 +257,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Bellatrix, version.Capella, version.Deneb:
+	case version.Altair, version.Bellatrix, version.Capella, version.Deneb, version.Electra:
 		state, err = altairOperations(ctx, state, beaconBlock)
 		if err != nil {
 			return nil, err

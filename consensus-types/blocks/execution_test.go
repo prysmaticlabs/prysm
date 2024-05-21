@@ -4,13 +4,13 @@ import (
 	"math/big"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestWrapExecutionPayload(t *testing.T) {
@@ -209,44 +209,6 @@ func TestWrapExecutionPayloadHeaderCapella_SSZ(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, 0, payload.SizeSSZ())
 	assert.NoError(t, payload.UnmarshalSSZ(encoded))
-}
-
-func Test_executionPayload_Pb(t *testing.T) {
-	payload := createWrappedPayload(t)
-	pb, err := payload.PbBellatrix()
-	require.NoError(t, err)
-	assert.DeepEqual(t, payload.Proto(), pb)
-
-	_, err = payload.PbCapella()
-	require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
-}
-
-func Test_executionPayloadHeader_Pb(t *testing.T) {
-	payload := createWrappedPayloadHeader(t)
-	_, err := payload.PbBellatrix()
-	require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
-
-	_, err = payload.PbCapella()
-	require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
-}
-
-func Test_executionPayloadCapella_Pb(t *testing.T) {
-	payload := createWrappedPayloadCapella(t)
-	pb, err := payload.PbCapella()
-	require.NoError(t, err)
-	assert.DeepEqual(t, payload.Proto(), pb)
-
-	_, err = payload.PbBellatrix()
-	require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
-}
-
-func Test_executionPayloadHeaderCapella_Pb(t *testing.T) {
-	payload := createWrappedPayloadHeaderCapella(t)
-	_, err := payload.PbBellatrix()
-	require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
-
-	_, err = payload.PbCapella()
-	require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
 }
 
 func TestWrapExecutionPayloadDeneb(t *testing.T) {

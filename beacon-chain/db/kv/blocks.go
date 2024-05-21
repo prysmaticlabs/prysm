@@ -9,16 +9,16 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -813,6 +813,16 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.ReadOnlySignedBea
 		if err := rawBlock.UnmarshalSSZ(enc[len(denebBlindKey):]); err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal blinded Deneb block")
 		}
+	case hasElectraKey(enc):
+		rawBlock = &ethpb.SignedBeaconBlockElectra{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(electraKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal Electra block")
+		}
+	case hasElectraBlindKey(enc):
+		rawBlock = &ethpb.SignedBlindedBeaconBlockElectra{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(electraBlindKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal blinded Electra block")
+		}
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock = &ethpb.SignedBeaconBlock{}
@@ -842,6 +852,11 @@ func encodeBlock(blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
 
 func keyForBlock(blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
 	switch blk.Version() {
+	case version.Electra:
+		if blk.IsBlinded() {
+			return electraBlindKey, nil
+		}
+		return electraKey, nil
 	case version.Deneb:
 		if blk.IsBlinded() {
 			return denebBlindKey, nil

@@ -14,15 +14,16 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/io/logs"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v4/validator/db"
+	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/io/logs"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/db"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -98,19 +99,19 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		grpcRetries:            cfg.GRPCRetries,
 		grpcRetryDelay:         cfg.GRPCRetryDelay,
 		grpcHeaders:            cfg.GRPCHeaders,
-		beaconNodeEndpoint:     cfg.BeaconNodeGRPCEndpoint,
-		beaconApiEndpoint:      cfg.BeaconApiEndpoint,
-		beaconApiTimeout:       cfg.BeaconApiTimeout,
-		beaconNodeCert:         cfg.BeaconNodeCert,
-		db:                     cfg.DB,
-		walletDir:              cfg.WalletDir,
-		wallet:                 cfg.Wallet,
-		walletInitializedFeed:  cfg.WalletInitializedFeed,
-		walletInitialized:      cfg.Wallet != nil,
-		validatorService:       cfg.ValidatorService,
-		router:                 cfg.Router,
-		logStreamer:            logs.NewStreamServer(),
-		logStreamerBufferSize:  1000, // Enough to handle most bursts of logs in the validator client.
+	}
+
+	if server.authTokenPath == "" && server.walletDir != "" {
+		server.authTokenPath = filepath.Join(server.walletDir, api.AuthTokenFileName)
+	}
+
+	if server.authTokenPath != "" {
+		if err := server.initializeAuthToken(); err != nil {
+			log.WithError(err).Error("Could not initialize web auth token")
+		}
+		validatorWebAddr := fmt.Sprintf("%s:%d", server.validatorGatewayHost, server.validatorGatewayPort)
+		logValidatorWebAuth(validatorWebAddr, server.authToken, server.authTokenPath)
+		go server.refreshAuthTokenFromFileChanges(server.ctx, server.authTokenPath)
 	}
 	// immediately register routes to override any catchalls
 	if err := server.InitializeRoutes(); err != nil {
@@ -122,7 +123,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 // Start the gRPC server.
 func (s *Server) Start() {
 	// Setup the gRPC server options and TLS configuration.
-	address := fmt.Sprintf("%s:%s", s.host, s.port)
+	address := net.JoinHostPort(s.host, s.port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)
@@ -139,7 +140,7 @@ func (s *Server) Start() {
 			),
 			grpcprometheus.UnaryServerInterceptor,
 			grpcopentracing.UnaryServerInterceptor(),
-			s.JWTInterceptor(),
+			s.AuthTokenInterceptor(),
 		)),
 	}
 	grpcprometheus.EnableHandlingTimeHistogram()
@@ -164,17 +165,6 @@ func (s *Server) Start() {
 	}()
 
 	log.WithField("address", address).Info("gRPC server listening on address")
-	if s.walletDir != "" {
-		token, err := s.initializeAuthToken(s.walletDir)
-		if err != nil {
-			log.WithError(err).Error("Could not initialize web auth token")
-			return
-		}
-		validatorWebAddr := fmt.Sprintf("%s:%d", s.grpcGatewayHost, s.grpcGatewayPort)
-		authTokenPath := filepath.Join(s.walletDir, AuthTokenFileName)
-		logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
-		go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
-	}
 }
 
 // InitializeRoutes initializes pure HTTP REST endpoints for the validator client.
@@ -184,7 +174,7 @@ func (s *Server) InitializeRoutes() error {
 		return errors.New("no router found on server")
 	}
 	// Adding Auth Interceptor for the routes below
-	s.router.Use(s.JwtHttpInterceptor)
+	s.router.Use(s.AuthTokenHandler)
 	// Register all services, HandleFunc calls, etc.
 	// ...
 	s.router.HandleFunc("/eth/v1/keystores", s.ListKeystores).Methods(http.MethodGet)
@@ -200,6 +190,10 @@ func (s *Server) InitializeRoutes() error {
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.SetFeeRecipientByPubkey).Methods(http.MethodPost)
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.DeleteFeeRecipientByPubkey).Methods(http.MethodDelete)
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/voluntary_exit", s.SetVoluntaryExit).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/graffiti", s.GetGraffiti).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/graffiti", s.SetGraffiti).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/graffiti", s.DeleteGraffiti).Methods(http.MethodDelete)
+
 	// auth endpoint
 	s.router.HandleFunc(api.WebUrlPrefix+"initialize", s.Initialize).Methods(http.MethodGet)
 	// accounts endpoints

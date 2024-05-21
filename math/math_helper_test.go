@@ -6,8 +6,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/math"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestIntegerSquareRoot(t *testing.T) {
@@ -554,7 +555,7 @@ func TestAddInt(t *testing.T) {
 func TestWeiToGwei(t *testing.T) {
 	tests := []struct {
 		v    *big.Int
-		want math.Gwei
+		want primitives.Gwei
 	}{
 		{big.NewInt(1e9 - 1), 0},
 		{big.NewInt(1e9), 1},
@@ -562,7 +563,7 @@ func TestWeiToGwei(t *testing.T) {
 		{big.NewInt(239489233849348394), 239489233},
 	}
 	for _, tt := range tests {
-		if got := math.WeiToGwei(tt.v); got != tt.want {
+		if got := primitives.WeiToGwei(tt.v); got != tt.want {
 			t.Errorf("WeiToGwei() = %v, want %v", got, tt.want)
 		}
 	}
@@ -570,8 +571,8 @@ func TestWeiToGwei(t *testing.T) {
 
 func TestWeiToGwei_CopyOk(t *testing.T) {
 	v := big.NewInt(1e9)
-	got := math.WeiToGwei(v)
+	got := primitives.WeiToGwei(v)
 
-	require.Equal(t, math.Gwei(1), got)
+	require.Equal(t, primitives.Gwei(1), got)
 	require.Equal(t, big.NewInt(1e9).Uint64(), v.Uint64())
 }
