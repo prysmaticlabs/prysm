@@ -21,6 +21,8 @@ const (
 	BlsSignLen   = 96
 )
 
+var errJsonNilField = errors.New("nil field in JSON value")
+
 // BlsPubkey represents a 48 byte BLS public key.
 type BlsPubkey [BlsPubKeyLen]byte
 
@@ -325,6 +327,14 @@ type ExecutionPayloadElectraJSON struct {
 	DepositRequests    []DepositRequestV1    `json:"depositRequests"`
 }
 
+// ExecutionPayloadBody represents the engine API ExecutionPayloadV1 or ExecutionPayloadV2 type.
+type ExecutionPayloadBody struct {
+	Transactions       []hexutil.Bytes       `json:"transactions"`
+	Withdrawals        []*Withdrawal         `json:"withdrawals"`
+	WithdrawalRequests []WithdrawalRequestV1 `json:"withdrawalRequests"`
+	DepositRequests    []DepositRequestV1    `json:"depositRequests"`
+}
+
 // Validate returns an error if key fields in GetPayloadV4ResponseJson are nil or invalid.
 func (j *GetPayloadV4ResponseJson) Validate() error {
 	if j.ExecutionPayload == nil {
@@ -411,6 +421,19 @@ type WithdrawalRequestV1 struct {
 	Amount          *hexutil.Uint64 `json:"amount"`
 }
 
+func (r WithdrawalRequestV1) Validate() error {
+	if r.SourceAddress == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'sourceAddress' for WithdrawalRequestV1")
+	}
+	if r.ValidatorPubkey == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'validatorPublicKey' for WithdrawalRequestV1")
+	}
+	if r.Amount == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'amount' for WithdrawalRequestV1")
+	}
+	return nil
+}
+
 // DepositRequestV1 represents an execution engine DepositRequestV1 value
 // https://github.com/ethereum/execution-apis/blob/main/src/engine/prague.md#depositrequestv1
 type DepositRequestV1 struct {
@@ -424,6 +447,25 @@ type DepositRequestV1 struct {
 	Signature *BlsSig `json:"signature"`
 	// index: QUANTITY, 64 Bits
 	Index *hexutil.Uint64 `json:"index"`
+}
+
+func (r DepositRequestV1) Validate() error {
+	if r.PubKey == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'pubkey' for DepositRequestV1")
+	}
+	if r.WithdrawalCredentials == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'withdrawalCredentials' for DepositRequestV1")
+	}
+	if r.Amount == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'amount' for DepositRequestV1")
+	}
+	if r.Signature == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'signature' for DepositRequestV1")
+	}
+	if r.Index == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'index' for DepositRequestV1")
+	}
+	return nil
 }
 
 // MarshalJSON --
@@ -941,17 +983,20 @@ func (e *ExecutionPayloadElectra) MarshalJSON() ([]byte, error) {
 		Withdrawals:        withdrawals,
 		BlobGasUsed:        &blobGasUsed,
 		ExcessBlobGas:      &excessBlobGas,
-		WithdrawalRequests: WithdrawalRequestProtoToJson(e.WithdrawalRequests),
-		DepositRequests:    DepositRequestProtoToJson(e.DepositReceipts),
+		WithdrawalRequests: ProtoWithdrawalRequestsToJson(e.WithdrawalRequests),
+		DepositRequests:    ProtoDepositRequestsToJson(e.DepositReceipts),
 	})
 }
 
-func (j *ExecutionPayloadElectraJSON) ElectraDepositReceipts() []*DepositReceipt {
-	rcpt := make([]*DepositReceipt, len(j.DepositRequests))
+func JsonDepositRequestsToProto(j []DepositRequestV1) ([]*DepositReceipt, error) {
+	reqs := make([]*DepositReceipt, len(j))
 
-	for i := range j.DepositRequests {
-		req := j.DepositRequests[i]
-		rcpt[i] = &DepositReceipt{
+	for i := range j {
+		req := j[i]
+		if err := req.Validate(); err != nil {
+			return nil, err
+		}
+		reqs[i] = &DepositReceipt{
 			Pubkey:                req.PubKey.Bytes(),
 			WithdrawalCredentials: req.WithdrawalCredentials.Bytes(),
 			Amount:                uint64(*req.Amount),
@@ -960,10 +1005,10 @@ func (j *ExecutionPayloadElectraJSON) ElectraDepositReceipts() []*DepositReceipt
 		}
 	}
 
-	return rcpt
+	return reqs, nil
 }
 
-func DepositRequestProtoToJson(reqs []*DepositReceipt) []DepositRequestV1 {
+func ProtoDepositRequestsToJson(reqs []*DepositReceipt) []DepositRequestV1 {
 	j := make([]DepositRequestV1, len(reqs))
 	for i := range reqs {
 		r := reqs[i]
@@ -985,11 +1030,14 @@ func DepositRequestProtoToJson(reqs []*DepositReceipt) []DepositRequestV1 {
 	return j
 }
 
-func (j *ExecutionPayloadElectraJSON) ElectraExecutionLayerWithdrawalRequests() []*ExecutionLayerWithdrawalRequest {
-	reqs := make([]*ExecutionLayerWithdrawalRequest, len(j.WithdrawalRequests))
+func JsonWithdrawalRequestsToProto(j []WithdrawalRequestV1) ([]*ExecutionLayerWithdrawalRequest, error) {
+	reqs := make([]*ExecutionLayerWithdrawalRequest, len(j))
 
-	for i := range j.WithdrawalRequests {
-		req := j.WithdrawalRequests[i]
+	for i := range j {
+		req := j[i]
+		if err := req.Validate(); err != nil {
+			return nil, err
+		}
 		reqs[i] = &ExecutionLayerWithdrawalRequest{
 			SourceAddress:   req.SourceAddress.Bytes(),
 			ValidatorPubkey: req.ValidatorPubkey.Bytes(),
@@ -997,10 +1045,10 @@ func (j *ExecutionPayloadElectraJSON) ElectraExecutionLayerWithdrawalRequests() 
 		}
 	}
 
-	return reqs
+	return reqs, nil
 }
 
-func WithdrawalRequestProtoToJson(reqs []*ExecutionLayerWithdrawalRequest) []WithdrawalRequestV1 {
+func ProtoWithdrawalRequestsToJson(reqs []*ExecutionLayerWithdrawalRequest) []WithdrawalRequestV1 {
 	j := make([]WithdrawalRequestV1, len(reqs))
 	for i := range reqs {
 		r := reqs[i]
@@ -1031,6 +1079,14 @@ func (j *ExecutionPayloadElectraJSON) ElectraPayload() (*ExecutionPayloadElectra
 	if j.Withdrawals == nil {
 		j.Withdrawals = make([]*Withdrawal, 0)
 	}
+	dr, err := JsonDepositRequestsToProto(j.DepositRequests)
+	if err != nil {
+		return nil, err
+	}
+	wr, err := JsonWithdrawalRequestsToProto(j.WithdrawalRequests)
+	if err != nil {
+		return nil, err
+	}
 	return &ExecutionPayloadElectra{
 		ParentHash:         j.ParentHash.Bytes(),
 		FeeRecipient:       j.FeeRecipient.Bytes(),
@@ -1049,8 +1105,8 @@ func (j *ExecutionPayloadElectraJSON) ElectraPayload() (*ExecutionPayloadElectra
 		Withdrawals:        j.Withdrawals,
 		BlobGasUsed:        uint64(*j.BlobGasUsed),
 		ExcessBlobGas:      uint64(*j.ExcessBlobGas),
-		DepositReceipts:    j.ElectraDepositReceipts(),
-		WithdrawalRequests: j.ElectraExecutionLayerWithdrawalRequests(),
+		DepositReceipts:    dr,
+		WithdrawalRequests: wr,
 	}, nil
 }
 
@@ -1232,42 +1288,11 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 	return nil
 }
 
-type executionPayloadBodyV1JSON struct {
-	Transactions []hexutil.Bytes `json:"transactions"`
-	Withdrawals  []*Withdrawal   `json:"withdrawals"`
-}
-
-func (b *ExecutionPayloadBodyV1) MarshalJSON() ([]byte, error) {
-	transactions := make([]hexutil.Bytes, len(b.Transactions))
-	for i, tx := range b.Transactions {
-		transactions[i] = tx
+// RecastHexutilByteSlice converts a []hexutil.Bytes to a [][]byte
+func RecastHexutilByteSlice(h []hexutil.Bytes) [][]byte {
+	r := make([][]byte, len(h))
+	for i := range h {
+		r[i] = h[i]
 	}
-	if len(b.Withdrawals) == 0 {
-		b.Withdrawals = make([]*Withdrawal, 0)
-	}
-	return json.Marshal(executionPayloadBodyV1JSON{
-		Transactions: transactions,
-		Withdrawals:  b.Withdrawals,
-	})
-}
-
-func (b *ExecutionPayloadBodyV1) UnmarshalJSON(enc []byte) error {
-	var decoded *executionPayloadBodyV1JSON
-	err := json.Unmarshal(enc, &decoded)
-	if err != nil {
-		return err
-	}
-	if len(decoded.Transactions) == 0 {
-		b.Transactions = make([][]byte, 0)
-	}
-	if len(decoded.Withdrawals) == 0 {
-		b.Withdrawals = make([]*Withdrawal, 0)
-	}
-	transactions := make([][]byte, len(decoded.Transactions))
-	for i, tx := range decoded.Transactions {
-		transactions[i] = tx
-	}
-	b.Transactions = transactions
-	b.Withdrawals = decoded.Withdrawals
-	return nil
+	return r
 }

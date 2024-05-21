@@ -77,7 +77,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 				})
 			}
 			require.NoError(t, err)
-			s.valDB = validatorDB
+			s.db = validatorDB
 
 			// Have to close it after import is done otherwise it complains db is not open.
 			defer func() {
@@ -151,7 +151,7 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 				})
 			}
 			require.NoError(t, err)
-			s.valDB = validatorDB
+			s.db = validatorDB
 
 			// Have to close it after export is done otherwise it complains db is not open.
 			defer func() {
@@ -189,7 +189,7 @@ func TestImportExportSlashingProtection_RoundTrip(t *testing.T) {
 		PubKeys: pubKeys,
 	})
 	require.NoError(t, err)
-	s.valDB = validatorDB
+	s.db = validatorDB
 
 	// Have to close it after import is done otherwise it complains db is not open.
 	defer func() {
