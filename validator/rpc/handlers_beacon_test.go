@@ -27,7 +27,7 @@ func TestGetBeaconStatus_NotConnected(t *testing.T) {
 		gomock.Any(),
 	).Return(nil /*response*/, errors.New("uh oh"))
 	srv := &Server{
-		beaconNodeClient: nodeClient,
+		nodeClient: nodeClient,
 	}
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/v2/validator/beacon/status"), nil)
 	wr := httptest.NewRecorder()
@@ -47,7 +47,7 @@ func TestGetBeaconStatus_NotConnected(t *testing.T) {
 func TestGetBeaconStatus_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	nodeClient := validatormock.NewMockNodeClient(ctrl)
-	beaconChainClient := validatormock.NewMockBeaconChainClient(ctrl)
+	chainClient := validatormock.NewMockChainClient(ctrl)
 	nodeClient.EXPECT().GetSyncStatus(
 		gomock.Any(), // ctx
 		gomock.Any(),
@@ -60,15 +60,15 @@ func TestGetBeaconStatus_OK(t *testing.T) {
 		GenesisTime:            timeStamp,
 		DepositContractAddress: []byte("hello"),
 	}, nil)
-	beaconChainClient.EXPECT().GetChainHead(
+	chainClient.EXPECT().GetChainHead(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.ChainHead{
 		HeadEpoch: 1,
 	}, nil)
 	srv := &Server{
-		beaconNodeClient:  nodeClient,
-		beaconChainClient: beaconChainClient,
+		nodeClient:  nodeClient,
+		chainClient: chainClient,
 	}
 
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/v2/validator/beacon/status"), nil)
@@ -228,7 +228,7 @@ func TestServer_GetValidators(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			beaconChainClient := validatormock.NewMockBeaconChainClient(ctrl)
+			beaconChainClient := validatormock.NewMockChainClient(ctrl)
 			if tt.wantErr == "" {
 				beaconChainClient.EXPECT().ListValidators(
 					gomock.Any(), // ctx
@@ -236,7 +236,7 @@ func TestServer_GetValidators(t *testing.T) {
 				).Return(tt.chainResp, nil)
 			}
 			s := &Server{
-				beaconChainClient: beaconChainClient,
+				chainClient: beaconChainClient,
 			}
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/v2/validator/beacon/validators?%s", tt.query), http.NoBody)
 			wr := httptest.NewRecorder()

@@ -203,7 +203,7 @@ func (v *validator) signAtt(ctx context.Context, pubKey [fieldparams.BLSPubkeyLe
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,

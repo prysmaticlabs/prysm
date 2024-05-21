@@ -17,15 +17,15 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 )
 
-type beaconApiBeaconChainClient struct {
-	fallbackClient          iface.BeaconChainClient
+type beaconApiChainClient struct {
+	fallbackClient          iface.ChainClient
 	jsonRestHandler         JsonRestHandler
 	stateValidatorsProvider StateValidatorsProvider
 }
 
 const getValidatorPerformanceEndpoint = "/prysm/validators/performance"
 
-func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*structs.GetBlockHeaderResponse, error) {
+func (c beaconApiChainClient) getHeadBlockHeaders(ctx context.Context) (*structs.GetBlockHeaderResponse, error) {
 	blockHeader := structs.GetBlockHeaderResponse{}
 	err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/headers/head", &blockHeader)
 	if err != nil {
@@ -43,7 +43,7 @@ func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*s
 	return &blockHeader, nil
 }
 
-func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.Empty) (*ethpb.ChainHead, error) {
+func (c beaconApiChainClient) GetChainHead(ctx context.Context, _ *empty.Empty) (*ethpb.ChainHead, error) {
 	const endpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
 
 	finalityCheckpoints := structs.GetFinalityCheckpointsResponse{}
@@ -146,16 +146,16 @@ func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.E
 	}, nil
 }
 
-func (c beaconApiBeaconChainClient) ListValidatorBalances(ctx context.Context, in *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
+func (c beaconApiChainClient) ListValidatorBalances(ctx context.Context, in *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
 	if c.fallbackClient != nil {
 		return c.fallbackClient.ListValidatorBalances(ctx, in)
 	}
 
 	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.ListValidatorBalances is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
+	panic("beaconApiChainClient.ListValidatorBalances is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiChainClientWithFallback.")
 }
 
-func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *ethpb.ListValidatorsRequest) (*ethpb.Validators, error) {
+func (c beaconApiChainClient) ListValidators(ctx context.Context, in *ethpb.ListValidatorsRequest) (*ethpb.Validators, error) {
 	pageSize := in.PageSize
 
 	// We follow the gRPC behavior here, which returns a maximum of 250 results when pageSize == 0
@@ -310,16 +310,16 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *ethp
 	}, nil
 }
 
-func (c beaconApiBeaconChainClient) GetValidatorQueue(ctx context.Context, in *empty.Empty) (*ethpb.ValidatorQueue, error) {
+func (c beaconApiChainClient) GetValidatorQueue(ctx context.Context, in *empty.Empty) (*ethpb.ValidatorQueue, error) {
 	if c.fallbackClient != nil {
 		return c.fallbackClient.GetValidatorQueue(ctx, in)
 	}
 
 	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.GetValidatorQueue is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
+	panic("beaconApiChainClient.GetValidatorQueue is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiChainClientWithFallback.")
 }
 
-func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context, in *ethpb.ValidatorPerformanceRequest) (*ethpb.ValidatorPerformanceResponse, error) {
+func (c beaconApiChainClient) GetValidatorPerformance(ctx context.Context, in *ethpb.ValidatorPerformanceRequest) (*ethpb.ValidatorPerformanceResponse, error) {
 	request, err := json.Marshal(structs.GetValidatorPerformanceRequest{
 		PublicKeys: in.PublicKeys,
 		Indices:    in.Indices,
@@ -345,17 +345,17 @@ func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context,
 	}, nil
 }
 
-func (c beaconApiBeaconChainClient) GetValidatorParticipation(ctx context.Context, in *ethpb.GetValidatorParticipationRequest) (*ethpb.ValidatorParticipationResponse, error) {
+func (c beaconApiChainClient) GetValidatorParticipation(ctx context.Context, in *ethpb.GetValidatorParticipationRequest) (*ethpb.ValidatorParticipationResponse, error) {
 	if c.fallbackClient != nil {
 		return c.fallbackClient.GetValidatorParticipation(ctx, in)
 	}
 
 	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.GetValidatorParticipation is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
+	panic("beaconApiChainClient.GetValidatorParticipation is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiChainClientWithFallback.")
 }
 
-func NewBeaconApiBeaconChainClientWithFallback(jsonRestHandler JsonRestHandler, fallbackClient iface.BeaconChainClient) iface.BeaconChainClient {
-	return &beaconApiBeaconChainClient{
+func NewBeaconApiChainClientWithFallback(jsonRestHandler JsonRestHandler, fallbackClient iface.ChainClient) iface.ChainClient {
+	return &beaconApiChainClient{
 		jsonRestHandler:         jsonRestHandler,
 		fallbackClient:          fallbackClient,
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
