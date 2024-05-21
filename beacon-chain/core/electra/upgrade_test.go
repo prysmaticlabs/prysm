@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -152,14 +151,14 @@ func TestUpgradeToElectra(t *testing.T) {
 
 	balance, err := mSt.DepositBalanceToConsume()
 	require.NoError(t, err)
-	require.Equal(t, math.Gwei(0), balance)
+	require.Equal(t, primitives.Gwei(0), balance)
 
 	tab, err := helpers.TotalActiveBalance(mSt)
 	require.NoError(t, err)
 
 	ebtc, err := mSt.ExitBalanceToConsume()
 	require.NoError(t, err)
-	require.Equal(t, helpers.ActivationExitChurnLimit(math.Gwei(tab)), ebtc)
+	require.Equal(t, helpers.ActivationExitChurnLimit(primitives.Gwei(tab)), ebtc)
 
 	eee, err := mSt.EarliestExitEpoch()
 	require.NoError(t, err)
@@ -167,7 +166,7 @@ func TestUpgradeToElectra(t *testing.T) {
 
 	cbtc, err := mSt.ConsolidationBalanceToConsume()
 	require.NoError(t, err)
-	require.Equal(t, helpers.ConsolidationChurnLimit(math.Gwei(tab)), cbtc)
+	require.Equal(t, helpers.ConsolidationChurnLimit(primitives.Gwei(tab)), cbtc)
 
 	earliestConsolidationEpoch, err := mSt.EarliestConsolidationEpoch()
 	require.NoError(t, err)

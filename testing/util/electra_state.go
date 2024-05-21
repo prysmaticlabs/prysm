@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -84,9 +84,9 @@ func emptyGenesisStateElectra() (state.BeaconState, error) {
 
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderElectra{},
 
-		DepositBalanceToConsume:       math.Gwei(0),
-		ExitBalanceToConsume:          math.Gwei(0),
-		ConsolidationBalanceToConsume: math.Gwei(0),
+		DepositBalanceToConsume:       primitives.Gwei(0),
+		ExitBalanceToConsume:          primitives.Gwei(0),
+		ConsolidationBalanceToConsume: primitives.Gwei(0),
 	}
 	return state_native.InitializeFromProtoElectra(st)
 }
@@ -192,9 +192,9 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 
 		// Electra Data
 		DepositReceiptsStartIndex:     params.BeaconConfig().UnsetDepositReceiptsStartIndex,
-		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(math.Gwei(tab)),
+		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(primitives.Gwei(tab)),
 		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(preState.Slot())),
-		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(math.Gwei(tab)),
+		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(primitives.Gwei(tab)),
 		PendingBalanceDeposits:        make([]*ethpb.PendingBalanceDeposit, 0),
 		PendingPartialWithdrawals:     make([]*ethpb.PendingPartialWithdrawal, 0),
 		PendingConsolidations:         make([]*ethpb.PendingConsolidation, 0),

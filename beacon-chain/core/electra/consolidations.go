@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
@@ -166,7 +166,7 @@ func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethp
 		return err
 	}
 
-	if helpers.ConsolidationChurnLimit(math.Gwei(totalBalance)) <= math.Gwei(params.BeaconConfig().MinActivationBalance) {
+	if helpers.ConsolidationChurnLimit(primitives.Gwei(totalBalance)) <= primitives.Gwei(params.BeaconConfig().MinActivationBalance) {
 		return errors.New("too little available consolidation churn limit")
 	}
 
@@ -240,7 +240,7 @@ func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethp
 			return errors.New("consolidation signature verification failed")
 		}
 
-		sEE, err := ComputeConsolidationEpochAndUpdateChurn(ctx, st, math.Gwei(source.EffectiveBalance))
+		sEE, err := ComputeConsolidationEpochAndUpdateChurn(ctx, st, primitives.Gwei(source.EffectiveBalance))
 		if err != nil {
 			return err
 		}
