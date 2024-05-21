@@ -50,7 +50,7 @@ type ValidatorService struct {
 	graffitiStruct          *graffiti.Graffiti
 	interopKeysConfig       *local.InteropKeymanagerConfig
 	web3SignerConfig        *remoteweb3signer.SetupConfig
-	proposerSettings        *validatorserviceconfig.ProposerSettings
+	proposerSettings        *proposer.Settings
 	validatorsRegBatchSize  int
 	useWeb                  bool
 	emitAccountMetrics      bool
@@ -76,7 +76,7 @@ type Config struct {
 	GraffitiStruct          *graffiti.Graffiti
 	InteropKmConfig         *local.InteropKeymanagerConfig
 	Web3SignerConfig        *remoteweb3signer.SetupConfig
-	ProposerSettings        *validatorserviceconfig.ProposerSettings
+	ProposerSettings        *proposer.Settings
 	ValidatorsRegBatchSize  int
 	UseWeb                  bool
 	LogValidatorPerformance bool

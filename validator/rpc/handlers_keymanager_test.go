@@ -1091,14 +1091,14 @@ func TestServer_SetGasLimit(t *testing.T) {
 				validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
 				vs, err := client.NewValidatorService(ctx, &client.Config{
 					Validator: m,
-					ValDB:     validatorDB,
+					DB:        validatorDB,
 				})
 				require.NoError(t, err)
 
 				s := &Server{
 					validatorService:          vs,
 					beaconNodeValidatorClient: beaconClient,
-					db:                     validatorDB,
+					db:                        validatorDB,
 				}
 
 				if tt.beaconReturn != nil {
@@ -1280,12 +1280,12 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 				validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
 				vs, err := client.NewValidatorService(ctx, &client.Config{
 					Validator: m,
-					DB:     validatorDB,
+					DB:        validatorDB,
 				})
 				require.NoError(t, err)
 				s := &Server{
 					validatorService: vs,
-					db:            validatorDB,
+					db:               validatorDB,
 				}
 				// Set up global default value for builder gas limit.
 				params.BeaconConfig().DefaultBuilderGasLimit = uint64(globalDefaultGasLimit)
@@ -1744,13 +1744,13 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 				// save a default here
 				vs, err := client.NewValidatorService(ctx, &client.Config{
 					Validator: m,
-					DB:     validatorDB,
+					DB:        validatorDB,
 				})
 				require.NoError(t, err)
 				s := &Server{
 					validatorService:          vs,
 					beaconNodeValidatorClient: beaconClient,
-					db:                     validatorDB,
+					db:                        validatorDB,
 				}
 				request := &SetFeeRecipientByPubkeyRequest{
 					Ethaddress: tt.args,
@@ -1854,12 +1854,12 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 				validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
 				vs, err := client.NewValidatorService(ctx, &client.Config{
 					Validator: m,
-					DB:     validatorDB,
+					DB:        validatorDB,
 				})
 				require.NoError(t, err)
 				s := &Server{
 					validatorService: vs,
-					db:            validatorDB,
+					db:               validatorDB,
 				}
 				req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
 				req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})

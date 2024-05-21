@@ -23,7 +23,7 @@ type beaconApiValidatorClient struct {
 	stateValidatorsProvider StateValidatorsProvider
 	jsonRestHandler         JsonRestHandler
 	beaconBlockConverter    BeaconBlockConverter
-	prysmChainClient  iface.PrysmBeaconChainClient
+	prysmChainClient        iface.PrysmChainClient
 	isEventStreamRunning    bool
 }
 

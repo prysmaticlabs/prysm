@@ -997,7 +997,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					}
 					v := &validator{
 						validatorClient: client,
-						km:      km,
+						km:              km,
 						db:              db,
 					}
 					client.EXPECT().CheckDoppelGanger(
@@ -1038,7 +1038,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					}
 					v := &validator{
 						validatorClient: client,
-						km:      km,
+						km:              km,
 						db:              db,
 					}
 					client.EXPECT().CheckDoppelGanger(
@@ -1077,7 +1077,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					}
 					v := &validator{
 						validatorClient: client,
-						km:      km,
+						km:              km,
 						db:              db,
 					}
 					client.EXPECT().CheckDoppelGanger(
@@ -1122,7 +1122,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					}
 					v := &validator{
 						validatorClient: client,
-						km:      km,
+						km:              km,
 						db:              db,
 					}
 					client.EXPECT().CheckDoppelGanger(
@@ -1150,7 +1150,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					}
 					v := &validator{
 						validatorClient: client,
-						km:      km,
+						km:              km,
 						db:              db,
 					}
 					client.EXPECT().CheckDoppelGanger(
@@ -1366,7 +1366,7 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 				db:     db,
 				useWeb: false,
 				wallet: w,
-				Web3SignerConfig: &remoteweb3signer.SetupConfig{
+				web3SignerConfig: &remoteweb3signer.SetupConfig{
 					BaseEndpoint:       "http://localhost:8545",
 					ProvidedPublicKeys: keys,
 				},
@@ -1391,9 +1391,9 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 			require.NoError(t, err)
 			walletChan := make(chan *wallet.Wallet, 1)
 			v := validator{
-				db:                       db,
-				useWeb:                   true,
-				walletInitializedFeed:    &event.Feed{},
+				db:                    db,
+				useWeb:                true,
+				walletInitializedFeed: &event.Feed{},
 				walletInitializedChan: walletChan,
 			}
 			wait := make(chan struct{})
@@ -1992,7 +1992,7 @@ func TestValidator_PushSettings(t *testing.T) {
 				pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
 				if tt.feeRecipientMap != nil {
-					feeRecipients, err := v.buildPrepProposerReqs(ctx, pubkeys)
+					feeRecipients, err := v.buildPrepProposerReqs(pubkeys)
 					require.NoError(t, err)
 					signedRegisterValidatorRequests := v.buildSignedRegReqs(ctx, pubkeys, km.Sign)
 					for _, recipient := range feeRecipients {

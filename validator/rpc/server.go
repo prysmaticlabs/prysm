@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/client"
 	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -65,7 +64,6 @@ type Server struct {
 	grpcRetryDelay            time.Duration
 	grpcHeaders               []string
 	grpcServer                *grpc.Server
-	jwtSecret                 []byte
 	beaconNodeValidatorClient iface.ValidatorClient
 	chainClient               iface.ChainClient
 	nodeClient                iface.NodeClient
@@ -74,6 +72,9 @@ type Server struct {
 	beaconApiEndpoint         string
 	beaconApiTimeout          time.Duration
 	beaconNodeCert            string
+	jwtSecret                 []byte
+	authTokenPath             string
+	authToken                 string
 	db                        db.Database
 	walletDir                 string
 	wallet                    *wallet.Wallet
@@ -109,7 +110,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		if err := server.initializeAuthToken(); err != nil {
 			log.WithError(err).Error("Could not initialize web auth token")
 		}
-		validatorWebAddr := fmt.Sprintf("%s:%d", server.validatorGatewayHost, server.validatorGatewayPort)
+		validatorWebAddr := fmt.Sprintf("%s:%d", server.grpcGatewayHost, server.grpcGatewayPort)
 		logValidatorWebAuth(validatorWebAddr, server.authToken, server.authTokenPath)
 		go server.refreshAuthTokenFromFileChanges(server.ctx, server.authTokenPath)
 	}

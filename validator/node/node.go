@@ -63,15 +63,15 @@ import (
 // ValidatorClient defines an instance of an Ethereum validator that manages
 // the entire lifecycle of services attached to it participating in proof of stake.
 type ValidatorClient struct {
-	cliCtx            *cli.Context
-	ctx               context.Context
-	cancel            context.CancelFunc
-	db                iface.ValidatorDB
-	services          *runtime.ServiceRegistry // Lifecycle and service store.
-	lock              sync.RWMutex
-	wallet            *wallet.Wallet
+	cliCtx                *cli.Context
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	db                    iface.ValidatorDB
+	services              *runtime.ServiceRegistry // Lifecycle and service store.
+	lock                  sync.RWMutex
+	wallet                *wallet.Wallet
 	walletInitializedFeed *event.Feed
-	stop              chan struct{} // Channel to wait for termination notifications.
+	stop                  chan struct{} // Channel to wait for termination notifications.
 }
 
 // NewValidatorClient creates a new instance of the Prysm validator client.
@@ -534,7 +534,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		GraffitiStruct:          graffitiStruct,
 		InteropKmConfig:         interopKmConfig,
 		Web3SignerConfig:        web3signerConfig,
-		ProposerSettings:        proposerSettings,
+		ProposerSettings:        ps,
 		ValidatorsRegBatchSize:  c.cliCtx.Int(flags.ValidatorsRegistrationBatchSizeFlag.Name),
 		UseWeb:                  c.cliCtx.Bool(flags.EnableWebFlag.Name),
 		LogValidatorPerformance: !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name),

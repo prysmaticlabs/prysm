@@ -41,7 +41,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
 	beacon_api "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-	vdb "github.com/prysmaticlabs/prysm/v5/validator/db"
+	"github.com/prysmaticlabs/prysm/v5/validator/db"
 	dbCommon "github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
@@ -91,7 +91,7 @@ type validator struct {
 	db                                 db.Database
 	km                                 keymanager.IKeymanager
 	web3SignerConfig                   *remoteweb3signer.SetupConfig
-	proposerSettings                   *validatorserviceconfig.ProposerSettings
+	proposerSettings                   *proposer.Settings
 	signedValidatorRegistrations       map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1
 	validatorsRegBatchSize             int
 	interopKeysConfig                  *local.InteropKeymanagerConfig

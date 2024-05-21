@@ -228,7 +228,7 @@ func TestServer_GetValidators(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			beaconChainClient := validatormock.NewMockBeaconChainClient(ctrl)
+			beaconChainClient := validatormock.NewMockChainClient(ctrl)
 			if tt.wantErr == "" {
 				beaconChainClient.EXPECT().ListValidators(
 					gomock.Any(), // ctx
@@ -236,7 +236,7 @@ func TestServer_GetValidators(t *testing.T) {
 				).Return(tt.chainResp, nil)
 			}
 			s := &Server{
-				beaconChainClient: beaconChainClient,
+				chainClient: beaconChainClient,
 			}
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/v2/validator/beacon/validators?%s", tt.query), http.NoBody)
 			wr := httptest.NewRecorder()
