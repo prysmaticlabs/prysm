@@ -10,7 +10,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
@@ -242,10 +241,10 @@ func BeaconState(t *testing.T) *ethpb.BeaconStateEPBS {
 			StateSummaryRoot: randomBytes(32, t),
 		}},
 		DepositReceiptsStartIndex:     randomUint64(t),
-		DepositBalanceToConsume:       math.Gwei(randomUint64(t)),
-		ExitBalanceToConsume:          math.Gwei(randomUint64(t)),
+		DepositBalanceToConsume:       primitives.Gwei(randomUint64(t)),
+		ExitBalanceToConsume:          primitives.Gwei(randomUint64(t)),
 		EarliestExitEpoch:             primitives.Epoch(randomUint64(t)),
-		ConsolidationBalanceToConsume: math.Gwei(randomUint64(t)),
+		ConsolidationBalanceToConsume: primitives.Gwei(randomUint64(t)),
 		EarliestConsolidationEpoch:    primitives.Epoch(randomUint64(t)),
 		PendingBalanceDeposits: []*ethpb.PendingBalanceDeposit{
 			{
