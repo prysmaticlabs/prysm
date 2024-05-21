@@ -91,7 +91,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		},
 	}
 
-	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}

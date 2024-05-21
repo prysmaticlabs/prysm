@@ -57,7 +57,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
@@ -96,7 +96,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		},
 	}
 
-	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
@@ -152,7 +152,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
@@ -225,7 +225,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 		},
 	}
 
-	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
@@ -298,7 +298,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusBellatrix(t *testing.T) {
 		},
 	}
 
-	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}
@@ -371,7 +371,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusCapella(t *testing.T) {
 		},
 	}
 
-	ss := make([]ethpb.AttesterSlashing, len(b.Block.Body.AttesterSlashings))
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
 	for i, s := range b.Block.Body.AttesterSlashings {
 		ss[i] = s
 	}

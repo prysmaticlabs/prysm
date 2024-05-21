@@ -16,7 +16,7 @@ import (
 
 func TestAttestingIndices(t *testing.T) {
 	type args struct {
-		att        ethpb.Att
+		att        eth.Att
 		committees [][]primitives.ValidatorIndex
 	}
 	tests := []struct {

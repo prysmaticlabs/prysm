@@ -455,7 +455,7 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	pendingSlashings := make([]*PendingAttesterSlashing, 20)
-	slashings := make([]ethpb.AttesterSlashing, 20)
+	slashings := make([]ethpb.AttSlashing, 20)
 	for i := 0; i < len(pendingSlashings); i++ {
 		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
 		require.NoError(t, err)
@@ -468,14 +468,14 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   []ethpb.AttesterSlashing
+		want   []ethpb.AttSlashing
 	}{
 		{
 			name: "Empty list",
 			fields: fields{
 				pending: []*PendingAttesterSlashing{},
 			},
-			want: []ethpb.AttesterSlashing{},
+			want: []ethpb.AttSlashing{},
 		},
 		{
 			name: "All pending",
@@ -530,7 +530,7 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 	require.NoError(t, beaconState.UpdateValidatorAtIndex(5, val))
 	pendingSlashings := make([]*PendingAttesterSlashing, 20)
 	pendingSlashings2 := make([]*PendingAttesterSlashing, 20)
-	slashings := make([]ethpb.AttesterSlashing, 20)
+	slashings := make([]ethpb.AttSlashing, 20)
 	for i := 0; i < len(pendingSlashings); i++ {
 		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
 		require.NoError(t, err)
@@ -548,7 +548,7 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   []ethpb.AttesterSlashing
+		want   []ethpb.AttSlashing
 	}{
 		{
 			name: "One item",
@@ -588,7 +588,7 @@ func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
 	params.OverrideBeaconConfig(conf)
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	pendingSlashings := make([]*PendingAttesterSlashing, 3)
-	slashings := make([]ethpb.AttesterSlashing, 3)
+	slashings := make([]ethpb.AttSlashing, 3)
 	for i := 0; i < 2; i++ {
 		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
 		require.NoError(t, err)

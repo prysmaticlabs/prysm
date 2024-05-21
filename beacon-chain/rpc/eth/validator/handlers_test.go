@@ -143,9 +143,9 @@ func TestGetAggregateAttestation(t *testing.T) {
 	}
 
 	pool := attestations.NewPool()
-	err := pool.SaveAggregatedAttestations([]ethpb.Att{attSlot1, attslot21, attslot22})
+	err := pool.SaveAggregatedAttestations([]ethpbalpha.Att{attSlot1, attslot21, attslot22})
 	assert.NoError(t, err)
-	err = pool.SaveUnaggregatedAttestations([]ethpb.Att{attslot31, attslot32})
+	err = pool.SaveUnaggregatedAttestations([]ethpbalpha.Att{attslot31, attslot32})
 	assert.NoError(t, err)
 
 	s := &Server{
@@ -314,7 +314,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 		Signature: sig,
 	}
 	pool := attestations.NewPool()
-	err := pool.SaveAggregatedAttestations([]ethpb.Att{att1, att2})
+	err := pool.SaveAggregatedAttestations([]ethpbalpha.Att{att1, att2})
 	assert.NoError(t, err)
 	s := &Server{
 		AttestationsPool: pool,
