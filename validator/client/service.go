@@ -240,8 +240,8 @@ func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
 	return v.validator.Keymanager()
 }
 
-// SignerConfig returns the web3signer configuration
-func (v *ValidatorService) SignerConfig() *remoteweb3signer.SetupConfig {
+// RemoteSignerConfig returns the web3signer configuration
+func (v *ValidatorService) RemoteSignerConfig() *remoteweb3signer.SetupConfig {
 	return v.web3SignerConfig
 }
 

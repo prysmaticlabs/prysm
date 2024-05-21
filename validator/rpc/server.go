@@ -233,7 +233,7 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-// Status returns nil or credentialError.
+// Status returns an error if the service is unhealthy.
 func (s *Server) Status() error {
 	return nil
 }

@@ -414,7 +414,7 @@ func (s *Server) ListRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < len(pubKeys); i++ {
 		keystoreResponse[i] = &RemoteKey{
 			Pubkey:   hexutil.Encode(pubKeys[i][:]),
-			Url:      s.validatorService.SignerConfig().BaseEndpoint,
+			Url:      s.validatorService.RemoteSignerConfig().BaseEndpoint,
 			Readonly: true,
 		}
 	}
