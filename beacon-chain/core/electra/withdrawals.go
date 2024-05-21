@@ -128,7 +128,7 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 			continue
 		}
 		// Verify the validator has been active long enough.
-		if currentEpoch < validator.ActivationEpoch+params.BeaconConfig().ShardCommitteePeriod {
+		if currentEpoch < validator.ActivationEpoch.AddEpoch(params.BeaconConfig().ShardCommitteePeriod) {
 			continue
 		}
 

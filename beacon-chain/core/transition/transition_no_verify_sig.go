@@ -425,7 +425,6 @@ func electraOperations(
 	ctx context.Context,
 	st state.BeaconState,
 	block interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
-
 	// Electra extends the altair operations.
 	st, err := altairOperations(ctx, st, block)
 	if err != nil {
@@ -455,7 +454,6 @@ func electraOperations(
 	if err := electra.ProcessConsolidations(ctx, st, bod.Consolidations()); err != nil {
 		return nil, errors.Wrap(err, "could not process consolidations")
 	}
-
 	return st, nil
 }
 
