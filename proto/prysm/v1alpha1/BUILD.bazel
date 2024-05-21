@@ -131,6 +131,7 @@ ssz_gen_marshal(
         "BeaconStateCapella",
         "BeaconStateDeneb",
         "BeaconStateElectra",
+        "BeaconStateEPBS",
         "SigningData",
         "SyncCommittee",
         "SyncAggregatorSelectionData",
@@ -155,6 +156,8 @@ ssz_gen_marshal(
         "PayloadAttestationData",
         "PayloadAttestation",
         "PayloadAttestationMessage",
+        "SignedBlindPayloadEnvelope",
+        "BlindPayloadEnvelope",
     ],
 )
 
@@ -259,6 +262,7 @@ ssz_proto_files(
         "beacon_state.proto",
         "blobs.proto",
         "payload_attestation.proto",
+        "blind_payload_envelope.proto",
         "sync_committee.proto",
         "withdrawals.proto",
     ],
