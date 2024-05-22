@@ -274,6 +274,25 @@ func HydrateAttestation(a *ethpb.Attestation) *ethpb.Attestation {
 	return a
 }
 
+// HydrateAttestationElectra hydrates an attestation object with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateAttestationElectra(a *ethpb.AttestationElectra) *ethpb.AttestationElectra {
+	if a.Signature == nil {
+		a.Signature = make([]byte, 96)
+	}
+	if a.AggregationBits == nil {
+		a.AggregationBits = make([]byte, 1)
+	}
+	if a.CommitteeBits == nil {
+		a.CommitteeBits = primitives.NewAttestationCommitteeBits()
+	}
+	if a.Data == nil {
+		a.Data = &ethpb.AttestationData{}
+	}
+	a.Data = HydrateAttestationData(a.Data)
+	return a
+}
+
 // HydrateV1Attestation hydrates a v1 attestation object with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateV1Attestation(a *attv1.Attestation) *attv1.Attestation {
