@@ -240,9 +240,6 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 			if err != nil {
 				builderGetPayloadMissCount.Inc()
 				log.WithError(err).Error("Could not get builder payload")
-			} else if builderBid == nil {
-				builderGetPayloadMissCount.Inc()
-				log.WithError(err).Error("Could not get builder payload")
 			}
 		}
 

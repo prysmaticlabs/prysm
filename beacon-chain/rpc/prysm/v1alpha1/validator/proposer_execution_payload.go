@@ -80,8 +80,6 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		payloadIDCacheHit.Inc()
 		res, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		if err == nil {
-			//payload, bundle, overrideBuilder := res.ExecutionData, res.BlobsBundle, res.OverrideBuilder
-			//bundleCache.add(slot, bundle)
 			warnIfFeeRecipientDiffers(res.ExecutionData.FeeRecipient(), val.FeeRecipient[:])
 			//return payload, overrideBuilder, nil
 			return res, nil
@@ -181,8 +179,6 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		return nil, err
 	}
 
-	// TODO: remove bundleCache code
-	//bundleCache.add(slot, res.BlobsBundle)
 	warnIfFeeRecipientDiffers(res.ExecutionData.FeeRecipient(), val.FeeRecipient[:])
 	log.WithField("value", res.Bid).Debug("received execution payload from local engine")
 	return res, nil
