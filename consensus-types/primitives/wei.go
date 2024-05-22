@@ -73,6 +73,9 @@ func Uint64ToWei(v uint64) Wei {
 
 // LittleEndianBytesToWei returns a Wei value given a little-endian binary representation.
 func LittleEndianBytesToWei(value []byte) Wei {
+	if len(value) == 0 {
+		return big.NewInt(0)
+	}
 	v := make([]byte, len(value))
 	copy(v, value)
 	// SetBytes expects a big-endian representation of the value, so we reverse the byte slice.

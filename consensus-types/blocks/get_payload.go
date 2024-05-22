@@ -42,8 +42,8 @@ func NewGetPayloadResponse(msg proto.Message) (*GetPayloadResponse, error) {
 	wei := primitives.ZeroWei
 	if hasBid {
 		wei = primitives.LittleEndianBytesToWei(bidValueGetter.GetValue())
-		r.Bid = wei
 	}
+	r.Bid = wei
 	shouldOverride, hasShouldOverride := msg.(shouldOverrideBuilderGetter)
 	if hasShouldOverride {
 		r.OverrideBuilder = shouldOverride.GetShouldOverrideBuilder()

@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
@@ -52,29 +53,29 @@ var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, local *blocks.GetPayloadResponse, bid builder.Bid, builderBoostFactor primitives.Gwei) error {
+func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, local *blocks.GetPayloadResponse, bid builder.Bid, builderBoostFactor primitives.Gwei) (primitives.Wei, *enginev1.BlobsBundle, error) {
 	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
 	defer span.End()
 
 	slot := blk.Block().Slot()
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
-		return nil
+		return primitives.ZeroWei, nil, nil
 	}
 
 	if local == nil {
-		return errors.New("local payload is nil")
+		return primitives.ZeroWei, nil, errors.New("local payload is nil")
 	}
 
 	// Use local payload if builder payload is nil.
 	if bid == nil {
-		return setLocalExecution(blk, local)
+		return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
 	}
 
 	var builderKzgCommitments [][]byte
 	builderPayload, err := bid.Header()
 	if err != nil {
 		log.WithError(err).Warn("Proposer: failed to retrieve header from BuilderBid")
-		return setLocalExecution(blk, local)
+		return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
 	}
 	if bid.Version() >= version.Deneb {
 		builderKzgCommitments, err = bid.BlobKzgCommitments()
@@ -89,7 +90,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			log.WithError(err).Warn("Proposer: failed to match withdrawals root")
-			return setLocalExecution(blk, local)
+			return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
 		}
 
 		// Compare payload values between local and builder. Default to the local value if it is higher.
@@ -114,9 +115,9 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
 			if err := setBuilderExecution(blk, builderPayload, builderKzgCommitments); err != nil {
 				log.WithError(err).Warn("Proposer: failed to set builder payload")
-				return setLocalExecution(blk, local)
+				return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
 			} else {
-				return nil
+				return bid.WeiValue(), nil, nil
 			}
 		}
 		if !higherValueBuilder {
@@ -134,13 +135,13 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
 			trace.Int64Attribute("builderBoostFactor", int64(builderBoostFactor)), // lint:ignore uintcast -- This is OK for tracing.
 		)
-		return setLocalExecution(blk, local)
+		return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
 	default: // Bellatrix case.
 		if err := setBuilderExecution(blk, builderPayload, builderKzgCommitments); err != nil {
 			log.WithError(err).Warn("Proposer: failed to set builder payload")
-			return setLocalExecution(blk, local)
+			return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
 		} else {
-			return nil
+			return bid.WeiValue(), nil, nil
 		}
 	}
 }
