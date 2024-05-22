@@ -8,8 +8,10 @@ import (
 	fssz "github.com/prysmaticlabs/fastssz"
 )
 
-// ZeroWei is a non-nil zero value for primitives.Wei
-var ZeroWei Wei = big.NewInt(0)
+// ZW returns a non-nil zero value for primitives.Wei
+func ZeroWei() Wei {
+	return big.NewInt(0)
+}
 
 // Wei is the smallest unit of Ether, represented as a pointer to a bigInt.
 type Wei *big.Int
@@ -71,12 +73,18 @@ func Uint64ToWei(v uint64) Wei {
 	return big.NewInt(0).SetUint64(v)
 }
 
-// BigEndianBytesToWei returns a Wei value given a big-endian binary representation (eg engine api payload bids).
-func BigEndianBytesToWei(value []byte) Wei {
+// LittleEndianBytesToWei returns a Wei value given a little-endian binary representation.
+// The only places we use this representation are in protobuf types that hold either the
+// local execution payload bid or the builder bid. Going forward we should avoid that representation
+// so this function being used in new places should be considered a code smell.
+func LittleEndianBytesToWei(value []byte) Wei {
+	if len(value) == 0 {
+		return big.NewInt(0)
+	}
 	v := make([]byte, len(value))
 	copy(v, value)
+	// SetBytes expects a big-endian representation of the value, so we reverse the byte slice.
 	slices.Reverse(v)
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
 	return big.NewInt(0).SetBytes(v)
 }
 

@@ -156,6 +156,8 @@ func (bb *BuilderBid) ToProto() (*eth.BuilderBid, error) {
 	}
 	return &eth.BuilderBid{
 		Header: header,
+		// Note that SSZBytes() reverses byte order for the little-endian representation.
+		// Uint256.Bytes() is big-endian, SSZBytes takes this value and reverses it.
 		Value:  bb.Value.SSZBytes(),
 		Pubkey: bb.Pubkey,
 	}, nil
@@ -484,6 +486,8 @@ func (bb *BuilderBidCapella) ToProto() (*eth.BuilderBidCapella, error) {
 	}
 	return &eth.BuilderBidCapella{
 		Header: header,
+		// Note that SSZBytes() reverses byte order for the little-endian representation.
+		// Uint256.Bytes() is big-endian, SSZBytes takes this value and reverses it.
 		Value:  bytesutil.SafeCopyBytes(bb.Value.SSZBytes()),
 		Pubkey: bytesutil.SafeCopyBytes(bb.Pubkey),
 	}, nil
@@ -1022,8 +1026,10 @@ func (bb *BuilderBidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
 	return &eth.BuilderBidDeneb{
 		Header:             header,
 		BlobKzgCommitments: kzgCommitments,
-		Value:              bytesutil.SafeCopyBytes(bb.Value.SSZBytes()),
-		Pubkey:             bytesutil.SafeCopyBytes(bb.Pubkey),
+		// Note that SSZBytes() reverses byte order for the little-endian representation.
+		// Uint256.Bytes() is big-endian, SSZBytes takes this value and reverses it.
+		Value:  bytesutil.SafeCopyBytes(bb.Value.SSZBytes()),
+		Pubkey: bytesutil.SafeCopyBytes(bb.Pubkey),
 	}, nil
 }
 
