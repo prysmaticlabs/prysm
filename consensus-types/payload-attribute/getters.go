@@ -80,7 +80,7 @@ func (a *data) PbV3() (*enginev1.PayloadAttributesV3, error) {
 	if a == nil {
 		return nil, errNilPayloadAttribute
 	}
-	if a.version != version.Deneb {
+	if a.version < version.Deneb {
 		return nil, consensus_types.ErrNotSupported("PbV3", a.version)
 	}
 	if a.timeStamp == 0 && len(a.prevRandao) == 0 && len(a.parentBeaconBlockRoot) == 0 {

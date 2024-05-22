@@ -18,7 +18,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -227,7 +226,7 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att, committee)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +265,7 @@ func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, priv
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att, committee)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +336,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]interfaces.Attestation{
+	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]ethpb.Att{
 		att0,
 		att1,
 		att2,
@@ -388,7 +387,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]interfaces.Attestation{
+	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]ethpb.Att{
 		att0,
 		att1,
 	})

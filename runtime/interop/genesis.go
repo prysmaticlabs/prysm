@@ -92,7 +92,7 @@ func GethShanghaiTime(genesisTime uint64, cfg *clparams.BeaconChainConfig) *uint
 	return shanghaiTime
 }
 
-// GethCancunTime calculates the absolute time of the shanghai (aka capella) fork block
+// GethCancunTime calculates the absolute time of the cancun (aka deneb) fork block
 // by adding the relative time of the capella the fork epoch to the given genesis timestamp.
 func GethCancunTime(genesisTime uint64, cfg *clparams.BeaconChainConfig) *uint64 {
 	var cancunTime *uint64
@@ -107,6 +107,21 @@ func GethCancunTime(genesisTime uint64, cfg *clparams.BeaconChainConfig) *uint64
 	return cancunTime
 }
 
+// GethPragueTime calculates the absolute time of the prague (aka electra) fork block
+// by adding the relative time of the capella the fork epoch to the given genesis timestamp.
+func GethPragueTime(genesisTime uint64, cfg *clparams.BeaconChainConfig) *uint64 {
+	var pragueTime *uint64
+	if cfg.ElectraForkEpoch != math.MaxUint64 {
+		startSlot, err := slots.EpochStart(cfg.ElectraForkEpoch)
+		if err == nil {
+			startTime := slots.StartTime(genesisTime, startSlot)
+			newTime := uint64(startTime.Unix())
+			pragueTime = &newTime
+		}
+	}
+	return pragueTime
+}
+
 // GethTestnetGenesis creates a genesis.json for eth1 clients with a set of defaults suitable for ephemeral testnets,
 // like in an e2e test. The parameters are minimal but the full value is returned unmarshaled so that it can be
 // customized as desired.
@@ -118,6 +133,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 
 	shanghaiTime := GethShanghaiTime(genesisTime, cfg)
 	cancunTime := GethCancunTime(genesisTime, cfg)
+	pragueTime := GethPragueTime(genesisTime, cfg)
 	cc := &params.ChainConfig{
 		ChainID:                       big.NewInt(defaultTestChainId),
 		HomesteadBlock:                bigz,
@@ -143,6 +159,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 		},
 		ShanghaiTime: shanghaiTime,
 		CancunTime:   cancunTime,
+		PragueTime:   pragueTime,
 	}
 	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
 	ma := minerAllocation()

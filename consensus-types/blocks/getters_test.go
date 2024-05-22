@@ -356,17 +356,30 @@ func Test_BeaconBlockBody_ProposerSlashings(t *testing.T) {
 }
 
 func Test_BeaconBlockBody_AttesterSlashings(t *testing.T) {
-	as := make([]interfaces.AttesterSlashing, 0)
+	as := make([]eth.AttSlashing, 0)
 	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
 	require.NoError(t, bb.SetAttesterSlashings(as))
 	assert.DeepSSZEqual(t, as, bb.Block().Body().AttesterSlashings())
 }
 
 func Test_BeaconBlockBody_Attestations(t *testing.T) {
-	a := make([]interfaces.Attestation, 0)
+	a := make([]eth.Att, 0)
 	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
 	require.NoError(t, bb.SetAttestations(a))
 	assert.DeepSSZEqual(t, a, bb.Block().Body().Attestations())
+}
+
+func Test_BeaconBlockBody_ElectraAttestations(t *testing.T) {
+	bb := &SignedBeaconBlock{
+		block: &BeaconBlock{body: &BeaconBlockBody{
+			version: version.Electra,
+			attestationsElectra: []*eth.AttestationElectra{{
+				Signature: []byte("electra"),
+			}},
+		}}}
+	a := bb.Block().Body().Attestations()
+	require.Equal(t, 1, len(a))
+	require.DeepEqual(t, a[0].GetSignature(), []byte("electra"))
 }
 
 func Test_BeaconBlockBody_Deposits(t *testing.T) {

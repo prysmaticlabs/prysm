@@ -11,7 +11,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
@@ -49,6 +48,7 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyStateRoots
 	ReadOnlyRandaoMixes
 	ReadOnlyEth1Data
+	ReadOnlyExits
 	ReadOnlyValidators
 	ReadOnlyBalances
 	ReadOnlyCheckpoint
@@ -115,7 +115,7 @@ type ReadOnlyValidator interface {
 	WithdrawableEpoch() primitives.Epoch
 	ExitEpoch() primitives.Epoch
 	PublicKey() [fieldparams.BLSPubkeyLength]byte
-	WithdrawalCredentials() []byte
+	GetWithdrawalCredentials() []byte
 	Slashed() bool
 	IsNil() bool
 }
@@ -179,6 +179,12 @@ type ReadOnlyEth1Data interface {
 	Eth1DepositIndex() uint64
 }
 
+// ReadOnlyExits defines a struct which only has read access to Exit related methods.
+type ReadOnlyExits interface {
+	ExitBalanceToConsume() (primitives.Gwei, error)
+	EarliestExitEpoch() (primitives.Epoch, error)
+}
+
 // ReadOnlyAttestations defines a struct which only has read access to attestations methods.
 type ReadOnlyAttestations interface {
 	PreviousEpochAttestations() ([]*ethpb.PendingAttestation, error)
@@ -212,13 +218,13 @@ type ReadOnlySyncCommittee interface {
 }
 
 type ReadOnlyDeposits interface {
-	DepositBalanceToConsume() (math.Gwei, error)
+	DepositBalanceToConsume() (primitives.Gwei, error)
 	DepositReceiptsStartIndex() (uint64, error)
 	PendingBalanceDeposits() ([]*ethpb.PendingBalanceDeposit, error)
 }
 
 type ReadOnlyConsolidations interface {
-	ConsolidationBalanceToConsume() (math.Gwei, error)
+	ConsolidationBalanceToConsume() (primitives.Gwei, error)
 	EarliestConsolidationEpoch() (primitives.Epoch, error)
 	PendingConsolidations() ([]*ethpb.PendingConsolidation, error)
 	NumPendingConsolidations() (uint64, error)
@@ -242,7 +248,7 @@ type WriteOnlyEth1Data interface {
 	SetEth1DataVotes(val []*ethpb.Eth1Data) error
 	AppendEth1DataVotes(val *ethpb.Eth1Data) error
 	SetEth1DepositIndex(val uint64) error
-	ExitEpochAndUpdateChurn(exitBalance math.Gwei) (primitives.Epoch, error)
+	ExitEpochAndUpdateChurn(exitBalance primitives.Gwei) (primitives.Epoch, error)
 }
 
 // WriteOnlyValidators defines a struct which only has write access to validators methods.
@@ -314,7 +320,7 @@ type WriteOnlyWithdrawals interface {
 
 type WriteOnlyConsolidations interface {
 	AppendPendingConsolidation(val *ethpb.PendingConsolidation) error
-	SetConsolidationBalanceToConsume(math.Gwei) error
+	SetConsolidationBalanceToConsume(primitives.Gwei) error
 	SetEarliestConsolidationEpoch(epoch primitives.Epoch) error
 	SetPendingConsolidations(val []*ethpb.PendingConsolidation) error
 }
@@ -323,5 +329,5 @@ type WriteOnlyDeposits interface {
 	AppendPendingBalanceDeposit(index primitives.ValidatorIndex, amount uint64) error
 	SetDepositReceiptsStartIndex(index uint64) error
 	SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDeposit) error
-	SetDepositBalanceToConsume(math.Gwei) error
+	SetDepositBalanceToConsume(primitives.Gwei) error
 }

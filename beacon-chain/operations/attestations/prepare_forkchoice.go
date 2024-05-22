@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
@@ -67,7 +67,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
 	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
 
-	attsByDataRoot := make(map[[32]byte][]interfaces.Attestation, len(atts))
+	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(atts))
 
 	// Consolidate attestations by aggregating them by similar data root.
 	for _, att := range atts {
@@ -103,10 +103,10 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 
 // This aggregates a list of attestations using the aggregation algorithm defined in AggregateAttestations
 // and saves the attestations for fork choice.
-func (s *Service) aggregateAndSaveForkChoiceAtts(atts []interfaces.Attestation) error {
-	clonedAtts := make([]interfaces.Attestation, len(atts))
+func (s *Service) aggregateAndSaveForkChoiceAtts(atts []ethpb.Att) error {
+	clonedAtts := make([]ethpb.Att, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = interfaces.CopyAttestation(a)
+		clonedAtts[i] = a.Copy()
 	}
 	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {
@@ -118,7 +118,7 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []interfaces.Attestation) 
 
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
-func (s *Service) seen(att interfaces.Attestation) (bool, error) {
+func (s *Service) seen(att ethpb.Att) (bool, error) {
 	attRoot, err := hash.Proto(att.GetData())
 	if err != nil {
 		return false, err

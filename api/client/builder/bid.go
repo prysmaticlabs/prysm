@@ -6,6 +6,7 @@ import (
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
@@ -165,7 +166,7 @@ func WrappedBuilderBidCapella(p *ethpb.BuilderBidCapella) (Bid, error) {
 // Header returns the execution data interface.
 func (b builderBidCapella) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, blocks.PayloadValueToWei(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, primitives.BigEndianBytesToWei(b.p.Value))
 }
 
 // BlobKzgCommitments --

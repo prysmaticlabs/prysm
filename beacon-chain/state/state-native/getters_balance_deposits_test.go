@@ -5,7 +5,6 @@ import (
 
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -17,7 +16,7 @@ func TestDepositBalanceToConsume(t *testing.T) {
 	require.NoError(t, err)
 	dbtc, err := s.DepositBalanceToConsume()
 	require.NoError(t, err)
-	require.Equal(t, math.Gwei(44), dbtc)
+	require.Equal(t, primitives.Gwei(44), dbtc)
 
 	// Fails for older than electra state
 	s, err = state_native.InitializeFromProtoDeneb(&eth.BeaconStateDeneb{})

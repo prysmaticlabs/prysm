@@ -15,12 +15,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -257,7 +257,7 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation bitfields is
 // a valid length matching the size of the committee.
-func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyBeaconState, att interfaces.Attestation) error {
+func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyBeaconState, att ethpb.Att) error {
 	committee, err := BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve beacon committees")
@@ -293,6 +293,21 @@ func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]pri
 
 	// UnshuffleList is used as an optimized implementation for raw speed.
 	return UnshuffleList(indices, seed)
+}
+
+// CommitteeIndices return beacon committee indices corresponding to bits that are set on the argument bitfield.
+//
+// Spec pseudocode definition:
+//
+//	def get_committee_indices(committee_bits: Bitvector) -> Sequence[CommitteeIndex]:
+//	   return [CommitteeIndex(index) for index, bit in enumerate(committee_bits) if bit]
+func CommitteeIndices(committeeBits bitfield.Bitfield) []primitives.CommitteeIndex {
+	indices := committeeBits.BitIndices()
+	committeeIndices := make([]primitives.CommitteeIndex, len(indices))
+	for i, ix := range indices {
+		committeeIndices[i] = primitives.CommitteeIndex(uint64(ix))
+	}
+	return committeeIndices
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices

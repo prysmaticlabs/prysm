@@ -23,7 +23,7 @@ type beaconApiValidatorClient struct {
 	stateValidatorsProvider StateValidatorsProvider
 	jsonRestHandler         JsonRestHandler
 	beaconBlockConverter    BeaconBlockConverter
-	prysmBeaconChainCLient  iface.PrysmBeaconChainClient
+	prysmChainClient        iface.PrysmChainClient
 	isEventStreamRunning    bool
 }
 
@@ -34,7 +34,7 @@ func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...Valida
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler:         jsonRestHandler,
 		beaconBlockConverter:    beaconApiBeaconBlockConverter{},
-		prysmBeaconChainCLient: prysmBeaconChainClient{
+		prysmChainClient: prysmChainClient{
 			nodeClient:      &beaconApiNodeClient{jsonRestHandler: jsonRestHandler},
 			jsonRestHandler: jsonRestHandler,
 		},

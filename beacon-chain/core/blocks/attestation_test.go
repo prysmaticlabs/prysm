@@ -11,7 +11,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -45,7 +44,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices1, err := attestation.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1, err := attestation.AttestingIndices(att1, committee)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
@@ -67,7 +66,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 	committee, err = helpers.BeaconCommitteeFromState(context.Background(), beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices2, err := attestation.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2, err := attestation.AttestingIndices(att2, committee)
 	require.NoError(t, err)
 	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
@@ -220,6 +219,83 @@ func TestVerifyAttestationNoVerifySignature_BadAttIdx(t *testing.T) {
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
 	err := blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	require.ErrorContains(t, "committee index 100 >= committee count 1", err)
+}
+
+func TestVerifyAttestationNoVerifySignature_Electra(t *testing.T) {
+	var mockRoot [32]byte
+	copy(mockRoot[:], "hello-world")
+	var zeroSig [fieldparams.BLSSignatureLength]byte
+
+	beaconState, _ := util.DeterministicGenesisState(t, 100)
+	err := beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	require.NoError(t, err)
+	ckp := beaconState.CurrentJustifiedCheckpoint()
+	copy(ckp.Root, "hello-world")
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
+
+	t.Run("ok", func(t *testing.T) {
+		aggBits := bitfield.NewBitlist(3)
+		aggBits.SetBitAt(1, true)
+		committeeBits := bitfield.NewBitvector64()
+		committeeBits.SetBitAt(0, true)
+		att := &ethpb.AttestationElectra{
+			Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			},
+			AggregationBits: aggBits,
+			CommitteeBits:   committeeBits,
+		}
+		att.Signature = zeroSig[:]
+		err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
+		assert.NoError(t, err)
+	})
+	t.Run("non-zero committee index", func(t *testing.T) {
+		att := &ethpb.AttestationElectra{
+			Data: &ethpb.AttestationData{
+				Source:         &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+				Target:         &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+				CommitteeIndex: 1,
+			},
+			AggregationBits: bitfield.NewBitlist(1),
+			CommitteeBits:   bitfield.NewBitvector64(),
+		}
+		err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
+		assert.ErrorContains(t, "committee index must be 0 post-Electra", err)
+	})
+	t.Run("index of committee too big", func(t *testing.T) {
+		aggBits := bitfield.NewBitlist(3)
+		committeeBits := bitfield.NewBitvector64()
+		committeeBits.SetBitAt(63, true)
+		att := &ethpb.AttestationElectra{
+			Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			},
+			AggregationBits: aggBits,
+			CommitteeBits:   committeeBits,
+		}
+		att.Signature = zeroSig[:]
+		err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
+		assert.ErrorContains(t, "committee index 63 >= committee count 1", err)
+	})
+	t.Run("wrong aggregation bits count", func(t *testing.T) {
+		aggBits := bitfield.NewBitlist(123)
+		committeeBits := bitfield.NewBitvector64()
+		committeeBits.SetBitAt(0, true)
+		att := &ethpb.AttestationElectra{
+			Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			},
+			AggregationBits: aggBits,
+			CommitteeBits:   committeeBits,
+		}
+		att.Signature = zeroSig[:]
+		err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
+		assert.ErrorContains(t, "aggregation bits count 123 is different than participant count 3", err)
+	})
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
@@ -387,7 +463,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 
 	sig := keys[0].Sign([]byte{'t', 'e', 's', 't'})
 	list := bitfield.Bitlist{0b11111}
-	var atts []interfaces.Attestation
+	var atts []ethpb.Att
 	for i := uint64(0); i < 1000; i++ {
 		atts = append(atts, &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
@@ -403,7 +479,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 	_, err := blocks.AttestationSignatureBatch(context.Background(), beaconState, atts)
 	assert.ErrorContains(t, want, err)
 
-	atts = []interfaces.Attestation{}
+	atts = []ethpb.Att{}
 	list = bitfield.Bitlist{0b10000}
 	for i := uint64(0); i < 1000; i++ {
 		atts = append(atts, &ethpb.Attestation{
@@ -544,7 +620,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	set, err := blocks.AttestationSignatureBatch(ctx, st, []interfaces.Attestation{att1, att2})
+	set, err := blocks.AttestationSignatureBatch(ctx, st, []ethpb.Att{att1, att2})
 	require.NoError(t, err)
 	verified, err := set.Verify()
 	require.NoError(t, err)
@@ -608,6 +684,6 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	_, err = blocks.AttestationSignatureBatch(ctx, st, []interfaces.Attestation{att1, att2})
+	_, err = blocks.AttestationSignatureBatch(ctx, st, []ethpb.Att{att1, att2})
 	require.NoError(t, err)
 }
