@@ -105,7 +105,7 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	// Initialize all committee related data.
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, requestedState, requestedEpoch)
+	assignments, err := helpers.Assignments(ctx, requestedState, requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
@@ -115,13 +115,13 @@ func (bs *Server) ListValidatorAssignments(
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
 				index, requestedState.NumValidators())
 		}
-		comAssignment := committeeAssignments[index]
+		a := assignments[index]
 		pubkey := requestedState.PubkeyAtIndex(index)
 		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
-			BeaconCommittees: comAssignment.Committee,
-			CommitteeIndex:   comAssignment.CommitteeIndex,
-			AttesterSlot:     comAssignment.AttesterSlot,
-			ProposerSlots:    proposerIndexToSlots[index],
+			BeaconCommittees: a.Committee,
+			CommitteeIndex:   a.CommitteeIndex,
+			AttesterSlot:     a.AttesterSlot,
+			ProposerSlots:    a.ProposerSlots,
 			PublicKey:        pubkey[:],
 			ValidatorIndex:   index,
 		}

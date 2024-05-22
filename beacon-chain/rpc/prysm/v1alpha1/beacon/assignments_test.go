@@ -174,16 +174,16 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 
 	activeIndices, err := helpers.ActiveValidatorIndices(ctx, s, 0)
 	require.NoError(t, err)
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), s, 0)
+	assignments, err := helpers.Assignments(context.Background(), s, 0)
 	require.NoError(t, err)
 	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
 		val, err := s.ValidatorAtIndex(index)
 		require.NoError(t, err)
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
-			BeaconCommittees: committeeAssignments[index].Committee,
-			CommitteeIndex:   committeeAssignments[index].CommitteeIndex,
-			AttesterSlot:     committeeAssignments[index].AttesterSlot,
-			ProposerSlots:    proposerIndexToSlots[index],
+			BeaconCommittees: assignments[index].Committee,
+			CommitteeIndex:   assignments[index].CommitteeIndex,
+			AttesterSlot:     assignments[index].AttesterSlot,
+			ProposerSlots:    assignments[index].ProposerSlots,
 			PublicKey:        val.PublicKey,
 			ValidatorIndex:   index,
 		})
@@ -244,16 +244,16 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 
 	activeIndices, err := helpers.ActiveValidatorIndices(ctx, s, 0)
 	require.NoError(t, err)
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), s, 0)
+	assignments, err := helpers.Assignments(context.Background(), s, 0)
 	require.NoError(t, err)
 	for _, index := range activeIndices[1:4] {
 		val, err := s.ValidatorAtIndex(index)
 		require.NoError(t, err)
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
-			BeaconCommittees: committeeAssignments[index].Committee,
-			CommitteeIndex:   committeeAssignments[index].CommitteeIndex,
-			AttesterSlot:     committeeAssignments[index].AttesterSlot,
-			ProposerSlots:    proposerIndexToSlots[index],
+			BeaconCommittees: assignments[index].Committee,
+			CommitteeIndex:   assignments[index].CommitteeIndex,
+			AttesterSlot:     assignments[index].AttesterSlot,
+			ProposerSlots:    assignments[index].ProposerSlots,
 			PublicKey:        val.PublicKey,
 			ValidatorIndex:   index,
 		})
@@ -312,16 +312,16 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 
 	activeIndices, err := helpers.ActiveValidatorIndices(ctx, s, 0)
 	require.NoError(t, err)
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), s, 0)
+	as, err := helpers.Assignments(context.Background(), s, 0)
 	require.NoError(t, err)
 	for _, index := range activeIndices[3:5] {
 		val, err := s.ValidatorAtIndex(index)
 		require.NoError(t, err)
 		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
-			BeaconCommittees: committeeAssignments[index].Committee,
-			CommitteeIndex:   committeeAssignments[index].CommitteeIndex,
-			AttesterSlot:     committeeAssignments[index].AttesterSlot,
-			ProposerSlots:    proposerIndexToSlots[index],
+			BeaconCommittees: as[index].Committee,
+			CommitteeIndex:   as[index].CommitteeIndex,
+			AttesterSlot:     as[index].AttesterSlot,
+			ProposerSlots:    as[index].ProposerSlots,
 			PublicKey:        val.PublicKey,
 			ValidatorIndex:   index,
 		})
@@ -340,16 +340,16 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	req = &ethpb.ListValidatorAssignmentsRequest{Indices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6}, PageSize: 5, PageToken: "1"}
 	res, err = bs.ListValidatorAssignments(context.Background(), req)
 	require.NoError(t, err)
-	cAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), s, 0)
+	as, err = helpers.Assignments(context.Background(), s, 0)
 	require.NoError(t, err)
 	for _, index := range activeIndices[6:7] {
 		val, err := s.ValidatorAtIndex(index)
 		require.NoError(t, err)
 		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
-			BeaconCommittees: cAssignments[index].Committee,
-			CommitteeIndex:   cAssignments[index].CommitteeIndex,
-			AttesterSlot:     cAssignments[index].AttesterSlot,
-			ProposerSlots:    proposerIndexToSlots[index],
+			BeaconCommittees: as[index].Committee,
+			CommitteeIndex:   as[index].CommitteeIndex,
+			AttesterSlot:     as[index].AttesterSlot,
+			ProposerSlots:    as[index].ProposerSlots,
 			PublicKey:        val.PublicKey,
 			ValidatorIndex:   index,
 		})
