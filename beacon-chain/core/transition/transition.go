@@ -256,14 +256,18 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			} else if state.Version() >= version.Altair {
+			} else if state.Version() <= version.Deneb {
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
+					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
 				}
 			} else {
-				return nil, errors.New("beacon state should have a version")
+				state, err = electra.ProcessEpoch(ctx, state)
+				if err != nil {
+					tracing.AnnotateError(span, err)
+					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+				}
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {

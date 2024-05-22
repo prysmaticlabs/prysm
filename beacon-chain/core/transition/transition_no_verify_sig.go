@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -452,11 +453,10 @@ func electraOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
-	st, err = electra.ProcessConsolidations(ctx, st, bod.Consolidations())
-	if err != nil {
+
+	if err := electra.ProcessConsolidations(ctx, st, bod.Consolidations()); err != nil {
 		return nil, errors.Wrap(err, "could not process consolidations")
 	}
-
 	return st, nil
 }
 
