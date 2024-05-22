@@ -72,6 +72,9 @@ func Uint64ToWei(v uint64) Wei {
 }
 
 // LittleEndianBytesToWei returns a Wei value given a little-endian binary representation.
+// The only places we use this representation are in protobuf types that hold either the
+// local execution payload bid or the builder bid. Going forward we should avoid that representation
+// so this function being used in new places should be considered a code smell.
 func LittleEndianBytesToWei(value []byte) Wei {
 	if len(value) == 0 {
 		return big.NewInt(0)

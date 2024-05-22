@@ -41,6 +41,10 @@ func NewGetPayloadResponse(msg proto.Message) (*GetPayloadResponse, error) {
 	bidValueGetter, hasBid := msg.(bidValueGetter)
 	wei := primitives.ZeroWei
 	if hasBid {
+		// The protobuf types that engine api responses unmarshal into store their values in little endian form.
+		// This is done for consistency with other uint256 values stored in protobufs for SSZ values.
+		// Long term we should move away from protobuf types for these values and just keep the bid as a big.Int as soon
+		// as we unmarshal it from the engine api response.
 		wei = primitives.LittleEndianBytesToWei(bidValueGetter.GetValue())
 	}
 	r.Bid = wei
