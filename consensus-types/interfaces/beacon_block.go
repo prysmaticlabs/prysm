@@ -27,8 +27,6 @@ type ReadOnlySignedBeaconBlock interface {
 	ssz.Unmarshaler
 	Version() int
 	IsBlinded() bool
-	ValueInWei() primitives.Wei
-	ValueInGwei() uint64
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 
@@ -128,8 +126,6 @@ type ExecutionData interface {
 	TransactionsRoot() ([]byte, error)
 	Withdrawals() ([]*enginev1.Withdrawal, error)
 	WithdrawalsRoot() ([]byte, error)
-	ValueInWei() (primitives.Wei, error)
-	ValueInGwei() (uint64, error)
 }
 
 type ExecutionDataElectra interface {
