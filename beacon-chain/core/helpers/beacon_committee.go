@@ -191,7 +191,7 @@ func Assignments(
 	if err != nil {
 		return nil, err
 	}
-	assignmentMap := make(map[primitives.ValidatorIndex]*AssignmentContainer, len(activeValidatorIndices))
+	assignmentMap := make(map[primitives.ValidatorIndex]*AssignmentContainer)
 
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
