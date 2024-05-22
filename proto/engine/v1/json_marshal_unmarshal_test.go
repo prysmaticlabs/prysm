@@ -360,8 +360,8 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 				}},
 				BlobGasUsed:        &bgu,
 				ExcessBlobGas:      &ebg,
-				WithdrawalRequests: enginev1.WithdrawalRequestProtoToJson(withdrawalReq),
-				DepositRequests:    enginev1.DepositRequestProtoToJson(depositReq),
+				WithdrawalRequests: enginev1.ProtoWithdrawalRequestsToJson(withdrawalReq),
+				DepositRequests:    enginev1.ProtoDepositRequestsToJson(depositReq),
 			},
 		}
 		enc, err := json.Marshal(resp)
@@ -763,8 +763,8 @@ func TestPayloadIDBytes_MarshalUnmarshalJSON(t *testing.T) {
 }
 
 func TestExecutionPayloadBody_MarshalUnmarshalJSON(t *testing.T) {
-	pBody := &enginev1.ExecutionPayloadBodyV1{
-		Transactions: [][]byte{[]byte("random1"), []byte("random2"), []byte("random3")},
+	pBody := &enginev1.ExecutionPayloadBody{
+		Transactions: []hexutil.Bytes{[]byte("random1"), []byte("random2"), []byte("random3")},
 		Withdrawals: []*enginev1.Withdrawal{
 			{
 				Index:          200,
@@ -782,8 +782,8 @@ func TestExecutionPayloadBody_MarshalUnmarshalJSON(t *testing.T) {
 	}
 	enc, err := json.Marshal(pBody)
 	require.NoError(t, err)
-	res := &enginev1.ExecutionPayloadBodyV1{}
-	err = res.UnmarshalJSON(enc)
+	res := &enginev1.ExecutionPayloadBody{}
+	err = json.Unmarshal(enc, res)
 	require.NoError(t, err)
 	require.DeepEqual(t, pBody, res)
 }

@@ -4,7 +4,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
@@ -52,7 +51,7 @@ func (b *BeaconState) SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDepos
 // SetDepositBalanceToConsume is a mutating call to the beacon state which sets the deposit balance
 // to consume value to the given value. This method requires access to the Lock on the state and
 // only applies in electra or later.
-func (b *BeaconState) SetDepositBalanceToConsume(dbtc math.Gwei) error {
+func (b *BeaconState) SetDepositBalanceToConsume(dbtc primitives.Gwei) error {
 	if b.version < version.Electra {
 		return errNotSupported("SetDepositBalanceToConsume", b.version)
 	}
