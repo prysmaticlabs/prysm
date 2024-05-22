@@ -105,6 +105,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		grpcHeaders:            cfg.GRPCHeaders,
 		validatorService:       cfg.ValidatorService,
 		authTokenPath:          cfg.AuthTokenPath,
+		db:                     cfg.DB,
 		walletDir:              cfg.WalletDir,
 		walletInitializedFeed:  cfg.WalletInitializedFeed,
 		walletInitialized:      cfg.Wallet != nil,
