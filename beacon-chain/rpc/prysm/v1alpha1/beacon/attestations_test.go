@@ -263,7 +263,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 	ctx := context.Background()
 
 	count := params.BeaconConfig().SlotsPerEpoch * 4
-	atts := make([]interfaces.Attestation, 0, count)
+	atts := make([]ethpb.Att, 0, count)
 	for i := primitives.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		for s := primitives.CommitteeIndex(0); s < 4; s++ {
 			blockExample := util.NewBeaconBlock()
@@ -278,7 +278,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 				}),
 			}
 			util.SaveBlock(t, ctx, db, blockExample)
-			as := make([]interfaces.Attestation, len(blockExample.Block.Body.Attestations))
+			as := make([]ethpb.Att, len(blockExample.Block.Body.Attestations))
 			for i, a := range blockExample.Block.Body.Attestations {
 				as[i] = a
 			}
@@ -464,7 +464,7 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 
 func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 	count := primitives.Slot(100)
-	atts := make([]interfaces.Attestation, count)
+	atts := make([]ethpb.Att, count)
 	targetRoot1 := bytesutil.ToBytes32([]byte("root1"))
 	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
 
@@ -707,7 +707,7 @@ func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
 		AttestationsPool: attestations.NewPool(),
 	}
 
-	atts := []interfaces.Attestation{
+	atts := []ethpb.Att{
 		&ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				Slot:            1,
@@ -756,7 +756,7 @@ func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 		AttestationsPool: attestations.NewPool(),
 	}
 
-	atts := make([]interfaces.Attestation, params.BeaconConfig().DefaultPageSize+1)
+	atts := make([]ethpb.Att, params.BeaconConfig().DefaultPageSize+1)
 	for i := 0; i < len(atts); i++ {
 		att := util.NewAttestation()
 		att.Data.Slot = primitives.Slot(i)
@@ -778,7 +778,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	}
 
 	numAtts := 100
-	atts := make([]interfaces.Attestation, numAtts)
+	atts := make([]ethpb.Att, numAtts)
 	for i := 0; i < len(atts); i++ {
 		att := util.NewAttestation()
 		att.Data.Slot = primitives.Slot(i)

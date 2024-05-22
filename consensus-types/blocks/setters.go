@@ -66,7 +66,7 @@ func (b *SignedBeaconBlock) SetProposerSlashings(p []*eth.ProposerSlashing) {
 
 // SetAttesterSlashings sets the attester slashings in the block.
 // This function is not thread safe, it is only used during block creation.
-func (b *SignedBeaconBlock) SetAttesterSlashings(slashings []interfaces.AttesterSlashing) error {
+func (b *SignedBeaconBlock) SetAttesterSlashings(slashings []eth.AttSlashing) error {
 	if b.version < version.Electra {
 		blockSlashings := make([]*eth.AttesterSlashing, 0, len(slashings))
 		for _, slashing := range slashings {
@@ -93,7 +93,7 @@ func (b *SignedBeaconBlock) SetAttesterSlashings(slashings []interfaces.Attester
 
 // SetAttestations sets the attestations in the block.
 // This function is not thread safe, it is only used during block creation.
-func (b *SignedBeaconBlock) SetAttestations(atts []interfaces.Attestation) error {
+func (b *SignedBeaconBlock) SetAttestations(atts []eth.Att) error {
 	if b.version < version.Electra {
 		blockAtts := make([]*eth.Attestation, 0, len(atts))
 		for _, att := range atts {
