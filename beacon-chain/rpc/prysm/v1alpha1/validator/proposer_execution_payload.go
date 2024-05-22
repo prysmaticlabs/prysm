@@ -81,7 +81,6 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		res, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		if err == nil {
 			warnIfFeeRecipientDiffers(res.ExecutionData.FeeRecipient(), val.FeeRecipient[:])
-			//return payload, overrideBuilder, nil
 			return res, nil
 		}
 		// TODO: TestServer_getExecutionPayloadContextTimeout expects this behavior.
