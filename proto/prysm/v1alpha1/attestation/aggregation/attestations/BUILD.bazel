@@ -9,7 +9,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations",
     visibility = ["//visibility:public"],
     deps = [
-        "//consensus-types/interfaces:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation:go_default_library",
@@ -28,7 +27,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//config/params:go_default_library",
-        "//consensus-types/interfaces:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/ssz/equality:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
