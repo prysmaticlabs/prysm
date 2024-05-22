@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -21,15 +20,15 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
-// GenerateFullBlockCapella generates a fully valid Capella block with the requested parameters.
+// GenerateFullBlockElectra generates a fully valid Electra block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 // This function modifies the passed state as follows:
-func GenerateFullBlockCapella(
+func GenerateFullBlockElectra(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
 	slot primitives.Slot,
-) (*ethpb.SignedBeaconBlockCapella, error) {
+) (*ethpb.SignedBeaconBlockElectra, error) {
 	ctx := context.Background()
 	currentSlot := bState.Slot()
 	if currentSlot > slot {
@@ -52,28 +51,28 @@ func GenerateFullBlockCapella(
 	}
 
 	numToGen = conf.NumAttesterSlashings
-	var aSlashings []*ethpb.AttesterSlashing
+	var aSlashings []*ethpb.AttesterSlashingElectra
 	if numToGen > 0 {
 		generated, err := generateAttesterSlashings(bState, privs, numToGen)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed generating %d attester slashings:", numToGen)
 		}
-		aSlashings = make([]*ethpb.AttesterSlashing, len(generated))
+		aSlashings = make([]*ethpb.AttesterSlashingElectra, len(generated))
 		for i, s := range generated {
-			aSlashings[i] = s.(*ethpb.AttesterSlashing)
+			aSlashings[i] = s.(*ethpb.AttesterSlashingElectra)
 		}
 	}
 
 	numToGen = conf.NumAttestations
-	var atts []*ethpb.Attestation
+	var atts []*ethpb.AttestationElectra
 	if numToGen > 0 {
 		generatedAtts, err := GenerateAttestations(bState, privs, numToGen, slot, false)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed generating %d attestations:", numToGen)
 		}
-		atts = make([]*ethpb.Attestation, len(generatedAtts))
+		atts = make([]*ethpb.AttestationElectra, len(generatedAtts))
 		for i, a := range generatedAtts {
-			atts[i] = a.(*ethpb.Attestation)
+			atts[i] = a.(*ethpb.AttestationElectra)
 		}
 	}
 
@@ -124,7 +123,7 @@ func GenerateFullBlockCapella(
 		return nil, err
 	}
 	blockHash := indexToHash(uint64(slot))
-	newExecutionPayloadCapella := &v1.ExecutionPayloadCapella{
+	newExecutionPayloadCapella := &v1.ExecutionPayloadElectra{
 		ParentHash:    parentExecution.BlockHash(),
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     params.BeaconConfig().ZeroHash[:],
@@ -187,11 +186,11 @@ func GenerateFullBlockCapella(
 		}
 	}
 
-	block := &ethpb.BeaconBlockCapella{
+	block := &ethpb.BeaconBlockElectra{
 		Slot:          slot,
 		ParentRoot:    parentRoot[:],
 		ProposerIndex: idx,
-		Body: &ethpb.BeaconBlockBodyCapella{
+		Body: &ethpb.BeaconBlockBodyElectra{
 			Eth1Data:              eth1Data,
 			RandaoReveal:          reveal,
 			ProposerSlashings:     pSlashings,
@@ -212,30 +211,5 @@ func GenerateFullBlockCapella(
 		return nil, errors.Wrap(err, "could not compute block signature")
 	}
 
-	return &ethpb.SignedBeaconBlockCapella{Block: block, Signature: signature.Marshal()}, nil
-}
-
-// GenerateBLSToExecutionChange generates a valid bls to exec change for validator `val` and its private key `priv` with the given beacon state `st`.
-func GenerateBLSToExecutionChange(st state.BeaconState, priv bls.SecretKey, val primitives.ValidatorIndex) (*ethpb.SignedBLSToExecutionChange, error) {
-	cred := indexToHash(uint64(val))
-	pubkey := priv.PublicKey().Marshal()
-	message := &ethpb.BLSToExecutionChange{
-		ToExecutionAddress: cred[12:],
-		ValidatorIndex:     val,
-		FromBlsPubkey:      pubkey,
-	}
-	c := params.BeaconConfig()
-	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())
-	if err != nil {
-		return nil, err
-	}
-	sr, err := signing.ComputeSigningRoot(message, domain)
-	if err != nil {
-		return nil, err
-	}
-	signature := priv.Sign(sr[:]).Marshal()
-	return &ethpb.SignedBLSToExecutionChange{
-		Message:   message,
-		Signature: signature,
-	}, nil
+	return &ethpb.SignedBeaconBlockElectra{Block: block, Signature: signature.Marshal()}, nil
 }

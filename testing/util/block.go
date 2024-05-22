@@ -22,6 +22,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assertions"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -109,18 +110,26 @@ func GenerateFullBlock(
 	numToGen = conf.NumAttesterSlashings
 	var aSlashings []*ethpb.AttesterSlashing
 	if numToGen > 0 {
-		aSlashings, err = generateAttesterSlashings(bState, privs, numToGen)
+		generated, err := generateAttesterSlashings(bState, privs, numToGen)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed generating %d attester slashings:", numToGen)
+		}
+		aSlashings = make([]*ethpb.AttesterSlashing, len(generated))
+		for i, s := range generated {
+			aSlashings[i] = s.(*ethpb.AttesterSlashing)
 		}
 	}
 
 	numToGen = conf.NumAttestations
 	var atts []*ethpb.Attestation
 	if numToGen > 0 {
-		atts, err = GenerateAttestations(bState, privs, numToGen, slot, false)
+		generatedAtts, err := GenerateAttestations(bState, privs, numToGen, slot, false)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed generating %d attestations:", numToGen)
+		}
+		atts = make([]*ethpb.Attestation, len(generatedAtts))
+		for i, a := range generatedAtts {
+			atts[i] = a.(*ethpb.Attestation)
 		}
 	}
 
@@ -265,8 +274,58 @@ func GenerateAttesterSlashingForValidator(
 	bState state.BeaconState,
 	priv bls.SecretKey,
 	idx primitives.ValidatorIndex,
-) (*ethpb.AttesterSlashing, error) {
+) (ethpb.AttSlashing, error) {
 	currentEpoch := time.CurrentEpoch(bState)
+
+	if bState.Version() >= version.Electra {
+		att1 := &ethpb.IndexedAttestationElectra{
+			Data: &ethpb.AttestationData{
+				Slot:            bState.Slot(),
+				CommitteeIndex:  0,
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				Target: &ethpb.Checkpoint{
+					Epoch: currentEpoch,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+				Source: &ethpb.Checkpoint{
+					Epoch: currentEpoch + 1,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+			},
+			AttestingIndices: []uint64{uint64(idx)},
+		}
+		var err error
+		att1.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, att1.Data, params.BeaconConfig().DomainBeaconAttester, priv)
+		if err != nil {
+			return nil, err
+		}
+
+		att2 := &ethpb.IndexedAttestationElectra{
+			Data: &ethpb.AttestationData{
+				Slot:            bState.Slot(),
+				CommitteeIndex:  0,
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				Target: &ethpb.Checkpoint{
+					Epoch: currentEpoch,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+				Source: &ethpb.Checkpoint{
+					Epoch: currentEpoch,
+					Root:  params.BeaconConfig().ZeroHash[:],
+				},
+			},
+			AttestingIndices: []uint64{uint64(idx)},
+		}
+		att2.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, att2.Data, params.BeaconConfig().DomainBeaconAttester, priv)
+		if err != nil {
+			return nil, err
+		}
+
+		return &ethpb.AttesterSlashingElectra{
+			Attestation_1: att1,
+			Attestation_2: att2,
+		}, nil
+	}
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
@@ -321,8 +380,8 @@ func generateAttesterSlashings(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
 	numSlashings uint64,
-) ([]*ethpb.AttesterSlashing, error) {
-	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
+) ([]ethpb.AttSlashing, error) {
+	attesterSlashings := make([]ethpb.AttSlashing, numSlashings)
 	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := randGen.Uint64() % helpers.SlotCommitteeCount(uint64(bState.NumValidators()))

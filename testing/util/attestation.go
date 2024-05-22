@@ -2,7 +2,6 @@ package util
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 
@@ -50,8 +49,8 @@ func NewAttestation() *ethpb.Attestation {
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
 func GenerateAttestations(
 	bState state.BeaconState, privs []bls.SecretKey, numToGen uint64, slot primitives.Slot, randomRoot bool,
-) ([]*ethpb.Attestation, error) {
-	var attestations []*ethpb.Attestation
+) ([]ethpb.Att, error) {
+	var attestations []ethpb.Att
 	generateHeadState := false
 	bState = bState.Copy()
 	if slot > bState.Slot() {
@@ -108,8 +107,28 @@ func GenerateAttestations(
 				return nil, err
 			}
 			headState = genState
+		case version.Deneb:
+			pbState, err := state_native.ProtobufBeaconStateDeneb(bState.ToProto())
+			if err != nil {
+				return nil, err
+			}
+			genState, err := state_native.InitializeFromProtoUnsafeDeneb(pbState)
+			if err != nil {
+				return nil, err
+			}
+			headState = genState
+		case version.Electra:
+			pbState, err := state_native.ProtobufBeaconStateElectra(bState.ToProto())
+			if err != nil {
+				return nil, err
+			}
+			genState, err := state_native.InitializeFromProtoUnsafeElectra(pbState)
+			if err != nil {
+				return nil, err
+			}
+			headState = genState
 		default:
-			return nil, errors.New("state type isn't supported")
+			return nil, fmt.Errorf("state version %s isn't supported", version.String(bState.Version()))
 		}
 
 		headState, err = transition.ProcessSlots(context.Background(), headState, slot+1)
@@ -180,9 +199,14 @@ func GenerateAttestations(
 			return nil, err
 		}
 
+		ci := c
+		if bState.Version() >= version.Electra {
+			// committee index must be 0 post-Electra
+			ci = 0
+		}
 		attData := &ethpb.AttestationData{
 			Slot:            slot,
-			CommitteeIndex:  c,
+			CommitteeIndex:  ci,
 			BeaconBlockRoot: headRoot,
 			Source:          bState.CurrentJustifiedCheckpoint(),
 			Target: &ethpb.Checkpoint{
@@ -211,10 +235,22 @@ func GenerateAttestations(
 				continue
 			}
 
-			att := &ethpb.Attestation{
-				Data:            attData,
-				AggregationBits: aggregationBits,
-				Signature:       bls.AggregateSignatures(sigs).Marshal(),
+			var att ethpb.Att
+			if bState.Version() >= version.Electra {
+				cb := primitives.NewAttestationCommitteeBits()
+				cb.SetBitAt(uint64(c), true)
+				att = &ethpb.AttestationElectra{
+					Data:            attData,
+					CommitteeBits:   cb,
+					AggregationBits: aggregationBits,
+					Signature:       bls.AggregateSignatures(sigs).Marshal(),
+				}
+			} else {
+				att = &ethpb.Attestation{
+					Data:            attData,
+					AggregationBits: aggregationBits,
+					Signature:       bls.AggregateSignatures(sigs).Marshal(),
+				}
 			}
 			attestations = append(attestations, att)
 		}
