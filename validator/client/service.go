@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
