@@ -98,25 +98,16 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		builderBoostFactor = primitives.Gwei(req.BuilderBoostFactor.Value)
 	}
 
-	winningBid, bundle, err := vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost, builderBoostFactor)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not build block in parallel")
-	}
-
-	sr, err := vs.computeStateRoot(ctx, sBlk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
-	}
-	sBlk.SetStateRoot(sr)
-
+	resp, err := vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost, builderBoostFactor)
 	log.WithFields(logrus.Fields{
 		"slot":               req.Slot,
 		"sinceSlotStartTime": time.Since(t),
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
-
-	// Blob cache is updated after BuildBlockParallel
-	return vs.constructGenericBeaconBlock(sBlk, bundle, winningBid)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not build block in parallel")
+	}
+	return resp, nil
 }
 
 func (vs *Server) handleSuccesfulReorgAttempt(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (state.BeaconState, error) {
@@ -187,7 +178,7 @@ func (vs *Server) getParentState(ctx context.Context, slot primitives.Slot) (sta
 	return head, parentRoot, err
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor primitives.Gwei) (primitives.Wei, *enginev1.BlobsBundle, error) {
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor primitives.Gwei) (*ethpb.GenericBeaconBlock, error) {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -234,13 +225,12 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	blockEpoch := slots.ToEpoch(sBlk.Block().Slot())
 	winningBid := primitives.ZeroWei
 	var bundle *enginev1.BlobsBundle
-	if blockEpoch >= params.BeaconConfig().BellatrixForkEpoch {
+	if slots.ToEpoch(sBlk.Block().Slot()) >= params.BeaconConfig().BellatrixForkEpoch {
 		local, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
 		if err != nil {
-			return primitives.ZeroWei, nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 		}
 
 		// There's no reason to try to get a builder bid if local override is true.
@@ -258,13 +248,19 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 
 		winningBid, bundle, err = setExecutionData(ctx, sBlk, local, builderBid, builderBoostFactor)
 		if err != nil {
-			return primitives.ZeroWei, nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 		}
 	}
 
-	wg.Wait() // Wait until block is built via consensus and execution fields.
+	wg.Wait()
 
-	return winningBid, bundle, nil
+	sr, err := vs.computeStateRoot(ctx, sBlk)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
+	}
+	sBlk.SetStateRoot(sr)
+
+	return vs.constructGenericBeaconBlock(sBlk, bundle, winningBid)
 }
 
 // ProposeBeaconBlock handles the proposal of beacon blocks.
