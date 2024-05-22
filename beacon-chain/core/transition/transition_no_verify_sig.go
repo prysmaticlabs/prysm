@@ -421,10 +421,7 @@ func VerifyBlobCommitmentCount(blk interfaces.ReadOnlyBeaconBlock) error {
 //	    for_ops(body.execution_payload.withdrawal_requests, process_execution_layer_withdrawal_request)
 //	    for_ops(body.execution_payload.deposit_receipts, process_deposit_receipt)  # [New in Electra:EIP6110]
 //	    for_ops(body.consolidations, process_consolidation)  # [New in Electra:EIP7251]
-func electraOperations(
-	ctx context.Context,
-	st state.BeaconState,
-	block interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+func electraOperations(ctx context.Context, st state.BeaconState, block interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
 	// Electra extends the altair operations.
 	st, err := altairOperations(ctx, st, block)
 	if err != nil {

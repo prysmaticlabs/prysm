@@ -3,8 +3,10 @@ package electra
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	e "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"go.opencensus.io/trace"
 )
@@ -50,47 +52,45 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 	_, span := trace.StartSpan(ctx, "electra.ProcessEpoch")
 	defer span.End()
 
-	// TODO: uncomment this
-	//
-	//if state == nil || state.IsNil() {
-	//	return nil, errors.New("nil state")
-	//}
-	//vp, bp, err := InitializePrecomputeValidators(ctx, state)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//vp, bp, err = ProcessEpochParticipation(ctx, state, bp, vp)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "could not process justification")
-	//}
-	//state, vp, err = ProcessInactivityScores(ctx, state, vp)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "could not process inactivity updates")
-	//}
-	//state, err = ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "could not process rewards and penalties")
-	//}
+	if state == nil || state.IsNil() {
+		return nil, errors.New("nil state")
+	}
+	vp, bp, err := InitializePrecomputeValidators(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+	vp, bp, err = ProcessEpochParticipation(ctx, state, bp, vp)
+	if err != nil {
+		return nil, err
+	}
+	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process justification")
+	}
+	state, vp, err = ProcessInactivityScores(ctx, state, vp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process inactivity updates")
+	}
+	state, err = ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process rewards and penalties")
+	}
 	//state, err = ProcessRegistryUpdates(ctx, state)
 	//if err != nil {
 	//	return nil, errors.Wrap(err, "could not process registry updates")
 	//}
-	//proportionalSlashingMultiplier, err := state.ProportionalSlashingMultiplier()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//state, err = ProcessSlashings(state, proportionalSlashingMultiplier)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//state, err = ProcessEth1DataReset(state)
-	//if err != nil {
-	//	return nil, err
-	//}
+	proportionalSlashingMultiplier, err := state.ProportionalSlashingMultiplier()
+	if err != nil {
+		return nil, err
+	}
+	state, err = ProcessSlashings(state, proportionalSlashingMultiplier)
+	if err != nil {
+		return nil, err
+	}
+	state, err = ProcessEth1DataReset(state)
+	if err != nil {
+		return nil, err
+	}
 	//if err = ProcessPendingBalanceDeposits(ctx, state, primitives.Gwei(bp.ActiveCurrentEpoch)); err != nil {
 	//	return nil, err
 	//}
@@ -100,28 +100,28 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 	//if err := ProcessEffectiveBalanceUpdates(state); err != nil {
 	//	return nil, err
 	//}
-	//state, err = ProcessSlashingsReset(state)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//state, err = ProcessRandaoMixesReset(state)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//state, err = ProcessHistoricalDataUpdate(state)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//state, err = ProcessParticipationFlagUpdates(state)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//state, err = ProcessSyncCommitteeUpdates(ctx, state)
-	//if err != nil {
-	//	return nil, err
-	//}
+	state, err = ProcessSlashingsReset(state)
+	if err != nil {
+		return nil, err
+	}
+	state, err = ProcessRandaoMixesReset(state)
+	if err != nil {
+		return nil, err
+	}
+	state, err = ProcessHistoricalDataUpdate(state)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err = ProcessParticipationFlagUpdates(state)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err = ProcessSyncCommitteeUpdates(ctx, state)
+	if err != nil {
+		return nil, err
+	}
 
 	return state, nil
 }
