@@ -7,6 +7,8 @@ go_library(
         "domain.go",
         "epoch.go",
         "execution_address.go",
+        "payload_attestations_mainnet.go",
+        "payload_attestations_minimal.go",  #keep
         "payload_id.go",
         "ptc_status.go",
         "randao.go",
@@ -21,6 +23,7 @@ go_library(
     deps = [
         "//math:go_default_library",
         "@com_github_prysmaticlabs_fastssz//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
 
