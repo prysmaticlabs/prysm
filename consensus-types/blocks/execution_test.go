@@ -108,12 +108,6 @@ func TestWrapExecutionPayloadCapella(t *testing.T) {
 	}
 	payload, err := blocks.WrappedExecutionPayloadCapella(data, big.NewInt(10*1e9))
 	require.NoError(t, err)
-	wei, err := payload.ValueInWei()
-	require.NoError(t, err)
-	assert.Equal(t, 0, big.NewInt(10*1e9).Cmp(wei))
-	gwei, err := payload.ValueInGwei()
-	require.NoError(t, err)
-	assert.Equal(t, uint64(10), gwei)
 
 	assert.DeepEqual(t, data, payload.Proto())
 }
@@ -138,13 +132,6 @@ func TestWrapExecutionPayloadHeaderCapella(t *testing.T) {
 	}
 	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(data, big.NewInt(10*1e9))
 	require.NoError(t, err)
-
-	wei, err := payload.ValueInWei()
-	require.NoError(t, err)
-	assert.Equal(t, 0, big.NewInt(10*1e9).Cmp(wei))
-	gwei, err := payload.ValueInGwei()
-	require.NoError(t, err)
-	assert.Equal(t, uint64(10), gwei)
 
 	assert.DeepEqual(t, data, payload.Proto())
 
@@ -238,12 +225,6 @@ func TestWrapExecutionPayloadDeneb(t *testing.T) {
 	}
 	payload, err := blocks.WrappedExecutionPayloadDeneb(data, big.NewInt(420*1e9))
 	require.NoError(t, err)
-	wei, err := payload.ValueInWei()
-	require.NoError(t, err)
-	assert.Equal(t, 0, big.NewInt(420*1e9).Cmp(wei))
-	gwei, err := payload.ValueInGwei()
-	require.NoError(t, err)
-	assert.Equal(t, uint64(420), gwei)
 
 	g, err := payload.BlobGasUsed()
 	require.NoError(t, err)
@@ -276,13 +257,6 @@ func TestWrapExecutionPayloadHeaderDeneb(t *testing.T) {
 	}
 	payload, err := blocks.WrappedExecutionPayloadHeaderDeneb(data, big.NewInt(10*1e9))
 	require.NoError(t, err)
-
-	wei, err := payload.ValueInWei()
-	require.NoError(t, err)
-	assert.Equal(t, 0, big.NewInt(10*1e9).Cmp(wei))
-	gwei, err := payload.ValueInGwei()
-	require.NoError(t, err)
-	assert.Equal(t, uint64(10), gwei)
 
 	g, err := payload.BlobGasUsed()
 	require.NoError(t, err)

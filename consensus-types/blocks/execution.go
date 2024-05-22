@@ -202,16 +202,6 @@ func (e executionPayload) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// ValueInWei --
-func (executionPayload) ValueInWei() (primitives.Wei, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInGwei --
-func (executionPayload) ValueInGwei() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -367,16 +357,6 @@ func (e executionPayloadHeader) BlobGasUsed() (uint64, error) {
 
 // ExcessBlobGas --
 func (e executionPayloadHeader) ExcessBlobGas() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (executionPayloadHeader) ValueInWei() (primitives.Wei, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInGwei --
-func (executionPayloadHeader) ValueInGwei() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
@@ -568,16 +548,6 @@ func (e executionPayloadCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// ValueInWei --
-func (e executionPayloadCapella) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadCapella) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -736,16 +706,6 @@ func (e executionPayloadHeaderCapella) BlobGasUsed() (uint64, error) {
 // ExcessBlobGas --
 func (e executionPayloadHeaderCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (e executionPayloadHeaderCapella) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderCapella) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
@@ -1125,16 +1085,6 @@ func (e executionPayloadHeaderDeneb) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// ValueInWei --
-func (e executionPayloadHeaderDeneb) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderDeneb) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadHeaderDeneb) IsBlinded() bool {
 	return true
@@ -1291,16 +1241,6 @@ func (e executionPayloadDeneb) BlobGasUsed() (uint64, error) {
 
 func (e executionPayloadDeneb) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
-}
-
-// ValueInWei --
-func (e executionPayloadDeneb) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadDeneb) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
 }
 
 // IsBlinded returns true if the underlying data is blinded.
@@ -1462,16 +1402,6 @@ func (e executionPayloadHeaderElectra) BlobGasUsed() (uint64, error) {
 // ExcessBlobGas --
 func (e executionPayloadHeaderElectra) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
-}
-
-// ValueInWei --
-func (e executionPayloadHeaderElectra) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderElectra) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
 }
 
 // DepositReceipts --
@@ -1641,16 +1571,6 @@ func (e executionPayloadElectra) BlobGasUsed() (uint64, error) {
 
 func (e executionPayloadElectra) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
-}
-
-// ValueInWei --
-func (e executionPayloadElectra) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadElectra) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
 }
 
 // DepositReceipts --
