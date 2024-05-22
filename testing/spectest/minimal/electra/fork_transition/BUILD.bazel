@@ -4,4 +4,8 @@ go_test(
     name = "go_default_test",
     srcs = ["transition_test.go"],
     deps = ["//testing/spectest/shared/electra/fork:go_default_library"],
+    network = "minimal",
+    data = glob(["*.yaml"]) + [
+        "@consensus_spec_tests_minimal//:test_data",
+    ],
 )
