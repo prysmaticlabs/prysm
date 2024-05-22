@@ -227,7 +227,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 
 	winningBid := primitives.ZeroWei
 	var bundle *enginev1.BlobsBundle
-	if slots.ToEpoch(sBlk.Block().Slot()) >= params.BeaconConfig().BellatrixForkEpoch {
+	if sBlk.Version() >= version.Bellatrix {
 		local, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)

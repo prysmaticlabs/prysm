@@ -95,7 +95,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 		// Compare payload values between local and builder. Default to the local value if it is higher.
 		localValueGwei := primitives.WeiToGwei(local.Bid)
-		builderValueGwei := primitives.WeiToGwei(bid.WeiValue())
+		builderValueGwei := primitives.WeiToGwei(bid.Value())
 		// Use builder payload if the following in true:
 		// builder_bid_value * builderBoostFactor(default 100) > local_block_value * (local-block-value-boost + 100)
 		boost := primitives.Gwei(params.BeaconConfig().LocalBlockValueBoost)
@@ -117,7 +117,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 				log.WithError(err).Warn("Proposer: failed to set builder payload")
 				return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
 			} else {
-				return bid.WeiValue(), nil, nil
+				return bid.Value(), nil, nil
 			}
 		}
 		if !higherValueBuilder {
@@ -141,7 +141,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 			log.WithError(err).Warn("Proposer: failed to set builder payload")
 			return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
 		} else {
-			return bid.WeiValue(), nil, nil
+			return bid.Value(), nil, nil
 		}
 	}
 }
@@ -200,7 +200,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, errors.New("builder returned nil bid")
 	}
 
-	v := bid.WeiValue()
+	v := bid.Value()
 	if big.NewInt(0).Cmp(v) == 0 {
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
@@ -323,7 +323,6 @@ func setLocalExecution(blk interfaces.SignedBeaconBlock, local *blocks.GetPayloa
 	if local.BlobsBundle != nil {
 		kzgCommitments = local.BlobsBundle.KzgCommitments
 	}
-	// TODO: plumb blobs bundle through here.
 	return setExecution(blk, local.ExecutionData, false, kzgCommitments)
 }
 

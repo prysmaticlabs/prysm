@@ -80,7 +80,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		payloadIDCacheHit.Inc()
 		res, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		if err == nil {
-			warnIfFeeRecipientDiffers(res.ExecutionData.FeeRecipient(), val.FeeRecipient[:])
+			warnIfFeeRecipientDiffers(val.FeeRecipient[:], res.ExecutionData.FeeRecipient())
 			return res, nil
 		}
 		// TODO: TestServer_getExecutionPayloadContextTimeout expects this behavior.
@@ -178,19 +178,18 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		return nil, err
 	}
 
-	warnIfFeeRecipientDiffers(res.ExecutionData.FeeRecipient(), val.FeeRecipient[:])
+	warnIfFeeRecipientDiffers(val.FeeRecipient[:], res.ExecutionData.FeeRecipient())
 	log.WithField("value", res.Bid).Debug("received execution payload from local engine")
 	return res, nil
 }
 
-// warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
-// match the requested one.
-func warnIfFeeRecipientDiffers(payload, val []byte) {
-	// Warn if the fee recipient is not the value we expect.
-	if !bytes.Equal(payload, val) {
+// warnIfFeeRecipientDiffers logs a warning if the fee recipient in the payload (eg the EL engine get payload response) does not
+// match what was expected (eg the fee recipient previously used to request preparation of the payload).
+func warnIfFeeRecipientDiffers(want, got []byte) {
+	if !bytes.Equal(want, got) {
 		logrus.WithFields(logrus.Fields{
-			"wantedFeeRecipient": fmt.Sprintf("%#x", val),
-			"received":           fmt.Sprintf("%#x", payload),
+			"wantedFeeRecipient": fmt.Sprintf("%#x", want),
+			"received":           fmt.Sprintf("%#x", got),
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
 			"It is possible someone has compromised your client to try and take your transaction fees")
 	}

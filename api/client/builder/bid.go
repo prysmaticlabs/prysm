@@ -23,8 +23,7 @@ type SignedBid interface {
 type Bid interface {
 	Header() (interfaces.ExecutionData, error)
 	BlobKzgCommitments() ([][]byte, error)
-	Value() []byte
-	WeiValue() primitives.Wei
+	Value() primitives.Wei
 	Pubkey() []byte
 	Version() int
 	IsNil() bool
@@ -127,12 +126,7 @@ func (b builderBid) Version() int {
 }
 
 // Value --
-func (b builderBid) Value() []byte {
-	return b.p.Value
-}
-
-// WeiValue --
-func (b builderBid) WeiValue() primitives.Wei {
+func (b builderBid) Value() primitives.Wei {
 	return primitives.LittleEndianBytesToWei(b.p.Value)
 }
 
@@ -186,12 +180,7 @@ func (b builderBidCapella) Version() int {
 }
 
 // Value --
-func (b builderBidCapella) Value() []byte {
-	return b.p.Value
-}
-
-// WeiValue --
-func (b builderBidCapella) WeiValue() primitives.Wei {
+func (b builderBidCapella) Value() primitives.Wei {
 	return primitives.LittleEndianBytesToWei(b.p.Value)
 }
 
@@ -234,12 +223,7 @@ func (b builderBidDeneb) Version() int {
 }
 
 // Value --
-func (b builderBidDeneb) Value() []byte {
-	return b.p.Value
-}
-
-// WeiValue --
-func (b builderBidDeneb) WeiValue() primitives.Wei {
+func (b builderBidDeneb) Value() primitives.Wei {
 	return primitives.LittleEndianBytesToWei(b.p.Value)
 }
 
