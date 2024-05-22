@@ -6,10 +6,10 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-func (c *AttCaches) insertSeenBit(att interfaces.Attestation) error {
+func (c *AttCaches) insertSeenBit(att ethpb.Att) error {
 	r, err := hashFn(att.GetData())
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func (c *AttCaches) insertSeenBit(att interfaces.Attestation) error {
 	return nil
 }
 
-func (c *AttCaches) hasSeenBit(att interfaces.Attestation) (bool, error) {
+func (c *AttCaches) hasSeenBit(att ethpb.Att) (bool, error) {
 	r, err := hashFn(att.GetData())
 	if err != nil {
 		return false, err

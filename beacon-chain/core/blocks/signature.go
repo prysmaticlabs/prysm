@@ -179,7 +179,7 @@ func randaoSigningData(ctx context.Context, beaconState state.ReadOnlyBeaconStat
 func createAttestationSignatureBatch(
 	ctx context.Context,
 	beaconState state.ReadOnlyBeaconState,
-	atts []interfaces.Attestation,
+	atts []ethpb.Att,
 	domain []byte,
 ) (*bls.SignatureBatch, error) {
 	if len(atts) == 0 {
@@ -233,7 +233,7 @@ func createAttestationSignatureBatch(
 
 // AttestationSignatureBatch retrieves all the related attestation signature data such as the relevant public keys,
 // signatures and attestation signing data and collate it into a signature batch object.
-func AttestationSignatureBatch(ctx context.Context, beaconState state.ReadOnlyBeaconState, atts []interfaces.Attestation) (*bls.SignatureBatch, error) {
+func AttestationSignatureBatch(ctx context.Context, beaconState state.ReadOnlyBeaconState, atts []ethpb.Att) (*bls.SignatureBatch, error) {
 	if len(atts) == 0 {
 		return bls.NewSet(), nil
 	}
@@ -243,8 +243,8 @@ func AttestationSignatureBatch(ctx context.Context, beaconState state.ReadOnlyBe
 	dt := params.BeaconConfig().DomainBeaconAttester
 
 	// Split attestations by fork. Note: the signature domain will differ based on the fork.
-	var preForkAtts []interfaces.Attestation
-	var postForkAtts []interfaces.Attestation
+	var preForkAtts []ethpb.Att
+	var postForkAtts []ethpb.Att
 	for _, a := range atts {
 		if slots.ToEpoch(a.GetData().Slot) < fork.Epoch {
 			preForkAtts = append(preForkAtts, a)

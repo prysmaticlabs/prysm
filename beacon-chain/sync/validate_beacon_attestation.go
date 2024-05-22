@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
@@ -172,7 +171,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 }
 
 // This validates beacon unaggregated attestation has correct topic string.
-func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a interfaces.Attestation, bs state.ReadOnlyBeaconState, t string) (pubsub.ValidationResult, error) {
+func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a eth.Att, bs state.ReadOnlyBeaconState, t string) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttTopic")
 	defer span.End()
 
@@ -194,7 +193,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a interfaces
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateCommitteeIndex(ctx context.Context, a interfaces.Attestation, bs state.ReadOnlyBeaconState) (uint64, pubsub.ValidationResult, error) {
+func (s *Service) validateCommitteeIndex(ctx context.Context, a eth.Att, bs state.ReadOnlyBeaconState) (uint64, pubsub.ValidationResult, error) {
 	valCount, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.GetData().Slot))
 	if err != nil {
 		return 0, pubsub.ValidationIgnore, err
@@ -208,7 +207,7 @@ func (s *Service) validateCommitteeIndex(ctx context.Context, a interfaces.Attes
 
 // This validates beacon unaggregated attestation using the given state, the validation consists of bitfield length and count consistency
 // and signature verification.
-func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a interfaces.Attestation, bs state.ReadOnlyBeaconState) (pubsub.ValidationResult, error) {
+func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a eth.Att, bs state.ReadOnlyBeaconState) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttWithState")
 	defer span.End()
 
@@ -224,7 +223,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a interf
 		return pubsub.ValidationReject, errors.New("attestation bitfield is invalid")
 	}
 
-	set, err := blocks.AttestationSignatureBatch(ctx, bs, []interfaces.Attestation{a})
+	set, err := blocks.AttestationSignatureBatch(ctx, bs, []eth.Att{a})
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		attBadSignatureBatchCount.Inc()
@@ -233,7 +232,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a interf
 	return s.validateWithBatchVerifier(ctx, "attestation", set)
 }
 
-func (s *Service) validateBitLength(ctx context.Context, a interfaces.Attestation, bs state.ReadOnlyBeaconState) ([]primitives.ValidatorIndex, pubsub.ValidationResult, error) {
+func (s *Service) validateBitLength(ctx context.Context, a eth.Att, bs state.ReadOnlyBeaconState) ([]primitives.ValidatorIndex, pubsub.ValidationResult, error) {
 	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, a.GetData().Slot, a.GetData().CommitteeIndex)
 	if err != nil {
 		return nil, pubsub.ValidationIgnore, err
