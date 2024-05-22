@@ -40,6 +40,10 @@ func ProcessAttestations(
 		return nil, nil, err
 	}
 	for _, a := range append(prevAtt, curAtt...) {
+		if a.Version() >= version.Electra {
+			return nil, nil, errors.New("post-Electra attestation not supported")
+		}
+
 		if a.InclusionDelay == 0 {
 			return nil, nil, errors.New("attestation with inclusion delay of 0")
 		}

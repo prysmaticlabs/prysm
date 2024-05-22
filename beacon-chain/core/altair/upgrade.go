@@ -8,8 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // UpgradeToAltair updates input state to return the version Altair state.
@@ -154,11 +156,26 @@ func TranslateParticipation(ctx context.Context, state state.BeaconState, atts [
 		if err != nil {
 			return nil, err
 		}
-		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			return nil, err
+
+		var committees [][]primitives.ValidatorIndex
+		if att.Version() >= version.Electra {
+			committeeIndices := helpers.CommitteeIndices(att.CommitteeBitsVal())
+			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
+			for i, ci := range committeeIndices {
+				committees[i], err = helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, ci)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
+			if err != nil {
+				return nil, err
+			}
+			committees = [][]primitives.ValidatorIndex{committee}
 		}
-		indices, err := attestation.AttestingIndices(att, committee)
+
+		indices, err := attestation.AttestingIndices(att, committees...)
 		if err != nil {
 			return nil, err
 		}
