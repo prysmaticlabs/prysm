@@ -23,19 +23,19 @@ func TestSetLatestExecutionPayloadHeader(t *testing.T) {
 		}(),
 		func() interfaces.ExecutionData {
 			e := util.NewBeaconBlockCapella().Block.Body.ExecutionPayload
-			ee, err := blocks.WrappedExecutionPayloadCapella(e, nil)
+			ee, err := blocks.WrappedExecutionPayloadCapella(e)
 			require.NoError(t, err)
 			return ee
 		}(),
 		func() interfaces.ExecutionData {
 			e := util.NewBeaconBlockDeneb().Block.Body.ExecutionPayload
-			ee, err := blocks.WrappedExecutionPayloadDeneb(e, nil)
+			ee, err := blocks.WrappedExecutionPayloadDeneb(e)
 			require.NoError(t, err)
 			return ee
 		}(),
 		func() interfaces.ExecutionData {
 			e := util.NewBeaconBlockElectra().Block.Body.ExecutionPayload
-			ee, err := blocks.WrappedExecutionPayloadElectra(e, nil)
+			ee, err := blocks.WrappedExecutionPayloadElectra(e)
 			require.NoError(t, err)
 			return ee
 		}(),
@@ -50,19 +50,19 @@ func TestSetLatestExecutionPayloadHeader(t *testing.T) {
 		}(),
 		func() interfaces.ExecutionData {
 			e := util.NewBlindedBeaconBlockCapella().Block.Body.ExecutionPayloadHeader
-			ee, err := blocks.WrappedExecutionPayloadHeaderCapella(e, nil)
+			ee, err := blocks.WrappedExecutionPayloadHeaderCapella(e)
 			require.NoError(t, err)
 			return ee
 		}(),
 		func() interfaces.ExecutionData {
 			e := util.NewBlindedBeaconBlockDeneb().Message.Body.ExecutionPayloadHeader
-			ee, err := blocks.WrappedExecutionPayloadHeaderDeneb(e, nil)
+			ee, err := blocks.WrappedExecutionPayloadHeaderDeneb(e)
 			require.NoError(t, err)
 			return ee
 		}(),
 		func() interfaces.ExecutionData {
 			e := util.NewBlindedBeaconBlockElectra().Message.Body.ExecutionPayloadHeader
-			ee, err := blocks.WrappedExecutionPayloadHeaderElectra(e, nil)
+			ee, err := blocks.WrappedExecutionPayloadHeaderElectra(e)
 			require.NoError(t, err)
 			return ee
 		}(),

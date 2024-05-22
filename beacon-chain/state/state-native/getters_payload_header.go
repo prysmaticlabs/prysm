@@ -2,7 +2,6 @@ package state_native
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -24,11 +23,11 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionData, 
 	case version.Bellatrix:
 		return blocks.WrappedExecutionPayloadHeader(b.latestExecutionPayloadHeaderVal())
 	case version.Capella:
-		return blocks.WrappedExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapellaVal(), big.NewInt(0))
+		return blocks.WrappedExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapellaVal())
 	case version.Deneb:
-		return blocks.WrappedExecutionPayloadHeaderDeneb(b.latestExecutionPayloadHeaderDenebVal(), big.NewInt(0))
+		return blocks.WrappedExecutionPayloadHeaderDeneb(b.latestExecutionPayloadHeaderDenebVal())
 	case version.Electra:
-		return blocks.WrappedExecutionPayloadHeaderElectra(b.latestExecutionPayloadHeaderElectraVal(), big.NewInt(0))
+		return blocks.WrappedExecutionPayloadHeaderElectra(b.latestExecutionPayloadHeaderElectraVal())
 	default:
 		return nil, fmt.Errorf("unsupported version (%s) for latest execution payload header", version.String(b.version))
 	}

@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -19,8 +18,8 @@ import (
 // found attester slashings to the caller.
 func (s *Service) checkSlashableAttestations(
 	ctx context.Context, currentEpoch primitives.Epoch, atts []*slashertypes.IndexedAttestationWrapper,
-) (map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing, error) {
-	slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{}
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// Double votes
 	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, atts)
@@ -57,13 +56,13 @@ func (s *Service) checkSurroundVotes(
 	ctx context.Context,
 	attWrappers []*slashertypes.IndexedAttestationWrapper,
 	currentEpoch primitives.Epoch,
-) (map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing, error) {
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
 	// With 256 validators and 16 epochs per chunk, there is 4096 `uint16` elements per chunk.
 	// 4096 `uint16` elements = 8192 bytes = 8KB
 	// 25_600 chunks * 8KB = 200MB
 	const maxChunkBeforeFlush = 25_600
 
-	slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{}
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// Group attestation wrappers by validator chunk index.
 	attWrappersByValidatorChunkIndex := s.groupByValidatorChunkIndex(attWrappers)
@@ -154,7 +153,7 @@ func (s *Service) checkSurroundVotes(
 // Check for double votes in our database given a list of incoming attestations.
 func (s *Service) checkDoubleVotes(
 	ctx context.Context, incomingAttWrappers []*slashertypes.IndexedAttestationWrapper,
-) (map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing, error) {
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotesOnDisk")
 	defer span.End()
 
@@ -163,7 +162,7 @@ func (s *Service) checkDoubleVotes(
 		epoch          primitives.Epoch
 	}
 
-	slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{}
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// Check each incoming attestation for double votes against other incoming attestations.
 	existingAttWrappers := make(map[attestationInfo]*slashertypes.IndexedAttestationWrapper)
@@ -462,13 +461,13 @@ func (s *Service) updateSpans(
 	kind slashertypes.ChunkKind,
 	validatorChunkIndex uint64,
 	currentEpoch primitives.Epoch,
-) (map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing, error) {
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.updateSpans")
 	defer span.End()
 
 	// Apply the attestations to the related chunks and find any
 	// slashings along the way.
-	slashings := map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing{}
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	for _, attWrappers := range attWrapperByChunkIdx {
 		for _, attWrapper := range attWrappers {
@@ -527,7 +526,7 @@ func (s *Service) applyAttestationForValidator(
 	validatorChunkIndex uint64,
 	validatorIndex primitives.ValidatorIndex,
 	currentEpoch primitives.Epoch,
-) (interfaces.AttesterSlashing, error) {
+) (ethpb.AttSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
 	defer span.End()
 

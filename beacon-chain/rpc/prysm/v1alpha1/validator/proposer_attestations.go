@@ -10,16 +10,16 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"go.opencensus.io/trace"
 )
 
-type proposerAtts []interfaces.Attestation
+type proposerAtts []ethpb.Att
 
-func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState) ([]interfaces.Attestation, error) {
+func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState) ([]ethpb.Att, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
 	defer span.End()
 
@@ -46,7 +46,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		return nil, err
 	}
 
-	attsByDataRoot := make(map[[32]byte][]interfaces.Attestation, len(atts))
+	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(atts))
 	for _, att := range atts {
 		attDataRoot, err := att.GetData().HashTreeRoot()
 		if err != nil {
@@ -55,7 +55,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 	}
 
-	attsForInclusion := proposerAtts(make([]interfaces.Attestation, 0))
+	attsForInclusion := proposerAtts(make([]ethpb.Att, 0))
 	for _, as := range attsByDataRoot {
 		as, err := attaggregation.Aggregate(as)
 		if err != nil {
@@ -79,8 +79,8 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 // The first group passes the all the required checks for attestation to be considered for proposing.
 // And attestations from the second group should be deleted.
 func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts) {
-	validAtts := make([]interfaces.Attestation, 0, len(a))
-	invalidAtts := make([]interfaces.Attestation, 0, len(a))
+	validAtts := make([]ethpb.Att, 0, len(a))
+	invalidAtts := make([]ethpb.Att, 0, len(a))
 
 	for _, att := range a {
 		if err := blocks.VerifyAttestationNoVerifySignature(ctx, st, att); err == nil {
@@ -182,7 +182,7 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
-	attsByDataRoot := make(map[[32]byte][]interfaces.Attestation, len(a))
+	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(a))
 	for _, att := range a {
 		attDataRoot, err := att.GetData().HashTreeRoot()
 		if err != nil {
@@ -191,7 +191,7 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 	}
 
-	uniqAtts := make([]interfaces.Attestation, 0, len(a))
+	uniqAtts := make([]ethpb.Att, 0, len(a))
 	for _, atts := range attsByDataRoot {
 		for i := 0; i < len(atts); i++ {
 			a := atts[i]
@@ -224,7 +224,7 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []interfaces.Attestation) ([]interfaces.Attestation, error) {
+func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []ethpb.Att) ([]ethpb.Att, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.validateAndDeleteAttsInPool")
 	defer span.End()
 
@@ -237,7 +237,7 @@ func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.Beac
 
 // The input attestations are processed and seen by the node, this deletes them from pool
 // so proposers don't include them in a block for the future.
-func (vs *Server) deleteAttsInPool(ctx context.Context, atts []interfaces.Attestation) error {
+func (vs *Server) deleteAttsInPool(ctx context.Context, atts []ethpb.Att) error {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.deleteAttsInPool")
 	defer span.End()
 
