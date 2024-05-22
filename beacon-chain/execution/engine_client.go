@@ -289,6 +289,9 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 	defer func() {
 		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
+	d := time.Now().Add(defaultEngineTimeout)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 
 	method, result := getPayloadMethodAndMessage(slot)
 	err := s.rpcClient.CallContext(ctx, result, method, pb.PayloadIDBytes(payloadId))
