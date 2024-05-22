@@ -3,7 +3,6 @@ package validator
 import (
 	"context"
 	"errors"
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -61,7 +60,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	}))
 
 	capellaTransitionState, _ := util.DeterministicGenesisStateCapella(t, 1)
-	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&pb.ExecutionPayloadHeaderCapella{BlockNumber: 1}, big.NewInt(0))
+	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&pb.ExecutionPayloadHeaderCapella{BlockNumber: 1})
 	require.NoError(t, err)
 	require.NoError(t, capellaTransitionState.SetLatestExecutionPayloadHeader(wrappedHeaderCapella))
 	b2pbCapella := util.NewBeaconBlockCapella()
@@ -146,7 +145,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			cfg.TerminalBlockHashActivationEpoch = tt.activationEpoch
 			params.OverrideBeaconConfig(cfg)
 
-			ed, err := blocks.NewWrappedExecutionData(&pb.ExecutionPayload{}, primitives.ZeroWei)
+			ed, err := blocks.NewWrappedExecutionData(&pb.ExecutionPayload{})
 			require.NoError(t, err)
 			vs := &Server{
 				ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed, OverrideBuilder: tt.override}},
@@ -195,7 +194,7 @@ func TestServer_getExecutionPayloadContextTimeout(t *testing.T) {
 	cfg.TerminalBlockHashActivationEpoch = 1
 	params.OverrideBeaconConfig(cfg)
 
-	ed, err := blocks.NewWrappedExecutionData(&pb.ExecutionPayload{}, primitives.ZeroWei)
+	ed, err := blocks.NewWrappedExecutionData(&pb.ExecutionPayload{})
 	require.NoError(t, err)
 	vs := &Server{
 		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: &pb.PayloadIDBytes{}, ErrGetPayload: context.DeadlineExceeded, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed}},
@@ -244,7 +243,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	payloadID := &pb.PayloadIDBytes{0x1}
 	payload := emptyPayload()
 	payload.FeeRecipient = feeRecipient[:]
-	ed, err := blocks.NewWrappedExecutionData(payload, primitives.ZeroWei)
+	ed, err := blocks.NewWrappedExecutionData(payload)
 	require.NoError(t, err)
 	vs := &Server{
 		ExecutionEngineCaller: &powtesting.EngineClient{

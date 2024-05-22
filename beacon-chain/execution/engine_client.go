@@ -562,7 +562,7 @@ func fullPayloadFromPayloadBody(
 			BlockHash:     header.BlockHash(),
 			Transactions:  pb.RecastHexutilByteSlice(body.Transactions),
 			Withdrawals:   body.Withdrawals,
-		}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
+		}) // We can't get the block value and don't care about the block value for this instance
 	case version.Deneb:
 		ebg, err := header.ExcessBlobGas()
 		if err != nil {
@@ -591,7 +591,7 @@ func fullPayloadFromPayloadBody(
 				Withdrawals:   body.Withdrawals,
 				ExcessBlobGas: ebg,
 				BlobGasUsed:   bgu,
-			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
+			}) // We can't get the block value and don't care about the block value for this instance
 	case version.Electra:
 		ebg, err := header.ExcessBlobGas()
 		if err != nil {
@@ -630,7 +630,7 @@ func fullPayloadFromPayloadBody(
 				BlobGasUsed:        bgu,
 				DepositReceipts:    dr,
 				WithdrawalRequests: wr,
-			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
+			}) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version for payload %d", bVersion)
 	}

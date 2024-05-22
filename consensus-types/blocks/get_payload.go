@@ -48,7 +48,7 @@ func NewGetPayloadResponse(msg proto.Message) (*GetPayloadResponse, error) {
 	if hasShouldOverride {
 		r.OverrideBuilder = shouldOverride.GetShouldOverrideBuilder()
 	}
-	ed, err := NewWrappedExecutionData(msg, wei)
+	ed, err := NewWrappedExecutionData(msg)
 	if err != nil {
 		return nil, err
 	}
