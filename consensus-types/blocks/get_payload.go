@@ -3,7 +3,6 @@ package blocks
 import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -12,7 +11,7 @@ import (
 // GetPayloadResponseV(1|2|3|4) value.
 type GetPayloadResponse struct {
 	ExecutionData   interfaces.ExecutionData
-	BlobsBundle     *enginev1.BlobsBundle
+	BlobsBundle     *pb.BlobsBundle
 	OverrideBuilder bool
 	// todo: should we convert this to Gwei up front?
 	Bid primitives.Wei
