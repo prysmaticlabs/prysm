@@ -225,7 +225,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	winningBid := primitives.ZeroWei
+	winningBid := primitives.ZeroWei()
 	var bundle *enginev1.BlobsBundle
 	if sBlk.Version() >= version.Bellatrix {
 		local, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
