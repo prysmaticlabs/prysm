@@ -106,7 +106,7 @@ func (s *Service) RefreshENR() {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	iterator := enode.Filter(s.dv5Listener.RandomNodes(), s.filterPeer)
+	iterator := filterNodes(s.ctx, s.dv5Listener.RandomNodes(), s.filterPeer)
 	defer iterator.Close()
 
 	for {
