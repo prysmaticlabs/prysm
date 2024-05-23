@@ -38,7 +38,7 @@ func NewGetPayloadResponse(msg proto.Message) (*GetPayloadResponse, error) {
 		r.BlobsBundle = bundleGetter.GetBlobsBundle()
 	}
 	bidValueGetter, hasBid := msg.(bidValueGetter)
-	wei := primitives.ZeroWei
+	wei := primitives.ZeroWei()
 	if hasBid {
 		// The protobuf types that engine api responses unmarshal into store their values in little endian form.
 		// This is done for consistency with other uint256 values stored in protobufs for SSZ values.

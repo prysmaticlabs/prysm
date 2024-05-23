@@ -59,11 +59,11 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 	slot := blk.Block().Slot()
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
-		return primitives.ZeroWei, nil, nil
+		return primitives.ZeroWei(), nil, nil
 	}
 
 	if local == nil {
-		return primitives.ZeroWei, nil, errors.New("local payload is nil")
+		return primitives.ZeroWei(), nil, errors.New("local payload is nil")
 	}
 
 	// Use local payload if builder payload is nil.
