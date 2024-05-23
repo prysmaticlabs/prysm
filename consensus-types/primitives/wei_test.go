@@ -10,7 +10,7 @@ import (
 )
 
 func TestWeiStringer(t *testing.T) {
-	require.Equal(t, "0", primitives.WeiToBigInt(primitives.ZeroWei).String())
+	require.Equal(t, "0", primitives.WeiToBigInt(primitives.ZeroWei()).String())
 	require.Equal(t, "1234", primitives.WeiToBigInt(primitives.Uint64ToWei(1234)).String())
 	require.Equal(t, "18446744073709551615", primitives.WeiToBigInt(primitives.Uint64ToWei(math.MaxUint64)).String())
 }
@@ -41,6 +41,6 @@ func TestWeiToGwei_CopyOk(t *testing.T) {
 }
 
 func TestZero(t *testing.T) {
-	z := primitives.ZeroWei
+	z := primitives.ZeroWei()
 	require.Equal(t, 0, big.NewInt(0).Cmp(z))
 }

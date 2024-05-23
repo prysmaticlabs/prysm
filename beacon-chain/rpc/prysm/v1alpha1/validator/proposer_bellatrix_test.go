@@ -503,7 +503,7 @@ func TestServer_setExecutionData(t *testing.T) {
 			GetPayloadResponse: &blocks.GetPayloadResponse{
 				ExecutionData: ed,
 				BlobsBundle:   blobsBundle,
-				Bid:           primitives.ZeroWei,
+				Bid:           primitives.ZeroWei(),
 			},
 		}
 		blk.SetSlot(primitives.Slot(params.BeaconConfig().DenebForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
