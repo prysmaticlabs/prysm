@@ -3,10 +3,8 @@ package math_test
 import (
 	"fmt"
 	stdmath "math"
-	"math/big"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -550,29 +548,4 @@ func TestAddInt(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestWeiToGwei(t *testing.T) {
-	tests := []struct {
-		v    *big.Int
-		want primitives.Gwei
-	}{
-		{big.NewInt(1e9 - 1), 0},
-		{big.NewInt(1e9), 1},
-		{big.NewInt(1e10), 10},
-		{big.NewInt(239489233849348394), 239489233},
-	}
-	for _, tt := range tests {
-		if got := primitives.WeiToGwei(tt.v); got != tt.want {
-			t.Errorf("WeiToGwei() = %v, want %v", got, tt.want)
-		}
-	}
-}
-
-func TestWeiToGwei_CopyOk(t *testing.T) {
-	v := big.NewInt(1e9)
-	got := primitives.WeiToGwei(v)
-
-	require.Equal(t, primitives.Gwei(1), got)
-	require.Equal(t, big.NewInt(1e9).Uint64(), v.Uint64())
 }

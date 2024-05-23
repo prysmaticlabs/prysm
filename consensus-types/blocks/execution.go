@@ -3,13 +3,11 @@ package blocks
 import (
 	"bytes"
 	"errors"
-	"math/big"
 
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
@@ -24,19 +22,25 @@ type executionPayload struct {
 }
 
 // NewWrappedExecutionData creates an appropriate execution payload wrapper based on the incoming type.
-func NewWrappedExecutionData(v proto.Message, weiValue primitives.Wei) (interfaces.ExecutionData, error) {
-	if weiValue == nil {
-		weiValue = new(big.Int).SetInt64(0)
+func NewWrappedExecutionData(v proto.Message) (interfaces.ExecutionData, error) {
+	if v == nil {
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	switch pbStruct := v.(type) {
 	case *enginev1.ExecutionPayload:
 		return WrappedExecutionPayload(pbStruct)
 	case *enginev1.ExecutionPayloadCapella:
-		return WrappedExecutionPayloadCapella(pbStruct, weiValue)
+		return WrappedExecutionPayloadCapella(pbStruct)
+	case *enginev1.ExecutionPayloadCapellaWithValue:
+		return WrappedExecutionPayloadCapella(pbStruct.Payload)
 	case *enginev1.ExecutionPayloadDeneb:
-		return WrappedExecutionPayloadDeneb(pbStruct, weiValue)
+		return WrappedExecutionPayloadDeneb(pbStruct)
+	case *enginev1.ExecutionPayloadDenebWithValueAndBlobsBundle:
+		return WrappedExecutionPayloadDeneb(pbStruct.Payload)
 	case *enginev1.ExecutionPayloadElectra:
-		return WrappedExecutionPayloadElectra(pbStruct, weiValue)
+		return WrappedExecutionPayloadElectra(pbStruct)
+	case *enginev1.ExecutionPayloadElectraWithValueAndBlobsBundle:
+		return WrappedExecutionPayloadElectra(pbStruct.Payload)
 	default:
 		return nil, ErrUnsupportedVersion
 	}
@@ -190,16 +194,6 @@ func (e executionPayload) BlobGasUsed() (uint64, error) {
 
 // ExcessBlobGas --
 func (e executionPayload) ExcessBlobGas() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (executionPayload) ValueInWei() (primitives.Wei, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInGwei --
-func (executionPayload) ValueInGwei() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
@@ -361,16 +355,6 @@ func (e executionPayloadHeader) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// ValueInWei --
-func (executionPayloadHeader) ValueInWei() (primitives.Wei, error) {
-	return nil, consensus_types.ErrUnsupportedField
-}
-
-// ValueInGwei --
-func (executionPayloadHeader) ValueInGwei() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
 // PayloadToHeader converts `payload` into execution payload header format.
 func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeader, error) {
 	txs, err := payload.Transactions()
@@ -403,16 +387,14 @@ func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPaylo
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadCapella struct {
-	p         *enginev1.ExecutionPayloadCapella
-	weiValue  primitives.Wei
-	gweiValue uint64
+	p *enginev1.ExecutionPayloadCapella
 }
 
 var _ interfaces.ExecutionData = &executionPayloadCapella{}
 
 // WrappedExecutionPayloadCapella is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value primitives.Wei) (interfaces.ExecutionData, error) {
-	w := executionPayloadCapella{p: p, weiValue: value, gweiValue: uint64(primitives.WeiToGwei(value))}
+func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella) (interfaces.ExecutionData, error) {
+	w := executionPayloadCapella{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -559,30 +541,18 @@ func (e executionPayloadCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// ValueInWei --
-func (e executionPayloadCapella) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadCapella) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeaderCapella struct {
-	p         *enginev1.ExecutionPayloadHeaderCapella
-	weiValue  primitives.Wei
-	gweiValue uint64
+	p *enginev1.ExecutionPayloadHeaderCapella
 }
 
 var _ interfaces.ExecutionData = &executionPayloadHeaderCapella{}
 
 // WrappedExecutionPayloadHeaderCapella is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value primitives.Wei) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderCapella{p: p, weiValue: value, gweiValue: uint64(primitives.WeiToGwei(value))}
+func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderCapella{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -727,16 +697,6 @@ func (e executionPayloadHeaderCapella) BlobGasUsed() (uint64, error) {
 // ExcessBlobGas --
 func (e executionPayloadHeaderCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
-}
-
-// ValueInWei --
-func (e executionPayloadHeaderCapella) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderCapella) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
@@ -965,16 +925,14 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeaderDeneb struct {
-	p         *enginev1.ExecutionPayloadHeaderDeneb
-	weiValue  primitives.Wei
-	gweiValue uint64
+	p *enginev1.ExecutionPayloadHeaderDeneb
 }
 
 var _ interfaces.ExecutionData = &executionPayloadHeaderDeneb{}
 
 // WrappedExecutionPayloadHeaderDeneb is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value primitives.Wei) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderDeneb{p: p, weiValue: value, gweiValue: uint64(primitives.WeiToGwei(value))}
+func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderDeneb{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -1116,16 +1074,6 @@ func (e executionPayloadHeaderDeneb) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// ValueInWei --
-func (e executionPayloadHeaderDeneb) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderDeneb) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadHeaderDeneb) IsBlinded() bool {
 	return true
@@ -1135,16 +1083,14 @@ func (e executionPayloadHeaderDeneb) IsBlinded() bool {
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadDeneb struct {
-	p         *enginev1.ExecutionPayloadDeneb
-	weiValue  primitives.Wei
-	gweiValue uint64
+	p *enginev1.ExecutionPayloadDeneb
 }
 
 var _ interfaces.ExecutionData = &executionPayloadDeneb{}
 
 // WrappedExecutionPayloadDeneb is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value primitives.Wei) (interfaces.ExecutionData, error) {
-	w := executionPayloadDeneb{p: p, weiValue: value, gweiValue: uint64(primitives.WeiToGwei(value))}
+func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb) (interfaces.ExecutionData, error) {
+	w := executionPayloadDeneb{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -1284,16 +1230,6 @@ func (e executionPayloadDeneb) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// ValueInWei --
-func (e executionPayloadDeneb) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadDeneb) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadDeneb) IsBlinded() bool {
 	return false
@@ -1303,17 +1239,15 @@ func (e executionPayloadDeneb) IsBlinded() bool {
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeaderElectra struct {
-	p         *enginev1.ExecutionPayloadHeaderElectra
-	weiValue  primitives.Wei
-	gweiValue uint64
+	p *enginev1.ExecutionPayloadHeaderElectra
 }
 
 var _ interfaces.ExecutionData = &executionPayloadElectra{}
 var _ interfaces.ExecutionDataElectra = &executionPayloadElectra{}
 
 // WrappedExecutionPayloadHeaderElectra is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderElectra(p *enginev1.ExecutionPayloadHeaderElectra, value primitives.Wei) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderElectra{p: p, weiValue: value, gweiValue: uint64(primitives.WeiToGwei(value))}
+func WrappedExecutionPayloadHeaderElectra(p *enginev1.ExecutionPayloadHeaderElectra) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderElectra{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -1455,16 +1389,6 @@ func (e executionPayloadHeaderElectra) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// ValueInWei --
-func (e executionPayloadHeaderElectra) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadHeaderElectra) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // DepositReceipts --
 func (e executionPayloadHeaderElectra) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
 	return nil, consensus_types.ErrUnsupportedField
@@ -1484,14 +1408,12 @@ func (e executionPayloadHeaderElectra) IsBlinded() bool {
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadElectra struct {
-	p         *enginev1.ExecutionPayloadElectra
-	weiValue  primitives.Wei
-	gweiValue uint64
+	p *enginev1.ExecutionPayloadElectra
 }
 
 // WrappedExecutionPayloadElectra is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadElectra(p *enginev1.ExecutionPayloadElectra, value primitives.Wei) (interfaces.ExecutionData, error) {
-	w := executionPayloadElectra{p: p, weiValue: value, gweiValue: uint64(primitives.WeiToGwei(value))}
+func WrappedExecutionPayloadElectra(p *enginev1.ExecutionPayloadElectra) (interfaces.ExecutionData, error) {
+	w := executionPayloadElectra{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -1634,16 +1556,6 @@ func (e executionPayloadElectra) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// ValueInWei --
-func (e executionPayloadElectra) ValueInWei() (primitives.Wei, error) {
-	return e.weiValue, nil
-}
-
-// ValueInGwei --
-func (e executionPayloadElectra) ValueInGwei() (uint64, error) {
-	return e.gweiValue, nil
-}
-
 // DepositReceipts --
 func (e executionPayloadElectra) DepositReceipts() []*enginev1.DepositReceipt {
 	return e.p.DepositReceipts
@@ -1657,17 +1569,4 @@ func (e executionPayloadElectra) WithdrawalRequests() []*enginev1.ExecutionLayer
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadElectra) IsBlinded() bool {
 	return false
-}
-
-// PayloadValueToWei returns a Wei value given the payload's value
-func PayloadValueToWei(value []byte) primitives.Wei {
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
-}
-
-// PayloadValueToGwei returns a Gwei value given the payload's value
-func PayloadValueToGwei(value []byte) primitives.Gwei {
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
-	return primitives.WeiToGwei(v)
 }

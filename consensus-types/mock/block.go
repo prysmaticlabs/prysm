@@ -75,14 +75,6 @@ func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 	panic("implement me")
 }
 
-func (SignedBeaconBlock) ValueInWei() primitives.Wei {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) ValueInGwei() uint64 {
-	panic("implement me")
-}
-
 type BeaconBlock struct {
 	Htr             [field_params.RootLength]byte
 	HtrErr          error

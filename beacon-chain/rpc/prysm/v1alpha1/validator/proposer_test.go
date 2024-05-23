@@ -277,9 +277,11 @@ func TestServer_GetBeaconBlock_Bellatrix(t *testing.T) {
 
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
 	proposerServer.Eth1BlockFetcher = c
+	ed, err := blocks.NewWrappedExecutionData(payload)
+	require.NoError(t, err)
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
-		PayloadIDBytes:   &enginev1.PayloadIDBytes{1},
-		ExecutionPayload: payload,
+		PayloadIDBytes:     &enginev1.PayloadIDBytes{1},
+		GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed},
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -400,9 +402,11 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 	}
 
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	ed, err := blocks.NewWrappedExecutionData(payload)
+	require.NoError(t, err)
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
-		PayloadIDBytes:          &enginev1.PayloadIDBytes{1},
-		ExecutionPayloadCapella: payload,
+		PayloadIDBytes:     &enginev1.PayloadIDBytes{1},
+		GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed},
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -510,6 +514,8 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 		BlobGasUsed:   4,
 		ExcessBlobGas: 5,
 	}
+	ed, err := blocks.NewWrappedExecutionData(payload)
+	require.NoError(t, err)
 
 	kc := make([][]byte, 0)
 	kc = append(kc, bytesutil.PadTo([]byte("kc"), 48))
@@ -520,9 +526,11 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 	bundle := &enginev1.BlobsBundle{KzgCommitments: kc, Proofs: proofs, Blobs: blobs}
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
-		PayloadIDBytes:        &enginev1.PayloadIDBytes{1},
-		ExecutionPayloadDeneb: payload,
-		BlobsBundle:           bundle,
+		PayloadIDBytes: &enginev1.PayloadIDBytes{1},
+		GetPayloadResponse: &blocks.GetPayloadResponse{
+			ExecutionData: ed,
+			BlobsBundle:   bundle,
+		},
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -651,9 +659,11 @@ func TestServer_GetBeaconBlock_Electra(t *testing.T) {
 	}
 
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	ed, err := blocks.NewWrappedExecutionData(payload)
+	require.NoError(t, err)
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
-		PayloadIDBytes:          &enginev1.PayloadIDBytes{1},
-		ExecutionPayloadElectra: payload,
+		PayloadIDBytes:     &enginev1.PayloadIDBytes{1},
+		GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed},
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
