@@ -78,7 +78,6 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	}
 
 	wg := new(sync.WaitGroup)
-	backOffCounter := 0
 	for {
 		currNum := len(s.pubsub.ListPeers(topic))
 		if currNum >= threshold {
@@ -88,13 +87,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 			return false, errors.Errorf("unable to find requisite number of peers for topic %s - "+
 				"only %d out of %d peers were able to be found", topic, currNum, threshold)
 		}
-		// Sleep to prevent excessive dials.
-		if backOffCounter > 50 {
-			time.Sleep(12 * time.Second)
-			backOffCounter = 0
-		}
 		nodes := enode.ReadNodes(iterator, int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch))
-		backOffCounter += len(nodes)
 		for _, node := range nodes {
 			info, _, err := convertToAddrInfo(node)
 			if err != nil {
