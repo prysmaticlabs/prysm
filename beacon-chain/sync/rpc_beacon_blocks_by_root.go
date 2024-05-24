@@ -292,7 +292,6 @@ func (s *Service) constructPendingColumnRequest(root [32]byte) (types.BlobSideca
 	}
 
 	return req, nil
-
 }
 
 // requestsForMissingIndices constructs a slice of BlobIdentifiers that are missing from
