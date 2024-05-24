@@ -356,9 +356,10 @@ func readChunkedBlobSidecar(stream network.Stream, encoding encoder.NetworkEncod
 	if !found {
 		return b, errors.Wrapf(errBlobUnmarshal, fmt.Sprintf("unrecognized fork digest %#x", ctxb))
 	}
-	// Only deneb is supported at this time, because we lack a fork-spanning interface/union type for blobs.
-	if v != version.Deneb {
-		return b, fmt.Errorf("unexpected context bytes for deneb BlobSidecar, ctx=%#x, v=%s", ctxb, version.String(v))
+	// Only deneb and electra are supported at this time, because we lack a fork-spanning interface/union type for blobs.
+	// In electra, there's no changes to blob type.
+	if v < version.Deneb {
+		return b, fmt.Errorf("unexpected context bytes for BlobSidecar, ctx=%#x, v=%s", ctxb, version.String(v))
 	}
 	if err := decode(stream, pb); err != nil {
 		return b, errors.Wrap(err, "failed to decode the protobuf-encoded BlobSidecar message from RPC chunk stream")
