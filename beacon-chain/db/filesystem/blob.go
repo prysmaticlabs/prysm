@@ -230,10 +230,12 @@ func (bs *BlobStorage) SaveDataColumn(column blocks.VerifiedRODataColumn) error 
 	if err != nil {
 		return err
 	}
+
 	if exists {
-		log.Debug("Ignoring a duplicate data column sidecar save attempt")
+		log.Trace("Ignoring a duplicate data column sidecar save attempt")
 		return nil
 	}
+
 	if bs.pruner != nil {
 		hRoot, err := column.SignedBlockHeader.Header.HashTreeRoot()
 		if err != nil {
