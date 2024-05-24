@@ -705,7 +705,8 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 
 			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey), duty.ValidatorIndex)
 			if err != nil {
-				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
+				aggregator = false
+				log.WithError(err).Error("Could not check if a validator is an aggregator")
 			}
 			if aggregator {
 				roles = append(roles, iface.RoleAggregator)
@@ -730,7 +731,8 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 		if inSyncCommittee {
 			aggregator, err := v.isSyncCommitteeAggregator(ctx, slot, bytesutil.ToBytes48(duty.PublicKey), duty.ValidatorIndex)
 			if err != nil {
-				return nil, errors.Wrap(err, "could not check if a validator is a sync committee aggregator")
+				aggregator = false
+				log.WithError(err).Error("Could not check if a validator is a sync committee aggregator")
 			}
 			if aggregator {
 				roles = append(roles, iface.RoleSyncCommitteeAggregator)
