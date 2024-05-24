@@ -200,39 +200,6 @@ func ProcessAttestationNoVerifySignature(
 	return beaconState, nil
 }
 
-// VerifyAttestationSignature converts and attestation into an indexed attestation and verifies
-// the signature in that attestation.
-func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyBeaconState, att ethpb.Att) error {
-	if err := helpers.ValidateNilAttestation(att); err != nil {
-		return err
-	}
-
-	var committees [][]primitives.ValidatorIndex
-	if att.Version() >= version.Electra {
-		committeeIndices := helpers.CommitteeIndices(att.CommitteeBitsVal())
-		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-		var err error
-		for i, ci := range committeeIndices {
-			committees[i], err = helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, ci)
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
-		if err != nil {
-			return err
-		}
-		committees = [][]primitives.ValidatorIndex{committee}
-	}
-
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees...)
-	if err != nil {
-		return err
-	}
-	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
-}
-
 // VerifyIndexedAttestation determines the validity of an indexed attestation.
 //
 // Spec pseudocode definition:
