@@ -156,7 +156,7 @@ func (x *GenericSignedBeaconBlock) GetBlindedElectra() *SignedBlindedBeaconBlock
 	return nil
 }
 
-func (x *GenericSignedBeaconBlock) GetEpbs() *SignedBeaconBlockePBS {
+func (x *GenericSignedBeaconBlock) GetEpbs() *SignedBeaconBlockEpbs {
 	if x, ok := x.GetBlock().(*GenericSignedBeaconBlock_Epbs); ok {
 		return x.Epbs
 	}
@@ -215,7 +215,7 @@ type GenericSignedBeaconBlock_BlindedElectra struct {
 }
 
 type GenericSignedBeaconBlock_Epbs struct {
-	Epbs *SignedBeaconBlockePBS `protobuf:"bytes,11,opt,name=epbs,proto3,oneof"`
+	Epbs *SignedBeaconBlockEpbs `protobuf:"bytes,11,opt,name=epbs,proto3,oneof"`
 }
 
 func (*GenericSignedBeaconBlock_Phase0) isGenericSignedBeaconBlock_Block() {}
@@ -372,7 +372,7 @@ func (x *GenericBeaconBlock) GetBlindedElectra() *BlindedBeaconBlockElectra {
 	return nil
 }
 
-func (x *GenericBeaconBlock) GetEpbs() *BeaconBlockePBS {
+func (x *GenericBeaconBlock) GetEpbs() *BeaconBlockEpbs {
 	if x, ok := x.GetBlock().(*GenericBeaconBlock_Epbs); ok {
 		return x.Epbs
 	}
@@ -438,7 +438,7 @@ type GenericBeaconBlock_BlindedElectra struct {
 }
 
 type GenericBeaconBlock_Epbs struct {
-	Epbs *BeaconBlockePBS `protobuf:"bytes,11,opt,name=epbs,proto3,oneof"`
+	Epbs *BeaconBlockEpbs `protobuf:"bytes,11,opt,name=epbs,proto3,oneof"`
 }
 
 func (*GenericBeaconBlock_Phase0) isGenericBeaconBlock_Block() {}
@@ -4694,7 +4694,7 @@ func (x *BlobSidecars) GetSidecars() []*BlobSidecar {
 	return nil
 }
 
-type BeaconBlockePBS struct {
+type BeaconBlockEpbs struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -4703,11 +4703,11 @@ type BeaconBlockePBS struct {
 	ProposerIndex github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                      `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                      `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
-	Body          *BeaconBlockBodyePBS                                                        `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	Body          *BeaconBlockBodyEpbs                                                        `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
 }
 
-func (x *BeaconBlockePBS) Reset() {
-	*x = BeaconBlockePBS{}
+func (x *BeaconBlockEpbs) Reset() {
+	*x = BeaconBlockEpbs{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[59]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -4715,13 +4715,13 @@ func (x *BeaconBlockePBS) Reset() {
 	}
 }
 
-func (x *BeaconBlockePBS) String() string {
+func (x *BeaconBlockEpbs) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BeaconBlockePBS) ProtoMessage() {}
+func (*BeaconBlockEpbs) ProtoMessage() {}
 
-func (x *BeaconBlockePBS) ProtoReflect() protoreflect.Message {
+func (x *BeaconBlockEpbs) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[59]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -4733,47 +4733,47 @@ func (x *BeaconBlockePBS) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BeaconBlockePBS.ProtoReflect.Descriptor instead.
-func (*BeaconBlockePBS) Descriptor() ([]byte, []int) {
+// Deprecated: Use BeaconBlockEpbs.ProtoReflect.Descriptor instead.
+func (*BeaconBlockEpbs) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_beacon_block_proto_rawDescGZIP(), []int{59}
 }
 
-func (x *BeaconBlockePBS) GetSlot() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Slot {
+func (x *BeaconBlockEpbs) GetSlot() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Slot {
 	if x != nil {
 		return x.Slot
 	}
 	return github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Slot(0)
 }
 
-func (x *BeaconBlockePBS) GetProposerIndex() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex {
+func (x *BeaconBlockEpbs) GetProposerIndex() github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex {
 	if x != nil {
 		return x.ProposerIndex
 	}
 	return github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex(0)
 }
 
-func (x *BeaconBlockePBS) GetParentRoot() []byte {
+func (x *BeaconBlockEpbs) GetParentRoot() []byte {
 	if x != nil {
 		return x.ParentRoot
 	}
 	return nil
 }
 
-func (x *BeaconBlockePBS) GetStateRoot() []byte {
+func (x *BeaconBlockEpbs) GetStateRoot() []byte {
 	if x != nil {
 		return x.StateRoot
 	}
 	return nil
 }
 
-func (x *BeaconBlockePBS) GetBody() *BeaconBlockBodyePBS {
+func (x *BeaconBlockEpbs) GetBody() *BeaconBlockBodyEpbs {
 	if x != nil {
 		return x.Body
 	}
 	return nil
 }
 
-type BeaconBlockBodyePBS struct {
+type BeaconBlockBodyEpbs struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -4792,8 +4792,8 @@ type BeaconBlockBodyePBS struct {
 	PayloadAttestations          []*PayloadAttestation            `protobuf:"bytes,12,rep,name=payload_attestations,json=payloadAttestations,proto3" json:"payload_attestations,omitempty" ssz-max:"4"`
 }
 
-func (x *BeaconBlockBodyePBS) Reset() {
-	*x = BeaconBlockBodyePBS{}
+func (x *BeaconBlockBodyEpbs) Reset() {
+	*x = BeaconBlockBodyEpbs{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[60]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -4801,13 +4801,13 @@ func (x *BeaconBlockBodyePBS) Reset() {
 	}
 }
 
-func (x *BeaconBlockBodyePBS) String() string {
+func (x *BeaconBlockBodyEpbs) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BeaconBlockBodyePBS) ProtoMessage() {}
+func (*BeaconBlockBodyEpbs) ProtoMessage() {}
 
-func (x *BeaconBlockBodyePBS) ProtoReflect() protoreflect.Message {
+func (x *BeaconBlockBodyEpbs) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[60]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -4819,106 +4819,106 @@ func (x *BeaconBlockBodyePBS) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BeaconBlockBodyePBS.ProtoReflect.Descriptor instead.
-func (*BeaconBlockBodyePBS) Descriptor() ([]byte, []int) {
+// Deprecated: Use BeaconBlockBodyEpbs.ProtoReflect.Descriptor instead.
+func (*BeaconBlockBodyEpbs) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_beacon_block_proto_rawDescGZIP(), []int{60}
 }
 
-func (x *BeaconBlockBodyePBS) GetRandaoReveal() []byte {
+func (x *BeaconBlockBodyEpbs) GetRandaoReveal() []byte {
 	if x != nil {
 		return x.RandaoReveal
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetEth1Data() *Eth1Data {
+func (x *BeaconBlockBodyEpbs) GetEth1Data() *Eth1Data {
 	if x != nil {
 		return x.Eth1Data
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetGraffiti() []byte {
+func (x *BeaconBlockBodyEpbs) GetGraffiti() []byte {
 	if x != nil {
 		return x.Graffiti
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetProposerSlashings() []*ProposerSlashing {
+func (x *BeaconBlockBodyEpbs) GetProposerSlashings() []*ProposerSlashing {
 	if x != nil {
 		return x.ProposerSlashings
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetAttesterSlashings() []*AttesterSlashing {
+func (x *BeaconBlockBodyEpbs) GetAttesterSlashings() []*AttesterSlashing {
 	if x != nil {
 		return x.AttesterSlashings
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetAttestations() []*Attestation {
+func (x *BeaconBlockBodyEpbs) GetAttestations() []*Attestation {
 	if x != nil {
 		return x.Attestations
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetDeposits() []*Deposit {
+func (x *BeaconBlockBodyEpbs) GetDeposits() []*Deposit {
 	if x != nil {
 		return x.Deposits
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetVoluntaryExits() []*SignedVoluntaryExit {
+func (x *BeaconBlockBodyEpbs) GetVoluntaryExits() []*SignedVoluntaryExit {
 	if x != nil {
 		return x.VoluntaryExits
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetSyncAggregate() *SyncAggregate {
+func (x *BeaconBlockBodyEpbs) GetSyncAggregate() *SyncAggregate {
 	if x != nil {
 		return x.SyncAggregate
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetBlsToExecutionChanges() []*SignedBLSToExecutionChange {
+func (x *BeaconBlockBodyEpbs) GetBlsToExecutionChanges() []*SignedBLSToExecutionChange {
 	if x != nil {
 		return x.BlsToExecutionChanges
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetSignedExecutionPayloadHeader() *v1.SignedExecutionPayloadHeader {
+func (x *BeaconBlockBodyEpbs) GetSignedExecutionPayloadHeader() *v1.SignedExecutionPayloadHeader {
 	if x != nil {
 		return x.SignedExecutionPayloadHeader
 	}
 	return nil
 }
 
-func (x *BeaconBlockBodyePBS) GetPayloadAttestations() []*PayloadAttestation {
+func (x *BeaconBlockBodyEpbs) GetPayloadAttestations() []*PayloadAttestation {
 	if x != nil {
 		return x.PayloadAttestations
 	}
 	return nil
 }
 
-type SignedBeaconBlockePBS struct {
+type SignedBeaconBlockEpbs struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Block     *BeaconBlockePBS `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty"`
+	Block     *BeaconBlockEpbs `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty"`
 	Signature []byte           `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
-func (x *SignedBeaconBlockePBS) Reset() {
-	*x = SignedBeaconBlockePBS{}
+func (x *SignedBeaconBlockEpbs) Reset() {
+	*x = SignedBeaconBlockEpbs{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[61]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -4926,13 +4926,13 @@ func (x *SignedBeaconBlockePBS) Reset() {
 	}
 }
 
-func (x *SignedBeaconBlockePBS) String() string {
+func (x *SignedBeaconBlockEpbs) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignedBeaconBlockePBS) ProtoMessage() {}
+func (*SignedBeaconBlockEpbs) ProtoMessage() {}
 
-func (x *SignedBeaconBlockePBS) ProtoReflect() protoreflect.Message {
+func (x *SignedBeaconBlockEpbs) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[61]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -4944,19 +4944,19 @@ func (x *SignedBeaconBlockePBS) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SignedBeaconBlockePBS.ProtoReflect.Descriptor instead.
-func (*SignedBeaconBlockePBS) Descriptor() ([]byte, []int) {
+// Deprecated: Use SignedBeaconBlockEpbs.ProtoReflect.Descriptor instead.
+func (*SignedBeaconBlockEpbs) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_beacon_block_proto_rawDescGZIP(), []int{61}
 }
 
-func (x *SignedBeaconBlockePBS) GetBlock() *BeaconBlockePBS {
+func (x *SignedBeaconBlockEpbs) GetBlock() *BeaconBlockEpbs {
 	if x != nil {
 		return x.Block
 	}
 	return nil
 }
 
-func (x *SignedBeaconBlockePBS) GetSignature() []byte {
+func (x *SignedBeaconBlockEpbs) GetSignature() []byte {
 	if x != nil {
 		return x.Signature
 	}
@@ -5116,7 +5116,7 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_rawDesc = []byte{
 	0x61, 0x12, 0x42, 0x0a, 0x04, 0x65, 0x70, 0x62, 0x73, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x0b, 0x32,
 	0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
 	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x65,
-	0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x50, 0x42, 0x53, 0x48, 0x00, 0x52,
+	0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x45, 0x70, 0x62, 0x73, 0x48, 0x00, 0x52,
 	0x04, 0x65, 0x70, 0x62, 0x73, 0x12, 0x1d, 0x0a, 0x0a, 0x69, 0x73, 0x5f, 0x62, 0x6c, 0x69, 0x6e,
 	0x64, 0x65, 0x64, 0x18, 0x64, 0x20, 0x01, 0x28, 0x08, 0x52, 0x09, 0x69, 0x73, 0x42, 0x6c, 0x69,
 	0x6e, 0x64, 0x65, 0x64, 0x42, 0x07, 0x0a, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x4a, 0x04, 0x08,
@@ -5174,8 +5174,8 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_rawDesc = []byte{
 	0x69, 0x6e, 0x64, 0x65, 0x64, 0x45, 0x6c, 0x65, 0x63, 0x74, 0x72, 0x61, 0x12, 0x3c, 0x0a, 0x04,
 	0x65, 0x70, 0x62, 0x73, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x65, 0x74, 0x68,
 	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x50,
-	0x42, 0x53, 0x48, 0x00, 0x52, 0x04, 0x65, 0x70, 0x62, 0x73, 0x12, 0x1d, 0x0a, 0x0a, 0x69, 0x73,
+	0x61, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x45, 0x70,
+	0x62, 0x73, 0x48, 0x00, 0x52, 0x04, 0x65, 0x70, 0x62, 0x73, 0x12, 0x1d, 0x0a, 0x0a, 0x69, 0x73,
 	0x5f, 0x62, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x18, 0x64, 0x20, 0x01, 0x28, 0x08, 0x52, 0x09,
 	0x69, 0x73, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x12, 0x23, 0x0a, 0x0d, 0x70, 0x61, 0x79,
 	0x6c, 0x6f, 0x61, 0x64, 0x5f, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x65, 0x20, 0x01, 0x28, 0x09,
@@ -6355,7 +6355,7 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_rawDesc = []byte{
 	0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x42, 0x6c,
 	0x6f, 0x62, 0x53, 0x69, 0x64, 0x65, 0x63, 0x61, 0x72, 0x42, 0x05, 0x92, 0xb5, 0x18, 0x01, 0x36,
 	0x52, 0x08, 0x73, 0x69, 0x64, 0x65, 0x63, 0x61, 0x72, 0x73, 0x22, 0xf4, 0x02, 0x0a, 0x0f, 0x42,
-	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x50, 0x42, 0x53, 0x12, 0x59,
+	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x45, 0x70, 0x62, 0x73, 0x12, 0x59,
 	0x0a, 0x04, 0x73, 0x6c, 0x6f, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x42, 0x45, 0x82, 0xb5,
 	0x18, 0x41, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79,
 	0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d,
@@ -6377,9 +6377,9 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_rawDesc = []byte{
 	0x74, 0x12, 0x3e, 0x0a, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32,
 	0x2a, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
 	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c,
-	0x6f, 0x63, 0x6b, 0x42, 0x6f, 0x64, 0x79, 0x65, 0x50, 0x42, 0x53, 0x52, 0x04, 0x62, 0x6f, 0x64,
+	0x6f, 0x63, 0x6b, 0x42, 0x6f, 0x64, 0x79, 0x45, 0x70, 0x62, 0x73, 0x52, 0x04, 0x62, 0x6f, 0x64,
 	0x79, 0x22, 0xf4, 0x07, 0x0a, 0x13, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63,
-	0x6b, 0x42, 0x6f, 0x64, 0x79, 0x65, 0x50, 0x42, 0x53, 0x12, 0x2b, 0x0a, 0x0d, 0x72, 0x61, 0x6e,
+	0x6b, 0x42, 0x6f, 0x64, 0x79, 0x45, 0x70, 0x62, 0x73, 0x12, 0x2b, 0x0a, 0x0d, 0x72, 0x61, 0x6e,
 	0x64, 0x61, 0x6f, 0x5f, 0x72, 0x65, 0x76, 0x65, 0x61, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c,
 	0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x39, 0x36, 0x52, 0x0c, 0x72, 0x61, 0x6e, 0x64, 0x61, 0x6f,
 	0x52, 0x65, 0x76, 0x65, 0x61, 0x6c, 0x12, 0x3c, 0x0a, 0x09, 0x65, 0x74, 0x68, 0x31, 0x5f, 0x64,
@@ -6442,11 +6442,11 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_rawDesc = []byte{
 	0x64, 0x41, 0x74, 0x74, 0x65, 0x73, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x42, 0x05, 0x92, 0xb5,
 	0x18, 0x01, 0x34, 0x52, 0x13, 0x70, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x41, 0x74, 0x74, 0x65,
 	0x73, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x7b, 0x0a, 0x15, 0x53, 0x69, 0x67, 0x6e,
-	0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x50, 0x42,
-	0x53, 0x12, 0x3c, 0x0a, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
+	0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x45, 0x70, 0x62,
+	0x73, 0x12, 0x3c, 0x0a, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
 	0x32, 0x26, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
 	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42,
-	0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x50, 0x42, 0x53, 0x52, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x12,
+	0x6c, 0x6f, 0x63, 0x6b, 0x45, 0x70, 0x62, 0x73, 0x52, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x12,
 	0x24, 0x0a, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18, 0x02, 0x20, 0x01,
 	0x28, 0x0c, 0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x39, 0x36, 0x52, 0x09, 0x73, 0x69, 0x67, 0x6e,
 	0x61, 0x74, 0x75, 0x72, 0x65, 0x42, 0x9b, 0x01, 0x0a, 0x19, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74,
@@ -6535,9 +6535,9 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_goTypes = []interface{}{
 	(*SignedBuilderBidDeneb)(nil),             // 56: ethereum.eth.v1alpha1.SignedBuilderBidDeneb
 	(*BlobSidecar)(nil),                       // 57: ethereum.eth.v1alpha1.BlobSidecar
 	(*BlobSidecars)(nil),                      // 58: ethereum.eth.v1alpha1.BlobSidecars
-	(*BeaconBlockePBS)(nil),                   // 59: ethereum.eth.v1alpha1.BeaconBlockePBS
-	(*BeaconBlockBodyePBS)(nil),               // 60: ethereum.eth.v1alpha1.BeaconBlockBodyePBS
-	(*SignedBeaconBlockePBS)(nil),             // 61: ethereum.eth.v1alpha1.SignedBeaconBlockePBS
+	(*BeaconBlockEpbs)(nil),                   // 59: ethereum.eth.v1alpha1.BeaconBlockEpbs
+	(*BeaconBlockBodyEpbs)(nil),               // 60: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs
+	(*SignedBeaconBlockEpbs)(nil),             // 61: ethereum.eth.v1alpha1.SignedBeaconBlockEpbs
 	(*Deposit_Data)(nil),                      // 62: ethereum.eth.v1alpha1.Deposit.Data
 	(*Attestation)(nil),                       // 63: ethereum.eth.v1alpha1.Attestation
 	(*AttestationData)(nil),                   // 64: ethereum.eth.v1alpha1.AttestationData
@@ -6566,7 +6566,7 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_depIdxs = []int32{
 	37,  // 7: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.blinded_deneb:type_name -> ethereum.eth.v1alpha1.SignedBlindedBeaconBlockDeneb
 	40,  // 8: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.electra:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockContentsElectra
 	45,  // 9: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.blinded_electra:type_name -> ethereum.eth.v1alpha1.SignedBlindedBeaconBlockElectra
-	61,  // 10: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.epbs:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockePBS
+	61,  // 10: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.epbs:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockEpbs
 	2,   // 11: ethereum.eth.v1alpha1.GenericBeaconBlock.phase0:type_name -> ethereum.eth.v1alpha1.BeaconBlock
 	4,   // 12: ethereum.eth.v1alpha1.GenericBeaconBlock.altair:type_name -> ethereum.eth.v1alpha1.BeaconBlockAltair
 	21,  // 13: ethereum.eth.v1alpha1.GenericBeaconBlock.bellatrix:type_name -> ethereum.eth.v1alpha1.BeaconBlockBellatrix
@@ -6577,7 +6577,7 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_depIdxs = []int32{
 	38,  // 18: ethereum.eth.v1alpha1.GenericBeaconBlock.blinded_deneb:type_name -> ethereum.eth.v1alpha1.BlindedBeaconBlockDeneb
 	41,  // 19: ethereum.eth.v1alpha1.GenericBeaconBlock.electra:type_name -> ethereum.eth.v1alpha1.BeaconBlockContentsElectra
 	46,  // 20: ethereum.eth.v1alpha1.GenericBeaconBlock.blinded_electra:type_name -> ethereum.eth.v1alpha1.BlindedBeaconBlockElectra
-	59,  // 21: ethereum.eth.v1alpha1.GenericBeaconBlock.epbs:type_name -> ethereum.eth.v1alpha1.BeaconBlockePBS
+	59,  // 21: ethereum.eth.v1alpha1.GenericBeaconBlock.epbs:type_name -> ethereum.eth.v1alpha1.BeaconBlockEpbs
 	6,   // 22: ethereum.eth.v1alpha1.BeaconBlock.body:type_name -> ethereum.eth.v1alpha1.BeaconBlockBody
 	2,   // 23: ethereum.eth.v1alpha1.SignedBeaconBlock.block:type_name -> ethereum.eth.v1alpha1.BeaconBlock
 	7,   // 24: ethereum.eth.v1alpha1.BeaconBlockAltair.body:type_name -> ethereum.eth.v1alpha1.BeaconBlockBodyAltair
@@ -6708,18 +6708,18 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_depIdxs = []int32{
 	55,  // 149: ethereum.eth.v1alpha1.SignedBuilderBidDeneb.message:type_name -> ethereum.eth.v1alpha1.BuilderBidDeneb
 	16,  // 150: ethereum.eth.v1alpha1.BlobSidecar.signed_block_header:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockHeader
 	57,  // 151: ethereum.eth.v1alpha1.BlobSidecars.sidecars:type_name -> ethereum.eth.v1alpha1.BlobSidecar
-	60,  // 152: ethereum.eth.v1alpha1.BeaconBlockePBS.body:type_name -> ethereum.eth.v1alpha1.BeaconBlockBodyePBS
-	14,  // 153: ethereum.eth.v1alpha1.BeaconBlockBodyePBS.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	8,   // 154: ethereum.eth.v1alpha1.BeaconBlockBodyePBS.proposer_slashings:type_name -> ethereum.eth.v1alpha1.ProposerSlashing
-	9,   // 155: ethereum.eth.v1alpha1.BeaconBlockBodyePBS.attester_slashings:type_name -> ethereum.eth.v1alpha1.AttesterSlashing
-	63,  // 156: ethereum.eth.v1alpha1.BeaconBlockBodyePBS.attestations:type_name -> ethereum.eth.v1alpha1.Attestation
-	11,  // 157: ethereum.eth.v1alpha1.BeaconBlockBodyePBS.deposits:type_name -> ethereum.eth.v1alpha1.Deposit
-	13,  // 158: ethereum.eth.v1alpha1.BeaconBlockBodyePBS.voluntary_exits:type_name -> ethereum.eth.v1alpha1.SignedVoluntaryExit
-	19,  // 159: ethereum.eth.v1alpha1.BeaconBlockBodyePBS.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	68,  // 160: ethereum.eth.v1alpha1.BeaconBlockBodyePBS.bls_to_execution_changes:type_name -> ethereum.eth.v1alpha1.SignedBLSToExecutionChange
-	76,  // 161: ethereum.eth.v1alpha1.BeaconBlockBodyePBS.signed_execution_payload_header:type_name -> ethereum.engine.v1.SignedExecutionPayloadHeader
-	77,  // 162: ethereum.eth.v1alpha1.BeaconBlockBodyePBS.payload_attestations:type_name -> ethereum.eth.v1alpha1.PayloadAttestation
-	59,  // 163: ethereum.eth.v1alpha1.SignedBeaconBlockePBS.block:type_name -> ethereum.eth.v1alpha1.BeaconBlockePBS
+	60,  // 152: ethereum.eth.v1alpha1.BeaconBlockEpbs.body:type_name -> ethereum.eth.v1alpha1.BeaconBlockBodyEpbs
+	14,  // 153: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	8,   // 154: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs.proposer_slashings:type_name -> ethereum.eth.v1alpha1.ProposerSlashing
+	9,   // 155: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs.attester_slashings:type_name -> ethereum.eth.v1alpha1.AttesterSlashing
+	63,  // 156: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs.attestations:type_name -> ethereum.eth.v1alpha1.Attestation
+	11,  // 157: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs.deposits:type_name -> ethereum.eth.v1alpha1.Deposit
+	13,  // 158: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs.voluntary_exits:type_name -> ethereum.eth.v1alpha1.SignedVoluntaryExit
+	19,  // 159: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	68,  // 160: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs.bls_to_execution_changes:type_name -> ethereum.eth.v1alpha1.SignedBLSToExecutionChange
+	76,  // 161: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs.signed_execution_payload_header:type_name -> ethereum.engine.v1.SignedExecutionPayloadHeader
+	77,  // 162: ethereum.eth.v1alpha1.BeaconBlockBodyEpbs.payload_attestations:type_name -> ethereum.eth.v1alpha1.PayloadAttestation
+	59,  // 163: ethereum.eth.v1alpha1.SignedBeaconBlockEpbs.block:type_name -> ethereum.eth.v1alpha1.BeaconBlockEpbs
 	164, // [164:164] is the sub-list for method output_type
 	164, // [164:164] is the sub-list for method input_type
 	164, // [164:164] is the sub-list for extension type_name
@@ -7446,7 +7446,7 @@ func file_proto_prysm_v1alpha1_beacon_block_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[59].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BeaconBlockePBS); i {
+			switch v := v.(*BeaconBlockEpbs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -7458,7 +7458,7 @@ func file_proto_prysm_v1alpha1_beacon_block_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[60].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BeaconBlockBodyePBS); i {
+			switch v := v.(*BeaconBlockBodyEpbs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -7470,7 +7470,7 @@ func file_proto_prysm_v1alpha1_beacon_block_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[61].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignedBeaconBlockePBS); i {
+			switch v := v.(*SignedBeaconBlockEpbs); i {
 			case 0:
 				return &v.state
 			case 1:
