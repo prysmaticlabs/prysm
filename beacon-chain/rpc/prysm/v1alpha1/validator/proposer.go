@@ -289,7 +289,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 			return nil, status.Errorf(codes.Internal, "%s: %v", "handle blinded block", err)
 		}
 	} else {
-		blobSidecars, dataColumnSideCars, err = handleUnblidedBlock(block, req, isPeerDASEnabled)
+		blobSidecars, dataColumnSideCars, err = handleUnblindedBlock(block, req, isPeerDASEnabled)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "%s: %v", "handle unblided block", err)
 		}
@@ -373,7 +373,7 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 }
 
 // handleUnblindedBlock processes unblinded beacon blocks.
-func handleUnblidedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericSignedBeaconBlock, isPeerDASEnabled bool) ([]*ethpb.BlobSidecar, []*ethpb.DataColumnSidecar, error) {
+func handleUnblindedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericSignedBeaconBlock, isPeerDASEnabled bool) ([]*ethpb.BlobSidecar, []*ethpb.DataColumnSidecar, error) {
 	dbBlockContents := req.GetDeneb()
 
 	if dbBlockContents == nil {
