@@ -65,5 +65,6 @@ go_test(
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "//time/slots:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
     ],
 )
