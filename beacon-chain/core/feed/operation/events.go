@@ -3,7 +3,6 @@ package operation
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
@@ -38,7 +37,7 @@ const (
 // UnAggregatedAttReceivedData is the data sent with UnaggregatedAttReceived events.
 type UnAggregatedAttReceivedData struct {
 	// Attestation is the unaggregated attestation object.
-	Attestation interfaces.Attestation
+	Attestation ethpb.Att
 }
 
 // AggregatedAttReceivedData is the data sent with AggregatedAttReceived events.
@@ -76,5 +75,5 @@ type ProposerSlashingReceivedData struct {
 
 // AttesterSlashingReceivedData is the data sent with AttesterSlashingReceived events.
 type AttesterSlashingReceivedData struct {
-	AttesterSlashing interfaces.AttesterSlashing
+	AttesterSlashing ethpb.AttSlashing
 }

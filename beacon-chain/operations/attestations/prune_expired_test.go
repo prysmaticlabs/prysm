@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/async"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -32,13 +31,13 @@ func TestPruneExpired_Ticker(t *testing.T) {
 
 	ad2 := util.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
 
-	atts := []interfaces.Attestation{
+	atts := []ethpb.Att{
 		&ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
 		&ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
 	}
 	require.NoError(t, s.cfg.Pool.SaveUnaggregatedAttestations(atts))
 	require.Equal(t, 2, s.cfg.Pool.UnaggregatedAttestationCount(), "Unexpected number of attestations")
-	atts = []interfaces.Attestation{
+	atts = []ethpb.Att{
 		&ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
 		&ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
 	}
@@ -97,7 +96,7 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	att2 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1111}}
 	att3 := &ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101}}
 	att4 := &ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1110}}
-	atts := []interfaces.Attestation{att1, att2, att3, att4}
+	atts := []ethpb.Att{att1, att2, att3, att4}
 	require.NoError(t, s.cfg.Pool.SaveAggregatedAttestations(atts))
 	for _, att := range atts {
 		require.NoError(t, s.cfg.Pool.SaveBlockAttestation(att))

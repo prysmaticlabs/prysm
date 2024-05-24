@@ -614,6 +614,16 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 	if err := c.services.FetchService(&vs); err != nil {
 		return err
 	}
+	authTokenPath := c.cliCtx.String(flags.AuthTokenPathFlag.Name)
+	walletDir := c.cliCtx.String(flags.WalletDirFlag.Name)
+	// if no auth token path flag was passed try to set a default value
+	if authTokenPath == "" {
+		authTokenPath = flags.AuthTokenPathFlag.Value
+		// if a wallet dir is passed without an auth token then override the default with the wallet dir
+		if walletDir != "" {
+			authTokenPath = filepath.Join(walletDir, api.AuthTokenFileName)
+		}
+	}
 	s := rpc.NewServer(c.cliCtx.Context, &rpc.Config{
 		Host:                   c.cliCtx.String(flags.RPCHost.Name),
 		Port:                   fmt.Sprintf("%d", c.cliCtx.Int(flags.RPCPort.Name)),
@@ -624,14 +634,15 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 		GRPCRetryDelay:         c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name),
 		GRPCHeaders:            strings.Split(c.cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
 		BeaconNodeGRPCEndpoint: c.cliCtx.String(flags.BeaconRPCProviderFlag.Name),
-		BeaconApiEndpoint:      c.cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name),
+		BeaconApiEndpoint:      c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 		BeaconApiTimeout:       time.Second * 30,
 		BeaconNodeCert:         c.cliCtx.String(flags.CertFlag.Name),
 		DB:                     c.db,
 		Wallet:                 c.wallet,
-		WalletDir:              c.cliCtx.String(flags.WalletDirFlag.Name),
+		WalletDir:              walletDir,
 		WalletInitializedFeed:  c.walletInitializedFeed,
 		ValidatorService:       vs,
+		AuthTokenPath:          authTokenPath,
 		Router:                 router,
 	})
 	return c.services.RegisterService(s)

@@ -38,7 +38,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -278,9 +277,11 @@ func TestServer_GetBeaconBlock_Bellatrix(t *testing.T) {
 
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
 	proposerServer.Eth1BlockFetcher = c
+	ed, err := blocks.NewWrappedExecutionData(payload)
+	require.NoError(t, err)
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
-		PayloadIDBytes:   &enginev1.PayloadIDBytes{1},
-		ExecutionPayload: payload,
+		PayloadIDBytes:     &enginev1.PayloadIDBytes{1},
+		GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed},
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -401,9 +402,11 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 	}
 
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	ed, err := blocks.NewWrappedExecutionData(payload)
+	require.NoError(t, err)
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
-		PayloadIDBytes:          &enginev1.PayloadIDBytes{1},
-		ExecutionPayloadCapella: payload,
+		PayloadIDBytes:     &enginev1.PayloadIDBytes{1},
+		GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed},
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -511,6 +514,8 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 		BlobGasUsed:   4,
 		ExcessBlobGas: 5,
 	}
+	ed, err := blocks.NewWrappedExecutionData(payload)
+	require.NoError(t, err)
 
 	kc := make([][]byte, 0)
 	kc = append(kc, bytesutil.PadTo([]byte("kc"), 48))
@@ -521,9 +526,11 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 	bundle := &enginev1.BlobsBundle{KzgCommitments: kc, Proofs: proofs, Blobs: blobs}
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
-		PayloadIDBytes:        &enginev1.PayloadIDBytes{1},
-		ExecutionPayloadDeneb: payload,
-		BlobsBundle:           bundle,
+		PayloadIDBytes: &enginev1.PayloadIDBytes{1},
+		GetPayloadResponse: &blocks.GetPayloadResponse{
+			ExecutionData: ed,
+			BlobsBundle:   bundle,
+		},
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -652,9 +659,11 @@ func TestServer_GetBeaconBlock_Electra(t *testing.T) {
 	}
 
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	ed, err := blocks.NewWrappedExecutionData(payload)
+	require.NoError(t, err)
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
-		PayloadIDBytes:          &enginev1.PayloadIDBytes{1},
-		ExecutionPayloadElectra: payload,
+		PayloadIDBytes:     &enginev1.PayloadIDBytes{1},
+		GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed},
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -2003,22 +2012,22 @@ func TestProposer_FilterAttestation(t *testing.T) {
 	tests := []struct {
 		name         string
 		wantedErr    string
-		inputAtts    func() []interfaces.Attestation
-		expectedAtts func(inputAtts []interfaces.Attestation) []interfaces.Attestation
+		inputAtts    func() []ethpb.Att
+		expectedAtts func(inputAtts []ethpb.Att) []ethpb.Att
 	}{
 		{
 			name: "nil attestations",
-			inputAtts: func() []interfaces.Attestation {
+			inputAtts: func() []ethpb.Att {
 				return nil
 			},
-			expectedAtts: func(inputAtts []interfaces.Attestation) []interfaces.Attestation {
-				return []interfaces.Attestation{}
+			expectedAtts: func(inputAtts []ethpb.Att) []ethpb.Att {
+				return []ethpb.Att{}
 			},
 		},
 		{
 			name: "invalid attestations",
-			inputAtts: func() []interfaces.Attestation {
-				atts := make([]interfaces.Attestation, 10)
+			inputAtts: func() []ethpb.Att {
+				atts := make([]ethpb.Att, 10)
 				for i := 0; i < len(atts); i++ {
 					atts[i] = util.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
@@ -2028,14 +2037,14 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				}
 				return atts
 			},
-			expectedAtts: func(inputAtts []interfaces.Attestation) []interfaces.Attestation {
-				return []interfaces.Attestation{}
+			expectedAtts: func(inputAtts []ethpb.Att) []ethpb.Att {
+				return []ethpb.Att{}
 			},
 		},
 		{
 			name: "filter aggregates ok",
-			inputAtts: func() []interfaces.Attestation {
-				atts := make([]interfaces.Attestation, 10)
+			inputAtts: func() []ethpb.Att {
+				atts := make([]ethpb.Att, 10)
 				for i := 0; i < len(atts); i++ {
 					atts[i] = util.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
@@ -2065,8 +2074,8 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				}
 				return atts
 			},
-			expectedAtts: func(inputAtts []interfaces.Attestation) []interfaces.Attestation {
-				return []interfaces.Attestation{inputAtts[0], inputAtts[1]}
+			expectedAtts: func(inputAtts []ethpb.Att) []ethpb.Att {
+				return []ethpb.Att{inputAtts[0], inputAtts[1]}
 			},
 		},
 	}
@@ -2097,10 +2106,10 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sig := priv.Sign([]byte("foo")).Marshal()
-	aggregatedAtts := []interfaces.Attestation{
+	aggregatedAtts := []ethpb.Att{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig})}
-	unaggregatedAtts := []interfaces.Attestation{
+	unaggregatedAtts := []ethpb.Att{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10010}, Signature: sig}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10100}, Signature: sig})}
 

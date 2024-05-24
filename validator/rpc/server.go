@@ -47,6 +47,7 @@ type Config struct {
 	WalletDir              string
 	WalletInitializedFeed  *event.Feed
 	ValidatorService       *client.ValidatorService
+	AuthTokenPath          string
 	Router                 *mux.Router
 }
 
@@ -92,6 +93,8 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 	server := &Server{
 		ctx:                    ctx,
 		cancel:                 cancel,
+		logStreamer:            logs.NewStreamServer(),
+		logStreamerBufferSize:  1000, // Enough to handle most bursts of logs in the validator client.
 		host:                   cfg.Host,
 		port:                   cfg.Port,
 		grpcGatewayHost:        cfg.GRPCGatewayHost,
@@ -100,6 +103,17 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		grpcRetries:            cfg.GRPCRetries,
 		grpcRetryDelay:         cfg.GRPCRetryDelay,
 		grpcHeaders:            cfg.GRPCHeaders,
+		validatorService:       cfg.ValidatorService,
+		authTokenPath:          cfg.AuthTokenPath,
+		db:                     cfg.DB,
+		walletDir:              cfg.WalletDir,
+		walletInitializedFeed:  cfg.WalletInitializedFeed,
+		walletInitialized:      cfg.Wallet != nil,
+		wallet:                 cfg.Wallet,
+		beaconApiTimeout:       cfg.BeaconApiTimeout,
+		beaconApiEndpoint:      cfg.BeaconApiEndpoint,
+		beaconNodeEndpoint:     cfg.BeaconNodeGRPCEndpoint,
+		router:                 cfg.Router,
 	}
 
 	if server.authTokenPath == "" && server.walletDir != "" {

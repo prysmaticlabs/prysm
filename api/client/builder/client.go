@@ -330,7 +330,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 	if err != nil {
 		return nil, nil, err
 	}
-	ed, err := blocks.NewWrappedExecutionData(pb, nil)
+	ed, err := blocks.NewWrappedExecutionData(pb)
 	if err != nil {
 		return nil, nil, err
 	}
