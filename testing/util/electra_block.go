@@ -58,8 +58,12 @@ func GenerateFullBlockElectra(
 			return nil, errors.Wrapf(err, "failed generating %d attester slashings:", numToGen)
 		}
 		aSlashings = make([]*ethpb.AttesterSlashingElectra, len(generated))
+		var ok bool
 		for i, s := range generated {
-			aSlashings[i] = s.(*ethpb.AttesterSlashingElectra)
+			aSlashings[i], ok = s.(*ethpb.AttesterSlashingElectra)
+			if !ok {
+				return nil, fmt.Errorf("attester slashing has the wrong type (expected %T, got %T)", &ethpb.AttesterSlashingElectra{}, s)
+			}
 		}
 	}
 
@@ -71,8 +75,12 @@ func GenerateFullBlockElectra(
 			return nil, errors.Wrapf(err, "failed generating %d attestations:", numToGen)
 		}
 		atts = make([]*ethpb.AttestationElectra, len(generatedAtts))
+		var ok bool
 		for i, a := range generatedAtts {
-			atts[i] = a.(*ethpb.AttestationElectra)
+			atts[i], ok = a.(*ethpb.AttestationElectra)
+			if !ok {
+				return nil, fmt.Errorf("attestation has the wrong type (expected %T, got %T)", &ethpb.AttestationElectra{}, a)
+			}
 		}
 	}
 

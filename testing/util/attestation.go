@@ -47,9 +47,7 @@ func NewAttestation() *ethpb.Attestation {
 // for the same data with their aggregation bits split uniformly.
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
-func GenerateAttestations(
-	bState state.BeaconState, privs []bls.SecretKey, numToGen uint64, slot primitives.Slot, randomRoot bool,
-) ([]ethpb.Att, error) {
+func GenerateAttestations(bState state.BeaconState, privs []bls.SecretKey, numToGen uint64, slot primitives.Slot, randomRoot bool) ([]ethpb.Att, error) { // nolint:gocognit
 	var attestations []ethpb.Att
 	generateHeadState := false
 	bState = bState.Copy()

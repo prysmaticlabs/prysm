@@ -115,8 +115,12 @@ func GenerateFullBlock(
 			return nil, errors.Wrapf(err, "failed generating %d attester slashings:", numToGen)
 		}
 		aSlashings = make([]*ethpb.AttesterSlashing, len(generated))
+		var ok bool
 		for i, s := range generated {
-			aSlashings[i] = s.(*ethpb.AttesterSlashing)
+			aSlashings[i], ok = s.(*ethpb.AttesterSlashing)
+			if !ok {
+				return nil, fmt.Errorf("attester slashing has the wrong type (expected %T, got %T)", &ethpb.AttesterSlashing{}, s)
+			}
 		}
 	}
 
@@ -128,8 +132,12 @@ func GenerateFullBlock(
 			return nil, errors.Wrapf(err, "failed generating %d attestations:", numToGen)
 		}
 		atts = make([]*ethpb.Attestation, len(generatedAtts))
+		var ok bool
 		for i, a := range generatedAtts {
-			atts[i] = a.(*ethpb.Attestation)
+			atts[i], ok = a.(*ethpb.Attestation)
+			if !ok {
+				return nil, fmt.Errorf("attestation has the wrong type (expected %T, got %T)", &ethpb.Attestation{}, a)
+			}
 		}
 	}
 
