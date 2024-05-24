@@ -421,7 +421,12 @@ func VerifyBlobCommitmentCount(blk interfaces.ReadOnlyBeaconBlock) error {
 //	    for_ops(body.execution_payload.withdrawal_requests, process_execution_layer_withdrawal_request)
 //	    for_ops(body.execution_payload.deposit_receipts, process_deposit_receipt)  # [New in Electra:EIP6110]
 //	    for_ops(body.consolidations, process_consolidation)  # [New in Electra:EIP7251]
-func electraOperations(ctx context.Context, st state.BeaconState, block interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+func electraOperations(
+	ctx context.Context,
+	st state.BeaconState,
+	block interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+	// 6110 validations are in VerifyOperationLengths
+
 	// Electra extends the altair operations.
 	st, err := altairOperations(ctx, st, block)
 	if err != nil {
@@ -444,10 +449,12 @@ func electraOperations(ctx context.Context, st state.BeaconState, block interfac
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
 	}
+
 	st, err = electra.ProcessDepositReceipts(ctx, st, exe.DepositReceipts()) // TODO: EIP-6110 deposit changes.
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
+  
 	if err := electra.ProcessConsolidations(ctx, st, bod.Consolidations()); err != nil {
 		return nil, errors.Wrap(err, "could not process consolidations")
 	}

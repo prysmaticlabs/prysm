@@ -8,8 +8,10 @@ import (
 	fssz "github.com/prysmaticlabs/fastssz"
 )
 
-// ZeroWei is a non-nil zero value for primitives.Wei
-var ZeroWei Wei = big.NewInt(0)
+// ZW returns a non-nil zero value for primitives.Wei
+func ZeroWei() Wei {
+	return big.NewInt(0)
+}
 
 // Wei is the smallest unit of Ether, represented as a pointer to a bigInt.
 type Wei *big.Int

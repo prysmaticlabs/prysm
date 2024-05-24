@@ -183,6 +183,5 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 			}
 		}
 	}
-
 	return st, nil
 }

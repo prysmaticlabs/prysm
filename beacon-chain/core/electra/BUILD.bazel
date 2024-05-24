@@ -6,6 +6,8 @@ go_library(
         "churn.go",
         "consolidations.go",
         "deposits.go",
+        "effective_balance_updates.go",
+        "registry_updates.go",
         "transition.go",
         "upgrade.go",
         "validator.go",
