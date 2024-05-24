@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -271,9 +270,9 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 
 		DepositReceiptsStartIndex:     params.BeaconConfig().UnsetDepositReceiptsStartIndex,
 		DepositBalanceToConsume:       0,
-		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(math.Gwei(tab)),
+		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(primitives.Gwei(tab)),
 		EarliestExitEpoch:             earliestExitEpoch,
-		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(math.Gwei(tab)),
+		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(primitives.Gwei(tab)),
 		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(beaconState.Slot())),
 		PendingBalanceDeposits:        make([]*ethpb.PendingBalanceDeposit, 0),
 		PendingPartialWithdrawals:     make([]*ethpb.PendingPartialWithdrawal, 0),

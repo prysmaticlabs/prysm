@@ -5,7 +5,6 @@ import (
 
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -18,7 +17,7 @@ func TestExitBalanceToConsume(t *testing.T) {
 		require.ErrorContains(t, "is not supported", err)
 	})
 	t.Run("electra returns expected value", func(t *testing.T) {
-		want := math.Gwei(2)
+		want := primitives.Gwei(2)
 		dState, err := state_native.InitializeFromProtoElectra(&ethpb.BeaconStateElectra{ExitBalanceToConsume: want})
 		require.NoError(t, err)
 		got, err := dState.ExitBalanceToConsume()

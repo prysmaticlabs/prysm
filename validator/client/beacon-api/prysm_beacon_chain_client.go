@@ -13,20 +13,20 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 )
 
-// NewPrysmBeaconChainClient returns implementation of iface.PrysmBeaconChainClient.
-func NewPrysmBeaconChainClient(jsonRestHandler JsonRestHandler, nodeClient iface.NodeClient) iface.PrysmBeaconChainClient {
-	return prysmBeaconChainClient{
+// NewPrysmChainClient returns implementation of iface.PrysmChainClient.
+func NewPrysmChainClient(jsonRestHandler JsonRestHandler, nodeClient iface.NodeClient) iface.PrysmChainClient {
+	return prysmChainClient{
 		jsonRestHandler: jsonRestHandler,
 		nodeClient:      nodeClient,
 	}
 }
 
-type prysmBeaconChainClient struct {
+type prysmChainClient struct {
 	jsonRestHandler JsonRestHandler
 	nodeClient      iface.NodeClient
 }
 
-func (c prysmBeaconChainClient) GetValidatorCount(ctx context.Context, stateID string, statuses []validator2.Status) ([]iface.ValidatorCount, error) {
+func (c prysmChainClient) GetValidatorCount(ctx context.Context, stateID string, statuses []validator2.Status) ([]iface.ValidatorCount, error) {
 	// Check node version for prysm beacon node as it is a custom endpoint for prysm beacon node.
 	nodeVersion, err := c.nodeClient.GetVersion(ctx, nil)
 	if err != nil {

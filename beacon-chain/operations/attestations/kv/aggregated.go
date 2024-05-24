@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -28,11 +28,11 @@ func (c *AttCaches) AggregateUnaggregatedAttestations(ctx context.Context) error
 	return c.aggregateUnaggregatedAtts(ctx, unaggregatedAtts)
 }
 
-func (c *AttCaches) aggregateUnaggregatedAtts(ctx context.Context, unaggregatedAtts []interfaces.Attestation) error {
+func (c *AttCaches) aggregateUnaggregatedAtts(ctx context.Context, unaggregatedAtts []ethpb.Att) error {
 	_, span := trace.StartSpan(ctx, "operations.attestations.kv.aggregateUnaggregatedAtts")
 	defer span.End()
 
-	attsByDataRoot := make(map[[32]byte][]interfaces.Attestation, len(unaggregatedAtts))
+	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(unaggregatedAtts))
 	for _, att := range unaggregatedAtts {
 		attDataRoot, err := att.GetData().HashTreeRoot()
 		if err != nil {
@@ -66,12 +66,12 @@ func (c *AttCaches) aggregateUnaggregatedAtts(ctx context.Context, unaggregatedA
 // aggregateParallel aggregates attestations in parallel for `atts` and saves them in the pool,
 // returns the unaggregated attestations that weren't able to aggregate.
 // Given `n` CPU cores, it creates a channel of size `n` and spawns `n` goroutines to aggregate attestations
-func (c *AttCaches) aggregateParallel(atts map[[32]byte][]interfaces.Attestation, leftOver map[[32]byte]bool) map[[32]byte]bool {
+func (c *AttCaches) aggregateParallel(atts map[[32]byte][]ethpb.Att, leftOver map[[32]byte]bool) map[[32]byte]bool {
 	var leftoverLock sync.Mutex
 	wg := sync.WaitGroup{}
 
 	n := runtime.GOMAXPROCS(0) // defaults to the value of runtime.NumCPU
-	ch := make(chan []interfaces.Attestation, n)
+	ch := make(chan []ethpb.Att, n)
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		go func() {
@@ -87,7 +87,7 @@ func (c *AttCaches) aggregateParallel(atts map[[32]byte][]interfaces.Attestation
 					continue
 				}
 				if helpers.IsAggregated(aggregated) {
-					if err := c.SaveAggregatedAttestations([]interfaces.Attestation{aggregated}); err != nil {
+					if err := c.SaveAggregatedAttestations([]ethpb.Att{aggregated}); err != nil {
 						log.WithError(err).Error("could not save aggregated attestation")
 						continue
 					}
@@ -116,7 +116,7 @@ func (c *AttCaches) aggregateParallel(atts map[[32]byte][]interfaces.Attestation
 }
 
 // SaveAggregatedAttestation saves an aggregated attestation in cache.
-func (c *AttCaches) SaveAggregatedAttestation(att interfaces.Attestation) error {
+func (c *AttCaches) SaveAggregatedAttestation(att ethpb.Att) error {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
@@ -143,12 +143,12 @@ func (c *AttCaches) SaveAggregatedAttestation(att interfaces.Attestation) error 
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
-	copiedAtt := interfaces.CopyAttestation(att)
+	copiedAtt := att.Copy()
 	c.aggregatedAttLock.Lock()
 	defer c.aggregatedAttLock.Unlock()
 	atts, ok := c.aggregatedAtt[r]
 	if !ok {
-		atts := []interfaces.Attestation{copiedAtt}
+		atts := []ethpb.Att{copiedAtt}
 		c.aggregatedAtt[r] = atts
 		return nil
 	}
@@ -163,7 +163,7 @@ func (c *AttCaches) SaveAggregatedAttestation(att interfaces.Attestation) error 
 }
 
 // SaveAggregatedAttestations saves a list of aggregated attestations in cache.
-func (c *AttCaches) SaveAggregatedAttestations(atts []interfaces.Attestation) error {
+func (c *AttCaches) SaveAggregatedAttestations(atts []ethpb.Att) error {
 	for _, att := range atts {
 		if err := c.SaveAggregatedAttestation(att); err != nil {
 			log.WithError(err).Debug("Could not save aggregated attestation")
@@ -176,11 +176,11 @@ func (c *AttCaches) SaveAggregatedAttestations(atts []interfaces.Attestation) er
 }
 
 // AggregatedAttestations returns the aggregated attestations in cache.
-func (c *AttCaches) AggregatedAttestations() []interfaces.Attestation {
+func (c *AttCaches) AggregatedAttestations() []ethpb.Att {
 	c.aggregatedAttLock.RLock()
 	defer c.aggregatedAttLock.RUnlock()
 
-	atts := make([]interfaces.Attestation, 0)
+	atts := make([]ethpb.Att, 0)
 
 	for _, a := range c.aggregatedAtt {
 		atts = append(atts, a...)
@@ -191,11 +191,11 @@ func (c *AttCaches) AggregatedAttestations() []interfaces.Attestation {
 
 // AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
-func (c *AttCaches) AggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []interfaces.Attestation {
+func (c *AttCaches) AggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []ethpb.Att {
 	_, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregatedAttestationsBySlotIndex")
 	defer span.End()
 
-	atts := make([]interfaces.Attestation, 0)
+	atts := make([]ethpb.Att, 0)
 
 	c.aggregatedAttLock.RLock()
 	defer c.aggregatedAttLock.RUnlock()
@@ -209,7 +209,7 @@ func (c *AttCaches) AggregatedAttestationsBySlotIndex(ctx context.Context, slot 
 }
 
 // DeleteAggregatedAttestation deletes the aggregated attestations in cache.
-func (c *AttCaches) DeleteAggregatedAttestation(att interfaces.Attestation) error {
+func (c *AttCaches) DeleteAggregatedAttestation(att ethpb.Att) error {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
@@ -232,7 +232,7 @@ func (c *AttCaches) DeleteAggregatedAttestation(att interfaces.Attestation) erro
 		return nil
 	}
 
-	filtered := make([]interfaces.Attestation, 0)
+	filtered := make([]ethpb.Att, 0)
 	for _, a := range attList {
 		if c, err := att.GetAggregationBits().Contains(a.GetAggregationBits()); err != nil {
 			return err
@@ -250,7 +250,7 @@ func (c *AttCaches) DeleteAggregatedAttestation(att interfaces.Attestation) erro
 }
 
 // HasAggregatedAttestation checks if the input attestations has already existed in cache.
-func (c *AttCaches) HasAggregatedAttestation(att interfaces.Attestation) (bool, error) {
+func (c *AttCaches) HasAggregatedAttestation(att ethpb.Att) (bool, error) {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return false, err
 	}
