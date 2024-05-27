@@ -327,7 +327,7 @@ func (s *Service) AggregatedSigAndAggregationBits(
 func (s *Service) GetAttestationData(
 	ctx context.Context, req *ethpb.AttestationDataRequest,
 ) (*ethpb.AttestationData, *RpcError) {
-	ctx, span := trace.StartSpan(ctx, "coreService.AttestationData")
+	ctx, span := trace.StartSpan(ctx, "coreService.GetAttestationData")
 	defer span.End()
 
 	if req.Slot != s.GenesisTimeFetcher.CurrentSlot() {

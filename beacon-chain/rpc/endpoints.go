@@ -192,7 +192,7 @@ func (s *Service) validatorEndpoints(
 		},
 		{
 			template: "/eth/v1/validator/attestation_data",
-			name:     namespace + ".AttestationData",
+			name:     namespace + ".GetAttestationData",
 			handler:  server.GetAttestationData,
 			methods:  []string{http.MethodGet},
 		},
@@ -283,7 +283,7 @@ func (s *Service) nodeEndpoints() []endpoint {
 	return []endpoint{
 		{
 			template: "/eth/v1/node/syncing",
-			name:     namespace + ".SyncStatus",
+			name:     namespace + ".GetSyncStatus",
 			handler:  server.GetSyncStatus,
 			methods:  []string{http.MethodGet},
 		},
@@ -313,7 +313,7 @@ func (s *Service) nodeEndpoints() []endpoint {
 		},
 		{
 			template: "/eth/v1/node/version",
-			name:     namespace + ".Version",
+			name:     namespace + ".GetVersion",
 			handler:  server.GetVersion,
 			methods:  []string{http.MethodGet},
 		},
@@ -520,7 +520,7 @@ func (s *Service) beaconEndpoints(
 		},
 		{
 			template: "/eth/v1/beacon/genesis",
-			name:     namespace + ".Genesis",
+			name:     namespace + ".GetGenesis",
 			handler:  server.GetGenesis,
 			methods:  []string{http.MethodGet},
 		},
@@ -690,13 +690,13 @@ func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater loo
 		},
 		{
 			template: "/eth/v1/beacon/states/{state_id}/validator_count",
-			name:     namespace + ".ValidatorCount",
+			name:     namespace + ".GetValidatorCount",
 			handler:  server.GetValidatorCount,
 			methods:  []string{http.MethodGet},
 		},
 		{
 			template: "/prysm/v1/beacon/states/{state_id}/validator_count",
-			name:     namespace + ".ValidatorCount",
+			name:     namespace + ".GetValidatorCount",
 			handler:  server.GetValidatorCount,
 			methods:  []string{http.MethodGet},
 		},
@@ -766,13 +766,13 @@ func (s *Service) prysmValidatorEndpoints(coreService *core.Service, stater look
 	return []endpoint{
 		{
 			template: "/prysm/validators/performance",
-			name:     namespace + ".ValidatorPerformance",
+			name:     namespace + ".GetValidatorPerformance",
 			handler:  server.GetValidatorPerformance,
 			methods:  []string{http.MethodPost},
 		},
 		{
 			template: "/prysm/v1/validators/performance",
-			name:     namespace + ".ValidatorPerformance",
+			name:     namespace + ".GetValidatorPerformance",
 			handler:  server.GetValidatorPerformance,
 			methods:  []string{http.MethodPost},
 		},

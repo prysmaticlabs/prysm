@@ -76,7 +76,7 @@ func TestServer_GetChainHead_NoGenesis(t *testing.T) {
 				PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
 			OptimisticModeFetcher: &chainMock.ChainService{},
 		}
-		_, err = bs.ChainHead(context.Background(), nil)
+		_, err = bs.GetChainHead(context.Background(), nil)
 		require.ErrorContains(t, "Could not get genesis block", err)
 	}
 }
@@ -111,7 +111,7 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 		OptimisticModeFetcher: &chainMock.ChainService{},
 	}
 
-	_, err = bs.ChainHead(context.Background(), nil)
+	_, err = bs.GetChainHead(context.Background(), nil)
 	require.ErrorContains(t, "Could not get finalized block", err)
 }
 
@@ -120,7 +120,7 @@ func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 		HeadFetcher:           &chainMock.ChainService{Block: nil},
 		OptimisticModeFetcher: &chainMock.ChainService{},
 	}
-	_, err := bs.ChainHead(context.Background(), nil)
+	_, err := bs.GetChainHead(context.Background(), nil)
 	assert.ErrorContains(t, "Head block of chain was nil", err)
 }
 
@@ -181,7 +181,7 @@ func TestServer_GetChainHead(t *testing.T) {
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
 	}
 
-	head, err := bs.ChainHead(context.Background(), nil)
+	head, err := bs.GetChainHead(context.Background(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, primitives.Epoch(3), head.PreviousJustifiedEpoch, "Unexpected PreviousJustifiedEpoch")
 	assert.Equal(t, primitives.Epoch(2), head.JustifiedEpoch, "Unexpected JustifiedEpoch")

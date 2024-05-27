@@ -396,7 +396,7 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 // GetAttestationData requests that the beacon node produces attestation data for
 // the requested committee index and slot based on the nodes current head.
 func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.AttestationData")
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetAttestationData")
 	defer span.End()
 
 	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
