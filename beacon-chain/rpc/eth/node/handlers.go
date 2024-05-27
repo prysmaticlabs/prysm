@@ -28,7 +28,7 @@ var (
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
 // if it is, what block it is up to.
 func (s *Server) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "node.GetSyncStatus")
+	ctx, span := trace.StartSpan(r.Context(), "node.SyncStatus")
 	defer span.End()
 
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
@@ -94,7 +94,7 @@ func (s *Server) GetIdentity(w http.ResponseWriter, r *http.Request) {
 // GetVersion requests that the beacon node identify information about its implementation in a
 // format similar to a HTTP User-Agent field.
 func (*Server) GetVersion(w http.ResponseWriter, r *http.Request) {
-	_, span := trace.StartSpan(r.Context(), "node.GetVersion")
+	_, span := trace.StartSpan(r.Context(), "node.Version")
 	defer span.End()
 
 	v := fmt.Sprintf("Prysm/%s (%s %s)", version.SemanticVersion(), runtime.GOOS, runtime.GOARCH)

@@ -89,9 +89,9 @@ func (mr *MockValidatorClientMockRecorder) EventStreamIsRunning() *gomock.Call {
 }
 
 // GetAggregatedSelections mocks base method.
-func (m *MockValidatorClient) GetAggregatedSelections(arg0 context.Context, arg1 []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
+func (m *MockValidatorClient) AggregatedSelections(arg0 context.Context, arg1 []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAggregatedSelections", arg0, arg1)
+	ret := m.ctrl.Call(m, "AggregatedSelections", arg0, arg1)
 	ret0, _ := ret[0].([]iface.BeaconCommitteeSelection)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -100,13 +100,13 @@ func (m *MockValidatorClient) GetAggregatedSelections(arg0 context.Context, arg1
 // GetAggregatedSelections indicates an expected call of GetAggregatedSelections.
 func (mr *MockValidatorClientMockRecorder) GetAggregatedSelections(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAggregatedSelections", reflect.TypeOf((*MockValidatorClient)(nil).GetAggregatedSelections), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AggregatedSelections", reflect.TypeOf((*MockValidatorClient)(nil).AggregatedSelections), arg0, arg1)
 }
 
 // GetAggregatedSyncSelections mocks base method.
-func (m *MockValidatorClient) GetAggregatedSyncSelections(arg0 context.Context, arg1 []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
+func (m *MockValidatorClient) AggregatedSyncSelections(arg0 context.Context, arg1 []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAggregatedSyncSelections", arg0, arg1)
+	ret := m.ctrl.Call(m, "AggregatedSyncSelections", arg0, arg1)
 	ret0, _ := ret[0].([]iface.SyncCommitteeSelection)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -115,13 +115,13 @@ func (m *MockValidatorClient) GetAggregatedSyncSelections(arg0 context.Context, 
 // GetAggregatedSyncSelections indicates an expected call of GetAggregatedSyncSelections.
 func (mr *MockValidatorClientMockRecorder) GetAggregatedSyncSelections(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAggregatedSyncSelections", reflect.TypeOf((*MockValidatorClient)(nil).GetAggregatedSyncSelections), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AggregatedSyncSelections", reflect.TypeOf((*MockValidatorClient)(nil).AggregatedSyncSelections), arg0, arg1)
 }
 
 // GetAttestationData mocks base method.
-func (m *MockValidatorClient) GetAttestationData(arg0 context.Context, arg1 *eth.AttestationDataRequest) (*eth.AttestationData, error) {
+func (m *MockValidatorClient) AttestationData(arg0 context.Context, arg1 *eth.AttestationDataRequest) (*eth.AttestationData, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAttestationData", arg0, arg1)
+	ret := m.ctrl.Call(m, "AttestationData", arg0, arg1)
 	ret0, _ := ret[0].(*eth.AttestationData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -130,13 +130,13 @@ func (m *MockValidatorClient) GetAttestationData(arg0 context.Context, arg1 *eth
 // GetAttestationData indicates an expected call of GetAttestationData.
 func (mr *MockValidatorClientMockRecorder) GetAttestationData(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttestationData", reflect.TypeOf((*MockValidatorClient)(nil).GetAttestationData), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttestationData", reflect.TypeOf((*MockValidatorClient)(nil).AttestationData), arg0, arg1)
 }
 
 // GetBeaconBlock mocks base method.
-func (m *MockValidatorClient) GetBeaconBlock(arg0 context.Context, arg1 *eth.BlockRequest) (*eth.GenericBeaconBlock, error) {
+func (m *MockValidatorClient) BeaconBlock(arg0 context.Context, arg1 *eth.BlockRequest) (*eth.GenericBeaconBlock, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBeaconBlock", arg0, arg1)
+	ret := m.ctrl.Call(m, "BeaconBlock", arg0, arg1)
 	ret0, _ := ret[0].(*eth.GenericBeaconBlock)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -145,13 +145,13 @@ func (m *MockValidatorClient) GetBeaconBlock(arg0 context.Context, arg1 *eth.Blo
 // GetBeaconBlock indicates an expected call of GetBeaconBlock.
 func (mr *MockValidatorClientMockRecorder) GetBeaconBlock(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconBlock", reflect.TypeOf((*MockValidatorClient)(nil).GetBeaconBlock), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeaconBlock", reflect.TypeOf((*MockValidatorClient)(nil).BeaconBlock), arg0, arg1)
 }
 
 // GetDuties mocks base method.
-func (m *MockValidatorClient) GetDuties(arg0 context.Context, arg1 *eth.DutiesRequest) (*eth.DutiesResponse, error) {
+func (m *MockValidatorClient) Duties(arg0 context.Context, arg1 *eth.DutiesRequest) (*eth.DutiesResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDuties", arg0, arg1)
+	ret := m.ctrl.Call(m, "Duties", arg0, arg1)
 	ret0, _ := ret[0].(*eth.DutiesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -160,13 +160,13 @@ func (m *MockValidatorClient) GetDuties(arg0 context.Context, arg1 *eth.DutiesRe
 // GetDuties indicates an expected call of GetDuties.
 func (mr *MockValidatorClientMockRecorder) GetDuties(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDuties", reflect.TypeOf((*MockValidatorClient)(nil).GetDuties), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Duties", reflect.TypeOf((*MockValidatorClient)(nil).Duties), arg0, arg1)
 }
 
 // GetFeeRecipientByPubKey mocks base method.
-func (m *MockValidatorClient) GetFeeRecipientByPubKey(arg0 context.Context, arg1 *eth.FeeRecipientByPubKeyRequest) (*eth.FeeRecipientByPubKeyResponse, error) {
+func (m *MockValidatorClient) FeeRecipientByPubKey(arg0 context.Context, arg1 *eth.FeeRecipientByPubKeyRequest) (*eth.FeeRecipientByPubKeyResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetFeeRecipientByPubKey", arg0, arg1)
+	ret := m.ctrl.Call(m, "FeeRecipientByPubKey", arg0, arg1)
 	ret0, _ := ret[0].(*eth.FeeRecipientByPubKeyResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -175,13 +175,13 @@ func (m *MockValidatorClient) GetFeeRecipientByPubKey(arg0 context.Context, arg1
 // GetFeeRecipientByPubKey indicates an expected call of GetFeeRecipientByPubKey.
 func (mr *MockValidatorClientMockRecorder) GetFeeRecipientByPubKey(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFeeRecipientByPubKey", reflect.TypeOf((*MockValidatorClient)(nil).GetFeeRecipientByPubKey), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeeRecipientByPubKey", reflect.TypeOf((*MockValidatorClient)(nil).FeeRecipientByPubKey), arg0, arg1)
 }
 
 // GetSyncCommitteeContribution mocks base method.
-func (m *MockValidatorClient) GetSyncCommitteeContribution(arg0 context.Context, arg1 *eth.SyncCommitteeContributionRequest) (*eth.SyncCommitteeContribution, error) {
+func (m *MockValidatorClient) SyncCommitteeContribution(arg0 context.Context, arg1 *eth.SyncCommitteeContributionRequest) (*eth.SyncCommitteeContribution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSyncCommitteeContribution", arg0, arg1)
+	ret := m.ctrl.Call(m, "SyncCommitteeContribution", arg0, arg1)
 	ret0, _ := ret[0].(*eth.SyncCommitteeContribution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -190,13 +190,13 @@ func (m *MockValidatorClient) GetSyncCommitteeContribution(arg0 context.Context,
 // GetSyncCommitteeContribution indicates an expected call of GetSyncCommitteeContribution.
 func (mr *MockValidatorClientMockRecorder) GetSyncCommitteeContribution(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncCommitteeContribution", reflect.TypeOf((*MockValidatorClient)(nil).GetSyncCommitteeContribution), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncCommitteeContribution", reflect.TypeOf((*MockValidatorClient)(nil).SyncCommitteeContribution), arg0, arg1)
 }
 
 // GetSyncMessageBlockRoot mocks base method.
-func (m *MockValidatorClient) GetSyncMessageBlockRoot(arg0 context.Context, arg1 *emptypb.Empty) (*eth.SyncMessageBlockRootResponse, error) {
+func (m *MockValidatorClient) SyncMessageBlockRoot(arg0 context.Context, arg1 *emptypb.Empty) (*eth.SyncMessageBlockRootResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSyncMessageBlockRoot", arg0, arg1)
+	ret := m.ctrl.Call(m, "SyncMessageBlockRoot", arg0, arg1)
 	ret0, _ := ret[0].(*eth.SyncMessageBlockRootResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -205,13 +205,13 @@ func (m *MockValidatorClient) GetSyncMessageBlockRoot(arg0 context.Context, arg1
 // GetSyncMessageBlockRoot indicates an expected call of GetSyncMessageBlockRoot.
 func (mr *MockValidatorClientMockRecorder) GetSyncMessageBlockRoot(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncMessageBlockRoot", reflect.TypeOf((*MockValidatorClient)(nil).GetSyncMessageBlockRoot), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncMessageBlockRoot", reflect.TypeOf((*MockValidatorClient)(nil).SyncMessageBlockRoot), arg0, arg1)
 }
 
 // GetSyncSubcommitteeIndex mocks base method.
-func (m *MockValidatorClient) GetSyncSubcommitteeIndex(arg0 context.Context, arg1 *eth.SyncSubcommitteeIndexRequest) (*eth.SyncSubcommitteeIndexResponse, error) {
+func (m *MockValidatorClient) SyncSubcommitteeIndex(arg0 context.Context, arg1 *eth.SyncSubcommitteeIndexRequest) (*eth.SyncSubcommitteeIndexResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSyncSubcommitteeIndex", arg0, arg1)
+	ret := m.ctrl.Call(m, "SyncSubcommitteeIndex", arg0, arg1)
 	ret0, _ := ret[0].(*eth.SyncSubcommitteeIndexResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -220,7 +220,7 @@ func (m *MockValidatorClient) GetSyncSubcommitteeIndex(arg0 context.Context, arg
 // GetSyncSubcommitteeIndex indicates an expected call of GetSyncSubcommitteeIndex.
 func (mr *MockValidatorClientMockRecorder) GetSyncSubcommitteeIndex(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncSubcommitteeIndex", reflect.TypeOf((*MockValidatorClient)(nil).GetSyncSubcommitteeIndex), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncSubcommitteeIndex", reflect.TypeOf((*MockValidatorClient)(nil).SyncSubcommitteeIndex), arg0, arg1)
 }
 
 // MultipleValidatorStatus mocks base method.

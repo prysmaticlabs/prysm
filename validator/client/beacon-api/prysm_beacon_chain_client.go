@@ -26,9 +26,9 @@ type prysmChainClient struct {
 	nodeClient      iface.NodeClient
 }
 
-func (c prysmChainClient) GetValidatorCount(ctx context.Context, stateID string, statuses []validator2.Status) ([]iface.ValidatorCount, error) {
+func (c prysmChainClient) ValidatorCount(ctx context.Context, stateID string, statuses []validator2.Status) ([]iface.ValidatorCount, error) {
 	// Check node version for prysm beacon node as it is a custom endpoint for prysm beacon node.
-	nodeVersion, err := c.nodeClient.GetVersion(ctx, nil)
+	nodeVersion, err := c.nodeClient.Version(ctx, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get node version")
 	}

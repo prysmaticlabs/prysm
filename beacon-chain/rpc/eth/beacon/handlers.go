@@ -1362,7 +1362,7 @@ func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) 
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
 func (s *Server) GetGenesis(w http.ResponseWriter, r *http.Request) {
-	_, span := trace.StartSpan(r.Context(), "beacon.GetGenesis")
+	_, span := trace.StartSpan(r.Context(), "beacon.Genesis")
 	defer span.End()
 
 	genesisTime := s.GenesisTimeFetcher.GenesisTime()

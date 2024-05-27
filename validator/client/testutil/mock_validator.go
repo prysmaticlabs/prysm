@@ -295,7 +295,7 @@ func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *propos
 }
 
 // GetGraffiti for mocking
-func (fv *FakeValidator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+func (fv *FakeValidator) Graffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	return []byte(fv.graffiti), nil
 }
 

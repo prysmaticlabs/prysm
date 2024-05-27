@@ -218,7 +218,7 @@ func (m *Validator) SetProposerSettings(_ context.Context, settings *proposer.Se
 }
 
 // GetGraffiti for mocking
-func (m *Validator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+func (m *Validator) Graffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	return []byte(m.graffiti), nil
 }
 

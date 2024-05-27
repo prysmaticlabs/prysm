@@ -35,7 +35,7 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Make sure that GetGenesis() is called exactly once
+	// Make sure that Genesis() is called exactly once
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(
 		&structs.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
@@ -64,7 +64,7 @@ func TestGetDomainData_GenesisError(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Make sure that GetGenesis() is called exactly once
+	// Make sure that Genesis() is called exactly once
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(nil, errors.New("foo error")).Times(1)
 
@@ -83,7 +83,7 @@ func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Make sure that GetGenesis() is called exactly once
+	// Make sure that Genesis() is called exactly once
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(
 		&structs.Genesis{GenesisValidatorsRoot: "foo"},

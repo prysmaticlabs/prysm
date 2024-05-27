@@ -43,7 +43,7 @@ func (m *MockGenesisProvider) EXPECT() *MockGenesisProviderMockRecorder {
 // GetGenesis mocks base method.
 func (m *MockGenesisProvider) GetGenesis(ctx context.Context) (*structs.Genesis, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGenesis", ctx)
+	ret := m.ctrl.Call(m, "Genesis", ctx)
 	ret0, _ := ret[0].(*structs.Genesis)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -52,5 +52,5 @@ func (m *MockGenesisProvider) GetGenesis(ctx context.Context) (*structs.Genesis,
 // GetGenesis indicates an expected call of GetGenesis.
 func (mr *MockGenesisProviderMockRecorder) GetGenesis(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGenesis", reflect.TypeOf((*MockGenesisProvider)(nil).GetGenesis), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Genesis", reflect.TypeOf((*MockGenesisProvider)(nil).GetGenesis), ctx)
 }

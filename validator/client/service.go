@@ -323,7 +323,7 @@ func (v *ValidatorService) GetGraffiti(ctx context.Context, pubKey [fieldparams.
 	if v.validator == nil {
 		return nil, errors.New("validator is unavailable")
 	}
-	return v.validator.GetGraffiti(ctx, pubKey)
+	return v.validator.Graffiti(ctx, pubKey)
 }
 
 func (v *ValidatorService) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {

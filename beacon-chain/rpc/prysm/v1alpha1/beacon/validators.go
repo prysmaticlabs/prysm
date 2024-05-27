@@ -30,7 +30,7 @@ import (
 // ListValidatorBalances retrieves the validator balances for a given set of public keys.
 // An optional Epoch parameter is provided to request historical validator balances from
 // archived, persistent data.
-func (bs *Server) ListValidatorBalances(
+func (bs *Server) ValidatorBalances(
 	ctx context.Context,
 	req *ethpb.ListValidatorBalancesRequest,
 ) (*ethpb.ValidatorBalances, error) {
@@ -185,7 +185,7 @@ func (bs *Server) ListValidatorBalances(
 
 // ListValidators retrieves the current list of active validators with an optional historical epoch flag to
 // retrieve validator set in time.
-func (bs *Server) ListValidators(
+func (bs *Server) Validators(
 	ctx context.Context,
 	req *ethpb.ListValidatorsRequest,
 ) (*ethpb.Validators, error) {
@@ -474,7 +474,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
 // it returns the information about validator's participation rate in voting on the proof of stake
 // rules based on their balance compared to the total active validator balance.
-func (bs *Server) GetValidatorParticipation(
+func (bs *Server) ValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
 	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
@@ -565,7 +565,7 @@ func (bs *Server) GetValidatorParticipation(
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
-func (bs *Server) GetValidatorQueue(
+func (bs *Server) ValidatorQueue(
 	ctx context.Context, _ *emptypb.Empty,
 ) (*ethpb.ValidatorQueue, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
@@ -657,7 +657,7 @@ func (bs *Server) GetValidatorQueue(
 
 // GetValidatorPerformance reports the validator's latest balance along with other important metrics on
 // rewards and penalties throughout its lifecycle in the beacon chain.
-func (bs *Server) GetValidatorPerformance(
+func (bs *Server) ValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
 	response, err := bs.CoreService.ComputeValidatorPerformance(ctx, req)

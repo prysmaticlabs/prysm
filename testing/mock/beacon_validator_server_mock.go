@@ -105,7 +105,7 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) DomainData(arg0, arg1 any) 
 // GetAttestationData mocks base method.
 func (m *MockBeaconNodeValidatorServer) GetAttestationData(arg0 context.Context, arg1 *eth.AttestationDataRequest) (*eth.AttestationData, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAttestationData", arg0, arg1)
+	ret := m.ctrl.Call(m, "AttestationData", arg0, arg1)
 	ret0, _ := ret[0].(*eth.AttestationData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -114,13 +114,13 @@ func (m *MockBeaconNodeValidatorServer) GetAttestationData(arg0 context.Context,
 // GetAttestationData indicates an expected call of GetAttestationData.
 func (mr *MockBeaconNodeValidatorServerMockRecorder) GetAttestationData(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttestationData", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetAttestationData), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttestationData", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetAttestationData), arg0, arg1)
 }
 
 // GetBeaconBlock mocks base method.
 func (m *MockBeaconNodeValidatorServer) GetBeaconBlock(arg0 context.Context, arg1 *eth.BlockRequest) (*eth.GenericBeaconBlock, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBeaconBlock", arg0, arg1)
+	ret := m.ctrl.Call(m, "BeaconBlock", arg0, arg1)
 	ret0, _ := ret[0].(*eth.GenericBeaconBlock)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -129,13 +129,13 @@ func (m *MockBeaconNodeValidatorServer) GetBeaconBlock(arg0 context.Context, arg
 // GetBeaconBlock indicates an expected call of GetBeaconBlock.
 func (mr *MockBeaconNodeValidatorServerMockRecorder) GetBeaconBlock(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconBlock", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetBeaconBlock), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeaconBlock", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetBeaconBlock), arg0, arg1)
 }
 
 // GetDuties mocks base method.
 func (m *MockBeaconNodeValidatorServer) GetDuties(arg0 context.Context, arg1 *eth.DutiesRequest) (*eth.DutiesResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDuties", arg0, arg1)
+	ret := m.ctrl.Call(m, "Duties", arg0, arg1)
 	ret0, _ := ret[0].(*eth.DutiesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -144,13 +144,13 @@ func (m *MockBeaconNodeValidatorServer) GetDuties(arg0 context.Context, arg1 *et
 // GetDuties indicates an expected call of GetDuties.
 func (mr *MockBeaconNodeValidatorServerMockRecorder) GetDuties(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDuties", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetDuties), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Duties", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetDuties), arg0, arg1)
 }
 
 // GetFeeRecipientByPubKey mocks base method.
 func (m *MockBeaconNodeValidatorServer) GetFeeRecipientByPubKey(arg0 context.Context, arg1 *eth.FeeRecipientByPubKeyRequest) (*eth.FeeRecipientByPubKeyResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetFeeRecipientByPubKey", arg0, arg1)
+	ret := m.ctrl.Call(m, "FeeRecipientByPubKey", arg0, arg1)
 	ret0, _ := ret[0].(*eth.FeeRecipientByPubKeyResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -159,13 +159,13 @@ func (m *MockBeaconNodeValidatorServer) GetFeeRecipientByPubKey(arg0 context.Con
 // GetFeeRecipientByPubKey indicates an expected call of GetFeeRecipientByPubKey.
 func (mr *MockBeaconNodeValidatorServerMockRecorder) GetFeeRecipientByPubKey(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFeeRecipientByPubKey", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetFeeRecipientByPubKey), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeeRecipientByPubKey", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetFeeRecipientByPubKey), arg0, arg1)
 }
 
 // GetSyncCommitteeContribution mocks base method.
 func (m *MockBeaconNodeValidatorServer) GetSyncCommitteeContribution(arg0 context.Context, arg1 *eth.SyncCommitteeContributionRequest) (*eth.SyncCommitteeContribution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSyncCommitteeContribution", arg0, arg1)
+	ret := m.ctrl.Call(m, "SyncCommitteeContribution", arg0, arg1)
 	ret0, _ := ret[0].(*eth.SyncCommitteeContribution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -174,13 +174,13 @@ func (m *MockBeaconNodeValidatorServer) GetSyncCommitteeContribution(arg0 contex
 // GetSyncCommitteeContribution indicates an expected call of GetSyncCommitteeContribution.
 func (mr *MockBeaconNodeValidatorServerMockRecorder) GetSyncCommitteeContribution(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncCommitteeContribution", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetSyncCommitteeContribution), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncCommitteeContribution", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetSyncCommitteeContribution), arg0, arg1)
 }
 
 // GetSyncMessageBlockRoot mocks base method.
 func (m *MockBeaconNodeValidatorServer) GetSyncMessageBlockRoot(arg0 context.Context, arg1 *emptypb.Empty) (*eth.SyncMessageBlockRootResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSyncMessageBlockRoot", arg0, arg1)
+	ret := m.ctrl.Call(m, "SyncMessageBlockRoot", arg0, arg1)
 	ret0, _ := ret[0].(*eth.SyncMessageBlockRootResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -189,13 +189,13 @@ func (m *MockBeaconNodeValidatorServer) GetSyncMessageBlockRoot(arg0 context.Con
 // GetSyncMessageBlockRoot indicates an expected call of GetSyncMessageBlockRoot.
 func (mr *MockBeaconNodeValidatorServerMockRecorder) GetSyncMessageBlockRoot(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncMessageBlockRoot", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetSyncMessageBlockRoot), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncMessageBlockRoot", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetSyncMessageBlockRoot), arg0, arg1)
 }
 
 // GetSyncSubcommitteeIndex mocks base method.
 func (m *MockBeaconNodeValidatorServer) GetSyncSubcommitteeIndex(arg0 context.Context, arg1 *eth.SyncSubcommitteeIndexRequest) (*eth.SyncSubcommitteeIndexResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSyncSubcommitteeIndex", arg0, arg1)
+	ret := m.ctrl.Call(m, "SyncSubcommitteeIndex", arg0, arg1)
 	ret0, _ := ret[0].(*eth.SyncSubcommitteeIndexResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -204,7 +204,7 @@ func (m *MockBeaconNodeValidatorServer) GetSyncSubcommitteeIndex(arg0 context.Co
 // GetSyncSubcommitteeIndex indicates an expected call of GetSyncSubcommitteeIndex.
 func (mr *MockBeaconNodeValidatorServerMockRecorder) GetSyncSubcommitteeIndex(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncSubcommitteeIndex", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetSyncSubcommitteeIndex), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncSubcommitteeIndex", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetSyncSubcommitteeIndex), arg0, arg1)
 }
 
 // MultipleValidatorStatus mocks base method.

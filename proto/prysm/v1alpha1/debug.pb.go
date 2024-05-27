@@ -1082,12 +1082,12 @@ var file_proto_prysm_v1alpha1_debug_proto_depIdxs = []int32{
 	3,  // 11: ethereum.eth.v1alpha1.Debug.GetBeaconState:input_type -> ethereum.eth.v1alpha1.BeaconStateRequest
 	4,  // 12: ethereum.eth.v1alpha1.Debug.GetBlock:input_type -> ethereum.eth.v1alpha1.BlockRequestByRoot
 	6,  // 13: ethereum.eth.v1alpha1.Debug.SetLoggingLevel:input_type -> ethereum.eth.v1alpha1.LoggingLevelRequest
-	18, // 14: ethereum.eth.v1alpha1.Debug.ListPeers:input_type -> google.protobuf.Empty
+	18, // 14: ethereum.eth.v1alpha1.Debug.Peers:input_type -> google.protobuf.Empty
 	19, // 15: ethereum.eth.v1alpha1.Debug.GetPeer:input_type -> ethereum.eth.v1alpha1.PeerRequest
 	5,  // 16: ethereum.eth.v1alpha1.Debug.GetBeaconState:output_type -> ethereum.eth.v1alpha1.SSZResponse
 	5,  // 17: ethereum.eth.v1alpha1.Debug.GetBlock:output_type -> ethereum.eth.v1alpha1.SSZResponse
 	18, // 18: ethereum.eth.v1alpha1.Debug.SetLoggingLevel:output_type -> google.protobuf.Empty
-	7,  // 19: ethereum.eth.v1alpha1.Debug.ListPeers:output_type -> ethereum.eth.v1alpha1.DebugPeerResponses
+	7,  // 19: ethereum.eth.v1alpha1.Debug.Peers:output_type -> ethereum.eth.v1alpha1.DebugPeerResponses
 	8,  // 20: ethereum.eth.v1alpha1.Debug.GetPeer:output_type -> ethereum.eth.v1alpha1.DebugPeerResponse
 	16, // [16:21] is the sub-list for method output_type
 	11, // [11:16] is the sub-list for method input_type
@@ -1318,7 +1318,7 @@ func (c *debugClient) SetLoggingLevel(ctx context.Context, in *LoggingLevelReque
 
 func (c *debugClient) ListPeers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error) {
 	out := new(DebugPeerResponses)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.Debug/ListPeers", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.Debug/Peers", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1357,7 +1357,7 @@ func (*UnimplementedDebugServer) SetLoggingLevel(context.Context, *LoggingLevelR
 	return nil, status.Errorf(codes.Unimplemented, "method SetLoggingLevel not implemented")
 }
 func (*UnimplementedDebugServer) ListPeers(context.Context, *emptypb.Empty) (*DebugPeerResponses, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListPeers not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method Peers not implemented")
 }
 func (*UnimplementedDebugServer) GetPeer(context.Context, *PeerRequest) (*DebugPeerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPeer not implemented")
@@ -1431,7 +1431,7 @@ func _Debug_ListPeers_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.v1alpha1.Debug/ListPeers",
+		FullMethod: "/ethereum.eth.v1alpha1.Debug/Peers",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DebugServer).ListPeers(ctx, req.(*emptypb.Empty))
@@ -1474,7 +1474,7 @@ var _Debug_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Debug_SetLoggingLevel_Handler,
 		},
 		{
-			MethodName: "ListPeers",
+			MethodName: "Peers",
 			Handler:    _Debug_ListPeers_Handler,
 		},
 		{

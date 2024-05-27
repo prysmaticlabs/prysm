@@ -13,7 +13,7 @@ import (
 
 // GetValidatorPerformance is an HTTP handler for GetValidatorPerformance.
 func (s *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.GetValidatorPerformance")
+	ctx, span := trace.StartSpan(r.Context(), "validator.ValidatorPerformance")
 	defer span.End()
 
 	var req structs.GetValidatorPerformanceRequest

@@ -75,7 +75,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		Slot:           slot,
 		CommitteeIndex: duty.CommitteeIndex,
 	}
-	data, err := v.validatorClient.GetAttestationData(ctx, req)
+	data, err := v.validatorClient.AttestationData(ctx, req)
 	if err != nil {
 		log.WithError(err).Error("Could not request attestation to sign at slot")
 		if v.emitAccountMetrics {

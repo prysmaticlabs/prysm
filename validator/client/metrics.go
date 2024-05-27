@@ -249,7 +249,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 	req := &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: pubKeys,
 	}
-	resp, err := v.chainClient.GetValidatorPerformance(ctx, req)
+	resp, err := v.chainClient.ValidatorPerformance(ctx, req)
 	if err != nil {
 		return err
 	}

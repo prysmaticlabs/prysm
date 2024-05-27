@@ -117,7 +117,7 @@ func TestGetAggregatedSyncSelections(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			res, err := validatorClient.GetAggregatedSyncSelections(ctx, test.req)
+			res, err := validatorClient.AggregatedSyncSelections(ctx, test.req)
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, test.expectedErrorMessage, err)
 				return

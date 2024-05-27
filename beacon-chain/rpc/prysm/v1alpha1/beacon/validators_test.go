@@ -89,7 +89,7 @@ func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
 	}
 
 	wanted := errNoEpochInfoError
-	_, err = bs.ListValidatorBalances(
+	_, err = bs.ValidatorBalances(
 		ctx,
 		&ethpb.ListValidatorBalancesRequest{
 			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
@@ -128,7 +128,7 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 		TotalSize:     int32(0),
 		NextPageToken: strconv.Itoa(0),
 	}
-	res, err := bs.ListValidatorBalances(
+	res, err := bs.ValidatorBalances(
 		ctx,
 		&ethpb.ListValidatorBalancesRequest{
 			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
@@ -182,7 +182,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 		},
 		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
 	}
-	res, err := bs.ListValidatorBalances(
+	res, err := bs.ValidatorBalances(
 		ctx,
 		&ethpb.ListValidatorBalancesRequest{
 			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
@@ -213,7 +213,7 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 200, len(headState.Balances()))
-	_, err = bs.ListValidatorBalances(context.Background(), &ethpb.ListValidatorBalancesRequest{
+	_, err = bs.ValidatorBalances(context.Background(), &ethpb.ListValidatorBalancesRequest{
 		PageToken:   strconv.Itoa(2),
 		PageSize:    100,
 		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
@@ -231,7 +231,7 @@ func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
 		cmd.Get().MaxRPCPageSize,
 	)
 	req := &ethpb.ListValidatorBalancesRequest{PageSize: exceedsMax}
-	_, err := bs.ListValidatorBalances(context.Background(), req)
+	_, err := bs.ValidatorBalances(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -316,7 +316,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 			}},
 	}
 	for _, test := range tests {
-		res, err := bs.ListValidatorBalances(context.Background(), test.req)
+		res, err := bs.ValidatorBalances(context.Background(), test.req)
 		require.NoError(t, err)
 		if !proto.Equal(res, test.res) {
 			t.Errorf("Expected %v, received %v", test.res, res)
@@ -385,7 +385,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 				TotalSize:     int32(count)}},
 	}
 	for _, test := range tests {
-		res, err := bs.ListValidatorBalances(context.Background(), test.req)
+		res, err := bs.ValidatorBalances(context.Background(), test.req)
 		require.NoError(t, err)
 		if !proto.Equal(res, test.res) {
 			t.Errorf("Expected %v, received %v", test.res, res)
@@ -415,7 +415,7 @@ func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 
 	req := &ethpb.ListValidatorBalancesRequest{Indices: []primitives.ValidatorIndex{primitives.ValidatorIndex(1)}, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}}
 	wanted := "Validator index 1 >= balance list 1"
-	_, err = bs.ListValidatorBalances(context.Background(), req)
+	_, err = bs.ValidatorBalances(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -438,7 +438,7 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 	}
 
 	wanted := errNoEpochInfoError
-	_, err = bs.ListValidators(
+	_, err = bs.Validators(
 		ctx,
 		&ethpb.ListValidatorsRequest{
 			QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
@@ -470,7 +470,7 @@ func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
 	// request uses HeadFetcher to get reqState.
 	req1 := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
 	wanted := "Requested state is nil"
-	_, err := bs.ListValidators(context.Background(), req1)
+	_, err := bs.Validators(context.Background(), req1)
 	assert.ErrorContains(t, wanted, err)
 
 	// request uses StateGen to get reqState.
@@ -479,7 +479,7 @@ func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
 		PageToken:   strconv.Itoa(1),
 		PageSize:    100,
 	}
-	_, err = bs.ListValidators(context.Background(), req2)
+	_, err = bs.Validators(context.Background(), req2)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -509,7 +509,7 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 		TotalSize:     int32(0),
 		NextPageToken: strconv.Itoa(0),
 	}
-	res, err := bs.ListValidators(
+	res, err := bs.Validators(
 		ctx,
 		&ethpb.ListValidatorsRequest{
 			QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
@@ -579,7 +579,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, st, gRoot))
 
-	received, err := bs.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+	received, err := bs.Validators(ctx, &ethpb.ListValidatorsRequest{
 		Active: true,
 	})
 	require.NoError(t, err)
@@ -647,7 +647,7 @@ func TestServer_ListValidators_InactiveInTheMiddle(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, st, gRoot))
 
-	received, err := bs.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+	received, err := bs.Validators(ctx, &ethpb.ListValidatorsRequest{
 		Active: true,
 	})
 	require.NoError(t, err)
@@ -695,7 +695,7 @@ func TestServer_ListValidatorBalances_UnknownValidatorInResponse(t *testing.T) {
 		NextPageToken: "",
 		TotalSize:     3,
 	}
-	res, err := bs.ListValidatorBalances(context.Background(), req)
+	res, err := bs.ValidatorBalances(context.Background(), req)
 	require.NoError(t, err)
 	if !proto.Equal(res, wanted) {
 		t.Errorf("Expected %v, received %v", wanted, res)
@@ -730,7 +730,7 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 		StateGen: stategen.New(beaconDB, doublylinkedtree.New()),
 	}
 
-	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
+	received, err := bs.Validators(context.Background(), &ethpb.ListValidatorsRequest{})
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, want, received.ValidatorList, "Incorrect respond of validators")
 }
@@ -757,7 +757,7 @@ func TestServer_ListValidators_StategenNotUsed(t *testing.T) {
 		},
 	}
 
-	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
+	received, err := bs.Validators(context.Background(), &ethpb.ListValidatorsRequest{})
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, received.ValidatorList, "Incorrect respond of validators")
 }
@@ -804,7 +804,7 @@ func TestServer_ListValidators_IndicesPubKeys(t *testing.T) {
 		Indices:    indicesWanted,
 		PublicKeys: pubKeysWanted,
 	}
-	received, err := bs.ListValidators(context.Background(), req)
+	received, err := bs.Validators(context.Background(), req)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, received.ValidatorList, "Incorrect respond of validators")
 }
@@ -939,7 +939,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 				TotalSize:     int32(count)}},
 	}
 	for _, test := range tests {
-		res, err := bs.ListValidators(context.Background(), test.req)
+		res, err := bs.Validators(context.Background(), test.req)
 		require.NoError(t, err)
 		if !proto.Equal(res, test.res) {
 			t.Errorf("Incorrect validator response, wanted %v, received %v", test.res, res)
@@ -971,7 +971,7 @@ func TestServer_ListValidators_PaginationOutOfRange(t *testing.T) {
 
 	req := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
 	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(validators))
-	_, err := bs.ListValidators(context.Background(), req)
+	_, err := bs.Validators(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -981,7 +981,7 @@ func TestServer_ListValidators_ExceedsMaxPageSize(t *testing.T) {
 
 	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	_, err := bs.ListValidators(context.Background(), req)
+	_, err := bs.Validators(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -1014,7 +1014,7 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 	}
 
 	req := &ethpb.ListValidatorsRequest{}
-	res, err := bs.ListValidators(context.Background(), req)
+	res, err := bs.Validators(context.Background(), req)
 	require.NoError(t, err)
 
 	i := 0
@@ -1063,7 +1063,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 			Genesis: true,
 		},
 	}
-	res, err := bs.ListValidators(context.Background(), req)
+	res, err := bs.Validators(context.Background(), req)
 	require.NoError(t, err)
 	assert.Equal(t, epochs, len(res.ValidatorList))
 
@@ -1080,7 +1080,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 			Epoch: 10,
 		},
 	}
-	res, err = bs.ListValidators(context.Background(), req)
+	res, err = bs.Validators(context.Background(), req)
 	require.NoError(t, err)
 
 	require.Equal(t, len(want), len(res.ValidatorList), "incorrect number of validators")
@@ -1142,7 +1142,7 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 			Epoch: 1,
 		},
 	}
-	res, err := bs.ListValidators(context.Background(), req)
+	res, err := bs.Validators(context.Background(), req)
 	require.NoError(t, err)
 	assert.Equal(t, len(want), len(res.ValidatorList), "Incorrect number of validators")
 	for i := 0; i < len(res.ValidatorList); i++ {
@@ -1360,7 +1360,7 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 			State: headState,
 		},
 	}
-	res, err := bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
+	res, err := bs.ValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	// We verify the keys are properly sorted by the validators' activation eligibility epoch.
 	wanted := [][]byte{
@@ -1404,7 +1404,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	}
 
 	// First we check if validator with index 1 is in the exit queue.
-	res, err := bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
+	res, err := bs.ValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	wanted := [][]byte{
 		bytesutil.PadTo([]byte("2"), 48),
@@ -1420,7 +1420,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	// Now, we move the state.slot past the exit epoch of the validator, and now
 	// the validator should no longer exist in the queue.
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(validators[1].ExitEpoch+1))))
-	res, err = bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
+	res, err = bs.ValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.ExitPublicKeys))
 }
@@ -1460,7 +1460,7 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 			State: headState,
 		},
 	}
-	res, err := bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
+	res, err := bs.ValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	// We verify the keys are properly sorted by the validators' withdrawable epoch.
 	wanted := [][]byte{
@@ -1492,7 +1492,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 	}
 
 	wanted := "Cannot retrieve information about an epoch"
-	_, err = bs.GetValidatorParticipation(
+	_, err = bs.ValidatorParticipation(
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
 			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
@@ -1564,7 +1564,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
+	res, err := bs.ValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
 	require.NoError(t, err)
 
 	wanted := &ethpb.ValidatorParticipation{
@@ -1643,7 +1643,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
+	res, err := bs.ValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
 	require.NoError(t, err)
 
 	wanted := &ethpb.ValidatorParticipation{
@@ -1754,7 +1754,7 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
+	res, err := bs.ValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
 	require.NoError(t, err)
 
 	wanted := &ethpb.ValidatorParticipation{
@@ -1772,7 +1772,7 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 	assert.DeepEqual(t, true, res.Finalized, "Incorrect validator participation respond")
 	assert.DeepEqual(t, wanted, res.Participation, "Incorrect validator participation respond")
 
-	res, err = bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
+	res, err = bs.ValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
 	require.NoError(t, err)
 
 	wanted = &ethpb.ValidatorParticipation{
@@ -1801,7 +1801,7 @@ func TestGetValidatorPerformance_Syncing(t *testing.T) {
 	}
 
 	wanted := "Syncing to latest head, not ready to respond"
-	_, err := bs.GetValidatorPerformance(ctx, nil)
+	_, err := bs.ValidatorPerformance(ctx, nil)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -1876,7 +1876,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 		MissingValidators:             [][]byte{publicKey1[:]},
 	}
 
-	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+	res, err := bs.ValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey3[:], publicKey2[:]},
 	})
 	require.NoError(t, err)
@@ -1947,7 +1947,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 		MissingValidators:             [][]byte{publicKey1[:]},
 	}
 
-	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+	res, err := bs.ValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		Indices: []primitives.ValidatorIndex{2, 1, 0},
 	})
 	require.NoError(t, err)
@@ -2020,7 +2020,7 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	}
 	// Index 2 and publicKey3 points to the same validator.
 	// Should not return duplicates.
-	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+	res, err := bs.ValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey3[:]}, Indices: []primitives.ValidatorIndex{1, 2},
 	})
 	require.NoError(t, err)
@@ -2090,7 +2090,7 @@ func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 		InactivityScores:              []uint64{0, 0},
 	}
 
-	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+	res, err := bs.ValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey3[:], publicKey2[:]},
 	})
 	require.NoError(t, err)
@@ -2160,7 +2160,7 @@ func TestGetValidatorPerformanceBellatrix_OK(t *testing.T) {
 		InactivityScores:              []uint64{0, 0},
 	}
 
-	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+	res, err := bs.ValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey3[:], publicKey2[:]},
 	})
 	require.NoError(t, err)
@@ -2230,7 +2230,7 @@ func TestGetValidatorPerformanceCapella_OK(t *testing.T) {
 		InactivityScores:              []uint64{0, 0},
 	}
 
-	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+	res, err := bs.ValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey3[:], publicKey2[:]},
 	})
 	require.NoError(t, err)

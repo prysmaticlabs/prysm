@@ -69,7 +69,7 @@ func (m *MockNodeClient) GetGenesis(arg0 context.Context, arg1 *emptypb.Empty, a
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "GetGenesis", varargs...)
+	ret := m.ctrl.Call(m, "Genesis", varargs...)
 	ret0, _ := ret[0].(*eth.Genesis)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -79,7 +79,7 @@ func (m *MockNodeClient) GetGenesis(arg0 context.Context, arg1 *emptypb.Empty, a
 func (mr *MockNodeClientMockRecorder) GetGenesis(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGenesis", reflect.TypeOf((*MockNodeClient)(nil).GetGenesis), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Genesis", reflect.TypeOf((*MockNodeClient)(nil).GetGenesis), varargs...)
 }
 
 // GetHost mocks base method.
@@ -129,7 +129,7 @@ func (m *MockNodeClient) GetSyncStatus(arg0 context.Context, arg1 *emptypb.Empty
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "GetSyncStatus", varargs...)
+	ret := m.ctrl.Call(m, "SyncStatus", varargs...)
 	ret0, _ := ret[0].(*eth.SyncStatus)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -139,7 +139,7 @@ func (m *MockNodeClient) GetSyncStatus(arg0 context.Context, arg1 *emptypb.Empty
 func (mr *MockNodeClientMockRecorder) GetSyncStatus(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncStatus", reflect.TypeOf((*MockNodeClient)(nil).GetSyncStatus), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncStatus", reflect.TypeOf((*MockNodeClient)(nil).GetSyncStatus), varargs...)
 }
 
 // GetVersion mocks base method.
@@ -149,7 +149,7 @@ func (m *MockNodeClient) GetVersion(arg0 context.Context, arg1 *emptypb.Empty, a
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "GetVersion", varargs...)
+	ret := m.ctrl.Call(m, "Version", varargs...)
 	ret0, _ := ret[0].(*eth.Version)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -159,7 +159,7 @@ func (m *MockNodeClient) GetVersion(arg0 context.Context, arg1 *emptypb.Empty, a
 func (mr *MockNodeClientMockRecorder) GetVersion(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersion", reflect.TypeOf((*MockNodeClient)(nil).GetVersion), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockNodeClient)(nil).GetVersion), varargs...)
 }
 
 // ListImplementedServices mocks base method.
@@ -189,7 +189,7 @@ func (m *MockNodeClient) ListPeers(arg0 context.Context, arg1 *emptypb.Empty, ar
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ListPeers", varargs...)
+	ret := m.ctrl.Call(m, "Peers", varargs...)
 	ret0, _ := ret[0].(*eth.Peers)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -199,5 +199,5 @@ func (m *MockNodeClient) ListPeers(arg0 context.Context, arg1 *emptypb.Empty, ar
 func (mr *MockNodeClientMockRecorder) ListPeers(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPeers", reflect.TypeOf((*MockNodeClient)(nil).ListPeers), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Peers", reflect.TypeOf((*MockNodeClient)(nil).ListPeers), varargs...)
 }

@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 )
 
-// Make sure that GetAttestationData() returns the same thing as the internal getAttestationData()
+// Make sure that AttestationData() returns the same thing as the internal getAttestationData()
 func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 	const slot = primitives.Slot(1)
 	const committeeIndex = primitives.CommitteeIndex(2)
@@ -45,7 +45,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	expectedResp, expectedErr := validatorClient.getAttestationData(ctx, slot, committeeIndex)
 
-	resp, err := validatorClient.GetAttestationData(
+	resp, err := validatorClient.AttestationData(
 		context.Background(),
 		&ethpb.AttestationDataRequest{Slot: slot, CommitteeIndex: committeeIndex},
 	)
@@ -79,7 +79,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	expectedResp, expectedErr := validatorClient.getAttestationData(ctx, slot, committeeIndex)
 
-	resp, err := validatorClient.GetAttestationData(
+	resp, err := validatorClient.AttestationData(
 		context.Background(),
 		&ethpb.AttestationDataRequest{Slot: slot, CommitteeIndex: committeeIndex},
 	)
@@ -93,7 +93,7 @@ func TestBeaconApiValidatorClient_GetFeeRecipientByPubKey(t *testing.T) {
 	validatorClient := beaconApiValidatorClient{}
 	var expected *ethpb.FeeRecipientByPubKeyResponse = nil
 
-	resp, err := validatorClient.GetFeeRecipientByPubKey(ctx, nil)
+	resp, err := validatorClient.FeeRecipientByPubKey(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, expected, resp)
 }

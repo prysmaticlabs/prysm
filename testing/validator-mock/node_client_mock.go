@@ -45,9 +45,9 @@ func (m *MockNodeClient) EXPECT() *MockNodeClientMockRecorder {
 }
 
 // GetGenesis mocks base method.
-func (m *MockNodeClient) GetGenesis(arg0 context.Context, arg1 *emptypb.Empty) (*eth.Genesis, error) {
+func (m *MockNodeClient) Genesis(arg0 context.Context, arg1 *emptypb.Empty) (*eth.Genesis, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGenesis", arg0, arg1)
+	ret := m.ctrl.Call(m, "Genesis", arg0, arg1)
 	ret0, _ := ret[0].(*eth.Genesis)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -56,13 +56,13 @@ func (m *MockNodeClient) GetGenesis(arg0 context.Context, arg1 *emptypb.Empty) (
 // GetGenesis indicates an expected call of GetGenesis.
 func (mr *MockNodeClientMockRecorder) GetGenesis(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGenesis", reflect.TypeOf((*MockNodeClient)(nil).GetGenesis), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Genesis", reflect.TypeOf((*MockNodeClient)(nil).Genesis), arg0, arg1)
 }
 
 // GetSyncStatus mocks base method.
-func (m *MockNodeClient) GetSyncStatus(arg0 context.Context, arg1 *emptypb.Empty) (*eth.SyncStatus, error) {
+func (m *MockNodeClient) SyncStatus(arg0 context.Context, arg1 *emptypb.Empty) (*eth.SyncStatus, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSyncStatus", arg0, arg1)
+	ret := m.ctrl.Call(m, "SyncStatus", arg0, arg1)
 	ret0, _ := ret[0].(*eth.SyncStatus)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -71,13 +71,13 @@ func (m *MockNodeClient) GetSyncStatus(arg0 context.Context, arg1 *emptypb.Empty
 // GetSyncStatus indicates an expected call of GetSyncStatus.
 func (mr *MockNodeClientMockRecorder) GetSyncStatus(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncStatus", reflect.TypeOf((*MockNodeClient)(nil).GetSyncStatus), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncStatus", reflect.TypeOf((*MockNodeClient)(nil).SyncStatus), arg0, arg1)
 }
 
 // GetVersion mocks base method.
-func (m *MockNodeClient) GetVersion(arg0 context.Context, arg1 *emptypb.Empty) (*eth.Version, error) {
+func (m *MockNodeClient) Version(arg0 context.Context, arg1 *emptypb.Empty) (*eth.Version, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetVersion", arg0, arg1)
+	ret := m.ctrl.Call(m, "Version", arg0, arg1)
 	ret0, _ := ret[0].(*eth.Version)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -86,7 +86,7 @@ func (m *MockNodeClient) GetVersion(arg0 context.Context, arg1 *emptypb.Empty) (
 // GetVersion indicates an expected call of GetVersion.
 func (mr *MockNodeClientMockRecorder) GetVersion(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersion", reflect.TypeOf((*MockNodeClient)(nil).GetVersion), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockNodeClient)(nil).Version), arg0, arg1)
 }
 
 // IsHealthy mocks base method.
@@ -104,9 +104,9 @@ func (mr *MockNodeClientMockRecorder) IsHealthy(arg0 any) *gomock.Call {
 }
 
 // ListPeers mocks base method.
-func (m *MockNodeClient) ListPeers(arg0 context.Context, arg1 *emptypb.Empty) (*eth.Peers, error) {
+func (m *MockNodeClient) Peers(arg0 context.Context, arg1 *emptypb.Empty) (*eth.Peers, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPeers", arg0, arg1)
+	ret := m.ctrl.Call(m, "Peers", arg0, arg1)
 	ret0, _ := ret[0].(*eth.Peers)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -115,7 +115,7 @@ func (m *MockNodeClient) ListPeers(arg0 context.Context, arg1 *emptypb.Empty) (*
 // ListPeers indicates an expected call of ListPeers.
 func (mr *MockNodeClientMockRecorder) ListPeers(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPeers", reflect.TypeOf((*MockNodeClient)(nil).ListPeers), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Peers", reflect.TypeOf((*MockNodeClient)(nil).Peers), arg0, arg1)
 }
 
 func (m *MockNodeClient) HealthTracker() *beacon.NodeHealthTracker {
