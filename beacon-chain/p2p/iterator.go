@@ -29,16 +29,7 @@ type filterIter struct {
 // filter criteria.
 func (f *filterIter) Next() bool {
 	lookupCounter := 0
-	start := time.Now()
 	for f.Iterator.Next() {
-		if time.Since(start) > 3*time.Second {
-			log.Infof("query takes %s", time.Since(start).String())
-		}
-		if time.Since(start) > 5*time.Second {
-			log.Infof("very long query %s", time.Since(start).String())
-			runtime.Gosched()
-			time.Sleep(30 * time.Second)
-		}
 		// Do not excessively perform lookups if we constantly receive non-viable peers.
 		if lookupCounter > backOffCounter {
 			lookupCounter = 0
@@ -52,7 +43,6 @@ func (f *filterIter) Next() bool {
 			return true
 		}
 		lookupCounter++
-		start = time.Now()
 	}
 	return false
 }
