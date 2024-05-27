@@ -3,6 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_test")
 go_test(
     name = "go_default_test",
     srcs = [
+        "effective_balance_updates_test.go",
         "eth1_data_reset_test.go",
         "historical_summaries_update_test.go",
         "inactivity_updates_test.go",
