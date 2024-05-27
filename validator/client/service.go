@@ -23,8 +23,8 @@ import (
 	beaconApi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-chain-client-factory"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-	nodeClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/node-client-factory"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/validator-client-factory"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/node-client-factory"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/validator-client-factory"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
 	"github.com/prysmaticlabs/prysm/v5/validator/graffiti"
 	validatorHelpers "github.com/prysmaticlabs/prysm/v5/validator/helpers"
@@ -170,7 +170,7 @@ func (v *ValidatorService) Start() {
 		v.conn.GetBeaconApiUrl(),
 	)
 
-	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
+	validatorClient := validator_client_factory.NewValidatorClient(v.conn, restHandler)
 
 	valStruct := &validator{
 		slotFeed:                       new(event.Feed),
@@ -186,7 +186,7 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		validatorClient:                validatorClient,
 		chainClient:                    beaconChainClientFactory.NewChainClient(v.conn, restHandler),
-		nodeClient:                     nodeClientFactory.NewNodeClient(v.conn, restHandler),
+		nodeClient:                     node_client_factory.NewNodeClient(v.conn, restHandler),
 		prysmChainClient:               beaconChainClientFactory.NewPrysmChainClient(v.conn, restHandler),
 		db:                             v.db,
 		km:                             nil,
