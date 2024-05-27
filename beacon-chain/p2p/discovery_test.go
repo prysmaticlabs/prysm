@@ -464,7 +464,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 			},
 			postValidation: func(t *testing.T, s *Service) {
 				currEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.genesisTime.Unix())))
-				subs, err := computeSubscribedSubnets(s.dv5Listener.LocalNode().ID(), currEpoch)
+				subs, err := ComputeSubscribedSubnets(s.dv5Listener.LocalNode().ID(), currEpoch)
 				assert.NoError(t, err)
 
 				bitV := bitfield.NewBitvector64()
@@ -555,7 +555,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				assert.Equal(t, version.Altair, s.metaData.Version())
 				assert.DeepEqual(t, bitfield.Bitvector4{0x00}, s.metaData.MetadataObjV1().Syncnets)
 				currEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.genesisTime.Unix())))
-				subs, err := computeSubscribedSubnets(s.dv5Listener.LocalNode().ID(), currEpoch)
+				subs, err := ComputeSubscribedSubnets(s.dv5Listener.LocalNode().ID(), currEpoch)
 				assert.NoError(t, err)
 
 				bitV := bitfield.NewBitvector64()

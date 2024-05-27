@@ -505,7 +505,7 @@ func TestSubnetComputation(t *testing.T) {
 	assert.NoError(t, err)
 	localNode := enode.NewLocalNode(db, convertedKey)
 
-	retrievedSubnets, err := computeSubscribedSubnets(localNode.ID(), 1000)
+	retrievedSubnets, err := ComputeSubscribedSubnets(localNode.ID(), 1000)
 	assert.NoError(t, err)
 	assert.Equal(t, retrievedSubnets[0]+1, retrievedSubnets[1])
 }
