@@ -41,8 +41,7 @@ func (c beaconApiStateValidatorsProvider) GetStateValidatorsForSlot(
 	statuses []string,
 ) (*structs.GetValidatorsResponse, error) {
 	stringIndices := convertValidatorIndicesToStrings(indices)
-	url := fmt.Sprintf("/eth/v1/beacon/states/%d/validators", slot)
-	return c.getStateValidatorsHelper(ctx, url, append(stringIndices, stringPubkeys...), statuses)
+	return c.getStateValidatorsHelper(ctx, fmt.Sprintf("/eth/v1/beacon/states/%d/validators", slot), append(stringIndices, stringPubkeys...), statuses)
 }
 
 func (c beaconApiStateValidatorsProvider) GetStateValidatorsForHead(

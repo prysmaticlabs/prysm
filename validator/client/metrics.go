@@ -67,16 +67,6 @@ var (
 			"pubkey",
 		},
 	)
-	// ValidatorProposeFailVecSlasher used to count failed proposals by slashing protection.
-	ValidatorProposeFailVecSlasher = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "validator_proposals_rejected_total",
-			Help: "Count the block proposals rejected by slashing protection.",
-		},
-		[]string{
-			"pubkey",
-		},
-	)
 	// ValidatorBalancesGaugeVec used to keep track of validator balances by public key.
 	ValidatorBalancesGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -158,16 +148,6 @@ var (
 			"pubkey",
 		},
 	)
-	// ValidatorAttestFailVecSlasher used to count failed attestations by slashing protection.
-	ValidatorAttestFailVecSlasher = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "validator_attestations_rejected_total",
-			Help: "Count the attestations rejected by slashing protection.",
-		},
-		[]string{
-			"pubkey",
-		},
-	)
 	// ValidatorNextAttestationSlotGaugeVec used to track validator statuses by public key.
 	ValidatorNextAttestationSlotGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -195,7 +175,7 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "in_sync_committee",
-			Help:      "validator sync committee.New in Altair hardfork",
+			Help:      "validator sync committee.New in Altair hard fork",
 		},
 		[]string{
 			"pubkey",
@@ -206,7 +186,7 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "in_next_sync_committee",
-			Help:      "validator next sync committee. New in Altair hardfork",
+			Help:      "validator next sync committee. New in Altair hard fork",
 		},
 		[]string{
 			"pubkey",
@@ -217,7 +197,7 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "inactivity_score",
-			Help:      "Validator inactivity score. 0 is optimum number. New in Altair hardfork",
+			Help:      "Validator inactivity score. 0 is optimum number. New in Altair hard fork",
 		},
 		[]string{
 			"pubkey",

@@ -83,8 +83,8 @@ func TestGetValidatorCount(t *testing.T) {
 			Slashed:           false,
 		},
 	}
-	for _, validator := range validators {
-		require.NoError(t, st.AppendValidator(validator))
+	for _, v := range validators {
+		require.NoError(t, st.AppendValidator(v))
 		require.NoError(t, st.AppendBalance(params.BeaconConfig().MaxEffectiveBalance))
 	}
 

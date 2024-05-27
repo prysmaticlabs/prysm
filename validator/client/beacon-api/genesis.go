@@ -24,7 +24,7 @@ type beaconApiGenesisProvider struct {
 	once            sync.Once
 }
 
-func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
+func (c *beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
 	genesis, err := c.genesisProvider.GetGenesis(ctx)
 
 	for err != nil {

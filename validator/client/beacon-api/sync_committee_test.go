@@ -55,7 +55,7 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	protoSyncCommiteeMessage := ethpb.SyncCommitteeMessage{
+	protoSyncCommitteeMessage := ethpb.SyncCommitteeMessage{
 		Slot:           primitives.Slot(42),
 		BlockRoot:      decodedBeaconBlockRoot,
 		ValidatorIndex: primitives.ValidatorIndex(12345),
@@ -63,7 +63,7 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 	}
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	res, err := validatorClient.SubmitSyncMessage(context.Background(), &protoSyncCommiteeMessage)
+	res, err := validatorClient.SubmitSyncMessage(context.Background(), &protoSyncCommitteeMessage)
 
 	assert.DeepEqual(t, new(empty.Empty), res)
 	require.NoError(t, err)

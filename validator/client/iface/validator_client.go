@@ -26,7 +26,7 @@ type beaconCommitteeSelectionJson struct {
 	ValidatorIndex string `json:"validator_index"`
 }
 
-func (b BeaconCommitteeSelection) MarshalJSON() ([]byte, error) {
+func (b *BeaconCommitteeSelection) MarshalJSON() ([]byte, error) {
 	return json.Marshal(beaconCommitteeSelectionJson{
 		SelectionProof: hexutil.Encode(b.SelectionProof),
 		Slot:           strconv.FormatUint(uint64(b.Slot), 10),
@@ -77,7 +77,7 @@ type syncCommitteeSelectionJson struct {
 	ValidatorIndex    string `json:"validator_index"`
 }
 
-func (s SyncCommitteeSelection) MarshalJSON() ([]byte, error) {
+func (s *SyncCommitteeSelection) MarshalJSON() ([]byte, error) {
 	return json.Marshal(syncCommitteeSelectionJson{
 		SelectionProof:    hexutil.Encode(s.SelectionProof),
 		Slot:              strconv.FormatUint(uint64(s.Slot), 10),

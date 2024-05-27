@@ -148,6 +148,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 				log.WithError(err).Error("Failed to build generic signed block")
 				return
 			}
+		default:
+			log.Errorf("Unsupported block version %s", version.String(blk.Version()))
 		}
 	} else {
 		genericSignedBlock, err = blk.PbGenericBlock()
@@ -426,7 +428,7 @@ func signVoluntaryExit(
 	return sig.Marshal(), nil
 }
 
-// GetGraffiti gets the graffiti from cli or file for the validator public key.
+// Graffiti gets the graffiti from cli or file for the validator public key.
 func (v *validator) Graffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	if v.proposerSettings != nil {
 		// Check proposer settings for specific key first

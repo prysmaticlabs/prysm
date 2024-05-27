@@ -40,7 +40,7 @@ type validatorForDuty struct {
 	status ethpb.ValidatorStatus
 }
 
-func (c beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+func (c *beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
 	vals, err := c.getValidatorsForDuties(ctx, in.PublicKeys)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validators for duties")
@@ -76,7 +76,7 @@ func (c beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.Dutie
 	}, nil
 }
 
-func (c beaconApiValidatorClient) getDutiesForEpoch(
+func (c *beaconApiValidatorClient) getDutiesForEpoch(
 	ctx context.Context,
 	epoch primitives.Epoch,
 	vals []validatorForDuty,

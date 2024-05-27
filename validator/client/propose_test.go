@@ -294,16 +294,16 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 				block0, block1 := util.NewBeaconBlock(), util.NewBeaconBlock()
 				block1.Block.Body.Graffiti = blockGraffiti[:]
 
-				var blocks []*ethpb.GenericBeaconBlock
+				var bs []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlock{block0, block1} {
 					block.Block.Slot = slot
-					blocks = append(blocks, &ethpb.GenericBeaconBlock{
+					bs = append(bs, &ethpb.GenericBeaconBlock{
 						Block: &ethpb.GenericBeaconBlock_Phase0{
 							Phase0: block.Block,
 						},
 					})
 				}
-				return blocks
+				return bs
 			}(),
 		},
 		{
@@ -312,16 +312,16 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 				block0, block1 := util.NewBeaconBlockAltair(), util.NewBeaconBlockAltair()
 				block1.Block.Body.Graffiti = blockGraffiti[:]
 
-				var blocks []*ethpb.GenericBeaconBlock
+				var bs []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlockAltair{block0, block1} {
 					block.Block.Slot = slot
-					blocks = append(blocks, &ethpb.GenericBeaconBlock{
+					bs = append(bs, &ethpb.GenericBeaconBlock{
 						Block: &ethpb.GenericBeaconBlock_Altair{
 							Altair: block.Block,
 						},
 					})
 				}
-				return blocks
+				return bs
 			}(),
 		},
 		{
@@ -330,16 +330,16 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 				block0, block1 := util.NewBeaconBlockBellatrix(), util.NewBeaconBlockBellatrix()
 				block1.Block.Body.Graffiti = blockGraffiti[:]
 
-				var blocks []*ethpb.GenericBeaconBlock
+				var bs []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlockBellatrix{block0, block1} {
 					block.Block.Slot = slot
-					blocks = append(blocks, &ethpb.GenericBeaconBlock{
+					bs = append(bs, &ethpb.GenericBeaconBlock{
 						Block: &ethpb.GenericBeaconBlock_Bellatrix{
 							Bellatrix: block.Block,
 						},
 					})
 				}
-				return blocks
+				return bs
 			}(),
 		},
 	}

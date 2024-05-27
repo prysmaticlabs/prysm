@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	testhelpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"go.uber.org/mock/gomock"
 )
 
@@ -37,9 +37,9 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 	require.NoError(t, err)
 
 	aggregateAttestation := &ethpb.Attestation{
-		AggregationBits: test_helpers.FillByteSlice(4, 74),
+		AggregationBits: testhelpers.FillByteSlice(4, 74),
 		Data:            attestationDataProto,
-		Signature:       test_helpers.FillByteSlice(96, 82),
+		Signature:       testhelpers.FillByteSlice(96, 82),
 	}
 
 	ctrl := gomock.NewController(t)

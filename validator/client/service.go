@@ -261,7 +261,7 @@ func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *pr
 	v.proposerSettings = settings
 
 	// passes settings down to be updated in database and saved in memory.
-	// updates to validator porposer settings will be in the validator object and not validator service.
+	// updates to validator proposer settings will be in the validator object and not validator service.
 	return v.validator.SetProposerSettings(ctx, settings)
 }
 

@@ -372,14 +372,14 @@ func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 }
 
 func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *testing.T) {
-	errSomeotherError := errors.New("some internal error")
+	errSomeOtherError := errors.New("some internal error")
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	node := healthTesting.NewMockHealthClient(ctrl)
 	tracker := beacon.NewNodeHealthTracker(node)
 	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
 	v := &testutil.FakeValidator{
-		ProposerSettingsErr: errors.Wrap(ErrBuilderValidatorRegistration, errSomeotherError.Error()),
+		ProposerSettingsErr: errors.Wrap(ErrBuilderValidatorRegistration, errSomeOtherError.Error()),
 		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 		Tracker:             tracker,
 	}

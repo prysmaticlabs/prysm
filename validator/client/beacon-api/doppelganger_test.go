@@ -298,7 +298,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
-					syncingEnpoint,
+					syncingEndpoint,
 					&syncingResponseJson,
 				).Return(
 					nil,
@@ -734,7 +734,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
-					syncingEnpoint,
+					syncingEndpoint,
 					&syncingResponseJson,
 				).Return(
 					testCase.getSyncingError,

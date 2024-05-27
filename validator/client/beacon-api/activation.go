@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (c beaconApiValidatorClient) waitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
+func (c *beaconApiValidatorClient) waitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
 	return &waitForActivationClient{
 		ctx:                        ctx,
 		beaconApiValidatorClient:   c,

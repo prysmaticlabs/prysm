@@ -290,7 +290,7 @@ func TestGetLiveness_Invalid(t *testing.T) {
 	require.ErrorContains(t, "custom error", err)
 }
 
-const syncingEnpoint = "/eth/v1/node/syncing"
+const syncingEndpoint = "/eth/v1/node/syncing"
 
 func TestGetIsSyncing_Nominal(t *testing.T) {
 	testCases := []struct {
@@ -325,7 +325,7 @@ func TestGetIsSyncing_Nominal(t *testing.T) {
 
 			jsonRestHandler.EXPECT().Get(
 				ctx,
-				syncingEnpoint,
+				syncingEndpoint,
 				&syncingResponseJson,
 			).Return(
 				nil,
@@ -356,7 +356,7 @@ func TestGetIsSyncing_Invalid(t *testing.T) {
 
 	jsonRestHandler.EXPECT().Get(
 		ctx,
-		syncingEnpoint,
+		syncingEndpoint,
 		&syncingResponseJson,
 	).Return(
 		errors.New("custom error"),

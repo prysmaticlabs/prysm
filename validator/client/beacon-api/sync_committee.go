@@ -80,10 +80,8 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 	params.Add("subcommittee_index", strconv.FormatUint(req.SubnetId, 10))
 	params.Add("beacon_block_root", blockRoot)
 
-	url := buildURL("/eth/v1/validator/sync_committee_contribution", params)
-
 	var resp structs.ProduceSyncCommitteeContributionResponse
-	if err = c.jsonRestHandler.Get(ctx, url, &resp); err != nil {
+	if err = c.jsonRestHandler.Get(ctx, buildURL("/eth/v1/validator/sync_committee_contribution", params), &resp); err != nil {
 		return nil, err
 	}
 

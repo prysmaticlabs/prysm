@@ -33,12 +33,12 @@ func NewBeaconApiJsonRestHandler(client http.Client, host string) JsonRestHandle
 	}
 }
 
-// GetHttpClient returns the underlying HTTP client of the handler
+// HttpClient returns the underlying HTTP client of the handler
 func (c BeaconApiJsonRestHandler) HttpClient() *http.Client {
 	return &c.client
 }
 
-// GetHost returns the underlying HTTP host
+// Host returns the underlying HTTP host
 func (c BeaconApiJsonRestHandler) Host() string {
 	return c.host
 }

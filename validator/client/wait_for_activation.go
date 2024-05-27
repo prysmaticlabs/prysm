@@ -96,7 +96,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 				break
 			}
 			// If context is canceled we return from the function.
-			if ctx.Err() == context.Canceled {
+			if errors.Is(ctx.Err(), context.Canceled) {
 				return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 			}
 			if err != nil {

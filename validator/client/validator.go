@@ -39,7 +39,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	accountsiface "github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
-	beacon_api "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
+	beaconapi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
 	dbCommon "github.com/prysmaticlabs/prysm/v5/validator/db/common"
@@ -132,7 +132,7 @@ func (v *validator) Done() {
 	v.ticker.Done()
 }
 
-// WaitForKmInitialization checks if the validator needs to wait for keymanager initialization.
+// WaitForKeymanagerInitialization checks if the validator needs to wait for keymanager initialization.
 func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 	genesisRoot, err := v.db.GenesisValidatorsRoot(ctx)
 	if err != nil {
@@ -255,7 +255,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		return client.ErrConnectionIssue
 	}
 
-	if ctx.Err() == context.Canceled {
+	if errors.Is(ctx.Err(), context.Canceled) {
 		return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 	}
 
@@ -341,48 +341,48 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, activeValCount int64) bool {
 	nonexistentIndex := primitives.ValidatorIndex(^uint64(0))
 	var validatorActivated bool
-	for _, status := range statuses {
+	for _, s := range statuses {
 		fields := logrus.Fields{
-			"pubkey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
-			"status": status.status.Status.String(),
+			"pubkey": fmt.Sprintf("%#x", bytesutil.Trunc(s.publicKey)),
+			"status": s.status.Status.String(),
 		}
-		if status.index != nonexistentIndex {
-			fields["validatorIndex"] = status.index
+		if s.index != nonexistentIndex {
+			fields["validatorIndex"] = s.index
 		}
 		log := log.WithFields(fields)
 		if v.emitAccountMetrics {
-			fmtKey := fmt.Sprintf("%#x", status.publicKey)
-			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.status.Status))
+			fmtKey := fmt.Sprintf("%#x", s.publicKey)
+			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(s.status.Status))
 		}
-		switch status.status.Status {
+		switch s.status.Status {
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 			log.Info("Waiting for deposit to be observed by beacon node")
 		case ethpb.ValidatorStatus_DEPOSITED:
-			if status.status.PositionInActivationQueue != 0 {
+			if s.status.PositionInActivationQueue != 0 {
 				log.WithField(
-					"positionInActivationQueue", status.status.PositionInActivationQueue,
+					"positionInActivationQueue", s.status.PositionInActivationQueue,
 				).Info("Deposit processed, entering activation queue after finalization")
 			}
 		case ethpb.ValidatorStatus_PENDING:
-			if activeValCount >= 0 && status.status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+			if activeValCount >= 0 && s.status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 				activationsPerEpoch :=
 					uint64(math.Max(float64(params.BeaconConfig().MinPerEpochChurnLimit), float64(uint64(activeValCount)/params.BeaconConfig().ChurnLimitQuotient)))
 				secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 				expectedWaitingTime :=
-					time.Duration((status.status.PositionInActivationQueue+activationsPerEpoch)/activationsPerEpoch*secondsPerEpoch) * time.Second
+					time.Duration((s.status.PositionInActivationQueue+activationsPerEpoch)/activationsPerEpoch*secondsPerEpoch) * time.Second
 				log.WithFields(logrus.Fields{
-					"positionInActivationQueue": status.status.PositionInActivationQueue,
+					"positionInActivationQueue": s.status.PositionInActivationQueue,
 					"expectedWaitingTime":       expectedWaitingTime.String(),
 				}).Info("Waiting to be assigned activation epoch")
-			} else if status.status.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
+			} else if s.status.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
 				log.WithFields(logrus.Fields{
-					"activationEpoch": status.status.ActivationEpoch,
+					"activationEpoch": s.status.ActivationEpoch,
 				}).Info("Waiting for activation")
 			}
 		case ethpb.ValidatorStatus_ACTIVE, ethpb.ValidatorStatus_EXITING:
 			validatorActivated = true
 			log.WithFields(logrus.Fields{
-				"index": status.index,
+				"index": s.index,
 			}).Info("Validator activated")
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
@@ -390,7 +390,7 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 			log.Warn("Invalid Eth1 deposit")
 		default:
 			log.WithFields(logrus.Fields{
-				"activationEpoch": status.status.ActivationEpoch,
+				"activationEpoch": s.status.ActivationEpoch,
 			}).Info("Validator status")
 		}
 	}
@@ -1137,19 +1137,19 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 	if err != nil {
 		return nil, err
 	}
-	for i, status := range resp.Statuses {
+	for i, s := range resp.Statuses {
 		currEpoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-		currActivating := status.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= status.ActivationEpoch
+		currActivating := s.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= s.ActivationEpoch
 
-		active := status.Status == ethpb.ValidatorStatus_ACTIVE
-		exiting := status.Status == ethpb.ValidatorStatus_EXITING
+		active := s.Status == ethpb.ValidatorStatus_ACTIVE
+		exiting := s.Status == ethpb.ValidatorStatus_EXITING
 
 		if currActivating || active || exiting {
 			filteredKeys = append(filteredKeys, bytesutil.ToBytes48(resp.PublicKeys[i]))
 		} else {
 			log.WithFields(logrus.Fields{
 				"pubkey": hexutil.Encode(resp.PublicKeys[i]),
-				"status": status.Status.String(),
+				"status": s.Status.String(),
 			}).Debugf("Skipping non-active status key.")
 		}
 	}
@@ -1285,7 +1285,7 @@ func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSP
 			"Perhaps the validator is not yet active.", pubkey)
 		return 0, false, nil
 	case err != nil:
-		notFoundErr := &beacon_api.IndexNotFoundError{}
+		notFoundErr := &beaconapi.IndexNotFoundError{}
 		if errors.As(err, &notFoundErr) {
 			log.Debugf("Could not find validator index for public key %#x. "+
 				"Perhaps the validator is not yet active.", pubkey)
