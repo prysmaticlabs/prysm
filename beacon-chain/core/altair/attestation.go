@@ -66,7 +66,6 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-
 	committees, err := helpers.AttestationCommittees(ctx, beaconState, att)
 	if err != nil {
 		return nil, err
