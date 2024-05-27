@@ -4200,16 +4200,16 @@ var file_proto_prysm_v1alpha1_beacon_chain_proto_depIdxs = []int32{
 	0,  // 25: ethereum.eth.v1alpha1.BeaconChain.ListIndexedAttestations:input_type -> ethereum.eth.v1alpha1.ListIndexedAttestationsRequest
 	24, // 26: ethereum.eth.v1alpha1.BeaconChain.AttestationPool:input_type -> ethereum.eth.v1alpha1.AttestationPoolRequest
 	4,  // 27: ethereum.eth.v1alpha1.BeaconChain.ListBeaconBlocks:input_type -> ethereum.eth.v1alpha1.ListBlocksRequest
-	52, // 28: ethereum.eth.v1alpha1.BeaconChain.ChainHead:input_type -> google.protobuf.Empty
+	52, // 28: ethereum.eth.v1alpha1.BeaconChain.GetChainHead:input_type -> google.protobuf.Empty
 	8,  // 29: ethereum.eth.v1alpha1.BeaconChain.ListBeaconCommittees:input_type -> ethereum.eth.v1alpha1.ListCommitteesRequest
-	10, // 30: ethereum.eth.v1alpha1.BeaconChain.ValidatorBalances:input_type -> ethereum.eth.v1alpha1.ListValidatorBalancesRequest
-	12, // 31: ethereum.eth.v1alpha1.BeaconChain.Validators:input_type -> ethereum.eth.v1alpha1.ListValidatorsRequest
+	10, // 30: ethereum.eth.v1alpha1.BeaconChain.ListValidatorBalances:input_type -> ethereum.eth.v1alpha1.ListValidatorBalancesRequest
+	12, // 31: ethereum.eth.v1alpha1.BeaconChain.ListValidators:input_type -> ethereum.eth.v1alpha1.ListValidatorsRequest
 	13, // 32: ethereum.eth.v1alpha1.BeaconChain.GetValidator:input_type -> ethereum.eth.v1alpha1.GetValidatorRequest
 	15, // 33: ethereum.eth.v1alpha1.BeaconChain.GetValidatorActiveSetChanges:input_type -> ethereum.eth.v1alpha1.GetValidatorActiveSetChangesRequest
-	52, // 34: ethereum.eth.v1alpha1.BeaconChain.ValidatorQueue:input_type -> google.protobuf.Empty
-	17, // 35: ethereum.eth.v1alpha1.BeaconChain.ValidatorPerformance:input_type -> ethereum.eth.v1alpha1.ValidatorPerformanceRequest
+	52, // 34: ethereum.eth.v1alpha1.BeaconChain.GetValidatorQueue:input_type -> google.protobuf.Empty
+	17, // 35: ethereum.eth.v1alpha1.BeaconChain.GetValidatorPerformance:input_type -> ethereum.eth.v1alpha1.ValidatorPerformanceRequest
 	20, // 36: ethereum.eth.v1alpha1.BeaconChain.ListValidatorAssignments:input_type -> ethereum.eth.v1alpha1.ListValidatorAssignmentsRequest
-	22, // 37: ethereum.eth.v1alpha1.BeaconChain.ValidatorParticipation:input_type -> ethereum.eth.v1alpha1.GetValidatorParticipationRequest
+	22, // 37: ethereum.eth.v1alpha1.BeaconChain.GetValidatorParticipation:input_type -> ethereum.eth.v1alpha1.GetValidatorParticipationRequest
 	52, // 38: ethereum.eth.v1alpha1.BeaconChain.GetBeaconConfig:input_type -> google.protobuf.Empty
 	53, // 39: ethereum.eth.v1alpha1.BeaconChain.SubmitAttesterSlashing:input_type -> ethereum.eth.v1alpha1.AttesterSlashing
 	54, // 40: ethereum.eth.v1alpha1.BeaconChain.SubmitProposerSlashing:input_type -> ethereum.eth.v1alpha1.ProposerSlashing
@@ -4218,16 +4218,16 @@ var file_proto_prysm_v1alpha1_beacon_chain_proto_depIdxs = []int32{
 	3,  // 43: ethereum.eth.v1alpha1.BeaconChain.ListIndexedAttestations:output_type -> ethereum.eth.v1alpha1.ListIndexedAttestationsResponse
 	25, // 44: ethereum.eth.v1alpha1.BeaconChain.AttestationPool:output_type -> ethereum.eth.v1alpha1.AttestationPoolResponse
 	5,  // 45: ethereum.eth.v1alpha1.BeaconChain.ListBeaconBlocks:output_type -> ethereum.eth.v1alpha1.ListBeaconBlocksResponse
-	7,  // 46: ethereum.eth.v1alpha1.BeaconChain.ChainHead:output_type -> ethereum.eth.v1alpha1.ChainHead
+	7,  // 46: ethereum.eth.v1alpha1.BeaconChain.GetChainHead:output_type -> ethereum.eth.v1alpha1.ChainHead
 	9,  // 47: ethereum.eth.v1alpha1.BeaconChain.ListBeaconCommittees:output_type -> ethereum.eth.v1alpha1.BeaconCommittees
-	11, // 48: ethereum.eth.v1alpha1.BeaconChain.ValidatorBalances:output_type -> ethereum.eth.v1alpha1.ValidatorBalances
-	14, // 49: ethereum.eth.v1alpha1.BeaconChain.Validators:output_type -> ethereum.eth.v1alpha1.Validators
+	11, // 48: ethereum.eth.v1alpha1.BeaconChain.ListValidatorBalances:output_type -> ethereum.eth.v1alpha1.ValidatorBalances
+	14, // 49: ethereum.eth.v1alpha1.BeaconChain.ListValidators:output_type -> ethereum.eth.v1alpha1.Validators
 	51, // 50: ethereum.eth.v1alpha1.BeaconChain.GetValidator:output_type -> ethereum.eth.v1alpha1.Validator
 	16, // 51: ethereum.eth.v1alpha1.BeaconChain.GetValidatorActiveSetChanges:output_type -> ethereum.eth.v1alpha1.ActiveSetChanges
-	19, // 52: ethereum.eth.v1alpha1.BeaconChain.ValidatorQueue:output_type -> ethereum.eth.v1alpha1.ValidatorQueue
-	18, // 53: ethereum.eth.v1alpha1.BeaconChain.ValidatorPerformance:output_type -> ethereum.eth.v1alpha1.ValidatorPerformanceResponse
+	19, // 52: ethereum.eth.v1alpha1.BeaconChain.GetValidatorQueue:output_type -> ethereum.eth.v1alpha1.ValidatorQueue
+	18, // 53: ethereum.eth.v1alpha1.BeaconChain.GetValidatorPerformance:output_type -> ethereum.eth.v1alpha1.ValidatorPerformanceResponse
 	21, // 54: ethereum.eth.v1alpha1.BeaconChain.ListValidatorAssignments:output_type -> ethereum.eth.v1alpha1.ValidatorAssignments
-	23, // 55: ethereum.eth.v1alpha1.BeaconChain.ValidatorParticipation:output_type -> ethereum.eth.v1alpha1.ValidatorParticipationResponse
+	23, // 55: ethereum.eth.v1alpha1.BeaconChain.GetValidatorParticipation:output_type -> ethereum.eth.v1alpha1.ValidatorParticipationResponse
 	26, // 56: ethereum.eth.v1alpha1.BeaconChain.GetBeaconConfig:output_type -> ethereum.eth.v1alpha1.BeaconConfig
 	27, // 57: ethereum.eth.v1alpha1.BeaconChain.SubmitAttesterSlashing:output_type -> ethereum.eth.v1alpha1.SubmitSlashingResponse
 	27, // 58: ethereum.eth.v1alpha1.BeaconChain.SubmitProposerSlashing:output_type -> ethereum.eth.v1alpha1.SubmitSlashingResponse
@@ -4836,7 +4836,7 @@ func (c *beaconChainClient) ListBeaconBlocks(ctx context.Context, in *ListBlocks
 // Deprecated: Do not use.
 func (c *beaconChainClient) GetChainHead(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ChainHead, error) {
 	out := new(ChainHead)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/ChainHead", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/GetChainHead", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4854,7 +4854,7 @@ func (c *beaconChainClient) ListBeaconCommittees(ctx context.Context, in *ListCo
 
 func (c *beaconChainClient) ListValidatorBalances(ctx context.Context, in *ListValidatorBalancesRequest, opts ...grpc.CallOption) (*ValidatorBalances, error) {
 	out := new(ValidatorBalances)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/ValidatorBalances", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/ListValidatorBalances", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4863,7 +4863,7 @@ func (c *beaconChainClient) ListValidatorBalances(ctx context.Context, in *ListV
 
 func (c *beaconChainClient) ListValidators(ctx context.Context, in *ListValidatorsRequest, opts ...grpc.CallOption) (*Validators, error) {
 	out := new(Validators)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/Validators", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/ListValidators", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4890,7 +4890,7 @@ func (c *beaconChainClient) GetValidatorActiveSetChanges(ctx context.Context, in
 
 func (c *beaconChainClient) GetValidatorQueue(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ValidatorQueue, error) {
 	out := new(ValidatorQueue)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/ValidatorQueue", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/GetValidatorQueue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4899,7 +4899,7 @@ func (c *beaconChainClient) GetValidatorQueue(ctx context.Context, in *emptypb.E
 
 func (c *beaconChainClient) GetValidatorPerformance(ctx context.Context, in *ValidatorPerformanceRequest, opts ...grpc.CallOption) (*ValidatorPerformanceResponse, error) {
 	out := new(ValidatorPerformanceResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/ValidatorPerformance", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/GetValidatorPerformance", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4918,7 +4918,7 @@ func (c *beaconChainClient) ListValidatorAssignments(ctx context.Context, in *Li
 // Deprecated: Do not use.
 func (c *beaconChainClient) GetValidatorParticipation(ctx context.Context, in *GetValidatorParticipationRequest, opts ...grpc.CallOption) (*ValidatorParticipationResponse, error) {
 	out := new(ValidatorParticipationResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/ValidatorParticipation", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/GetValidatorParticipation", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4968,17 +4968,17 @@ type BeaconChainServer interface {
 	AttestationPool(context.Context, *AttestationPoolRequest) (*AttestationPoolResponse, error)
 	ListBeaconBlocks(context.Context, *ListBlocksRequest) (*ListBeaconBlocksResponse, error)
 	// Deprecated: Do not use.
-	ChainHead(context.Context, *emptypb.Empty) (*ChainHead, error)
+	GetChainHead(context.Context, *emptypb.Empty) (*ChainHead, error)
 	ListBeaconCommittees(context.Context, *ListCommitteesRequest) (*BeaconCommittees, error)
-	ValidatorBalances(context.Context, *ListValidatorBalancesRequest) (*ValidatorBalances, error)
-	Validators(context.Context, *ListValidatorsRequest) (*Validators, error)
+	ListValidatorBalances(context.Context, *ListValidatorBalancesRequest) (*ValidatorBalances, error)
+	ListValidators(context.Context, *ListValidatorsRequest) (*Validators, error)
 	GetValidator(context.Context, *GetValidatorRequest) (*Validator, error)
 	GetValidatorActiveSetChanges(context.Context, *GetValidatorActiveSetChangesRequest) (*ActiveSetChanges, error)
-	ValidatorQueue(context.Context, *emptypb.Empty) (*ValidatorQueue, error)
-	ValidatorPerformance(context.Context, *ValidatorPerformanceRequest) (*ValidatorPerformanceResponse, error)
+	GetValidatorQueue(context.Context, *emptypb.Empty) (*ValidatorQueue, error)
+	GetValidatorPerformance(context.Context, *ValidatorPerformanceRequest) (*ValidatorPerformanceResponse, error)
 	ListValidatorAssignments(context.Context, *ListValidatorAssignmentsRequest) (*ValidatorAssignments, error)
 	// Deprecated: Do not use.
-	ValidatorParticipation(context.Context, *GetValidatorParticipationRequest) (*ValidatorParticipationResponse, error)
+	GetValidatorParticipation(context.Context, *GetValidatorParticipationRequest) (*ValidatorParticipationResponse, error)
 	GetBeaconConfig(context.Context, *emptypb.Empty) (*BeaconConfig, error)
 	SubmitAttesterSlashing(context.Context, *AttesterSlashing) (*SubmitSlashingResponse, error)
 	SubmitProposerSlashing(context.Context, *ProposerSlashing) (*SubmitSlashingResponse, error)
@@ -5001,17 +5001,17 @@ func (*UnimplementedBeaconChainServer) AttestationPool(context.Context, *Attesta
 func (*UnimplementedBeaconChainServer) ListBeaconBlocks(context.Context, *ListBlocksRequest) (*ListBeaconBlocksResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListBeaconBlocks not implemented")
 }
-func (*UnimplementedBeaconChainServer) ChainHead(context.Context, *emptypb.Empty) (*ChainHead, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ChainHead not implemented")
+func (*UnimplementedBeaconChainServer) GetChainHead(context.Context, *emptypb.Empty) (*ChainHead, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChainHead not implemented")
 }
 func (*UnimplementedBeaconChainServer) ListBeaconCommittees(context.Context, *ListCommitteesRequest) (*BeaconCommittees, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListBeaconCommittees not implemented")
 }
-func (*UnimplementedBeaconChainServer) ValidatorBalances(context.Context, *ListValidatorBalancesRequest) (*ValidatorBalances, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidatorBalances not implemented")
+func (*UnimplementedBeaconChainServer) ListValidatorBalances(context.Context, *ListValidatorBalancesRequest) (*ValidatorBalances, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListValidatorBalances not implemented")
 }
-func (*UnimplementedBeaconChainServer) Validators(context.Context, *ListValidatorsRequest) (*Validators, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Validators not implemented")
+func (*UnimplementedBeaconChainServer) ListValidators(context.Context, *ListValidatorsRequest) (*Validators, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListValidators not implemented")
 }
 func (*UnimplementedBeaconChainServer) GetValidator(context.Context, *GetValidatorRequest) (*Validator, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidator not implemented")
@@ -5019,17 +5019,17 @@ func (*UnimplementedBeaconChainServer) GetValidator(context.Context, *GetValidat
 func (*UnimplementedBeaconChainServer) GetValidatorActiveSetChanges(context.Context, *GetValidatorActiveSetChangesRequest) (*ActiveSetChanges, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorActiveSetChanges not implemented")
 }
-func (*UnimplementedBeaconChainServer) ValidatorQueue(context.Context, *emptypb.Empty) (*ValidatorQueue, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidatorQueue not implemented")
+func (*UnimplementedBeaconChainServer) GetValidatorQueue(context.Context, *emptypb.Empty) (*ValidatorQueue, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorQueue not implemented")
 }
-func (*UnimplementedBeaconChainServer) ValidatorPerformance(context.Context, *ValidatorPerformanceRequest) (*ValidatorPerformanceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidatorPerformance not implemented")
+func (*UnimplementedBeaconChainServer) GetValidatorPerformance(context.Context, *ValidatorPerformanceRequest) (*ValidatorPerformanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorPerformance not implemented")
 }
 func (*UnimplementedBeaconChainServer) ListValidatorAssignments(context.Context, *ListValidatorAssignmentsRequest) (*ValidatorAssignments, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListValidatorAssignments not implemented")
 }
-func (*UnimplementedBeaconChainServer) ValidatorParticipation(context.Context, *GetValidatorParticipationRequest) (*ValidatorParticipationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidatorParticipation not implemented")
+func (*UnimplementedBeaconChainServer) GetValidatorParticipation(context.Context, *GetValidatorParticipationRequest) (*ValidatorParticipationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorParticipation not implemented")
 }
 func (*UnimplementedBeaconChainServer) GetBeaconConfig(context.Context, *emptypb.Empty) (*BeaconConfig, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconConfig not implemented")
@@ -5126,14 +5126,14 @@ func _BeaconChain_GetChainHead_Handler(srv interface{}, ctx context.Context, dec
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BeaconChainServer).ChainHead(ctx, in)
+		return srv.(BeaconChainServer).GetChainHead(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/ChainHead",
+		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/GetChainHead",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).ChainHead(ctx, req.(*emptypb.Empty))
+		return srv.(BeaconChainServer).GetChainHead(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5162,14 +5162,14 @@ func _BeaconChain_ListValidatorBalances_Handler(srv interface{}, ctx context.Con
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BeaconChainServer).ValidatorBalances(ctx, in)
+		return srv.(BeaconChainServer).ListValidatorBalances(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/ValidatorBalances",
+		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/ListValidatorBalances",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).ValidatorBalances(ctx, req.(*ListValidatorBalancesRequest))
+		return srv.(BeaconChainServer).ListValidatorBalances(ctx, req.(*ListValidatorBalancesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5180,14 +5180,14 @@ func _BeaconChain_ListValidators_Handler(srv interface{}, ctx context.Context, d
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BeaconChainServer).Validators(ctx, in)
+		return srv.(BeaconChainServer).ListValidators(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/Validators",
+		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/ListValidators",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).Validators(ctx, req.(*ListValidatorsRequest))
+		return srv.(BeaconChainServer).ListValidators(ctx, req.(*ListValidatorsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5234,14 +5234,14 @@ func _BeaconChain_GetValidatorQueue_Handler(srv interface{}, ctx context.Context
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BeaconChainServer).ValidatorQueue(ctx, in)
+		return srv.(BeaconChainServer).GetValidatorQueue(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/ValidatorQueue",
+		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/GetValidatorQueue",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).ValidatorQueue(ctx, req.(*emptypb.Empty))
+		return srv.(BeaconChainServer).GetValidatorQueue(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5252,14 +5252,14 @@ func _BeaconChain_GetValidatorPerformance_Handler(srv interface{}, ctx context.C
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BeaconChainServer).ValidatorPerformance(ctx, in)
+		return srv.(BeaconChainServer).GetValidatorPerformance(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/ValidatorPerformance",
+		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/GetValidatorPerformance",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).ValidatorPerformance(ctx, req.(*ValidatorPerformanceRequest))
+		return srv.(BeaconChainServer).GetValidatorPerformance(ctx, req.(*ValidatorPerformanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5288,14 +5288,14 @@ func _BeaconChain_GetValidatorParticipation_Handler(srv interface{}, ctx context
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BeaconChainServer).ValidatorParticipation(ctx, in)
+		return srv.(BeaconChainServer).GetValidatorParticipation(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/ValidatorParticipation",
+		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/GetValidatorParticipation",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).ValidatorParticipation(ctx, req.(*GetValidatorParticipationRequest))
+		return srv.(BeaconChainServer).GetValidatorParticipation(ctx, req.(*GetValidatorParticipationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5393,7 +5393,7 @@ var _BeaconChain_serviceDesc = grpc.ServiceDesc{
 			Handler:    _BeaconChain_ListBeaconBlocks_Handler,
 		},
 		{
-			MethodName: "ChainHead",
+			MethodName: "GetChainHead",
 			Handler:    _BeaconChain_GetChainHead_Handler,
 		},
 		{
@@ -5401,11 +5401,11 @@ var _BeaconChain_serviceDesc = grpc.ServiceDesc{
 			Handler:    _BeaconChain_ListBeaconCommittees_Handler,
 		},
 		{
-			MethodName: "ValidatorBalances",
+			MethodName: "ListValidatorBalances",
 			Handler:    _BeaconChain_ListValidatorBalances_Handler,
 		},
 		{
-			MethodName: "Validators",
+			MethodName: "ListValidators",
 			Handler:    _BeaconChain_ListValidators_Handler,
 		},
 		{
@@ -5417,11 +5417,11 @@ var _BeaconChain_serviceDesc = grpc.ServiceDesc{
 			Handler:    _BeaconChain_GetValidatorActiveSetChanges_Handler,
 		},
 		{
-			MethodName: "ValidatorQueue",
+			MethodName: "GetValidatorQueue",
 			Handler:    _BeaconChain_GetValidatorQueue_Handler,
 		},
 		{
-			MethodName: "ValidatorPerformance",
+			MethodName: "GetValidatorPerformance",
 			Handler:    _BeaconChain_GetValidatorPerformance_Handler,
 		},
 		{
@@ -5429,7 +5429,7 @@ var _BeaconChain_serviceDesc = grpc.ServiceDesc{
 			Handler:    _BeaconChain_ListValidatorAssignments_Handler,
 		},
 		{
-			MethodName: "ValidatorParticipation",
+			MethodName: "GetValidatorParticipation",
 			Handler:    _BeaconChain_GetValidatorParticipation_Handler,
 		},
 		{

@@ -89,7 +89,7 @@ func (m *MockBeaconChainClient) GetChainHead(arg0 context.Context, arg1 *emptypb
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ChainHead", varargs...)
+	ret := m.ctrl.Call(m, "GetChainHead", varargs...)
 	ret0, _ := ret[0].(*eth.ChainHead)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -99,7 +99,7 @@ func (m *MockBeaconChainClient) GetChainHead(arg0 context.Context, arg1 *emptypb
 func (mr *MockBeaconChainClientMockRecorder) GetChainHead(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChainHead", reflect.TypeOf((*MockBeaconChainClient)(nil).GetChainHead), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChainHead", reflect.TypeOf((*MockBeaconChainClient)(nil).GetChainHead), varargs...)
 }
 
 // GetIndividualVotes mocks base method.
@@ -169,7 +169,7 @@ func (m *MockBeaconChainClient) GetValidatorParticipation(arg0 context.Context, 
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ValidatorParticipation", varargs...)
+	ret := m.ctrl.Call(m, "GetValidatorParticipation", varargs...)
 	ret0, _ := ret[0].(*eth.ValidatorParticipationResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -179,7 +179,7 @@ func (m *MockBeaconChainClient) GetValidatorParticipation(arg0 context.Context, 
 func (mr *MockBeaconChainClientMockRecorder) GetValidatorParticipation(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorParticipation", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorParticipation), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorParticipation", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorParticipation), varargs...)
 }
 
 // GetValidatorPerformance mocks base method.
@@ -189,7 +189,7 @@ func (m *MockBeaconChainClient) GetValidatorPerformance(arg0 context.Context, ar
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ValidatorPerformance", varargs...)
+	ret := m.ctrl.Call(m, "GetValidatorPerformance", varargs...)
 	ret0, _ := ret[0].(*eth.ValidatorPerformanceResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -199,7 +199,7 @@ func (m *MockBeaconChainClient) GetValidatorPerformance(arg0 context.Context, ar
 func (mr *MockBeaconChainClientMockRecorder) GetValidatorPerformance(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorPerformance", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorPerformance), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorPerformance", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorPerformance), varargs...)
 }
 
 // GetValidatorQueue mocks base method.
@@ -209,7 +209,7 @@ func (m *MockBeaconChainClient) GetValidatorQueue(arg0 context.Context, arg1 *em
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ValidatorQueue", varargs...)
+	ret := m.ctrl.Call(m, "GetValidatorQueue", varargs...)
 	ret0, _ := ret[0].(*eth.ValidatorQueue)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -219,7 +219,7 @@ func (m *MockBeaconChainClient) GetValidatorQueue(arg0 context.Context, arg1 *em
 func (mr *MockBeaconChainClientMockRecorder) GetValidatorQueue(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorQueue", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorQueue), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorQueue", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorQueue), varargs...)
 }
 
 // ListAttestations mocks base method.
@@ -329,7 +329,7 @@ func (m *MockBeaconChainClient) ListValidatorBalances(arg0 context.Context, arg1
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ValidatorBalances", varargs...)
+	ret := m.ctrl.Call(m, "ListValidatorBalances", varargs...)
 	ret0, _ := ret[0].(*eth.ValidatorBalances)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -339,7 +339,7 @@ func (m *MockBeaconChainClient) ListValidatorBalances(arg0 context.Context, arg1
 func (mr *MockBeaconChainClientMockRecorder) ListValidatorBalances(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorBalances", reflect.TypeOf((*MockBeaconChainClient)(nil).ListValidatorBalances), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValidatorBalances", reflect.TypeOf((*MockBeaconChainClient)(nil).ListValidatorBalances), varargs...)
 }
 
 // ListValidators mocks base method.
@@ -349,7 +349,7 @@ func (m *MockBeaconChainClient) ListValidators(arg0 context.Context, arg1 *eth.L
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "Validators", varargs...)
+	ret := m.ctrl.Call(m, "ListValidators", varargs...)
 	ret0, _ := ret[0].(*eth.Validators)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -359,7 +359,7 @@ func (m *MockBeaconChainClient) ListValidators(arg0 context.Context, arg1 *eth.L
 func (mr *MockBeaconChainClientMockRecorder) ListValidators(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validators", reflect.TypeOf((*MockBeaconChainClient)(nil).ListValidators), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValidators", reflect.TypeOf((*MockBeaconChainClient)(nil).ListValidators), varargs...)
 }
 
 // SubmitAttesterSlashing mocks base method.

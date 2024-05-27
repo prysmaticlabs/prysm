@@ -130,7 +130,7 @@ func (m *MockBeaconNodeValidatorClient) GetAttestationData(arg0 context.Context,
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "AttestationData", varargs...)
+	ret := m.ctrl.Call(m, "GetAttestationData", varargs...)
 	ret0, _ := ret[0].(*eth.AttestationData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -140,7 +140,7 @@ func (m *MockBeaconNodeValidatorClient) GetAttestationData(arg0 context.Context,
 func (mr *MockBeaconNodeValidatorClientMockRecorder) GetAttestationData(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttestationData", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetAttestationData), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttestationData", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetAttestationData), varargs...)
 }
 
 // GetBeaconBlock mocks base method.
@@ -150,7 +150,7 @@ func (m *MockBeaconNodeValidatorClient) GetBeaconBlock(arg0 context.Context, arg
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "BeaconBlock", varargs...)
+	ret := m.ctrl.Call(m, "GetBeaconBlock", varargs...)
 	ret0, _ := ret[0].(*eth.GenericBeaconBlock)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -160,7 +160,7 @@ func (m *MockBeaconNodeValidatorClient) GetBeaconBlock(arg0 context.Context, arg
 func (mr *MockBeaconNodeValidatorClientMockRecorder) GetBeaconBlock(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeaconBlock", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetBeaconBlock), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconBlock", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetBeaconBlock), varargs...)
 }
 
 // GetDuties mocks base method.
@@ -170,7 +170,7 @@ func (m *MockBeaconNodeValidatorClient) GetDuties(arg0 context.Context, arg1 *et
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "Duties", varargs...)
+	ret := m.ctrl.Call(m, "GetDuties", varargs...)
 	ret0, _ := ret[0].(*eth.DutiesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -180,7 +180,7 @@ func (m *MockBeaconNodeValidatorClient) GetDuties(arg0 context.Context, arg1 *et
 func (mr *MockBeaconNodeValidatorClientMockRecorder) GetDuties(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Duties", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetDuties), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDuties", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetDuties), varargs...)
 }
 
 // GetFeeRecipientByPubKey mocks base method.
@@ -190,7 +190,7 @@ func (m *MockBeaconNodeValidatorClient) GetFeeRecipientByPubKey(arg0 context.Con
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "FeeRecipientByPubKey", varargs...)
+	ret := m.ctrl.Call(m, "GetFeeRecipientByPubKey", varargs...)
 	ret0, _ := ret[0].(*eth.FeeRecipientByPubKeyResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -200,7 +200,7 @@ func (m *MockBeaconNodeValidatorClient) GetFeeRecipientByPubKey(arg0 context.Con
 func (mr *MockBeaconNodeValidatorClientMockRecorder) GetFeeRecipientByPubKey(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeeRecipientByPubKey", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetFeeRecipientByPubKey), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFeeRecipientByPubKey", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetFeeRecipientByPubKey), varargs...)
 }
 
 // GetSyncCommitteeContribution mocks base method.
@@ -210,7 +210,7 @@ func (m *MockBeaconNodeValidatorClient) GetSyncCommitteeContribution(arg0 contex
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "SyncCommitteeContribution", varargs...)
+	ret := m.ctrl.Call(m, "GetSyncCommitteeContribution", varargs...)
 	ret0, _ := ret[0].(*eth.SyncCommitteeContribution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -220,7 +220,7 @@ func (m *MockBeaconNodeValidatorClient) GetSyncCommitteeContribution(arg0 contex
 func (mr *MockBeaconNodeValidatorClientMockRecorder) GetSyncCommitteeContribution(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncCommitteeContribution", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetSyncCommitteeContribution), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncCommitteeContribution", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetSyncCommitteeContribution), varargs...)
 }
 
 // GetSyncMessageBlockRoot mocks base method.
@@ -230,7 +230,7 @@ func (m *MockBeaconNodeValidatorClient) GetSyncMessageBlockRoot(arg0 context.Con
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "SyncMessageBlockRoot", varargs...)
+	ret := m.ctrl.Call(m, "GetSyncMessageBlockRoot", varargs...)
 	ret0, _ := ret[0].(*eth.SyncMessageBlockRootResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -240,7 +240,7 @@ func (m *MockBeaconNodeValidatorClient) GetSyncMessageBlockRoot(arg0 context.Con
 func (mr *MockBeaconNodeValidatorClientMockRecorder) GetSyncMessageBlockRoot(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncMessageBlockRoot", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetSyncMessageBlockRoot), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncMessageBlockRoot", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetSyncMessageBlockRoot), varargs...)
 }
 
 // GetSyncSubcommitteeIndex mocks base method.
@@ -250,7 +250,7 @@ func (m *MockBeaconNodeValidatorClient) GetSyncSubcommitteeIndex(arg0 context.Co
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "SyncSubcommitteeIndex", varargs...)
+	ret := m.ctrl.Call(m, "GetSyncSubcommitteeIndex", varargs...)
 	ret0, _ := ret[0].(*eth.SyncSubcommitteeIndexResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -260,7 +260,7 @@ func (m *MockBeaconNodeValidatorClient) GetSyncSubcommitteeIndex(arg0 context.Co
 func (mr *MockBeaconNodeValidatorClientMockRecorder) GetSyncSubcommitteeIndex(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncSubcommitteeIndex", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetSyncSubcommitteeIndex), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncSubcommitteeIndex", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetSyncSubcommitteeIndex), varargs...)
 }
 
 // MultipleValidatorStatus mocks base method.
