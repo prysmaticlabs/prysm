@@ -385,7 +385,7 @@ func TestWaitSync_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().SyncStatus(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: true}, nil)
@@ -402,7 +402,7 @@ func TestWaitSync_NotSyncing(t *testing.T) {
 		nodeClient: n,
 	}
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().SyncStatus(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: false}, nil)
@@ -419,12 +419,12 @@ func TestWaitSync_Syncing(t *testing.T) {
 		nodeClient: n,
 	}
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().SyncStatus(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: true}, nil)
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().SyncStatus(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: false}, nil)
@@ -450,7 +450,7 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 			},
 		},
 	}
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Times(0)
@@ -477,7 +477,7 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 
 	expected := errors.New("bad")
 
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, expected)
@@ -508,7 +508,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 		km:              newMockKeymanager(t, randKeypair(t)),
 		validatorClient: client,
 	}
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
@@ -557,7 +557,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	resp := &ethpb.DutiesResponse{
 		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{},
 	}
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
@@ -614,7 +614,7 @@ func TestUpdateDuties_AllValidatorsExited(t *testing.T) {
 		km:              newMockKeymanager(t, randKeypair(t)),
 		validatorClient: client,
 	}
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
@@ -661,7 +661,7 @@ func TestUpdateDuties_Distributed(t *testing.T) {
 
 	sigDomain := make([]byte, 32)
 
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
@@ -674,7 +674,7 @@ func TestUpdateDuties_Distributed(t *testing.T) {
 		nil, /*err*/
 	).Times(2)
 
-	client.EXPECT().GetAggregatedSelections(
+	client.EXPECT().AggregatedSelections(
 		gomock.Any(),
 		gomock.Any(), // fill this properly
 	).Return(
@@ -740,7 +740,7 @@ func TestRolesAt_OK(t *testing.T) {
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -775,7 +775,7 @@ func TestRolesAt_OK(t *testing.T) {
 				},
 			}
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -1250,7 +1250,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 			slot := primitives.Slot(1)
 			pubKey := validatorKey.PublicKey().Marshal()
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -1271,7 +1271,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -1297,7 +1297,7 @@ func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
 			slot := primitives.Slot(1)
 			pubKey := validatorKey.PublicKey().Marshal()
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -1318,7 +1318,7 @@ func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/).Times(2)
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -1335,7 +1335,7 @@ func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
 				ValidatorIndex:    123,
 				SubcommitteeIndex: 0,
 			}
-			m.validatorClient.EXPECT().GetAggregatedSyncSelections(
+			m.validatorClient.EXPECT().AggregatedSyncSelections(
 				gomock.Any(), // ctx
 				[]iface.SyncCommitteeSelection{selection},
 			).Return([]iface.SyncCommitteeSelection{selection}, nil)

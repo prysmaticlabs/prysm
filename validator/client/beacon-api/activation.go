@@ -24,7 +24,7 @@ func (c *beaconApiValidatorClient) waitForActivation(ctx context.Context, in *et
 type waitForActivationClient struct {
 	grpc.ClientStream
 	ctx context.Context
-	beaconApiValidatorClient
+	*beaconApiValidatorClient
 	*ethpb.ValidatorActivationRequest
 	lastRecvTime time.Time
 }

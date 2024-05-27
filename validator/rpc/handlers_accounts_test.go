@@ -253,7 +253,7 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	}
 
 	mockNodeClient.EXPECT().
-		GetGenesis(gomock.Any(), gomock.Any()).
+		Genesis(gomock.Any(), gomock.Any()).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
 	mockValidatorClient.EXPECT().

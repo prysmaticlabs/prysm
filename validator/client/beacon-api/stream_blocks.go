@@ -24,7 +24,7 @@ type abstractSignedBlockResponseJson struct {
 type streamBlocksAltairClient struct {
 	grpc.ClientStream
 	ctx                 context.Context
-	beaconApiClient     beaconApiValidatorClient
+	beaconApiClient     *beaconApiValidatorClient
 	streamBlocksRequest *ethpb.StreamBlocksRequest
 	prevBlockSlot       primitives.Slot
 	pingDelay           time.Duration
