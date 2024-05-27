@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -193,26 +192,10 @@ func createAttestationSignatureBatch(
 	descs := make([]string, len(atts))
 	for i, a := range atts {
 		sigs[i] = a.GetSignature()
-
-		var committees [][]primitives.ValidatorIndex
-		if a.Version() >= version.Electra {
-			committeeIndices := helpers.CommitteeIndices(a.CommitteeBitsVal())
-			committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-			var err error
-			for j, ci := range committeeIndices {
-				committees[j], err = helpers.BeaconCommitteeFromState(ctx, beaconState, a.GetData().Slot, ci)
-				if err != nil {
-					return nil, err
-				}
-			}
-		} else {
-			committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, a.GetData().Slot, a.GetData().CommitteeIndex)
-			if err != nil {
-				return nil, err
-			}
-			committees = [][]primitives.ValidatorIndex{committee}
+		committees, err := helpers.AttestationCommittees(ctx, beaconState, a)
+		if err != nil {
+			return nil, err
 		}
-
 		ia, err := attestation.ConvertToIndexed(ctx, a, committees...)
 		if err != nil {
 			return nil, err

@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -56,6 +57,29 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 	}
 
 	return committeesPerSlot
+}
+
+// AttestationCommittees returns beacon state committees that reflect attestation's committee indices.
+func AttestationCommittees(ctx context.Context, st state.ReadOnlyBeaconState, att ethpb.Att) ([][]primitives.ValidatorIndex, error) {
+	var committees [][]primitives.ValidatorIndex
+	if att.Version() >= version.Electra {
+		committeeIndices := att.CommitteeBitsVal().BitIndices()
+		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
+		var err error
+		for i, ci := range committeeIndices {
+			committees[i], err = BeaconCommitteeFromState(ctx, st, att.GetData().Slot, primitives.CommitteeIndex(ci))
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		committee, err := BeaconCommitteeFromState(ctx, st, att.GetData().Slot, att.GetData().CommitteeIndex)
+		if err != nil {
+			return nil, err
+		}
+		committees = [][]primitives.ValidatorIndex{committee}
+	}
+	return committees, nil
 }
 
 // BeaconCommitteeFromState returns the crosslink committee of a given slot and committee index. This
