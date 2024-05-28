@@ -717,8 +717,7 @@ func TestCommitteeIndices(t *testing.T) {
 }
 
 func TestAttestationCommittees(t *testing.T) {
-	committeeSize := uint64(16)
-	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch.Mul(committeeSize))
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().TargetCommitteeSize))
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -736,7 +735,7 @@ func TestAttestationCommittees(t *testing.T) {
 		committees, err := helpers.AttestationCommittees(context.Background(), state, att)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(committees))
-		assert.Equal(t, committeeSize, uint64(len(committees[0])))
+		assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(committees[0])))
 	})
 	t.Run("post-Electra", func(t *testing.T) {
 		bits := primitives.NewAttestationCommitteeBits()
@@ -746,7 +745,7 @@ func TestAttestationCommittees(t *testing.T) {
 		committees, err := helpers.AttestationCommittees(context.Background(), state, att)
 		require.NoError(t, err)
 		require.Equal(t, 2, len(committees))
-		assert.Equal(t, committeeSize, uint64(len(committees[0])))
-		assert.Equal(t, committeeSize, uint64(len(committees[1])))
+		assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(committees[0])))
+		assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(committees[1])))
 	})
 }
