@@ -65,12 +65,12 @@ func AttestationCommittees(ctx context.Context, st state.ReadOnlyBeaconState, at
 	if att.Version() >= version.Electra {
 		committeeIndices := att.CommitteeBitsVal().BitIndices()
 		committees = make([][]primitives.ValidatorIndex, len(committeeIndices))
-		var err error
 		for i, ci := range committeeIndices {
-			committees[i], err = BeaconCommitteeFromState(ctx, st, att.GetData().Slot, primitives.CommitteeIndex(ci))
+			committee, err := BeaconCommitteeFromState(ctx, st, att.GetData().Slot, primitives.CommitteeIndex(ci))
 			if err != nil {
 				return nil, err
 			}
+			committees[i] = committee
 		}
 	} else {
 		committee, err := BeaconCommitteeFromState(ctx, st, att.GetData().Slot, att.GetData().CommitteeIndex)

@@ -733,15 +733,20 @@ func TestAttestationCommittees(t *testing.T) {
 
 	t.Run("pre-Electra", func(t *testing.T) {
 		att := &ethpb.Attestation{Data: &ethpb.AttestationData{CommitteeIndex: 0}}
-		_, err = helpers.AttestationCommittees(context.Background(), state, att)
+		committees, err := helpers.AttestationCommittees(context.Background(), state, att)
 		require.NoError(t, err)
+		require.Equal(t, 1, len(committees))
+		assert.Equal(t, committeeSize, uint64(len(committees[0])))
 	})
 	t.Run("post-Electra", func(t *testing.T) {
 		bits := primitives.NewAttestationCommitteeBits()
 		bits.SetBitAt(0, true)
 		bits.SetBitAt(1, true)
 		att := &ethpb.AttestationElectra{CommitteeBits: bits, Data: &ethpb.AttestationData{}}
-		_, err = helpers.AttestationCommittees(context.Background(), state, att)
+		committees, err := helpers.AttestationCommittees(context.Background(), state, att)
 		require.NoError(t, err)
+		require.Equal(t, 2, len(committees))
+		assert.Equal(t, committeeSize, uint64(len(committees[0])))
+		assert.Equal(t, committeeSize, uint64(len(committees[1])))
 	})
 }
