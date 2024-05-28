@@ -84,6 +84,8 @@ type validator struct {
 	graffiti                           []byte
 	graffitiStruct                     *graffiti.Graffiti
 	graffitiOrderedIndex               uint64
+	beaconNodeHosts                    []string
+	currentHostIndex                   uint64
 	validatorClient                    iface.ValidatorClient
 	chainClient                        iface.ChainClient
 	nodeClient                         iface.NodeClient
@@ -94,7 +96,6 @@ type validator struct {
 	proposerSettings                   *proposer.Settings
 	signedValidatorRegistrations       map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1
 	validatorsRegBatchSize             int
-	beaconNodeHosts                    []string
 	interopKeysConfig                  *local.InteropKeymanagerConfig
 	attSelections                      map[attSelectionKey]iface.BeaconCommitteeSelection
 	aggregatedSlotCommitteeIDCache     *lru.Cache
@@ -1120,17 +1121,14 @@ func (v *validator) Host() string {
 }
 
 func (v *validator) ChangeHost() {
-	if len(v.beaconNodeHosts) <= 1 {
-		log.Infof("Beacon node API at %s is not responding, no backup node configured", v.Host())
+	if len(v.beaconNodeHosts) == 1 {
+		log.Infof("Beacon node at %s is not responding, no backup node configured", v.Host())
 		return
 	}
-	for i, url := range v.beaconNodeHosts {
-		if url == v.Host() {
-			next := (i + 1) % len(v.beaconNodeHosts)
-			log.Infof("Beacon node API at %s is not responding, switching to %s", url, v.beaconNodeHosts[next])
-			v.validatorClient.SetHost(v.beaconNodeHosts[next])
-		}
-	}
+	next := (v.currentHostIndex + 1) % uint64(len(v.beaconNodeHosts))
+	log.Infof("Beacon node at %s is not responding, switching to %s...", v.beaconNodeHosts[v.currentHostIndex], v.beaconNodeHosts[next])
+	v.validatorClient.SetHost(v.beaconNodeHosts[next])
+	v.currentHostIndex = next
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {

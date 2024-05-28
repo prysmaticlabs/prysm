@@ -2595,46 +2595,30 @@ func TestValidator_Host(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	hosts := []string{"http://localhost:8080", "http://localhost:8081"}
 	client := validatormock.NewMockValidatorClient(ctrl)
 	v := validator{
 		validatorClient: client,
 	}
-	client.EXPECT().SetHost(hosts[0]).Times(1)
-	client.EXPECT().Host().Return(hosts[0]).Times(1)
 
-	v.validatorClient.SetHost(hosts[0])
-	host := v.validatorClient.Host()
-	require.Equal(t, hosts[0], host)
-
-	client.EXPECT().SetHost(hosts[1]).Times(1)
-	client.EXPECT().Host().Return(hosts[1]).Times(1)
-
-	v.validatorClient.SetHost(hosts[1])
-	host = v.validatorClient.Host()
-	require.Equal(t, hosts[1], host)
+	client.EXPECT().Host().Return("host").Times(1)
+	require.Equal(t, "host", v.Host())
 }
 
-func TestValidator_SetHost(t *testing.T) {
+func TestValidator_ChangeHost(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	client := validatormock.NewMockValidatorClient(ctrl)
 	v := validator{
-		validatorClient: client,
-		beaconNodeHosts: []string{"http://localhost:8080", "http://localhost:8081"},
+		validatorClient:  client,
+		beaconNodeHosts:  []string{"http://localhost:8080", "http://localhost:8081"},
+		currentHostIndex: 0,
 	}
-	client.EXPECT().SetHost(v.beaconNodeHosts[0]).Times(2)
-	v.validatorClient.SetHost(v.beaconNodeHosts[0])
 
-	client.EXPECT().Host().Return(v.beaconNodeHosts[0]).Times(2)
-	host := v.Host()
-	require.Equal(t, v.beaconNodeHosts[0], host)
-
-	client.EXPECT().Host().Return(v.beaconNodeHosts[1]).Times(1)
-	client.EXPECT().SetHost(v.beaconNodeHosts[1]).Times(1)
+	client.EXPECT().SetHost(v.beaconNodeHosts[1])
+	client.EXPECT().SetHost(v.beaconNodeHosts[0])
 	v.ChangeHost()
-
-	client.EXPECT().Host().Return(v.beaconNodeHosts[1]).Times(1)
-	require.Equal(t, v.beaconNodeHosts[1], v.Host())
+	assert.Equal(t, uint64(1), v.currentHostIndex)
+	v.ChangeHost()
+	assert.Equal(t, uint64(0), v.currentHostIndex)
 }
