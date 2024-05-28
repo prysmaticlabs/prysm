@@ -235,6 +235,6 @@ func (c *beaconApiValidatorClient) Host() string {
 	return c.jsonRestHandler.Host()
 }
 
-func (c *beaconApiValidatorClient) ChangeHost(host string) {
-	c.jsonRestHandler.ChangeHost(host)
+func (c *beaconApiValidatorClient) SetHost(host string) {
+	c.jsonRestHandler.SetHost(host)
 }

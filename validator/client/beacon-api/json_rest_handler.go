@@ -18,7 +18,7 @@ type JsonRestHandler interface {
 	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) error
 	HttpClient() *http.Client
 	Host() string
-	ChangeHost(newHost string)
+	SetHost(newHost string)
 }
 
 type BeaconApiJsonRestHandler struct {
@@ -136,6 +136,6 @@ func decodeResp(httpResp *http.Response, resp interface{}) error {
 	return nil
 }
 
-func (c *BeaconApiJsonRestHandler) ChangeHost(newHost string) {
+func (c *BeaconApiJsonRestHandler) SetHost(newHost string) {
 	c.host = newHost
 }

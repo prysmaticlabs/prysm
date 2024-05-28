@@ -44,18 +44,6 @@ func (m *MockValidatorClient) EXPECT() *MockValidatorClientMockRecorder {
 	return m.recorder
 }
 
-// ChangeHost mocks base method.
-func (m *MockValidatorClient) ChangeHost(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ChangeHost", arg0)
-}
-
-// ChangeHost indicates an expected call of ChangeHost.
-func (mr *MockValidatorClientMockRecorder) ChangeHost(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeHost", reflect.TypeOf((*MockValidatorClient)(nil).ChangeHost), arg0)
-}
-
 // CheckDoppelGanger mocks base method.
 func (m *MockValidatorClient) CheckDoppelGanger(arg0 context.Context, arg1 *eth.DoppelGangerRequest) (*eth.DoppelGangerResponse, error) {
 	m.ctrl.T.Helper()
@@ -322,6 +310,18 @@ func (m *MockValidatorClient) ProposeExit(arg0 context.Context, arg1 *eth.Signed
 func (mr *MockValidatorClientMockRecorder) ProposeExit(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeExit", reflect.TypeOf((*MockValidatorClient)(nil).ProposeExit), arg0, arg1)
+}
+
+// SetHost mocks base method.
+func (m *MockValidatorClient) SetHost(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetHost", arg0)
+}
+
+// SetHost indicates an expected call of SetHost.
+func (mr *MockValidatorClientMockRecorder) SetHost(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHost", reflect.TypeOf((*MockValidatorClient)(nil).SetHost), arg0)
 }
 
 // StartEventStream mocks base method.

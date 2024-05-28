@@ -251,6 +251,6 @@ func (*grpcValidatorClient) Host() string {
 	return ""
 }
 
-func (*grpcValidatorClient) ChangeHost(_ string) {
+func (*grpcValidatorClient) SetHost(_ string) {
 	log.Warn(iface.ErrNotSupported)
 }

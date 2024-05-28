@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	beacon "github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	gomock "go.uber.org/mock/gomock"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -21,9 +21,8 @@ import (
 
 // MockNodeClient is a mock of NodeClient interface.
 type MockNodeClient struct {
-	ctrl          *gomock.Controller
-	recorder      *MockNodeClientMockRecorder
-	healthTracker *beacon.NodeHealthTracker
+	ctrl     *gomock.Controller
+	recorder *MockNodeClientMockRecorder
 }
 
 // MockNodeClientMockRecorder is the mock recorder for MockNodeClient.

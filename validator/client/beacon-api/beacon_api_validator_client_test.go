@@ -209,7 +209,7 @@ func TestBeaconApiValidatorClient_Host(t *testing.T) {
 
 	hosts := []string{"http://localhost:8080", "http://localhost:8081"}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().ChangeHost(
+	jsonRestHandler.EXPECT().SetHost(
 		hosts[0],
 	).Times(1)
 	jsonRestHandler.EXPECT().Host().Return(
@@ -217,17 +217,17 @@ func TestBeaconApiValidatorClient_Host(t *testing.T) {
 	).Times(1)
 
 	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	validatorClient.ChangeHost(hosts[0])
+	validatorClient.SetHost(hosts[0])
 	host := validatorClient.Host()
 	require.Equal(t, hosts[0], host)
 
-	jsonRestHandler.EXPECT().ChangeHost(
+	jsonRestHandler.EXPECT().SetHost(
 		hosts[1],
 	).Times(1)
 	jsonRestHandler.EXPECT().Host().Return(
 		hosts[1],
 	).Times(1)
-	validatorClient.ChangeHost(hosts[1])
+	validatorClient.SetHost(hosts[1])
 	host = validatorClient.Host()
 	require.Equal(t, hosts[1], host)
 }

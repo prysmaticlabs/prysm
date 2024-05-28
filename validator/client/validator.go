@@ -1126,7 +1126,7 @@ func (v *validator) ChangeHost() {
 		if url == v.Host() {
 			next := (i + 1) % len(v.beaconNodeHosts)
 			log.Infof("Beacon node API at %s is not responding, switching to %s", url, v.beaconNodeHosts[next])
-			v.validatorClient.ChangeHost(v.beaconNodeHosts[next])
+			v.validatorClient.SetHost(v.beaconNodeHosts[next])
 		}
 	}
 }
