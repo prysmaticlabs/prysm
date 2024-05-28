@@ -14,6 +14,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -87,6 +88,7 @@ import (
 func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconState, wrs []*enginev1.ExecutionLayerWithdrawalRequest) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "electra.ProcessExecutionLayerWithdrawRequests")
 	defer span.End()
+	currentEpoch := slots.ToEpoch(st.Slot())
 	for _, wr := range wrs {
 		if wr == nil {
 			return nil, errors.New("nil execution layer withdrawal request")
@@ -98,11 +100,13 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 			return nil, err
 		} else if n == params.BeaconConfig().PendingPartialWithdrawalsLimit && !isFullExitRequest {
 			// if the PendingPartialWithdrawalsLimit is met, the user would have paid for a partial withdrawal that's not included
+			log.Debugln("Skipping execution layer withdrawal request, PendingPartialWithdrawalsLimit reached")
 			continue
 		}
 
 		vIdx, exists := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(wr.ValidatorPubkey))
 		if !exists {
+			log.Debugln("Skipping execution layer withdrawal request, validator index not found")
 			continue
 		}
 		validator, err := st.ValidatorAtIndex(vIdx)
@@ -113,22 +117,23 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 		hasCorrectCredential := helpers.HasExecutionWithdrawalCredentials(validator)
 		isCorrectSourceAddress := bytes.Equal(validator.WithdrawalCredentials[12:], wr.SourceAddress)
 		if !hasCorrectCredential || !isCorrectSourceAddress {
+			log.Debugln("Skipping execution layer withdrawal request, wrong withdrawals credentials")
 			continue
 		}
 
-		currentSlot := st.Slot()
-		currentEpoch := slots.ToEpoch(currentSlot)
-
 		// Verify the validator is active.
 		if !helpers.IsActiveValidator(validator, currentEpoch) {
+			log.Debugln("Skipping execution layer withdrawal request, validator not active")
 			continue
 		}
 		// Verify the validator has not yet submitted an exit.
 		if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			log.Debugln("Skipping execution layer withdrawal request, validator has submitted an exit already")
 			continue
 		}
 		// Verify the validator has been active long enough.
 		if currentEpoch < validator.ActivationEpoch.AddEpoch(params.BeaconConfig().ShardCommitteePeriod) {
+			log.Debugln("Skipping execution layer withdrawal request, validator has not been active long enough")
 			continue
 		}
 

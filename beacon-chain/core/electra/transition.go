@@ -27,9 +27,6 @@ var (
 	ProcessSyncCommitteeUpdates          = altair.ProcessSyncCommitteeUpdates
 	AttestationsDelta                    = altair.AttestationsDelta
 	ProcessSyncAggregate                 = altair.ProcessSyncAggregate
-	// These need to be rewritten for electra.
-	ProcessDeposits                      = altair.ProcessDeposits
-	ProcessAttestationsNoVerifySignature = altair.ProcessAttestationsNoVerifySignature
 )
 
 // ProcessEpoch describes the per epoch operations that are performed on the beacon state.
