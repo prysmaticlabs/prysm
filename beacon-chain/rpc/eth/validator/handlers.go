@@ -712,7 +712,6 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 	if requestedEpoch == 0 {
 		r, err := s.BeaconDB.GenesisBlockRoot(ctx)
 		if err != nil {
-			fmt.Println("Could not get genesis block root: ", err)
 			httputil.HandleError(w, "Could not get genesis block root: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
