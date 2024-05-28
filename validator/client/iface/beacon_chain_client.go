@@ -7,7 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-type BeaconChainClient interface {
+type ChainClient interface {
 	GetChainHead(ctx context.Context, in *empty.Empty) (*ethpb.ChainHead, error)
 	ListValidatorBalances(ctx context.Context, in *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error)
 	ListValidators(ctx context.Context, in *ethpb.ListValidatorsRequest) (*ethpb.Validators, error)

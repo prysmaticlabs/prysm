@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"google.golang.org/protobuf/proto"
@@ -50,7 +49,7 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 	return nil
 }
 
-func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ interfaces.Attestation) error {
+func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ ethpb.Att) error {
 	mb.broadcastCalled = true
 	return nil
 }

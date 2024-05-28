@@ -461,7 +461,7 @@ func (r *blobRange) Request() *p2ppb.BlobSidecarsByRangeRequest {
 	}
 	return &p2ppb.BlobSidecarsByRangeRequest{
 		StartSlot: r.low,
-		Count:     uint64(r.high.SubSlot(r.low)) + 1,
+		Count:     uint64(r.high.FlooredSubSlot(r.low)) + 1,
 	}
 }
 

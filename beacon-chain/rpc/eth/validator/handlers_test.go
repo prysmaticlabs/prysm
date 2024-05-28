@@ -33,7 +33,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -144,9 +143,9 @@ func TestGetAggregateAttestation(t *testing.T) {
 	}
 
 	pool := attestations.NewPool()
-	err := pool.SaveAggregatedAttestations([]interfaces.Attestation{attSlot1, attslot21, attslot22})
+	err := pool.SaveAggregatedAttestations([]ethpbalpha.Att{attSlot1, attslot21, attslot22})
 	assert.NoError(t, err)
-	err = pool.SaveUnaggregatedAttestations([]interfaces.Attestation{attslot31, attslot32})
+	err = pool.SaveUnaggregatedAttestations([]ethpbalpha.Att{attslot31, attslot32})
 	assert.NoError(t, err)
 
 	s := &Server{
@@ -315,7 +314,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 		Signature: sig,
 	}
 	pool := attestations.NewPool()
-	err := pool.SaveAggregatedAttestations([]interfaces.Attestation{att1, att2})
+	err := pool.SaveAggregatedAttestations([]ethpbalpha.Att{att1, att2})
 	assert.NoError(t, err)
 	s := &Server{
 		AttestationsPool: pool,
@@ -1738,6 +1737,7 @@ func TestGetProposerDuties(t *testing.T) {
 	t.Run("next epoch", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 		require.NoError(t, bs.SetBlockRoots(roots))
 		chainSlot := primitives.Slot(0)
 		chain := &mockChain.ChainService{

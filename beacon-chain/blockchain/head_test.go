@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
@@ -313,7 +312,7 @@ func TestSaveOrphanedAtts(t *testing.T) {
 
 	require.NoError(t, service.saveOrphanedOperations(ctx, r3, r4))
 	require.Equal(t, 3, service.cfg.AttPool.AggregatedAttestationCount())
-	wantAtts := []interfaces.Attestation{
+	wantAtts := []ethpb.Att{
 		blk3.Block.Body.Attestations[0],
 		blk2.Block.Body.Attestations[0],
 		blk1.Block.Body.Attestations[0],
@@ -390,7 +389,7 @@ func TestSaveOrphanedOps(t *testing.T) {
 
 	require.NoError(t, service.saveOrphanedOperations(ctx, r3, r4))
 	require.Equal(t, 3, service.cfg.AttPool.AggregatedAttestationCount())
-	wantAtts := []interfaces.Attestation{
+	wantAtts := []ethpb.Att{
 		blk3.Block.Body.Attestations[0],
 		blk2.Block.Body.Attestations[0],
 		blk1.Block.Body.Attestations[0],
@@ -518,7 +517,7 @@ func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 
 	require.NoError(t, service.saveOrphanedOperations(ctx, r3, r4))
 	require.Equal(t, 3, service.cfg.AttPool.AggregatedAttestationCount())
-	wantAtts := []interfaces.Attestation{
+	wantAtts := []ethpb.Att{
 		blk3.Block.Body.Attestations[0],
 		blk2.Block.Body.Attestations[0],
 		blk1.Block.Body.Attestations[0],

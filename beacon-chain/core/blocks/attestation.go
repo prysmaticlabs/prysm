@@ -46,7 +46,7 @@ func ProcessAttestationsNoVerifySignature(
 func VerifyAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.ReadOnlyBeaconState,
-	att interfaces.Attestation,
+	att ethpb.Att,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestationNoVerifySignature")
 	defer span.End()
@@ -133,7 +133,7 @@ func VerifyAttestationNoVerifySignature(
 			return errors.New("committee index must be 0 post-Electra")
 		}
 
-		committeeIndices := att.GetCommitteeBitsVal().BitIndices()
+		committeeIndices := att.CommitteeBitsVal().BitIndices()
 		committees := make([][]primitives.ValidatorIndex, len(committeeIndices))
 		participantsCount := 0
 		var err error
@@ -164,7 +164,7 @@ func VerifyAttestationNoVerifySignature(
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	att interfaces.Attestation,
+	att ethpb.Att,
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
 	defer span.End()
@@ -202,7 +202,7 @@ func ProcessAttestationNoVerifySignature(
 
 // VerifyAttestationSignature converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyBeaconState, att interfaces.Attestation) error {
+func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyBeaconState, att ethpb.Att) error {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
