@@ -11,6 +11,7 @@ type GlobalFlags struct {
 	SubscribeToAllSubnets      bool
 	MinimumSyncPeers           int
 	MinimumPeersPerSubnet      int
+	MaxConcurrentDials         int
 	BlockBatchLimit            int
 	BlockBatchLimitBurstFactor int
 	BlobBatchLimit             int
@@ -45,9 +46,15 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	cfg.BlobBatchLimit = ctx.Int(BlobBatchLimit.Name)
 	cfg.BlobBatchLimitBurstFactor = ctx.Int(BlobBatchLimitBurstFactor.Name)
 	cfg.MinimumPeersPerSubnet = ctx.Int(MinPeersPerSubnet.Name)
+	cfg.MaxConcurrentDials = ctx.Int(MaxConcurrentDials.Name)
 	configureMinimumPeers(ctx, cfg)
 
 	Init(cfg)
+}
+
+// MaxDialIsActive checks if the user has enabled the max dial flag.
+func MaxDialIsActive() bool {
+	return Get().MaxConcurrentDials > 0
 }
 
 func configureMinimumPeers(ctx *cli.Context, cfg *GlobalFlags) {
