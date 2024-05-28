@@ -309,7 +309,7 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 			if !isHealthy && features.Get().EnableBeaconRESTApi {
 				v.ChangeHost()
 				if !tracker.CheckHealth(ctx) {
-					log.Infof("New beacon node API at %s is also not responding", v.Host())
+					log.Infof("New beacon node at %s is also not responding, trying again...", v.Host())
 					continue // Skip to the next ticker
 				}
 
