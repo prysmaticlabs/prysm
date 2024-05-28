@@ -80,11 +80,11 @@ func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time
 	}
 
 	// Use the target state to verify attesting indices are valid.
-	committee, err := helpers.BeaconCommitteeFromState(ctx, baseState, a.GetData().Slot, a.GetData().CommitteeIndex)
+	committees, err := helpers.AttestationCommittees(ctx, baseState, a)
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committee)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committees...)
 	if err != nil {
 		return err
 	}
