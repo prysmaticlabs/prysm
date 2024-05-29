@@ -760,7 +760,8 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 	)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "could not check if validators are a sync committee aggregator")
+		log.WithError(err).Error("Could not check if any validator is a sync committee aggregator")
+		return rolesAt, nil
 	}
 
 	for valIdx, isAgg := range aggregator {
@@ -769,7 +770,7 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 			if !ok {
 				log.
 					WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(valPubkey[:]))).
-					Warn("validator is marked as sync committee aggregator but cannot be found in sync committee validator list")
+					Warn("Validator is marked as sync committee aggregator but cannot be found in sync committee validator list")
 				continue
 			}
 
