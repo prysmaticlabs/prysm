@@ -177,7 +177,7 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 			// safe add the uint64 to avoid overflow
 			withdrawableEpoch, err := exitQueueEpoch.SafeAddEpoch(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to add withdrawablility delay to exit queue")
+				return nil, errors.Wrap(err, "failed to add withdrawability delay to exit queue epoch")
 			}
 			if err := st.AppendPendingPartialWithdrawal(&ethpb.PendingPartialWithdrawal{
 				Index:             vIdx,
