@@ -43,7 +43,7 @@ func RunExecutionLayerWithdrawalRequestTest(t *testing.T, config string) {
 				require.NoError(t, err)
 				exe, ok := e.(interfaces.ExecutionDataElectra)
 				require.Equal(t, true, ok)
-				return electra.ProcessExecutionLayerWithdrawRequests(ctx, s, exe.WithdrawalRequests())
+				return electra.ProcessExecutionLayerWithdrawalRequests(ctx, s, exe.WithdrawalRequests())
 			})
 		})
 	}

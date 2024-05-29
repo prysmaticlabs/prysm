@@ -12,11 +12,15 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
+	logHook := test.NewGlobal()
 	source, err := hexutil.Decode("0xb20a608c624Ca5003905aA834De7156C68b2E1d0")
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisStateElectra(t, 1)
@@ -246,12 +250,43 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 				require.DeepEqual(t, wantPostSt.Validators(), got.Validators())
 			},
 		},
+		{
+			name: "PendingPartialWithdrawalsLimit reached with partial withdrawal results in a skip",
+			args: args{
+				st: func() state.BeaconState {
+					cfg := params.BeaconConfig().Copy()
+					cfg.PendingPartialWithdrawalsLimit = 1
+					params.OverrideBeaconConfig(cfg)
+					logrus.SetLevel(logrus.DebugLevel)
+					preSt := st.Copy()
+					require.NoError(t, preSt.AppendPendingPartialWithdrawal(&eth.PendingPartialWithdrawal{
+						Index:             0,
+						Amount:            params.BeaconConfig().FullExitRequestAmount,
+						WithdrawableEpoch: 0,
+					}))
+					return preSt
+				}(),
+				wrs: []*enginev1.ExecutionLayerWithdrawalRequest{
+					{
+						SourceAddress:   source,
+						ValidatorPubkey: bytesutil.SafeCopyBytes(val.PublicKey),
+						Amount:          100,
+					},
+				},
+			},
+			wantFn: func(t *testing.T, got state.BeaconState) {
+				assert.LogsContain(t, logHook, "Skipping execution layer withdrawal request, PendingPartialWithdrawalsLimit reached")
+				params.SetupTestConfigCleanup(t)
+				logrus.SetLevel(logrus.InfoLevel) // reset
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := electra.ProcessExecutionLayerWithdrawRequests(context.Background(), tt.args.st, tt.args.wrs)
+
+			got, err := electra.ProcessExecutionLayerWithdrawalRequests(context.Background(), tt.args.st, tt.args.wrs)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ProcessExecutionLayerWithdrawRequests() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ProcessExecutionLayerWithdrawalRequests() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			tt.wantFn(t, got)

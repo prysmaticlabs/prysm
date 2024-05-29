@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
@@ -18,7 +19,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ProcessExecutionLayerWithdrawRequests processes the validator withdrawals from the provided execution payload
+// ProcessExecutionLayerWithdrawalRequests processes the validator withdrawals from the provided execution payload
 // into the beacon state triggered by the execution layer.
 //
 // Spec pseudocode definition:
@@ -85,8 +86,8 @@ import (
 //	   amount=to_withdraw,
 //	   withdrawable_epoch=withdrawable_epoch,
 //	   ))
-func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconState, wrs []*enginev1.ExecutionLayerWithdrawalRequest) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "electra.ProcessExecutionLayerWithdrawRequests")
+func ProcessExecutionLayerWithdrawalRequests(ctx context.Context, st state.BeaconState, wrs []*enginev1.ExecutionLayerWithdrawalRequest) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "electra.ProcessExecutionLayerWithdrawalRequests")
 	defer span.End()
 	currentEpoch := slots.ToEpoch(st.Slot())
 	for _, wr := range wrs {
@@ -106,7 +107,7 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 
 		vIdx, exists := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(wr.ValidatorPubkey))
 		if !exists {
-			log.Debugln("Skipping execution layer withdrawal request, validator index not found")
+			log.Debugf("Skipping execution layer withdrawal request, validator index for %s not found\n", hexutil.Encode(wr.ValidatorPubkey))
 			continue
 		}
 		validator, err := st.ValidatorAtIndex(vIdx)
@@ -163,10 +164,11 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 
 		// Only allow partial withdrawals with compounding withdrawal credentials
 		if helpers.HasCompoundingWithdrawalCredential(validator) && hasSufficientEffectiveBalance && hasExcessBalance {
-			//to_withdraw = min(
-			//	state.balances[index] - MIN_ACTIVATION_BALANCE - pending_balance_to_withdraw,
-			//	amount
-			//)
+			// Spec definition:
+			//  to_withdraw = min(
+			//	  state.balances[index] - MIN_ACTIVATION_BALANCE - pending_balance_to_withdraw,
+			//	  amount
+			//  )
 
 			// note: you can safely subtract these values because haxExcessBalance is checked
 			toWithdraw := min(vBal-params.BeaconConfig().MinActivationBalance-pendingBalanceToWithdraw, amount)
