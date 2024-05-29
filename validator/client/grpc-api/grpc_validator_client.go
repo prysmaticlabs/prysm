@@ -245,3 +245,12 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 func (c *grpcValidatorClient) EventStreamIsRunning() bool {
 	return c.isEventStreamRunning
 }
+
+func (*grpcValidatorClient) Host() string {
+	log.Warn(iface.ErrNotSupported)
+	return ""
+}
+
+func (*grpcValidatorClient) SetHost(_ string) {
+	log.Warn(iface.ErrNotSupported)
+}

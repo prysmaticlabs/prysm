@@ -202,3 +202,32 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockError(t *testing.T) {
 	assert.ErrorContains(t, expectedErr.Error(), err)
 	assert.DeepEqual(t, expectedResp, resp)
 }
+
+func TestBeaconApiValidatorClient_Host(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	hosts := []string{"http://localhost:8080", "http://localhost:8081"}
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().SetHost(
+		hosts[0],
+	).Times(1)
+	jsonRestHandler.EXPECT().Host().Return(
+		hosts[0],
+	).Times(1)
+
+	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient.SetHost(hosts[0])
+	host := validatorClient.Host()
+	require.Equal(t, hosts[0], host)
+
+	jsonRestHandler.EXPECT().SetHost(
+		hosts[1],
+	).Times(1)
+	jsonRestHandler.EXPECT().Host().Return(
+		hosts[1],
+	).Times(1)
+	validatorClient.SetHost(hosts[1])
+	host = validatorClient.Host()
+	require.Equal(t, hosts[1], host)
+}

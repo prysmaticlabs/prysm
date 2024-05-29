@@ -68,7 +68,9 @@ type Validator interface {
 	SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error
 	DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error
 	HealthTracker() *beacon.NodeHealthTracker
+	Host() string
+	ChangeHost()
 }
 
-// SigningFunc interface defines a type for the a function that signs a message
+// SigningFunc interface defines a type for the function that signs a message
 type SigningFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)

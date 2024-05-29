@@ -122,9 +122,17 @@ func generateMarshalledFullStateAndBlock() error {
 
 	var atts []*ethpb.Attestation
 	for i := slotOffset + 1; i < slotsPerEpoch+slotOffset; i++ {
-		attsForSlot, err := util.GenerateAttestations(beaconState, privs, attConfig.NumAttestations, i, false)
+		generatedAttsForSlot, err := util.GenerateAttestations(beaconState, privs, attConfig.NumAttestations, i, false)
 		if err != nil {
 			return err
+		}
+		attsForSlot := make([]*ethpb.Attestation, len(generatedAttsForSlot))
+		for j, att := range generatedAttsForSlot {
+			a, ok := att.(*ethpb.Attestation)
+			if !ok {
+				return errors.New("attestation is not of type *ethpb.Attestation")
+			}
+			attsForSlot[j] = a
 		}
 		atts = append(atts, attsForSlot...)
 	}

@@ -96,3 +96,15 @@ func (mr *MockJsonRestHandlerMockRecorder) Post(ctx, endpoint, headers, data, re
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Post", reflect.TypeOf((*MockJsonRestHandler)(nil).Post), ctx, endpoint, headers, data, resp)
 }
+
+// SetHost mocks base method.
+func (m *MockJsonRestHandler) SetHost(host string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetHost", host)
+}
+
+// SetHost indicates an expected call of SetHost.
+func (mr *MockJsonRestHandlerMockRecorder) SetHost(host any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHost", reflect.TypeOf((*MockJsonRestHandler)(nil).SetHost), host)
+}

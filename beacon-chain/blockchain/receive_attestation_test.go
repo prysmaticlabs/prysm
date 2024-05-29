@@ -73,7 +73,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
 	atts, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
-	tRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
+	tRoot := bytesutil.ToBytes32(atts[0].GetData().Target.Root)
 	copied := genesisState.Copy()
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
@@ -131,8 +131,8 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	}
 	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(attsToSave))
 	// Verify the target is in forkchoice
-	require.Equal(t, true, fcs.HasNode(bytesutil.ToBytes32(atts[0].Data.BeaconBlockRoot)))
-	require.Equal(t, tRoot, bytesutil.ToBytes32(atts[0].Data.BeaconBlockRoot))
+	require.Equal(t, true, fcs.HasNode(bytesutil.ToBytes32(atts[0].GetData().BeaconBlockRoot)))
+	require.Equal(t, tRoot, bytesutil.ToBytes32(atts[0].GetData().BeaconBlockRoot))
 	require.Equal(t, true, fcs.HasNode(service.originBlockRoot))
 
 	// Insert a new block to forkchoice

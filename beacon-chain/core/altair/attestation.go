@@ -66,11 +66,11 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
+	committees, err := helpers.AttestationCommittees(ctx, beaconState, att)
 	if err != nil {
 		return nil, err
 	}
-	indices, err := attestation.AttestingIndices(att, committee)
+	indices, err := attestation.AttestingIndices(att, committees...)
 	if err != nil {
 		return nil, err
 	}

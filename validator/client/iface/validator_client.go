@@ -150,4 +150,6 @@ type ValidatorClient interface {
 	EventStreamIsRunning() bool
 	AggregatedSelections(ctx context.Context, selections []BeaconCommitteeSelection) ([]BeaconCommitteeSelection, error)
 	AggregatedSyncSelections(ctx context.Context, selections []SyncCommitteeSelection) ([]SyncCommitteeSelection, error)
+	Host() string
+	SetHost(host string)
 }
