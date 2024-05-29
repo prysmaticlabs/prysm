@@ -113,7 +113,7 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 		if err != nil {
 			return nil, err
 		}
-		// # Verify withdrawal credentials
+		// Verify withdrawal credentials
 		hasCorrectCredential := helpers.HasExecutionWithdrawalCredentials(validator)
 		isCorrectSourceAddress := bytes.Equal(validator.WithdrawalCredentials[12:], wr.SourceAddress)
 		if !hasCorrectCredential || !isCorrectSourceAddress {
