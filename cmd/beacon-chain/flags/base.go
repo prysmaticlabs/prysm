@@ -230,7 +230,7 @@ var (
 	// MaxConcurrentDials defines a flag to set the maximum number of peers that a node will attempt to dial with from discovery.
 	MaxConcurrentDials = &cli.Uint64Flag{
 		Name: "max-concurrent-dials",
-		Usage: "Sets the maximum number of peers that a node will attempt to dial with from discovery. By default we will dials as" +
+		Usage: "Sets the maximum number of peers that a node will attempt to dial with from discovery. By default we will dials as " +
 			"many peers as possible.",
 	}
 	// SuggestedFeeRecipient specifies the fee recipient for the transaction fees.
