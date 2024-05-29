@@ -48,7 +48,7 @@ func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...Valida
 
 func (c *beaconApiValidatorClient) Duties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
 	return wrapInMetrics[*ethpb.DutiesResponse]("Duties", func() (*ethpb.DutiesResponse, error) {
-		return c.getDuties(ctx, in)
+		return c.duties(ctx, in)
 	})
 }
 

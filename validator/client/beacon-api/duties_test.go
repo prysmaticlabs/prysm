@@ -726,7 +726,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 			}
 
 			validatorClient := &beaconApiValidatorClient{dutiesProvider: dutiesProvider}
-			_, err := validatorClient.getDutiesForEpoch(
+			_, err := validatorClient.dutiesForEpoch(
 				ctx,
 				epoch,
 				vals,
@@ -951,7 +951,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 					status: ethpb.ValidatorStatus_ACTIVE,
 				}
 			}
-			duties, err := validatorClient.getDutiesForEpoch(
+			duties, err := validatorClient.dutiesForEpoch(
 				ctx,
 				epoch,
 				vals,
@@ -1187,13 +1187,13 @@ func TestGetDuties_Valid(t *testing.T) {
 				nil,
 			).MinTimes(1)
 
-			// Make sure that our values are equal to what would be returned by calling getDutiesForEpoch individually
+			// Make sure that our values are equal to what would be returned by calling dutiesForEpoch individually
 			validatorClient := &beaconApiValidatorClient{
 				dutiesProvider:          dutiesProvider,
 				stateValidatorsProvider: stateValidatorsProvider,
 			}
 
-			expectedCurrentEpochDuties, err := validatorClient.getDutiesForEpoch(
+			expectedCurrentEpochDuties, err := validatorClient.dutiesForEpoch(
 				ctx,
 				testCase.epoch,
 				vals,
@@ -1201,7 +1201,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			expectedNextEpochDuties, err := validatorClient.getDutiesForEpoch(
+			expectedNextEpochDuties, err := validatorClient.dutiesForEpoch(
 				ctx,
 				testCase.epoch+1,
 				vals,
@@ -1214,7 +1214,7 @@ func TestGetDuties_Valid(t *testing.T) {
 				NextEpochDuties:    expectedNextEpochDuties,
 			}
 
-			duties, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
+			duties, err := validatorClient.duties(ctx, &ethpb.DutiesRequest{
 				Epoch:      testCase.epoch,
 				PublicKeys: append(pubkeys, []byte("0xunknown")),
 			})
@@ -1246,7 +1246,7 @@ func TestGetDuties_GetStateValidatorsFailed(t *testing.T) {
 		stateValidatorsProvider: stateValidatorsProvider,
 	}
 
-	_, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
+	_, err := validatorClient.duties(ctx, &ethpb.DutiesRequest{
 		Epoch:      1,
 		PublicKeys: [][]byte{},
 	})
@@ -1308,7 +1308,7 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 		dutiesProvider:          dutiesProvider,
 	}
 
-	_, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
+	_, err := validatorClient.duties(ctx, &ethpb.DutiesRequest{
 		Epoch:      1,
 		PublicKeys: [][]byte{pubkey},
 	})
@@ -1456,7 +1456,7 @@ func generateValidSyncDuties(pubkeys [][]byte, validatorIndices []primitives.Val
 	}
 }
 
-// We will use a reverse function to easily make sure that the current epoch and next epoch data returned by getDutiesForEpoch
+// We will use a reverse function to easily make sure that the current epoch and next epoch data returned by dutiesForEpoch
 // are not the same
 func reverseSlice[T interface{}](slice []T) []T {
 	reversedSlice := make([]T, len(slice))

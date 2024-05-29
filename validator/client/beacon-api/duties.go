@@ -40,7 +40,7 @@ type validatorForDuty struct {
 	status ethpb.ValidatorStatus
 }
 
-func (c *beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+func (c *beaconApiValidatorClient) duties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
 	vals, err := c.getValidatorsForDuties(ctx, in.PublicKeys)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validators for duties")
@@ -53,7 +53,7 @@ func (c *beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.Duti
 
 	var currentEpochDuties []*ethpb.DutiesResponse_Duty
 	go func() {
-		currentEpochDuties, err = c.getDutiesForEpoch(ctx, in.Epoch, vals, fetchSyncDuties)
+		currentEpochDuties, err = c.dutiesForEpoch(ctx, in.Epoch, vals, fetchSyncDuties)
 		if err != nil {
 			errCh <- errors.Wrapf(err, "failed to get duties for current epoch `%d`", in.Epoch)
 			return
@@ -61,7 +61,7 @@ func (c *beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.Duti
 		errCh <- nil
 	}()
 
-	nextEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch+1, vals, fetchSyncDuties)
+	nextEpochDuties, err := c.dutiesForEpoch(ctx, in.Epoch+1, vals, fetchSyncDuties)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get duties for next epoch `%d`", in.Epoch+1)
 	}
@@ -76,7 +76,7 @@ func (c *beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.Duti
 	}, nil
 }
 
-func (c *beaconApiValidatorClient) getDutiesForEpoch(
+func (c *beaconApiValidatorClient) dutiesForEpoch(
 	ctx context.Context,
 	epoch primitives.Epoch,
 	vals []validatorForDuty,
