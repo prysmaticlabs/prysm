@@ -364,7 +364,7 @@ http_archive(
 filegroup(
     name = "configs",
     srcs = [
-        "custom_config_data/config.yaml",
+        "metadata/config.yaml",
     ],
     visibility = ["//visibility:public"],
 )
