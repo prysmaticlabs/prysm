@@ -708,10 +708,20 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	dependentRoot, err := attestationDependentRoot(st, requestedEpoch)
-	if err != nil {
-		httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
-		return
+	var dependentRoot []byte
+	if requestedEpoch == 0 {
+		r, err := s.BeaconDB.GenesisBlockRoot(ctx)
+		if err != nil {
+			httputil.HandleError(w, "Could not get genesis block root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dependentRoot = r[:]
+	} else {
+		dependentRoot, err = attestationDependentRoot(st, requestedEpoch)
+		if err != nil {
+			httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
@@ -822,10 +832,20 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dependentRoot, err := proposalDependentRoot(st, requestedEpoch)
-	if err != nil {
-		httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
-		return
+	var dependentRoot []byte
+	if requestedEpoch == 0 {
+		r, err := s.BeaconDB.GenesisBlockRoot(ctx)
+		if err != nil {
+			httputil.HandleError(w, "Could not get genesis block root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dependentRoot = r[:]
+	} else {
+		dependentRoot, err = proposalDependentRoot(st, requestedEpoch)
+		if err != nil {
+			httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {

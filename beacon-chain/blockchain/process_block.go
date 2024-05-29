@@ -366,11 +366,11 @@ func (s *Service) handleEpochBoundary(ctx context.Context, slot primitives.Slot,
 func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) error {
 	// Feed in block's attestations to fork choice store.
 	for _, a := range blk.Body().Attestations() {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.GetData().Slot, a.GetData().CommitteeIndex)
+		committees, err := helpers.AttestationCommittees(ctx, st, a)
 		if err != nil {
 			return err
 		}
-		indices, err := attestation.AttestingIndices(a, committee)
+		indices, err := attestation.AttestingIndices(a, committees...)
 		if err != nil {
 			return err
 		}
