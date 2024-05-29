@@ -764,7 +764,10 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 		if isAgg {
 			valPubkey, ok := syncCommitteeValidators[valIdx]
 			if !ok {
-				return nil, errors.New("validator is marked as sync committee aggregator but cannot be found in sync committee validator list")
+				log.
+					WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(valPubkey[:]))).
+					Warn("validator is marked as sync committee aggregator but cannot be found in sync committee validator list")
+				continue
 			}
 
 			rolesAt[bytesutil.ToBytes48(valPubkey[:])] = append(rolesAt[bytesutil.ToBytes48(valPubkey[:])], iface.RoleSyncCommitteeAggregator)
