@@ -151,10 +151,7 @@ func TestValidHostname(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			baseURL := cl.BaseURL()
-			u := baseURL.ResolveReference(&url.URL{Path: c.path})
-			urlStr := u.String()
-			require.Equal(t, c.joined, urlStr)
+			require.Equal(t, c.joined, cl.BaseURL().ResolveReference(&url.URL{Path: c.path}).String())
 		})
 	}
 }
