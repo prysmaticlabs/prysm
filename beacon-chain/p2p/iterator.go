@@ -34,7 +34,7 @@ func (f *filterIter) Next() bool {
 		if lookupCounter > backOffCounter {
 			lookupCounter = 0
 			runtime.Gosched()
-			time.Sleep(30 * time.Second)
+			time.Sleep(pollingPeriod)
 		}
 		if f.Context.Err() != nil {
 			return false
