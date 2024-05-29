@@ -664,7 +664,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, st, requestedEpoch)
+	assignments, err := helpers.CommitteeAssignments(ctx, st, requestedEpoch, requestedValIndices)
 	if err != nil {
 		httputil.HandleError(w, "Could not compute committee assignments: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -684,7 +684,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 			httputil.HandleError(w, fmt.Sprintf("Invalid validator index %d", index), http.StatusBadRequest)
 			return
 		}
-		committee := committeeAssignments[index]
+		committee := assignments[index]
 		if committee == nil {
 			continue
 		}
@@ -708,10 +708,20 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	dependentRoot, err := attestationDependentRoot(st, requestedEpoch)
-	if err != nil {
-		httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
-		return
+	var dependentRoot []byte
+	if requestedEpoch == 0 {
+		r, err := s.BeaconDB.GenesisBlockRoot(ctx)
+		if err != nil {
+			httputil.HandleError(w, "Could not get genesis block root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dependentRoot = r[:]
+	} else {
+		dependentRoot, err = attestationDependentRoot(st, requestedEpoch)
+		if err != nil {
+			httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
@@ -793,11 +803,11 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var proposals map[primitives.ValidatorIndex][]primitives.Slot
+	var assignments map[primitives.ValidatorIndex][]primitives.Slot
 	if nextEpochLookahead {
-		_, proposals, err = helpers.CommitteeAssignments(ctx, st, nextEpoch)
+		assignments, err = helpers.ProposerAssignments(ctx, st, nextEpoch)
 	} else {
-		_, proposals, err = helpers.CommitteeAssignments(ctx, st, requestedEpoch)
+		assignments, err = helpers.ProposerAssignments(ctx, st, requestedEpoch)
 	}
 	if err != nil {
 		httputil.HandleError(w, "Could not compute committee assignments: "+err.Error(), http.StatusInternalServerError)
@@ -805,7 +815,7 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 	}
 
 	duties := make([]*structs.ProposerDuty, 0)
-	for index, proposalSlots := range proposals {
+	for index, proposalSlots := range assignments {
 		val, err := st.ValidatorAtIndexReadOnly(index)
 		if err != nil {
 			httputil.HandleError(w, fmt.Sprintf("Could not get validator at index %d: %v", index, err), http.StatusInternalServerError)
@@ -822,10 +832,20 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dependentRoot, err := proposalDependentRoot(st, requestedEpoch)
-	if err != nil {
-		httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
-		return
+	var dependentRoot []byte
+	if requestedEpoch == 0 {
+		r, err := s.BeaconDB.GenesisBlockRoot(ctx)
+		if err != nil {
+			httputil.HandleError(w, "Could not get genesis block root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dependentRoot = r[:]
+	} else {
+		dependentRoot, err = proposalDependentRoot(st, requestedEpoch)
+		if err != nil {
+			httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {

@@ -2598,3 +2598,35 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 	actual := v.buildSignedRegReqs(ctx, pubkeys, signer)
 	assert.Equal(t, 0, len(actual))
 }
+
+func TestValidator_Host(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	client := validatormock.NewMockValidatorClient(ctrl)
+	v := validator{
+		validatorClient: client,
+	}
+
+	client.EXPECT().Host().Return("host").Times(1)
+	require.Equal(t, "host", v.Host())
+}
+
+func TestValidator_ChangeHost(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	client := validatormock.NewMockValidatorClient(ctrl)
+	v := validator{
+		validatorClient:  client,
+		beaconNodeHosts:  []string{"http://localhost:8080", "http://localhost:8081"},
+		currentHostIndex: 0,
+	}
+
+	client.EXPECT().SetHost(v.beaconNodeHosts[1])
+	client.EXPECT().SetHost(v.beaconNodeHosts[0])
+	v.ChangeHost()
+	assert.Equal(t, uint64(1), v.currentHostIndex)
+	v.ChangeHost()
+	assert.Equal(t, uint64(0), v.currentHostIndex)
+}

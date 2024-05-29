@@ -1,6 +1,13 @@
 package electra
 
-import "github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+import (
+	"fmt"
+
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+)
 
 // ProcessEffectiveBalanceUpdates processes effective balance updates during epoch processing.
 //
@@ -24,6 +31,35 @@ import "github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 //	        ):
 //	            validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, EFFECTIVE_BALANCE_LIMIT)
 func ProcessEffectiveBalanceUpdates(state state.BeaconState) error {
-	// TODO: replace with real implementation
-	return nil
+	effBalanceInc := params.BeaconConfig().EffectiveBalanceIncrement
+	hysteresisInc := effBalanceInc / params.BeaconConfig().HysteresisQuotient
+	downwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisDownwardMultiplier
+	upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
+
+	bals := state.Balances()
+
+	// Update effective balances with hysteresis.
+	validatorFunc := func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
+		if val == nil {
+			return false, nil, fmt.Errorf("validator %d is nil in state", idx)
+		}
+		if idx >= len(bals) {
+			return false, nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
+		}
+		balance := bals[idx]
+
+		effectiveBalanceLimit := params.BeaconConfig().MinActivationBalance
+		if helpers.HasCompoundingWithdrawalCredential(val) {
+			effectiveBalanceLimit = params.BeaconConfig().MaxEffectiveBalanceElectra
+		}
+
+		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
+			effectiveBal := min(balance-balance%effBalanceInc, effectiveBalanceLimit)
+			val.EffectiveBalance = effectiveBal
+			return false, val, nil
+		}
+		return false, val, nil
+	}
+
+	return state.ApplyToEveryValidator(validatorFunc)
 }
