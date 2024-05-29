@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
@@ -165,9 +166,15 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
+	u := strings.ReplaceAll(v.conn.GetBeaconApiUrl(), " ", "")
+	hosts := strings.Split(u, ",")
+	if len(hosts) == 0 {
+		log.WithError(err).Error("No API hosts provided")
+		return
+	}
 	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
 		http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
-		v.conn.GetBeaconApiUrl(),
+		hosts[0],
 	)
 
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
@@ -184,6 +191,8 @@ func (v *ValidatorService) Start() {
 		graffiti:                       v.graffiti,
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
+		beaconNodeHosts:                hosts,
+		currentHostIndex:               0,
 		validatorClient:                validatorClient,
 		chainClient:                    beaconChainClientFactory.NewChainClient(v.conn, restHandler),
 		nodeClient:                     nodeClientFactory.NewNodeClient(v.conn, restHandler),

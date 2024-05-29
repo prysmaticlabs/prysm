@@ -324,3 +324,11 @@ func (*FakeValidator) EventStreamIsRunning() bool {
 func (fv *FakeValidator) HealthTracker() *beacon.NodeHealthTracker {
 	return fv.Tracker
 }
+
+func (*FakeValidator) Host() string {
+	return "127.0.0.1:0"
+}
+
+func (fv *FakeValidator) ChangeHost() {
+	fv.Host()
+}
