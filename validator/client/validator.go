@@ -84,6 +84,8 @@ type validator struct {
 	graffiti                           []byte
 	graffitiStruct                     *graffiti.Graffiti
 	graffitiOrderedIndex               uint64
+	beaconNodeHosts                    []string
+	currentHostIndex                   uint64
 	validatorClient                    iface.ValidatorClient
 	chainClient                        iface.ChainClient
 	nodeClient                         iface.NodeClient
@@ -1112,6 +1114,21 @@ func (v *validator) EventStreamIsRunning() bool {
 
 func (v *validator) HealthTracker() *beacon.NodeHealthTracker {
 	return v.nodeClient.HealthTracker()
+}
+
+func (v *validator) Host() string {
+	return v.validatorClient.Host()
+}
+
+func (v *validator) ChangeHost() {
+	if len(v.beaconNodeHosts) == 1 {
+		log.Infof("Beacon node at %s is not responding, no backup node configured", v.Host())
+		return
+	}
+	next := (v.currentHostIndex + 1) % uint64(len(v.beaconNodeHosts))
+	log.Infof("Beacon node at %s is not responding, switching to %s...", v.beaconNodeHosts[v.currentHostIndex], v.beaconNodeHosts[next])
+	v.validatorClient.SetHost(v.beaconNodeHosts[next])
+	v.currentHostIndex = next
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {

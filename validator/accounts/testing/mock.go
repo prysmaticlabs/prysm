@@ -249,3 +249,11 @@ func (*Validator) EventStreamIsRunning() bool {
 func (*Validator) HealthTracker() *beacon.NodeHealthTracker {
 	panic("implement me")
 }
+
+func (*Validator) Host() string {
+	panic("implement me")
+}
+
+func (*Validator) ChangeHost() {
+	panic("implement me")
+}
