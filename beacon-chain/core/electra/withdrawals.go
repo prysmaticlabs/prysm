@@ -117,7 +117,7 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 		hasCorrectCredential := helpers.HasExecutionWithdrawalCredentials(validator)
 		isCorrectSourceAddress := bytes.Equal(validator.WithdrawalCredentials[12:], wr.SourceAddress)
 		if !hasCorrectCredential || !isCorrectSourceAddress {
-			log.Debugln("Skipping execution layer withdrawal request, wrong withdrawals credentials")
+			log.Debugln("Skipping execution layer withdrawal request, wrong withdrawal credentials")
 			continue
 		}
 
