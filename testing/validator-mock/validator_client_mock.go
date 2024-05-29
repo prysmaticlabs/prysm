@@ -223,6 +223,20 @@ func (mr *MockValidatorClientMockRecorder) GetSyncSubcommitteeIndex(arg0, arg1 a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncSubcommitteeIndex", reflect.TypeOf((*MockValidatorClient)(nil).GetSyncSubcommitteeIndex), arg0, arg1)
 }
 
+// Host mocks base method.
+func (m *MockValidatorClient) Host() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Host")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Host indicates an expected call of Host.
+func (mr *MockValidatorClientMockRecorder) Host() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Host", reflect.TypeOf((*MockValidatorClient)(nil).Host))
+}
+
 // MultipleValidatorStatus mocks base method.
 func (m *MockValidatorClient) MultipleValidatorStatus(arg0 context.Context, arg1 *eth.MultipleValidatorStatusRequest) (*eth.MultipleValidatorStatusResponse, error) {
 	m.ctrl.T.Helper()
@@ -296,6 +310,18 @@ func (m *MockValidatorClient) ProposeExit(arg0 context.Context, arg1 *eth.Signed
 func (mr *MockValidatorClientMockRecorder) ProposeExit(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeExit", reflect.TypeOf((*MockValidatorClient)(nil).ProposeExit), arg0, arg1)
+}
+
+// SetHost mocks base method.
+func (m *MockValidatorClient) SetHost(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetHost", arg0)
+}
+
+// SetHost indicates an expected call of SetHost.
+func (mr *MockValidatorClientMockRecorder) SetHost(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHost", reflect.TypeOf((*MockValidatorClient)(nil).SetHost), arg0)
 }
 
 // StartEventStream mocks base method.
