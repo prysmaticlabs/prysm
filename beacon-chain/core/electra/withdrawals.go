@@ -142,7 +142,7 @@ func ProcessExecutionLayerWithdrawRequests(ctx context.Context, st state.BeaconS
 			return nil, err
 		}
 		if isFullExitRequest {
-			//# Only exit validator if it has no pending withdrawals in the queue
+			// Only exit validator if it has no pending withdrawals in the queue
 			if pendingBalanceToWithdraw == 0 {
 				maxExitEpoch, churn := validators.MaxExitEpochAndChurn(st)
 				var err error
