@@ -65,6 +65,11 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
+		httputil.HandleError(w, fmt.Sprintf("block id %s was not found", blockId), http.StatusNotFound)
+		return
+	}
+
 	// Deal with block unblinding.
 	if blk.Version() >= version.Bellatrix && blk.IsBlinded() {
 		blk, err = s.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
@@ -93,6 +98,11 @@ func (s *Server) GetBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	}
 	blk, err := s.Blocker.Block(ctx, []byte(blockId))
 	if !shared.WriteBlockFetchError(w, blk, err) {
+		return
+	}
+
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
+		httputil.HandleError(w, fmt.Sprintf("block id %s was not found", blockId), http.StatusNotFound)
 		return
 	}
 
