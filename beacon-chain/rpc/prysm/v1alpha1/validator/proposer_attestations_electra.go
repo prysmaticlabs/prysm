@@ -59,7 +59,7 @@ func computeOnChainAggregate(aggregates map[kv.AttestationId][]ethpb.Att) ([]eth
 
 	for _, aggs := range aggsByDigest {
 		slices.SortFunc(aggs, func(a, b ethpb.Att) int {
-			return a.GetCommitteeBitsVal().BitIndices()[0] - b.GetCommitteeBitsVal().BitIndices()[0]
+			return a.CommitteeBitsVal().BitIndices()[0] - b.CommitteeBitsVal().BitIndices()[0]
 		})
 
 		sigs := make([]bls.Signature, len(aggs))
@@ -75,7 +75,7 @@ func computeOnChainAggregate(aggregates map[kv.AttestationId][]ethpb.Att) ([]eth
 			if err != nil {
 				return nil, err
 			}
-			committeeIndices[i] = helpers.CommitteeIndices(a.GetCommitteeBitsVal())[0]
+			committeeIndices[i] = helpers.CommitteeIndices(a.CommitteeBitsVal())[0]
 
 			aggBitsOffset += a.GetAggregationBits().Len()
 		}

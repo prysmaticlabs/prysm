@@ -165,7 +165,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
 		}
 		// TODO: extend to Electra
-		a, ok := attData.Attestation.GetAggregateVal().(*eth.Attestation)
+		a, ok := attData.Attestation.AggregateVal().(*eth.Attestation)
 		if ok {
 			att := structs.AttFromConsensus(a)
 			return send(w, flusher, AttestationTopic, att)

@@ -188,6 +188,7 @@ go_test(
         "duties_test.go",
         "exit_test.go",
         "proposer_altair_test.go",
+        "proposer_attestations_electra_test.go",
         "proposer_attestations_test.go",
         "proposer_bellatrix_test.go",
         "proposer_builder_test.go",
