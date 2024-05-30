@@ -192,11 +192,11 @@ func createAttestationSignatureBatch(
 	descs := make([]string, len(atts))
 	for i, a := range atts {
 		sigs[i] = a.GetSignature()
-		c, err := helpers.BeaconCommitteeFromState(ctx, beaconState, a.GetData().Slot, a.GetData().CommitteeIndex)
+		committees, err := helpers.AttestationCommittees(ctx, beaconState, a)
 		if err != nil {
 			return nil, err
 		}
-		ia, err := attestation.ConvertToIndexed(ctx, a, c)
+		ia, err := attestation.ConvertToIndexed(ctx, a, committees...)
 		if err != nil {
 			return nil, err
 		}

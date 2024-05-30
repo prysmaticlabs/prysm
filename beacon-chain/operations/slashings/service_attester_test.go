@@ -17,9 +17,9 @@ import (
 func validAttesterSlashingForValIdx(t *testing.T, beaconState state.BeaconState, privs []bls.SecretKey, valIdx ...uint64) *ethpb.AttesterSlashing {
 	var slashings []*ethpb.AttesterSlashing
 	for _, idx := range valIdx {
-		slashing, err := util.GenerateAttesterSlashingForValidator(beaconState, privs[idx], primitives.ValidatorIndex(idx))
+		generatedSlashing, err := util.GenerateAttesterSlashingForValidator(beaconState, privs[idx], primitives.ValidatorIndex(idx))
 		require.NoError(t, err)
-		slashings = append(slashings, slashing)
+		slashings = append(slashings, generatedSlashing.(*ethpb.AttesterSlashing))
 	}
 	var allSig1 []bls.Signature
 	var allSig2 []bls.Signature
@@ -78,12 +78,14 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 	pendingSlashings := make([]*PendingAttesterSlashing, 20)
 	slashings := make([]*ethpb.AttesterSlashing, 20)
 	for i := 0; i < len(pendingSlashings); i++ {
-		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
+		generatedSl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
-			attesterSlashing: sl,
+			attesterSlashing: generatedSl,
 			validatorToSlash: primitives.ValidatorIndex(i),
 		}
+		sl, ok := generatedSl.(*ethpb.AttesterSlashing)
+		require.Equal(t, true, ok, "Attester slashing has the wrong type (expected %T, got %T)", &ethpb.AttesterSlashing{}, generatedSl)
 		slashings[i] = sl
 	}
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -303,11 +305,15 @@ func TestPool_InsertAttesterSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 	pendingSlashings := make([]*PendingAttesterSlashing, 2)
 	slashings := make([]*ethpb.AttesterSlashing, 2)
 	for i := 0; i < 2; i++ {
-		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
+		generatedSl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
-			attesterSlashing: sl,
+			attesterSlashing: generatedSl,
 			validatorToSlash: primitives.ValidatorIndex(i),
+		}
+		sl, ok := generatedSl.(*ethpb.AttesterSlashing)
+		if !ok {
+			require.Equal(t, true, ok, "Attester slashing has the wrong type (expected %T, got %T)", &ethpb.AttesterSlashing{}, generatedSl)
 		}
 		slashings[i] = sl
 	}
