@@ -854,7 +854,7 @@ func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	graffiti, err := s.validatorService.GetGraffiti(ctx, bytesutil.ToBytes48(pubkey))
+	graffiti, err := s.validatorService.Graffiti(ctx, bytesutil.ToBytes48(pubkey))
 	if err != nil {
 		if strings.Contains(err.Error(), "unavailable") {
 			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)

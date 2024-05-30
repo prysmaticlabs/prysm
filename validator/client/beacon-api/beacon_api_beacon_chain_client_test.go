@@ -58,7 +58,7 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			errors.New("foo error"),
 		)
@@ -78,7 +78,7 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			errors.New("bar error"),
 		)
@@ -96,7 +96,7 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().GetStateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			errors.New("foo error"),
 		)
@@ -114,7 +114,7 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().GetStateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			nil,
 		)
@@ -187,7 +187,7 @@ func TestListValidators(t *testing.T) {
 				ctx := context.Background()
 
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-				stateValidatorsProvider.EXPECT().GetStateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				stateValidatorsProvider.EXPECT().StateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					nil,
 					nil,
 				)
@@ -328,7 +328,7 @@ func TestListValidators(t *testing.T) {
 				ctx := context.Background()
 
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-				stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					testCase.generateStateValidatorsResponse(),
 					nil,
 				)
@@ -556,7 +556,7 @@ func TestListValidators(t *testing.T) {
 				ctx := context.Background()
 
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-				stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, primitives.Slot(0), make([]string, 0), []primitives.ValidatorIndex{}, nil).Return(
+				stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, primitives.Slot(0), make([]string, 0), []primitives.ValidatorIndex{}, nil).Return(
 					testCase.generateJsonStateValidatorsResponse(),
 					nil,
 				)

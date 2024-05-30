@@ -611,7 +611,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, duties *ethpb.Duties
 
 	if v.distributed {
 		// Get aggregated selection proofs to calculate isAggregator.
-		if err := v.getAggregatedSelectionProofs(ctx, duties); err != nil {
+		if err := v.aggregatedSelectionProofs(ctx, duties); err != nil {
 			return errors.Wrap(err, "could not get aggregated selection proofs")
 		}
 	}
@@ -779,7 +779,7 @@ func (v *validator) isAggregator(
 		err     error
 	)
 	if v.distributed {
-		slotSig, err = v.getAttSelection(attSelectionKey{slot: slot, index: validatorIndex})
+		slotSig, err = v.attSelection(attSelectionKey{slot: slot, index: validatorIndex})
 		if err != nil {
 			return false, err
 		}
@@ -1315,7 +1315,7 @@ func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSP
 	return resp.Index, true, nil
 }
 
-func (v *validator) getAggregatedSelectionProofs(ctx context.Context, duties *ethpb.DutiesResponse) error {
+func (v *validator) aggregatedSelectionProofs(ctx context.Context, duties *ethpb.DutiesResponse) error {
 	// Create new instance of attestation selections map.
 	v.newAttSelections()
 
@@ -1386,7 +1386,7 @@ func (v *validator) newAttSelections() {
 	v.attSelections = make(map[attSelectionKey]iface.BeaconCommitteeSelection)
 }
 
-func (v *validator) getAttSelection(key attSelectionKey) ([]byte, error) {
+func (v *validator) attSelection(key attSelectionKey) ([]byte, error) {
 	v.attSelectionLock.Lock()
 	defer v.attSelectionLock.Unlock()
 

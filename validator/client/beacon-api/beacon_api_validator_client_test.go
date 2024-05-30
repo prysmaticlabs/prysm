@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 )
 
-// Make sure that AttestationData() returns the same thing as the internal getAttestationData()
+// Make sure that AttestationData() returns the same thing as the internal attestationData()
 func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 	const slot = primitives.Slot(1)
 	const committeeIndex = primitives.CommitteeIndex(2)
@@ -43,7 +43,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 	).Times(2)
 
 	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	expectedResp, expectedErr := validatorClient.getAttestationData(ctx, slot, committeeIndex)
+	expectedResp, expectedErr := validatorClient.attestationData(ctx, slot, committeeIndex)
 
 	resp, err := validatorClient.AttestationData(
 		context.Background(),
@@ -77,7 +77,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 	).Times(2)
 
 	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	expectedResp, expectedErr := validatorClient.getAttestationData(ctx, slot, committeeIndex)
+	expectedResp, expectedErr := validatorClient.attestationData(ctx, slot, committeeIndex)
 
 	resp, err := validatorClient.AttestationData(
 		context.Background(),
@@ -109,7 +109,7 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 	ctx := context.Background()
 
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
-	genesisProvider.EXPECT().GetGenesis(ctx).Return(
+	genesisProvider.EXPECT().Genesis(ctx).Return(
 		&structs.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
 	).Times(2)
@@ -118,7 +118,7 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 	resp, err := validatorClient.DomainData(context.Background(), &ethpb.DomainRequest{Epoch: epoch, Domain: domainType})
 
 	domainTypeArray := bytesutil.ToBytes4(domainType)
-	expectedResp, expectedErr := validatorClient.getDomainData(ctx, epoch, domainTypeArray)
+	expectedResp, expectedErr := validatorClient.domainData(ctx, epoch, domainTypeArray)
 	assert.DeepEqual(t, expectedErr, err)
 	assert.DeepEqual(t, expectedResp, resp)
 }

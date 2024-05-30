@@ -65,19 +65,19 @@ func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.Dom
 	domainType := bytesutil.ToBytes4(in.Domain)
 
 	return wrapInMetrics[*ethpb.DomainResponse]("DomainData", func() (*ethpb.DomainResponse, error) {
-		return c.getDomainData(ctx, in.Epoch, domainType)
+		return c.domainData(ctx, in.Epoch, domainType)
 	})
 }
 
 func (c *beaconApiValidatorClient) AttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
 	return wrapInMetrics[*ethpb.AttestationData]("AttestationData", func() (*ethpb.AttestationData, error) {
-		return c.getAttestationData(ctx, in.Slot, in.CommitteeIndex)
+		return c.attestationData(ctx, in.Slot, in.CommitteeIndex)
 	})
 }
 
 func (c *beaconApiValidatorClient) BeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	return wrapInMetrics[*ethpb.GenericBeaconBlock]("BeaconBlock", func() (*ethpb.GenericBeaconBlock, error) {
-		return c.getBeaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti)
+		return c.beaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti)
 	})
 }
 
@@ -87,19 +87,19 @@ func (c *beaconApiValidatorClient) FeeRecipientByPubKey(_ context.Context, _ *et
 
 func (c *beaconApiValidatorClient) SyncCommitteeContribution(ctx context.Context, in *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
 	return wrapInMetrics[*ethpb.SyncCommitteeContribution]("SyncCommitteeContribution", func() (*ethpb.SyncCommitteeContribution, error) {
-		return c.getSyncCommitteeContribution(ctx, in)
+		return c.syncCommitteeContribution(ctx, in)
 	})
 }
 
 func (c *beaconApiValidatorClient) SyncMessageBlockRoot(ctx context.Context, _ *empty.Empty) (*ethpb.SyncMessageBlockRootResponse, error) {
 	return wrapInMetrics[*ethpb.SyncMessageBlockRootResponse]("SyncMessageBlockRoot", func() (*ethpb.SyncMessageBlockRootResponse, error) {
-		return c.getSyncMessageBlockRoot(ctx)
+		return c.syncMessageBlockRoot(ctx)
 	})
 }
 
 func (c *beaconApiValidatorClient) SyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
 	return wrapInMetrics[*ethpb.SyncSubcommitteeIndexResponse]("SyncSubcommitteeIndex", func() (*ethpb.SyncSubcommitteeIndexResponse, error) {
-		return c.getSyncSubcommitteeIndex(ctx, in)
+		return c.syncSubcommitteeIndex(ctx, in)
 	})
 }
 
@@ -212,11 +212,11 @@ func (c *beaconApiValidatorClient) EventStreamIsRunning() bool {
 }
 
 func (c *beaconApiValidatorClient) AggregatedSelections(ctx context.Context, selections []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
-	return c.getAggregatedSelection(ctx, selections)
+	return c.aggregatedSelection(ctx, selections)
 }
 
 func (c *beaconApiValidatorClient) AggregatedSyncSelections(ctx context.Context, selections []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
-	return c.getAggregatedSyncSelections(ctx, selections)
+	return c.aggregatedSyncSelections(ctx, selections)
 }
 
 func wrapInMetrics[Resp any](action string, f func() (Resp, error)) (Resp, error) {

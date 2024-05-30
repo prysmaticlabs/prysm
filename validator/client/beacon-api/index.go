@@ -31,7 +31,7 @@ func (e *IndexNotFoundError) Error() string {
 func (c *beaconApiValidatorClient) validatorIndex(ctx context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
 	stringPubKey := hexutil.Encode(in.PublicKey)
 
-	stateValidator, err := c.stateValidatorsProvider.GetStateValidators(ctx, []string{stringPubKey}, nil, nil)
+	stateValidator, err := c.stateValidatorsProvider.StateValidators(ctx, []string{stringPubKey}, nil, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get state validator")
 	}

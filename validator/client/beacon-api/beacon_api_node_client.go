@@ -41,7 +41,7 @@ func (c *beaconApiNodeClient) SyncStatus(ctx context.Context, _ *empty.Empty) (*
 }
 
 func (c *beaconApiNodeClient) Genesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesis, error) {
-	genesisJson, err := c.genesisProvider.GetGenesis(ctx)
+	genesisJson, err := c.genesisProvider.Genesis(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get genesis")
 	}

@@ -37,7 +37,7 @@ func TestGetGenesis_ValidGenesis(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	resp, err := genesisProvider.GetGenesis(ctx)
+	resp, err := genesisProvider.Genesis(ctx)
 	assert.NoError(t, err)
 	require.NotNil(t, resp)
 	assert.Equal(t, "1234", resp.GenesisTime)
@@ -64,7 +64,7 @@ func TestGetGenesis_NilData(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	_, err := genesisProvider.GetGenesis(ctx)
+	_, err := genesisProvider.Genesis(ctx)
 	assert.ErrorContains(t, "genesis data is nil", err)
 }
 
@@ -93,9 +93,9 @@ func TestGetGenesis_EndpointCalledOnlyOnce(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	_, err := genesisProvider.GetGenesis(ctx)
+	_, err := genesisProvider.Genesis(ctx)
 	assert.NoError(t, err)
-	resp, err := genesisProvider.GetGenesis(ctx)
+	resp, err := genesisProvider.Genesis(ctx)
 	assert.NoError(t, err)
 	require.NotNil(t, resp)
 	assert.Equal(t, "1234", resp.GenesisTime)
@@ -134,9 +134,9 @@ func TestGetGenesis_EndpointCanBeCalledAgainAfterError(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	_, err := genesisProvider.GetGenesis(ctx)
+	_, err := genesisProvider.Genesis(ctx)
 	require.ErrorContains(t, "foo", err)
-	resp, err := genesisProvider.GetGenesis(ctx)
+	resp, err := genesisProvider.Genesis(ctx)
 	assert.NoError(t, err)
 	require.NotNil(t, resp)
 	assert.Equal(t, "1234", resp.GenesisTime)

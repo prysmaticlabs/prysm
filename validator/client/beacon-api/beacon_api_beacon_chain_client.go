@@ -25,7 +25,7 @@ type beaconApiChainClient struct {
 
 const getValidatorPerformanceEndpoint = "/prysm/validators/performance"
 
-func (c beaconApiChainClient) getHeadBlockHeaders(ctx context.Context) (*structs.GetBlockHeaderResponse, error) {
+func (c beaconApiChainClient) headBlockHeaders(ctx context.Context) (*structs.GetBlockHeaderResponse, error) {
 	blockHeader := structs.GetBlockHeaderResponse{}
 	err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/headers/head", &blockHeader)
 	if err != nil {
@@ -112,7 +112,7 @@ func (c beaconApiChainClient) ChainHead(ctx context.Context, _ *empty.Empty) (*e
 		return nil, errors.Wrapf(err, "failed to decode previous justified checkpoint root `%s`", finalityCheckpoints.Data.PreviousJustified.Root)
 	}
 
-	blockHeader, err := c.getHeadBlockHeaders(ctx)
+	blockHeader, err := c.headBlockHeaders(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get head block headers")
 	}
@@ -191,21 +191,21 @@ func (c beaconApiChainClient) Validators(ctx context.Context, in *ethpb.ListVali
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get first slot for epoch `%d`", queryFilter.Epoch)
 		}
-		if stateValidators, err = c.stateValidatorsProvider.GetStateValidatorsForSlot(ctx, slot, pubkeys, in.Indices, statuses); err != nil {
+		if stateValidators, err = c.stateValidatorsProvider.StateValidatorsForSlot(ctx, slot, pubkeys, in.Indices, statuses); err != nil {
 			return nil, errors.Wrapf(err, "failed to get state validators for slot `%d`", slot)
 		}
 		epoch = slots.ToEpoch(slot)
 	case *ethpb.ListValidatorsRequest_Genesis:
-		if stateValidators, err = c.stateValidatorsProvider.GetStateValidatorsForSlot(ctx, 0, pubkeys, in.Indices, statuses); err != nil {
+		if stateValidators, err = c.stateValidatorsProvider.StateValidatorsForSlot(ctx, 0, pubkeys, in.Indices, statuses); err != nil {
 			return nil, errors.Wrapf(err, "failed to get genesis state validators")
 		}
 		epoch = 0
 	case nil:
-		if stateValidators, err = c.stateValidatorsProvider.GetStateValidatorsForHead(ctx, pubkeys, in.Indices, statuses); err != nil {
+		if stateValidators, err = c.stateValidatorsProvider.StateValidatorsForHead(ctx, pubkeys, in.Indices, statuses); err != nil {
 			return nil, errors.Wrap(err, "failed to get head state validators")
 		}
 
-		blockHeader, err := c.getHeadBlockHeaders(ctx)
+		blockHeader, err := c.headBlockHeaders(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get head block headers")
 		}

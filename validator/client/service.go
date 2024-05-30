@@ -328,7 +328,7 @@ func ConstructDialOptions(
 	return dialOpts
 }
 
-func (v *ValidatorService) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+func (v *ValidatorService) Graffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	if v.validator == nil {
 		return nil, errors.New("validator is unavailable")
 	}

@@ -150,7 +150,7 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			actualResponse, err := validatorClient.getSyncMessageBlockRoot(ctx)
+			actualResponse, err := validatorClient.syncMessageBlockRoot(ctx)
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, test.expectedErrorMessage, err)
 				return
@@ -236,7 +236,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			actualResponse, err := validatorClient.getSyncCommitteeContribution(ctx, request)
+			actualResponse, err := validatorClient.syncCommitteeContribution(ctx, request)
 			if test.expectedErrMsg != "" {
 				require.ErrorContains(t, test.expectedErrMsg, err)
 				return
@@ -394,7 +394,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 					jsonRestHandler: jsonRestHandler,
 				},
 			}
-			actualResponse, err := validatorClient.getSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+			actualResponse, err := validatorClient.syncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 				PublicKey: pubkey,
 				Slot:      slot,
 			})

@@ -112,7 +112,7 @@ func TestGetGenesis(t *testing.T) {
 			ctx := context.Background()
 
 			genesisProvider := mock.NewMockGenesisProvider(ctrl)
-			genesisProvider.EXPECT().GetGenesis(
+			genesisProvider.EXPECT().Genesis(
 				ctx,
 			).Return(
 				testCase.genesisResponse,
