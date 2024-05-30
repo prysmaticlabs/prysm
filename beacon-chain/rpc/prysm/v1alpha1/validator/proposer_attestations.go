@@ -17,9 +17,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type proposerAtts []*ethpb.Attestation
+type proposerAtts []ethpb.Att
 
-func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState) ([]*ethpb.Attestation, error) {
+func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState) ([]ethpb.Att, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
 	defer span.End()
 
@@ -46,16 +46,16 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		return nil, err
 	}
 
-	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(atts))
 	for _, att := range atts {
-		attDataRoot, err := att.Data.HashTreeRoot()
+		attDataRoot, err := att.GetData().HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 	}
 
-	attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
+	attsForInclusion := proposerAtts(make([]ethpb.Att, 0))
 	for _, as := range attsByDataRoot {
 		as, err := attaggregation.Aggregate(as)
 		if err != nil {
@@ -79,8 +79,8 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 // The first group passes the all the required checks for attestation to be considered for proposing.
 // And attestations from the second group should be deleted.
 func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts) {
-	validAtts := make([]*ethpb.Attestation, 0, len(a))
-	invalidAtts := make([]*ethpb.Attestation, 0, len(a))
+	validAtts := make([]ethpb.Att, 0, len(a))
+	invalidAtts := make([]ethpb.Att, 0, len(a))
 
 	for _, att := range a {
 		if err := blocks.VerifyAttestationNoVerifySignature(ctx, st, att); err == nil {
@@ -107,10 +107,10 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 	var slots []primitives.Slot
 	attsBySlot := map[primitives.Slot]proposerAtts{}
 	for _, att := range a {
-		if _, ok := attsBySlot[att.Data.Slot]; !ok {
-			slots = append(slots, att.Data.Slot)
+		if _, ok := attsBySlot[att.GetData().Slot]; !ok {
+			slots = append(slots, att.GetData().Slot)
 		}
-		attsBySlot[att.Data.Slot] = append(attsBySlot[att.Data.Slot], att)
+		attsBySlot[att.GetData().Slot] = append(attsBySlot[att.GetData().Slot], att)
 	}
 
 	selectAtts := func(atts proposerAtts) (proposerAtts, error) {
@@ -120,7 +120,7 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 		candidates := make([]*bitfield.Bitlist64, len(atts))
 		for i := 0; i < len(atts); i++ {
 			var err error
-			candidates[i], err = atts[i].AggregationBits.ToBitlist64()
+			candidates[i], err = atts[i].GetAggregationBits().ToBitlist64()
 			if err != nil {
 				return nil, err
 			}
@@ -139,10 +139,10 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 				leftoverAtts[i] = atts[key]
 			}
 			sort.Slice(selectedAtts, func(i, j int) bool {
-				return selectedAtts[i].AggregationBits.Count() > selectedAtts[j].AggregationBits.Count()
+				return selectedAtts[i].GetAggregationBits().Count() > selectedAtts[j].GetAggregationBits().Count()
 			})
 			sort.Slice(leftoverAtts, func(i, j int) bool {
-				return leftoverAtts[i].AggregationBits.Count() > leftoverAtts[j].AggregationBits.Count()
+				return leftoverAtts[i].GetAggregationBits().Count() > leftoverAtts[j].GetAggregationBits().Count()
 			})
 			return append(selectedAtts, leftoverAtts...), nil
 		}
@@ -182,22 +182,22 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
-	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(a))
+	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(a))
 	for _, att := range a {
-		attDataRoot, err := att.Data.HashTreeRoot()
+		attDataRoot, err := att.GetData().HashTreeRoot()
 		if err != nil {
 			continue
 		}
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 	}
 
-	uniqAtts := make([]*ethpb.Attestation, 0, len(a))
+	uniqAtts := make([]ethpb.Att, 0, len(a))
 	for _, atts := range attsByDataRoot {
 		for i := 0; i < len(atts); i++ {
 			a := atts[i]
 			for j := i + 1; j < len(atts); j++ {
 				b := atts[j]
-				if c, err := a.AggregationBits.Contains(b.AggregationBits); err != nil {
+				if c, err := a.GetAggregationBits().Contains(b.GetAggregationBits()); err != nil {
 					return nil, err
 				} else if c {
 					// a contains b, b is redundant.
@@ -205,7 +205,7 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 					atts[len(atts)-1] = nil
 					atts = atts[:len(atts)-1]
 					j--
-				} else if c, err := b.AggregationBits.Contains(a.AggregationBits); err != nil {
+				} else if c, err := b.GetAggregationBits().Contains(a.GetAggregationBits()); err != nil {
 					return nil, err
 				} else if c {
 					// b contains a, a is redundant.
@@ -224,7 +224,7 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []ethpb.Att) ([]ethpb.Att, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.validateAndDeleteAttsInPool")
 	defer span.End()
 
@@ -237,7 +237,7 @@ func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.Beac
 
 // The input attestations are processed and seen by the node, this deletes them from pool
 // so proposers don't include them in a block for the future.
-func (vs *Server) deleteAttsInPool(ctx context.Context, atts []*ethpb.Attestation) error {
+func (vs *Server) deleteAttsInPool(ctx context.Context, atts []ethpb.Att) error {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.deleteAttsInPool")
 	defer span.End()
 

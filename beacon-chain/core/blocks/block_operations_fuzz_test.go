@@ -216,7 +216,7 @@ func TestFuzzProcessAttesterSlashings_10000(t *testing.T) {
 		fuzzer.Fuzz(a)
 		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
 		require.NoError(t, err)
-		r, err := ProcessAttesterSlashings(ctx, s, []*ethpb.AttesterSlashing{a}, v.SlashValidator)
+		r, err := ProcessAttesterSlashings(ctx, s, []ethpb.AttSlashing{a}, v.SlashValidator)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and slashing: %v", r, err, state, a)
 		}
@@ -293,21 +293,6 @@ func TestFuzzVerifyIndexedAttestationn_10000(t *testing.T) {
 		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
 		require.NoError(t, err)
 		err = VerifyIndexedAttestation(ctx, s, idxAttestation)
-		_ = err
-	}
-}
-
-func TestFuzzVerifyAttestation_10000(t *testing.T) {
-	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethpb.BeaconState{}
-	attestation := &ethpb.Attestation{}
-	ctx := context.Background()
-	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(attestation)
-		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
-		require.NoError(t, err)
-		err = VerifyAttestationSignature(ctx, s, attestation)
 		_ = err
 	}
 }

@@ -181,7 +181,8 @@ func TestAttests_NextSlot(t *testing.T) {
 	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
 	// avoid race condition between the cancellation of the context in the go stream from slot and the setting of IsHealthy
 	_ = tracker.CheckHealth(context.Background())
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker}
+	attSubmitted := make(chan interface{})
+	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker, AttSubmitted: attSubmitted}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
@@ -193,9 +194,8 @@ func TestAttests_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-	timer := time.NewTimer(200 * time.Millisecond)
 	run(ctx, v)
-	<-timer.C
+	<-attSubmitted
 	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
 	assert.Equal(t, uint64(slot), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
 }
@@ -208,7 +208,8 @@ func TestProposes_NextSlot(t *testing.T) {
 	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
 	// avoid race condition between the cancellation of the context in the go stream from slot and the setting of IsHealthy
 	_ = tracker.CheckHealth(context.Background())
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker}
+	blockProposed := make(chan interface{})
+	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker, BlockProposed: blockProposed}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
@@ -220,9 +221,9 @@ func TestProposes_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-	timer := time.NewTimer(200 * time.Millisecond)
 	run(ctx, v)
-	<-timer.C
+	<-blockProposed
+
 	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)
 	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }
@@ -235,7 +236,9 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
 	// avoid race condition between the cancellation of the context in the go stream from slot and the setting of IsHealthy
 	_ = tracker.CheckHealth(context.Background())
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker}
+	blockProposed := make(chan interface{})
+	attSubmitted := make(chan interface{})
+	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker, BlockProposed: blockProposed, AttSubmitted: attSubmitted}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
@@ -247,9 +250,9 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-	timer := time.NewTimer(200 * time.Millisecond)
 	run(ctx, v)
-	<-timer.C
+	<-blockProposed
+	<-attSubmitted
 	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
 	assert.Equal(t, uint64(slot), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
 	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)

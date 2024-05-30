@@ -167,7 +167,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			root, err := signing.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 			require.NoError(t, err)
 
-			sig, err := validator.keyManager.Sign(context.Background(), &validatorpb.SignRequest{
+			sig, err := validator.km.Sign(context.Background(), &validatorpb.SignRequest{
 				PublicKey:   validatorKey.PublicKey().Marshal(),
 				SigningRoot: root[:],
 			})
@@ -504,7 +504,7 @@ func TestSignAttestation(t *testing.T) {
 			att.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("blockRoot"), 32)
 
 			pk := testKeyFromBytes(t, []byte{1})
-			validator.keyManager = newMockKeymanager(t, pk)
+			validator.km = newMockKeymanager(t, pk)
 			sig, sr, err := validator.signAtt(ctx, pk.pub, att.Data, att.Data.Slot)
 			require.NoError(t, err, "%x,%x,%v", sig, sr, err)
 			require.Equal(t, "b6a60f8497bd328908be83634d045"+

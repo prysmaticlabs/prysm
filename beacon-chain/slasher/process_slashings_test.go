@@ -84,7 +84,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		root, err := slashing.HashTreeRoot()
 		require.NoError(tt, err, "failed to hash tree root")
 
-		slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{
+		slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{
 			root: slashing,
 		}
 
@@ -108,7 +108,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		root, err := slashing.HashTreeRoot()
 		require.NoError(tt, err, "failed to hash tree root")
 
-		slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{
+		slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{
 			root: slashing,
 		}
 
@@ -132,7 +132,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		root, err := slashing.HashTreeRoot()
 		require.NoError(tt, err, "failed to hash tree root")
 
-		slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{
+		slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{
 			root: slashing,
 		}
 

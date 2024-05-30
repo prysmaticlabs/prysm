@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -127,20 +128,26 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	}
 
 	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
+	// Special handling for Deneb blocks and later version because of blob side cars.
 	if blk.Version() >= version.Deneb && !blk.IsBlinded() {
-		denebBlock, err := blk.PbDenebBlock()
+		pb, err := blk.Proto()
 		if err != nil {
 			log.WithError(err).Error("Failed to get deneb block")
 			return
 		}
-		genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
-			Block: &ethpb.GenericSignedBeaconBlock_Deneb{
-				Deneb: &ethpb.SignedBeaconBlockContentsDeneb{
-					Block:     denebBlock,
-					KzgProofs: b.GetDeneb().KzgProofs,
-					Blobs:     b.GetDeneb().Blobs,
-				},
-			},
+		switch blk.Version() {
+		case version.Deneb:
+			genericSignedBlock, err = buildGenericSignedBlockDenebWithBlobs(pb, b)
+			if err != nil {
+				log.WithError(err).Error("Failed to build generic signed block")
+				return
+			}
+		case version.Electra:
+			genericSignedBlock, err = buildGenericSignedBlockElectraWithBlobs(pb, b)
+			if err != nil {
+				log.WithError(err).Error("Failed to build generic signed block")
+				return
+			}
 		}
 	} else {
 		genericSignedBlock, err = blk.PbGenericBlock()
@@ -225,6 +232,38 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	}
 }
 
+func buildGenericSignedBlockDenebWithBlobs(pb proto.Message, b *ethpb.GenericBeaconBlock) (*ethpb.GenericSignedBeaconBlock, error) {
+	denebBlock, ok := pb.(*ethpb.SignedBeaconBlockDeneb)
+	if !ok {
+		return nil, errors.New("could cast to deneb block")
+	}
+	return &ethpb.GenericSignedBeaconBlock{
+		Block: &ethpb.GenericSignedBeaconBlock_Deneb{
+			Deneb: &ethpb.SignedBeaconBlockContentsDeneb{
+				Block:     denebBlock,
+				KzgProofs: b.GetDeneb().KzgProofs,
+				Blobs:     b.GetDeneb().Blobs,
+			},
+		},
+	}, nil
+}
+
+func buildGenericSignedBlockElectraWithBlobs(pb proto.Message, b *ethpb.GenericBeaconBlock) (*ethpb.GenericSignedBeaconBlock, error) {
+	electraBlock, ok := pb.(*ethpb.SignedBeaconBlockElectra)
+	if !ok {
+		return nil, errors.New("could cast to electra block")
+	}
+	return &ethpb.GenericSignedBeaconBlock{
+		Block: &ethpb.GenericSignedBeaconBlock_Electra{
+			Electra: &ethpb.SignedBeaconBlockContentsElectra{
+				Block:     electraBlock,
+				KzgProofs: b.GetElectra().KzgProofs,
+				Blobs:     b.GetElectra().Blobs,
+			},
+		},
+	}, nil
+}
+
 // ProposeExit performs a voluntary exit on a validator.
 // The exit is signed by the validator before being sent to the beacon node for broadcasting.
 func ProposeExit(
@@ -302,7 +341,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 	if err != nil {
 		return nil, err
 	}
-	randaoReveal, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	randaoReveal, err = v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -334,7 +373,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     blockRoot[:],
 		SignatureDomain: domain.SignatureDomain,

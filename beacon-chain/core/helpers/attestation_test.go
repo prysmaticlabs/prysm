@@ -238,7 +238,7 @@ func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
 func TestValidateNilAttestation(t *testing.T) {
 	tests := []struct {
 		name        string
-		attestation *ethpb.Attestation
+		attestation ethpb.Att
 		errString   string
 	}{
 		{

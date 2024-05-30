@@ -126,7 +126,7 @@ func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
 
 // AttesterSlashing receives an attester slashing and feeds it to forkchoice.
 func (bb *Builder) AttesterSlashing(s *ethpb.AttesterSlashing) {
-	slashings := []*ethpb.AttesterSlashing{s}
+	slashings := []ethpb.AttSlashing{s}
 	bb.service.InsertSlashingsToForkChoiceStore(context.TODO(), slashings)
 }
 

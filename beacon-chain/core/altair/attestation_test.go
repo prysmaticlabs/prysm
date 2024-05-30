@@ -195,47 +195,95 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 }
 
 func TestProcessAttestations_OK(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, 100)
+	t.Run("pre-Electra", func(t *testing.T) {
+		beaconState, privKeys := util.DeterministicGenesisStateAltair(t, 100)
 
-	aggBits := bitfield.NewBitlist(3)
-	aggBits.SetBitAt(0, true)
-	var mockRoot [32]byte
-	copy(mockRoot[:], "hello-world")
-	att := util.HydrateAttestation(&ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Root: mockRoot[:]},
-			Target: &ethpb.Checkpoint{Root: mockRoot[:]},
-		},
-		AggregationBits: aggBits,
+		aggBits := bitfield.NewBitlist(3)
+		aggBits.SetBitAt(0, true)
+		var mockRoot [32]byte
+		copy(mockRoot[:], "hello-world")
+		att := util.HydrateAttestation(&ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Root: mockRoot[:]},
+				Target: &ethpb.Checkpoint{Root: mockRoot[:]},
+			},
+			AggregationBits: aggBits,
+		})
+
+		cfc := beaconState.CurrentJustifiedCheckpoint()
+		cfc.Root = mockRoot[:]
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
+
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att.Data.Slot, 0)
+		require.NoError(t, err)
+		attestingIndices, err := attestation.AttestingIndices(att, committee)
+		require.NoError(t, err)
+		sigs := make([]bls.Signature, len(attestingIndices))
+		for i, indice := range attestingIndices {
+			sb, err := signing.ComputeDomainAndSign(beaconState, 0, att.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+			require.NoError(t, err)
+			sig, err := bls.SignatureFromBytes(sb)
+			require.NoError(t, err)
+			sigs[i] = sig
+		}
+		att.Signature = bls.AggregateSignatures(sigs).Marshal()
+
+		block := util.NewBeaconBlockAltair()
+		block.Block.Body.Attestations = []*ethpb.Attestation{att}
+
+		err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+		require.NoError(t, err)
+		wsb, err := blocks.NewSignedBeaconBlock(block)
+		require.NoError(t, err)
+		_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb.Block())
+		require.NoError(t, err)
 	})
+	t.Run("post-Electra", func(t *testing.T) {
+		beaconState, privKeys := util.DeterministicGenesisStateElectra(t, 100)
 
-	cfc := beaconState.CurrentJustifiedCheckpoint()
-	cfc.Root = mockRoot[:]
-	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
+		aggBits := bitfield.NewBitlist(3)
+		aggBits.SetBitAt(0, true)
+		committeeBits := primitives.NewAttestationCommitteeBits()
+		committeeBits.SetBitAt(0, true)
+		var mockRoot [32]byte
+		copy(mockRoot[:], "hello-world")
+		att := util.HydrateAttestationElectra(&ethpb.AttestationElectra{
+			Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Root: mockRoot[:]},
+				Target: &ethpb.Checkpoint{Root: mockRoot[:]},
+			},
+			AggregationBits: aggBits,
+			CommitteeBits:   committeeBits,
+		})
 
-	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att.Data.Slot, att.Data.CommitteeIndex)
-	require.NoError(t, err)
-	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
-	require.NoError(t, err)
-	sigs := make([]bls.Signature, len(attestingIndices))
-	for i, indice := range attestingIndices {
-		sb, err := signing.ComputeDomainAndSign(beaconState, 0, att.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+		cfc := beaconState.CurrentJustifiedCheckpoint()
+		cfc.Root = mockRoot[:]
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
+
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att.Data.Slot, 0)
 		require.NoError(t, err)
-		sig, err := bls.SignatureFromBytes(sb)
+		attestingIndices, err := attestation.AttestingIndices(att, committee)
 		require.NoError(t, err)
-		sigs[i] = sig
-	}
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()
+		sigs := make([]bls.Signature, len(attestingIndices))
+		for i, indice := range attestingIndices {
+			sb, err := signing.ComputeDomainAndSign(beaconState, 0, att.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+			require.NoError(t, err)
+			sig, err := bls.SignatureFromBytes(sb)
+			require.NoError(t, err)
+			sigs[i] = sig
+		}
+		att.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	block := util.NewBeaconBlockAltair()
-	block.Block.Body.Attestations = []*ethpb.Attestation{att}
+		block := util.NewBeaconBlockElectra()
+		block.Block.Body.Attestations = []*ethpb.AttestationElectra{att}
 
-	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
-	require.NoError(t, err)
-	wsb, err := blocks.NewSignedBeaconBlock(block)
-	require.NoError(t, err)
-	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb.Block())
-	require.NoError(t, err)
+		err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+		require.NoError(t, err)
+		wsb, err := blocks.NewSignedBeaconBlock(block)
+		require.NoError(t, err)
+		_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb.Block())
+		require.NoError(t, err)
+	})
 }
 
 func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
@@ -273,7 +321,7 @@ func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
-	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+	indices, err := attestation.AttestingIndices(att, committee)
 	require.NoError(t, err)
 	for _, index := range indices {
 		has, err := altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyHeadFlagIndex)

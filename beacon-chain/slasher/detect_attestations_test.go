@@ -668,8 +668,8 @@ func Test_processAttestations(t *testing.T) {
 
 					// Create the attester slashing.
 					expectedSlashing := &ethpb.AttesterSlashing{
-						Attestation_1: wrapper_1.IndexedAttestation,
-						Attestation_2: wrapper_2.IndexedAttestation,
+						Attestation_1: wrapper_1.IndexedAttestation.(*ethpb.IndexedAttestation),
+						Attestation_2: wrapper_2.IndexedAttestation.(*ethpb.IndexedAttestation),
 					}
 
 					root, err := expectedSlashing.HashTreeRoot()
@@ -821,7 +821,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	s.attsQueue = newAttestationsQueue()
 	s.attsQueue.push(att1)
 	s.attsQueue.push(att2)
-	slot, err := slots.EpochStart(att2.IndexedAttestation.Data.Target.Epoch)
+	slot, err := slots.EpochStart(att2.IndexedAttestation.GetData().Target.Epoch)
 	require.NoError(t, err)
 	mockChain.Slot = &slot
 	s.serviceCfg.HeadStateFetcher = mockChain
@@ -1164,7 +1164,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.IsNil(t, slashing)
-	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
+	att.IndexedAttestation.(*ethpb.IndexedAttestation).AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{att},
@@ -1221,7 +1221,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
-	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
+	att.IndexedAttestation.(*ethpb.IndexedAttestation).AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{att},

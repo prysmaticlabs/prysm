@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -73,7 +75,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		a         *ethpb.Attestation
+		a         ethpb.Att
 		wantedErr string
 	}{
 		{
@@ -125,25 +127,36 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 }
 
 func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
-	service, tr := minimalTestService(t)
-	ctx := tr.ctx
+	eval := func(ctx context.Context, service *Service, genesisState state.BeaconState, pks []bls.SecretKey) {
+		service.SetGenesisTime(time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0))
+		require.NoError(t, service.saveGenesisData(ctx, genesisState))
+		att, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
+		require.NoError(t, err)
+		tRoot := bytesutil.ToBytes32(att[0].GetData().Target.Root)
+		copied := genesisState.Copy()
+		copied, err = transition.ProcessSlots(ctx, copied, 1)
+		require.NoError(t, err)
+		require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
+		ojc := &ethpb.Checkpoint{Epoch: 0, Root: tRoot[:]}
+		ofc := &ethpb.Checkpoint{Epoch: 0, Root: tRoot[:]}
+		state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
+		require.NoError(t, err)
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.OnAttestation(ctx, att[0], 0))
+	}
 
-	genesisState, pks := util.DeterministicGenesisState(t, 64)
-	service.SetGenesisTime(time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0))
-	require.NoError(t, service.saveGenesisData(ctx, genesisState))
-	att, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
-	require.NoError(t, err)
-	tRoot := bytesutil.ToBytes32(att[0].Data.Target.Root)
-	copied := genesisState.Copy()
-	copied, err = transition.ProcessSlots(ctx, copied, 1)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
-	ojc := &ethpb.Checkpoint{Epoch: 0, Root: tRoot[:]}
-	ofc := &ethpb.Checkpoint{Epoch: 0, Root: tRoot[:]}
-	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
-	require.NoError(t, service.OnAttestation(ctx, att[0], 0))
+	t.Run("pre-Electra", func(t *testing.T) {
+		service, tr := minimalTestService(t)
+		ctx := tr.ctx
+		genesisState, pks := util.DeterministicGenesisState(t, 64)
+		eval(ctx, service, genesisState, pks)
+	})
+	t.Run("post-Electra", func(t *testing.T) {
+		service, tr := minimalTestService(t)
+		ctx := tr.ctx
+		genesisState, pks := util.DeterministicGenesisStateElectra(t, 64)
+		eval(ctx, service, genesisState, pks)
+	})
 }
 
 func TestService_GetRecentPreState(t *testing.T) {

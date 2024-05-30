@@ -31,15 +31,15 @@ func TestPruneExpired_Ticker(t *testing.T) {
 
 	ad2 := util.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
 
-	atts := []*ethpb.Attestation{
-		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
-		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
+	atts := []ethpb.Att{
+		&ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
+		&ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
 	}
 	require.NoError(t, s.cfg.Pool.SaveUnaggregatedAttestations(atts))
 	require.Equal(t, 2, s.cfg.Pool.UnaggregatedAttestationCount(), "Unexpected number of attestations")
-	atts = []*ethpb.Attestation{
-		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
-		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
+	atts = []ethpb.Att{
+		&ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
+		&ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
 	}
 	require.NoError(t, s.cfg.Pool.SaveAggregatedAttestations(atts))
 	assert.Equal(t, 2, s.cfg.Pool.AggregatedAttestationCount())
@@ -57,17 +57,17 @@ func TestPruneExpired_Ticker(t *testing.T) {
 		atts, err := s.cfg.Pool.UnaggregatedAttestations()
 		require.NoError(t, err)
 		for _, attestation := range atts {
-			if attestation.Data.Slot == 0 {
+			if attestation.GetData().Slot == 0 {
 				return
 			}
 		}
 		for _, attestation := range s.cfg.Pool.AggregatedAttestations() {
-			if attestation.Data.Slot == 0 {
+			if attestation.GetData().Slot == 0 {
 				return
 			}
 		}
 		for _, attestation := range s.cfg.Pool.BlockAttestations() {
-			if attestation.Data.Slot == 0 {
+			if attestation.GetData().Slot == 0 {
 				return
 			}
 		}
@@ -96,7 +96,7 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	att2 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1111}}
 	att3 := &ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101}}
 	att4 := &ethpb.Attestation{Data: ad2, AggregationBits: bitfield.Bitlist{0b1110}}
-	atts := []*ethpb.Attestation{att1, att2, att3, att4}
+	atts := []ethpb.Att{att1, att2, att3, att4}
 	require.NoError(t, s.cfg.Pool.SaveAggregatedAttestations(atts))
 	for _, att := range atts {
 		require.NoError(t, s.cfg.Pool.SaveBlockAttestation(att))
@@ -108,12 +108,12 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	s.pruneExpiredAtts()
 	// All the attestations on slot 0 should be pruned.
 	for _, attestation := range s.cfg.Pool.AggregatedAttestations() {
-		if attestation.Data.Slot == 0 {
+		if attestation.GetData().Slot == 0 {
 			t.Error("Should be pruned")
 		}
 	}
 	for _, attestation := range s.cfg.Pool.BlockAttestations() {
-		if attestation.Data.Slot == 0 {
+		if attestation.GetData().Slot == 0 {
 			t.Error("Should be pruned")
 		}
 	}

@@ -104,18 +104,18 @@ func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, int
 	sbb.SetSlot(2)
 	// we have to set the proposer index to the value that will be randomly chosen (fortunately it's deterministic)
 	sbb.SetProposerIndex(12)
-	sbb.SetAttestations([]*eth.Attestation{
-		{
+	require.NoError(t, sbb.SetAttestations([]eth.Att{
+		&eth.Attestation{
 			AggregationBits: bitfield.Bitlist{0b00000111},
 			Data:            util.HydrateAttestationData(&eth.AttestationData{}),
 			Signature:       make([]byte, fieldparams.BLSSignatureLength),
 		},
-		{
+		&eth.Attestation{
 			AggregationBits: bitfield.Bitlist{0b00000111},
 			Data:            util.HydrateAttestationData(&eth.AttestationData{}),
 			Signature:       make([]byte, fieldparams.BLSSignatureLength),
 		},
-	})
+	}))
 
 	attData1 := util.HydrateAttestationData(&eth.AttestationData{BeaconBlockRoot: bytesutil.PadTo([]byte("root1"), 32)})
 	attData2 := util.HydrateAttestationData(&eth.AttestationData{BeaconBlockRoot: bytesutil.PadTo([]byte("root2"), 32)})
@@ -125,8 +125,8 @@ func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, int
 	require.NoError(t, err)
 	sigRoot2, err := signing.ComputeSigningRoot(attData2, domain)
 	require.NoError(t, err)
-	sbb.SetAttesterSlashings([]*eth.AttesterSlashing{
-		{
+	require.NoError(t, sbb.SetAttesterSlashings([]eth.AttSlashing{
+		&eth.AttesterSlashing{
 			Attestation_1: &eth.IndexedAttestation{
 				AttestingIndices: []uint64{0},
 				Data:             attData1,
@@ -138,7 +138,7 @@ func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, int
 				Signature:        secretKeys[0].Sign(sigRoot2[:]).Marshal(),
 			},
 		},
-	})
+	}))
 	header1 := &eth.BeaconBlockHeader{
 		Slot:          0,
 		ProposerIndex: 1,

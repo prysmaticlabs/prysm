@@ -263,7 +263,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 	ctx := context.Background()
 
 	count := params.BeaconConfig().SlotsPerEpoch * 4
-	atts := make([]*ethpb.Attestation, 0, count)
+	atts := make([]ethpb.Att, 0, count)
 	for i := primitives.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		for s := primitives.CommitteeIndex(0); s < 4; s++ {
 			blockExample := util.NewBeaconBlock()
@@ -278,7 +278,11 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 				}),
 			}
 			util.SaveBlock(t, ctx, db, blockExample)
-			atts = append(atts, blockExample.Block.Body.Attestations...)
+			as := make([]ethpb.Att, len(blockExample.Block.Body.Attestations))
+			for i, a := range blockExample.Block.Body.Attestations {
+				as[i] = a
+			}
+			atts = append(atts, as...)
 		}
 	}
 	sort.Sort(sortableAttestations(atts))
@@ -303,9 +307,9 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
-					atts[3],
-					atts[4],
-					atts[5],
+					atts[3].(*ethpb.Attestation),
+					atts[4].(*ethpb.Attestation),
+					atts[5].(*ethpb.Attestation),
 				},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count),
@@ -322,7 +326,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
-					atts[10],
+					atts[10].(*ethpb.Attestation),
 				},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count),
@@ -339,14 +343,14 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
-					atts[16],
-					atts[17],
-					atts[18],
-					atts[19],
-					atts[20],
-					atts[21],
-					atts[22],
-					atts[23],
+					atts[16].(*ethpb.Attestation),
+					atts[17].(*ethpb.Attestation),
+					atts[18].(*ethpb.Attestation),
+					atts[19].(*ethpb.Attestation),
+					atts[20].(*ethpb.Attestation),
+					atts[21].(*ethpb.Attestation),
+					atts[22].(*ethpb.Attestation),
+					atts[23].(*ethpb.Attestation),
 				},
 				NextPageToken: strconv.Itoa(3),
 				TotalSize:     int32(count)},
@@ -460,7 +464,7 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 
 func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 	count := primitives.Slot(100)
-	atts := make([]*ethpb.Attestation, count)
+	atts := make([]ethpb.Att, count)
 	targetRoot1 := bytesutil.ToBytes32([]byte("root1"))
 	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
 
@@ -548,7 +552,9 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		require.NoError(t, err)
 		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
-		indexedAtts[i] = idxAtt
+		a, ok := idxAtt.(*ethpb.IndexedAttestation)
+		require.Equal(t, true, ok, "unexpected type of indexed attestation")
+		indexedAtts[i] = a
 	}
 	for i := 0; i < len(atts2); i++ {
 		att := atts2[i]
@@ -556,7 +562,9 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		require.NoError(t, err)
 		idxAtt, err := attestation.ConvertToIndexed(ctx, atts2[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
-		indexedAtts[i+len(atts)] = idxAtt
+		a, ok := idxAtt.(*ethpb.IndexedAttestation)
+		require.Equal(t, true, ok, "unexpected type of indexed attestation")
+		indexedAtts[i+len(atts)] = a
 	}
 
 	bs := &Server{
@@ -588,7 +596,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(indexedAtts), len(res.IndexedAttestations), "Incorrect indexted attestations length")
 	sort.Slice(indexedAtts, func(i, j int) bool {
-		return indexedAtts[i].Data.Slot < indexedAtts[j].Data.Slot
+		return indexedAtts[i].GetData().Slot < indexedAtts[j].GetData().Slot
 	})
 	sort.Slice(res.IndexedAttestations, func(i, j int) bool {
 		return res.IndexedAttestations[i].Data.Slot < res.IndexedAttestations[j].Data.Slot
@@ -655,7 +663,9 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		require.NoError(t, err)
 		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
-		indexedAtts[i] = idxAtt
+		a, ok := idxAtt.(*ethpb.IndexedAttestation)
+		require.Equal(t, true, ok, "unexpected type of indexed attestation")
+		indexedAtts[i] = a
 	}
 
 	bs := &Server{
@@ -697,8 +707,8 @@ func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
 		AttestationsPool: attestations.NewPool(),
 	}
 
-	atts := []*ethpb.Attestation{
-		{
+	atts := []ethpb.Att{
+		&ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				Slot:            1,
 				BeaconBlockRoot: bytesutil.PadTo([]byte{1}, 32),
@@ -708,7 +718,7 @@ func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0b1101},
 			Signature:       bytesutil.PadTo([]byte{1}, fieldparams.BLSSignatureLength),
 		},
-		{
+		&ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				Slot:            2,
 				BeaconBlockRoot: bytesutil.PadTo([]byte{2}, 32),
@@ -718,7 +728,7 @@ func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0b1101},
 			Signature:       bytesutil.PadTo([]byte{2}, fieldparams.BLSSignatureLength),
 		},
-		{
+		&ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				Slot:            3,
 				BeaconBlockRoot: bytesutil.PadTo([]byte{3}, 32),
@@ -746,7 +756,7 @@ func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 		AttestationsPool: attestations.NewPool(),
 	}
 
-	atts := make([]*ethpb.Attestation, params.BeaconConfig().DefaultPageSize+1)
+	atts := make([]ethpb.Att, params.BeaconConfig().DefaultPageSize+1)
 	for i := 0; i < len(atts); i++ {
 		att := util.NewAttestation()
 		att.Data.Slot = primitives.Slot(i)
@@ -768,7 +778,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	}
 
 	numAtts := 100
-	atts := make([]*ethpb.Attestation, numAtts)
+	atts := make([]ethpb.Att, numAtts)
 	for i := 0; i < len(atts); i++ {
 		att := util.NewAttestation()
 		att.Data.Slot = primitives.Slot(i)

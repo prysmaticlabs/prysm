@@ -14,7 +14,7 @@ import (
 )
 
 func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
-	atts := proposerAtts([]*ethpb.Attestation{
+	atts := proposerAtts([]ethpb.Att{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11000000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11100000}}),
@@ -22,7 +22,7 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}}),
 	})
-	want := proposerAtts([]*ethpb.Attestation{
+	want := proposerAtts([]ethpb.Att{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11110000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}}),
@@ -411,13 +411,13 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 				t.Error(err)
 			}
 			sort.Slice(atts, func(i, j int) bool {
-				if atts[i].AggregationBits.Count() == atts[j].AggregationBits.Count() {
-					if atts[i].Data.Slot == atts[j].Data.Slot {
-						return bytes.Compare(atts[i].AggregationBits, atts[j].AggregationBits) <= 0
+				if atts[i].GetAggregationBits().Count() == atts[j].GetAggregationBits().Count() {
+					if atts[i].GetData().Slot == atts[j].GetData().Slot {
+						return bytes.Compare(atts[i].GetAggregationBits(), atts[j].GetAggregationBits()) <= 0
 					}
-					return atts[i].Data.Slot > atts[j].Data.Slot
+					return atts[i].GetData().Slot > atts[j].GetData().Slot
 				}
-				return atts[i].AggregationBits.Count() > atts[j].AggregationBits.Count()
+				return atts[i].GetAggregationBits().Count() > atts[j].GetAggregationBits().Count()
 			})
 			assert.DeepEqual(t, tt.want, atts)
 		})

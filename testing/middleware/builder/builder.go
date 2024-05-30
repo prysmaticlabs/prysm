@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"net/http"
@@ -152,7 +151,7 @@ func New(opts ...Option) (*Builder, error) {
 	router.HandleFunc(registerPath, p.registerValidators)
 	router.HandleFunc(headerPath, p.handleHeaderRequest)
 	router.HandleFunc(blindedPath, p.handleBlindedBlock)
-	addr := fmt.Sprintf("%s:%d", p.cfg.builderHost, p.cfg.builderPort)
+	addr := net.JoinHostPort(p.cfg.builderHost, strconv.Itoa(p.cfg.builderPort))
 	srv := &http.Server{
 		Handler:           mux,
 		Addr:              addr,
@@ -268,7 +267,7 @@ func (p *Builder) handleEngineCalls(req, resp []byte) {
 		}
 		payloadID := [8]byte{}
 		status := ""
-		lastValHash := []byte{}
+		var lastValHash []byte
 		if result.Result.PayloadId != nil {
 			payloadID = *result.Result.PayloadId
 		}
@@ -280,7 +279,7 @@ func (p *Builder) handleEngineCalls(req, resp []byte) {
 	}
 }
 
-func (p *Builder) isBuilderCall(req *http.Request) bool {
+func (*Builder) isBuilderCall(req *http.Request) bool {
 	return strings.Contains(req.URL.Path, "/eth/v1/builder/")
 }
 
@@ -424,11 +423,7 @@ func (p *Builder) handleHeaderRequestCapella(w http.ResponseWriter) {
 	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
 	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
 	v = v.Mul(v, big.NewInt(2))
-	// Is used as the helper modifies the big.Int
-	weiVal := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
-	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
-	weiVal = weiVal.Mul(weiVal, big.NewInt(2))
-	wObj, err := blocks.WrappedExecutionPayloadCapella(b.Payload, weiVal)
+	wObj, err := blocks.WrappedExecutionPayloadCapella(b.Payload)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not wrap execution payload")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -505,11 +500,7 @@ func (p *Builder) handleHeaderRequestDeneb(w http.ResponseWriter) {
 	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
 	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
 	v = v.Mul(v, big.NewInt(2))
-	// Is used as the helper modifies the big.Int
-	weiVal := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
-	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
-	weiVal = weiVal.Mul(weiVal, big.NewInt(2))
-	wObj, err := blocks.WrappedExecutionPayloadDeneb(b.Payload, weiVal)
+	wObj, err := blocks.WrappedExecutionPayloadDeneb(b.Payload)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not wrap execution payload")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -523,7 +514,7 @@ func (p *Builder) handleHeaderRequestDeneb(w http.ResponseWriter) {
 		return
 	}
 	val := builderAPI.Uint256{Int: v}
-	commitments := []hexutil.Bytes{}
+	var commitments []hexutil.Bytes
 	for _, c := range b.BlobsBundle.KzgCommitments {
 		copiedC := c
 		commitments = append(commitments, copiedC)
@@ -592,66 +583,14 @@ func (p *Builder) handleBlindedBlock(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "payload not found", http.StatusInternalServerError)
 		return
 	}
-	if payload, err := p.currPayload.PbDeneb(); err == nil {
-		convertedPayload, err := builderAPI.FromProtoDeneb(payload)
-		if err != nil {
-			p.cfg.logger.WithError(err).Error("Could not convert the payload")
-			http.Error(w, "payload not found", http.StatusInternalServerError)
-			return
-		}
-		execResp := &builderAPI.ExecPayloadResponseDeneb{
-			Version: "deneb",
-			Data: &builderAPI.ExecutionPayloadDenebAndBlobsBundle{
-				ExecutionPayload: &convertedPayload,
-				BlobsBundle:      builderAPI.FromBundleProto(p.blobBundle),
-			},
-		}
-		err = json.NewEncoder(w).Encode(execResp)
-		if err != nil {
-			p.cfg.logger.WithError(err).Error("Could not encode full payload response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	if payload, err := p.currPayload.PbCapella(); err == nil {
-		convertedPayload, err := builderAPI.FromProtoCapella(payload)
-		if err != nil {
-			p.cfg.logger.WithError(err).Error("Could not convert the payload")
-			http.Error(w, "payload not found", http.StatusInternalServerError)
-			return
-		}
-		execResp := &builderAPI.ExecPayloadResponseCapella{
-			Version: "capella",
-			Data:    convertedPayload,
-		}
-		err = json.NewEncoder(w).Encode(execResp)
-		if err != nil {
-			p.cfg.logger.WithError(err).Error("Could not encode full payload response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	bellPayload, err := p.currPayload.PbBellatrix()
-	if err != nil {
-		p.cfg.logger.WithError(err).Error("Could not retrieve the payload")
-		http.Error(w, "payload not found", http.StatusInternalServerError)
-		return
-	}
-	convertedPayload, err := builderAPI.FromProto(bellPayload)
+
+	resp, err := builderAPI.ExecutionPayloadResponseFromData(p.currPayload, p.blobBundle)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not convert the payload")
-		http.Error(w, "payload not found", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	execResp := &builderAPI.ExecPayloadResponse{
-		Version: "bellatrix",
-		Data:    convertedPayload,
-	}
-	err = json.NewEncoder(w).Encode(execResp)
+	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not encode full payload response")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -747,7 +686,7 @@ func (p *Builder) sendHttpRequest(req *http.Request, requestBytes []byte) (*http
 	}
 
 	// Set the modified request as the proxy request body.
-	proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(requestBytes))
+	proxyReq.Body = io.NopCloser(bytes.NewBuffer(requestBytes))
 
 	// Required proxy headers for forwarding JSON-RPC requests to the execution client.
 	proxyReq.Header.Set("Host", req.Host)
@@ -768,14 +707,14 @@ func (p *Builder) sendHttpRequest(req *http.Request, requestBytes []byte) (*http
 
 // Peek into the bytes of an HTTP request's body.
 func parseRequestBytes(req *http.Request) ([]byte, error) {
-	requestBytes, err := ioutil.ReadAll(req.Body)
+	requestBytes, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, err
 	}
 	if err = req.Body.Close(); err != nil {
 		return nil, err
 	}
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(requestBytes))
+	req.Body = io.NopCloser(bytes.NewBuffer(requestBytes))
 	return requestBytes, nil
 }
 

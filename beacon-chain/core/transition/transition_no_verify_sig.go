@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -223,19 +224,29 @@ func ProcessBlockNoVerifyAnySig(
 //
 // Spec pseudocode definition:
 //
-//	def process_operations(state: BeaconState, body: ReadOnlyBeaconBlockBody) -> None:
-//	  # Verify that outstanding deposits are processed up to the maximum number of deposits
-//	  assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
+//	def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
+//	    # [Modified in Electra:EIP6110]
+//	    # Disable former deposit mechanism once all prior deposits are processed
+//	    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_receipts_start_index)
+//	    if state.eth1_deposit_index < eth1_deposit_index_limit:
+//	        assert len(body.deposits) == min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
+//	    else:
+//	        assert len(body.deposits) == 0
 //
-//	  def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
-//	      for operation in operations:
-//	          fn(state, operation)
+//	    def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
+//	        for operation in operations:
+//	            fn(state, operation)
 //
-//	  for_ops(body.proposer_slashings, process_proposer_slashing)
-//	  for_ops(body.attester_slashings, process_attester_slashing)
-//	  for_ops(body.attestations, process_attestation)
-//	  for_ops(body.deposits, process_deposit)
-//	  for_ops(body.voluntary_exits, process_voluntary_exit)
+//	    for_ops(body.proposer_slashings, process_proposer_slashing)
+//	    for_ops(body.attester_slashings, process_attester_slashing)
+//	    for_ops(body.attestations, process_attestation)  # [Modified in Electra:EIP7549]
+//	    for_ops(body.deposits, process_deposit)  # [Modified in Electra:EIP7251]
+//	    for_ops(body.voluntary_exits, process_voluntary_exit)  # [Modified in Electra:EIP7251]
+//	    for_ops(body.bls_to_execution_changes, process_bls_to_execution_change)
+//	    # [New in Electra:EIP7002:EIP7251]
+//	    for_ops(body.execution_payload.withdrawal_requests, process_execution_layer_withdrawal_request)
+//	    for_ops(body.execution_payload.deposit_receipts, process_deposit_receipt)  # [New in Electra:EIP6110]
+//	    for_ops(body.consolidations, process_consolidation)  # [New in Electra:EIP7251]
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state state.BeaconState,
@@ -259,6 +270,11 @@ func ProcessOperationsNoVerifyAttsSigs(
 		}
 	case version.Altair, version.Bellatrix, version.Capella, version.Deneb:
 		state, err = altairOperations(ctx, state, beaconBlock)
+		if err != nil {
+			return nil, err
+		}
+	case version.Electra:
+		state, err = electraOperations(ctx, state, beaconBlock)
 		if err != nil {
 			return nil, err
 		}
@@ -376,6 +392,72 @@ func VerifyBlobCommitmentCount(blk interfaces.ReadOnlyBeaconBlock) error {
 		return fmt.Errorf("too many kzg commitments in block: %d", len(kzgs))
 	}
 	return nil
+}
+
+// electraOperations
+//
+// Spec definition:
+//
+//	def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
+//	    # [Modified in Electra:EIP6110]
+//	    # Disable former deposit mechanism once all prior deposits are processed
+//	    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_receipts_start_index)
+//	    if state.eth1_deposit_index < eth1_deposit_index_limit:
+//	        assert len(body.deposits) == min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
+//	    else:
+//	        assert len(body.deposits) == 0
+//
+//	    def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
+//	        for operation in operations:
+//	            fn(state, operation)
+//
+//	    for_ops(body.proposer_slashings, process_proposer_slashing)
+//	    for_ops(body.attester_slashings, process_attester_slashing)
+//	    for_ops(body.attestations, process_attestation)  # [Modified in Electra:EIP7549]
+//	    for_ops(body.deposits, process_deposit)  # [Modified in Electra:EIP7251]
+//	    for_ops(body.voluntary_exits, process_voluntary_exit)  # [Modified in Electra:EIP7251]
+//	    for_ops(body.bls_to_execution_changes, process_bls_to_execution_change)
+//	    # [New in Electra:EIP7002:EIP7251]
+//	    for_ops(body.execution_payload.withdrawal_requests, process_execution_layer_withdrawal_request)
+//	    for_ops(body.execution_payload.deposit_receipts, process_deposit_receipt)  # [New in Electra:EIP6110]
+//	    for_ops(body.consolidations, process_consolidation)  # [New in Electra:EIP7251]
+func electraOperations(
+	ctx context.Context,
+	st state.BeaconState,
+	block interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+	// 6110 validations are in VerifyOperationLengths
+
+	// Electra extends the altair operations.
+	st, err := altairOperations(ctx, st, block)
+	if err != nil {
+		return nil, err
+	}
+	b := block.Body()
+	bod, ok := b.(interfaces.ROBlockBodyElectra)
+	if !ok {
+		return nil, errors.New("could not cast block body to electra block body")
+	}
+	e, err := bod.Execution()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get execution data from block")
+	}
+	exe, ok := e.(interfaces.ExecutionDataElectra)
+	if !ok {
+		return nil, errors.New("could not cast execution data to electra execution data")
+	}
+	st, err = electra.ProcessExecutionLayerWithdrawRequests(ctx, st, exe.WithdrawalRequests())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
+	}
+	st, err = electra.ProcessDepositReceipts(ctx, st, exe.DepositReceipts())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process deposit receipts")
+	}
+
+	if err := electra.ProcessConsolidations(ctx, st, bod.Consolidations()); err != nil {
+		return nil, errors.Wrap(err, "could not process consolidations")
+	}
+	return st, nil
 }
 
 // This calls altair block operations.

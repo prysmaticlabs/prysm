@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/v5/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -47,12 +48,12 @@ func setFeeRecipientIfBurnAddress(val *cache.TrackedValidator) {
 }
 
 // This returns the local execution payload of a given slot. The function has full awareness of pre and post merge.
-func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) (interfaces.ExecutionData, bool, error) {
+func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) (*consensusblocks.GetPayloadResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getLocalPayload")
 	defer span.End()
 
 	if blk.Version() < version.Bellatrix {
-		return nil, false, nil
+		return nil, nil
 	}
 
 	slot := blk.Slot()
@@ -77,34 +78,31 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		var pid primitives.PayloadID
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
-		switch {
-		case err == nil:
-			bundleCache.add(slot, bundle)
-			warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
-			return payload, overrideBuilder, nil
-		case errors.Is(err, context.DeadlineExceeded):
-		default:
-			return nil, false, errors.Wrap(err, "could not get cached payload from execution client")
+		res, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
+		if err == nil {
+			warnIfFeeRecipientDiffers(val.FeeRecipient[:], res.ExecutionData.FeeRecipient())
+			return res, nil
+		}
+		// TODO: TestServer_getExecutionPayloadContextTimeout expects this behavior.
+		// We need to figure out if it is actually important to "retry" by falling through to the code below when
+		// we get a timeout when trying to retrieve the cached payload id.
+		if !errors.Is(err, context.DeadlineExceeded) {
+			return nil, errors.Wrap(err, "could not get cached payload from execution client")
 		}
 	}
 	log.WithFields(logFields).Debug("payload ID cache miss")
 	parentHash, err := vs.getParentBlockHash(ctx, st, slot)
 	switch {
 	case errors.Is(err, errActivationNotReached) || errors.Is(err, errNoTerminalBlockHash):
-		p, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
-		if err != nil {
-			return nil, false, err
-		}
-		return p, false, nil
+		return consensusblocks.NewGetPayloadResponse(emptyPayload())
 	case err != nil:
-		return nil, false, err
+		return nil, err
 	}
 	payloadIDCacheMiss.Inc()
 
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	finalizedBlockHash := [32]byte{}
@@ -123,14 +121,14 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 
 	t, err := slots.ToTime(st.GenesisTime(), slot)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	var attr payloadattribute.Attributer
 	switch st.Version() {
-	case version.Deneb:
-		withdrawals, err := st.ExpectedWithdrawals()
+	case version.Deneb, version.Electra:
+		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV3{
 			Timestamp:             uint64(t.Unix()),
@@ -140,12 +138,12 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 			ParentBeaconBlockRoot: headRoot[:],
 		})
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 	case version.Capella:
-		withdrawals, err := st.ExpectedWithdrawals()
+		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
 			Timestamp:             uint64(t.Unix()),
@@ -154,7 +152,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 			Withdrawals:           withdrawals,
 		})
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 	case version.Bellatrix:
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
@@ -163,39 +161,35 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 			SuggestedFeeRecipient: val.FeeRecipient[:],
 		})
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 	default:
-		return nil, false, errors.New("unknown beacon state version")
+		return nil, errors.New("unknown beacon state version")
 	}
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "could not prepare payload")
+		return nil, errors.Wrap(err, "could not prepare payload")
 	}
 	if payloadID == nil {
-		return nil, false, fmt.Errorf("nil payload with block hash: %#x", parentHash)
+		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
+	res, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	bundleCache.add(slot, bundle)
-	warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
-	localValueGwei, err := payload.ValueInGwei()
-	if err == nil {
-		log.WithField("value", localValueGwei).Debug("received execution payload from local engine")
-	}
-	return payload, overrideBuilder, nil
+
+	warnIfFeeRecipientDiffers(val.FeeRecipient[:], res.ExecutionData.FeeRecipient())
+	log.WithField("value", res.Bid).Debug("received execution payload from local engine")
+	return res, nil
 }
 
-// warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
-// match the requested one.
-func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient primitives.ExecutionAddress) {
-	// Warn if the fee recipient is not the value we expect.
-	if payload != nil && !bytes.Equal(payload.FeeRecipient(), feeRecipient[:]) {
+// warnIfFeeRecipientDiffers logs a warning if the fee recipient in the payload (eg the EL engine get payload response) does not
+// match what was expected (eg the fee recipient previously used to request preparation of the payload).
+func warnIfFeeRecipientDiffers(want, got []byte) {
+	if !bytes.Equal(want, got) {
 		logrus.WithFields(logrus.Fields{
-			"wantedFeeRecipient": fmt.Sprintf("%#x", feeRecipient),
-			"received":           fmt.Sprintf("%#x", payload.FeeRecipient()),
+			"wantedFeeRecipient": fmt.Sprintf("%#x", want),
+			"received":           fmt.Sprintf("%#x", got),
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
 			"It is possible someone has compromised your client to try and take your transaction fees")
 	}
@@ -234,20 +228,20 @@ func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTi
 
 func (vs *Server) getBuilderPayloadAndBlobs(ctx context.Context,
 	slot primitives.Slot,
-	vIdx primitives.ValidatorIndex) (interfaces.ExecutionData, [][]byte, error) {
+	vIdx primitives.ValidatorIndex) (builder.Bid, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getBuilderPayloadAndBlobs")
 	defer span.End()
 
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
-		return nil, nil, nil
+		return nil, nil
 	}
 	canUseBuilder, err := vs.canUseBuilder(ctx, slot, vIdx)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to check if we can use the builder")
+		return nil, errors.Wrap(err, "failed to check if we can use the builder")
 	}
 	span.AddAttributes(trace.BoolAttribute("canUseBuilder", canUseBuilder))
 	if !canUseBuilder {
-		return nil, nil, nil
+		return nil, nil
 	}
 
 	return vs.getPayloadHeaderFromBuilder(ctx, slot, vIdx)

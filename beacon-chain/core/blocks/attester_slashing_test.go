@@ -57,7 +57,11 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, b.Block.Body.AttesterSlashings, v.SlashValidator)
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
+	for i, s := range b.Block.Body.AttesterSlashings {
+		ss[i] = s
+	}
+	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, ss, v.SlashValidator)
 	assert.ErrorContains(t, "attestations are not slashable", err)
 }
 
@@ -92,7 +96,11 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		},
 	}
 
-	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, b.Block.Body.AttesterSlashings, v.SlashValidator)
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
+	for i, s := range b.Block.Body.AttesterSlashings {
+		ss[i] = s
+	}
+	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, ss, v.SlashValidator)
 	assert.ErrorContains(t, "validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE", err)
 }
 
@@ -144,7 +152,11 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, b.Block.Body.AttesterSlashings, v.SlashValidator)
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
+	for i, s := range b.Block.Body.AttesterSlashings {
+		ss[i] = s
+	}
+	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, ss, v.SlashValidator)
 	require.NoError(t, err)
 	newRegistry := newState.Validators()
 
@@ -213,7 +225,11 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 		},
 	}
 
-	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, b.Block.Body.AttesterSlashings, v.SlashValidator)
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
+	for i, s := range b.Block.Body.AttesterSlashings {
+		ss[i] = s
+	}
+	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, ss, v.SlashValidator)
 	require.NoError(t, err)
 	newRegistry := newState.Validators()
 
@@ -282,7 +298,11 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusBellatrix(t *testing.T) {
 		},
 	}
 
-	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, b.Block.Body.AttesterSlashings, v.SlashValidator)
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
+	for i, s := range b.Block.Body.AttesterSlashings {
+		ss[i] = s
+	}
+	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, ss, v.SlashValidator)
 	require.NoError(t, err)
 	newRegistry := newState.Validators()
 
@@ -351,7 +371,11 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusCapella(t *testing.T) {
 		},
 	}
 
-	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, b.Block.Body.AttesterSlashings, v.SlashValidator)
+	ss := make([]ethpb.AttSlashing, len(b.Block.Body.AttesterSlashings))
+	for i, s := range b.Block.Body.AttesterSlashings {
+		ss[i] = s
+	}
+	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, ss, v.SlashValidator)
 	require.NoError(t, err)
 	newRegistry := newState.Validators()
 

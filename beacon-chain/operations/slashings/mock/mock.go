@@ -9,12 +9,12 @@ import (
 
 // PoolMock is a fake implementation of PoolManager.
 type PoolMock struct {
-	PendingAttSlashings  []*ethpb.AttesterSlashing
+	PendingAttSlashings  []ethpb.AttSlashing
 	PendingPropSlashings []*ethpb.ProposerSlashing
 }
 
 // PendingAttesterSlashings --
-func (m *PoolMock) PendingAttesterSlashings(_ context.Context, _ state.ReadOnlyBeaconState, _ bool) []*ethpb.AttesterSlashing {
+func (m *PoolMock) PendingAttesterSlashings(_ context.Context, _ state.ReadOnlyBeaconState, _ bool) []ethpb.AttSlashing {
 	return m.PendingAttSlashings
 }
 
@@ -24,7 +24,7 @@ func (m *PoolMock) PendingProposerSlashings(_ context.Context, _ state.ReadOnlyB
 }
 
 // InsertAttesterSlashing --
-func (m *PoolMock) InsertAttesterSlashing(_ context.Context, _ state.ReadOnlyBeaconState, slashing *ethpb.AttesterSlashing) error {
+func (m *PoolMock) InsertAttesterSlashing(_ context.Context, _ state.ReadOnlyBeaconState, slashing ethpb.AttSlashing) error {
 	m.PendingAttSlashings = append(m.PendingAttSlashings, slashing)
 	return nil
 }
@@ -36,7 +36,7 @@ func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ state.ReadOnlyBea
 }
 
 // MarkIncludedAttesterSlashing --
-func (*PoolMock) MarkIncludedAttesterSlashing(_ *ethpb.AttesterSlashing) {
+func (*PoolMock) MarkIncludedAttesterSlashing(_ ethpb.AttSlashing) {
 	panic("implement me")
 }
 

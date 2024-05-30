@@ -3,10 +3,10 @@ package blocks
 import (
 	"bytes"
 	"errors"
-	"math/big"
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -516,7 +516,7 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 			ExcessBlobGas: 123,
 			BlobGasUsed:   321,
 		}
-		wrapped, err := WrappedExecutionPayloadDeneb(payload, big.NewInt(123))
+		wrapped, err := WrappedExecutionPayloadDeneb(payload)
 		require.NoError(t, err)
 		header, err := PayloadToHeaderDeneb(wrapped)
 		require.NoError(t, err)
@@ -535,5 +535,28 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		require.DeepEqual(t, payload, got.Proto())
 		require.DeepEqual(t, uint64(123), payload.ExcessBlobGas)
 		require.DeepEqual(t, uint64(321), payload.BlobGasUsed)
+	})
+}
+
+func TestElectraBlockBodyCast(t *testing.T) {
+	t.Run("deneb cast fails", func(t *testing.T) {
+		pb := &eth.BeaconBlockBodyDeneb{}
+		i, err := NewBeaconBlockBody(pb)
+		require.NoError(t, err)
+		b, ok := i.(*BeaconBlockBody)
+		require.Equal(t, true, ok)
+		assert.Equal(t, version.Deneb, b.version)
+		_, err = interfaces.AsROBlockBodyElectra(b)
+		require.ErrorIs(t, err, interfaces.ErrInvalidCast)
+	})
+	t.Run("electra cast succeeds", func(t *testing.T) {
+		pb := &eth.BeaconBlockBodyElectra{}
+		i, err := NewBeaconBlockBody(pb)
+		require.NoError(t, err)
+		b, ok := i.(*BeaconBlockBody)
+		require.Equal(t, true, ok)
+		assert.Equal(t, version.Electra, b.version)
+		_, err = interfaces.AsROBlockBodyElectra(b)
+		require.NoError(t, err)
 	})
 }

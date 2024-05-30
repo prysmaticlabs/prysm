@@ -8,6 +8,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
+	"github.com/google/go-cmp/cmp"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
@@ -17,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/d4l3k/messagediff.v1"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 func RunExecutionPayloadTest(t *testing.T, config string) {
@@ -76,8 +77,7 @@ func RunExecutionPayloadTest(t *testing.T, config string) {
 				pbState, err := state_native.ProtobufBeaconStateBellatrix(gotState.ToProto())
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
-					diff, _ := messagediff.PrettyDiff(gotState.ToProto(), postBeaconState)
-					t.Log(diff)
+					t.Log(cmp.Diff(postBeaconState, pbState, protocmp.Transform()))
 					t.Fatal("Post state does not match expected")
 				}
 			} else if config.Valid {

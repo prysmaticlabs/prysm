@@ -18,6 +18,7 @@ func Test_getEmptyBlock(t *testing.T) {
 	config.BellatrixForkEpoch = 2
 	config.CapellaForkEpoch = 3
 	config.DenebForkEpoch = 4
+	config.ElectraForkEpoch = 5
 	params.OverrideBeaconConfig(config)
 
 	tests := []struct {
@@ -57,6 +58,15 @@ func Test_getEmptyBlock(t *testing.T) {
 			slot: primitives.Slot(params.BeaconConfig().DenebForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
 			want: func() interfaces.ReadOnlySignedBeaconBlock {
 				b, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockDeneb{Block: &ethpb.BeaconBlockDeneb{Body: &ethpb.BeaconBlockBodyDeneb{}}})
+				require.NoError(t, err)
+				return b
+			},
+		},
+		{
+			name: "electra",
+			slot: primitives.Slot(params.BeaconConfig().ElectraForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			want: func() interfaces.ReadOnlySignedBeaconBlock {
+				b, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockElectra{Block: &ethpb.BeaconBlockElectra{Body: &ethpb.BeaconBlockBodyElectra{}}})
 				require.NoError(t, err)
 				return b
 			},

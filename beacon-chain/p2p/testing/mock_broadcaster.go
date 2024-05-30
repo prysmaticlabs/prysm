@@ -13,7 +13,7 @@ import (
 type MockBroadcaster struct {
 	BroadcastCalled       atomic.Bool
 	BroadcastMessages     []proto.Message
-	BroadcastAttestations []*ethpb.Attestation
+	BroadcastAttestations []ethpb.Att
 	msgLock               sync.Mutex
 	attLock               sync.Mutex
 }
@@ -28,7 +28,7 @@ func (m *MockBroadcaster) Broadcast(_ context.Context, msg proto.Message) error 
 }
 
 // BroadcastAttestation records a broadcast occurred.
-func (m *MockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, a *ethpb.Attestation) error {
+func (m *MockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, a ethpb.Att) error {
 	m.BroadcastCalled.Store(true)
 	m.attLock.Lock()
 	defer m.attLock.Unlock()
