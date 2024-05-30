@@ -27,6 +27,10 @@ var (
 	ProcessSyncCommitteeUpdates          = altair.ProcessSyncCommitteeUpdates
 	AttestationsDelta                    = altair.AttestationsDelta
 	ProcessSyncAggregate                 = altair.ProcessSyncAggregate
+
+	// These need to be rewritten for electra.
+	ProcessDeposits                      = altair.ProcessDeposits
+	ProcessAttestationsNoVerifySignature = altair.ProcessAttestationsNoVerifySignature
 )
 
 // ProcessEpoch describes the per epoch operations that are performed on the beacon state.
@@ -47,7 +51,7 @@ var (
 //	    process_slashings_reset(state)
 //	    process_randao_mixes_reset(state)
 func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
-	_, span := trace.StartSpan(ctx, "electra.ProcessEpoch")
+	ctx, span := trace.StartSpan(ctx, "electra.ProcessEpoch")
 	defer span.End()
 
 	if state == nil || state.IsNil() {

@@ -89,6 +89,8 @@ func (s *Server) getBeaconStateV2(ctx context.Context, w http.ResponseWriter, id
 			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+	case version.Electra:
+		panic("implement me")
 	default:
 		httputil.HandleError(w, "Unsupported state version", http.StatusInternalServerError)
 		return

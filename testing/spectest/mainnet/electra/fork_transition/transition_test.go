@@ -7,6 +7,5 @@ import (
 )
 
 func TestMainnet_Electra_Transition(t *testing.T) {
-	t.Skip("TODO: Electra")
 	fork.RunForkTransitionTest(t, "mainnet")
 }

@@ -12,6 +12,7 @@ go_test(
         "pending_balance_updates_test.go",
         "pending_consolidations_test.go",
         "randao_mixes_reset_test.go",
+        "registry_updates_test.go",
         "rewards_and_penalties_test.go",
         "slashings_reset_test.go",
         "slashings_test.go",

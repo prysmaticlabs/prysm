@@ -475,6 +475,8 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
 			ParentBeaconBlockRoot: hexutil.Encode(parentRoot[:]),
 		}
+	case version.Electra:
+		panic("implement me")
 	default:
 		return write(w, flusher, "Payload version %s is not supported", version.String(headState.Version()))
 	}
