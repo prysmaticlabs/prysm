@@ -2,9 +2,13 @@ package p2p
 
 import (
 	"context"
+	"runtime"
+	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
+
+const backOffCounter = 50
 
 // filterNodes wraps an iterator such that Next only returns nodes for which
 // the 'check' function returns true. This custom implementation also
@@ -24,13 +28,21 @@ type filterIter struct {
 // Next looks up for the next valid node according to our
 // filter criteria.
 func (f *filterIter) Next() bool {
+	lookupCounter := 0
 	for f.Iterator.Next() {
+		// Do not excessively perform lookups if we constantly receive non-viable peers.
+		if lookupCounter > backOffCounter {
+			lookupCounter = 0
+			runtime.Gosched()
+			time.Sleep(pollingPeriod)
+		}
 		if f.Context.Err() != nil {
 			return false
 		}
 		if f.check(f.Node()) {
 			return true
 		}
+		lookupCounter++
 	}
 	return false
 }
