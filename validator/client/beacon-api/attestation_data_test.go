@@ -224,7 +224,7 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 	assert.ErrorContains(t, "some specific json response error", err)
 }
 
-func generateValidAttestation(slot uint64, committeeIndex uint64) structs.GetAttestationDataResponse {
+func generateValidAttestation(slot, committeeIndex uint64) structs.GetAttestationDataResponse {
 	return structs.GetAttestationDataResponse{
 		Data: &structs.AttestationData{
 			Slot:            strconv.FormatUint(slot, 10),

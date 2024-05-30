@@ -29,7 +29,7 @@ type waitForActivationClient struct {
 	lastRecvTime time.Time
 }
 
-func computeWaitElements(now time.Time, lastRecvTime time.Time) (time.Duration, time.Time) {
+func computeWaitElements(now, lastRecvTime time.Time) (time.Duration, time.Time) {
 	nextRecvTime := lastRecvTime.Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 
 	if lastRecvTime.IsZero() {
