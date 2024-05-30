@@ -305,10 +305,10 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := validatormock.NewMockBeaconChainClient(ctrl)
+	client := validatormock.NewMockChainClient(ctrl)
 	v := validator{
-		beaconClient: client,
-		genesisTime:  1,
+		chainClient: client,
+		genesisTime: 1,
 	}
 	client.EXPECT().GetChainHead(
 		gomock.Any(),
@@ -321,9 +321,9 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 func TestCanonicalHeadSlot_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := validatormock.NewMockBeaconChainClient(ctrl)
+	client := validatormock.NewMockChainClient(ctrl)
 	v := validator{
-		beaconClient: client,
+		chainClient: client,
 	}
 	client.EXPECT().GetChainHead(
 		gomock.Any(),
@@ -339,22 +339,22 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+	client := validatormock.NewMockValidatorClient(ctrl)
+	chainClient := validatormock.NewMockChainClient(ctrl)
+	prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
-		beaconClient:      beaconClient,
-		prysmBeaconClient: prysmBeaconClient,
+		validatorClient:  client,
+		km:               newMockKeymanager(t, kp),
+		chainClient:      chainClient,
+		prysmChainClient: prysmChainClient,
 	}
 
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock2.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-	validatorClient.EXPECT().WaitForActivation(
+	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
 			PublicKeys: [][]byte{kp.pub[:]},
@@ -364,7 +364,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	prysmBeaconClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
 		[]validatorType.Status{validatorType.Active},
@@ -465,7 +465,7 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 
 	v := validator{
 		validatorClient: client,
-		keyManager:      newMockKeymanager(t, randKeypair(t)),
+		km:              newMockKeymanager(t, randKeypair(t)),
 		duties: &ethpb.DutiesResponse{
 			CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 				{
@@ -505,7 +505,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 		},
 	}
 	v := validator{
-		keyManager:      newMockKeymanager(t, randKeypair(t)),
+		km:              newMockKeymanager(t, randKeypair(t)),
 		validatorClient: client,
 	}
 	client.EXPECT().GetDuties(
@@ -549,9 +549,9 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 		blacklistedPublicKeys[k] = true
 	}
 	v := validator{
-		keyManager:                     km,
-		validatorClient:                client,
-		eipImportBlacklistedPublicKeys: blacklistedPublicKeys,
+		km:                 km,
+		validatorClient:    client,
+		blacklistedPubkeys: blacklistedPublicKeys,
 	}
 
 	resp := &ethpb.DutiesResponse{
@@ -611,7 +611,7 @@ func TestUpdateDuties_AllValidatorsExited(t *testing.T) {
 		},
 	}
 	v := validator{
-		keyManager:      newMockKeymanager(t, randKeypair(t)),
+		km:              newMockKeymanager(t, randKeypair(t)),
 		validatorClient: client,
 	}
 	client.EXPECT().GetDuties(
@@ -654,7 +654,7 @@ func TestUpdateDuties_Distributed(t *testing.T) {
 	}
 
 	v := validator{
-		keyManager:      newMockKeymanager(t, keys),
+		km:              newMockKeymanager(t, keys),
 		validatorClient: client,
 		distributed:     true,
 	}
@@ -997,7 +997,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					}
 					v := &validator{
 						validatorClient: client,
-						keyManager:      km,
+						km:              km,
 						db:              db,
 					}
 					client.EXPECT().CheckDoppelGanger(
@@ -1038,7 +1038,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					}
 					v := &validator{
 						validatorClient: client,
-						keyManager:      km,
+						km:              km,
 						db:              db,
 					}
 					client.EXPECT().CheckDoppelGanger(
@@ -1077,7 +1077,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					}
 					v := &validator{
 						validatorClient: client,
-						keyManager:      km,
+						km:              km,
 						db:              db,
 					}
 					client.EXPECT().CheckDoppelGanger(
@@ -1122,7 +1122,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					}
 					v := &validator{
 						validatorClient: client,
-						keyManager:      km,
+						km:              km,
 						db:              db,
 					}
 					client.EXPECT().CheckDoppelGanger(
@@ -1150,7 +1150,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					}
 					v := &validator{
 						validatorClient: client,
-						keyManager:      km,
+						km:              km,
 						db:              db,
 					}
 					client.EXPECT().CheckDoppelGanger(
@@ -1366,7 +1366,7 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 				db:     db,
 				useWeb: false,
 				wallet: w,
-				Web3SignerConfig: &remoteweb3signer.SetupConfig{
+				web3SignerConfig: &remoteweb3signer.SetupConfig{
 					BaseEndpoint:       "http://localhost:8545",
 					ProvidedPublicKeys: keys,
 				},
@@ -1391,10 +1391,10 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 			require.NoError(t, err)
 			walletChan := make(chan *wallet.Wallet, 1)
 			v := validator{
-				db:                       db,
-				useWeb:                   true,
-				walletInitializedFeed:    &event.Feed{},
-				walletInitializedChannel: walletChan,
+				db:                    db,
+				useWeb:                true,
+				walletInitializedFeed: &event.Feed{},
+				walletInitializedChan: walletChan,
 			}
 			wait := make(chan struct{})
 			go func() {
@@ -1992,7 +1992,7 @@ func TestValidator_PushSettings(t *testing.T) {
 				pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
 				if tt.feeRecipientMap != nil {
-					feeRecipients, err := v.buildPrepProposerReqs(ctx, pubkeys)
+					feeRecipients, err := v.buildPrepProposerReqs(pubkeys)
 					require.NoError(t, err)
 					signedRegisterValidatorRequests := v.buildSignedRegReqs(ctx, pubkeys, km.Sign)
 					for _, recipient := range feeRecipients {
@@ -2148,7 +2148,7 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	}
 	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 0)
 	require.NoError(t, err)
-	actual, err := v.buildPrepProposerReqs(ctx, filteredKeys)
+	actual, err := v.buildPrepProposerReqs(filteredKeys)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expected, actual)
 }
@@ -2316,7 +2316,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	}
 	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 641)
 	require.NoError(t, err)
-	actual, err := v.buildPrepProposerReqs(ctx, filteredKeys)
+	actual, err := v.buildPrepProposerReqs(filteredKeys)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expected, actual)
 }
@@ -2589,4 +2589,36 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 	v.pubkeyToValidatorIndex[pubkey1] = primitives.ValidatorIndex(1)
 	actual := v.buildSignedRegReqs(ctx, pubkeys, signer)
 	assert.Equal(t, 0, len(actual))
+}
+
+func TestValidator_Host(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	client := validatormock.NewMockValidatorClient(ctrl)
+	v := validator{
+		validatorClient: client,
+	}
+
+	client.EXPECT().Host().Return("host").Times(1)
+	require.Equal(t, "host", v.Host())
+}
+
+func TestValidator_ChangeHost(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	client := validatormock.NewMockValidatorClient(ctrl)
+	v := validator{
+		validatorClient:  client,
+		beaconNodeHosts:  []string{"http://localhost:8080", "http://localhost:8081"},
+		currentHostIndex: 0,
+	}
+
+	client.EXPECT().SetHost(v.beaconNodeHosts[1])
+	client.EXPECT().SetHost(v.beaconNodeHosts[0])
+	v.ChangeHost()
+	assert.Equal(t, uint64(1), v.currentHostIndex)
+	v.ChangeHost()
+	assert.Equal(t, uint64(0), v.currentHostIndex)
 }

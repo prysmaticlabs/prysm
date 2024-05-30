@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/client"
 	"github.com/prysmaticlabs/prysm/v5/api/client/event"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -305,6 +306,28 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 				return
 			}
 			isHealthy := tracker.CheckHealth(ctx)
+			if !isHealthy && features.Get().EnableBeaconRESTApi {
+				v.ChangeHost()
+				if !tracker.CheckHealth(ctx) {
+					continue // Skip to the next ticker
+				}
+
+				km, err := v.Keymanager()
+				if err != nil {
+					log.WithError(err).Error("Could not get keymanager")
+					return
+				}
+				slot, err := v.CanonicalHeadSlot(ctx)
+				if err != nil {
+					log.WithError(err).Error("Could not get canonical head slot")
+					return
+				}
+				deadline := time.Now().Add(5 * time.Minute) // Should consider changing to a constant
+				if err := v.PushProposerSettings(ctx, km, slot, deadline); err != nil {
+					log.WithError(err).Warn("Failed to update proposer settings")
+				}
+			}
+
 			// in case of node returning healthy but event stream died
 			if isHealthy && !v.EventStreamIsRunning() {
 				log.Info("Event stream reconnecting...")

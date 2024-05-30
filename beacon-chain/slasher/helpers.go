@@ -10,7 +10,6 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -130,14 +129,14 @@ func validateBlockHeaderIntegrity(header *ethpb.SignedBeaconBlockHeader) bool {
 	return true
 }
 
-func logAttesterSlashing(slashing interfaces.AttesterSlashing) {
-	indices := slice.IntersectionUint64(slashing.GetFirstAttestation().GetAttestingIndices(), slashing.GetSecondAttestation().GetAttestingIndices())
+func logAttesterSlashing(slashing ethpb.AttSlashing) {
+	indices := slice.IntersectionUint64(slashing.FirstAttestation().GetAttestingIndices(), slashing.SecondAttestation().GetAttestingIndices())
 	log.WithFields(logrus.Fields{
 		"validatorIndex":  indices,
-		"prevSourceEpoch": slashing.GetFirstAttestation().GetData().Source.Epoch,
-		"prevTargetEpoch": slashing.GetFirstAttestation().GetData().Target.Epoch,
-		"sourceEpoch":     slashing.GetSecondAttestation().GetData().Source.Epoch,
-		"targetEpoch":     slashing.GetSecondAttestation().GetData().Target.Epoch,
+		"prevSourceEpoch": slashing.FirstAttestation().GetData().Source.Epoch,
+		"prevTargetEpoch": slashing.FirstAttestation().GetData().Target.Epoch,
+		"sourceEpoch":     slashing.SecondAttestation().GetData().Source.Epoch,
+		"targetEpoch":     slashing.SecondAttestation().GetData().Target.Epoch,
 	}).Info("Attester slashing detected")
 }
 

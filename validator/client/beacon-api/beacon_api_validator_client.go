@@ -23,7 +23,7 @@ type beaconApiValidatorClient struct {
 	stateValidatorsProvider StateValidatorsProvider
 	jsonRestHandler         JsonRestHandler
 	beaconBlockConverter    BeaconBlockConverter
-	prysmBeaconChainCLient  iface.PrysmBeaconChainClient
+	prysmChainClient        iface.PrysmChainClient
 	isEventStreamRunning    bool
 }
 
@@ -34,7 +34,7 @@ func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...Valida
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler:         jsonRestHandler,
 		beaconBlockConverter:    beaconApiBeaconBlockConverter{},
-		prysmBeaconChainCLient: prysmBeaconChainClient{
+		prysmChainClient: prysmChainClient{
 			nodeClient:      &beaconApiNodeClient{jsonRestHandler: jsonRestHandler},
 			jsonRestHandler: jsonRestHandler,
 		},
@@ -229,4 +229,12 @@ func wrapInMetrics[Resp any](action string, f func() (Resp, error)) (Resp, error
 		failedHTTPActionCount.WithLabelValues(action).Inc()
 	}
 	return resp, err
+}
+
+func (c *beaconApiValidatorClient) Host() string {
+	return c.jsonRestHandler.Host()
+}
+
+func (c *beaconApiValidatorClient) SetHost(host string) {
+	c.jsonRestHandler.SetHost(host)
 }
