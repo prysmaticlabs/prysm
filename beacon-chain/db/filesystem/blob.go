@@ -8,6 +8,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -70,7 +71,10 @@ func WithSaveFsync(fsync bool) BlobStorageOption {
 // attempt to hold a file lock to guarantee exclusive control of the blob storage directory, so this should only be
 // initialized once per beacon node.
 func NewBlobStorage(opts ...BlobStorageOption) (*BlobStorage, error) {
-	b := &BlobStorage{}
+	b := &BlobStorage{
+		DataColumnNotifier: newDataColumnNotifier(),
+	}
+
 	for _, o := range opts {
 		if err := o(b); err != nil {
 			return nil, errors.Wrap(err, "failed to create blob storage")
@@ -92,13 +96,84 @@ func NewBlobStorage(opts ...BlobStorageOption) (*BlobStorage, error) {
 	return b, nil
 }
 
+// dataColumnNotifier is a thread-safe map of notifiers for notifying when a data column is saved into the dababase.
+type dataColumnNotifier struct {
+	mut       sync.Mutex
+	notifiers map[[fieldparams.RootLength]byte]chan uint64
+	seenIndex map[[fieldparams.RootLength]byte][fieldparams.NumberOfColumns]bool
+}
+
+// notifyIndex must be called when a data column is saved into the database.
+// It will send a notification to the channel for the given root and index.
+func (dcn *dataColumnNotifier) notifyRootIndex(root [fieldparams.RootLength]byte, idx uint64) {
+	dcn.mut.Lock()
+
+	// Retrieve the channel for the given root.
+	channel, ok := dcn.notifiers[root]
+
+	// If no notifiers exist, it means nobody is listening for this root/index pair.
+	// Exit early.
+	if !ok {
+		dcn.mut.Unlock()
+		return
+	}
+
+	seen, ok := dcn.seenIndex[root]
+	if ok && seen[idx] {
+		// If this root/index pair has already been seen, do not notify again.
+		dcn.mut.Unlock()
+		return
+	}
+
+	// Mark the index as seen.
+	seen[idx] = true
+	dcn.seenIndex[root] = seen
+
+	dcn.mut.Unlock()
+
+	// Send the index to the channel.
+	channel <- idx
+}
+
+// ForRoot returns a channel for notifying when a data colum is saved for a given root.
+// When finished, the caller must call Delete to clean up the channel, else it will leak.
+func (dcn *dataColumnNotifier) ForRoot(root [fieldparams.RootLength]byte) chan uint64 {
+	dcn.mut.Lock()
+	defer dcn.mut.Unlock()
+
+	channel, ok := dcn.notifiers[root]
+	if !ok {
+		// If the channel does not exist, create a new one.
+		channel = make(chan uint64, fieldparams.NumberOfColumns)
+		dcn.notifiers[root] = channel
+	}
+
+	return channel
+}
+
+func (dcn *dataColumnNotifier) Delete(root [fieldparams.RootLength]byte) {
+	dcn.mut.Lock()
+	defer dcn.mut.Unlock()
+
+	delete(dcn.seenIndex, root)
+	delete(dcn.notifiers, root)
+}
+
+func newDataColumnNotifier() *dataColumnNotifier {
+	return &dataColumnNotifier{
+		notifiers: make(map[[fieldparams.RootLength]byte]chan uint64),
+		seenIndex: make(map[[fieldparams.RootLength]byte][fieldparams.NumberOfColumns]bool),
+	}
+}
+
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	base            string
-	retentionEpochs primitives.Epoch
-	fsync           bool
-	fs              afero.Fs
-	pruner          *blobPruner
+	base               string
+	retentionEpochs    primitives.Epoch
+	fsync              bool
+	fs                 afero.Fs
+	pruner             *blobPruner
+	DataColumnNotifier *dataColumnNotifier
 }
 
 // WarmCache runs the prune routine with an expiration of slot of 0, so nothing will be pruned, but the pruner's cache
@@ -312,6 +387,10 @@ func (bs *BlobStorage) SaveDataColumn(column blocks.VerifiedRODataColumn) error 
 		return errors.Wrap(err, "failed to rename partial file to final name")
 	}
 	partialMoved = true
+
+	// Notify the data column notifier that a new data column has been saved.
+	bs.DataColumnNotifier.notifyRootIndex(column.BlockRoot(), column.ColumnIndex)
+
 	// TODO: Use new metrics for data columns
 	blobsWrittenCounter.Inc()
 	blobSaveLatency.Observe(float64(time.Since(startTime).Milliseconds()))
