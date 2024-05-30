@@ -1366,8 +1366,7 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 			newDir := filepath.Join(t.TempDir(), "new")
 			require.NoError(t, os.MkdirAll(newDir, 0700))
 			set.String(flags.WalletDirFlag.Name, newDir, "")
-			w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-			require.NoError(t, err)
+			w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 			v := validator{
 				db:     db,
 				useWeb: false,

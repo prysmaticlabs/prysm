@@ -30,10 +30,7 @@ func walletWithKeymanager(c *cli.Context) (*wallet.Wallet, keymanager.IKeymanage
 }
 
 func walletWithWeb3SignerKeymanager(c *cli.Context, config *remote_web3signer.SetupConfig) (*wallet.Wallet, keymanager.IKeymanager, error) {
-	w, err := wallet.NewWalletForWeb3Signer(c)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "unable to create new wallet for remote signer")
-	}
+	w := wallet.NewWalletForWeb3Signer(c)
 	km, err := w.InitializeKeymanager(c.Context, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
 	if err != nil {
 		return nil, nil, err

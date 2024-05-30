@@ -352,8 +352,7 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	newDir := filepath.Join(t.TempDir(), "new")
 	require.NoError(t, os.MkdirAll(newDir, 0700))
 	set.String(flags.WalletDirFlag.Name, newDir, "")
-	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-	require.NoError(t, err)
+	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remoteweb3signer.SetupConfig{
@@ -636,8 +635,7 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	newDir := filepath.Join(t.TempDir(), "new")
 	require.NoError(t, os.MkdirAll(newDir, 0700))
 	set.String(flags.WalletDirFlag.Name, newDir, "")
-	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-	require.NoError(t, err)
+	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false,
@@ -1333,8 +1331,7 @@ func TestServer_ListRemoteKeys(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	newDir := filepath.Join(t.TempDir(), "new")
 	set.String(flags.WalletDirFlag.Name, newDir, "")
-	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-	require.NoError(t, err)
+	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	config := &remoteweb3signer.SetupConfig{
@@ -1380,8 +1377,7 @@ func TestServer_ImportRemoteKeys(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	newDir := filepath.Join(t.TempDir(), "new")
 	set.String(flags.WalletDirFlag.Name, newDir, "")
-	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-	require.NoError(t, err)
+	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	config := &remoteweb3signer.SetupConfig{
@@ -1442,8 +1438,7 @@ func TestServer_DeleteRemoteKeys(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	newDir := filepath.Join(t.TempDir(), "new")
 	set.String(flags.WalletDirFlag.Name, newDir, "")
-	w, err := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-	require.NoError(t, err)
+	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	pkey := "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"

@@ -254,22 +254,15 @@ func OpenOrCreateNewWallet(cliCtx *cli.Context) (*Wallet, error) {
 }
 
 // NewWalletForWeb3Signer returns a new wallet for web3 signer which is temporary and not stored locally.
-func NewWalletForWeb3Signer(cliCtx *cli.Context) (*Wallet, error) {
+func NewWalletForWeb3Signer(cliCtx *cli.Context) *Wallet {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	exists, err := Exists(walletDir)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to open wallet dir")
-	}
-	if exists {
-		return nil, fmt.Errorf("a valid prysm wallet already exists at %s", walletDir)
-	}
 	// wallet is just a temporary wallet for web3 signer used to call initialize keymanager.
 	return &Wallet{
-		walletDir:      walletDir,
+		walletDir:      walletDir, // it's ok if there's an existing wallet, we just need some metadata to know where
 		accountsPath:   "",
 		keymanagerKind: keymanager.Web3Signer,
 		walletPassword: "",
-	}, nil
+	}
 }
 
 // OpenWallet instantiates a wallet from a specified path. It checks the

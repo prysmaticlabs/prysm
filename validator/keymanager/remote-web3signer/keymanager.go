@@ -54,7 +54,8 @@ type SetupConfig struct {
 type Keymanager struct {
 	client                internal.HttpSignerClient
 	genesisValidatorsRoot []byte
-	providedPublicKeys    [][48]byte
+	providedPublicKeys    [][48]byte // source of truth flag loaded + file loaded + api loaded keys
+	flagLoadedPublicKeys  [][48]byte // stores what was provided from flag
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
 	keyFilePath           string
@@ -120,6 +121,9 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		}
 		flagLoadedKeys[key] = bytesutil.ToBytes48(decodedKey)
 	}
+	if len(flagLoadedKeys) != 0 {
+		km.flagLoadedPublicKeys = maps.Values(flagLoadedKeys)
+	}
 
 	// load from file
 	if keyFileExists {
@@ -151,11 +155,11 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 	}
 	f, err := os.Open(filepath.Clean(km.keyFilePath))
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not open web3signer public key file")
+		return nil, nil, errors.Wrap(err, "could not open remote signer public key file")
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			log.WithError(err).Error("could not close web3signer public key file")
+			log.WithError(err).Error("could not close remote signer public key file")
 		}
 	}()
 	// Use a map to track and skip duplicate lines
@@ -170,7 +174,7 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 			continue
 		}
 		if len(line) != pubkeyLength {
-			log.Warnf("web3signer key file: invalid public key line: %s", line)
+			log.Fatalf("remote signer key file: invalid public key: %s \n", line)
 			continue
 		}
 		if _, found := seenKeys[line]; !found {
@@ -186,10 +190,10 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 	}
 	// Check for scanning errors
 	if err := scanner.Err(); err != nil {
-		return nil, nil, errors.Wrap(err, "could not scan web3signer public key file")
+		return nil, nil, errors.Wrap(err, "could not scan remote signer public key file")
 	}
 	if len(keys) == 0 {
-		log.Warn("web3signer key file: no valid public keys found")
+		log.Warn("remote signer key file: no valid public keys found")
 	}
 	return keys, seenKeys, nil
 }
@@ -233,13 +237,27 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 	}
 	for {
 		select {
-		case <-watcher.Events:
+		case e, ok := <-watcher.Events:
+			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
+				return
+			}
+			if e.Op.String() == "REMOVE" {
+				log.Fatalln("remote signer keyfile was removed! Restart the validator client with the appropriate remote signer file")
+			}
+			log.Infof("remote signer keyfile %s event triggered \n", e.Name)
 			keys, _, err := km.readKeyFile()
 			if err != nil {
-				log.WithError(err).Error("Could not read key file")
+				log.WithError(err).Fatalln("Could not read key file")
+			}
+			if len(keys) == 0 {
+				log.Warnln("remote signer keyfile no longer has keys, defaulting to flag provided keys")
+				keys = km.flagLoadedPublicKeys
 			}
 			km.updatePublicKeys(keys)
-		case err := <-watcher.Errors:
+		case err, ok := <-watcher.Errors:
+			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
+				return
+			}
 			log.WithError(err).Errorf("Could not watch for file changes for: %s", km.keyFilePath)
 		case <-ctx.Done():
 			return

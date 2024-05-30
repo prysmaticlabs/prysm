@@ -259,11 +259,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 	if !isInteropNumValidatorsSet {
 		// Custom Check For Web3Signer
 		if isWeb3SignerURLFlagSet {
-			w, err := wallet.NewWalletForWeb3Signer(cliCtx)
-			if err != nil {
-				return errors.Wrap(err, "unable to create new wallet for remote signer")
-			}
-			c.wallet = w
+			c.wallet = wallet.NewWalletForWeb3Signer(cliCtx)
 		} else {
 			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 				return nil, wallet.ErrNoWalletFound
@@ -306,11 +302,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Router) error {
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		// Custom Check For Web3Signer
-		w, err := wallet.NewWalletForWeb3Signer(cliCtx)
-		if err != nil {
-			return errors.Wrap(err, "unable to use wallet directory for remote signer")
-		}
-		c.wallet = w
+		c.wallet = wallet.NewWalletForWeb3Signer(cliCtx)
 	} else {
 		// Read the wallet password file from the cli context.
 		if err := setWalletPasswordFilePath(cliCtx); err != nil {
