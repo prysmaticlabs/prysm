@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
@@ -133,13 +132,7 @@ func (s *Service) listenForNewNodes() {
 		}
 		// Restrict dials if limit is applied.
 		if flags.MaxDialIsActive() {
-			var err error
-			wantedICount := math.Min(uint64(wantedCount), uint64(flags.Get().MaxConcurrentDials))
-			wantedCount, err = math.Int(wantedICount)
-			if err != nil {
-				log.WithError(err).Error("Could not get wanted count")
-				continue
-			}
+			wantedCount = min(wantedCount, flags.Get().MaxConcurrentDials)
 		}
 		wantedNodes := enode.ReadNodes(iterator, wantedCount)
 		wg := new(sync.WaitGroup)

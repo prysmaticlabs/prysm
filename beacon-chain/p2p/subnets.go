@@ -90,13 +90,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		nodeCount := int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch)
 		// Restrict dials if limit is applied.
 		if flags.MaxDialIsActive() {
-			var err error
-			wantedICount := mathutil.Min(uint64(nodeCount), uint64(flags.Get().MaxConcurrentDials))
-			nodeCount, err = mathutil.Int(wantedICount)
-			if err != nil {
-				log.WithError(err).Error("Could not get wanted count")
-				continue
-			}
+			nodeCount = min(nodeCount, flags.Get().MaxConcurrentDials)
 		}
 		nodes := enode.ReadNodes(iterator, nodeCount)
 		for _, node := range nodes {
