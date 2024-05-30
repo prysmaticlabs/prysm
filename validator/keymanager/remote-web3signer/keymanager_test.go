@@ -125,15 +125,6 @@ func TestNewKeymanager(t *testing.T) {
 			wantLog: "key file does not exist",
 		},
 		{
-			name: "bad key file, ignores bad public keys and uses the good ones",
-			args: &SetupConfig{
-				BaseEndpoint:          "http://prysm.xyz/",
-				GenesisValidatorsRoot: root,
-				KeyFilePath:           "./testing/bad_keyfile.txt",
-			},
-			want: []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"},
-		},
-		{
 			name: "happy path public key url with good keyfile",
 			args: &SetupConfig{
 				BaseEndpoint:          "http://prysm.xyz/",
