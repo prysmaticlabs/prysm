@@ -151,6 +151,7 @@ func (dcn *dataColumnNotifier) ForRoot(root [fieldparams.RootLength]byte) chan u
 	return channel
 }
 
+// Delete removes the channel for the given root.
 func (dcn *dataColumnNotifier) Delete(root [fieldparams.RootLength]byte) {
 	dcn.mut.Lock()
 	defer dcn.mut.Unlock()
