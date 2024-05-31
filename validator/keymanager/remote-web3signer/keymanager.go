@@ -177,7 +177,10 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 			line = "0x" + line
 		}
 		if len(line) != pubkeyLength {
-			log.WithField("key", line).Fatal("Invalid public key in remote signer key file")
+			log.WithFields(log.Fields{
+				"filepath": km.keyFilePath,
+				"key":      line,
+			}).Fatal("Invalid public key in remote signer key file")
 			continue
 		}
 		if _, found := seenKeys[line]; !found {
@@ -235,7 +238,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 		}
 	}()
 	if err := watcher.Add(km.keyFilePath); err != nil {
-		log.WithError(err).WithField("file path", km.keyFilePath).Errorf("Could not add file to file watcher")
+		log.WithError(err).WithField("filepath", km.keyFilePath).Errorf("Could not add file to file watcher")
 		return
 	}
 	for {
@@ -270,7 +273,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
 				return
 			}
-			log.WithError(err).WithField("file path", km.keyFilePath).Error("Could not watch for file changes")
+			log.WithError(err).WithField("filepath", km.keyFilePath).Error("Could not watch for file changes")
 		case <-ctx.Done():
 			return
 		}
