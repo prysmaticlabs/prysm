@@ -741,6 +741,10 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 			}
 		}
 
+		if duty.PtcSlot == slot {
+			roles = append(roles, iface.RolePayloadTimelinessCommittee)
+		}
+
 		if len(roles) == 0 {
 			roles = append(roles, iface.RoleUnknown)
 		}
