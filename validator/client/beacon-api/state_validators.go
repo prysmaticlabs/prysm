@@ -14,16 +14,16 @@ import (
 )
 
 type StateValidatorsProvider interface {
-	GetStateValidators(context.Context, []string, []primitives.ValidatorIndex, []string) (*structs.GetValidatorsResponse, error)
-	GetStateValidatorsForSlot(context.Context, primitives.Slot, []string, []primitives.ValidatorIndex, []string) (*structs.GetValidatorsResponse, error)
-	GetStateValidatorsForHead(context.Context, []string, []primitives.ValidatorIndex, []string) (*structs.GetValidatorsResponse, error)
+	StateValidators(context.Context, []string, []primitives.ValidatorIndex, []string) (*structs.GetValidatorsResponse, error)
+	StateValidatorsForSlot(context.Context, primitives.Slot, []string, []primitives.ValidatorIndex, []string) (*structs.GetValidatorsResponse, error)
+	StateValidatorsForHead(context.Context, []string, []primitives.ValidatorIndex, []string) (*structs.GetValidatorsResponse, error)
 }
 
 type beaconApiStateValidatorsProvider struct {
 	jsonRestHandler JsonRestHandler
 }
 
-func (c beaconApiStateValidatorsProvider) GetStateValidators(
+func (c beaconApiStateValidatorsProvider) StateValidators(
 	ctx context.Context,
 	stringPubkeys []string,
 	indexes []primitives.ValidatorIndex,
@@ -33,7 +33,7 @@ func (c beaconApiStateValidatorsProvider) GetStateValidators(
 	return c.getStateValidatorsHelper(ctx, "/eth/v1/beacon/states/head/validators", append(stringIndices, stringPubkeys...), statuses)
 }
 
-func (c beaconApiStateValidatorsProvider) GetStateValidatorsForSlot(
+func (c beaconApiStateValidatorsProvider) StateValidatorsForSlot(
 	ctx context.Context,
 	slot primitives.Slot,
 	stringPubkeys []string,
@@ -41,11 +41,10 @@ func (c beaconApiStateValidatorsProvider) GetStateValidatorsForSlot(
 	statuses []string,
 ) (*structs.GetValidatorsResponse, error) {
 	stringIndices := convertValidatorIndicesToStrings(indices)
-	url := fmt.Sprintf("/eth/v1/beacon/states/%d/validators", slot)
-	return c.getStateValidatorsHelper(ctx, url, append(stringIndices, stringPubkeys...), statuses)
+	return c.getStateValidatorsHelper(ctx, fmt.Sprintf("/eth/v1/beacon/states/%d/validators", slot), append(stringIndices, stringPubkeys...), statuses)
 }
 
-func (c beaconApiStateValidatorsProvider) GetStateValidatorsForHead(
+func (c beaconApiStateValidatorsProvider) StateValidatorsForHead(
 	ctx context.Context,
 	stringPubkeys []string,
 	indices []primitives.ValidatorIndex,

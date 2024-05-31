@@ -55,7 +55,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 
 	var slotSig []byte
 	if v.distributed {
-		slotSig, err = v.getAttSelection(attSelectionKey{slot: slot, index: duty.ValidatorIndex})
+		slotSig, err = v.attSelection(attSelectionKey{slot: slot, index: duty.ValidatorIndex})
 		if err != nil {
 			log.WithError(err).Error("Could not find aggregated selection proof")
 			if v.emitAccountMetrics {

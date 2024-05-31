@@ -738,7 +738,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		Return(&eth.DomainResponse{SignatureDomain: make([]byte, common.HashLength)}, nil /*err*/)
 
 	mockNodeClient.EXPECT().
-		GetGenesis(gomock.Any(), gomock.Any()).
+		Genesis(gomock.Any(), gomock.Any()).
 		Times(3).
 		Return(&eth.Genesis{GenesisTime: genesisTime}, nil)
 
@@ -841,7 +841,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			resp := &SetVoluntaryExitResponse{}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
 			if tt.w.epoch == 0 {
-				genesisResponse, err := s.nodeClient.GetGenesis(ctx, &emptypb.Empty{})
+				genesisResponse, err := s.nodeClient.Genesis(ctx, &emptypb.Empty{})
 				require.NoError(t, err)
 				tt.w.epoch, err = client.CurrentEpoch(genesisResponse.GenesisTime)
 				require.NoError(t, err)
@@ -1102,7 +1102,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 				}
 
 				if tt.beaconReturn != nil {
-					beaconClient.EXPECT().GetFeeRecipientByPubKey(
+					beaconClient.EXPECT().FeeRecipientByPubKey(
 						gomock.Any(),
 						gomock.Any(),
 					).Return(tt.beaconReturn.resp, tt.beaconReturn.error)

@@ -146,7 +146,7 @@ func TestGetValidatorCount(t *testing.T) {
 				jsonRestHandler: jsonRestHandler,
 			}
 
-			countResponse, err := client.GetValidatorCount(ctx, "head", []validator.Status{validator.Active})
+			countResponse, err := client.ValidatorCount(ctx, "head", []validator.Status{validator.Active})
 
 			if len(test.expectedResponse) == 0 {
 				require.ErrorContains(t, test.expectedError, err)

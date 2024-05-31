@@ -37,7 +37,7 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(
 		return nil, errors.New("validator is not an aggregator")
 	}
 
-	attestationData, err := c.getAttestationData(ctx, in.Slot, in.CommitteeIndex)
+	attestationData, err := c.attestationData(ctx, in.Slot, in.CommitteeIndex)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get attestation data for slot=%d and committee_index=%d", in.Slot, in.CommitteeIndex)
 	}
@@ -47,7 +47,7 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(
 		return nil, errors.Wrap(err, "failed to calculate attestation data root")
 	}
 
-	aggregateAttestationResponse, err := c.getAggregateAttestation(ctx, in.Slot, attestationDataRoot[:])
+	aggregateAttestationResponse, err := c.aggregateAttestation(ctx, in.Slot, attestationDataRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(
 	}, nil
 }
 
-func (c *beaconApiValidatorClient) getAggregateAttestation(
+func (c *beaconApiValidatorClient) aggregateAttestation(
 	ctx context.Context,
 	slot primitives.Slot,
 	attestationDataRoot []byte,
