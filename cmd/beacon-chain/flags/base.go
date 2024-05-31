@@ -174,6 +174,11 @@ var (
 		Usage: "The factor by which blob batch limit may increase on burst.",
 		Value: 2,
 	}
+	// DisableDebugRPCEndpoints disables the debug Beacon API namespace.
+	DisableDebugRPCEndpoints = &cli.BoolFlag{
+		Name:  "disable-debug-rpc-endpoints",
+		Usage: "Disables the debug Beacon API namespace.",
+	}
 	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation/sync subnets or not.
 	SubscribeToAllSubnets = &cli.BoolFlag{
 		Name:  "subscribe-all-subnets",

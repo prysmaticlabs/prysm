@@ -30,6 +30,7 @@ type endpoint struct {
 }
 
 func (s *Service) endpoints(
+	enableDebug bool,
 	blocker lookup.Blocker,
 	stater lookup.Stater,
 	rewardFetcher rewards.BlockRewardsFetcher,
@@ -50,7 +51,9 @@ func (s *Service) endpoints(
 	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch, stater)...)
 	endpoints = append(endpoints, s.prysmNodeEndpoints()...)
 	endpoints = append(endpoints, s.prysmValidatorEndpoints(coreService, stater)...)
-	endpoints = append(endpoints, s.debugEndpoints(stater)...)
+	if enableDebug {
+		endpoints = append(endpoints, s.debugEndpoints(stater)...)
+	}
 	return endpoints
 }
 
