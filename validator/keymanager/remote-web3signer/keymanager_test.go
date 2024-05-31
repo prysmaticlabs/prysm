@@ -95,7 +95,7 @@ func TestNewKeymanager(t *testing.T) {
 				GenesisValidatorsRoot: root,
 				ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "http://prysm.xyz/"},
 			},
-			wantErr: "could not decode public key for web3signer",
+			wantErr: "could not decode public key for remote signer",
 		},
 		{
 			name: "path provided public keys, some bad hex for key",
@@ -122,7 +122,7 @@ func TestNewKeymanager(t *testing.T) {
 				GenesisValidatorsRoot: root,
 				KeyFilePath:           "./testing/invalid.txt",
 			},
-			wantLog: "key file does not exist",
+			wantLog: "Key file does not exist",
 		},
 		{
 			name: "happy path public key url with good keyfile",

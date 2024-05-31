@@ -88,7 +88,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		// Check if the directory and file exists, if not create it
 		keyFileExists, err = file.Exists(km.keyFilePath, file.Regular)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not check if web3signer persistent keys exists in %s", km.keyFilePath)
+			return nil, errors.Wrapf(err, "could not check if remote signer persistent keys exists in %s", km.keyFilePath)
 		}
 		if !keyFileExists {
 			log.WithField("path", km.keyFilePath).Warn("Key file does not exist. please create a new one. the file should contain public keys in hex format 1 on each line.")
@@ -115,7 +115,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	for _, key := range ppk {
 		decodedKey, err := hexutil.Decode(key)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not decode public key for web3signer")
+			return nil, errors.Wrap(err, "could not decode public key for remote signer")
 		}
 		if len(decodedKey) != fieldparams.BLSPubkeyLength {
 			return nil, fmt.Errorf("invalid public key length: expected %d, got %d", fieldparams.BLSPubkeyLength, len(decodedKey))
