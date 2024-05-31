@@ -28,7 +28,7 @@ func TestSubmitSyncCommitteeMessage_ValidatorDutiesRequestFailure(t *testing.T) 
 			validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{}}
 			defer finish()
 
-			m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
+			m.validatorClient.EXPECT().SyncMessageBlockRoot(
 				gomock.Any(), // ctx
 				&emptypb.Empty{},
 			).Return(&ethpb.SyncMessageBlockRootResponse{
@@ -60,7 +60,7 @@ func TestSubmitSyncCommitteeMessage_BadDomainData(t *testing.T) {
 			}}
 
 			r := []byte{'a'}
-			m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
+			m.validatorClient.EXPECT().SyncMessageBlockRoot(
 				gomock.Any(), // ctx
 				&emptypb.Empty{},
 			).Return(&ethpb.SyncMessageBlockRootResponse{
@@ -96,7 +96,7 @@ func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
 			}}
 
 			r := []byte{'a'}
-			m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
+			m.validatorClient.EXPECT().SyncMessageBlockRoot(
 				gomock.Any(), // ctx
 				&emptypb.Empty{},
 			).Return(&ethpb.SyncMessageBlockRootResponse{
@@ -141,7 +141,7 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 			}}
 
 			r := []byte{'a'}
-			m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
+			m.validatorClient.EXPECT().SyncMessageBlockRoot(
 				gomock.Any(), // ctx
 				&emptypb.Empty{},
 			).Return(&ethpb.SyncMessageBlockRootResponse{
@@ -191,7 +191,7 @@ func TestSubmitSignedContributionAndProof_ValidatorDutiesRequestFailure(t *testi
 	}
 }
 
-func TestSubmitSignedContributionAndProof_GetSyncSubcommitteeIndexFailure(t *testing.T) {
+func TestSubmitSignedContributionAndProof_SyncSubcommitteeIndexFailure(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
 		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
 			hook := logTest.NewGlobal()
@@ -209,7 +209,7 @@ func TestSubmitSignedContributionAndProof_GetSyncSubcommitteeIndexFailure(t *tes
 
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					Slot:      1,
@@ -241,7 +241,7 @@ func TestSubmitSignedContributionAndProof_NothingToDo(t *testing.T) {
 
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					Slot:      1,
@@ -273,7 +273,7 @@ func TestSubmitSignedContributionAndProof_BadDomain(t *testing.T) {
 
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					Slot:      1,
@@ -319,7 +319,7 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					Slot:      1,
@@ -334,7 +334,7 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 					SignatureDomain: make([]byte, 32),
 				}, nil)
 
-			m.validatorClient.EXPECT().GetSyncCommitteeContribution(
+			m.validatorClient.EXPECT().SyncCommitteeContribution(
 				gomock.Any(), // ctx
 				&ethpb.SyncCommitteeContributionRequest{
 					Slot:      1,
@@ -373,7 +373,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					Slot:      1,
@@ -390,7 +390,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 
 			aggBits := bitfield.NewBitvector128()
 			aggBits.SetBitAt(0, true)
-			m.validatorClient.EXPECT().GetSyncCommitteeContribution(
+			m.validatorClient.EXPECT().SyncCommitteeContribution(
 				gomock.Any(), // ctx
 				&ethpb.SyncCommitteeContributionRequest{
 					Slot:      1,
@@ -455,7 +455,7 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					Slot:      1,
@@ -472,7 +472,7 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 
 			aggBits := bitfield.NewBitvector128()
 			aggBits.SetBitAt(0, true)
-			m.validatorClient.EXPECT().GetSyncCommitteeContribution(
+			m.validatorClient.EXPECT().SyncCommitteeContribution(
 				gomock.Any(), // ctx
 				&ethpb.SyncCommitteeContributionRequest{
 					Slot:      1,

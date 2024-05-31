@@ -133,7 +133,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 		keystores[i] = k
 	}
 	if req.SlashingProtection != "" {
-		if s.valDB == nil || s.valDB.ImportStandardProtectionJSON(ctx, bytes.NewBufferString(req.SlashingProtection)) != nil {
+		if s.db == nil || s.db.ImportStandardProtectionJSON(ctx, bytes.NewBufferString(req.SlashingProtection)) != nil {
 			statuses := make([]*keymanager.KeyStatus, len(req.Keystores))
 			for i := 0; i < len(req.Keystores); i++ {
 				statuses[i] = &keymanager.KeyStatus{
@@ -285,11 +285,11 @@ func (s *Server) transformDeletedKeysStatuses(
 // Gets a map of all public keys in the database, useful for O(1) lookups.
 func (s *Server) publicKeysInDB(ctx context.Context) (map[[fieldparams.BLSPubkeyLength]byte]bool, error) {
 	pubKeysInDB := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
-	attestedPublicKeys, err := s.valDB.AttestedPublicKeys(ctx)
+	attestedPublicKeys, err := s.db.AttestedPublicKeys(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get attested public keys from DB: %v", err)
 	}
-	proposedPublicKeys, err := s.valDB.ProposedPublicKeys(ctx)
+	proposedPublicKeys, err := s.db.ProposedPublicKeys(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposed public keys from DB: %v", err)
 	}
@@ -313,7 +313,7 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 			filteredKeys = append(filteredKeys, pk)
 		}
 	}
-	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, filteredKeys...)
+	return slashingprotection.ExportStandardProtectionJSON(ctx, s.db, filteredKeys...)
 }
 
 // SetVoluntaryExit creates a signed voluntary exit message and returns a VoluntaryExit object.
@@ -347,7 +347,7 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	epoch := primitives.Epoch(e)
 
 	if rawEpoch == "" {
-		genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
+		genesisResponse, err := s.nodeClient.Genesis(ctx, &emptypb.Empty{})
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Failed to get genesis time").Error(), http.StatusInternalServerError)
 			return
@@ -414,7 +414,7 @@ func (s *Server) ListRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < len(pubKeys); i++ {
 		keystoreResponse[i] = &RemoteKey{
 			Pubkey:   hexutil.Encode(pubKeys[i][:]),
-			Url:      s.validatorService.Web3SignerConfig.BaseEndpoint,
+			Url:      s.validatorService.RemoteSignerConfig().BaseEndpoint,
 			Readonly: true,
 		}
 	}
@@ -842,7 +842,7 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.GetGraffiti")
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.Graffiti")
 	defer span.End()
 
 	if s.validatorService == nil {
@@ -854,7 +854,7 @@ func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	graffiti, err := s.validatorService.GetGraffiti(ctx, bytesutil.ToBytes48(pubkey))
+	graffiti, err := s.validatorService.Graffiti(ctx, bytesutil.ToBytes48(pubkey))
 	if err != nil {
 		if strings.Contains(err.Error(), "unavailable") {
 			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)

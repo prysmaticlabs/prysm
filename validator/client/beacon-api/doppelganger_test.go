@@ -298,7 +298,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
-					syncingEnpoint,
+					syncingEndpoint,
 					&syncingResponseJson,
 				).Return(
 					nil,
@@ -363,7 +363,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
-				stateValidatorsProvider.EXPECT().GetStateValidators(
+				stateValidatorsProvider.EXPECT().StateValidators(
 					ctx,
 					testCase.getStateValidatorsInterface.input,
 					nil,
@@ -489,7 +489,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			},
 		},
 		{
-			name:                   "getFork on error",
+			name:                   "fork on error",
 			expectedErrorMessage:   "failed to get fork",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
@@ -734,7 +734,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
-					syncingEnpoint,
+					syncingEndpoint,
 					&syncingResponseJson,
 				).Return(
 					testCase.getSyncingError,
@@ -777,7 +777,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
-				stateValidatorsProvider.EXPECT().GetStateValidators(
+				stateValidatorsProvider.EXPECT().StateValidators(
 					ctx,
 					testCase.getStateValidatorsInterface.input,
 					nil,

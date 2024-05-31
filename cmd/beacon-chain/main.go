@@ -72,6 +72,7 @@ var appFlags = []cli.Flag{
 	flags.WeakSubjectivityCheckpoint,
 	flags.Eth1HeaderReqLimit,
 	flags.MinPeersPerSubnet,
+	flags.MaxConcurrentDials,
 	flags.SuggestedFeeRecipient,
 	flags.TerminalTotalDifficultyOverride,
 	flags.TerminalBlockHashOverride,

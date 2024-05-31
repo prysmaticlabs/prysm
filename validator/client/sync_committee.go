@@ -33,7 +33,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primiti
 
 	v.waitOneThirdOrValidBlock(ctx, slot)
 
-	res, err := v.validatorClient.GetSyncMessageBlockRoot(ctx, &emptypb.Empty{})
+	res, err := v.validatorClient.SyncMessageBlockRoot(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Could not request sync message block root to sign")
 		tracing.AnnotateError(span, err)
@@ -58,7 +58,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primiti
 		return
 	}
 
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
@@ -107,7 +107,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 		return
 	}
 
-	indexRes, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+	indexRes, err := v.validatorClient.SyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
 		Slot:      slot,
 	})
@@ -139,7 +139,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 		}
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 		subnet := uint64(comIdx) / subCommitteeSize
-		contribution, err := v.validatorClient.GetSyncCommitteeContribution(ctx, &ethpb.SyncCommitteeContributionRequest{
+		contribution, err := v.validatorClient.SyncCommitteeContribution(ctx, &ethpb.SyncCommitteeContributionRequest{
 			Slot:      slot,
 			PublicKey: pubKey[:],
 			SubnetId:  subnet,
@@ -216,7 +216,7 @@ func (v *validator) selectionProofs(ctx context.Context, slot primitives.Slot, p
 	// Override selection proofs with aggregated ones if the node is part of a Distributed Validator.
 	if v.distributed && len(selections) > 0 {
 		var err error
-		selections, err := v.validatorClient.GetAggregatedSyncSelections(ctx, selections)
+		selections, err := v.validatorClient.AggregatedSyncSelections(ctx, selections)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get aggregated sync selections")
 		}
@@ -243,7 +243,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldpara
 	if err != nil {
 		return nil, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -266,7 +266,7 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldp
 	if err != nil {
 		return nil, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
