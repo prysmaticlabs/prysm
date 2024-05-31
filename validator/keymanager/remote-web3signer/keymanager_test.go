@@ -172,7 +172,7 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 
 	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
 	bytesBuf := new(bytes.Buffer)
-	_, err := bytesBuf.WriteString("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055")
+	_, err := bytesBuf.WriteString("8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055") // test without 0x
 	require.NoError(t, err)
 	_, err = bytesBuf.WriteString("\n")
 	require.NoError(t, err)
