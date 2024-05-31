@@ -95,15 +95,16 @@ func (client *ApiClient) GetPublicKeys(ctx context.Context, url string) ([]strin
 	if err := unmarshalResponse(resp.Body, &publicKeys); err != nil {
 		return nil, err
 	}
-	if len(publicKeys) != 0 {
-		// check if it's a hex and a public key
-		b, err := hexutil.Decode(publicKeys[0])
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to decode public key")
-		}
-		if len(b) != fieldparams.BLSPubkeyLength {
-			return nil, fmt.Errorf("invalid public key length: %v", len(b))
-		}
+	if len(publicKeys) == 0 {
+		return publicKeys, nil
+	}
+	// check if it's a hex and a public key
+	b, err := hexutil.Decode(publicKeys[0])
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to decode public key")
+	}
+	if len(b) != fieldparams.BLSPubkeyLength {
+		return nil, fmt.Errorf("invalid public key length: %v", len(b))
 	}
 	return publicKeys, nil
 }
