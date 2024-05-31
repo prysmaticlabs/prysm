@@ -366,11 +366,11 @@ func (s *Service) handleEpochBoundary(ctx context.Context, slot primitives.Slot,
 func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) error {
 	// Feed in block's attestations to fork choice store.
 	for _, a := range blk.Body().Attestations() {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.GetData().Slot, a.GetData().CommitteeIndex)
+		committees, err := helpers.AttestationCommittees(ctx, st, a)
 		if err != nil {
 			return err
 		}
-		indices, err := attestation.AttestingIndices(a, committee)
+		indices, err := attestation.AttestingIndices(a, committees...)
 		if err != nil {
 			return err
 		}
@@ -387,7 +387,7 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Re
 // InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
 // This function requires a write lock on forkchoice.
-func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []interfaces.AttesterSlashing) {
+func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []ethpb.AttSlashing) {
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
 		for _, index := range indices {

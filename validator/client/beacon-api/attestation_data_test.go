@@ -58,7 +58,7 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	resp, err := validatorClient.getAttestationData(ctx, primitives.Slot(expectedSlot), primitives.CommitteeIndex(expectedCommitteeIndex))
+	resp, err := validatorClient.attestationData(ctx, primitives.Slot(expectedSlot), primitives.CommitteeIndex(expectedCommitteeIndex))
 	assert.NoError(t, err)
 
 	require.NotNil(t, resp)
@@ -194,7 +194,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			_, err := validatorClient.getAttestationData(ctx, 1, 2)
+			_, err := validatorClient.attestationData(ctx, 1, 2)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}
@@ -220,11 +220,11 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, err := validatorClient.getAttestationData(ctx, slot, committeeIndex)
+	_, err := validatorClient.attestationData(ctx, slot, committeeIndex)
 	assert.ErrorContains(t, "some specific json response error", err)
 }
 
-func generateValidAttestation(slot uint64, committeeIndex uint64) structs.GetAttestationDataResponse {
+func generateValidAttestation(slot, committeeIndex uint64) structs.GetAttestationDataResponse {
 	return structs.GetAttestationDataResponse{
 		Data: &structs.AttestationData{
 			Slot:            strconv.FormatUint(slot, 10),

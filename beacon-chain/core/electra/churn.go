@@ -37,7 +37,7 @@ import (
 //	    state.earliest_consolidation_epoch = earliest_consolidation_epoch
 //
 //	    return state.earliest_consolidation_epoch
-func ComputeConsolidationEpochAndUpdateChurn(ctx context.Context, s state.BeaconState, consolidationBalance math.Gwei) (primitives.Epoch, error) {
+func ComputeConsolidationEpochAndUpdateChurn(ctx context.Context, s state.BeaconState, consolidationBalance primitives.Gwei) (primitives.Epoch, error) {
 	earliestEpoch, err := s.EarliestConsolidationEpoch()
 	if err != nil {
 		return 0, err
@@ -47,10 +47,10 @@ func ComputeConsolidationEpochAndUpdateChurn(ctx context.Context, s state.Beacon
 	if err != nil {
 		return 0, err
 	}
-	perEpochConsolidationChurn := helpers.ConsolidationChurnLimit(math.Gwei(activeBal))
+	perEpochConsolidationChurn := helpers.ConsolidationChurnLimit(primitives.Gwei(activeBal))
 
 	// New epoch for consolidations.
-	var consolidationBalanceToConsume math.Gwei
+	var consolidationBalanceToConsume primitives.Gwei
 	if earliestEpoch < earliestConsolidationEpoch {
 		consolidationBalanceToConsume = perEpochConsolidationChurn
 	} else {
@@ -70,7 +70,7 @@ func ComputeConsolidationEpochAndUpdateChurn(ctx context.Context, s state.Beacon
 		}
 		additionalEpochs++
 		earliestConsolidationEpoch += primitives.Epoch(additionalEpochs)
-		consolidationBalanceToConsume += math.Gwei(additionalEpochs) * perEpochConsolidationChurn
+		consolidationBalanceToConsume += primitives.Gwei(additionalEpochs) * perEpochConsolidationChurn
 	}
 
 	// Consume the balance and update state variables.

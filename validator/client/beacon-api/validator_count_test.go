@@ -141,12 +141,12 @@ func TestGetValidatorCount(t *testing.T) {
 			).Times(test.validatorCountCalled)
 
 			// Type assertion.
-			var client iface.PrysmBeaconChainClient = &prysmBeaconChainClient{
+			var client iface.PrysmChainClient = &prysmChainClient{
 				nodeClient:      &beaconApiNodeClient{jsonRestHandler: jsonRestHandler},
 				jsonRestHandler: jsonRestHandler,
 			}
 
-			countResponse, err := client.GetValidatorCount(ctx, "head", []validator.Status{validator.Active})
+			countResponse, err := client.ValidatorCount(ctx, "head", []validator.Status{validator.Active})
 
 			if len(test.expectedResponse) == 0 {
 				require.ErrorContains(t, test.expectedError, err)

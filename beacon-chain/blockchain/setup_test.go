@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
@@ -20,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"google.golang.org/protobuf/proto"
@@ -50,7 +50,7 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 	return nil
 }
 
-func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ interfaces.Attestation) error {
+func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ ethpb.Att) error {
 	mb.broadcastCalled = true
 	return nil
 }
@@ -121,6 +121,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
 		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
 		WithSyncChecker(mock.MockChecker{}),
+		WithExecutionEngineCaller(&mockExecution.EngineClient{}),
 	}
 	// append the variadic opts so they override the defaults by being processed afterwards
 	opts = append(defOpts, opts...)

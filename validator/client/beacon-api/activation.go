@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (c beaconApiValidatorClient) waitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
+func (c *beaconApiValidatorClient) waitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
 	return &waitForActivationClient{
 		ctx:                        ctx,
 		beaconApiValidatorClient:   c,
@@ -24,12 +24,12 @@ func (c beaconApiValidatorClient) waitForActivation(ctx context.Context, in *eth
 type waitForActivationClient struct {
 	grpc.ClientStream
 	ctx context.Context
-	beaconApiValidatorClient
+	*beaconApiValidatorClient
 	*ethpb.ValidatorActivationRequest
 	lastRecvTime time.Time
 }
 
-func computeWaitElements(now time.Time, lastRecvTime time.Time) (time.Duration, time.Time) {
+func computeWaitElements(now, lastRecvTime time.Time) (time.Duration, time.Time) {
 	nextRecvTime := lastRecvTime.Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 
 	if lastRecvTime.IsZero() {
@@ -68,7 +68,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 			stringTargetPubKeys[index] = stringPubKey
 		}
 
-		stateValidators, err := c.stateValidatorsProvider.GetStateValidators(c.ctx, stringTargetPubKeys, nil, nil)
+		stateValidators, err := c.stateValidatorsProvider.StateValidators(c.ctx, stringTargetPubKeys, nil, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get state validators")
 		}

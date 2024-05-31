@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
+        "effective_balance_updates.go",
         "eth1_data_reset.go",
         "helpers.go",
         "historical_summaries_update.go",
@@ -26,7 +27,7 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
         "//config/params:go_default_library",
-        "//math:go_default_library",
+        "//consensus-types/primitives:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
         "//testing/spectest/utils:go_default_library",

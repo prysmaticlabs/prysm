@@ -6,7 +6,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"go.opencensus.io/trace"
 )
 
@@ -32,7 +33,7 @@ import (
 //	        state.deposit_balance_to_consume = Gwei(0)
 //	    else:
 //	        state.deposit_balance_to_consume = available_for_processing - processed_amount
-func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, activeBalance math.Gwei) error {
+func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, activeBalance primitives.Gwei) error {
 	_, span := trace.StartSpan(ctx, "electra.ProcessPendingBalanceDeposits")
 	defer span.End()
 
@@ -54,13 +55,13 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	}
 
 	for _, deposit := range deposits {
-		if math.Gwei(deposit.Amount) > availableForProcessing {
+		if primitives.Gwei(deposit.Amount) > availableForProcessing {
 			break
 		}
 		if err := helpers.IncreaseBalance(st, deposit.Index, deposit.Amount); err != nil {
 			return err
 		}
-		availableForProcessing -= math.Gwei(deposit.Amount)
+		availableForProcessing -= primitives.Gwei(deposit.Amount)
 		nextDepositIndex++
 	}
 
@@ -74,4 +75,13 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	} else {
 		return st.SetDepositBalanceToConsume(availableForProcessing)
 	}
+}
+
+// ProcessDepositReceipts is a function as part of electra to process execution layer deposits
+func ProcessDepositReceipts(ctx context.Context, beaconState state.BeaconState, receipts []*enginev1.DepositReceipt) (state.BeaconState, error) {
+	_, span := trace.StartSpan(ctx, "electra.ProcessDepositReceipts")
+	defer span.End()
+	// TODO: replace with 6110 logic
+	// return b.ProcessDepositReceipts(beaconState, receipts)
+	return beaconState, nil
 }

@@ -67,16 +67,6 @@ var (
 			"pubkey",
 		},
 	)
-	// ValidatorProposeFailVecSlasher used to count failed proposals by slashing protection.
-	ValidatorProposeFailVecSlasher = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "validator_proposals_rejected_total",
-			Help: "Count the block proposals rejected by slashing protection.",
-		},
-		[]string{
-			"pubkey",
-		},
-	)
 	// ValidatorBalancesGaugeVec used to keep track of validator balances by public key.
 	ValidatorBalancesGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -158,16 +148,6 @@ var (
 			"pubkey",
 		},
 	)
-	// ValidatorAttestFailVecSlasher used to count failed attestations by slashing protection.
-	ValidatorAttestFailVecSlasher = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "validator_attestations_rejected_total",
-			Help: "Count the attestations rejected by slashing protection.",
-		},
-		[]string{
-			"pubkey",
-		},
-	)
 	// ValidatorNextAttestationSlotGaugeVec used to track validator statuses by public key.
 	ValidatorNextAttestationSlotGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -195,7 +175,7 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "in_sync_committee",
-			Help:      "validator sync committee.New in Altair hardfork",
+			Help:      "validator sync committee.New in Altair hard fork",
 		},
 		[]string{
 			"pubkey",
@@ -206,7 +186,7 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "in_next_sync_committee",
-			Help:      "validator next sync committee. New in Altair hardfork",
+			Help:      "validator next sync committee. New in Altair hard fork",
 		},
 		[]string{
 			"pubkey",
@@ -217,7 +197,7 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "inactivity_score",
-			Help:      "Validator inactivity score. 0 is optimum number. New in Altair hardfork",
+			Help:      "Validator inactivity score. 0 is optimum number. New in Altair hard fork",
 		},
 		[]string{
 			"pubkey",
@@ -234,13 +214,13 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 		// Do nothing unless we are at the end of the epoch, and not in the first epoch.
 		return nil
 	}
-	if !v.logValidatorBalances {
+	if !v.logValidatorPerformance {
 		return nil
 	}
 
 	var pks [][fieldparams.BLSPubkeyLength]byte
 	var err error
-	pks, err = v.keyManager.FetchValidatingPublicKeys(ctx)
+	pks, err = v.km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
 	}
@@ -249,7 +229,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 	req := &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: pubKeys,
 	}
-	resp, err := v.beaconClient.GetValidatorPerformance(ctx, req)
+	resp, err := v.chainClient.ValidatorPerformance(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -270,11 +250,11 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 			v.voteStats.startEpoch = prevEpoch
 		}
 	}
-	v.prevBalanceLock.Lock()
+	v.prevEpochBalancesLock.Lock()
 	for i, pubKey := range resp.PublicKeys {
 		v.logForEachValidator(i, pubKey, resp, slot, prevEpoch)
 	}
-	v.prevBalanceLock.Unlock()
+	v.prevEpochBalancesLock.Unlock()
 
 	v.UpdateLogAggregateStats(resp, slot)
 	return nil
@@ -284,7 +264,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 	truncatedKey := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
 	pubKeyBytes := bytesutil.ToBytes48(pubKey)
 	if slot < params.BeaconConfig().SlotsPerEpoch {
-		v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
+		v.prevEpochBalances[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
 	// Safely load data from response with slice out of bounds checks. The server should return
@@ -325,7 +305,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 
 	fmtKey := fmt.Sprintf("%#x", pubKey)
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
-	if v.prevBalance[pubKeyBytes] > 0 {
+	if v.prevEpochBalances[pubKeyBytes] > 0 {
 		newBalance := float64(balAfterEpoch) / gweiPerEth
 		prevBalance := float64(balBeforeEpoch) / gweiPerEth
 		startBalance := float64(v.startBalances[pubKeyBytes]) / gweiPerEth
@@ -380,7 +360,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 			}
 		}
 	}
-	v.prevBalance[pubKeyBytes] = balBeforeEpoch
+	v.prevEpochBalances[pubKeyBytes] = balBeforeEpoch
 }
 
 // UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained from LogValidatorGainsAndLosses.
@@ -438,12 +418,12 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	log.WithFields(epochSummaryFields).Info("Previous epoch aggregated voting summary")
 
 	var totalStartBal, totalPrevBal uint64
-	v.prevBalanceLock.RLock()
+	v.prevEpochBalancesLock.RLock()
 	for i, val := range v.startBalances {
 		totalStartBal += val
-		totalPrevBal += v.prevBalance[i]
+		totalPrevBal += v.prevEpochBalances[i]
 	}
-	v.prevBalanceLock.RUnlock()
+	v.prevEpochBalancesLock.RUnlock()
 
 	if totalStartBal == 0 || summary.totalAttestedCount == 0 {
 		log.Error("Failed to print launch summary: one or more divisors is 0")

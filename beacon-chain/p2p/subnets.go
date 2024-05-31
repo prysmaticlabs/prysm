@@ -87,7 +87,12 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 			return false, errors.Errorf("unable to find requisite number of peers for topic %s - "+
 				"only %d out of %d peers were able to be found", topic, currNum, threshold)
 		}
-		nodes := enode.ReadNodes(iterator, int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch))
+		nodeCount := int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch)
+		// Restrict dials if limit is applied.
+		if flags.MaxDialIsActive() {
+			nodeCount = min(nodeCount, flags.Get().MaxConcurrentDials)
+		}
+		nodes := enode.ReadNodes(iterator, nodeCount)
 		for _, node := range nodes {
 			info, _, err := convertToAddrInfo(node)
 			if err != nil {
