@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
@@ -101,6 +102,11 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		"requestedCount": len(requestedColumnsList),
 	}).Debug("Received data column sidecar by root request")
 
+	// Subscribe to the data column feed.
+	rootIndexChan := make(chan filesystem.RootIndexPair)
+	subscription := s.cfg.blobStorage.DataColumnFeed.Subscribe(rootIndexChan)
+	defer subscription.Unsubscribe()
+
 	for i := range requestedColumnIdents {
 		if err := ctx.Err(); err != nil {
 			closeStream(stream, log)
@@ -135,10 +141,6 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		// If the data column is nil, it means it is not yet available in the db.
 		// We wait for it to be available.
 
-		// Subscribe to the data column channel for this root.
-		rootChannel := s.cfg.blobStorage.DataColumnNotifier.ForRoot(requestedRoot)
-		defer s.cfg.blobStorage.DataColumnNotifier.Delete(requestedRoot)
-
 		// Retrieve the data column from the database.
 		dataColumnSidecar, err := s.cfg.blobStorage.GetColumn(requestedRoot, requestedIndex)
 
@@ -158,8 +160,8 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		loop:
 			for {
 				select {
-				case receivedIndex := <-rootChannel:
-					if receivedIndex == requestedIndex {
+				case receivedRootIndex := <-rootIndexChan:
+					if receivedRootIndex.Root == requestedRoot && receivedRootIndex.Index == requestedIndex {
 						// This is the data column we are looking for.
 						log.WithFields(fields).Debug("Data column sidecar by root is now available in the db")
 
