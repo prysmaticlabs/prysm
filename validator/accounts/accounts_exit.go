@@ -47,7 +47,7 @@ func (acm *CLIManager) Exit(ctx context.Context) error {
 	if nodeClient == nil {
 		return errors.New("could not prepare beacon node client")
 	}
-	syncStatus, err := (*nodeClient).GetSyncStatus(ctx, &emptypb.Empty{})
+	syncStatus, err := (*nodeClient).SyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func PerformVoluntaryExit(
 	ctx context.Context, cfg PerformExitCfg,
 ) (rawExitedKeys [][]byte, formattedExitedKeys []string, err error) {
 	var rawNotExitedKeys [][]byte
-	genesisResponse, err := cfg.NodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	genesisResponse, err := cfg.NodeClient.Genesis(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.WithError(err).Errorf("voluntary exit failed: %v", err)
 	}

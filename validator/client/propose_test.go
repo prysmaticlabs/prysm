@@ -199,7 +199,7 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 					gomock.Any(), // epoch
 				).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-				m.validatorClient.EXPECT().GetBeaconBlock(
+				m.validatorClient.EXPECT().BeaconBlock(
 					gomock.Any(), // ctx
 					gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 				).Return(nil /*response*/, errors.New("uh oh"))
@@ -255,7 +255,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 					gomock.Any(), // epoch
 				).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-				m.validatorClient.EXPECT().GetBeaconBlock(
+				m.validatorClient.EXPECT().BeaconBlock(
 					gomock.Any(), // ctx
 					gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 				).Return(tt.block, nil /*err*/)
@@ -294,16 +294,16 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 				block0, block1 := util.NewBeaconBlock(), util.NewBeaconBlock()
 				block1.Block.Body.Graffiti = blockGraffiti[:]
 
-				var blocks []*ethpb.GenericBeaconBlock
+				var bs []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlock{block0, block1} {
 					block.Block.Slot = slot
-					blocks = append(blocks, &ethpb.GenericBeaconBlock{
+					bs = append(bs, &ethpb.GenericBeaconBlock{
 						Block: &ethpb.GenericBeaconBlock_Phase0{
 							Phase0: block.Block,
 						},
 					})
 				}
-				return blocks
+				return bs
 			}(),
 		},
 		{
@@ -312,16 +312,16 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 				block0, block1 := util.NewBeaconBlockAltair(), util.NewBeaconBlockAltair()
 				block1.Block.Body.Graffiti = blockGraffiti[:]
 
-				var blocks []*ethpb.GenericBeaconBlock
+				var bs []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlockAltair{block0, block1} {
 					block.Block.Slot = slot
-					blocks = append(blocks, &ethpb.GenericBeaconBlock{
+					bs = append(bs, &ethpb.GenericBeaconBlock{
 						Block: &ethpb.GenericBeaconBlock_Altair{
 							Altair: block.Block,
 						},
 					})
 				}
-				return blocks
+				return bs
 			}(),
 		},
 		{
@@ -330,16 +330,16 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 				block0, block1 := util.NewBeaconBlockBellatrix(), util.NewBeaconBlockBellatrix()
 				block1.Block.Body.Graffiti = blockGraffiti[:]
 
-				var blocks []*ethpb.GenericBeaconBlock
+				var bs []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlockBellatrix{block0, block1} {
 					block.Block.Slot = slot
-					blocks = append(blocks, &ethpb.GenericBeaconBlock{
+					bs = append(bs, &ethpb.GenericBeaconBlock{
 						Block: &ethpb.GenericBeaconBlock_Bellatrix{
 							Bellatrix: block.Block,
 						},
 					})
 				}
-				return blocks
+				return bs
 			}(),
 		},
 	}
@@ -362,12 +362,12 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 					gomock.Any(), // epoch
 				).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-				m.validatorClient.EXPECT().GetBeaconBlock(
+				m.validatorClient.EXPECT().BeaconBlock(
 					gomock.Any(), // ctx
 					gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 				).Return(tt.blocks[0], nil /*err*/)
 
-				m.validatorClient.EXPECT().GetBeaconBlock(
+				m.validatorClient.EXPECT().BeaconBlock(
 					gomock.Any(), // ctx
 					gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 				).Return(tt.blocks[1], nil /*err*/)
@@ -414,7 +414,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 			testBlock := util.NewBeaconBlock()
 			farFuture := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod + 9))
 			testBlock.Block.Slot = farFuture
-			m.validatorClient.EXPECT().GetBeaconBlock(
+			m.validatorClient.EXPECT().BeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 			).Return(&ethpb.GenericBeaconBlock{
@@ -428,7 +428,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 			var blockGraffiti [32]byte
 			copy(blockGraffiti[:], "someothergraffiti")
 			secondTestBlock.Block.Body.Graffiti = blockGraffiti[:]
-			m.validatorClient.EXPECT().GetBeaconBlock(
+			m.validatorClient.EXPECT().BeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 			).Return(&ethpb.GenericBeaconBlock{
@@ -491,7 +491,7 @@ func TestProposeBlock_AllowsOrNotPastProposals(t *testing.T) {
 
 				blk := util.NewBeaconBlock()
 				blk.Block.Slot = slot
-				m.validatorClient.EXPECT().GetBeaconBlock(
+				m.validatorClient.EXPECT().BeaconBlock(
 					gomock.Any(), // ctx
 					gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 				).Return(&ethpb.GenericBeaconBlock{
@@ -520,7 +520,7 @@ func TestProposeBlock_AllowsOrNotPastProposals(t *testing.T) {
 
 				blk2 := util.NewBeaconBlock()
 				blk2.Block.Slot = tt.pastSlot
-				m.validatorClient.EXPECT().GetBeaconBlock(
+				m.validatorClient.EXPECT().BeaconBlock(
 					gomock.Any(), // ctx
 					gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 				).Return(&ethpb.GenericBeaconBlock{
@@ -683,7 +683,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 					gomock.Any(), // epoch
 				).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-				m.validatorClient.EXPECT().GetBeaconBlock(
+				m.validatorClient.EXPECT().BeaconBlock(
 					gomock.Any(), // ctx
 					gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
 				).DoAndReturn(func(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
@@ -1081,7 +1081,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
 					Return(&ethpb.ValidatorIndexResponse{Index: 2}, nil)
 			}
-			got, err := tt.v.GetGraffiti(context.Background(), pubKey)
+			got, err := tt.v.Graffiti(context.Background(), pubKey)
 			require.NoError(t, err)
 			require.DeepEqual(t, tt.want, got)
 		})
@@ -1111,7 +1111,7 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 				},
 			}
 			for _, want := range [][]byte{bytesutil.PadTo([]byte{'a'}, 32), bytesutil.PadTo([]byte{'b'}, 32), bytesutil.PadTo([]byte{'c'}, 32), bytesutil.PadTo([]byte{'d'}, 32), bytesutil.PadTo([]byte{'d'}, 32)} {
-				got, err := v.GetGraffiti(context.Background(), pubKey)
+				got, err := v.Graffiti(context.Background(), pubKey)
 				require.NoError(t, err)
 				require.DeepEqual(t, want, got)
 			}

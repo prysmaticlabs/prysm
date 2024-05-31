@@ -24,8 +24,8 @@ import (
 	beaconApi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-chain-client-factory"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-	nodeClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/node-client-factory"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/validator-client-factory"
+	nodeclientfactory "github.com/prysmaticlabs/prysm/v5/validator/client/node-client-factory"
+	validatorclientfactory "github.com/prysmaticlabs/prysm/v5/validator/client/validator-client-factory"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
 	"github.com/prysmaticlabs/prysm/v5/validator/graffiti"
 	validatorHelpers "github.com/prysmaticlabs/prysm/v5/validator/helpers"
@@ -177,7 +177,7 @@ func (v *ValidatorService) Start() {
 		hosts[0],
 	)
 
-	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
+	validatorClient := validatorclientfactory.NewValidatorClient(v.conn, restHandler)
 
 	valStruct := &validator{
 		slotFeed:                       new(event.Feed),
@@ -195,7 +195,7 @@ func (v *ValidatorService) Start() {
 		currentHostIndex:               0,
 		validatorClient:                validatorClient,
 		chainClient:                    beaconChainClientFactory.NewChainClient(v.conn, restHandler),
-		nodeClient:                     nodeClientFactory.NewNodeClient(v.conn, restHandler),
+		nodeClient:                     nodeclientfactory.NewNodeClient(v.conn, restHandler),
 		prysmChainClient:               beaconChainClientFactory.NewPrysmChainClient(v.conn, restHandler),
 		db:                             v.db,
 		km:                             nil,
@@ -270,7 +270,7 @@ func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *pr
 	v.proposerSettings = settings
 
 	// passes settings down to be updated in database and saved in memory.
-	// updates to validator porposer settings will be in the validator object and not validator service.
+	// updates to validator proposer settings will be in the validator object and not validator service.
 	return v.validator.SetProposerSettings(ctx, settings)
 }
 
@@ -328,11 +328,11 @@ func ConstructDialOptions(
 	return dialOpts
 }
 
-func (v *ValidatorService) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+func (v *ValidatorService) Graffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	if v.validator == nil {
 		return nil, errors.New("validator is unavailable")
 	}
-	return v.validator.GetGraffiti(ctx, pubKey)
+	return v.validator.Graffiti(ctx, pubKey)
 }
 
 func (v *ValidatorService) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {

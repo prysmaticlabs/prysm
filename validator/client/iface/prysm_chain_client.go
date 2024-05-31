@@ -16,5 +16,5 @@ type ValidatorCount struct {
 
 // PrysmChainClient defines an interface required to implement all the prysm specific custom endpoints.
 type PrysmChainClient interface {
-	GetValidatorCount(context.Context, string, []validator.Status) ([]ValidatorCount, error)
+	ValidatorCount(context.Context, string, []validator.Status) ([]ValidatorCount, error)
 }
