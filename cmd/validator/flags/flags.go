@@ -308,7 +308,7 @@ var (
 	// example:--validators-external-signer-key-file=./path/to/keys.txt
 	Web3SignerKeyFileFlag = &cli.StringFlag{
 		Name:  "validators-external-signer-key-file",
-		Usage: "A file path used to load remote public validator keys and persist them through restarts",
+		Usage: "A file path used to load remote public validator keys and persist them through restarts.",
 		Value: "",
 	}
 

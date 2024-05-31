@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -90,7 +91,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 			return nil, errors.Wrapf(err, "could not check if web3signer persistent keys exists in %s", km.keyFilePath)
 		}
 		if !keyFileExists {
-			log.WithField("path", km.keyFilePath).Warn("key file does not exist. please create a new one. the file should contain public keys in hex format 1 on each line.")
+			log.WithField("path", km.keyFilePath).Warn("Key file does not exist. please create a new one. the file should contain public keys in hex format 1 on each line.")
 		}
 	}
 
@@ -100,7 +101,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, cfg.PublicKeysURL)
 		if err != nil {
 			erroredResponsesTotal.Inc()
-			return nil, errors.Wrap(err, fmt.Sprintf("could not get public keys from remote server url: %v", cfg.PublicKeysURL))
+			return nil, errors.Wrapf(err, "could not get public keys from remote server url: %v", cfg.PublicKeysURL)
 		}
 		ppk = providedPublicKeys
 	} else if len(cfg.ProvidedPublicKeys) != 0 {
@@ -121,9 +122,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		}
 		flagLoadedKeys[key] = bytesutil.ToBytes48(decodedKey)
 	}
-	if len(flagLoadedKeys) != 0 {
-		km.flagLoadedPublicKeys = maps.Values(flagLoadedKeys)
-	}
+	km.flagLoadedPublicKeys = maps.Values(flagLoadedKeys)
 
 	// load from file
 	if keyFileExists {
@@ -173,15 +172,19 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 			// skip empty line
 			continue
 		}
+		// allow for pubkeys without the 0x
+		if len(line) == pubkeyLength-2 && !strings.HasPrefix(line, "0x") {
+			line = "0x" + line
+		}
 		if len(line) != pubkeyLength {
-			log.Fatalf("remote signer key file: invalid public key: %s \n", line)
+			log.WithField("key", line).Fatal("Invalid public key in remote signer key file")
 			continue
 		}
 		if _, found := seenKeys[line]; !found {
 			// If it's a new line, mark it as seen and process it
 			pubkey, err := hexutil.Decode(line)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, errors.Wrapf(err, "could not decode public key line in remote signer key file: %s", line)
 			}
 			bPubkey := bytesutil.ToBytes48(pubkey)
 			seenKeys[line] = bPubkey
@@ -193,7 +196,7 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 		return nil, nil, errors.Wrap(err, "could not scan remote signer public key file")
 	}
 	if len(keys) == 0 {
-		log.Warn("remote signer key file: no valid public keys found")
+		log.Warn("Remote signer key file: no valid public keys found")
 	}
 	return keys, seenKeys, nil
 }
@@ -232,7 +235,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 		}
 	}()
 	if err := watcher.Add(km.keyFilePath); err != nil {
-		log.WithError(err).Errorf("Could not add file %s to file watcher", km.keyFilePath)
+		log.WithError(err).WithField("file path", km.keyFilePath).Errorf("Could not add file to file watcher")
 		return
 	}
 	for {
@@ -242,23 +245,32 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 				return
 			}
 			if e.Op.String() == "REMOVE" {
-				log.Fatalln("remote signer keyfile was removed! Restart the validator client with the appropriate remote signer file")
+				log.Fatalln("Remote signer keyfile was removed! Restart the validator client with the appropriate remote signer file")
 			}
-			log.Infof("remote signer keyfile %s event triggered \n", e.Name)
-			keys, _, err := km.readKeyFile()
+			log.WithFields(log.Fields{
+				"event": e.Name,
+				"op":    e.Op.String(),
+			}).Info("remote signer keyfile event triggered")
+			fileKeys, _, err := km.readKeyFile()
 			if err != nil {
 				log.WithError(err).Fatalln("Could not read key file")
 			}
-			if len(keys) == 0 {
-				log.Warnln("remote signer keyfile no longer has keys, defaulting to flag provided keys")
-				keys = km.flagLoadedPublicKeys
+			if len(fileKeys) == 0 {
+				log.Warnln("Remote signer keyfile no longer has keys, defaulting to flag provided keys")
+				fileKeys = km.flagLoadedPublicKeys
 			}
-			km.updatePublicKeys(keys)
+			currentKeys, err := km.FetchValidatingPublicKeys(ctx)
+			if err != nil {
+				log.WithError(err).Fatalln("Could not fetch current keys")
+			}
+			if !reflect.DeepEqual(currentKeys, fileKeys) {
+				km.updatePublicKeys(fileKeys)
+			}
 		case err, ok := <-watcher.Errors:
 			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
 				return
 			}
-			log.WithError(err).Errorf("Could not watch for file changes for: %s", km.keyFilePath)
+			log.WithError(err).WithField("file path", km.keyFilePath).Error("Could not watch for file changes")
 		case <-ctx.Done():
 			return
 		}
