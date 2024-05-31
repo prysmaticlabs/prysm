@@ -1,4 +1,4 @@
-package validator_client_factory
+package beacon_chain_client_factory
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/config/features"

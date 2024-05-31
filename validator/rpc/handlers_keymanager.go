@@ -347,7 +347,7 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	epoch := primitives.Epoch(e)
 
 	if rawEpoch == "" {
-		genesisResponse, err := s.nodeClient.GetGenesis(ctx, &emptypb.Empty{})
+		genesisResponse, err := s.nodeClient.Genesis(ctx, &emptypb.Empty{})
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Failed to get genesis time").Error(), http.StatusInternalServerError)
 			return
@@ -851,7 +851,7 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.GetGraffiti")
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.Graffiti")
 	defer span.End()
 
 	if s.validatorService == nil {
@@ -863,7 +863,7 @@ func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	graffiti, err := s.validatorService.GetGraffiti(ctx, bytesutil.ToBytes48(pubkey))
+	graffiti, err := s.validatorService.Graffiti(ctx, bytesutil.ToBytes48(pubkey))
 	if err != nil {
 		if strings.Contains(err.Error(), "unavailable") {
 			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)

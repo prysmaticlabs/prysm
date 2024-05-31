@@ -20,19 +20,19 @@ type grpcNodeClient struct {
 	healthTracker *beacon.NodeHealthTracker
 }
 
-func (c *grpcNodeClient) GetSyncStatus(ctx context.Context, in *empty.Empty) (*ethpb.SyncStatus, error) {
+func (c *grpcNodeClient) SyncStatus(ctx context.Context, in *empty.Empty) (*ethpb.SyncStatus, error) {
 	return c.nodeClient.GetSyncStatus(ctx, in)
 }
 
-func (c *grpcNodeClient) GetGenesis(ctx context.Context, in *empty.Empty) (*ethpb.Genesis, error) {
+func (c *grpcNodeClient) Genesis(ctx context.Context, in *empty.Empty) (*ethpb.Genesis, error) {
 	return c.nodeClient.GetGenesis(ctx, in)
 }
 
-func (c *grpcNodeClient) GetVersion(ctx context.Context, in *empty.Empty) (*ethpb.Version, error) {
+func (c *grpcNodeClient) Version(ctx context.Context, in *empty.Empty) (*ethpb.Version, error) {
 	return c.nodeClient.GetVersion(ctx, in)
 }
 
-func (c *grpcNodeClient) ListPeers(ctx context.Context, in *empty.Empty) (*ethpb.Peers, error) {
+func (c *grpcNodeClient) Peers(ctx context.Context, in *empty.Empty) (*ethpb.Peers, error) {
 	return c.nodeClient.ListPeers(ctx, in)
 }
 

@@ -108,7 +108,7 @@ func (m *mockKeymanager) add(pairs ...keypair) error {
 	return nil
 }
 
-func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	if m.fetchNoKeys {
@@ -390,7 +390,7 @@ func TestWaitSync_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().SyncStatus(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: true}, nil)
@@ -407,7 +407,7 @@ func TestWaitSync_NotSyncing(t *testing.T) {
 		nodeClient: n,
 	}
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().SyncStatus(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: false}, nil)
@@ -424,12 +424,12 @@ func TestWaitSync_Syncing(t *testing.T) {
 		nodeClient: n,
 	}
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().SyncStatus(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: true}, nil)
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().SyncStatus(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.SyncStatus{Syncing: false}, nil)
@@ -455,7 +455,7 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 			},
 		},
 	}
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Times(0)
@@ -482,7 +482,7 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 
 	expected := errors.New("bad")
 
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, expected)
@@ -513,7 +513,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 		km:              newMockKeymanager(t, randKeypair(t)),
 		validatorClient: client,
 	}
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
@@ -562,7 +562,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	resp := &ethpb.DutiesResponse{
 		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{},
 	}
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
@@ -619,7 +619,7 @@ func TestUpdateDuties_AllValidatorsExited(t *testing.T) {
 		km:              newMockKeymanager(t, randKeypair(t)),
 		validatorClient: client,
 	}
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
@@ -666,7 +666,7 @@ func TestUpdateDuties_Distributed(t *testing.T) {
 
 	sigDomain := make([]byte, 32)
 
-	client.EXPECT().GetDuties(
+	client.EXPECT().Duties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
@@ -679,7 +679,7 @@ func TestUpdateDuties_Distributed(t *testing.T) {
 		nil, /*err*/
 	).Times(2)
 
-	client.EXPECT().GetAggregatedSelections(
+	client.EXPECT().AggregatedSelections(
 		gomock.Any(),
 		gomock.Any(), // fill this properly
 	).Return(
@@ -745,7 +745,7 @@ func TestRolesAt_OK(t *testing.T) {
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -780,7 +780,7 @@ func TestRolesAt_OK(t *testing.T) {
 				},
 			}
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -1255,7 +1255,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 			slot := primitives.Slot(1)
 			pubKey := validatorKey.PublicKey().Marshal()
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -1276,7 +1276,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -1302,7 +1302,7 @@ func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
 			slot := primitives.Slot(1)
 			pubKey := validatorKey.PublicKey().Marshal()
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -1323,7 +1323,7 @@ func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/).Times(2)
 
-			m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
 				&ethpb.SyncSubcommitteeIndexRequest{
 					PublicKey: validatorKey.PublicKey().Marshal(),
@@ -1340,7 +1340,7 @@ func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
 				ValidatorIndex:    123,
 				SubcommitteeIndex: 0,
 			}
-			m.validatorClient.EXPECT().GetAggregatedSyncSelections(
+			m.validatorClient.EXPECT().AggregatedSyncSelections(
 				gomock.Any(), // ctx
 				[]iface.SyncCommitteeSelection{selection},
 			).Return([]iface.SyncCommitteeSelection{selection}, nil)
@@ -2036,7 +2036,7 @@ func TestValidator_PushSettings(t *testing.T) {
 	}
 }
 
-func getPubkeyFromString(t *testing.T, stringPubkey string) [fieldparams.BLSPubkeyLength]byte {
+func pubkeyFromString(t *testing.T, stringPubkey string) [fieldparams.BLSPubkeyLength]byte {
 	pubkeyTemp, err := hexutil.Decode(stringPubkey)
 	require.NoError(t, err)
 
@@ -2046,7 +2046,7 @@ func getPubkeyFromString(t *testing.T, stringPubkey string) [fieldparams.BLSPubk
 	return pubkey
 }
 
-func getFeeRecipientFromString(t *testing.T, stringFeeRecipient string) common.Address {
+func feeRecipientFromString(t *testing.T, stringFeeRecipient string) common.Address {
 	feeRecipientTemp, err := hexutil.Decode(stringFeeRecipient)
 	require.NoError(t, err)
 
@@ -2063,15 +2063,15 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	// pubkey4 => Nothing (already in `v.validatorIndex`)
 
 	// Public keys
-	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
-	pubkey2 := getPubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
-	pubkey3 := getPubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
-	pubkey4 := getPubkeyFromString(t, "0x444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444")
+	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey2 := pubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+	pubkey3 := pubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+	pubkey4 := pubkeyFromString(t, "0x444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444")
 
 	// Fee recipients
-	feeRecipient1 := getFeeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
-	feeRecipient2 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
-	feeRecipient3 := getFeeRecipientFromString(t, "0x3333333333333333333333333333333333333333")
+	feeRecipient1 := feeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
+	feeRecipient2 := feeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
+	feeRecipient3 := feeRecipientFromString(t, "0x3333333333333333333333333333333333333333")
 	feeRecipient4 := common.Address{}
 
 	ctrl := gomock.NewController(t)
@@ -2169,22 +2169,22 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	// pubkey8 => feeRecipient8 - Status: exiting (already in `v.validatorIndex`)
 
 	// Public keys
-	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
-	pubkey2 := getPubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
-	pubkey3 := getPubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
-	pubkey4 := getPubkeyFromString(t, "0x444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444")
-	pubkey5 := getPubkeyFromString(t, "0x555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555")
-	pubkey6 := getPubkeyFromString(t, "0x666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666")
-	pubkey7 := getPubkeyFromString(t, "0x777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777")
-	pubkey8 := getPubkeyFromString(t, "0x888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888")
+	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey2 := pubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+	pubkey3 := pubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+	pubkey4 := pubkeyFromString(t, "0x444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444")
+	pubkey5 := pubkeyFromString(t, "0x555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555")
+	pubkey6 := pubkeyFromString(t, "0x666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666")
+	pubkey7 := pubkeyFromString(t, "0x777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777")
+	pubkey8 := pubkeyFromString(t, "0x888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888")
 
 	// Fee recipients
-	feeRecipient1 := getFeeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
-	feeRecipient2 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
-	feeRecipient3 := getFeeRecipientFromString(t, "0x3333333333333333333333333333333333333333")
-	feeRecipient8 := getFeeRecipientFromString(t, "0x8888888888888888888888888888888888888888")
+	feeRecipient1 := feeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
+	feeRecipient2 := feeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
+	feeRecipient3 := feeRecipientFromString(t, "0x3333333333333333333333333333333333333333")
+	feeRecipient8 := feeRecipientFromString(t, "0x8888888888888888888888888888888888888888")
 
-	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+	defaultFeeRecipient := feeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
 
 	pubkeyToStatus := map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus{
 		pubkey1: ethpb.ValidatorStatus_ACTIVE,
@@ -2332,15 +2332,15 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	// pubkey3 => Nothing, builder enabled
 
 	// Public keys
-	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
-	pubkey2 := getPubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
-	pubkey3 := getPubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey2 := pubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+	pubkey3 := pubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
 
 	// Fee recipients
-	feeRecipient1 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
-	feeRecipient2 := getFeeRecipientFromString(t, "0x2222222222222222222222222222222222222222")
+	feeRecipient1 := feeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
+	feeRecipient2 := feeRecipientFromString(t, "0x2222222222222222222222222222222222222222")
 
-	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+	defaultFeeRecipient := feeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2417,15 +2417,15 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	// pubkey3 => Nothing, builder enabled
 
 	// Public keys
-	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
-	pubkey2 := getPubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
-	pubkey3 := getPubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey2 := pubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+	pubkey3 := pubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
 
 	// Fee recipients
-	feeRecipient1 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
-	feeRecipient2 := getFeeRecipientFromString(t, "0x2222222222222222222222222222222222222222")
+	feeRecipient1 := feeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
+	feeRecipient2 := feeRecipientFromString(t, "0x2222222222222222222222222222222222222222")
 
-	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+	defaultFeeRecipient := feeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2503,10 +2503,10 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 
 func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
 	// Public keys
-	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
 
 	// Fee recipients
-	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+	defaultFeeRecipient := feeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2542,12 +2542,12 @@ func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
 
 func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 	// Public keys
-	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
 
 	// Fee recipients
-	feeRecipient1 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
+	feeRecipient1 := feeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
 
-	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+	defaultFeeRecipient := feeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

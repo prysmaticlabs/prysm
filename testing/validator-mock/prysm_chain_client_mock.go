@@ -37,9 +37,9 @@ func (m *MockPrysmChainClient) EXPECT() *MockPrysmChainClientMockRecorder {
 }
 
 // GetValidatorCount mocks base method.
-func (m *MockPrysmChainClient) GetValidatorCount(arg0 context.Context, arg1 string, arg2 []validator.Status) ([]iface.ValidatorCount, error) {
+func (m *MockPrysmChainClient) ValidatorCount(arg0 context.Context, arg1 string, arg2 []validator.Status) ([]iface.ValidatorCount, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetValidatorCount", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ValidatorCount", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]iface.ValidatorCount)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -48,5 +48,5 @@ func (m *MockPrysmChainClient) GetValidatorCount(arg0 context.Context, arg1 stri
 // GetValidatorCount indicates an expected call of GetValidatorCount.
 func (mr *MockPrysmChainClientMockRecorder) GetValidatorCount(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorCount", reflect.TypeOf((*MockPrysmChainClient)(nil).GetValidatorCount), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorCount", reflect.TypeOf((*MockPrysmChainClient)(nil).ValidatorCount), arg0, arg1, arg2)
 }

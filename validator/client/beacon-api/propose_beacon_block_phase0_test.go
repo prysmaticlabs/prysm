@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	testhelpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"go.uber.org/mock/gomock"
 )
 
@@ -76,8 +76,8 @@ func TestProposeBeaconBlock_Phase0(t *testing.T) {
 func generateSignedPhase0Block() *ethpb.GenericSignedBeaconBlock_Phase0 {
 	return &ethpb.GenericSignedBeaconBlock_Phase0{
 		Phase0: &ethpb.SignedBeaconBlock{
-			Block:     test_helpers.GenerateProtoPhase0BeaconBlock(),
-			Signature: test_helpers.FillByteSlice(96, 110),
+			Block:     testhelpers.GenerateProtoPhase0BeaconBlock(),
+			Signature: testhelpers.FillByteSlice(96, 110),
 		},
 	}
 }
