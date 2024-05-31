@@ -127,7 +127,7 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			flags.Web3SignerURLFlag,
 			flags.Web3SignerPublicValidatorKeysFlag,
-      flags.Web3SignerKeyFileFlag,
+			flags.Web3SignerKeyFileFlag,
 		},
 	},
 	{
