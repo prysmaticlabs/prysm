@@ -158,7 +158,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				Index:          withdrawalIndex,
 				ValidatorIndex: validatorIndex,
-				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Address:        bytesutil.SafeCopyBytes(val.GetWithdrawalCredentials()[ETH1AddressOffset:]),
 				Amount:         balance,
 			})
 			withdrawalIndex++
@@ -166,7 +166,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				Index:          withdrawalIndex,
 				ValidatorIndex: validatorIndex,
-				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Address:        bytesutil.SafeCopyBytes(val.GetWithdrawalCredentials()[ETH1AddressOffset:]),
 				Amount:         balance - helpers.ValidatorMaxEffectiveBalance(val),
 			})
 			withdrawalIndex++
