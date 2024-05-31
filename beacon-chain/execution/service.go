@@ -436,7 +436,7 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*types.Hea
 	return headers, nil
 }
 
-// safelyHandleHeader will recover and log any panic that occurs from the block
+// safelyHandlePanic will recover and log any panic that occurs from the block
 func safelyHandlePanic() {
 	if r := recover(); r != nil {
 		log.WithFields(logrus.Fields{
