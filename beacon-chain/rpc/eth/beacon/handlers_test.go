@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/mock/gomock"
 	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"go.uber.org/mock/gomock"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"

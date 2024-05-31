@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -40,7 +41,6 @@ import (
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/v5/validator/testing"
-	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
@@ -17,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
-	"go.uber.org/mock/gomock"
 )
 
 func TestGetBeaconBlock_RequestFailed(t *testing.T) {

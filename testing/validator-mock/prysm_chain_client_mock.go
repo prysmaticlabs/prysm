@@ -8,9 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "github.com/golang/mock/gomock"
 	validator "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPrysmChainClient is a mock of PrysmChainClient interface.

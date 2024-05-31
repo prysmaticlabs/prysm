@@ -5,8 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	healthTesting "github.com/prysmaticlabs/prysm/v5/api/client/beacon/testing"
-	"go.uber.org/mock/gomock"
 )
 
 func TestNodeHealth_IsHealthy(t *testing.T) {

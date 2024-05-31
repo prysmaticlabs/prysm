@@ -25,6 +25,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/gddo v0.0.0-20200528160355-8d077c1d8f4c
+	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.4
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
 	github.com/google/go-cmp v0.6.0
@@ -87,7 +88,6 @@ require (
 	go.etcd.io/bbolt v1.3.6
 	go.opencensus.io v0.24.0
 	go.uber.org/automaxprocs v1.5.2
-	go.uber.org/mock v0.4.0
 	golang.org/x/crypto v0.23.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/mod v0.17.0
@@ -247,6 +247,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.uber.org/dig v1.17.1 // indirect
 	go.uber.org/fx v1.21.1 // indirect
+	go.uber.org/mock v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20231108232855-2478ac86f678 // indirect

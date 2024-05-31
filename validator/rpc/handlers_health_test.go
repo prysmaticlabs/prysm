@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/io/logs/mock"
@@ -16,7 +17,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	validatormock "github.com/prysmaticlabs/prysm/v5/testing/validator-mock"
-	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
 )
 

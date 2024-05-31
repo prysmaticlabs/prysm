@@ -11,6 +11,7 @@ import (
 	validatorType "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 
+	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -25,7 +26,6 @@ import (
 	mock2 "github.com/stretchr/testify/mock"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
-	"go.uber.org/mock/gomock"
 )
 
 func TestWaitActivation_ContextCanceled(t *testing.T) {

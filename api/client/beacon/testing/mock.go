@@ -4,8 +4,8 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon/iface"
-	"go.uber.org/mock/gomock"
 )
 
 var (

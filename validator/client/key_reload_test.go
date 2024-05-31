@@ -4,9 +4,11 @@ import (
 	"context"
 	"testing"
 
+	gomock2 "github.com/golang/mock/gomock"
 	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 
+	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -15,12 +17,13 @@ import (
 	validatormock "github.com/prysmaticlabs/prysm/v5/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"go.uber.org/mock/gomock"
 )
 
 func TestValidator_HandleKeyReload(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+	ctrl2 := gomock2.NewController(t)
+	defer ctrl2.Finish()
 
 	t.Run("active", func(t *testing.T) {
 		hook := logTest.NewGlobal()
@@ -28,7 +31,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 		inactive := randKeypair(t)
 		active := randKeypair(t)
 
-		client := validatormock.NewMockValidatorClient(ctrl)
+		client := validatormock.NewMockValidatorClient(ctrl2)
 		chainClient := validatormock.NewMockChainClient(ctrl)
 		prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 		v := validator{
@@ -64,7 +67,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 	t.Run("no active", func(t *testing.T) {
 		hook := logTest.NewGlobal()
 
-		client := validatormock.NewMockValidatorClient(ctrl)
+		client := validatormock.NewMockValidatorClient(ctrl2)
 		chainClient := validatormock.NewMockChainClient(ctrl)
 		prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 		kp := randKeypair(t)
@@ -99,7 +102,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 
 	t.Run("error when getting status", func(t *testing.T) {
 		kp := randKeypair(t)
-		client := validatormock.NewMockValidatorClient(ctrl)
+		client := validatormock.NewMockValidatorClient(ctrl2)
 		v := validator{
 			validatorClient: client,
 			km:              newMockKeymanager(t, kp),

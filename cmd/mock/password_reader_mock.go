@@ -7,7 +7,7 @@ package mock
 import (
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // PasswordReader is a mock of PasswordReader interface

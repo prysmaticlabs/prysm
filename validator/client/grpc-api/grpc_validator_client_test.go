@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	eventClient "github.com/prysmaticlabs/prysm/v5/api/client/event"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -14,7 +15,6 @@ import (
 	mock2 "github.com/prysmaticlabs/prysm/v5/testing/mock"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

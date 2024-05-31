@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-	"go.uber.org/mock/gomock"
 )
 
 func TestGetAggregatedSyncSelections(t *testing.T) {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	healthTesting "github.com/prysmaticlabs/prysm/v5/api/client/beacon/testing"
@@ -20,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"go.uber.org/mock/gomock"
 )
 
 func cancelledContext() context.Context {
