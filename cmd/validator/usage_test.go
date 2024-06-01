@@ -10,7 +10,7 @@ import (
 
 func TestAllFlagsExistInHelp(t *testing.T) {
 	// If this test is failing, it is because you've recently added/removed a
-	// flag in beacon chain main.go, but did not add/remove it to the usage.go
+	// flag in main.go, but did not add/remove it to the usage.go
 	// flag grouping (appHelpFlagGroups).
 
 	var helpFlags []cli.Flag

@@ -60,8 +60,7 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	blk, err := s.Blocker.Block(ctx, []byte(blockId))
-	if err != nil {
-		shared.WriteBlockFetchError(w, blk, err)
+	if !shared.WriteBlockFetchError(w, blk, err) {
 		return
 	}
 
@@ -69,7 +68,7 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 	if blk.Version() >= version.Bellatrix && blk.IsBlinded() {
 		blk, err = s.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 		if err != nil {
-			shared.WriteBlockFetchError(w, blk, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block"))
+			httputil.HandleError(w, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block").Error(), http.StatusBadRequest)
 			return
 		}
 	}
@@ -892,6 +891,11 @@ func (s *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnlyS
 	if err != nil {
 		return errors.Wrap(err, "could not get parent block")
 	}
+
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
+		return errors.Wrap(err, "could not validate block")
+	}
+
 	parentStateRoot := parentBlock.Block().StateRoot()
 	parentState, err := s.Stater.State(ctx, parentStateRoot[:])
 	if err != nil {

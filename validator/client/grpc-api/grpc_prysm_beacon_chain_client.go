@@ -22,8 +22,8 @@ type grpcPrysmChainClient struct {
 	chainClient iface.ChainClient
 }
 
-func (g grpcPrysmChainClient) GetValidatorCount(ctx context.Context, _ string, statuses []validator.Status) ([]iface.ValidatorCount, error) {
-	resp, err := g.chainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{PageSize: 0})
+func (g grpcPrysmChainClient) ValidatorCount(ctx context.Context, _ string, statuses []validator.Status) ([]iface.ValidatorCount, error) {
+	resp, err := g.chainClient.Validators(ctx, &ethpb.ListValidatorsRequest{PageSize: 0})
 	if err != nil {
 		return nil, errors.Wrap(err, "list validators failed")
 	}
@@ -33,7 +33,7 @@ func (g grpcPrysmChainClient) GetValidatorCount(ctx context.Context, _ string, s
 		vals = append(vals, val.Validator)
 	}
 
-	head, err := g.chainClient.GetChainHead(ctx, &empty.Empty{})
+	head, err := g.chainClient.ChainHead(ctx, &empty.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "get chain head")
 	}
