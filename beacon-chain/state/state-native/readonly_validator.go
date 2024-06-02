@@ -77,7 +77,7 @@ func (v readOnlyValidator) publicKeySlice() []byte {
 
 // WithdrawalCredentials returns the withdrawal credentials of the
 // read only validator.
-func (v readOnlyValidator) WithdrawalCredentials() []byte {
+func (v readOnlyValidator) GetWithdrawalCredentials() []byte {
 	creds := make([]byte, len(v.validator.WithdrawalCredentials))
 	copy(creds, v.validator.WithdrawalCredentials)
 	return creds

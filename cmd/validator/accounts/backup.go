@@ -23,10 +23,10 @@ func accountsBackup(c *cli.Context) error {
 	dialOpts := client.ConstructDialOptions(
 		c.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 		c.String(flags.CertFlag.Name),
-		c.Uint(flags.GrpcRetriesFlag.Name),
-		c.Duration(flags.GrpcRetryDelayFlag.Name),
+		c.Uint(flags.GRPCRetriesFlag.Name),
+		c.Duration(flags.GRPCRetryDelayFlag.Name),
 	)
-	grpcHeaders := strings.Split(c.String(flags.GrpcHeadersFlag.Name), ",")
+	grpcHeaders := strings.Split(c.String(flags.GRPCHeadersFlag.Name), ",")
 
 	opts := []accounts.Option{
 		accounts.WithWallet(w),
@@ -62,7 +62,7 @@ func accountsBackup(c *cli.Context) error {
 	// Ask the user for their desired password for their backed up accounts.
 	backupsPassword, err := prompt.InputPassword(
 		c,
-		flags.BackupPasswordFile,
+		flags.BackupPasswordFileFlag,
 		"Enter a new password for your backed up accounts",
 		"Confirm new password",
 		true,

@@ -5,7 +5,6 @@ import (
 
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -32,7 +31,7 @@ func TestEarliestConsolidationEpoch(t *testing.T) {
 
 func TestConsolidationBalanceToConsume(t *testing.T) {
 	t.Run("electra returns expected value", func(t *testing.T) {
-		want := math.Gwei(10)
+		want := primitives.Gwei(10)
 		st, err := state_native.InitializeFromProtoElectra(&ethpb.BeaconStateElectra{
 			ConsolidationBalanceToConsume: want,
 		})

@@ -33,7 +33,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -144,9 +143,9 @@ func TestGetAggregateAttestation(t *testing.T) {
 	}
 
 	pool := attestations.NewPool()
-	err := pool.SaveAggregatedAttestations([]interfaces.Attestation{attSlot1, attslot21, attslot22})
+	err := pool.SaveAggregatedAttestations([]ethpbalpha.Att{attSlot1, attslot21, attslot22})
 	assert.NoError(t, err)
-	err = pool.SaveUnaggregatedAttestations([]interfaces.Attestation{attslot31, attslot32})
+	err = pool.SaveUnaggregatedAttestations([]ethpbalpha.Att{attslot31, attslot32})
 	assert.NoError(t, err)
 
 	s := &Server{
@@ -315,7 +314,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 		Signature: sig,
 	}
 	pool := attestations.NewPool()
-	err := pool.SaveAggregatedAttestations([]interfaces.Attestation{att1, att2})
+	err := pool.SaveAggregatedAttestations([]ethpbalpha.Att{att1, att2})
 	assert.NoError(t, err)
 	s := &Server{
 		AttestationsPool: pool,
@@ -1444,6 +1443,9 @@ func TestGetAttesterDuties(t *testing.T) {
 	chain := &mockChain.ChainService{
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
+	db := dbutil.SetupDB(t)
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
+
 	s := &Server{
 		Stater: &testutil.MockStater{
 			StatesBySlot: map[primitives.Slot]state.BeaconState{
@@ -1454,6 +1456,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		TimeFetcher:           chain,
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		OptimisticModeFetcher: chain,
+		BeaconDB:              db,
 	}
 
 	t.Run("single validator", func(t *testing.T) {
@@ -1620,7 +1623,6 @@ func TestGetAttesterDuties(t *testing.T) {
 		blk.Block.Slot = 31
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		db := dbutil.SetupDB(t)
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
@@ -1633,6 +1635,7 @@ func TestGetAttesterDuties(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BeaconDB:              db,
 		}
 
 		var body bytes.Buffer
@@ -1694,6 +1697,9 @@ func TestGetProposerDuties(t *testing.T) {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
+	db := dbutil.SetupDB(t)
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
+
 	t.Run("ok", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
@@ -1711,6 +1717,7 @@ func TestGetProposerDuties(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			PayloadIDCache:         cache.NewPayloadIDCache(),
 			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+			BeaconDB:               db,
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
@@ -1738,6 +1745,7 @@ func TestGetProposerDuties(t *testing.T) {
 	t.Run("next epoch", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 		require.NoError(t, bs.SetBlockRoots(roots))
 		chainSlot := primitives.Slot(0)
 		chain := &mockChain.ChainService{
@@ -1751,6 +1759,7 @@ func TestGetProposerDuties(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			PayloadIDCache:         cache.NewPayloadIDCache(),
 			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+			BeaconDB:               db,
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
@@ -1793,6 +1802,7 @@ func TestGetProposerDuties(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			PayloadIDCache:         cache.NewPayloadIDCache(),
 			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+			BeaconDB:               db,
 		}
 
 		currentEpoch := slots.ToEpoch(bs.Slot())
@@ -1809,7 +1819,6 @@ func TestGetProposerDuties(t *testing.T) {
 		assert.StringContains(t, fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", currentEpoch+2, currentEpoch+1), e.Message)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
-		ctx := context.Background()
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
 		// Set state to non-epoch start slot.
@@ -1819,11 +1828,6 @@ func TestGetProposerDuties(t *testing.T) {
 		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
 		blk.Block.Slot = 31
-		root, err := blk.Block.HashTreeRoot()
-		require.NoError(t, err)
-		db := dbutil.SetupDB(t)
-		util.SaveBlock(t, ctx, db, blk)
-		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		chainSlot := primitives.Slot(0)
 		chain := &mockChain.ChainService{
@@ -1837,6 +1841,7 @@ func TestGetProposerDuties(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			PayloadIDCache:         cache.NewPayloadIDCache(),
 			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+			BeaconDB:               db,
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)

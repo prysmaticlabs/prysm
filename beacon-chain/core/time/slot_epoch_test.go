@@ -333,3 +333,38 @@ func TestCanUpgradeToDeneb(t *testing.T) {
 		})
 	}
 }
+
+func TestCanUpgradeToElectra(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	bc := params.BeaconConfig()
+	bc.ElectraForkEpoch = 5
+	params.OverrideBeaconConfig(bc)
+	tests := []struct {
+		name string
+		slot primitives.Slot
+		want bool
+	}{
+		{
+			name: "not epoch start",
+			slot: 1,
+			want: false,
+		},
+		{
+			name: "not electra epoch",
+			slot: params.BeaconConfig().SlotsPerEpoch,
+			want: false,
+		},
+		{
+			name: "electra epoch",
+			slot: primitives.Slot(params.BeaconConfig().ElectraForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := time.CanUpgradeToElectra(tt.slot); got != tt.want {
+				t.Errorf("CanUpgradeToElectra() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

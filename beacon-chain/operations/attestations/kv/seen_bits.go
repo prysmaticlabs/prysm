@@ -1,13 +1,15 @@
 package kv
 
 import (
+	"fmt"
+
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-func (c *AttCaches) insertSeenBit(att interfaces.Attestation) error {
+func (c *AttCaches) insertSeenBit(att ethpb.Att) error {
 	r, err := hashFn(att.GetData())
 	if err != nil {
 		return err
@@ -22,7 +24,7 @@ func (c *AttCaches) insertSeenBit(att interfaces.Attestation) error {
 		alreadyExists := false
 		for _, bit := range seenBits {
 			if c, err := bit.Contains(att.GetAggregationBits()); err != nil {
-				return err
+				return fmt.Errorf("failed to check seen bits on attestation when inserting bit: %w", err)
 			} else if c {
 				alreadyExists = true
 				break
@@ -39,7 +41,7 @@ func (c *AttCaches) insertSeenBit(att interfaces.Attestation) error {
 	return nil
 }
 
-func (c *AttCaches) hasSeenBit(att interfaces.Attestation) (bool, error) {
+func (c *AttCaches) hasSeenBit(att ethpb.Att) (bool, error) {
 	r, err := hashFn(att.GetData())
 	if err != nil {
 		return false, err
@@ -53,7 +55,7 @@ func (c *AttCaches) hasSeenBit(att interfaces.Attestation) (bool, error) {
 		}
 		for _, bit := range seenBits {
 			if c, err := bit.Contains(att.GetAggregationBits()); err != nil {
-				return false, err
+				return false, fmt.Errorf("failed to check seen bits on attestation when reading bit: %w", err)
 			} else if c {
 				return true, nil
 			}

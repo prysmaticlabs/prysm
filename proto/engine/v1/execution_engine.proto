@@ -41,11 +41,6 @@ message ExecutionPayload {
 	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
 }
 
-message ExecutionPayloadBodyV1 {
-	repeated bytes transactions = 1;
-	repeated Withdrawal withdrawals = 2;
-}
-
 message ExecutionPayloadCapella {
 	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];
@@ -107,6 +102,13 @@ message ExecutionPayloadElectra {
 	uint64 excess_blob_gas  = 17;
 	repeated DepositReceipt deposit_receipts = 18 [(ethereum.eth.ext.ssz_max) = "max_deposit_receipts"]; // new in electra, eip6110
 	repeated ExecutionLayerWithdrawalRequest	withdrawal_requests = 19 [(ethereum.eth.ext.ssz_max) = "max_withdrawal_requests_per_payload.size"]; // new in electra, eip7002, eip7251
+}
+
+message ExecutionPayloadElectraWithValueAndBlobsBundle {
+	ExecutionPayloadElectra payload = 1;
+	bytes value = 2;
+	BlobsBundle blobs_bundle = 3;
+	bool should_override_builder = 4;
 }
 
 message ExecutionPayloadCapellaWithValue {

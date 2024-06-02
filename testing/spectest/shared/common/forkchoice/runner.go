@@ -85,6 +85,9 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 				case version.Deneb:
 					beaconState = unmarshalDenebState(t, preBeaconStateSSZ)
 					beaconBlock = unmarshalDenebBlock(t, blockSSZ)
+				case version.Electra:
+					beaconState = unmarshalElectraState(t, preBeaconStateSSZ)
+					beaconBlock = unmarshalElectraBlock(t, blockSSZ)
 				default:
 					t.Fatalf("unknown fork version: %v", fork)
 				}
@@ -112,6 +115,8 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 							beaconBlock = unmarshalSignedCapellaBlock(t, blockSSZ)
 						case version.Deneb:
 							beaconBlock = unmarshalSignedDenebBlock(t, blockSSZ)
+						case version.Electra:
+							beaconBlock = unmarshalSignedElectraBlock(t, blockSSZ)
 						default:
 							t.Fatalf("unknown fork version: %v", fork)
 						}
@@ -275,6 +280,30 @@ func unmarshalDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock 
 
 func unmarshalSignedDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.SignedBeaconBlockDeneb{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	blk, err := blocks.NewSignedBeaconBlock(base)
+	require.NoError(t, err)
+	return blk
+}
+
+func unmarshalElectraState(t *testing.T, raw []byte) state.BeaconState {
+	base := &ethpb.BeaconStateElectra{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	st, err := state_native.InitializeFromProtoElectra(base)
+	require.NoError(t, err)
+	return st
+}
+
+func unmarshalElectraBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.BeaconBlockElectra{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockElectra{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	require.NoError(t, err)
+	return blk
+}
+
+func unmarshalSignedElectraBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.SignedBeaconBlockElectra{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
 	blk, err := blocks.NewSignedBeaconBlock(base)
 	require.NoError(t, err)

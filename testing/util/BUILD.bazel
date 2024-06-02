@@ -17,6 +17,8 @@ go_library(
         "deneb_state.go",
         "deposits.go",
         "electra.go",
+        "electra_block.go",
+        "electra_state.go",
         "helpers.go",
         "merge.go",
         "state.go",

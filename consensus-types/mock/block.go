@@ -5,7 +5,7 @@ import (
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/math"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
@@ -72,14 +72,6 @@ func (SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, erro
 }
 
 func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) ValueInWei() math.Wei {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) ValueInGwei() uint64 {
 	panic("implement me")
 }
 
@@ -192,7 +184,7 @@ func (BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) AttesterSlashings() []interfaces.AttesterSlashing {
+func (BeaconBlockBody) AttesterSlashings() []eth.AttSlashing {
 	panic("implement me")
 }
 
@@ -248,7 +240,7 @@ func (b *BeaconBlockBody) SetProposerSlashings([]*eth.ProposerSlashing) {
 	panic("implement me")
 }
 
-func (b *BeaconBlockBody) SetAttesterSlashings([]interfaces.AttesterSlashing) {
+func (b *BeaconBlockBody) SetAttesterSlashings([]ethpb.AttesterSlashing) {
 	panic("implement me")
 }
 
@@ -281,7 +273,7 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	panic("implement me")
 }
 
-func (b *BeaconBlockBody) Attestations() []interfaces.Attestation {
+func (b *BeaconBlockBody) Attestations() []eth.Att {
 	panic("implement me")
 }
 func (b *BeaconBlockBody) Consolidations() []*eth.SignedConsolidation {

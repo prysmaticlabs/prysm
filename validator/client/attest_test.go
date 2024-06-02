@@ -81,7 +81,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 					Committee:      make([]primitives.ValidatorIndex, 111),
 					ValidatorIndex: 0,
 				}}}
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Return(&ethpb.AttestationData{
@@ -128,7 +128,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
 			targetRoot := bytesutil.ToBytes32([]byte("B"))
 			sourceRoot := bytesutil.ToBytes32([]byte("C"))
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Return(&ethpb.AttestationData{
@@ -167,7 +167,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			root, err := signing.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 			require.NoError(t, err)
 
-			sig, err := validator.keyManager.Sign(context.Background(), &validatorpb.SignRequest{
+			sig, err := validator.km.Sign(context.Background(), &validatorpb.SignRequest{
 				PublicKey:   validatorKey.PublicKey().Marshal(),
 				SigningRoot: root[:],
 			})
@@ -206,7 +206,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 			sourceRoot := bytesutil.ToBytes32([]byte("C"))
 			beaconBlockRoot2 := bytesutil.ToBytes32([]byte("D"))
 
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Return(&ethpb.AttestationData{
@@ -214,7 +214,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 				Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 4},
 				Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
 			}, nil)
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Return(&ethpb.AttestationData{
@@ -261,7 +261,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 			targetRoot := bytesutil.ToBytes32([]byte("B"))
 			sourceRoot := bytesutil.ToBytes32([]byte("C"))
 
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Return(&ethpb.AttestationData{
@@ -269,7 +269,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 				Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 2},
 				Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 1},
 			}, nil)
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Return(&ethpb.AttestationData{
@@ -317,7 +317,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 			targetRoot := bytesutil.ToBytes32([]byte("B"))
 			sourceRoot := bytesutil.ToBytes32([]byte("C"))
 
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Return(&ethpb.AttestationData{
@@ -339,7 +339,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 			validator.SubmitAttestation(context.Background(), 30, pubKey)
 			require.LogsDoNotContain(t, hook, failedAttLocalProtectionErr)
 
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Return(&ethpb.AttestationData{
@@ -363,12 +363,12 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
 			validator.genesisTime = uint64(prysmTime.Now().Unix())
-			m.validatorClient.EXPECT().GetDuties(
+			m.validatorClient.EXPECT().Duties(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.DutiesRequest{}),
 			).Times(0)
 
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Times(0)
@@ -408,7 +408,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 					ValidatorIndex: validatorIndex,
 				}}}
 
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Return(&ethpb.AttestationData{
@@ -450,7 +450,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 					Committee:      committee,
 					ValidatorIndex: validatorIndex,
 				}}}
-			m.validatorClient.EXPECT().GetAttestationData(
+			m.validatorClient.EXPECT().AttestationData(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 			).Return(&ethpb.AttestationData{
@@ -504,7 +504,7 @@ func TestSignAttestation(t *testing.T) {
 			att.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("blockRoot"), 32)
 
 			pk := testKeyFromBytes(t, []byte{1})
-			validator.keyManager = newMockKeymanager(t, pk)
+			validator.km = newMockKeymanager(t, pk)
 			sig, sr, err := validator.signAtt(ctx, pk.pub, att.Data, att.Data.Slot)
 			require.NoError(t, err, "%x,%x,%v", sig, sr, err)
 			require.Equal(t, "b6a60f8497bd328908be83634d045"+
@@ -643,7 +643,7 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 				gomock.Any(), // ctx
 				&ethpb.DomainRequest{Epoch: 10, Domain: []byte{1, 0, 0, 0}},
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-			_, sr, err := validator.getDomainAndSigningRoot(ctx, att.Data)
+			_, sr, err := validator.domainAndSigningRoot(ctx, att.Data)
 			require.NoError(t, err)
 
 			err = validator.db.SlashableAttestationCheck(context.Background(), att, pubKey, sr, false, nil)
