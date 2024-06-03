@@ -46,84 +46,84 @@ var (
 //	    process_effective_balance_updates(state)
 //	    process_slashings_reset(state)
 //	    process_randao_mixes_reset(state)
-func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
 	_, span := trace.StartSpan(ctx, "electra.ProcessEpoch")
 	defer span.End()
 
 	if state == nil || state.IsNil() {
-		return nil, errors.New("nil state")
+		return errors.New("nil state")
 	}
 	vp, bp, err := InitializePrecomputeValidators(ctx, state)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	vp, bp, err = ProcessEpochParticipation(ctx, state, bp, vp)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process justification")
+		return errors.Wrap(err, "could not process justification")
 	}
 	state, vp, err = ProcessInactivityScores(ctx, state, vp)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process inactivity updates")
+		return errors.Wrap(err, "could not process inactivity updates")
 	}
 	state, err = ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process rewards and penalties")
+		return errors.Wrap(err, "could not process rewards and penalties")
 	}
 
 	state, err = ProcessRegistryUpdates(ctx, state)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process registry updates")
+		return errors.Wrap(err, "could not process registry updates")
 	}
 
 	proportionalSlashingMultiplier, err := state.ProportionalSlashingMultiplier()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	state, err = ProcessSlashings(state, proportionalSlashingMultiplier)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	state, err = ProcessEth1DataReset(state)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if err = ProcessPendingBalanceDeposits(ctx, state, primitives.Gwei(bp.ActiveCurrentEpoch)); err != nil {
-		return nil, err
+		return err
 	}
-	if err := ProcessPendingConsolidations(ctx, state); err != nil {
-		return nil, err
+	if err = ProcessPendingConsolidations(ctx, state); err != nil {
+		return err
 	}
-	if err := ProcessEffectiveBalanceUpdates(state); err != nil {
-		return nil, err
+	if err = ProcessEffectiveBalanceUpdates(state); err != nil {
+		return err
 	}
 
 	state, err = ProcessSlashingsReset(state)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	state, err = ProcessRandaoMixesReset(state)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	state, err = ProcessHistoricalDataUpdate(state)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	state, err = ProcessParticipationFlagUpdates(state)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	state, err = ProcessSyncCommitteeUpdates(ctx, state)
+	_, err = ProcessSyncCommitteeUpdates(ctx, state)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return state, nil
+	return nil
 }
