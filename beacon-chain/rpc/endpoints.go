@@ -3,6 +3,10 @@ package rpc
 import (
 	"net/http"
 
+	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/blob"
@@ -23,10 +27,25 @@ import (
 )
 
 type endpoint struct {
-	template string
-	name     string
-	handler  http.HandlerFunc
-	methods  []string
+	template   string
+	name       string
+	middleware []mux.MiddlewareFunc
+	handler    http.HandlerFunc
+	methods    []string
+}
+
+func (e *endpoint) handlerWithMiddleware() http.HandlerFunc {
+	handler := http.Handler(e.handler)
+	for _, m := range e.middleware {
+		handler = m(handler)
+	}
+	return promhttp.InstrumentHandlerDuration(
+		httpRequestLatency.MustCurryWith(prometheus.Labels{"endpoint": e.name}),
+		promhttp.InstrumentHandlerCounter(
+			httpRequestCount.MustCurryWith(prometheus.Labels{"endpoint": e.name}),
+			handler,
+		),
+	)
 }
 
 func (s *Service) endpoints(
@@ -193,8 +212,11 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/attestation_data",
 			name:     namespace + ".GetAttestationData",
-			handler:  server.GetAttestationData,
-			methods:  []string{http.MethodGet},
+			middleware: []mux.MiddlewareFunc{
+				middleware.ContentTypeHandler([]string{"application/json"}),
+			},
+			handler: server.GetAttestationData,
+			methods: []string{http.MethodGet},
 		},
 		{
 			template: "/eth/v1/validator/register_validator",
