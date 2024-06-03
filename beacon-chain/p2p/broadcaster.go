@@ -142,7 +142,7 @@ func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint6
 		log.WithFields(logrus.Fields{
 			"attestationSlot": att.Data.Slot,
 			"currentSlot":     currSlot,
-		}).WithError(err).Warning("Attestation is too old to broadcast, discarding it")
+		}).WithError(err).Debug("Attestation is too old to broadcast, discarding it")
 		return
 	}
 
