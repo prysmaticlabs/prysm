@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/holiman/uint256"
 	errors "github.com/pkg/errors"
+
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -28,9 +29,9 @@ const (
 type (
 	ExtendedMatrix []cKzg4844.Cell
 
-	cellCoordinate struct {
-		blobIndex uint64
-		cellID    uint64
+	CellCoordinate struct {
+		BlobIndex uint64
+		CellID    uint64
 	}
 )
 
@@ -130,15 +131,15 @@ func ComputeExtendedMatrix(blobs []cKzg4844.Blob) (ExtendedMatrix, error) {
 
 // RecoverMatrix recovers the extended matrix from some cells.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#recover_matrix
-func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCount uint64) (ExtendedMatrix, error) {
+func RecoverMatrix(cellFromCoordinate map[CellCoordinate]cKzg4844.Cell, blobCount uint64) (ExtendedMatrix, error) {
 	matrix := make(ExtendedMatrix, 0, extendedMatrixSize)
 
 	for blobIndex := uint64(0); blobIndex < blobCount; blobIndex++ {
 		// Filter all cells that belong to the current blob.
 		cellIds := make([]uint64, 0, cKzg4844.CellsPerExtBlob)
 		for coordinate := range cellFromCoordinate {
-			if coordinate.blobIndex == blobIndex {
-				cellIds = append(cellIds, coordinate.cellID)
+			if coordinate.BlobIndex == blobIndex {
+				cellIds = append(cellIds, coordinate.CellID)
 			}
 		}
 
@@ -147,7 +148,7 @@ func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCoun
 
 		cells := make([]cKzg4844.Cell, 0, cellIdsCount)
 		for _, cellId := range cellIds {
-			coordinate := cellCoordinate{blobIndex: blobIndex, cellID: cellId}
+			coordinate := CellCoordinate{BlobIndex: blobIndex, CellID: cellId}
 			cell, ok := cellFromCoordinate[coordinate]
 			if !ok {
 				return matrix, errCellNotFound
@@ -169,7 +170,7 @@ func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCoun
 }
 
 // DataColumnSidecars computes the data column sidecars from the signed block and blobs.
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#recover_matrix
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#get_data_column_sidecars
 func DataColumnSidecars(signedBlock interfaces.ReadOnlySignedBeaconBlock, blobs []cKzg4844.Blob) ([]*ethpb.DataColumnSidecar, error) {
 	blobsCount := len(blobs)
 	if blobsCount == 0 {
@@ -183,8 +184,7 @@ func DataColumnSidecars(signedBlock interfaces.ReadOnlySignedBeaconBlock, blobs 
 	}
 
 	// Get the block body.
-	block := signedBlock.Block()
-	blockBody := block.Body()
+	blockBody := signedBlock.Block().Body()
 
 	// Get the blob KZG commitments.
 	blobKzgCommitments, err := blockBody.BlobKzgCommitments()
