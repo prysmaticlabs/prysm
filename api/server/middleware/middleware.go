@@ -37,6 +37,11 @@ func CorsHandler(allowOrigins []string) mux.MiddlewareFunc {
 func ContentTypeHandler(acceptedMediaTypes []string) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// skip the GET request
+			if r.Method == http.MethodGet {
+				next.ServeHTTP(w, r)
+				return
+			}
 			contentType := r.Header.Get("Content-Type")
 			if contentType == "" {
 				http.Error(w, "Content-Type header is missing", http.StatusUnsupportedMediaType)
@@ -53,6 +58,42 @@ func ContentTypeHandler(acceptedMediaTypes []string) mux.MiddlewareFunc {
 
 			if !accepted {
 				http.Error(w, fmt.Sprintf("Unsupported media type: %s", contentType), http.StatusUnsupportedMediaType)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// AcceptHeaderHandler checks if the client's response preference is handled
+func AcceptHeaderHandler(serverAcceptedTypes []string) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			acceptHeader := r.Header.Get("Accept")
+			// header is optional and should skip if not provided
+			if acceptHeader == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			accepted := false
+			acceptTypes := strings.Split(acceptHeader, ",")
+			for _, acceptType := range acceptTypes {
+				acceptType = strings.TrimSpace(acceptType)
+				for _, serverAcceptedType := range serverAcceptedTypes {
+					if strings.HasPrefix(acceptType, serverAcceptedType) {
+						accepted = true
+						break
+					}
+				}
+				if accepted {
+					break
+				}
+			}
+
+			if !accepted {
+				http.Error(w, fmt.Sprintf("Not Acceptable: %s", acceptHeader), http.StatusNotAcceptable)
 				return
 			}
 

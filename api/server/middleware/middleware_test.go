@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
@@ -48,6 +49,130 @@ func TestNormalizeQueryValuesHandler(t *testing.T) {
 
 			if rr.Body.String() != "next handler" {
 				t.Errorf("next handler was not executed")
+			}
+		})
+	}
+}
+
+func TestContentTypeHandler(t *testing.T) {
+	acceptedMediaTypes := []string{api.JsonMediaType, api.OctetStreamMediaType}
+
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write([]byte("next handler"))
+		require.NoError(t, err)
+	})
+
+	handler := ContentTypeHandler(acceptedMediaTypes)(nextHandler)
+
+	tests := []struct {
+		name               string
+		contentType        string
+		expectedStatusCode int
+		isGet              bool
+	}{
+		{
+			name:               "Accepted Content-Type - application/json",
+			contentType:        api.JsonMediaType,
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "Accepted Content-Type - ssz format",
+			contentType:        api.OctetStreamMediaType,
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "Unsupported Content-Type - text/plain",
+			contentType:        "text/plain",
+			expectedStatusCode: http.StatusUnsupportedMediaType,
+		},
+		{
+			name:               "Missing Content-Type",
+			contentType:        "",
+			expectedStatusCode: http.StatusUnsupportedMediaType,
+		},
+		{
+			name:               "GET request skips content type check",
+			contentType:        "",
+			expectedStatusCode: http.StatusOK,
+			isGet:              true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpMethod := http.MethodPost
+			if tt.isGet {
+				httpMethod = http.MethodGet
+			}
+			req := httptest.NewRequest(httpMethod, "/", nil)
+			if tt.contentType != "" {
+				req.Header.Set("Content-Type", tt.contentType)
+			}
+			rr := httptest.NewRecorder()
+
+			handler.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != tt.expectedStatusCode {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatusCode)
+			}
+		})
+	}
+}
+
+func TestAcceptHeaderHandler(t *testing.T) {
+	acceptedTypes := []string{"application/json", "application/octet-stream"}
+
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write([]byte("next handler"))
+		require.NoError(t, err)
+	})
+
+	handler := AcceptHeaderHandler(acceptedTypes)(nextHandler)
+
+	tests := []struct {
+		name               string
+		acceptHeader       string
+		expectedStatusCode int
+	}{
+		{
+			name:               "Accepted Accept-Type - application/json",
+			acceptHeader:       "application/json",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "Accepted Accept-Type - application/octet-stream",
+			acceptHeader:       "application/octet-stream",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "Accepted Accept-Type with parameters",
+			acceptHeader:       "application/json;q=0.9, application/octet-stream;q=0.8",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "Unsupported Accept-Type - text/plain",
+			acceptHeader:       "text/plain",
+			expectedStatusCode: http.StatusNotAcceptable,
+		},
+		{
+			name:               "Missing Accept header",
+			acceptHeader:       "",
+			expectedStatusCode: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/", nil)
+			if tt.acceptHeader != "" {
+				req.Header.Set("Accept", tt.acceptHeader)
+			}
+			rr := httptest.NewRecorder()
+
+			handler.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != tt.expectedStatusCode {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatusCode)
 			}
 		})
 	}
