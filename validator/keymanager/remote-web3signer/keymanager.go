@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
+	"slices"
 	"strings"
 	"sync"
 
@@ -266,7 +266,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			if err != nil {
 				log.WithError(err).Fatalln("Could not fetch current keys")
 			}
-			if !reflect.DeepEqual(currentKeys, fileKeys) {
+			if !slices.Equal(currentKeys, fileKeys) {
 				km.updatePublicKeys(fileKeys)
 			}
 		case err, ok := <-watcher.Errors:
@@ -285,6 +285,7 @@ func (km *Keymanager) updatePublicKeys(keys [][48]byte) {
 	km.providedPublicKeys = keys
 	km.accountsChangedFeed.Send(keys)
 	km.lock.Unlock()
+	log.Debug("Updated public keys")
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys
