@@ -9,8 +9,8 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 var hashFn = hash.Proto
@@ -20,13 +20,13 @@ var hashFn = hash.Proto
 // such are unaggregated, aggregated or attestations within a block.
 type AttCaches struct {
 	aggregatedAttLock  sync.RWMutex
-	aggregatedAtt      map[[32]byte][]ethpb.Att
+	aggregatedAtt      map[blocks.AttestationId][]blocks.ROAttestation
 	unAggregateAttLock sync.RWMutex
-	unAggregatedAtt    map[[32]byte]ethpb.Att
+	unAggregatedAtt    map[blocks.AttestationId]blocks.ROAttestation
 	forkchoiceAttLock  sync.RWMutex
-	forkchoiceAtt      map[[32]byte]ethpb.Att
+	forkchoiceAtt      map[blocks.AttestationId]blocks.ROAttestation
 	blockAttLock       sync.RWMutex
-	blockAtt           map[[32]byte][]ethpb.Att
+	blockAtt           map[blocks.AttestationId][]blocks.ROAttestation
 	seenAtt            *cache.Cache
 }
 
@@ -36,10 +36,10 @@ func NewAttCaches() *AttCaches {
 	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	c := cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second)
 	pool := &AttCaches{
-		unAggregatedAtt: make(map[[32]byte]ethpb.Att),
-		aggregatedAtt:   make(map[[32]byte][]ethpb.Att),
-		forkchoiceAtt:   make(map[[32]byte]ethpb.Att),
-		blockAtt:        make(map[[32]byte][]ethpb.Att),
+		unAggregatedAtt: make(map[blocks.AttestationId]blocks.ROAttestation),
+		aggregatedAtt:   make(map[blocks.AttestationId][]blocks.ROAttestation),
+		forkchoiceAtt:   make(map[blocks.AttestationId]blocks.ROAttestation),
+		blockAtt:        make(map[blocks.AttestationId][]blocks.ROAttestation),
 		seenAtt:         c,
 	}
 

@@ -189,7 +189,7 @@ func (s *Service) processAttestations(ctx context.Context, disparity time.Durati
 			continue
 		}
 
-		if err := s.receiveAttestationNoPubsub(ctx, a, disparity); err != nil {
+		if err := s.receiveAttestationNoPubsub(ctx, a.Att, disparity); err != nil {
 			log.WithFields(logrus.Fields{
 				"slot":             a.GetData().Slot,
 				"committeeIndex":   a.GetData().CommitteeIndex,

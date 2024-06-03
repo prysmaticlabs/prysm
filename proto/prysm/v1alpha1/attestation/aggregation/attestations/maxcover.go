@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
@@ -14,7 +15,7 @@ import (
 // Aggregation occurs in many rounds, up until no more aggregation is possible (all attestations
 // are overlapping).
 // See https://hackmd.io/@farazdagi/in-place-attagg for design and rationale.
-func MaxCoverAttestationAggregation(atts []ethpb.Att) ([]ethpb.Att, error) {
+func MaxCoverAttestationAggregation(atts []blocks.ROAttestation) ([]blocks.ROAttestation, error) {
 	if len(atts) < 2 {
 		return atts, nil
 	}
@@ -149,7 +150,7 @@ func padSelectedKeys(keys []int, pad int) []int {
 
 // aggregateAttestations combines signatures of selected attestations into a single aggregate attestation, and
 // pushes that aggregated attestation into the position of the first of selected attestations.
-func aggregateAttestations(atts []ethpb.Att, keys []int, coverage *bitfield.Bitlist64) (targetIdx int, err error) {
+func aggregateAttestations(atts []blocks.ROAttestation, keys []int, coverage *bitfield.Bitlist64) (targetIdx int, err error) {
 	if len(keys) < 2 || atts == nil || len(atts) < 2 {
 		return targetIdx, errors.Wrap(ErrInvalidAttestationCount, "cannot aggregate")
 	}
@@ -171,25 +172,32 @@ func aggregateAttestations(atts []ethpb.Att, keys []int, coverage *bitfield.Bitl
 		}
 	}
 	// Put aggregated attestation at a position of the first selected attestation.
-	atts[targetIdx] = &ethpb.Attestation{
+	atts[targetIdx], err = blocks.NewROAttestation(&ethpb.Attestation{
 		// Append size byte, which will be unnecessary on switch to Bitlist64.
 		AggregationBits: coverage.ToBitlist(),
 		Data:            data,
 		Signature:       aggregateSignatures(signs).Marshal(),
+	})
+	if err != nil {
+		return targetIdx, err
 	}
+
 	return
 }
 
 // rearrangeProcessedAttestations pushes processed attestations to the end of the slice, returning
 // the number of items re-arranged (so that caller can cut the slice, and allow processed items to be
 // garbage collected).
-func rearrangeProcessedAttestations(atts []ethpb.Att, candidates []*bitfield.Bitlist64, processedKeys []int) {
+func rearrangeProcessedAttestations(atts []blocks.ROAttestation, candidates []*bitfield.Bitlist64, processedKeys []int) {
 	if atts == nil || candidates == nil || processedKeys == nil {
 		return
 	}
+
+	var zeroAtt blocks.ROAttestation
+
 	// Set all selected keys to nil.
 	for _, idx := range processedKeys {
-		atts[idx] = nil
+		atts[idx] = zeroAtt
 		candidates[idx] = nil
 	}
 	// Re-arrange nil items, move them to end of slice.
@@ -197,7 +205,7 @@ func rearrangeProcessedAttestations(atts []ethpb.Att, candidates []*bitfield.Bit
 	lastIdx := len(atts) - 1
 	for _, idx0 := range processedKeys {
 		// Make sure that nil items are swapped for non-nil items only.
-		for lastIdx > idx0 && atts[lastIdx] == nil {
+		for lastIdx > idx0 && atts[lastIdx] == zeroAtt {
 			lastIdx--
 		}
 		if idx0 == lastIdx {
@@ -215,7 +223,7 @@ func (al attList) merge(al1 attList) attList {
 
 // selectUsingKeys returns only items with specified keys.
 func (al attList) selectUsingKeys(keys []int) attList {
-	filtered := make([]ethpb.Att, len(keys))
+	filtered := make([]blocks.ROAttestation, len(keys))
 	for i, key := range keys {
 		filtered[i] = al[key]
 	}

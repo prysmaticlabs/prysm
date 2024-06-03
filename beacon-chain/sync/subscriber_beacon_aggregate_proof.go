@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -15,17 +16,22 @@ import (
 func (s *Service) beaconAggregateProofSubscriber(_ context.Context, msg proto.Message) error {
 	a, ok := msg.(*ethpb.SignedAggregateAttestationAndProof)
 	if !ok {
-		return fmt.Errorf("message was not type *ethpb.SignedAggregateAttestationAndProof, type=%T", msg)
+		return fmt.Errorf("message was not type ethpb.SignedAggregateAttAndProof, type=%T", msg)
 	}
 
 	if a.Message.Aggregate == nil || a.Message.Aggregate.Data == nil {
 		return errors.New("nil aggregate")
 	}
 
-	// An unaggregated attestation can make it here. It’s valid, the aggregator it just itself, although it means poor performance for the subnet.
-	if !helpers.IsAggregated(a.Message.Aggregate) {
-		return s.cfg.attPool.SaveUnaggregatedAttestation(a.Message.Aggregate)
+	roAtt, err := blocks.NewROAttestation(a.Message.Aggregate)
+	if err != nil {
+		return err
 	}
 
-	return s.cfg.attPool.SaveAggregatedAttestation(a.Message.Aggregate)
+	// An unaggregated attestation can make it here. It’s valid, the aggregator it just itself, although it means poor performance for the subnet.
+	if !helpers.IsAggregated(roAtt.Att) {
+		return s.cfg.attPool.SaveUnaggregatedAttestation(roAtt)
+	}
+
+	return s.cfg.attPool.SaveAggregatedAttestation(roAtt)
 }

@@ -25,6 +25,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -52,7 +53,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var match ethpbalpha.Att
+	var match *blocks.ROAttestation
 	var err error
 
 	match, err = matchingAtt(s.AttestationsPool.AggregatedAttestations(), primitives.Slot(slot), attDataRoot)
@@ -98,7 +99,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	httputil.WriteJson(w, response)
 }
 
-func matchingAtt(atts []ethpbalpha.Att, slot primitives.Slot, attDataRoot []byte) (ethpbalpha.Att, error) {
+func matchingAtt(atts []blocks.ROAttestation, slot primitives.Slot, attDataRoot []byte) (*blocks.ROAttestation, error) {
 	for _, att := range atts {
 		if att.GetData().Slot == slot {
 			root, err := att.GetData().HashTreeRoot()
@@ -106,7 +107,7 @@ func matchingAtt(atts []ethpbalpha.Att, slot primitives.Slot, attDataRoot []byte
 				return nil, errors.Wrap(err, "could not get attestation data root")
 			}
 			if bytes.Equal(root[:], attDataRoot) {
-				return att, nil
+				return &att, nil
 			}
 		}
 	}

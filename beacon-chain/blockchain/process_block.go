@@ -377,8 +377,14 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Re
 		r := bytesutil.ToBytes32(a.GetData().BeaconBlockRoot)
 		if s.cfg.ForkChoiceStore.HasNode(r) {
 			s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, r, a.GetData().Target.Epoch)
-		} else if err := s.cfg.AttPool.SaveBlockAttestation(a); err != nil {
-			return err
+		} else {
+			roAtt, err := consensusblocks.NewROAttestation(a)
+			if err != nil {
+				return err
+			}
+			if err := s.cfg.AttPool.SaveBlockAttestation(roAtt); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -414,12 +420,16 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 func (s *Service) pruneAttsFromPool(headBlock interfaces.ReadOnlySignedBeaconBlock) error {
 	atts := headBlock.Block().Body().Attestations()
 	for _, att := range atts {
-		if helpers.IsAggregated(att) {
-			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
+		roAtt, err := consensusblocks.NewROAttestation(att)
+		if err != nil {
+			return err
+		}
+		if helpers.IsAggregated(roAtt.Att) {
+			if err := s.cfg.AttPool.DeleteAggregatedAttestation(roAtt); err != nil {
 				return err
 			}
 		} else {
-			if err := s.cfg.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+			if err := s.cfg.AttPool.DeleteUnaggregatedAttestation(roAtt); err != nil {
 				return err
 			}
 		}

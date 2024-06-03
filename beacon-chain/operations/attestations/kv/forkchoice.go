@@ -1,29 +1,20 @@
 package kv
 
 import (
-	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 )
 
 // SaveForkchoiceAttestation saves an forkchoice attestation in cache.
-func (c *AttCaches) SaveForkchoiceAttestation(att ethpb.Att) error {
-	if att == nil {
-		return nil
-	}
-	r, err := hashFn(att)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash attestation")
-	}
-
+func (c *AttCaches) SaveForkchoiceAttestation(att blocks.ROAttestation) error {
 	c.forkchoiceAttLock.Lock()
 	defer c.forkchoiceAttLock.Unlock()
-	c.forkchoiceAtt[r] = att.Copy()
+	c.forkchoiceAtt[att.Id()] = att
 
 	return nil
 }
 
 // SaveForkchoiceAttestations saves a list of forkchoice attestations in cache.
-func (c *AttCaches) SaveForkchoiceAttestations(atts []ethpb.Att) error {
+func (c *AttCaches) SaveForkchoiceAttestations(atts []blocks.ROAttestation) error {
 	for _, att := range atts {
 		if err := c.SaveForkchoiceAttestation(att); err != nil {
 			return err
@@ -34,11 +25,11 @@ func (c *AttCaches) SaveForkchoiceAttestations(atts []ethpb.Att) error {
 }
 
 // ForkchoiceAttestations returns the forkchoice attestations in cache.
-func (c *AttCaches) ForkchoiceAttestations() []ethpb.Att {
+func (c *AttCaches) ForkchoiceAttestations() []blocks.ROAttestation {
 	c.forkchoiceAttLock.RLock()
 	defer c.forkchoiceAttLock.RUnlock()
 
-	atts := make([]ethpb.Att, 0, len(c.forkchoiceAtt))
+	atts := make([]blocks.ROAttestation, 0, len(c.forkchoiceAtt))
 	for _, att := range c.forkchoiceAtt {
 		atts = append(atts, att.Copy())
 	}
@@ -47,18 +38,10 @@ func (c *AttCaches) ForkchoiceAttestations() []ethpb.Att {
 }
 
 // DeleteForkchoiceAttestation deletes a forkchoice attestation in cache.
-func (c *AttCaches) DeleteForkchoiceAttestation(att ethpb.Att) error {
-	if att == nil {
-		return nil
-	}
-	r, err := hashFn(att)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash attestation")
-	}
-
+func (c *AttCaches) DeleteForkchoiceAttestation(att blocks.ROAttestation) error {
 	c.forkchoiceAttLock.Lock()
 	defer c.forkchoiceAttLock.Unlock()
-	delete(c.forkchoiceAtt, r)
+	delete(c.forkchoiceAtt, att.Id())
 
 	return nil
 }

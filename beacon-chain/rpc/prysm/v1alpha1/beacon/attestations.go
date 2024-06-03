@@ -456,7 +456,7 @@ func attestationsFromPool[T ethpb.Att](pageSize int32, pool attestations.Pool) (
 	poolAtts := pool.AggregatedAttestations()
 	atts := make([]T, 0, len(poolAtts))
 	for _, att := range poolAtts {
-		a, ok := att.(T)
+		a, ok := att.Att.(T)
 		if !ok {
 			var expected T
 			return nil, status.Errorf(codes.Internal, "Attestation is of the wrong type (expected %T, got %T)", expected, att)

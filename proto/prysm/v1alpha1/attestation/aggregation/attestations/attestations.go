@@ -2,6 +2,7 @@ package attestations
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
@@ -9,7 +10,7 @@ import (
 )
 
 // attList represents list of attestations, defined for easier en masse operations (filtering, sorting).
-type attList []ethpb.Att
+type attList []blocks.ROAttestation
 
 // BLS aggregate signature aliases for testing / benchmark substitution. These methods are
 // significantly more expensive than the inner logic of AggregateAttestations so they must be
@@ -25,38 +26,32 @@ var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 
 // Aggregate aggregates attestations. The minimal number of attestations is returned.
 // Aggregation occurs in-place i.e. contents of input array will be modified. Should you need to
-// preserve input attestations, clone them before aggregating:
-//
-//	clonedAtts := make([]*ethpb.Attestation, len(atts))
-//	for i, a := range atts {
-//	    clonedAtts[i] = stateTrie.CopyAttestation(a)
-//	}
-//	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
-func Aggregate(atts []ethpb.Att) ([]ethpb.Att, error) {
+// preserve input attestations, clone them before aggregating
+func Aggregate(atts []blocks.ROAttestation) ([]blocks.ROAttestation, error) {
 	return MaxCoverAttestationAggregation(atts)
 }
 
 // AggregateDisjointOneBitAtts aggregates unaggregated attestations with the
 // exact same attestation data.
-func AggregateDisjointOneBitAtts(atts []ethpb.Att) (ethpb.Att, error) {
+func AggregateDisjointOneBitAtts(atts []blocks.ROAttestation) (blocks.ROAttestation, error) {
 	if len(atts) == 0 {
-		return nil, nil
+		return blocks.ROAttestation{}, nil
 	}
 	if len(atts) == 1 {
 		return atts[0], nil
 	}
 	coverage, err := atts[0].GetAggregationBits().ToBitlist64()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get aggregation bits")
+		return blocks.ROAttestation{}, errors.Wrap(err, "could not get aggregation bits")
 	}
 	for _, att := range atts[1:] {
 		bits, err := att.GetAggregationBits().ToBitlist64()
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get aggregation bits")
+			return blocks.ROAttestation{}, errors.Wrap(err, "could not get aggregation bits")
 		}
 		err = coverage.NoAllocOr(bits, coverage)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get aggregation bits")
+			return blocks.ROAttestation{}, errors.Wrap(err, "could not get aggregation bits")
 		}
 	}
 	keys := make([]int, len(atts))
@@ -65,10 +60,10 @@ func AggregateDisjointOneBitAtts(atts []ethpb.Att) (ethpb.Att, error) {
 	}
 	idx, err := aggregateAttestations(atts, keys, coverage)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not aggregate attestations")
+		return blocks.ROAttestation{}, errors.Wrap(err, "could not aggregate attestations")
 	}
 	if idx != 0 {
-		return nil, errors.New("could not aggregate attestations, obtained non zero index")
+		return blocks.ROAttestation{}, errors.New("could not aggregate attestations, obtained non zero index")
 	}
 	return atts[0], nil
 }

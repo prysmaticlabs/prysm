@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -25,7 +26,12 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 	}
 	s.setSeenCommitteeIndicesSlot(a.Data.Slot, a.Data.CommitteeIndex, a.AggregationBits)
 
-	exists, err := s.cfg.attPool.HasAggregatedAttestation(a)
+	roAtt, err := blocks.NewROAttestation(a)
+	if err != nil {
+		return err
+	}
+
+	exists, err := s.cfg.attPool.HasAggregatedAttestation(roAtt)
 	if err != nil {
 		return errors.Wrap(err, "Could not determine if attestation pool has this atttestation")
 	}
@@ -33,7 +39,7 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 		return nil
 	}
 
-	return s.cfg.attPool.SaveUnaggregatedAttestation(a)
+	return s.cfg.attPool.SaveUnaggregatedAttestation(roAtt)
 }
 
 func (_ *Service) persistentSubnetIndices() []uint64 {

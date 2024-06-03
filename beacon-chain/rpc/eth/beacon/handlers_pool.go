@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
@@ -58,7 +59,7 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	if isEmptyReq {
 		allAtts := make([]*structs.Attestation, len(attestations))
 		for i, att := range attestations {
-			a, ok := att.(*eth.Attestation)
+			a, ok := att.Att.(*eth.Attestation)
 			if ok {
 				allAtts[i] = structs.AttFromConsensus(a)
 			} else {
@@ -77,7 +78,7 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 		slotMatch := rawSlot != "" && att.GetData().Slot == primitives.Slot(slot)
 		shouldAppend := (bothDefined && committeeIndexMatch && slotMatch) || (!bothDefined && (committeeIndexMatch || slotMatch))
 		if shouldAppend {
-			a, ok := att.(*eth.Attestation)
+			a, ok := att.Att.(*eth.Attestation)
 			if ok {
 				filteredAtts = append(filteredAtts, structs.AttFromConsensus(a))
 			} else {
@@ -159,12 +160,17 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 			log.WithError(err).Errorf("could not broadcast attestation at index %d", i)
 		}
 
-		if corehelpers.IsAggregated(att) {
-			if err = s.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
+		roAtt, err := consensusblocks.NewROAttestation(att)
+		if err != nil {
+			httputil.HandleError(w, "Could not create an ROAttestation from submitted attestation: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if corehelpers.IsAggregated(roAtt.Att) {
+			if err = s.AttestationsPool.SaveAggregatedAttestation(roAtt); err != nil {
 				log.WithError(err).Error("could not save aggregated attestation")
 			}
 		} else {
-			if err = s.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
+			if err = s.AttestationsPool.SaveUnaggregatedAttestation(roAtt); err != nil {
 				log.WithError(err).Error("could not save unaggregated attestation")
 			}
 		}

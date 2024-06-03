@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -39,7 +40,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 }
 
 // ProposeAttestation is a function called by an attester to vote
-// on a block via an attestation object as defined in the Ethereum Serenity specification.
+// on a block via an attestation object as defined in the Ethereum specification.
 func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation) (*ethpb.AttestResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.ProposeAttestation")
 	defer span.End()
@@ -77,9 +78,13 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-		attCopy := ethpb.CopyAttestation(att)
-		if err := vs.AttPool.SaveUnaggregatedAttestation(attCopy); err != nil {
-			log.WithError(err).Error("Could not handle attestation in operations service")
+		roAtt, err := blocks.NewROAttestation(ethpb.CopyAttestation(att))
+		if err != nil {
+			log.WithError(err).Error("Could not create ROAttestation from attestation")
+			return
+		}
+		if err := vs.AttPool.SaveUnaggregatedAttestation(roAtt); err != nil {
+			log.WithError(err).Error("Could not save unaggregated attestation")
 			return
 		}
 	}()

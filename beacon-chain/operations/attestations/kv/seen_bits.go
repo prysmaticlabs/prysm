@@ -1,21 +1,14 @@
 package kv
 
 import (
-	"fmt"
-
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 )
 
-func (c *AttCaches) insertSeenBit(att ethpb.Att) error {
-	r, err := hashFn(att.GetData())
-	if err != nil {
-		return err
-	}
-
-	v, ok := c.seenAtt.Get(string(r[:]))
+func (c *AttCaches) insertSeenBit(att blocks.ROAttestation) error {
+	v, ok := c.seenAtt.Get(att.DataId().String())
 	if ok {
 		seenBits, ok := v.([]bitfield.Bitlist)
 		if !ok {
@@ -24,7 +17,7 @@ func (c *AttCaches) insertSeenBit(att ethpb.Att) error {
 		alreadyExists := false
 		for _, bit := range seenBits {
 			if c, err := bit.Contains(att.GetAggregationBits()); err != nil {
-				return fmt.Errorf("failed to check seen bits on attestation when inserting bit: %w", err)
+				return err
 			} else if c {
 				alreadyExists = true
 				break
@@ -33,21 +26,16 @@ func (c *AttCaches) insertSeenBit(att ethpb.Att) error {
 		if !alreadyExists {
 			seenBits = append(seenBits, att.GetAggregationBits())
 		}
-		c.seenAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration /* one epoch */)
+		c.seenAtt.Set(att.DataId().String(), seenBits, cache.DefaultExpiration /* one epoch */)
 		return nil
 	}
 
-	c.seenAtt.Set(string(r[:]), []bitfield.Bitlist{att.GetAggregationBits()}, cache.DefaultExpiration /* one epoch */)
+	c.seenAtt.Set(att.DataId().String(), []bitfield.Bitlist{att.GetAggregationBits()}, cache.DefaultExpiration /* one epoch */)
 	return nil
 }
 
-func (c *AttCaches) hasSeenBit(att ethpb.Att) (bool, error) {
-	r, err := hashFn(att.GetData())
-	if err != nil {
-		return false, err
-	}
-
-	v, ok := c.seenAtt.Get(string(r[:]))
+func (c *AttCaches) hasSeenBit(att blocks.ROAttestation) (bool, error) {
+	v, ok := c.seenAtt.Get(att.DataId().String())
 	if ok {
 		seenBits, ok := v.([]bitfield.Bitlist)
 		if !ok {
@@ -55,7 +43,7 @@ func (c *AttCaches) hasSeenBit(att ethpb.Att) (bool, error) {
 		}
 		for _, bit := range seenBits {
 			if c, err := bit.Contains(att.GetAggregationBits()); err != nil {
-				return false, fmt.Errorf("failed to check seen bits on attestation when reading bit: %w", err)
+				return false, err
 			} else if c {
 				return true, nil
 			}

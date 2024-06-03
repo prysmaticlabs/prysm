@@ -17,12 +17,12 @@ var forkChoiceProcessedRootsSize = 1 << 16
 
 // Service of attestation pool operations.
 type Service struct {
-	cfg                      *Config
-	ctx                      context.Context
-	cancel                   context.CancelFunc
-	err                      error
-	forkChoiceProcessedRoots *lru.Cache
-	genesisTime              uint64
+	cfg                     *Config
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	err                     error
+	forkChoiceProcessedAtts *lru.Cache
+	genesisTime             uint64
 }
 
 // Config options for the service.
@@ -44,10 +44,10 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		cfg:                      cfg,
-		ctx:                      ctx,
-		cancel:                   cancel,
-		forkChoiceProcessedRoots: cache,
+		cfg:                     cfg,
+		ctx:                     ctx,
+		cancel:                  cancel,
+		forkChoiceProcessedAtts: cache,
 	}, nil
 }
 
