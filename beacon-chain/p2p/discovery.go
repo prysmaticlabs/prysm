@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
@@ -41,6 +42,11 @@ type Listener interface {
 const (
 	udp4 = iota
 	udp6
+)
+
+const (
+	quickProtocolEnrKey      = "quic"
+	custodySubnetCountEnrKey = "custody_subnet_count"
 )
 
 type (
@@ -270,15 +276,14 @@ func (s *Service) createLocalNode(
 	}
 
 	if features.Get().EnablePeerDAS {
-		var custodyBytes []byte
-		custodyBytes = ssz.MarshalUint64(custodyBytes, params.BeaconConfig().CustodyRequirement)
-		custodySubnetEntry := CustodySubnetCount(custodyBytes)
-
+		custodyRequirement := params.BeaconConfig().CustodyRequirement
 		if flags.Get().SubscribeToAllSubnets {
-			var allCustodyBytes []byte
-			allCustodyBytes = ssz.MarshalUint64(allCustodyBytes, params.BeaconConfig().DataColumnSidecarSubnetCount)
-			custodySubnetEntry = CustodySubnetCount(allCustodyBytes)
+			custodyRequirement = params.BeaconConfig().DataColumnSidecarSubnetCount
 		}
+
+		var custodyBytes []byte
+		custodyBytes = ssz.MarshalUint64(custodyBytes, custodyRequirement)
+		custodySubnetEntry := CustodySubnetCount(custodyBytes)
 
 		localNode.Set(custodySubnetEntry)
 	}
