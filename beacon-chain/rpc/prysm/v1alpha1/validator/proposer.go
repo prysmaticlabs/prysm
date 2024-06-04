@@ -473,8 +473,9 @@ func (vs *Server) broadcastAndReceiveDataColumns(ctx context.Context, sidecars [
 
 			if colIdx < dataColumnsWithholdCount {
 				log.WithFields(logrus.Fields{
-					"dataColumnIndex": colIdx,
 					"root":            fmt.Sprintf("%#x", root),
+					"subnet":          subnet,
+					"dataColumnIndex": colIdx,
 				}).Warning("Withholding data column")
 			} else {
 				if err := vs.P2P.BroadcastDataColumn(ctx, subnet, sidecar); err != nil {
