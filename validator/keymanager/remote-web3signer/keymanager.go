@@ -247,28 +247,32 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
 				return
 			}
-			if e.Op.String() == "REMOVE" {
-				log.Fatalln("Remote signer keyfile was removed! Restart the validator client with the appropriate remote signer file")
-			}
 			log.WithFields(log.Fields{
 				"event": e.Name,
 				"op":    e.Op.String(),
-			}).Info("remote signer keyfile event triggered")
-			fileKeys, _, err := km.readKeyFile()
-			if err != nil {
-				log.WithError(err).Fatalln("Could not read key file")
+			}).Debug("Remote signer keyfile event triggered")
+			if e.Has(fsnotify.Remove) {
+				log.Fatalln("Remote signer keyfile was removed! Restart the validator client with the appropriate remote signer file")
 			}
-			if len(fileKeys) == 0 {
-				log.Warnln("Remote signer keyfile no longer has keys, defaulting to flag provided keys")
-				fileKeys = km.flagLoadedPublicKeys
+			if e.Has(fsnotify.Write) {
+				log.Info("Remote signer keyfile updated")
+				fileKeys, _, err := km.readKeyFile()
+				if err != nil {
+					log.WithError(err).Fatalln("Could not read key file")
+				}
+				if len(fileKeys) == 0 {
+					log.Warnln("Remote signer keyfile no longer has keys, defaulting to flag provided keys")
+					fileKeys = km.flagLoadedPublicKeys
+				}
+				currentKeys, err := km.FetchValidatingPublicKeys(ctx)
+				if err != nil {
+					log.WithError(err).Fatalln("Could not fetch current keys")
+				}
+				if !slices.Equal(currentKeys, fileKeys) {
+					km.updatePublicKeys(fileKeys)
+				}
 			}
-			currentKeys, err := km.FetchValidatingPublicKeys(ctx)
-			if err != nil {
-				log.WithError(err).Fatalln("Could not fetch current keys")
-			}
-			if !slices.Equal(currentKeys, fileKeys) {
-				km.updatePublicKeys(fileKeys)
-			}
+
 		case err, ok := <-watcher.Errors:
 			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
 				return
