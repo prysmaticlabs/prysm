@@ -36,11 +36,11 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 	return s.cfg.attPool.SaveUnaggregatedAttestation(a)
 }
 
-func (_ *Service) persistentSubnetIndices() []uint64 {
+func (*Service) persistentSubnetIndices() []uint64 {
 	return cache.SubnetIDs.GetAllSubnets()
 }
 
-func (_ *Service) aggregatorSubnetIndices(currentSlot primitives.Slot) []uint64 {
+func (*Service) aggregatorSubnetIndices(currentSlot primitives.Slot) []uint64 {
 	endEpoch := slots.ToEpoch(currentSlot) + 1
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
 	var commIds []uint64
@@ -50,7 +50,7 @@ func (_ *Service) aggregatorSubnetIndices(currentSlot primitives.Slot) []uint64 
 	return slice.SetUint64(commIds)
 }
 
-func (_ *Service) attesterSubnetIndices(currentSlot primitives.Slot) []uint64 {
+func (*Service) attesterSubnetIndices(currentSlot primitives.Slot) []uint64 {
 	endEpoch := slots.ToEpoch(currentSlot) + 1
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
 	var commIds []uint64
