@@ -93,12 +93,14 @@ func windowMin(latest, offset primitives.Slot) primitives.Slot {
 func (p *blobPruner) warmCache() error {
 	p.Lock()
 	defer p.Unlock()
+	defer func() {
+		if !p.warmed {
+			p.warmed = true
+			close(p.cacheReady)
+		}
+	}()
 	if err := p.prune(0); err != nil {
 		return err
-	}
-	if !p.warmed {
-		p.warmed = true
-		close(p.cacheReady)
 	}
 	return nil
 }
