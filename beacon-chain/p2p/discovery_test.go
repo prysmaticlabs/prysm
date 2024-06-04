@@ -236,9 +236,9 @@ func TestCreateLocalNode(t *testing.T) {
 			require.DeepSSZEqual(t, []byte{0}, *syncSubnets)
 
 			// Check custody_subnet_count config.
-			custodySubnetCount := new([]byte)
+			custodySubnetCount := new(uint64)
 			require.NoError(t, localNode.Node().Record().Load(enr.WithEntry(custodySubnetCountEnrKey, custodySubnetCount)))
-			require.DeepSSZEqual(t, []byte{1, 0, 0, 0, 0, 0, 0, 0}, *custodySubnetCount)
+			require.Equal(t, uint64(1), *custodySubnetCount)
 		})
 	}
 }
