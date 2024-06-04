@@ -685,6 +685,7 @@ func (s *Service) beaconEndpoints(
 			name:     namespace + ".SubmitAttesterSlashing",
 			middleware: []mux.MiddlewareFunc{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.SubmitAttesterSlashing,
 			methods: []string{http.MethodPost},
@@ -749,6 +750,7 @@ func (s *Service) beaconEndpoints(
 			name:     namespace + ".GetValidators",
 			middleware: []mux.MiddlewareFunc{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetValidators,
 			methods: []string{http.MethodGet, http.MethodPost},

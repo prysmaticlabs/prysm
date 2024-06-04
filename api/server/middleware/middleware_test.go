@@ -159,6 +159,26 @@ func TestAcceptHeaderHandler(t *testing.T) {
 			acceptHeader:       "",
 			expectedStatusCode: http.StatusOK,
 		},
+		{
+			name:               "*/* is accepted",
+			acceptHeader:       "*/*",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "application/* is accepted",
+			acceptHeader:       "application/*",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "/* is unsupported",
+			acceptHeader:       "/*",
+			expectedStatusCode: http.StatusNotAcceptable,
+		},
+		{
+			name:               "application/ is unsupported",
+			acceptHeader:       "application/",
+			expectedStatusCode: http.StatusNotAcceptable,
+		},
 	}
 
 	for _, tt := range tests {
