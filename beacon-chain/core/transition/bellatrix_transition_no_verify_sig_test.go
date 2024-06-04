@@ -216,7 +216,7 @@ func TestProcessEpoch_BadBalanceBellatrix(t *testing.T) {
 	epochParticipation[0] = participation
 	assert.NoError(t, s.SetCurrentParticipationBits(epochParticipation))
 	assert.NoError(t, s.SetPreviousParticipationBits(epochParticipation))
-	_, err = altair.ProcessEpoch(context.Background(), s)
+	err = altair.ProcessEpoch(context.Background(), s)
 	assert.ErrorContains(t, "addition overflows", err)
 }
 
