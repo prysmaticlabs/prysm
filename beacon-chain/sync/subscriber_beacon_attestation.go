@@ -33,6 +33,8 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 		return nil
 	}
 
+	s.attReceived <- struct{}{}
+
 	return s.cfg.attPool.SaveUnaggregatedAttestation(a)
 }
 
@@ -58,4 +60,30 @@ func (_ *Service) attesterSubnetIndices(currentSlot primitives.Slot) []uint64 {
 		commIds = append(commIds, cache.SubnetIDs.GetAttesterSubnetIDs(i)...)
 	}
 	return slice.SetUint64(commIds)
+}
+
+func (s *Service) beaconAttestationWatcher() {
+	slotTicker := slots.NewSlotTicker(s.cfg.chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
+	count := 0
+	for {
+		select {
+		case currSlot := <-slotTicker.C():
+			log.Infof("Beacon Attestation Watcher: Clearing Slot: %d, Total received: %d", currSlot, count)
+			count = 0
+		case <-s.attReceived:
+			count++
+			// 1014657 / 32 / 2 =15854
+			if count == 15854 {
+				t := uint64(s.cfg.chain.GenesisTime().Unix())
+				d := slots.TimeIntoSlot(t)
+				currentSlot := slots.CurrentSlot(t)
+				duration := d.Milliseconds() - 4000
+				beaconAttestationReachHalfSummary.Observe(float64(duration))
+				log.Infof("Beacon Attestation Watcher: Receive enough attestation for slot: %d and it took time %d", currentSlot, duration)
+			}
+		case <-s.ctx.Done():
+			slotTicker.Done()
+			return
+		}
+	}
 }

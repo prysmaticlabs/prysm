@@ -158,6 +158,7 @@ type Service struct {
 	newBlobVerifier                  verification.NewBlobVerifier
 	availableBlocker                 coverage.AvailableBlocker
 	ctxMap                           ContextByteVersions
+	attReceived                      chan struct{}
 }
 
 // NewService initializes new regular sync service.
@@ -173,6 +174,7 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
+		attReceived:          make(chan struct{}),
 	}
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
@@ -236,6 +238,8 @@ func (s *Service) Start() {
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
 	s.resyncIfBehind()
+
+	go s.beaconAttestationWatcher()
 
 	// Update sync metrics.
 	async.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)

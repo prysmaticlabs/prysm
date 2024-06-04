@@ -150,6 +150,12 @@ var (
 			Help: "Time to verify gossiped blob sidecars",
 		},
 	)
+	beaconAttestationReachHalfSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "attestation_reach_half_milliseconds",
+			Help: "Time for attestations to reach half",
+		},
+	)
 	pendingAttCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_pending_attestations_total",
 		Help: "increased when receiving a new pending attestation",
