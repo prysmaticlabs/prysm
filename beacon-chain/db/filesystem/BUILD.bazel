@@ -7,6 +7,7 @@ go_library(
         "cache.go",
         "log.go",
         "metrics.go",
+        "migration.go",
         "mock.go",
         "pruner.go",
     ],
@@ -37,6 +38,7 @@ go_test(
     srcs = [
         "blob_test.go",
         "cache_test.go",
+        "migration_test.go",
         "pruner_test.go",
     ],
     embed = [":go_default_library"],
