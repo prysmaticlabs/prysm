@@ -553,7 +553,7 @@ func (s *Service) beaconEndpoints(
 			name:     namespace + ".PublishBlockV2",
 			middleware: []mux.MiddlewareFunc{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
-				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.PublishBlockV2,
 			methods: []string{http.MethodPost},
