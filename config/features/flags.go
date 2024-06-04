@@ -166,9 +166,17 @@ var (
 		Name:  "enable-quic",
 		Usage: "Enables connection using the QUIC protocol for peers which support it.",
 	}
+	// EnablePeerDAS is a flag for enabling the peer data availability sampling.
 	EnablePeerDAS = &cli.BoolFlag{
 		Name:  "peer-das",
 		Usage: "Enables Prysm to run with the experimental peer data availability sampling scheme.",
+	}
+	// DataColumnsWithholdCount is a flag for withholding data columns when proposing a block.
+	DataColumnsWithholdCount = &cli.IntFlag{
+		Name:   "data-columns-withhold-count",
+		Usage:  "Number of columns to withhold when proposing a block. DO NOT USE IN PRODUCTION.",
+		Value:  0,
+		Hidden: true,
 	}
 )
 
@@ -228,6 +236,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	BlobSaveFsync,
 	EnableQUIC,
 	EnablePeerDAS,
+	DataColumnsWithholdCount,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

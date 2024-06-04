@@ -76,6 +76,9 @@ type Flags struct {
 	// EnablePeerDAS enables running the node with the experimental data availability sampling scheme.
 	EnablePeerDAS bool
 
+	// DataColumnsWithholdCount specifies the likelihood of withholding a data column sidecar when proposing a block (percentage)
+	DataColumnsWithholdCount int
+
 	SaveInvalidBlock bool // SaveInvalidBlock saves invalid block to temp.
 	SaveInvalidBlob  bool // SaveInvalidBlob saves invalid blob to temp.
 
@@ -260,6 +263,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(EnablePeerDAS.Name) {
 		logEnabled(EnablePeerDAS)
 		cfg.EnablePeerDAS = true
+	}
+
+	if ctx.IsSet(DataColumnsWithholdCount.Name) {
+		logEnabled(DataColumnsWithholdCount)
+		cfg.DataColumnsWithholdCount = ctx.Int(DataColumnsWithholdCount.Name)
 	}
 
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
