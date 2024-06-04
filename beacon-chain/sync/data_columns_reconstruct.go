@@ -23,25 +23,23 @@ func recoverBlobs(
 	columnsCount int,
 	blockRoot [fieldparams.RootLength]byte,
 ) ([]cKzg4844.Blob, error) {
-	// Check if all columns have the same length.
-	var blobCount *int
+	if len(dataColumnSideCars) == 0 {
+		return nil, errors.New("no data column sidecars")
+	}
 
+	// Check if all columns have the same length.
+	blobCount := len(dataColumnSideCars[0].DataColumn)
 	for _, sidecar := range dataColumnSideCars {
 		length := len(sidecar.DataColumn)
 
-		if blobCount == nil {
-			blobCount = &length
-			continue
-		}
-
-		if *blobCount != length {
+		if length != blobCount {
 			return nil, errors.New("columns do not have the same length")
 		}
 	}
 
-	recoveredBlobs := make([]cKzg4844.Blob, 0, *blobCount)
+	recoveredBlobs := make([]cKzg4844.Blob, 0, blobCount)
 
-	for blobIndex := 0; blobIndex < *blobCount; blobIndex++ {
+	for blobIndex := 0; blobIndex < blobCount; blobIndex++ {
 		start := time.Now()
 
 		cellsId := make([]uint64, 0, columnsCount)
