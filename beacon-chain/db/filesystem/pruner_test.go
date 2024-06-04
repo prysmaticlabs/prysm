@@ -2,16 +2,19 @@ package filesystem
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"os"
 	"path"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/spf13/afero"
@@ -32,6 +35,34 @@ func TestTryPruneDir_CachedNotExpired(t *testing.T) {
 	pruned, err := pr.tryPruneDir(rootStr, pr.windowSize)
 	require.NoError(t, err)
 	require.Equal(t, 0, pruned)
+}
+
+func TestCacheWarmFail(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	n := blobNamer{root: bytesutil.ToBytes32([]byte("derp")), index: 0}
+	bp := n.path()
+	mkdir := path.Dir(bp)
+	require.NoError(t, fs.MkdirAll(mkdir, directoryPermissions))
+
+	// Create an empty blob index in the fs by touching the file at a seemingly valid path.
+	fi, err := fs.Create(bp)
+	require.NoError(t, err)
+	require.NoError(t, fi.Close())
+
+	// Cache warm should fail due to the unexpected EOF.
+	pr, err := newBlobPruner(fs, 0)
+	require.NoError(t, err)
+	require.ErrorIs(t, pr.warmCache(), errPruningFailures)
+
+	// The cache warm has finished, so calling waitForCache with a super short deadline
+	// should not block or hit the context deadline.
+	ctx := context.Background()
+	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(1*time.Millisecond))
+	defer cancel()
+	c, err := pr.waitForCache(ctx)
+	// We will get an error and a nil value for the cache if we hit the deadline.
+	require.NoError(t, err)
+	require.NotNil(t, c)
 }
 
 func TestTryPruneDir_CachedExpired(t *testing.T) {
