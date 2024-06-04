@@ -75,6 +75,9 @@ type Flags struct {
 	// EnablePeerDAS enables running the node with the experimental data availability sampling scheme.
 	EnablePeerDAS bool
 
+	// DataColumnsWithholdCount specifies the likelihood of withholding a data column sidecar when proposing a block (percentage)
+	DataColumnsWithholdCount int
+
 	SaveInvalidBlock           bool // SaveInvalidBlock saves invalid block to temp.
 	SaveInvalidBlob            bool // SaveInvalidBlob saves invalid blob to temp.
 	EIP6110ValidatorIndexCache bool // EIP6110ValidatorIndexCache specifies whether to use the new validator index cache.
@@ -260,6 +263,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(EnablePeerDAS.Name) {
 		logEnabled(EnablePeerDAS)
 		cfg.EnablePeerDAS = true
+	}
+
+	if ctx.IsSet(DataColumnsWithholdCount.Name) {
+		logEnabled(DataColumnsWithholdCount)
+		cfg.DataColumnsWithholdCount = ctx.Int(DataColumnsWithholdCount.Name)
 	}
 
 	if ctx.IsSet(eip6110ValidatorCache.Name) {
