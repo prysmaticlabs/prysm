@@ -122,6 +122,15 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+
+	if features.Get().EnablePeerDAS {
+		// We need to save the block before checking data availability since reconstruction needs it.
+		// It is safe to save the block multiple times, since it won't be re-stored if it is already in the cache.
+		if err := s.cfg.BeaconDB.SaveBlock(ctx, blockCopy); err != nil {
+			return errors.Wrapf(err, "save block at slot %d", blockCopy.Block().Slot())
+		}
+	}
+
 	daStartTime := time.Now()
 	if avs != nil {
 		if err := avs.IsDataAvailable(ctx, s.CurrentSlot(), rob); err != nil {
