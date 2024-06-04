@@ -16,7 +16,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
@@ -311,13 +310,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	for _, e := range endpoints {
 		s.cfg.Router.HandleFunc(
 			e.template,
-			promhttp.InstrumentHandlerDuration(
-				httpRequestLatency.MustCurryWith(prometheus.Labels{"endpoint": e.name}),
-				promhttp.InstrumentHandlerCounter(
-					httpRequestCount.MustCurryWith(prometheus.Labels{"endpoint": e.name}),
-					e.handler,
-				),
-			),
+			e.handlerWithMiddleware(),
 		).Methods(e.methods...)
 	}
 
