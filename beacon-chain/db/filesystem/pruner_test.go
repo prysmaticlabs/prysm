@@ -2,16 +2,19 @@ package filesystem
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"os"
 	"path"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/spf13/afero"
@@ -32,6 +35,29 @@ func TestTryPruneDir_CachedNotExpired(t *testing.T) {
 	pruned, err := pr.tryPruneDir(rootStr, pr.windowSize)
 	require.NoError(t, err)
 	require.Equal(t, 0, pruned)
+}
+
+func TestCacheWarmFail(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	n := blobNamer{root: bytesutil.ToBytes32([]byte("0x00f")), index: 0}
+	bp := n.path()
+	mkdir := path.Dir(bp)
+	fs.MkdirAll(mkdir, directoryPermissions)
+
+	// Touch the file
+	fi, err := fs.Create(bp)
+	require.NoError(t, err)
+	fi.Close()
+
+	pr, err := newBlobPruner(fs, 0)
+	require.NoError(t, err)
+	require.ErrorIs(t, pr.warmCache(), errPruningFailures)
+
+	ctx := context.Background()
+	ctx, _ = context.WithDeadline(ctx, time.Now().Add(1*time.Millisecond))
+	c, err := pr.waitForCache(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, c)
 }
 
 func TestTryPruneDir_CachedExpired(t *testing.T) {
