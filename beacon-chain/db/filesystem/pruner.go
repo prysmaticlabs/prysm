@@ -187,34 +187,18 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 		if err != nil {
 			return 0, errors.Wrapf(err, "slot could not be read from blob file %s", scFiles[0])
 		}
-		for i := range scFiles {
-			idx, err := idxFromPath(scFiles[i])
-			if err != nil {
-				return 0, errors.Wrapf(err, "index could not be determined for blob file %s", scFiles[i])
-			}
-			if err := p.cache.ensure(root, slot, idx); err != nil {
-				return 0, errors.Wrapf(err, "could not update prune cache for blob file %s", scFiles[i])
-			}
+		err = p.updateCache(root, slot, scFiles)
+		if err != nil {
+			return 0, errors.Wrapf(err, "could not update cache for blob files in directory %s", dir)
 		}
 		if shouldRetain(slot, pruneBefore) {
 			return 0, nil
 		}
 	}
 
-	removed := 0
-	for _, fname := range entries {
-		fullName := path.Join(dir, fname)
-		if err := p.fs.Remove(fullName); err != nil {
-			return removed, errors.Wrapf(err, "unable to remove %s", fullName)
-		}
-		// Don't count other files that happen to be in the dir, like dangling .part files.
-		if filterSsz(fname) {
-			removed += 1
-		}
-		// Log a warning whenever we clean up a .part file
-		if filterPart(fullName) {
-			log.WithField("file", fullName).Warn("Deleting abandoned blob .part file")
-		}
+	removed, err := p.removeFiles(dir, entries)
+	if err != nil {
+		return removed, errors.Wrapf(err, "unable to remove blob files in directory %s", dir)
 	}
 	if err := p.fs.Remove(dir); err != nil {
 		return removed, errors.Wrapf(err, "unable to remove blob directory %s", dir)
@@ -222,6 +206,37 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 
 	p.cache.evict(root)
 	return len(scFiles), nil
+}
+
+func (p *blobPruner) updateCache(root [32]byte, slot primitives.Slot, scFiles []string) error {
+	for i := range scFiles {
+		idx, err := idxFromPath(scFiles[i])
+		if err != nil {
+			return errors.Wrapf(err, "index could not be determined for blob file %s", scFiles[i])
+		}
+		if err := p.cache.ensure(root, slot, idx); err != nil {
+			return errors.Wrapf(err, "could not update prune cache for blob file %s", scFiles[i])
+		}
+	}
+	return nil
+}
+
+func (p *blobPruner) removeFiles(dir string, scFiles []string) (int, error) {
+	removed := 0
+	for _, fname := range scFiles {
+		fullName := path.Join(dir, fname)
+		if err := p.fs.Remove(fullName); err != nil {
+			return removed, errors.Wrapf(err, "unable to remove %s", fullName)
+		}
+		// Don't count other files that happen to be in the dir, like dangling .part files.
+		if filterSsz(fullName) {
+			removed++
+		}
+		if filterPart(fullName) {
+			log.WithField("file", fullName).Warn("Deleting abandoned blob .part file")
+		}
+	}
+	return removed, nil
 }
 
 func idxFromPath(fname string) (uint64, error) {
