@@ -20,7 +20,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	apigateway "github.com/prysmaticlabs/prysm/v5/api/gateway"
-	"github.com/prysmaticlabs/prysm/v5/api/server"
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
@@ -409,8 +409,8 @@ func newRouter(cliCtx *cli.Context) *mux.Router {
 		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
 	}
 	r := mux.NewRouter()
-	r.Use(server.NormalizeQueryValuesHandler)
-	r.Use(server.CorsHandler(allowedOrigins))
+	r.Use(middleware.NormalizeQueryValuesHandler)
+	r.Use(middleware.CorsHandler(allowedOrigins))
 	return r
 }
 
