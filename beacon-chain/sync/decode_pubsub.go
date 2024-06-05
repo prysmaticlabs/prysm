@@ -1,13 +1,19 @@
 package sync
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -51,7 +57,19 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	}
 	// Handle different message types across forks.
 	if topic == p2p.BlockSubnetTopicFormat {
-		m, err = extractBlockDataType(fDigest[:], s.cfg.clock)
+		m, err = extractDataType(types.BlockMap, fDigest[:], s.cfg.clock)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if topic == p2p.AttestationSubnetTopicFormat {
+		m, err = extractDataType(types.AttestationMap, fDigest[:], s.cfg.clock)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if topic == p2p.AggregateAndProofSubnetTopicFormat {
+		m, err = extractDataType(types.AggregateAttestationMap, fDigest[:], s.cfg.clock)
 		if err != nil {
 			return nil, err
 		}
@@ -70,4 +88,37 @@ func (_ *Service) replaceForkDigest(topic string) (string, error) {
 	}
 	subStrings[2] = "%x"
 	return strings.Join(subStrings, "/"), nil
+}
+
+func extractDataType[T any](typeMap map[[4]byte]func() (T, error), digest []byte, tor blockchain.TemporalOracle) (T, error) {
+	var zero T
+
+	if len(digest) == 0 {
+		f, ok := typeMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+		if !ok {
+			return zero, fmt.Errorf("no %T type exists for the genesis fork version", zero)
+		}
+		return f()
+	}
+	if len(digest) != forkDigestLength {
+		return zero, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
+	}
+	vRoot := tor.GenesisValidatorsRoot()
+	for k, f := range typeMap {
+		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
+		if err != nil {
+			return zero, err
+		}
+		if rDigest == bytesutil.ToBytes4(digest) {
+			return f()
+		}
+	}
+	return zero, errors.Wrapf(
+		ErrNoValidDigest,
+		"could not extract %T data type, saw digest=%#x, genesis=%v, vr=%#x",
+		zero,
+		digest,
+		tor.GenesisTime(),
+		tor.GenesisValidatorsRoot(),
+	)
 }

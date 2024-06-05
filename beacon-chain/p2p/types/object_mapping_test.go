@@ -46,6 +46,12 @@ func TestInitializeDataMaps(t *testing.T) {
 			tt.action()
 			_, ok := BlockMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 			assert.Equal(t, tt.exists, ok)
+			_, ok = MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+			assert.Equal(t, tt.exists, ok)
+			_, ok = AttestationMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+			assert.Equal(t, tt.exists, ok)
+			_, ok = AggregateAttestationMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+			assert.Equal(t, tt.exists, ok)
 		})
 	}
 }

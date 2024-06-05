@@ -15,19 +15,21 @@ import (
 )
 
 func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, msg proto.Message) error {
-	a, ok := msg.(*eth.Attestation)
+	a, ok := msg.(eth.Att)
 	if !ok {
-		return fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
+		return fmt.Errorf("message was not type eth.Att, type=%T", msg)
 	}
 
-	if a.Data == nil {
+	data := a.GetData()
+
+	if data == nil {
 		return errors.New("nil attestation")
 	}
-	s.setSeenCommitteeIndicesSlot(a.Data.Slot, a.Data.CommitteeIndex, a.AggregationBits)
+	s.setSeenCommitteeIndicesSlot(data.Slot, data.CommitteeIndex, a.GetAggregationBits())
 
 	exists, err := s.cfg.attPool.HasAggregatedAttestation(a)
 	if err != nil {
-		return errors.Wrap(err, "Could not determine if attestation pool has this atttestation")
+		return errors.Wrap(err, "could not determine if attestation pool has this attestation")
 	}
 	if exists {
 		return nil
