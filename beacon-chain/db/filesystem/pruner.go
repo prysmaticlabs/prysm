@@ -99,10 +99,7 @@ func (p *blobPruner) warmCache() error {
 		}
 		p.Unlock()
 	}()
-	if err := p.prune(0); err != nil {
-		return err
-	}
-	return nil
+	return p.prune(0)
 }
 
 func (p *blobPruner) waitForCache(ctx context.Context) (*blobStorageCache, error) {
