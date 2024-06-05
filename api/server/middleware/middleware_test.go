@@ -31,7 +31,7 @@ func TestNormalizeQueryValuesHandler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", "/test?"+test.inputQuery, nil)
+			req, err := http.NewRequest("GET", "/test?"+test.inputQuery, http.NoBody)
 			if err != nil {
 				t.Fatal(err)
 			}
