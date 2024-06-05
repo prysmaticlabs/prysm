@@ -442,11 +442,12 @@ func electraOperations(
 	if !ok {
 		return nil, errors.New("could not cast execution data to electra execution data")
 	}
-	st, err = electra.ProcessExecutionLayerWithdrawRequests(ctx, st, exe.WithdrawalRequests())
+	st, err = electra.ProcessExecutionLayerWithdrawalRequests(ctx, st, exe.WithdrawalRequests())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
 	}
-	st, err = electra.ProcessDepositReceipts(ctx, st, exe.DepositReceipts())
+
+	st, err = electra.ProcessDepositReceipts(ctx, st, exe.DepositReceipts()) // TODO: EIP-6110 deposit changes.
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}

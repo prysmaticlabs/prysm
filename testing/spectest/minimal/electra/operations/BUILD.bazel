@@ -9,6 +9,7 @@ go_test(
         "deposit_receipts_test.go",
         "deposit_test.go",
         "consolidation_test.go",
+        "execution_layer_withdrawals_test.go",
         "execution_payload_test.go",
         "proposer_slashing_test.go",
         "sync_committee_test.go",

@@ -32,7 +32,7 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		beaconChainClient := beaconApiChainClient{}
-		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+		_, err := beaconChainClient.Validators(ctx, &ethpb.ListValidatorsRequest{
 			PageToken: "foo",
 		})
 		assert.ErrorContains(t, "failed to parse page token `foo`", err)
@@ -44,7 +44,7 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		beaconChainClient := beaconApiChainClient{}
-		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+		_, err := beaconChainClient.Validators(ctx, &ethpb.ListValidatorsRequest{
 			QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
 				Epoch: math.MaxUint64,
 			},
@@ -58,13 +58,13 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			errors.New("foo error"),
 		)
 
 		beaconChainClient := beaconApiChainClient{stateValidatorsProvider: stateValidatorsProvider}
-		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+		_, err := beaconChainClient.Validators(ctx, &ethpb.ListValidatorsRequest{
 			QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
 				Epoch: 0,
 			},
@@ -78,13 +78,13 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			errors.New("bar error"),
 		)
 
 		beaconChainClient := beaconApiChainClient{stateValidatorsProvider: stateValidatorsProvider}
-		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+		_, err := beaconChainClient.Validators(ctx, &ethpb.ListValidatorsRequest{
 			QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
 		})
 		assert.ErrorContains(t, "failed to get genesis state validators: bar error", err)
@@ -96,13 +96,13 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().GetStateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			errors.New("foo error"),
 		)
 
 		beaconChainClient := beaconApiChainClient{stateValidatorsProvider: stateValidatorsProvider}
-		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+		_, err := beaconChainClient.Validators(ctx, &ethpb.ListValidatorsRequest{
 			QueryFilter: nil,
 		})
 		assert.ErrorContains(t, "failed to get head state validators: foo error", err)
@@ -114,7 +114,7 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().GetStateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			nil,
 		)
@@ -126,7 +126,7 @@ func TestListValidators(t *testing.T) {
 			stateValidatorsProvider: stateValidatorsProvider,
 			jsonRestHandler:         jsonRestHandler,
 		}
-		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+		_, err := beaconChainClient.Validators(ctx, &ethpb.ListValidatorsRequest{
 			QueryFilter: nil,
 		})
 		assert.ErrorContains(t, "bar error", err)
@@ -187,7 +187,7 @@ func TestListValidators(t *testing.T) {
 				ctx := context.Background()
 
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-				stateValidatorsProvider.EXPECT().GetStateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				stateValidatorsProvider.EXPECT().StateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					nil,
 					nil,
 				)
@@ -204,7 +204,7 @@ func TestListValidators(t *testing.T) {
 					stateValidatorsProvider: stateValidatorsProvider,
 					jsonRestHandler:         jsonRestHandler,
 				}
-				_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+				_, err := beaconChainClient.Validators(ctx, &ethpb.ListValidatorsRequest{
 					QueryFilter: nil,
 				})
 				assert.ErrorContains(t, testCase.expectedError, err)
@@ -328,13 +328,13 @@ func TestListValidators(t *testing.T) {
 				ctx := context.Background()
 
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-				stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					testCase.generateStateValidatorsResponse(),
 					nil,
 				)
 
 				beaconChainClient := beaconApiChainClient{stateValidatorsProvider: stateValidatorsProvider}
-				_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+				_, err := beaconChainClient.Validators(ctx, &ethpb.ListValidatorsRequest{
 					QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
 				})
 				assert.ErrorContains(t, testCase.expectedError, err)
@@ -556,13 +556,13 @@ func TestListValidators(t *testing.T) {
 				ctx := context.Background()
 
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-				stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, primitives.Slot(0), make([]string, 0), []primitives.ValidatorIndex{}, nil).Return(
+				stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, primitives.Slot(0), make([]string, 0), []primitives.ValidatorIndex{}, nil).Return(
 					testCase.generateJsonStateValidatorsResponse(),
 					nil,
 				)
 
 				beaconChainClient := beaconApiChainClient{stateValidatorsProvider: stateValidatorsProvider}
-				validators, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+				validators, err := beaconChainClient.Validators(ctx, &ethpb.ListValidatorsRequest{
 					QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
 					PublicKeys:  [][]byte{},
 					Indices:     []primitives.ValidatorIndex{},
@@ -753,7 +753,7 @@ func TestGetChainHead(t *testing.T) {
 				)
 
 				beaconChainClient := beaconApiChainClient{jsonRestHandler: jsonRestHandler}
-				_, err := beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
+				_, err := beaconChainClient.ChainHead(ctx, &emptypb.Empty{})
 				assert.ErrorContains(t, testCase.expectedError, err)
 			})
 		}
@@ -860,7 +860,7 @@ func TestGetChainHead(t *testing.T) {
 				)
 
 				beaconChainClient := beaconApiChainClient{jsonRestHandler: jsonRestHandler}
-				_, err := beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
+				_, err := beaconChainClient.ChainHead(ctx, &emptypb.Empty{})
 				assert.ErrorContains(t, testCase.expectedError, err)
 			})
 		}
@@ -914,7 +914,7 @@ func TestGetChainHead(t *testing.T) {
 		}
 
 		beaconChainClient := beaconApiChainClient{jsonRestHandler: jsonRestHandler}
-		chainHead, err := beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
+		chainHead, err := beaconChainClient.ChainHead(ctx, &emptypb.Empty{})
 		require.NoError(t, err)
 		assert.DeepEqual(t, expectedChainHead, chainHead)
 	})
@@ -953,7 +953,7 @@ func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
 		jsonRestHandler: jsonRestHandler,
 	}
 
-	got, err := c.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+	got, err := c.ValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 	})
 	require.NoError(t, err)

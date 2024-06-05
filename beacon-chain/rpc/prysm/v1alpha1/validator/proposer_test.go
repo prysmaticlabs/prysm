@@ -753,10 +753,12 @@ func injectSlashings(t *testing.T, st state.BeaconState, keys []bls.SecretKey, s
 
 	attSlashings := make([]*ethpb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
-		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(st, keys[i+params.BeaconConfig().MaxProposerSlashings], primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings) /* validator index */)
+		generatedAttesterSlashing, err := util.GenerateAttesterSlashingForValidator(st, keys[i+params.BeaconConfig().MaxProposerSlashings], primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings) /* validator index */)
 		require.NoError(t, err)
+		attesterSlashing, ok := generatedAttesterSlashing.(*ethpb.AttesterSlashing)
+		require.Equal(t, true, ok, "Attester slashing has the wrong type (expected %T, got %T)", &ethpb.AttesterSlashing{}, generatedAttesterSlashing)
 		attSlashings[i] = attesterSlashing
-		err = server.SlashingsPool.InsertAttesterSlashing(context.Background(), st, attesterSlashing)
+		err = server.SlashingsPool.InsertAttesterSlashing(context.Background(), st, generatedAttesterSlashing.(*ethpb.AttesterSlashing))
 		require.NoError(t, err)
 	}
 	return proposerSlashings, attSlashings

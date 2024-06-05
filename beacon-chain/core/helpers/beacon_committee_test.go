@@ -715,3 +715,37 @@ func TestCommitteeIndices(t *testing.T) {
 	indices := helpers.CommitteeIndices(bitfield)
 	assert.DeepEqual(t, []primitives.CommitteeIndex{0, 1, 3}, indices)
 }
+
+func TestAttestationCommittees(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().TargetCommitteeSize))
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	require.NoError(t, err)
+
+	t.Run("pre-Electra", func(t *testing.T) {
+		att := &ethpb.Attestation{Data: &ethpb.AttestationData{CommitteeIndex: 0}}
+		committees, err := helpers.AttestationCommittees(context.Background(), state, att)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(committees))
+		assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(committees[0])))
+	})
+	t.Run("post-Electra", func(t *testing.T) {
+		bits := primitives.NewAttestationCommitteeBits()
+		bits.SetBitAt(0, true)
+		bits.SetBitAt(1, true)
+		att := &ethpb.AttestationElectra{CommitteeBits: bits, Data: &ethpb.AttestationData{}}
+		committees, err := helpers.AttestationCommittees(context.Background(), state, att)
+		require.NoError(t, err)
+		require.Equal(t, 2, len(committees))
+		assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(committees[0])))
+		assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(committees[1])))
+	})
+}

@@ -297,21 +297,6 @@ func TestFuzzVerifyIndexedAttestationn_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzVerifyAttestation_10000(t *testing.T) {
-	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethpb.BeaconState{}
-	attestation := &ethpb.Attestation{}
-	ctx := context.Background()
-	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(attestation)
-		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
-		require.NoError(t, err)
-		err = VerifyAttestationSignature(ctx, s, attestation)
-		_ = err
-	}
-}
-
 func TestFuzzProcessDeposits_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &ethpb.BeaconState{}

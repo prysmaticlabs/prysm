@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	testhelpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"go.uber.org/mock/gomock"
 )
 
@@ -80,24 +80,24 @@ func generateSignedAggregateAndProofJson() *ethpb.SignedAggregateAttestationAndP
 		Message: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 72,
 			Aggregate: &ethpb.Attestation{
-				AggregationBits: test_helpers.FillByteSlice(4, 74),
+				AggregationBits: testhelpers.FillByteSlice(4, 74),
 				Data: &ethpb.AttestationData{
 					Slot:            75,
 					CommitteeIndex:  76,
-					BeaconBlockRoot: test_helpers.FillByteSlice(32, 38),
+					BeaconBlockRoot: testhelpers.FillByteSlice(32, 38),
 					Source: &ethpb.Checkpoint{
 						Epoch: 78,
-						Root:  test_helpers.FillByteSlice(32, 79),
+						Root:  testhelpers.FillByteSlice(32, 79),
 					},
 					Target: &ethpb.Checkpoint{
 						Epoch: 80,
-						Root:  test_helpers.FillByteSlice(32, 81),
+						Root:  testhelpers.FillByteSlice(32, 81),
 					},
 				},
-				Signature: test_helpers.FillByteSlice(96, 82),
+				Signature: testhelpers.FillByteSlice(96, 82),
 			},
-			SelectionProof: test_helpers.FillByteSlice(96, 82),
+			SelectionProof: testhelpers.FillByteSlice(96, 82),
 		},
-		Signature: test_helpers.FillByteSlice(96, 82),
+		Signature: testhelpers.FillByteSlice(96, 82),
 	}
 }
