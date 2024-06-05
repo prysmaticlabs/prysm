@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
@@ -36,7 +38,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
@@ -518,7 +519,7 @@ func (s *MockClockSetter) SetClock(g *startup.Clock) error {
 func TestNotifyIndex(t *testing.T) {
 	// Initialize a blobNotifierMap
 	bn := &blobNotifierMap{
-		seenIndex: make(map[[32]byte][fieldparams.NumberOfColumns]bool),
+		seenIndex: make(map[[32]byte][fieldparams.MaxBlobsPerBlock]bool),
 		notifiers: make(map[[32]byte]chan uint64),
 	}
 

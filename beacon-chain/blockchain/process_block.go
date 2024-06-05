@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
-	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 
@@ -641,66 +639,30 @@ func (s *Service) isDataAvailableDataColumns(ctx context.Context, root [32]byte,
 	if len(kzgCommitments) == 0 {
 		return nil
 	}
-	custodiedSubnetCount := params.BeaconConfig().CustodyRequirement
-	if flags.Get().SubscribeToAllSubnets {
-		custodiedSubnetCount = params.BeaconConfig().DataColumnSidecarSubnetCount
-	}
-
-	colMap, err := peerdas.CustodyColumns(s.cfg.P2P.NodeID(), custodiedSubnetCount)
-	if err != nil {
-		return err
-	}
-	// expected is the number of custodied data columnns a node is expected to have.
-	expected := len(colMap)
-	if expected == 0 {
-		return nil
-	}
-	// get a map of data column indices that are not currently available.
-	missing, err := missingDataColumns(s.blobStorage, root, colMap)
-	if err != nil {
-		return err
-	}
-	// If there are no missing indices, all data column sidecars are available.
-	if len(missing) == 0 {
-		return nil
-	}
-
-	// The gossip handler for data columns writes the index of each verified data column referencing the given
-	// root to the channel returned by blobNotifiers.forRoot.
-	nc := s.blobNotifiers.forRoot(root)
 
 	// Log for DA checks that cross over into the next slot; helpful for debugging.
 	nextSlot := slots.BeginsAt(signed.Block().Slot()+1, s.genesisTime)
-	// Avoid logging if DA check is called after next slot start.
 	if nextSlot.After(time.Now()) {
 		nst := time.AfterFunc(time.Until(nextSlot), func() {
+			missing := s.blobDataColumnNotifier.missingBlobDataColumns(root)
 			if len(missing) == 0 {
 				return
 			}
-			log.WithFields(daCheckLogFields(root, signed.Block().Slot(), expected, len(missing))).
-				Error("Still waiting for DA check at slot end.")
+
+			fields := daCheckLogFields(root, signed.Block().Slot(), len(kzgCommitments), len(missing))
+			log.WithFields(fields).Error("Still waiting for DA check at slot end.")
 		})
 		defer nst.Stop()
 	}
+
+	dataAvailableCh := s.blobDataColumnNotifier.dataAvailable(root)
 	for {
 		select {
-		case idx := <-nc:
-			// Delete each index seen in the notification channel.
-			delete(missing, idx)
-			// Read from the channel until there are no more missing sidecars.
-			if len(missing) > 0 {
-				continue
-			}
-			// Once all sidecars have been observed, clean up the notification channel.
-			s.blobNotifiers.delete(root)
+		case <-dataAvailableCh:
+			s.blobDataColumnNotifier.deleteBlockRoot(root)
 			return nil
 		case <-ctx.Done():
-			missingIndexes := make([]uint64, 0, len(missing))
-			for val := range missing {
-				copiedVal := val
-				missingIndexes = append(missingIndexes, copiedVal)
-			}
-			return errors.Wrapf(ctx.Err(), "context deadline waiting for blob sidecars slot: %d, BlockRoot: %#x, missing %v", block.Slot(), root, missingIndexes)
+			return errors.Wrapf(ctx.Err(), "context deadline waiting for blob sidecars slot: %d, BlockRoot: %#x, missing %v", block.Slot(), root, s.blobDataColumnNotifier.missingBlobDataColumns(root))
 		}
 	}
 }
