@@ -221,15 +221,15 @@ func (p *blobPruner) updateCache(root [32]byte, slot primitives.Slot, scFiles []
 	return nil
 }
 
-func (p *blobPruner) removeFiles(dir string, scFiles []string) (int, error) {
+func (p *blobPruner) removeFiles(dir string, entries []string) (int, error) {
 	removed := 0
-	for _, fname := range scFiles {
+	for _, fname := range entries {
 		fullName := path.Join(dir, fname)
 		if err := p.fs.Remove(fullName); err != nil {
 			return removed, errors.Wrapf(err, "unable to remove %s", fullName)
 		}
 		// Don't count other files that happen to be in the dir, like dangling .part files.
-		if filterSsz(fullName) {
+		if filterSsz(fname) {
 			removed++
 		}
 		if filterPart(fullName) {
