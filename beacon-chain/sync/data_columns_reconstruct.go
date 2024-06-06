@@ -8,14 +8,11 @@ import (
 
 	cKzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
@@ -90,52 +87,6 @@ func recoverBlobs(
 	return recoveredBlobs, nil
 }
 
-// getSignedBlock retrieves the signed block corresponding to the given root.
-// If the block is not available, it waits for it.
-func (s *Service) getSignedBlock(
-	ctx context.Context,
-	blockRoot [fieldparams.RootLength]byte,
-) (interfaces.ReadOnlySignedBeaconBlock, error) {
-	blocksChannel := make(chan *feed.Event, 1)
-	blockSub := s.cfg.blockNotifier.BlockFeed().Subscribe(blocksChannel)
-	defer blockSub.Unsubscribe()
-
-	// Get the signedBlock corresponding to this root.
-	signedBlock, err := s.cfg.beaconDB.Block(ctx, blockRoot)
-	if err != nil {
-		return nil, errors.Wrap(err, "block")
-	}
-
-	// If the block is here, return it.
-	if signedBlock != nil {
-		return signedBlock, nil
-	}
-
-	// Wait for the block to be available.
-	for {
-		select {
-		case blockEvent := <-blocksChannel:
-			// Check the type of the event.
-			data, ok := blockEvent.Data.(*statefeed.BlockProcessedData)
-			if !ok || data == nil {
-				continue
-			}
-
-			// Check if the block is the one we are looking for.
-			if data.BlockRoot != blockRoot {
-				continue
-			}
-
-			// This is the block we are looking for.
-			return data.SignedBlock, nil
-		case err := <-blockSub.Err():
-			return nil, errors.Wrap(err, "block subscriber error")
-		case <-ctx.Done():
-			return nil, errors.New("context canceled")
-		}
-	}
-}
-
 func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColumn blocks.VerifiedRODataColumn) error {
 	// Lock to prevent concurrent reconstruction.
 	s.dataColumsnReconstructionLock.Lock()
@@ -176,14 +127,13 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 		return errors.Wrap(err, "recover blobs")
 	}
 
-	// Get the signed block.
-	signedBlock, err := s.getSignedBlock(ctx, blockRoot)
-	if err != nil {
-		return errors.Wrap(err, "get signed block")
-	}
-
 	// Reconstruct the data columns sidecars.
-	dataColumnSidecars, err := peerdas.DataColumnSidecars(signedBlock, recoveredBlobs)
+	dataColumnSidecars, err := peerdas.DataColumnSidecarsForReconstruct(
+		verifiedRODataColumn.KzgCommitments,
+		verifiedRODataColumn.SignedBlockHeader,
+		verifiedRODataColumn.KzgCommitmentsInclusionProof,
+		recoveredBlobs,
+	)
 	if err != nil {
 		return errors.Wrap(err, "data column sidecars")
 	}
