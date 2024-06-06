@@ -12,7 +12,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/api/grpc",
     visibility = ["//visibility:public"],
     deps = [
-        "//api/server:go_default_library",
+        "//api/server/middleware:go_default_library",
         "//runtime:go_default_library",
         "@com_github_gorilla_mux//:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",

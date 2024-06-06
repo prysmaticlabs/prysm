@@ -1052,7 +1052,6 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 	}
 	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
 	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	enableDebugRPCEndpoints := !b.cliCtx.Bool(flags.DisableDebugRPCEndpoints.Name)
 	gatewayAddress := net.JoinHostPort(gatewayHost, strconv.Itoa(gatewayPort))
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	timeout := b.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
