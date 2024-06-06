@@ -66,6 +66,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 	}
 
 	if defaultKeysExist {
+		log.WithField("filePath", defaultKeyPath).Info("Reading static P2P private key from a file. To generate a new random private key at every start, please remove this file.")
 		return privKeyFromFile(defaultKeyPath)
 	}
 
@@ -93,7 +94,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		return nil, err
 	}
 
-	log.Info("Wrote network key to file")
+	log.WithField("file", defaultKeyPath).Info("Wrote network key to")
 	// Read the key from the defaultKeyPath file just written
 	// for the strongest guarantee that the next start will be the same as this one.
 	return privKeyFromFile(defaultKeyPath)
