@@ -17,7 +17,7 @@ type NodeHealthTracker struct {
 func NewNodeHealthTracker(node iface.HealthNode) *NodeHealthTracker {
 	return &NodeHealthTracker{
 		node:       node,
-		healthChan: make(chan bool, 1),
+		healthChan: make(chan bool, 5), // large enough to make sure multiple writes without reading don't block causing a deadlock
 	}
 }
 
