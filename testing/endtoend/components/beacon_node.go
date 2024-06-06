@@ -278,6 +278,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		"--" + flags.EnableDebugRPCEndpoints.Name,
 		"--" + features.EnableQUIC.Name,
 		"--" + flags.SubscribeToAllSubnets.Name,
+		fmt.Sprintf("--%s=%d", features.DataColumnsWithholdCount.Name, 3),
 	}
 	if config.UsePprof {
 		args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index))
