@@ -45,32 +45,7 @@ var (
 	maxUint256 = &uint256.Int{math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64}
 )
 
-// CustodyColumns computes the columns the node should custody.
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#helper-functions
-func CustodyColumns(nodeId enode.ID, custodySubnetCount uint64) (map[uint64]bool, error) {
-	dataColumnSidecarSubnetCount := params.BeaconConfig().DataColumnSidecarSubnetCount
-
-	// Compute the custodied subnets.
-	subnetIds, err := CustodyColumnSubnets(nodeId, custodySubnetCount)
-	if err != nil {
-		return nil, errors.Wrap(err, "custody subnets")
-	}
-
-	columnsPerSubnet := cKzg4844.CellsPerExtBlob / dataColumnSidecarSubnetCount
-
-	// Knowing the subnet ID and the number of columns per subnet, select all the columns the node should custody.
-	// Columns belonging to the same subnet are contiguous.
-	columnIndices := make(map[uint64]bool, custodySubnetCount*columnsPerSubnet)
-	for i := uint64(0); i < columnsPerSubnet; i++ {
-		for subnetId := range subnetIds {
-			columnIndex := dataColumnSidecarSubnetCount*i + subnetId
-			columnIndices[columnIndex] = true
-		}
-	}
-
-	return columnIndices, nil
-}
-
+// CustodyColumnSubnets computes the subnets the node should participate in for custody.
 func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) (map[uint64]bool, error) {
 	dataColumnSidecarSubnetCount := params.BeaconConfig().DataColumnSidecarSubnetCount
 
@@ -107,6 +82,32 @@ func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) (map[uint6
 	}
 
 	return subnetIds, nil
+}
+
+// CustodyColumns computes the columns the node should custody.
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#helper-functions
+func CustodyColumns(nodeId enode.ID, custodySubnetCount uint64) (map[uint64]bool, error) {
+	dataColumnSidecarSubnetCount := params.BeaconConfig().DataColumnSidecarSubnetCount
+
+	// Compute the custodied subnets.
+	subnetIds, err := CustodyColumnSubnets(nodeId, custodySubnetCount)
+	if err != nil {
+		return nil, errors.Wrap(err, "custody subnets")
+	}
+
+	columnsPerSubnet := cKzg4844.CellsPerExtBlob / dataColumnSidecarSubnetCount
+
+	// Knowing the subnet ID and the number of columns per subnet, select all the columns the node should custody.
+	// Columns belonging to the same subnet are contiguous.
+	columnIndices := make(map[uint64]bool, custodySubnetCount*columnsPerSubnet)
+	for i := uint64(0); i < columnsPerSubnet; i++ {
+		for subnetId := range subnetIds {
+			columnIndex := dataColumnSidecarSubnetCount*i + subnetId
+			columnIndices[columnIndex] = true
+		}
+	}
+
+	return columnIndices, nil
 }
 
 // ComputeExtendedMatrix computes the extended matrix from the blobs.
