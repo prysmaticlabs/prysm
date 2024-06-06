@@ -99,9 +99,9 @@ func TestNodeHealth_Concurrency(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			defer wg.Done()
-			client.EXPECT().IsHealthy(gomock.Any()).Return(false).Times(1)
+			client.EXPECT().IsHealthy(gomock.Any()).Return(false)
 			n.CheckHealth(context.Background())
-			client.EXPECT().IsHealthy(gomock.Any()).Return(true).Times(1)
+			client.EXPECT().IsHealthy(gomock.Any()).Return(true)
 			n.CheckHealth(context.Background())
 		}()
 	}
