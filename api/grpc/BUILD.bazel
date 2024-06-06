@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "grpcutils.go",
-        "log.go",
         "parameters.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/api/grpc",
