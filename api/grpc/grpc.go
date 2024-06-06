@@ -8,7 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/api/server"
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 )
 
@@ -55,7 +55,7 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 		g.cfg.router = mux.NewRouter()
 	}
 
-	corsMux := server.CorsHandler(g.cfg.allowedOrigins).Middleware(g.cfg.router)
+	corsMux := middleware.CorsHandler(g.cfg.allowedOrigins).Middleware(g.cfg.router)
 	// TODO: actually use the timeout config provided
 	g.server = &http.Server{
 		Addr:              g.cfg.gatewayAddr,
