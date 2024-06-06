@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/holiman/uint256"
 	errors "github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -17,27 +16,12 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-const (
-	// Bytes per cell
-	bytesPerCell = cKzg4844.FieldElementsPerCell * cKzg4844.BytesPerFieldElement
-
-	// Number of cells in the extended matrix
-	extendedMatrixSize = fieldparams.MaxBlobsPerBlock * cKzg4844.CellsPerExtBlob
-)
-
-type (
-	ExtendedMatrix []cKzg4844.Cell
-
-	cellCoordinate struct {
-		blobIndex uint64
-		cellID    uint64
-	}
-)
+// Bytes per cell
+const bytesPerCell = cKzg4844.FieldElementsPerCell * cKzg4844.BytesPerFieldElement
 
 var (
 	// Custom errors
 	errCustodySubnetCountTooLarge = errors.New("custody subnet count larger than data column sidecar subnet count")
-	errCellNotFound               = errors.New("cell not found (should never happen)")
 	errIndexTooLarge              = errors.New("column index is larger than the specified number of columns")
 	errMismatchLength             = errors.New("mismatch in the length of the commitments and proofs")
 
@@ -108,65 +92,6 @@ func CustodyColumns(nodeId enode.ID, custodySubnetCount uint64) (map[uint64]bool
 	}
 
 	return columnIndices, nil
-}
-
-// ComputeExtendedMatrix computes the extended matrix from the blobs.
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#compute_extended_matrix
-func ComputeExtendedMatrix(blobs []cKzg4844.Blob) (ExtendedMatrix, error) {
-	matrix := make(ExtendedMatrix, 0, extendedMatrixSize)
-
-	for i := range blobs {
-		// Chunk a non-extended blob into cells representing the corresponding extended blob.
-		blob := &blobs[i]
-		cells, err := cKzg4844.ComputeCells(blob)
-		if err != nil {
-			return nil, errors.Wrap(err, "compute cells for blob")
-		}
-
-		matrix = append(matrix, cells[:]...)
-	}
-
-	return matrix, nil
-}
-
-// RecoverMatrix recovers the extended matrix from some cells.
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#recover_matrix
-func RecoverMatrix(cellFromCoordinate map[cellCoordinate]cKzg4844.Cell, blobCount uint64) (ExtendedMatrix, error) {
-	matrix := make(ExtendedMatrix, 0, extendedMatrixSize)
-
-	for blobIndex := uint64(0); blobIndex < blobCount; blobIndex++ {
-		// Filter all cells that belong to the current blob.
-		cellIds := make([]uint64, 0, cKzg4844.CellsPerExtBlob)
-		for coordinate := range cellFromCoordinate {
-			if coordinate.blobIndex == blobIndex {
-				cellIds = append(cellIds, coordinate.cellID)
-			}
-		}
-
-		// Retrieve cells corresponding to all `cellIds`.
-		cellIdsCount := len(cellIds)
-
-		cells := make([]cKzg4844.Cell, 0, cellIdsCount)
-		for _, cellId := range cellIds {
-			coordinate := cellCoordinate{blobIndex: blobIndex, cellID: cellId}
-			cell, ok := cellFromCoordinate[coordinate]
-			if !ok {
-				return matrix, errCellNotFound
-			}
-
-			cells = append(cells, cell)
-		}
-
-		// Recover all cells.
-		allCellsForRow, err := cKzg4844.RecoverAllCells(cellIds, cells)
-		if err != nil {
-			return matrix, errors.Wrap(err, "recover all cells")
-		}
-
-		matrix = append(matrix, allCellsForRow[:]...)
-	}
-
-	return matrix, nil
 }
 
 // DataColumnSidecars computes the data column sidecars from the signed block and blobs.
