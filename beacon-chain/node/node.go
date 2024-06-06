@@ -19,8 +19,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/api/grpc"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
+	"github.com/prysmaticlabs/prysm/v5/api/server/rest"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
@@ -1056,13 +1056,13 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	timeout := b.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 
-	opts := []grpc.Option{
-		grpc.WithRouter(router),
-		grpc.WithGatewayAddr(gatewayAddress),
-		grpc.WithAllowedOrigins(allowedOrigins),
-		grpc.WithTimeout(uint64(timeout)),
+	opts := []rest.Option{
+		rest.WithRouter(router),
+		rest.WithGatewayAddr(gatewayAddress),
+		rest.WithAllowedOrigins(allowedOrigins),
+		rest.WithTimeout(uint64(timeout)),
 	}
-	g, err := grpc.New(b.ctx, opts...)
+	g, err := rest.New(b.ctx, opts...)
 	if err != nil {
 		return err
 	}

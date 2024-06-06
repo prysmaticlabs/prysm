@@ -1,5 +1,5 @@
 // Package gateway defines a grpc-gateway server that serves HTTP-JSON traffic and acts a proxy between HTTP and gRPC.
-package grpc
+package rest
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 
 var _ runtime.Service = (*Server)(nil)
 
-// MuxHandler is a function that implements the mux handler functionality.
-type MuxHandler func(
+// restHandler is a functional interface that implements the rest handler functionality.
+type restHandler func(
 	h http.HandlerFunc,
 	w http.ResponseWriter,
 	req *http.Request,
@@ -25,7 +25,7 @@ type MuxHandler func(
 type config struct {
 	gatewayAddr    string
 	allowedOrigins []string
-	muxHandler     MuxHandler
+	muxHandler     restHandler
 	router         *mux.Router
 	timeout        time.Duration
 }
@@ -50,9 +50,9 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 			return nil, err
 		}
 	}
-	// TODO: this is a codesmell ( we should always have a router here)
+
 	if g.cfg.router == nil {
-		g.cfg.router = mux.NewRouter()
+		return nil, errors.New("router option not configured")
 	}
 
 	corsMux := middleware.CorsHandler(g.cfg.allowedOrigins).Middleware(g.cfg.router)

@@ -23,8 +23,8 @@ import (
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
-	"github.com/prysmaticlabs/prysm/v5/api/grpc"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
+	"github.com/prysmaticlabs/prysm/v5/api/server/rest"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
@@ -675,14 +675,14 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		}
 	}
 
-	opts := []grpc.Option{
-		grpc.WithMuxHandler(muxHandler),
-		grpc.WithRouter(router), // note some routes are registered in server.go
-		grpc.WithGatewayAddr(gatewayAddress),
-		grpc.WithAllowedOrigins(allowedOrigins),
-		grpc.WithTimeout(uint64(timeout)),
+	opts := []rest.Option{
+		rest.WithMuxHandler(muxHandler),
+		rest.WithRouter(router), // note some routes are registered in server.go
+		rest.WithGatewayAddr(gatewayAddress),
+		rest.WithAllowedOrigins(allowedOrigins),
+		rest.WithTimeout(uint64(timeout)),
 	}
-	gw, err := grpc.New(c.cliCtx.Context, opts...)
+	gw, err := rest.New(c.cliCtx.Context, opts...)
 	if err != nil {
 		return err
 	}

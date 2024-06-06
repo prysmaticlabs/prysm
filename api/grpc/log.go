@@ -2,4 +2,4 @@ package grpc
 
 import "github.com/sirupsen/logrus"
 
-var log = logrus.WithField("prefix", "gateway")
+var log = logrus.WithField("prefix", "gRPC")

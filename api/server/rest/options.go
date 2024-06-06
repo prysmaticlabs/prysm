@@ -1,4 +1,4 @@
-package grpc
+package rest
 
 import (
 	"time"
@@ -9,7 +9,7 @@ import (
 
 type Option func(g *Server) error
 
-func WithMuxHandler(m MuxHandler) Option {
+func WithMuxHandler(m restHandler) Option {
 	return func(g *Server) error {
 		g.cfg.muxHandler = m
 		return nil
