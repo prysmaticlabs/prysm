@@ -23,8 +23,8 @@ import (
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/api/grpc"
-	"github.com/prysmaticlabs/prysm/v5/api/server"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
@@ -152,8 +152,8 @@ func newRouter(cliCtx *cli.Context) *mux.Router {
 		allowedOrigins = strings.Split(flags.GRPCGatewayCorsDomain.Value, ",")
 	}
 	r := mux.NewRouter()
-	r.Use(server.NormalizeQueryValuesHandler)
-	r.Use(server.CorsHandler(allowedOrigins))
+	r.Use(middleware.NormalizeQueryValuesHandler)
+	r.Use(middleware.CorsHandler(allowedOrigins))
 	return r
 }
 
