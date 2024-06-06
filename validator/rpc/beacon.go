@@ -1,8 +1,6 @@
 package rpc
 
 import (
-	"net/http"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -11,7 +9,6 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/client"
-	beaconApi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-chain-client-factory"
 	nodeClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/node-client-factory"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/validator-client-factory"
@@ -54,14 +51,16 @@ func (s *Server) registerBeaconClient() error {
 		s.beaconApiTimeout,
 	)
 
-	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
-		http.Client{Timeout: s.beaconApiTimeout},
-		s.beaconApiEndpoint,
-	)
+	//restHandler := beaconApi.NewBeaconApiJsonRestHandler(
+	//	http.Client{Timeout: s.beaconApiTimeout},
+	//	s.beaconApiEndpoint,
+	//)
 
-	s.chainClient = beaconChainClientFactory.NewChainClient(conn, restHandler)
-	s.nodeClient = nodeClientFactory.NewNodeClient(conn, restHandler)
-	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn, restHandler)
-
+	//s.chainClient = beaconChainClientFactory.NewChainClient(conn, restHandler)
+	//s.nodeClient = nodeClientFactory.NewNodeClient(conn, restHandler)
+	//s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn, restHandler)
+	s.chainClient = beaconChainClientFactory.NewChainClient(conn, nil)
+	s.nodeClient = nodeClientFactory.NewNodeClient(conn, nil)
+	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn, nil)
 	return nil
 }

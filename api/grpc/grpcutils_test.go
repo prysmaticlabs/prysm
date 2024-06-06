@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -64,15 +63,15 @@ func TestAppendHeaders(t *testing.T) {
 }
 
 func TestAppendCustomErrorHeader(t *testing.T) {
-	stream := &runtime.ServerTransportStream{}
-	ctx := grpc.NewContextWithServerTransportStream(context.Background(), stream)
+	ctx := context.Background()
+	stream := grpc.ServerTransportStreamFromContext(ctx)
+	ctx = grpc.NewContextWithServerTransportStream(ctx, stream)
 	data := &customErrorData{Message: "foo"}
 	require.NoError(t, AppendCustomErrorHeader(ctx, data))
 	// The stream used in test setup sets the metadata key in lowercase.
-	value, ok := stream.Header()[strings.ToLower(CustomErrorMetadataKey)]
+	md, ok := metadata.FromIncomingContext(ctx)
 	require.Equal(t, true, ok, "Failed to retrieve custom error metadata value")
 	expected, err := json.Marshal(data)
 	require.NoError(t, err)
-	assert.Equal(t, string(expected), value[0])
-
+	assert.Equal(t, string(expected), md.Get(strings.ToLower(CustomErrorMetadataKey))[0])
 }

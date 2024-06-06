@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
@@ -204,7 +203,7 @@ func TestNodeServer_GetHealth(t *testing.T) {
 			}
 			ethpb.RegisterNodeServer(server, ns)
 			reflection.Register(server)
-			ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+			ctx := grpc.NewContextWithServerTransportStream(context.Background(), grpc.ServerTransportStreamFromContext(context.Background()))
 			_, err := ns.GetHealth(ctx, &ethpb.HealthRequest{SyncingStatus: tt.customStatus})
 			if tt.wantedErr == "" {
 				require.NoError(t, err)

@@ -57,7 +57,6 @@ func e2eMinimal(t *testing.T, cfg *params.BeaconChainConfig, cfgo ...types.E2ECo
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
 		ev.DenebForkTransition,
-		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,

@@ -1,4 +1,4 @@
-package gateway
+package grpc
 
 import (
 	"context"
@@ -9,42 +9,12 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
-
-func TestGateway_Customized(t *testing.T) {
-	r := mux.NewRouter()
-	cert := "cert"
-	origins := []string{"origin"}
-	size := uint64(100)
-
-	opts := []Option{
-		WithRouter(r),
-		WithRemoteCert(cert),
-		WithAllowedOrigins(origins),
-		WithMaxCallRecvMsgSize(size),
-		WithMuxHandler(func(
-			_ http.HandlerFunc,
-			_ http.ResponseWriter,
-			_ *http.Request,
-		) {
-		}),
-	}
-
-	g, err := New(context.Background(), opts...)
-	require.NoError(t, err)
-
-	assert.Equal(t, r, g.cfg.router)
-	assert.Equal(t, cert, g.cfg.remoteCert)
-	require.Equal(t, 1, len(g.cfg.allowedOrigins))
-	assert.Equal(t, origins[0], g.cfg.allowedOrigins[0])
-	assert.Equal(t, size, g.cfg.maxCallRecvMsgSize)
-}
 
 func TestGateway_StartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -55,13 +25,10 @@ func TestGateway_StartStop(t *testing.T) {
 
 	gatewayPort := ctx.Int(flags.GRPCGatewayPort.Name)
 	gatewayHost := ctx.String(flags.GRPCGatewayHost.Name)
-	rpcHost := ctx.String(flags.RPCHost.Name)
-	selfAddress := fmt.Sprintf("%s:%d", rpcHost, ctx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 
 	opts := []Option{
 		WithGatewayAddr(gatewayAddress),
-		WithRemoteAddr(selfAddress),
 		WithMuxHandler(func(
 			_ http.HandlerFunc,
 			_ http.ResponseWriter,
@@ -89,13 +56,10 @@ func TestGateway_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 
 	gatewayPort := ctx.Int(flags.GRPCGatewayPort.Name)
 	gatewayHost := ctx.String(flags.GRPCGatewayHost.Name)
-	rpcHost := ctx.String(flags.RPCHost.Name)
-	selfAddress := fmt.Sprintf("%s:%d", rpcHost, ctx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 
 	opts := []Option{
 		WithGatewayAddr(gatewayAddress),
-		WithRemoteAddr(selfAddress),
 	}
 
 	g, err := New(context.Background(), opts...)

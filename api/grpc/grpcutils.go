@@ -94,3 +94,62 @@ func AppendCustomErrorHeader(ctx context.Context, errorData interface{}) error {
 	}
 	return nil
 }
+
+//
+//// MuxConfig contains configuration that should be used when registering the beacon node in the gateway.
+//type MuxConfig struct {
+//	EthPbMux     *PbMux
+//	V1AlphaPbMux *PbMux
+//}
+//
+//// DefaultConfig returns a fully configured MuxConfig with standard gateway behavior.
+//func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
+//	var v1AlphaPbHandler, ethPbHandler *PbMux
+//	if flags.EnableHTTPPrysmAPI(httpModules) {
+//		v1AlphaRegistrations := []PbHandlerRegistration{
+//			ethpbalpha.RegisterNodeHandler,
+//			ethpbalpha.RegisterBeaconChainHandler,
+//			ethpbalpha.RegisterBeaconNodeValidatorHandler,
+//			ethpbalpha.RegisterHealthHandler,
+//		}
+//		if enableDebugRPCEndpoints {
+//			v1AlphaRegistrations = append(v1AlphaRegistrations, ethpbalpha.RegisterDebugHandler)
+//		}
+//		v1AlphaMux := gwruntime.NewServeMux(
+//			gwruntime.WithMarshalerOption(
+//				api.EventStreamMediaType, &gwruntime.EventSourceJSONPb{},
+//			),
+//		)
+//		v1AlphaPbHandler = &PbMux{
+//			Registrations: v1AlphaRegistrations,
+//			Patterns:      []string{"/eth/v1alpha1/", "/eth/v1alpha2/"},
+//			Mux:           v1AlphaMux,
+//		}
+//	}
+//	if flags.EnableHTTPEthAPI(httpModules) {
+//		ethRegistrations := []PbHandlerRegistration{}
+//		ethMux := gwruntime.NewServeMux(
+//			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
+//				Marshaler: &gwruntime.JSONPb{
+//					MarshalOptions: protojson.MarshalOptions{
+//						UseProtoNames:   true,
+//						EmitUnpopulated: true,
+//					},
+//					UnmarshalOptions: protojson.UnmarshalOptions{
+//						DiscardUnknown: true,
+//					},
+//				},
+//			}),
+//		)
+//		ethPbHandler = &PbMux{
+//			Registrations: ethRegistrations,
+//			Patterns:      []string{"/internal/eth/v1/", "/internal/eth/v2/"},
+//			Mux:           ethMux,
+//		}
+//	}
+//
+//	return MuxConfig{
+//		EthPbMux:     ethPbHandler,
+//		V1AlphaPbMux: v1AlphaPbHandler,
+//	}
+//}

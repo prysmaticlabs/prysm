@@ -20,11 +20,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
-	"github.com/prysmaticlabs/prysm/v5/api/gateway"
+	"github.com/prysmaticlabs/prysm/v5/api/grpc"
 	"github.com/prysmaticlabs/prysm/v5/api/server"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
@@ -39,7 +38,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
-	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 	"github.com/prysmaticlabs/prysm/v5/runtime/debug"
 	"github.com/prysmaticlabs/prysm/v5/runtime/prereqs"
@@ -57,7 +55,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // ValidatorClient defines an instance of an Ethereum validator that manages
@@ -657,9 +654,6 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		)
 	}
 	gatewayPort := c.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	rpcHost := c.cliCtx.String(flags.RPCHost.Name)
-	rpcPort := c.cliCtx.Int(flags.RPCPort.Name)
-	rpcAddr := net.JoinHostPort(rpcHost, fmt.Sprintf("%d", rpcPort))
 	gatewayAddress := net.JoinHostPort(gatewayHost, fmt.Sprintf("%d", gatewayPort))
 	timeout := c.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	var allowedOrigins []string
@@ -668,56 +662,27 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 	} else {
 		allowedOrigins = strings.Split(flags.GRPCGatewayCorsDomain.Value, ",")
 	}
-	maxCallSize := c.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-
-	registrations := []gateway.PbHandlerRegistration{
-		pb.RegisterHealthHandler,
-	}
-	gwmux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					EmitUnpopulated: true,
-					UseProtoNames:   true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-		gwruntime.WithMarshalerOption(
-			api.EventStreamMediaType, &gwruntime.EventSourceJSONPb{}, // TODO: remove this
-		),
-		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
-	)
 
 	muxHandler := func(h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
-		// The validator gateway handler requires this special logic as it serves the web APIs and the web UI.
+		// The validator api handler requires this special logic as it serves the web APIs and the web UI.
 		if strings.HasPrefix(req.URL.Path, "/api") {
-			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
+			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1) // used to redirect apis to standard rest APIs
 			// Else, we handle with the Prysm API gateway without a middleware.
-			h(w, req)
+			h(w, req) //TODO: test this handler wrapper ...
 		} else {
 			// Finally, we handle with the web server.
 			web.Handler(w, req)
 		}
 	}
 
-	pbHandler := &gateway.PbMux{
-		Registrations: registrations,
-		Mux:           gwmux,
+	opts := []grpc.Option{
+		grpc.WithMuxHandler(muxHandler),
+		grpc.WithRouter(router), // note some routes are registered in server.go
+		grpc.WithGatewayAddr(gatewayAddress),
+		grpc.WithAllowedOrigins(allowedOrigins),
+		grpc.WithTimeout(uint64(timeout)),
 	}
-	opts := []gateway.Option{
-		gateway.WithMuxHandler(muxHandler),
-		gateway.WithRouter(router), // note some routes are registered in server.go
-		gateway.WithRemoteAddr(rpcAddr),
-		gateway.WithGatewayAddr(gatewayAddress),
-		gateway.WithMaxCallRecvMsgSize(maxCallSize),
-		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
-		gateway.WithAllowedOrigins(allowedOrigins),
-		gateway.WithTimeout(uint64(timeout)),
-	}
-	gw, err := gateway.New(c.cliCtx.Context, opts...)
+	gw, err := grpc.New(c.cliCtx.Context, opts...)
 	if err != nil {
 		return err
 	}

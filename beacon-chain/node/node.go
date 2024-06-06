@@ -19,7 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	apigateway "github.com/prysmaticlabs/prysm/v5/api/gateway"
+	"github.com/prysmaticlabs/prysm/v5/api/grpc"
 	"github.com/prysmaticlabs/prysm/v5/api/server"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
@@ -34,7 +34,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
@@ -1054,38 +1053,17 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 	}
 	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
 	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	rpcHost := b.cliCtx.String(flags.RPCHost.Name)
-	rpcPort := b.cliCtx.Int(flags.RPCPort.Name)
-
-	selfAddress := net.JoinHostPort(rpcHost, strconv.Itoa(rpcPort))
 	gatewayAddress := net.JoinHostPort(gatewayHost, strconv.Itoa(gatewayPort))
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
-	selfCert := b.cliCtx.String(flags.CertFlag.Name)
-	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	httpModules := b.cliCtx.String(flags.HTTPModules.Name)
 	timeout := b.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 
-	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, httpModules)
-	muxs := make([]*apigateway.PbMux, 0)
-	if gatewayConfig.V1AlphaPbMux != nil {
-		muxs = append(muxs, gatewayConfig.V1AlphaPbMux)
+	opts := []grpc.Option{
+		grpc.WithRouter(router),
+		grpc.WithGatewayAddr(gatewayAddress),
+		grpc.WithAllowedOrigins(allowedOrigins),
+		grpc.WithTimeout(uint64(timeout)),
 	}
-	if gatewayConfig.EthPbMux != nil {
-		muxs = append(muxs, gatewayConfig.EthPbMux)
-	}
-
-	opts := []apigateway.Option{
-		apigateway.WithRouter(router),
-		apigateway.WithGatewayAddr(gatewayAddress),
-		apigateway.WithRemoteAddr(selfAddress),
-		apigateway.WithPbHandlers(muxs),
-		apigateway.WithRemoteCert(selfCert),
-		apigateway.WithMaxCallRecvMsgSize(maxCallSize),
-		apigateway.WithAllowedOrigins(allowedOrigins),
-		apigateway.WithTimeout(uint64(timeout)),
-	}
-	g, err := apigateway.New(b.ctx, opts...)
+	g, err := grpc.New(b.ctx, opts...)
 	if err != nil {
 		return err
 	}
