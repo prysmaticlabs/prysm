@@ -69,9 +69,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 
 	// Broadcast the aggregated attestation on a feed to notify other services in the beacon node
 	// of a received aggregated attestation.
-
 	// TODO: this will be extended to Electra in a later PR
-
 	if m.Version() == version.Phase0 {
 		phase0Att, ok := m.(*ethpb.SignedAggregateAttestationAndProof)
 		if ok {
@@ -172,7 +170,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.Signed
 	// Verify validator index is within the beacon committee.
 	result, err := s.validateIndexInCommittee(ctx, bs, aggregate, aggregatorIndex)
 	if result != pubsub.ValidationAccept {
-		wrappedErr := errors.Wrapf(err, "Could not validate index in committee")
+		wrappedErr := errors.Wrapf(err, "could not validate index in committee")
 		tracing.AnnotateError(span, wrappedErr)
 		return result, wrappedErr
 	}
@@ -206,7 +204,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.Signed
 		aggregateAndProof.GetSelectionProof(),
 	)
 	if err != nil {
-		wrappedErr := errors.Wrapf(err, "Could not validate selection for validator %d", aggregateAndProof.GetAggregatorIndex())
+		wrappedErr := errors.Wrapf(err, "could not validate selection for validator %d", aggregateAndProof.GetAggregatorIndex())
 		tracing.AnnotateError(span, wrappedErr)
 		attBadSelectionProofCount.Inc()
 		return pubsub.ValidationReject, wrappedErr
@@ -216,13 +214,13 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.Signed
 	// We use batch verify here to save compute.
 	aggregatorSigSet, err := aggSigSet(bs, signed)
 	if err != nil {
-		wrappedErr := errors.Wrapf(err, "Could not get aggregator sig set %d", aggregatorIndex)
+		wrappedErr := errors.Wrapf(err, "could not get aggregator sig set %d", aggregatorIndex)
 		tracing.AnnotateError(span, wrappedErr)
 		return pubsub.ValidationIgnore, wrappedErr
 	}
 	attSigSet, err := blocks.AttestationSignatureBatch(ctx, bs, []ethpb.Att{aggregate})
 	if err != nil {
-		wrappedErr := errors.Wrapf(err, "Could not verify aggregator signature %d", aggregatorIndex)
+		wrappedErr := errors.Wrapf(err, "could not verify aggregator signature %d", aggregatorIndex)
 		tracing.AnnotateError(span, wrappedErr)
 		return pubsub.ValidationIgnore, wrappedErr
 	}
