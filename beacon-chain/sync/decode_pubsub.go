@@ -81,7 +81,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 }
 
 // Replaces our fork digest with the formatter.
-func (_ *Service) replaceForkDigest(topic string) (string, error) {
+func (*Service) replaceForkDigest(topic string) (string, error) {
 	subStrings := strings.Split(topic, "/")
 	if len(subStrings) != 4 {
 		return "", errInvalidTopic
