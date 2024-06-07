@@ -221,6 +221,7 @@ type BeaconChainConfig struct {
 	// Mev-boost circuit breaker
 	MaxBuilderConsecutiveMissedSlots primitives.Slot // MaxBuilderConsecutiveMissedSlots defines the number of consecutive skip slot to fallback from using relay/builder to local execution engine for block construction.
 	MaxBuilderEpochMissedSlots       primitives.Slot // MaxBuilderEpochMissedSlots is defining the number of total skip slot (per epoch rolling windows) to fallback from using relay/builder to local execution engine for block construction.
+	BuilderProposalDelayTolerance    uint64          // Maximum time allowed for a builder to respond to a block request.
 	LocalBlockValueBoost             uint64          // LocalBlockValueBoost is the value boost for local block construction. This is used to prioritize local block construction over relay/builder block construction.
 
 	// Execution engine timeout value
@@ -333,6 +334,18 @@ func (b *BeaconChainConfig) PreviousEpochAttestationsLength() uint64 {
 // BeaconChainConfig.
 func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
 	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
+
+// BuilderProposalDelayTolerance returns the maximum time duration
+// allowed for a builder to respond to a block request.
+func (b *BeaconChainConfig) BuilderProposalDelayToleranceDuration() time.Duration {
+	// Tolerance lower than 200 ms will certainly miss proposal
+	// opportunities, so let's set a reasonable minimum.
+	tolerance := b.BuilderProposalDelayTolerance
+	if tolerance < 200 {
+		tolerance = 200
+	}
+	return time.Duration(tolerance) * time.Millisecond
 }
 
 // TtfbTimeoutDuration returns the time duration of the timeout.

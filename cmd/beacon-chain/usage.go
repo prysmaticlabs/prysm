@@ -128,6 +128,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.MevRelayEndpoint,
 			flags.MaxBuilderEpochMissedSlots,
 			flags.MaxBuilderConsecutiveMissedSlots,
+			flags.BuilderProposalDelayTolerance,
 			flags.EngineEndpointTimeoutSeconds,
 			flags.SlasherDirFlag,
 			flags.LocalBlockValueBoost,

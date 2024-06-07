@@ -48,10 +48,6 @@ var (
 // can be used as a constant to avoid recomputing this value in every call.
 var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225}
 
-// blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
-// block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
-const blockBuilderTimeout = 1 * time.Second
-
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
 func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, local *blocks.GetPayloadResponse, bid builder.Bid, builderBoostFactor primitives.Gwei) (primitives.Wei, *enginev1.BlobsBundle, error) {
 	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
@@ -170,10 +166,15 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, err
 	}
 
+	blockBuilderTimeout := params.BeaconConfig().BuilderProposalDelayToleranceDuration()
 	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
 	defer cancel()
 
 	signedBid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
+	if ctx.Err() != nil {
+		// Might be non-nil even if err is nil.
+		return nil, ctx.Err()
+	}
 	if err != nil {
 		return nil, err
 	}

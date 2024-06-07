@@ -24,6 +24,13 @@ var (
 		Name:  "max-builder-epoch-missed-slots",
 		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
 	}
+	BuilderProposalDelayTolerance = &cli.Uint64Flag{
+		Name: "builder-proposal-delay-tolerance",
+		Usage: "The maximum amount of time (in ms) allowed for a block builder to respond to a block request. " +
+                        "This value is known as BUILDER_PROPOSAL_DELAY_TOLERANCE in builder spec.",
+		Value: 1000,
+	}
+
 	// LocalBlockValueBoost sets a percentage boost for local block construction while using a custom builder.
 	LocalBlockValueBoost = &cli.Uint64Flag{
 		Name: "local-block-value-boost",

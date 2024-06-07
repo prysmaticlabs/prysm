@@ -80,6 +80,7 @@ var appFlags = []cli.Flag{
 	flags.MevRelayEndpoint,
 	flags.MaxBuilderEpochMissedSlots,
 	flags.MaxBuilderConsecutiveMissedSlots,
+	flags.BuilderProposalDelayTolerance,
 	flags.EngineEndpointTimeoutSeconds,
 	flags.LocalBlockValueBoost,
 	cmd.BackupWebhookOutputDir,
