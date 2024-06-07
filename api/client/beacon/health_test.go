@@ -87,12 +87,6 @@ func TestNodeHealth_Concurrency(t *testing.T) {
 	// Number of goroutines to spawn for both reading and writing
 	numGoroutines := 6
 
-	go func() {
-		for range n.HealthUpdates() {
-			// Consume values to avoid blocking on channel send.
-		}
-	}()
-
 	wg.Add(numGoroutines * 2) // for readers and writers
 
 	// Concurrently update health status

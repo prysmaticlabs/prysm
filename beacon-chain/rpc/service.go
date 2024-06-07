@@ -113,8 +113,8 @@ type Config struct {
 	ExecutionChainInfoFetcher     execution.ChainInfoFetcher
 	GenesisTimeFetcher            blockchain.TimeFetcher
 	GenesisFetcher                blockchain.GenesisFetcher
-	EnableDebugRPCEndpoints       bool
 	MockEth1Votes                 bool
+	EnableDebugRPCEndpoints       bool
 	AttestationsPool              attestations.Pool
 	ExitPool                      voluntaryexits.PoolManager
 	SlashingsPool                 slashings.PoolManager
@@ -318,7 +318,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	if s.cfg.EnableDebugRPCEndpoints {
-		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debugv1alpha1.Server{
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			BeaconDB:           s.cfg.BeaconDB,
