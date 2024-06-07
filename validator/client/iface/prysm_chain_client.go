@@ -14,7 +14,7 @@ type ValidatorCount struct {
 	Count  uint64
 }
 
-// PrysmBeaconChainClient defines an interface required to implement all the prysm specific custom endpoints.
-type PrysmBeaconChainClient interface {
-	GetValidatorCount(context.Context, string, []validator.Status) ([]ValidatorCount, error)
+// PrysmChainClient defines an interface required to implement all the prysm specific custom endpoints.
+type PrysmChainClient interface {
+	ValidatorCount(context.Context, string, []validator.Status) ([]ValidatorCount, error)
 }

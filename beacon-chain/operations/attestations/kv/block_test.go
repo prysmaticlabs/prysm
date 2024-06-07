@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -18,7 +17,7 @@ func TestKV_BlockAttestation_CanSaveRetrieve(t *testing.T) {
 	att1 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}})
 	att2 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}})
 	att3 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}})
-	atts := []interfaces.Attestation{att1, att2, att3}
+	atts := []ethpb.Att{att1, att2, att3}
 
 	for _, att := range atts {
 		require.NoError(t, cache.SaveBlockAttestation(att))
@@ -44,7 +43,7 @@ func TestKV_BlockAttestation_CanDelete(t *testing.T) {
 	att1 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}})
 	att2 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}})
 	att3 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}})
-	atts := []interfaces.Attestation{att1, att2, att3}
+	atts := []ethpb.Att{att1, att2, att3}
 
 	for _, att := range atts {
 		require.NoError(t, cache.SaveBlockAttestation(att))
@@ -54,6 +53,6 @@ func TestKV_BlockAttestation_CanDelete(t *testing.T) {
 	require.NoError(t, cache.DeleteBlockAttestation(att3))
 
 	returned := cache.BlockAttestations()
-	wanted := []interfaces.Attestation{att2}
+	wanted := []ethpb.Att{att2}
 	assert.DeepEqual(t, wanted, returned)
 }

@@ -70,7 +70,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		return
 	}
 
-	g, err := v.GetGraffiti(ctx, pubKey)
+	g, err := v.Graffiti(ctx, pubKey)
 	if err != nil {
 		// Graffiti is not a critical enough to fail block production and cause
 		// validator to miss block reward. When failed, validator should continue
@@ -79,7 +79,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	}
 
 	// Request block from beacon node
-	b, err := v.validatorClient.GetBeaconBlock(ctx, &ethpb.BlockRequest{
+	b, err := v.validatorClient.BeaconBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
 		Graffiti:     g,
@@ -148,6 +148,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 				log.WithError(err).Error("Failed to build generic signed block")
 				return
 			}
+		default:
+			log.Errorf("Unsupported block version %s", version.String(blk.Version()))
 		}
 	} else {
 		genericSignedBlock, err = blk.PbGenericBlock()
@@ -341,7 +343,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 	if err != nil {
 		return nil, err
 	}
-	randaoReveal, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	randaoReveal, err = v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -373,7 +375,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     blockRoot[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -426,8 +428,8 @@ func signVoluntaryExit(
 	return sig.Marshal(), nil
 }
 
-// GetGraffiti gets the graffiti from cli or file for the validator public key.
-func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+// Graffiti gets the graffiti from cli or file for the validator public key.
+func (v *validator) Graffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	if v.proposerSettings != nil {
 		// Check proposer settings for specific key first
 		if v.proposerSettings.ProposeConfig != nil {

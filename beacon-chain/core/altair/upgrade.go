@@ -154,7 +154,7 @@ func TranslateParticipation(ctx context.Context, state state.BeaconState, atts [
 		if err != nil {
 			return nil, err
 		}
-		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}

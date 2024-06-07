@@ -2,7 +2,7 @@ package helpers
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // BalanceChurnLimit for the current active balance, in gwei.
@@ -19,12 +19,12 @@ import (
 //	        get_total_active_balance(state) // CHURN_LIMIT_QUOTIENT
 //	    )
 //	    return churn - churn % EFFECTIVE_BALANCE_INCREMENT
-func BalanceChurnLimit(activeBalance math.Gwei) math.Gwei {
+func BalanceChurnLimit(activeBalance primitives.Gwei) primitives.Gwei {
 	churn := max(
 		params.BeaconConfig().MinPerEpochChurnLimitElectra,
 		(uint64(activeBalance) / params.BeaconConfig().ChurnLimitQuotient),
 	)
-	return math.Gwei(churn - churn%params.BeaconConfig().EffectiveBalanceIncrement)
+	return primitives.Gwei(churn - churn%params.BeaconConfig().EffectiveBalanceIncrement)
 }
 
 // ActivationExitChurnLimit for the current active balance, in gwei.
@@ -37,8 +37,8 @@ func BalanceChurnLimit(activeBalance math.Gwei) math.Gwei {
 //	    Return the churn limit for the current epoch dedicated to activations and exits.
 //	    """
 //	    return min(MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, get_balance_churn_limit(state))
-func ActivationExitChurnLimit(activeBalance math.Gwei) math.Gwei {
-	return min(math.Gwei(params.BeaconConfig().MaxPerEpochActivationExitChurnLimit), BalanceChurnLimit(activeBalance))
+func ActivationExitChurnLimit(activeBalance primitives.Gwei) primitives.Gwei {
+	return min(primitives.Gwei(params.BeaconConfig().MaxPerEpochActivationExitChurnLimit), BalanceChurnLimit(activeBalance))
 }
 
 // ConsolidationChurnLimit for the current active balance, in gwei.
@@ -48,6 +48,6 @@ func ActivationExitChurnLimit(activeBalance math.Gwei) math.Gwei {
 //
 //	def get_consolidation_churn_limit(state: BeaconState) -> Gwei:
 //	    return get_balance_churn_limit(state) - get_activation_exit_churn_limit(state)
-func ConsolidationChurnLimit(activeBalance math.Gwei) math.Gwei {
+func ConsolidationChurnLimit(activeBalance primitives.Gwei) primitives.Gwei {
 	return BalanceChurnLimit(activeBalance) - ActivationExitChurnLimit(activeBalance)
 }

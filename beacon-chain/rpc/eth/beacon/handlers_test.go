@@ -86,6 +86,24 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 }
 
 func TestGetBlockV2(t *testing.T) {
+	t.Run("Unsycned Block", func(t *testing.T) {
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: nil}
+		mockChainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{},
+		}
+		s := &Server{
+			FinalizationFetcher: mockChainService,
+			Blocker:             mockBlockFetcher,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
+		request = mux.SetURLVars(request, map[string]string{"block_id": "123552314"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlockV2(writer, request)
+		require.Equal(t, http.StatusNotFound, writer.Code)
+	})
 	t.Run("phase0", func(t *testing.T) {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = 123

@@ -6,6 +6,7 @@ import (
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
@@ -22,7 +23,7 @@ type SignedBid interface {
 type Bid interface {
 	Header() (interfaces.ExecutionData, error)
 	BlobKzgCommitments() ([][]byte, error)
-	Value() []byte
+	Value() primitives.Wei
 	Pubkey() []byte
 	Version() int
 	IsNil() bool
@@ -125,8 +126,8 @@ func (b builderBid) Version() int {
 }
 
 // Value --
-func (b builderBid) Value() []byte {
-	return b.p.Value
+func (b builderBid) Value() primitives.Wei {
+	return primitives.LittleEndianBytesToWei(b.p.Value)
 }
 
 // Pubkey --
@@ -165,7 +166,7 @@ func WrappedBuilderBidCapella(p *ethpb.BuilderBidCapella) (Bid, error) {
 // Header returns the execution data interface.
 func (b builderBidCapella) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, blocks.PayloadValueToWei(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header)
 }
 
 // BlobKzgCommitments --
@@ -179,8 +180,8 @@ func (b builderBidCapella) Version() int {
 }
 
 // Value --
-func (b builderBidCapella) Value() []byte {
-	return b.p.Value
+func (b builderBidCapella) Value() primitives.Wei {
+	return primitives.LittleEndianBytesToWei(b.p.Value)
 }
 
 // Pubkey --
@@ -222,8 +223,8 @@ func (b builderBidDeneb) Version() int {
 }
 
 // Value --
-func (b builderBidDeneb) Value() []byte {
-	return b.p.Value
+func (b builderBidDeneb) Value() primitives.Wei {
+	return primitives.LittleEndianBytesToWei(b.p.Value)
 }
 
 // Pubkey --
@@ -249,7 +250,7 @@ func (b builderBidDeneb) HashTreeRootWith(hh *ssz.Hasher) error {
 // Header --
 func (b builderBidDeneb) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	return blocks.WrappedExecutionPayloadHeaderDeneb(b.p.Header, blocks.PayloadValueToWei(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderDeneb(b.p.Header)
 }
 
 // BlobKzgCommitments --

@@ -3,6 +3,7 @@ package testutil
 import (
 	"bytes"
 	"context"
+	"errors"
 	"time"
 
 	api "github.com/prysmaticlabs/prysm/v5/api/client"
@@ -60,6 +61,8 @@ type FakeValidator struct {
 	Km                                keymanager.IKeymanager
 	graffiti                          string
 	Tracker                           *beacon.NodeHealthTracker
+	AttSubmitted                      chan interface{}
+	BlockProposed                     chan interface{}
 }
 
 // Done for mocking.
@@ -73,7 +76,7 @@ func (fv *FakeValidator) WaitForKeymanagerInitialization(_ context.Context) erro
 	return nil
 }
 
-// LogSyncCommitteeMessagesSubmitted --
+// LogSubmittedSyncCommitteeMessages --
 func (fv *FakeValidator) LogSubmittedSyncCommitteeMessages() {}
 
 // WaitForChainStart for mocking.
@@ -170,12 +173,20 @@ func (fv *FakeValidator) RolesAt(_ context.Context, slot primitives.Slot) (map[[
 func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = uint64(slot)
+	if fv.AttSubmitted != nil {
+		close(fv.AttSubmitted)
+		fv.AttSubmitted = nil
+	}
 }
 
 // ProposeBlock for mocking.
 func (fv *FakeValidator) ProposeBlock(_ context.Context, slot primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = uint64(slot)
+	if fv.BlockProposed != nil {
+		close(fv.BlockProposed)
+		fv.BlockProposed = nil
+	}
 }
 
 // SubmitAggregateAndProof for mocking.
@@ -243,14 +254,14 @@ func (*FakeValidator) HasProposerSettings() bool {
 }
 
 // PushProposerSettings for mocking
-func (fv *FakeValidator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error {
+func (fv *FakeValidator) PushProposerSettings(ctx context.Context, _ keymanager.IKeymanager, _ primitives.Slot, deadline time.Time) error {
 	nctx, cancel := context.WithDeadline(ctx, deadline)
 	ctx = nctx
 	defer cancel()
 	time.Sleep(fv.ProposerSettingWait)
-	if ctx.Err() == context.DeadlineExceeded {
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		log.Error("deadline exceeded")
-		// can't return error or it will trigger a log.fatal
+		// can't return error as it will trigger a log.fatal
 		return nil
 	}
 
@@ -283,20 +294,20 @@ func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *propos
 	return nil
 }
 
-// GetGraffiti for mocking
-func (f *FakeValidator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
-	return []byte(f.graffiti), nil
+// Graffiti for mocking
+func (fv *FakeValidator) Graffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	return []byte(fv.graffiti), nil
 }
 
 // SetGraffiti for mocking
-func (f *FakeValidator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
-	f.graffiti = string(graffiti)
+func (fv *FakeValidator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	fv.graffiti = string(graffiti)
 	return nil
 }
 
 // DeleteGraffiti for mocking
-func (f *FakeValidator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
-	f.graffiti = ""
+func (fv *FakeValidator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
+	fv.graffiti = ""
 	return nil
 }
 
@@ -312,4 +323,12 @@ func (*FakeValidator) EventStreamIsRunning() bool {
 
 func (fv *FakeValidator) HealthTracker() *beacon.NodeHealthTracker {
 	return fv.Tracker
+}
+
+func (*FakeValidator) Host() string {
+	return "127.0.0.1:0"
+}
+
+func (fv *FakeValidator) ChangeHost() {
+	fv.Host()
 }

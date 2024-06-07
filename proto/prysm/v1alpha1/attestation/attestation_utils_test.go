@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
@@ -17,7 +16,7 @@ import (
 
 func TestAttestingIndices(t *testing.T) {
 	type args struct {
-		att        interfaces.Attestation
+		att        eth.Att
 		committees [][]primitives.ValidatorIndex
 	}
 	tests := []struct {
