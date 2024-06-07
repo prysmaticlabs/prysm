@@ -128,7 +128,7 @@ func TestUpgradeToElectra(t *testing.T) {
 		BlockHash:              prevHeader.BlockHash(),
 		TransactionsRoot:       txRoot,
 		WithdrawalsRoot:        wdRoot,
-		DepositReceiptsRoot:    bytesutil.Bytes32(0),
+		DepositRequestsRoot:    bytesutil.Bytes32(0),
 		WithdrawalRequestsRoot: bytesutil.Bytes32(0),
 	}
 	require.DeepEqual(t, wanted, protoHeader)
@@ -145,9 +145,9 @@ func TestUpgradeToElectra(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, len(summaries))
 
-	startIndex, err := mSt.DepositReceiptsStartIndex()
+	startIndex, err := mSt.DepositRequestsStartIndex()
 	require.NoError(t, err)
-	require.Equal(t, params.BeaconConfig().UnsetDepositReceiptsStartIndex, startIndex)
+	require.Equal(t, params.BeaconConfig().UnsetDepositRequestsStartIndex, startIndex)
 
 	balance, err := mSt.DepositBalanceToConsume()
 	require.NoError(t, err)

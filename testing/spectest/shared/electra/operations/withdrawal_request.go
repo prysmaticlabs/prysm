@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
-func RunExecutionLayerWithdrawalRequestTest(t *testing.T, config string) {
+func RunWithdrawalRequestTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", "operations/execution_layer_withdrawal_request/pyspec_tests")
 	if len(testFolders) == 0 {
@@ -25,14 +25,14 @@ func RunExecutionLayerWithdrawalRequestTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			executionLayerWithdrawalRequestFile, err := util.BazelFileBytes(folderPath, "execution_layer_withdrawal_request.ssz_snappy")
+			withdrawalRequestFile, err := util.BazelFileBytes(folderPath, "execution_layer_withdrawal_request.ssz_snappy")
 			require.NoError(t, err)
-			executionLayerWithdrawalRequestSSZ, err := snappy.Decode(nil /* dst */, executionLayerWithdrawalRequestFile)
+			withdrawalRequestSSZ, err := snappy.Decode(nil /* dst */, withdrawalRequestFile)
 			require.NoError(t, err, "Failed to decompress")
-			withdrawalRequest := &enginev1.ExecutionLayerWithdrawalRequest{}
-			require.NoError(t, withdrawalRequest.UnmarshalSSZ(executionLayerWithdrawalRequestSSZ), "Failed to unmarshal")
+			withdrawalRequest := &enginev1.WithdrawalRequest{}
+			require.NoError(t, withdrawalRequest.UnmarshalSSZ(withdrawalRequestSSZ), "Failed to unmarshal")
 			body := &ethpb.BeaconBlockBodyElectra{ExecutionPayload: &enginev1.ExecutionPayloadElectra{
-				WithdrawalRequests: []*enginev1.ExecutionLayerWithdrawalRequest{
+				WithdrawalRequests: []*enginev1.WithdrawalRequest{
 					withdrawalRequest,
 				},
 			}}
@@ -43,7 +43,7 @@ func RunExecutionLayerWithdrawalRequestTest(t *testing.T, config string) {
 				require.NoError(t, err)
 				exe, ok := e.(interfaces.ExecutionDataElectra)
 				require.Equal(t, true, ok)
-				return electra.ProcessExecutionLayerWithdrawalRequests(ctx, s, exe.WithdrawalRequests())
+				return electra.ProcessWithdrawalRequests(ctx, s, exe.WithdrawalRequests())
 			})
 		})
 	}

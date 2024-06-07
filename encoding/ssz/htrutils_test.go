@@ -281,21 +281,21 @@ func TestWithrawalSliceRoot(t *testing.T) {
 	}
 }
 
-func TestDepositReceiptSliceRoot(t *testing.T) {
+func TestDepositRequestsSliceRoot(t *testing.T) {
 	tests := []struct {
 		name  string
-		input []*enginev1.DepositReceipt
+		input []*enginev1.DepositRequest
 		limit uint64
 		want  [32]byte
 	}{
 		{
 			name:  "empty",
-			input: make([]*enginev1.DepositReceipt, 0),
+			input: make([]*enginev1.DepositRequest, 0),
 			want:  [32]byte{0xf5, 0xa5, 0xfd, 0x42, 0xd1, 0x6a, 0x20, 0x30, 0x27, 0x98, 0xef, 0x6e, 0xd3, 0x9, 0x97, 0x9b, 0x43, 0x0, 0x3d, 0x23, 0x20, 0xd9, 0xf0, 0xe8, 0xea, 0x98, 0x31, 0xa9, 0x27, 0x59, 0xfb, 0x4b},
 		},
 		{
 			name: "non-empty",
-			input: []*enginev1.DepositReceipt{
+			input: []*enginev1.DepositRequest{
 				{
 					Pubkey:                bytesutil.PadTo([]byte{0x01, 0x02}, 48),
 					WithdrawalCredentials: bytesutil.PadTo([]byte{0x03, 0x04}, 32),
@@ -311,7 +311,7 @@ func TestDepositReceiptSliceRoot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ssz.DepositReceiptSliceRoot(tt.input, tt.limit)
+			got, err := ssz.DepositRequestsSliceRoot(tt.input, tt.limit)
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, tt.want, got)
 		})
@@ -321,18 +321,18 @@ func TestDepositReceiptSliceRoot(t *testing.T) {
 func TestWithdrawalRequestSliceRoot(t *testing.T) {
 	tests := []struct {
 		name  string
-		input []*enginev1.ExecutionLayerWithdrawalRequest
+		input []*enginev1.WithdrawalRequest
 		limit uint64
 		want  [32]byte
 	}{
 		{
 			name:  "empty",
-			input: make([]*enginev1.ExecutionLayerWithdrawalRequest, 0),
+			input: make([]*enginev1.WithdrawalRequest, 0),
 			want:  [32]byte{0xf5, 0xa5, 0xfd, 0x42, 0xd1, 0x6a, 0x20, 0x30, 0x27, 0x98, 0xef, 0x6e, 0xd3, 0x9, 0x97, 0x9b, 0x43, 0x0, 0x3d, 0x23, 0x20, 0xd9, 0xf0, 0xe8, 0xea, 0x98, 0x31, 0xa9, 0x27, 0x59, 0xfb, 0x4b},
 		},
 		{
 			name: "non-empty",
-			input: []*enginev1.ExecutionLayerWithdrawalRequest{
+			input: []*enginev1.WithdrawalRequest{
 				{
 					SourceAddress:   bytesutil.PadTo([]byte{0x01, 0x02}, 20),
 					ValidatorPubkey: bytesutil.PadTo([]byte{0x03, 0x04}, 48),
@@ -346,7 +346,7 @@ func TestWithdrawalRequestSliceRoot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ssz.WithdrawalRequestSliceRoot(tt.input, tt.limit)
+			got, err := ssz.WithdrawalRequestsSliceRoot(tt.input, tt.limit)
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, tt.want, got)
 		})

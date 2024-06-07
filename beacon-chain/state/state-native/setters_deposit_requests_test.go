@@ -9,17 +9,18 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
-func TestDepositReceiptsStartIndex(t *testing.T) {
+func TestSetDepositRequestsStartIndex(t *testing.T) {
 	t.Run("previous fork returns expected error", func(t *testing.T) {
 		dState, _ := util.DeterministicGenesisState(t, 1)
-		_, err := dState.DepositReceiptsStartIndex()
-		require.ErrorContains(t, "is not supported", err)
+		require.ErrorContains(t, "is not supported", dState.SetDepositRequestsStartIndex(1))
 	})
-	t.Run("electra returns expected value", func(t *testing.T) {
-		want := uint64(2)
-		dState, err := state_native.InitializeFromProtoElectra(&ethpb.BeaconStateElectra{DepositReceiptsStartIndex: want})
+	t.Run("electra sets expected value", func(t *testing.T) {
+		old := uint64(2)
+		dState, err := state_native.InitializeFromProtoElectra(&ethpb.BeaconStateElectra{DepositRequestsStartIndex: old})
 		require.NoError(t, err)
-		got, err := dState.DepositReceiptsStartIndex()
+		want := uint64(3)
+		require.NoError(t, dState.SetDepositRequestsStartIndex(want))
+		got, err := dState.DepositRequestsStartIndex()
 		require.NoError(t, err)
 		require.Equal(t, want, got)
 	})
