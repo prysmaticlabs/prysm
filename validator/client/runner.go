@@ -45,9 +45,6 @@ func run(ctx context.Context, v iface.Validator) {
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
-	eventsChan := make(chan *event.Event, 1)
-	healthTracker := v.HealthTracker()
-	runHealthCheckRoutine(ctx, v, eventsChan)
 
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	km, err := v.Keymanager()
@@ -61,14 +58,20 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Warn("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
+
 	deadline := time.Now().Add(5 * time.Minute)
 	if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
 		if errors.Is(err, ErrBuilderValidatorRegistration) {
-			log.WithError(err).Warn("Push proposer settings error")
+			log.WithError(err).Warn("Failed to update proposer settings")
 		} else {
 			log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
 		}
 	}
+
+	eventsChan := make(chan *event.Event, 1)
+	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
+	nodeIsHealthyPrev := true
+
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 		select {
@@ -77,11 +80,9 @@ func run(ctx context.Context, v iface.Validator) {
 			span.End()
 			sub.Unsubscribe()
 			close(accountsChangedChan)
+			close(eventsChan)
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
-			if !healthTracker.IsHealthy() {
-				continue
-			}
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 			deadline := v.SlotDeadline(slot)
@@ -125,18 +126,39 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
-		case isHealthyAgain := <-healthTracker.HealthUpdates():
-			if isHealthyAgain {
+		case <-v.LastSecondOfSlot():
+			nodeIsHealthyCurr := v.HealthTracker().IsHealthy()
+			if !nodeIsHealthyPrev && nodeIsHealthyCurr {
 				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
 				if err != nil {
-					log.WithError(err).Error("Failed to re initialize validator and get head slot")
+					log.WithError(err).Error("Failed to re-initialize validator and get head slot")
 					continue
 				}
 				if err := v.UpdateDuties(ctx, headSlot); err != nil {
 					handleAssignmentError(err, headSlot)
 					continue
 				}
+				km, err = v.Keymanager()
+				if err != nil {
+					log.WithError(err).Error("Could not get keymanager")
+					continue
+				}
+				deadline = time.Now().Add(5 * time.Minute) // Should consider changing to a constant
+				if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
+					log.WithError(err).Warn("Failed to update proposer settings")
+					continue
+				}
 			}
+			if !nodeIsHealthyCurr && features.Get().EnableBeaconRESTApi {
+				v.ChangeHost()
+			}
+			// in case of node returning healthy but event stream died
+			if nodeIsHealthyCurr && !v.EventStreamIsRunning() {
+				log.Info("Event stream reconnecting...")
+				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
+			}
+
+			nodeIsHealthyPrev = nodeIsHealthyCurr
 		case e := <-eventsChan:
 			v.ProcessEvent(e)
 		case currentKeys := <-accountsChangedChan: // should be less of a priority than next slot
@@ -292,47 +314,4 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 	} else {
 		log.WithError(err).Error("Failed to update assignments")
 	}
-}
-
-func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan chan<- *event.Event) {
-	log.Info("Starting health check routine for beacon node apis")
-	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-	tracker := v.HealthTracker()
-	go func() {
-		// trigger the healthcheck immediately the first time
-		for ; true; <-healthCheckTicker.C {
-			if ctx.Err() != nil {
-				log.WithError(ctx.Err()).Error("Context cancelled")
-				return
-			}
-			isHealthy := tracker.CheckHealth(ctx)
-			if !isHealthy && features.Get().EnableBeaconRESTApi {
-				v.ChangeHost()
-				if !tracker.CheckHealth(ctx) {
-					continue // Skip to the next ticker
-				}
-
-				km, err := v.Keymanager()
-				if err != nil {
-					log.WithError(err).Error("Could not get keymanager")
-					return
-				}
-				slot, err := v.CanonicalHeadSlot(ctx)
-				if err != nil {
-					log.WithError(err).Error("Could not get canonical head slot")
-					return
-				}
-				deadline := time.Now().Add(5 * time.Minute) // Should consider changing to a constant
-				if err := v.PushProposerSettings(ctx, km, slot, deadline); err != nil {
-					log.WithError(err).Warn("Failed to update proposer settings")
-				}
-			}
-
-			// in case of node returning healthy but event stream died
-			if isHealthy && !v.EventStreamIsRunning() {
-				log.Info("Event stream reconnecting...")
-				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
-			}
-		}
-	}()
 }

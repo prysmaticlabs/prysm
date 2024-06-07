@@ -71,6 +71,7 @@ var (
 type validator struct {
 	duties                             *ethpb.DutiesResponse
 	ticker                             slots.Ticker
+	lastSecondTicker                   slots.Ticker
 	genesisTime                        uint64
 	highestValidSlot                   primitives.Slot
 	slotFeed                           *event.Feed
@@ -90,6 +91,7 @@ type validator struct {
 	chainClient                        iface.ChainClient
 	nodeClient                         iface.NodeClient
 	prysmChainClient                   iface.PrysmChainClient
+	healthTracker                      *beacon.NodeHealthTracker
 	db                                 db.Database
 	km                                 keymanager.IKeymanager
 	web3SignerConfig                   *remoteweb3signer.SetupConfig
@@ -132,6 +134,7 @@ type attSelectionKey struct {
 // Done cleans up the validator.
 func (v *validator) Done() {
 	v.ticker.Done()
+	v.lastSecondTicker.Done()
 }
 
 // WaitForKeymanagerInitialization checks if the validator needs to wait for keymanager initialization.
@@ -269,6 +272,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	}
 
 	v.genesisTime = chainStartRes.GenesisTime
+	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
 
 	curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
 	if err != nil {
@@ -280,7 +284,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(err, "could not save genesis validators root")
 		}
 
-		v.setTicker()
+		v.setTickers()
 		return nil
 	}
 
@@ -298,15 +302,14 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		)
 	}
 
-	v.setTicker()
+	v.setTickers()
 	return nil
 }
 
-func (v *validator) setTicker() {
-	// Once the ChainStart log is received, we update the genesis time of the validator client
-	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
-	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
+func (v *validator) setTickers() {
+	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), secondsPerSlot)
+	v.lastSecondTicker = slots.NewSlotTickerWithOffset(time.Unix(int64(v.genesisTime), 0), time.Second*time.Duration(secondsPerSlot-1), secondsPerSlot)
 }
 
 // WaitForSync checks whether the beacon node has sync to the latest head.
@@ -414,6 +417,11 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (primitives.Slot, err
 // NextSlot emits the next slot number at the start time of that slot.
 func (v *validator) NextSlot() <-chan primitives.Slot {
 	return v.ticker.C()
+}
+
+// LastSecondOfSlot emits the slot number at the last second of that slot.
+func (v *validator) LastSecondOfSlot() <-chan primitives.Slot {
+	return v.lastSecondTicker.C()
 }
 
 // SlotDeadline is the start time of the next slot.
@@ -1113,7 +1121,7 @@ func (v *validator) EventStreamIsRunning() bool {
 }
 
 func (v *validator) HealthTracker() *beacon.NodeHealthTracker {
-	return v.nodeClient.HealthTracker()
+	return v.healthTracker
 }
 
 func (v *validator) Host() string {

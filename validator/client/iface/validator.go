@@ -41,6 +41,7 @@ type Validator interface {
 	WaitForActivation(ctx context.Context, accountsChangedChan chan [][fieldparams.BLSPubkeyLength]byte) error
 	CanonicalHeadSlot(ctx context.Context) (primitives.Slot, error)
 	NextSlot() <-chan primitives.Slot
+	LastSecondOfSlot() <-chan primitives.Slot
 	SlotDeadline(slot primitives.Slot) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot primitives.Slot) error
 	UpdateDuties(ctx context.Context, slot primitives.Slot) error

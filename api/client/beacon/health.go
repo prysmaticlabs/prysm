@@ -3,58 +3,38 @@ package beacon
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon/iface"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 )
 
 type NodeHealthTracker struct {
-	isHealthy  *bool
-	healthChan chan bool
-	node       iface.HealthNode
+	isHealthy bool
+	node      iface.HealthNode
 	sync.RWMutex
 }
 
-func NewNodeHealthTracker(node iface.HealthNode) *NodeHealthTracker {
-	return &NodeHealthTracker{
-		node:       node,
-		healthChan: make(chan bool, 1),
+func NewNodeHealthTracker(ctx context.Context, node iface.HealthNode) *NodeHealthTracker {
+	tracker := &NodeHealthTracker{
+		node:      node,
+		isHealthy: true,
 	}
-}
-
-// HealthUpdates provides a read-only channel for health updates.
-func (n *NodeHealthTracker) HealthUpdates() <-chan bool {
-	return n.healthChan
+	log.Info("Starting health check routine. Health check will be performed every 12 seconds.")
+	ticker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	go func() {
+		for range ticker.C {
+			tracker.Lock()
+			tracker.isHealthy = tracker.node.IsHealthy(ctx)
+			tracker.Unlock()
+		}
+		log.Info("Stopping health check routine")
+	}()
+	return tracker
 }
 
 func (n *NodeHealthTracker) IsHealthy() bool {
 	n.RLock()
 	defer n.RUnlock()
-	if n.isHealthy == nil {
-		return false
-	}
-	return *n.isHealthy
-}
-
-func (n *NodeHealthTracker) CheckHealth(ctx context.Context) bool {
-	n.Lock()
-	defer n.Unlock()
-
-	newStatus := n.node.IsHealthy(ctx)
-	if n.isHealthy == nil {
-		n.isHealthy = &newStatus
-	}
-
-	isStatusChanged := newStatus != *n.isHealthy
-	if isStatusChanged {
-		// Update the health status
-		n.isHealthy = &newStatus
-		// Send the new status to the health channel, potentially overwriting the existing value
-		select {
-		case <-n.healthChan:
-			n.healthChan <- newStatus
-		default:
-			n.healthChan <- newStatus
-		}
-	}
-	return newStatus
+	return n.isHealthy
 }

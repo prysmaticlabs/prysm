@@ -136,6 +136,11 @@ func (fv *FakeValidator) NextSlot() <-chan primitives.Slot {
 	return fv.NextSlotRet
 }
 
+// LastSecondOfSlot for mocking.
+func (fv *FakeValidator) LastSecondOfSlot() <-chan primitives.Slot {
+	return nil
+}
+
 // UpdateDuties for mocking.
 func (fv *FakeValidator) UpdateDuties(_ context.Context, slot primitives.Slot) error {
 	fv.UpdateDutiesCalled = true
