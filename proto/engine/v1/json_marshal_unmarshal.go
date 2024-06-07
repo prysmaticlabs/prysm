@@ -417,7 +417,7 @@ type ExecutionPayloadDenebJSON struct {
 // https://github.com/ethereum/execution-apis/blob/main/src/engine/prague.md#withdrawalrequestv1
 type WithdrawalRequestV1 struct {
 	SourceAddress   *common.Address `json:"sourceAddress"`
-	ValidatorPubkey *BlsPubkey      `json:"validatorPublicKey"`
+	ValidatorPubkey *BlsPubkey      `json:"validatorPubkey"`
 	Amount          *hexutil.Uint64 `json:"amount"`
 }
 
@@ -426,7 +426,7 @@ func (r WithdrawalRequestV1) Validate() error {
 		return errors.Wrap(errJsonNilField, "missing required field 'sourceAddress' for WithdrawalRequestV1")
 	}
 	if r.ValidatorPubkey == nil {
-		return errors.Wrap(errJsonNilField, "missing required field 'validatorPublicKey' for WithdrawalRequestV1")
+		return errors.Wrap(errJsonNilField, "missing required field 'validatorPubkey' for WithdrawalRequestV1")
 	}
 	if r.Amount == nil {
 		return errors.Wrap(errJsonNilField, "missing required field 'amount' for WithdrawalRequestV1")
