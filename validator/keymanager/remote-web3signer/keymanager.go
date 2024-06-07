@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/internal"
 	web3signerv1 "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/v1"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/exp/maps"
 )
@@ -91,7 +91,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 			return nil, errors.Wrapf(err, "could not check if remote signer persistent keys exists in %s", km.keyFilePath)
 		}
 		if !keyFileExists {
-			log.WithField("path", km.keyFilePath).Warn("Key file does not exist. please create a new one. the file should contain public keys in hex format 1 on each line.")
+			log.WithField("path", km.keyFilePath).Fatal("Key file does not exist. Please create a new one. The file should contain public keys in hex format 1 on each line.")
 		}
 	}
 
@@ -177,7 +177,7 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 			line = "0x" + line
 		}
 		if len(line) != pubkeyLength {
-			log.WithFields(log.Fields{
+			log.WithFields(logrus.Fields{
 				"filepath": km.keyFilePath,
 				"key":      line,
 			}).Fatal("Invalid public key in remote signer key file")
@@ -247,7 +247,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
 				return
 			}
-			log.WithFields(log.Fields{
+			log.WithFields(logrus.Fields{
 				"event": e.Name,
 				"op":    e.Op.String(),
 			}).Debug("Remote signer keyfile event triggered")

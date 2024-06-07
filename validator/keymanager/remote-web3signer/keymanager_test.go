@@ -116,15 +116,6 @@ func TestNewKeymanager(t *testing.T) {
 			want: []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
 		},
 		{
-			name: "key file not found",
-			args: &SetupConfig{
-				BaseEndpoint:          "http://prysm.xyz/",
-				GenesisValidatorsRoot: root,
-				KeyFilePath:           "./testing/invalid.txt",
-			},
-			wantLog: "Key file does not exist",
-		},
-		{
 			name: "happy path public key url with good keyfile",
 			args: &SetupConfig{
 				BaseEndpoint:          "http://prysm.xyz/",
