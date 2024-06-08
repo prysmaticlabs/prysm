@@ -17,6 +17,11 @@ var (
 	errNotBlobSSZ      = errors.New("not a blob ssz file")
 )
 
+// blobPruner keeps track of the tail end of the retention period, based only the blobs it has seen via the notify method.
+// If the retention period advances in response to notify being called,
+// the pruner will invoke the pruneBefore method of the given layout in a new goroutine.
+// The details of pruning are left entirely to the layout, with the pruner's only responsibility being to
+// schedule just one pruning operation at a time, for each forward movement of the minimum retention epoch.
 type blobPruner struct {
 	mu              sync.Mutex
 	prunedBefore    atomic.Uint64
@@ -28,6 +33,8 @@ func newBlobPruner(retain primitives.Epoch) *blobPruner {
 	return p
 }
 
+// notify returns a channel that is closed when the pruning operation is complete.
+// This is useful for tests, but at runtime fsLayouts or BlobStorage should not wait for completion.
 func (p *blobPruner) notify(latest primitives.Epoch, layout fsLayout) chan struct{} {
 	done := make(chan struct{})
 	floor := periodFloor(latest, p.retentionPeriod)

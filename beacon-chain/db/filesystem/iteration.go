@@ -64,13 +64,20 @@ func listDir(fs afero.Fs, dir string) ([]string, error) {
 	return dirs, nil
 }
 
+// identPopulator is a function that sets values in the blobIdent for a given level of the filesystem layout.
+type identPopulator func(blobIdent, string) (blobIdent, error)
+
 type layoutLevel struct {
 	populateIdent identPopulator
 	filter        func(string) bool
 }
 
-type identPopulator func(blobIdent, string) (blobIdent, error)
-
+// identIterator moves through the filesystem in order to yield blobIdents.
+// layoutLevels (in the 'levels' field) allows a filesystem layout to control how the
+// the layout is traversed. A layoutLevel can filter out entries from the directory listing
+// via the filter function, and populate fields in the blobIdent via the populateIdent function.
+// The blobIdent is populated from an empty value at the root, accumulating values for its fields at each level.
+// The fully populated blobIdent is returned when the iterator reaches the leaf level.
 type identIterator struct {
 	fs      afero.Fs
 	path    string
@@ -82,6 +89,9 @@ type identIterator struct {
 	eof     bool
 }
 
+// next is the only method that a user of the identIterator needs to call.
+// identIterator will blobIdents in a breadth-first fashion,
+// returning an empty blobIdent and io.EOF once all branches have been traversed.
 func (iter *identIterator) next() (blobIdent, error) {
 	if iter.eof {
 		return blobIdent{}, io.EOF
@@ -98,6 +108,8 @@ func (iter *identIterator) next() (blobIdent, error) {
 	return iter.advanceChild()
 }
 
+// advanceChild is used to move to the next directory at each level of the tree, either when
+// the nodes are first being initialized at a level, or when a sub-branch has been exhausted.
 func (iter *identIterator) advanceChild() (blobIdent, error) {
 	defer func() {
 		iter.offset += 1
