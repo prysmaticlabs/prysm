@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
@@ -290,10 +291,6 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(s.ctx, &forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
-		Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
-		return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
-	}
 	if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: finalized.Epoch,
 		Root: bytesutil.ToBytes32(finalized.Root)}); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's finalized checkpoint")
@@ -306,6 +303,26 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	}
 	if err := s.cfg.ForkChoiceStore.InsertNode(s.ctx, st, fRoot); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
+	}
+
+	var (
+		roots  [][32]byte
+		states []state.BeaconState
+		jRoot  = s.ensureRootNotZeros(bytesutil.ToBytes32(justified.Root))
+	)
+	for parentRoot := jRoot; common.BytesToHash(fRoot[:]) != common.BytesToHash(parentRoot[:]); {
+		parentState, err := s.cfg.StateGen.StateByRoot(s.ctx, parentRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not get parent state")
+		}
+		roots = append(roots, parentRoot)
+		states = append(states, parentState)
+		parentRoot = bytesutil.ToBytes32(parentState.LatestBlockHeader().ParentRoot)
+	}
+	for i := len(roots) - 1; i >= 0; i-- {
+		if err := s.cfg.ForkChoiceStore.InsertNode(s.ctx, states[i], roots[i]); err != nil {
+			return errors.Wrap(err, "could not insert block to forkchoice")
+		}
 	}
 	if !features.Get().EnableStartOptimistic {
 		lastValidatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(s.ctx)
