@@ -45,33 +45,26 @@ func (mc *MockClient) GetPublicKeys(_ context.Context, _ string) ([]string, erro
 	return mc.PublicKeys, nil
 }
 
-func copyFile(src, dst string) error {
+func copyFile(t *testing.T, src, dst string) {
 	// Open the source file
 	sourceFile, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("failed to open source file: %w", err)
-	}
-	defer sourceFile.Close()
-
+	require.NoError(t, err)
 	// Create the destination file
 	destinationFile, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("failed to create destination file: %w", err)
-	}
-	defer destinationFile.Close()
+	require.NoError(t, err)
 
 	// Copy the contents from source to destination
-	_, err = io.Copy(destinationFile, sourceFile)
-	if err != nil {
-		return fmt.Errorf("failed to copy file contents: %w", err)
-	}
+	a, err := io.Copy(destinationFile, sourceFile)
+	require.NoError(t, err)
+	require.NotNil(t, a)
 
-	return nil
+	require.NoError(t, sourceFile.Close())
+	require.NoError(t, destinationFile.Close())
 }
 
 func TestNewKeymanager(t *testing.T) {
 	dir := t.TempDir()
-	require.NoError(t, copyFile("./testing/good_keyfile.txt", filepath.Join(dir, "good-keyfile.txt")))
+	copyFile(t, "./testing/good_keyfile.txt", filepath.Join(dir, "good-keyfile.txt"))
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
