@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -18,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v5/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/internal"
@@ -472,7 +472,7 @@ func TestKeymanager_AddPublicKeys_WithFile(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	dir := t.TempDir()
-	stdOutFile, err := helpers.DeleteAndCreateFile(dir, "keyfile.txt")
+	stdOutFile, err := os.Create(filepath.Clean(path.Join(dir, "keyfile.txt")))
 	require.NoError(t, err)
 	require.NoError(t, stdOutFile.Chmod(os.FileMode(0600)))
 	keyFilePath := filepath.Join(dir, "keyfile.txt")

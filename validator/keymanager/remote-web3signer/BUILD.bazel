@@ -45,7 +45,6 @@ go_test(
         "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
-        "//testing/endtoend/helpers:go_default_library",
         "//testing/require:go_default_library",
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/remote-web3signer/internal:go_default_library",
