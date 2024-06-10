@@ -30,7 +30,7 @@ func RunConsolidationTest(t *testing.T, config string) {
 			require.NoError(t, consolidation.UnmarshalSSZ(consolidationSSZ), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBodyElectra{Consolidations: []*ethpb.SignedConsolidation{consolidation}}
-			processConsolidationFunc := func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+			processConsolidationFunc := func(ctx context.Context, s state.BeaconState, b interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
 				body, ok := b.Block().Body().(interfaces.ROBlockBodyElectra)
 				if !ok {
 					t.Error("block body is not electra")
