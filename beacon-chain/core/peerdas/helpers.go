@@ -40,7 +40,7 @@ func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) ([]uint64,
 
 	one := uint256.NewInt(1)
 
-	subnetIds := make([]uint64, 0, custodySubnetCount)
+	subnetIds, subnetIdsMap := make([]uint64, 0, custodySubnetCount), make(map[uint64]bool, custodySubnetCount)
 	for currentId := new(uint256.Int).SetBytes(nodeId.Bytes()); uint64(len(subnetIds)) < custodySubnetCount; currentId.Add(currentId, one) {
 		// Convert to big endian bytes.
 		currentIdBytesBigEndian := currentId.Bytes32()
@@ -55,7 +55,11 @@ func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) ([]uint64,
 		subnetId := binary.LittleEndian.Uint64(hashedCurrentId[:8]) % dataColumnSidecarSubnetCount
 
 		// Add the subnet to the slice.
-		subnetIds = append(subnetIds, subnetId)
+		exists := subnetIdsMap[subnetId]
+		if !exists {
+			subnetIds = append(subnetIds, subnetId)
+			subnetIdsMap[subnetId] = true
+		}
 
 		// Overflow prevention.
 		if currentId.Cmp(maxUint256) == 0 {
