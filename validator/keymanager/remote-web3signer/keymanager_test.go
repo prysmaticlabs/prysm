@@ -543,7 +543,11 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 func TestKeymanager_DeletePublicKeys_WithFile(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
+	dir := t.TempDir()
+	stdOutFile, err := os.Create(filepath.Clean(path.Join(dir, "keyfile.txt")))
+	require.NoError(t, err)
+	require.NoError(t, stdOutFile.Chmod(os.FileMode(0600)))
+	keyFilePath := filepath.Join(dir, "keyfile.txt")
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	if err != nil {
 		fmt.Printf("error: %v", err)
