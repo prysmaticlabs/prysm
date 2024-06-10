@@ -30,7 +30,7 @@ var (
 )
 
 // CustodyColumnSubnets computes the subnets the node should participate in for custody.
-func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) (map[uint64]bool, error) {
+func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) ([]uint64, error) {
 	dataColumnSidecarSubnetCount := params.BeaconConfig().DataColumnSidecarSubnetCount
 
 	// Check if the custody subnet count is larger than the data column sidecar subnet count.
@@ -38,11 +38,9 @@ func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) (map[uint6
 		return nil, errCustodySubnetCountTooLarge
 	}
 
-	// First, compute the subnet IDs that the node should participate in.
-	subnetIds := make(map[uint64]bool, custodySubnetCount)
-
 	one := uint256.NewInt(1)
 
+	subnetIds := make([]uint64, 0, custodySubnetCount)
 	for currentId := new(uint256.Int).SetBytes(nodeId.Bytes()); uint64(len(subnetIds)) < custodySubnetCount; currentId.Add(currentId, one) {
 		// Convert to big endian bytes.
 		currentIdBytesBigEndian := currentId.Bytes32()
@@ -56,8 +54,8 @@ func CustodyColumnSubnets(nodeId enode.ID, custodySubnetCount uint64) (map[uint6
 		// Get the subnet ID.
 		subnetId := binary.LittleEndian.Uint64(hashedCurrentId[:8]) % dataColumnSidecarSubnetCount
 
-		// Add the subnet to the map.
-		subnetIds[subnetId] = true
+		// Add the subnet to the slice.
+		subnetIds = append(subnetIds, subnetId)
 
 		// Overflow prevention.
 		if currentId.Cmp(maxUint256) == 0 {
@@ -85,7 +83,7 @@ func CustodyColumns(nodeId enode.ID, custodySubnetCount uint64) (map[uint64]bool
 	// Columns belonging to the same subnet are contiguous.
 	columnIndices := make(map[uint64]bool, custodySubnetCount*columnsPerSubnet)
 	for i := uint64(0); i < columnsPerSubnet; i++ {
-		for subnetId := range subnetIds {
+		for _, subnetId := range subnetIds {
 			columnIndex := dataColumnSidecarSubnetCount*i + subnetId
 			columnIndices[columnIndex] = true
 		}

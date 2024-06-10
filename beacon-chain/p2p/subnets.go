@@ -220,17 +220,12 @@ func initializePersistentColumnSubnets(id enode.ID) error {
 	if ok && expTime.After(time.Now()) {
 		return nil
 	}
-	subsMap, err := peerdas.CustodyColumnSubnets(id, params.BeaconConfig().CustodyRequirement)
+	subnetsId, err := peerdas.CustodyColumnSubnets(id, params.BeaconConfig().CustodyRequirement)
 	if err != nil {
 		return err
 	}
 
-	subs := make([]uint64, 0, len(subsMap))
-	for sub := range subsMap {
-		subs = append(subs, sub)
-	}
-
-	cache.ColumnSubnetIDs.AddColumnSubnets(subs)
+	cache.ColumnSubnetIDs.AddColumnSubnets(subnetsId)
 	return nil
 }
 
