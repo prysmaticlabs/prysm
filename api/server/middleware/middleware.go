@@ -50,7 +50,7 @@ func ContentTypeHandler(acceptedMediaTypes []string) mux.MiddlewareFunc {
 
 			accepted := false
 			for _, acceptedType := range acceptedMediaTypes {
-				if strings.TrimSpace(contentType) == strings.TrimSpace(acceptedType) {
+				if strings.Contains(strings.TrimSpace(contentType), strings.TrimSpace(acceptedType)) {
 					accepted = true
 					break
 				}
