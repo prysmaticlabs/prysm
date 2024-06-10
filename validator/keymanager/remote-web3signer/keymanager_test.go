@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -44,7 +45,33 @@ func (mc *MockClient) GetPublicKeys(_ context.Context, _ string) ([]string, erro
 	return mc.PublicKeys, nil
 }
 
+func copyFile(src, dst string) error {
+	// Open the source file
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %w", err)
+	}
+	defer sourceFile.Close()
+
+	// Create the destination file
+	destinationFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer destinationFile.Close()
+
+	// Copy the contents from source to destination
+	_, err = io.Copy(destinationFile, sourceFile)
+	if err != nil {
+		return fmt.Errorf("failed to copy file contents: %w", err)
+	}
+
+	return nil
+}
+
 func TestNewKeymanager(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, copyFile("./testing/good_keyfile.txt", filepath.Join(dir, "good-keyfile.txt")))
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
@@ -112,7 +139,7 @@ func TestNewKeymanager(t *testing.T) {
 			args: &SetupConfig{
 				BaseEndpoint:          "http://prysm.xyz/",
 				GenesisValidatorsRoot: root,
-				KeyFilePath:           "./testing/good_keyfile.txt",
+				KeyFilePath:           filepath.Join(dir, "good-keyfile.txt"),
 			},
 			want: []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
 		},
@@ -122,7 +149,7 @@ func TestNewKeymanager(t *testing.T) {
 				BaseEndpoint:          "http://prysm.xyz/",
 				GenesisValidatorsRoot: root,
 				PublicKeysURL:         srv.URL + "/public_keys",
-				KeyFilePath:           "./testing/good_keyfile.txt",
+				KeyFilePath:           filepath.Join(dir, "good-keyfile.txt"),
 			},
 			want: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
 		},
