@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	apiiface "github.com/prysmaticlabs/prysm/v5/api/client/beacon/iface"
 	"github.com/prysmaticlabs/prysm/v5/api/client/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
@@ -119,6 +119,10 @@ func (_ *Validator) CanonicalHeadSlot(_ context.Context) (primitives.Slot, error
 }
 
 func (_ *Validator) NextSlot() <-chan primitives.Slot {
+	panic("implement me")
+}
+
+func (_ *Validator) LastSecondOfSlot() <-chan primitives.Slot {
 	panic("implement me")
 }
 
@@ -246,7 +250,7 @@ func (*Validator) EventStreamIsRunning() bool {
 	panic("implement me")
 }
 
-func (*Validator) HealthTracker() *beacon.NodeHealthTracker {
+func (*Validator) HealthTracker() apiiface.HealthTracker {
 	panic("implement me")
 }
 

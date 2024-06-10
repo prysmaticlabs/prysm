@@ -48,7 +48,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				PublicKeys: [][]byte{inactive.pub[:], active.pub[:]},
 			},
 		).Return(resp, nil)
-		prysmChainClient.EXPECT().GetValidatorCount(
+		prysmChainClient.EXPECT().ValidatorCount(
 			gomock.Any(),
 			"head",
 			[]validator2.Status{validator2.Active},
@@ -84,7 +84,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				PublicKeys: [][]byte{kp.pub[:]},
 			},
 		).Return(resp, nil)
-		prysmChainClient.EXPECT().GetValidatorCount(
+		prysmChainClient.EXPECT().ValidatorCount(
 			gomock.Any(),
 			"head",
 			[]validator2.Status{validator2.Active},

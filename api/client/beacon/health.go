@@ -11,16 +11,16 @@ import (
 
 type NodeHealthTracker struct {
 	isHealthy bool
-	node      iface.HealthNode
+	node      iface.HealthProvider
 	sync.RWMutex
 }
 
-func NewNodeHealthTracker(ctx context.Context, node iface.HealthNode) *NodeHealthTracker {
+func NewNodeHealthTracker(ctx context.Context, node iface.HealthProvider) *NodeHealthTracker {
 	tracker := &NodeHealthTracker{
 		node:      node,
 		isHealthy: true,
 	}
-	log.Info("Starting health check routine. Health check will be performed every 12 seconds.")
+	log.Infof("Starting health check routine. Health check will be performed every %d seconds", params.BeaconConfig().SecondsPerSlot)
 	ticker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	go func() {
 		for range ticker.C {

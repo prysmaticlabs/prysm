@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/client"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	apiiface "github.com/prysmaticlabs/prysm/v5/api/client/beacon/iface"
 	eventClient "github.com/prysmaticlabs/prysm/v5/api/client/event"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
@@ -1120,7 +1121,7 @@ func (v *validator) EventStreamIsRunning() bool {
 	return v.validatorClient.EventStreamIsRunning()
 }
 
-func (v *validator) HealthTracker() *beacon.NodeHealthTracker {
+func (v *validator) HealthTracker() apiiface.HealthTracker {
 	return v.healthTracker
 }
 

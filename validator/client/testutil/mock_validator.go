@@ -7,7 +7,8 @@ import (
 	"time"
 
 	api "github.com/prysmaticlabs/prysm/v5/api/client"
-	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	apiiface "github.com/prysmaticlabs/prysm/v5/api/client/beacon/iface"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon/mock"
 	"github.com/prysmaticlabs/prysm/v5/api/client/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
@@ -28,6 +29,7 @@ type FakeValidator struct {
 	SlasherReadyCalled                bool
 	NextSlotCalled                    bool
 	UpdateDutiesCalled                bool
+	PushProposerSettingsCalled        bool
 	UpdateProtectionsCalled           bool
 	RoleAtCalled                      bool
 	AttestToBlockHeadCalled           bool
@@ -48,6 +50,7 @@ type FakeValidator struct {
 	RoleAtArg1                        uint64
 	UpdateDutiesArg1                  uint64
 	NextSlotRet                       <-chan primitives.Slot
+	LastSecondOfSlotRet               <-chan primitives.Slot
 	PublicKey                         string
 	UpdateDutiesRet                   error
 	ProposerSettingsErr               error
@@ -60,7 +63,7 @@ type FakeValidator struct {
 	ProposerSettingWait               time.Duration
 	Km                                keymanager.IKeymanager
 	graffiti                          string
-	Tracker                           *beacon.NodeHealthTracker
+	Tracker                           *mock.MockHealthTracker
 	AttSubmitted                      chan interface{}
 	BlockProposed                     chan interface{}
 }
@@ -138,7 +141,7 @@ func (fv *FakeValidator) NextSlot() <-chan primitives.Slot {
 
 // LastSecondOfSlot for mocking.
 func (fv *FakeValidator) LastSecondOfSlot() <-chan primitives.Slot {
-	return nil
+	return fv.LastSecondOfSlotRet
 }
 
 // UpdateDuties for mocking.
@@ -260,6 +263,7 @@ func (*FakeValidator) HasProposerSettings() bool {
 
 // PushProposerSettings for mocking
 func (fv *FakeValidator) PushProposerSettings(ctx context.Context, _ keymanager.IKeymanager, _ primitives.Slot, deadline time.Time) error {
+	fv.PushProposerSettingsCalled = true
 	nctx, cancel := context.WithDeadline(ctx, deadline)
 	ctx = nctx
 	defer cancel()
@@ -326,7 +330,7 @@ func (*FakeValidator) EventStreamIsRunning() bool {
 	return true
 }
 
-func (fv *FakeValidator) HealthTracker() *beacon.NodeHealthTracker {
+func (fv *FakeValidator) HealthTracker() apiiface.HealthTracker {
 	return fv.Tracker
 }
 

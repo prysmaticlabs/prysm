@@ -40,12 +40,10 @@ go_test(
     srcs = [
         "checkpoint_test.go",
         "client_test.go",
-        "health_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//api/client:go_default_library",
-        "//api/client/beacon/testing:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
@@ -59,6 +57,5 @@ go_test(
         "//testing/util:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@org_uber_go_mock//gomock:go_default_library",
     ],
 )
