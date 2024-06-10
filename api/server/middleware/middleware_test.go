@@ -96,6 +96,11 @@ func TestContentTypeHandler(t *testing.T) {
 			expectedStatusCode: http.StatusOK,
 			isGet:              true,
 		},
+		{
+			name:               "Content type contains charset is ok",
+			contentType:        "application/json; charset=utf-8",
+			expectedStatusCode: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
