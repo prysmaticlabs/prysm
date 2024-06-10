@@ -145,9 +145,59 @@ func (bs *BlobStorage) migrateLayouts() error {
 	return nil
 }
 
+func (bs *BlobStorage) writePart(sidecar blocks.VerifiedROBlob) (string, error) {
+	ident := identForSidecar(sidecar)
+	// Serialize the ethpb.BlobSidecar to binary data using SSZ.
+	sidecarData, err := sidecar.MarshalSSZ()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to serialize sidecar data")
+	} else if len(sidecarData) == 0 {
+		return "", errSidecarEmptySSZData
+	}
+
+	if err := bs.fs.MkdirAll(bs.layout.dir(ident), directoryPermissions); err != nil {
+		return "", err
+	}
+	partPath := bs.layout.partPath(ident, fmt.Sprintf("%p", sidecarData))
+
+	// Create a partial file and write the serialized data to it.
+	partialFile, err := bs.fs.Create(partPath)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create partial file")
+	}
+
+	n, err := partialFile.Write(sidecarData)
+	if err != nil {
+		closeErr := partialFile.Close()
+		if closeErr != nil {
+			return partPath, closeErr
+		}
+		return partPath, errors.Wrap(err, "failed to write to partial file")
+	}
+	if bs.fsync {
+		if err := partialFile.Sync(); err != nil {
+			return partPath, err
+		}
+	}
+
+	if err := partialFile.Close(); err != nil {
+		return partPath, err
+	}
+
+	if n != len(sidecarData) {
+		return partPath, fmt.Errorf("failed to write the full bytes of sidecarData, wrote only %d of %d bytes", n, len(sidecarData))
+	}
+
+	if n == 0 {
+		return partPath, errEmptyBlobWritten
+	}
+	return partPath, nil
+}
+
 // Save saves blobs given a list of sidecars.
 func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	startTime := time.Now()
+
 	ident := identForSidecar(sidecar)
 	sszPath := bs.layout.sszPath(ident)
 	exists, err := afero.Exists(bs.fs, sszPath)
@@ -159,65 +209,23 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return nil
 	}
 
-	// Serialize the ethpb.BlobSidecar to binary data using SSZ.
-	sidecarData, err := sidecar.MarshalSSZ()
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize sidecar data")
-	} else if len(sidecarData) == 0 {
-		return errSidecarEmptySSZData
-	}
-
-	if err := bs.fs.MkdirAll(bs.layout.dir(ident), directoryPermissions); err != nil {
-		return err
-	}
-	partPath := bs.layout.partPath(ident, fmt.Sprintf("%p", sidecarData))
-
 	partialMoved := false
+	partPath, err := bs.writePart(sidecar)
 	// Ensure the partial file is deleted.
 	defer func() {
-		if partialMoved {
-
+		if partialMoved || partPath == "" {
 			return
 		}
 		// It's expected to error if the save is successful.
-		err = bs.fs.Remove(partPath)
+		err := bs.fs.Remove(partPath)
 		if err == nil {
 			log.WithFields(logrus.Fields{
 				"partPath": partPath,
 			}).Debugf("Removed partial file")
 		}
 	}()
-
-	// Create a partial file and write the serialized data to it.
-	partialFile, err := bs.fs.Create(partPath)
 	if err != nil {
-		return errors.Wrap(err, "failed to create partial file")
-	}
-
-	n, err := partialFile.Write(sidecarData)
-	if err != nil {
-		closeErr := partialFile.Close()
-		if closeErr != nil {
-			return closeErr
-		}
-		return errors.Wrap(err, "failed to write to partial file")
-	}
-	if bs.fsync {
-		if err := partialFile.Sync(); err != nil {
-			return err
-		}
-	}
-
-	if err := partialFile.Close(); err != nil {
 		return err
-	}
-
-	if n != len(sidecarData) {
-		return fmt.Errorf("failed to write the full bytes of sidecarData, wrote only %d of %d bytes", n, len(sidecarData))
-	}
-
-	if n == 0 {
-		return errEmptyBlobWritten
 	}
 
 	// Atomically rename the partial file to its final name.

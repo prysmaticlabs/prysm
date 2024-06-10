@@ -78,7 +78,7 @@ func (l *periodicEpochLayout) dir(n blobIdent) string {
 	return filepath.Join(l.epochDir(n.epoch), rootToString(n.root))
 }
 
-func (l *periodicEpochLayout) epochDir(epoch primitives.Epoch) string {
+func (*periodicEpochLayout) epochDir(epoch primitives.Epoch) string {
 	return filepath.Join(periodicEpochBaseDir, fmt.Sprintf("%d", periodForEpoch(epoch)), fmt.Sprintf("%d", epoch))
 }
 

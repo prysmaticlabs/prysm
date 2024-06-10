@@ -25,8 +25,9 @@ func NewEphemeralBlobStorageAndFs(t testing.TB, opts ...BlobStorageOption) (afer
 }
 
 func NewEphemeralBlobStorageUsingFs(t testing.TB, fs afero.Fs, opts ...BlobStorageOption) *BlobStorage {
-	opts = append(opts, WithBlobRetentionEpochs(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest))
-	opts = append(opts, WithFs(fs))
+	opts = append(opts,
+		WithBlobRetentionEpochs(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest),
+		WithFs(fs))
 	bs, err := NewBlobStorage(opts...)
 	if err != nil {
 		t.Fatalf("error initializing test BlobStorage, err=%s", err.Error())

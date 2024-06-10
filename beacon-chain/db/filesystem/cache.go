@@ -85,16 +85,6 @@ func (s *blobStorageCache) ensure(ident blobIdent) error {
 	return nil
 }
 
-func (s *blobStorageCache) epoch(key [32]byte) (primitives.Epoch, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	v, ok := s.cache[key]
-	if !ok {
-		return 0, false
-	}
-	return v.epoch, ok
-}
-
 func (s *blobStorageCache) get(key [32]byte) (BlobStorageSummary, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

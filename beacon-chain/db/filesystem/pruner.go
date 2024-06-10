@@ -12,10 +12,7 @@ import (
 
 const retentionBuffer primitives.Epoch = 2
 
-var (
-	errPruningFailures = errors.New("blobs could not be pruned for some roots")
-	errNotBlobSSZ      = errors.New("not a blob ssz file")
-)
+var errNotBlobSSZ = errors.New("not a blob ssz file")
 
 // blobPruner keeps track of the tail end of the retention period, based only the blobs it has seen via the notify method.
 // If the retention period advances in response to notify being called,

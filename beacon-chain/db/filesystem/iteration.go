@@ -32,7 +32,7 @@ func (ide *identificationError) Unwrap() error {
 	return ide.err
 }
 
-func (ide *identificationError) Is(err error) bool {
+func (*identificationError) Is(err error) bool {
 	return err == errIdentFailure
 }
 
@@ -74,7 +74,7 @@ type layoutLevel struct {
 
 // identIterator moves through the filesystem in order to yield blobIdents.
 // layoutLevels (in the 'levels' field) allows a filesystem layout to control how the
-// the layout is traversed. A layoutLevel can filter out entries from the directory listing
+// layout is traversed. A layoutLevel can filter out entries from the directory listing
 // via the filter function, and populate fields in the blobIdent via the populateIdent function.
 // The blobIdent is populated from an empty value at the root, accumulating values for its fields at each level.
 // The fully populated blobIdent is returned when the iterator reaches the leaf level.
@@ -150,7 +150,7 @@ func (iter *identIterator) advanceChild() (blobIdent, error) {
 	return blobIdent{}, io.EOF
 }
 
-func populateNoop(namer blobIdent, dir string) (blobIdent, error) {
+func populateNoop(namer blobIdent, _ string) (blobIdent, error) {
 	return namer, nil
 }
 

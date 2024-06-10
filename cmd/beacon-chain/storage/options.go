@@ -38,7 +38,7 @@ func layoutFlagUsage() string {
 		"Available options are: " + strings.Join(filesystem.LayoutNames, ", ")
 }
 
-func validateLayoutFlag(c *cli.Context, v string) error {
+func validateLayoutFlag(_ *cli.Context, v string) error {
 	for _, l := range filesystem.LayoutNames {
 		if v == l {
 			return nil

@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	rootPrefixLen = 4
 	// Full root in directory will be 66 chars, eg:
 	// >>> len('0x0002fb4db510b8618b04dc82d023793739c26346a8b02eb73482e24b0fec0555') == 66
 	rootStringLen        = 66
