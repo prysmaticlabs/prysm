@@ -330,5 +330,4 @@ func TestLastSecondOfSlot_HealthyAgain(t *testing.T) {
 	}()
 	run(ctx, v)
 	assert.Equal(t, true, v.UpdateDutiesCalled)
-	assert.Equal(t, true, v.PushProposerSettingsCalled)
 }

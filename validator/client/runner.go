@@ -134,20 +134,21 @@ func run(ctx context.Context, v iface.Validator) {
 					log.WithError(err).Error("Failed to re-initialize validator and get head slot")
 					continue
 				}
-				if err := v.UpdateDuties(ctx, headSlot); err != nil {
+				if err = v.UpdateDuties(ctx, headSlot); err != nil {
 					handleAssignmentError(err, headSlot)
 					continue
 				}
-				km, err = v.Keymanager()
-				if err != nil {
-					log.WithError(err).Error("Could not get keymanager")
-					continue
-				}
-				deadline = time.Now().Add(5 * time.Minute) // Should consider changing to a constant
-				if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
-					log.WithError(err).Warn("Failed to update proposer settings")
-					continue
-				}
+				go func() {
+					km, err := v.Keymanager()
+					if err != nil {
+						log.WithError(err).Error("Could not get keymanager")
+						return
+					}
+					deadline := time.Now().Add(5 * time.Minute) // Should consider changing to a constant
+					if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
+						log.WithError(err).Warn("Failed to update proposer settings")
+					}
+				}()
 			}
 			if !nodeIsHealthyCurr && features.Get().EnableBeaconRESTApi {
 				v.ChangeHost()
