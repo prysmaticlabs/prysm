@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "keymanager.go",
+        "log.go",
         "metrics.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer",

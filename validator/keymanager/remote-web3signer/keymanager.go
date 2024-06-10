@@ -237,6 +237,12 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			log.WithError(err).Error("Could not close file watcher")
 		}
 	}()
+	initialFileInfo, err := os.Stat(km.keyFilePath)
+	if err != nil {
+		log.WithError(err).Error("Could not stat remote signer public key file")
+		return
+	}
+	initialFileSize := initialFileInfo.Size()
 	if err := watcher.Add(km.keyFilePath); err != nil {
 		log.WithError(err).WithField("filepath", km.keyFilePath).Errorf("Could not add file to file watcher")
 		return
@@ -254,7 +260,12 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			if e.Has(fsnotify.Remove) {
 				log.Fatalln("Remote signer keyfile was removed! Restart the validator client with the appropriate remote signer file")
 			}
-			if e.Has(fsnotify.Write) {
+			currentFileInfo, err := os.Stat(km.keyFilePath)
+			if err != nil {
+				log.Fatalln("Could not stat remote signer public key file")
+				return
+			}
+			if currentFileInfo.Size() != initialFileSize {
 				log.Info("Remote signer keyfile updated")
 				fileKeys, _, err := km.readKeyFile()
 				if err != nil {
@@ -271,8 +282,8 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 				if !slices.Equal(currentKeys, fileKeys) {
 					km.updatePublicKeys(fileKeys)
 				}
+				initialFileSize = currentFileInfo.Size()
 			}
-
 		case err, ok := <-watcher.Errors:
 			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
 				return
