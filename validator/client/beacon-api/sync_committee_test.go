@@ -55,7 +55,7 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	protoSyncCommiteeMessage := ethpb.SyncCommitteeMessage{
+	protoSyncCommitteeMessage := ethpb.SyncCommitteeMessage{
 		Slot:           primitives.Slot(42),
 		BlockRoot:      decodedBeaconBlockRoot,
 		ValidatorIndex: primitives.ValidatorIndex(12345),
@@ -63,7 +63,7 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 	}
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	res, err := validatorClient.SubmitSyncMessage(context.Background(), &protoSyncCommiteeMessage)
+	res, err := validatorClient.SubmitSyncMessage(context.Background(), &protoSyncCommitteeMessage)
 
 	assert.DeepEqual(t, new(empty.Empty), res)
 	require.NoError(t, err)
@@ -150,7 +150,7 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			actualResponse, err := validatorClient.getSyncMessageBlockRoot(ctx)
+			actualResponse, err := validatorClient.syncMessageBlockRoot(ctx)
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, test.expectedErrorMessage, err)
 				return
@@ -236,7 +236,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			actualResponse, err := validatorClient.getSyncCommitteeContribution(ctx, request)
+			actualResponse, err := validatorClient.syncCommitteeContribution(ctx, request)
 			if test.expectedErrMsg != "" {
 				require.ErrorContains(t, test.expectedErrMsg, err)
 				return
@@ -394,7 +394,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 					jsonRestHandler: jsonRestHandler,
 				},
 			}
-			actualResponse, err := validatorClient.getSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+			actualResponse, err := validatorClient.syncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 				PublicKey: pubkey,
 				Slot:      slot,
 			})

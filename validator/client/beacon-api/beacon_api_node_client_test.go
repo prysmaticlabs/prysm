@@ -112,7 +112,7 @@ func TestGetGenesis(t *testing.T) {
 			ctx := context.Background()
 
 			genesisProvider := mock.NewMockGenesisProvider(ctrl)
-			genesisProvider.EXPECT().GetGenesis(
+			genesisProvider.EXPECT().Genesis(
 				ctx,
 			).Return(
 				testCase.genesisResponse,
@@ -139,7 +139,7 @@ func TestGetGenesis(t *testing.T) {
 				genesisProvider: genesisProvider,
 				jsonRestHandler: jsonRestHandler,
 			}
-			response, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
+			response, err := nodeClient.Genesis(ctx, &emptypb.Empty{})
 
 			if testCase.expectedResponse == nil {
 				assert.ErrorContains(t, testCase.expectedError, err)
@@ -214,7 +214,7 @@ func TestGetSyncStatus(t *testing.T) {
 			)
 
 			nodeClient := &beaconApiNodeClient{jsonRestHandler: jsonRestHandler}
-			syncStatus, err := nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
+			syncStatus, err := nodeClient.SyncStatus(ctx, &emptypb.Empty{})
 
 			if testCase.expectedResponse == nil {
 				assert.ErrorContains(t, testCase.expectedError, err)
@@ -278,7 +278,7 @@ func TestGetVersion(t *testing.T) {
 			)
 
 			nodeClient := &beaconApiNodeClient{jsonRestHandler: jsonRestHandler}
-			version, err := nodeClient.GetVersion(ctx, &emptypb.Empty{})
+			version, err := nodeClient.Version(ctx, &emptypb.Empty{})
 
 			if testCase.expectedResponse == nil {
 				assert.ErrorContains(t, testCase.expectedError, err)

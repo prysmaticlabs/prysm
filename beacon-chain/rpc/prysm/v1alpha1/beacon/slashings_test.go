@@ -167,3 +167,28 @@ func TestServer_SubmitAttesterSlashing_DontBroadcast(t *testing.T) {
 	_, err = bs.SubmitAttesterSlashing(ctx, generatedSlashing.(*ethpb.AttesterSlashing))
 	assert.NotNil(t, err, "Expected including a attester slashing for an already slashed validator to fail")
 }
+
+func TestServer_SubmitAttesterSlashingElectra(t *testing.T) {
+	ctx := context.Background()
+	st, privs := util.DeterministicGenesisStateElectra(t, 64)
+	slashedVal, err := st.ValidatorAtIndex(5)
+	require.NoError(t, err)
+	slashedVal.Slashed = true
+	require.NoError(t, st.UpdateValidatorAtIndex(5, slashedVal))
+
+	mb := &mockp2p.MockBroadcaster{}
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: st,
+		},
+		SlashingsPool: slashings.NewPool(),
+		Broadcaster:   mb,
+	}
+
+	generatedSlashing, err := util.GenerateAttesterSlashingForValidator(st, privs[2], primitives.ValidatorIndex(2))
+	require.NoError(t, err)
+
+	_, err = bs.SubmitAttesterSlashingElectra(ctx, generatedSlashing.(*ethpb.AttesterSlashingElectra))
+	require.NoError(t, err)
+	assert.Equal(t, true, mb.BroadcastCalled.Load(), "Expected broadcast to be called when flag is set")
+}

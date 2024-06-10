@@ -15,7 +15,7 @@ import (
 )
 
 type GenesisProvider interface {
-	GetGenesis(ctx context.Context) (*structs.Genesis, error)
+	Genesis(ctx context.Context) (*structs.Genesis, error)
 }
 
 type beaconApiGenesisProvider struct {
@@ -24,8 +24,8 @@ type beaconApiGenesisProvider struct {
 	once            sync.Once
 }
 
-func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
-	genesis, err := c.genesisProvider.GetGenesis(ctx)
+func (c *beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
+	genesis, err := c.genesisProvider.Genesis(ctx)
 
 	for err != nil {
 		jsonErr := &httputil.DefaultJsonError{}
@@ -37,7 +37,7 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 		// Error 404 means that the chain genesis info is not yet known, so we query it every second until it's ready
 		select {
 		case <-time.After(time.Second):
-			genesis, err = c.genesisProvider.GetGenesis(ctx)
+			genesis, err = c.genesisProvider.Genesis(ctx)
 		case <-ctx.Done():
 			return nil, errors.New("context canceled")
 		}
@@ -67,7 +67,7 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 }
 
 // GetGenesis gets the genesis information from the beacon node via the /eth/v1/beacon/genesis endpoint
-func (c *beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*structs.Genesis, error) {
+func (c *beaconApiGenesisProvider) Genesis(ctx context.Context) (*structs.Genesis, error) {
 	genesisJson := &structs.GetGenesisResponse{}
 	var doErr error
 	c.once.Do(func() {
