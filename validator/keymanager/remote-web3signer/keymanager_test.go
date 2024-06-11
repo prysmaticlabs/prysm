@@ -200,7 +200,7 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 	_, err = bytesBuf.WriteString("\n")
 	require.NoError(t, err)
 	// Open the file for writing, create it if it does not exist, and truncate it if it does.
-	f, err := os.OpenFile(keyFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(keyFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	require.NoError(t, err)
 
 	// Write the buffer's contents to the file.

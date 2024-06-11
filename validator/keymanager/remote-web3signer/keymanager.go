@@ -256,9 +256,9 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			log.WithFields(logrus.Fields{
 				"event": e.Name,
 				"op":    e.Op.String(),
-			}).Debug("Remote signer keyfile event triggered")
+			}).Debug("Remote signer key file event triggered")
 			if e.Has(fsnotify.Remove) {
-				log.Fatalln("Remote signer keyfile was removed! Restart the validator client with the appropriate remote signer file")
+				log.Fatalln("Remote signer key file was removed! Restart the validator client with the appropriate remote signer file")
 			}
 			currentFileInfo, err := os.Stat(km.keyFilePath)
 			if err != nil {
@@ -266,13 +266,13 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 				return
 			}
 			if currentFileInfo.Size() != initialFileSize {
-				log.Info("Remote signer keyfile updated")
+				log.Info("Remote signer key file updated")
 				fileKeys, _, err := km.readKeyFile()
 				if err != nil {
 					log.WithError(err).Fatalln("Could not read key file")
 				}
 				if len(fileKeys) == 0 {
-					log.Warnln("Remote signer keyfile no longer has keys, defaulting to flag provided keys")
+					log.Warnln("Remote signer key file no longer has keys, defaulting to flag provided keys")
 					fileKeys = km.flagLoadedPublicKeys
 				}
 				currentKeys, err := km.FetchValidatingPublicKeys(ctx)
@@ -304,7 +304,7 @@ func (km *Keymanager) updatePublicKeys(keys [][48]byte) {
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	km.lock.RLock()
 	defer km.lock.RUnlock()
 	return km.providedPublicKeys, nil
