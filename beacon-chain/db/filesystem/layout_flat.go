@@ -26,8 +26,7 @@ func newFlatLayout(fs afero.Fs, cache *blobStorageCache, pruner *blobPruner) fsL
 }
 
 func (l *flatLayout) iterateIdents(before primitives.Epoch) (*identIterator, error) {
-	_, err := l.fs.Stat(".")
-	if err != nil {
+	if _, err := l.fs.Stat("."); err != nil {
 		if os.IsNotExist(err) {
 			return &identIterator{eof: true}, nil // The directory is non-existent, which is fine; stop iteration.
 		}
