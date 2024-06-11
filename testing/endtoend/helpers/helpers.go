@@ -132,7 +132,7 @@ func WaitForTextInFile(src *os.File, match string) error {
 
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("could not find requested text \"%s\" in %s before deadline:\n", match, f.Name())
+		return fmt.Errorf("could not find requested text %s in %s before deadline", match, f.Name())
 	case <-foundChan:
 		return nil
 	case err = <-errChan:
