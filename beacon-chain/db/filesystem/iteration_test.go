@@ -93,7 +93,7 @@ func (df dirFiles) reify(t *testing.T, fs afero.Fs, base string) {
 	fullPath := path.Join(base, df.name)
 	if df.isDir {
 		if df.name != "" {
-			require.NoError(t, fs.Mkdir(fullPath, directoryPermissions))
+			require.NoError(t, fs.Mkdir(fullPath, directoryPermissions()))
 		}
 		for _, c := range df.children {
 			c.reify(t, fs, fullPath)

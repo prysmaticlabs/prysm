@@ -3,12 +3,14 @@ package filesystem
 import (
 	"fmt"
 	"math"
+	"os"
 	"path"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
@@ -17,11 +19,12 @@ import (
 	"github.com/spf13/afero"
 )
 
-const directoryPermissions = 0700
+func directoryPermissions() os.FileMode {
+	return params.BeaconIoConfig().ReadWriteExecutePermissions
+}
 
 var (
 	errIndexOutOfBounds    = errors.New("blob index in file name >= MaxBlobsPerBlock")
-	errEmptyBlobWritten    = errors.New("zero bytes written to disk when saving blob sidecar")
 	errSidecarEmptySSZData = errors.New("sidecar marshalled to an empty ssz byte slice")
 	errNoBasePath          = errors.New("BlobStorage base path not specified in init")
 )
@@ -145,53 +148,49 @@ func (bs *BlobStorage) migrateLayouts() error {
 	return nil
 }
 
-func (bs *BlobStorage) writePart(sidecar blocks.VerifiedROBlob) (string, error) {
+func (bs *BlobStorage) writePart(sidecar blocks.VerifiedROBlob) (ppath string, err error) {
 	ident := identForSidecar(sidecar)
-	// Serialize the ethpb.BlobSidecar to binary data using SSZ.
 	sidecarData, err := sidecar.MarshalSSZ()
 	if err != nil {
 		return "", errors.Wrap(err, "failed to serialize sidecar data")
-	} else if len(sidecarData) == 0 {
+	}
+	if len(sidecarData) == 0 {
 		return "", errSidecarEmptySSZData
 	}
 
-	if err := bs.fs.MkdirAll(bs.layout.dir(ident), directoryPermissions); err != nil {
+	if err := bs.fs.MkdirAll(bs.layout.dir(ident), directoryPermissions()); err != nil {
 		return "", err
 	}
-	partPath := bs.layout.partPath(ident, fmt.Sprintf("%p", sidecarData))
+	ppath = bs.layout.partPath(ident, fmt.Sprintf("%p", sidecarData))
 
 	// Create a partial file and write the serialized data to it.
-	partialFile, err := bs.fs.Create(partPath)
+	partialFile, err := bs.fs.Create(ppath)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create partial file")
 	}
+	defer func() {
+		cerr := partialFile.Close()
+		// The close error is probably less important than any existing error, so only overwrite nil err.
+		if cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	n, err := partialFile.Write(sidecarData)
 	if err != nil {
-		closeErr := partialFile.Close()
-		if closeErr != nil {
-			return partPath, closeErr
-		}
-		return partPath, errors.Wrap(err, "failed to write to partial file")
+		return ppath, errors.Wrap(err, "failed to write to partial file")
 	}
 	if bs.fsync {
 		if err := partialFile.Sync(); err != nil {
-			return partPath, err
+			return ppath, err
 		}
 	}
 
-	if err := partialFile.Close(); err != nil {
-		return partPath, err
-	}
-
 	if n != len(sidecarData) {
-		return partPath, fmt.Errorf("failed to write the full bytes of sidecarData, wrote only %d of %d bytes", n, len(sidecarData))
+		return ppath, fmt.Errorf("failed to write the full bytes of sidecarData, wrote only %d of %d bytes", n, len(sidecarData))
 	}
 
-	if n == 0 {
-		return partPath, errEmptyBlobWritten
-	}
-	return partPath, nil
+	return ppath, nil
 }
 
 // Save saves blobs given a list of sidecars.

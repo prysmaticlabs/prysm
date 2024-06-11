@@ -25,7 +25,7 @@ func setupTestBlobFile(t *testing.T, ident blobIdent, offset primitives.Slot, fs
 	scb, err := sc[0].MarshalSSZ()
 	require.NoError(t, err)
 	dir := l.dir(ident)
-	require.NoError(t, fs.MkdirAll(dir, directoryPermissions))
+	require.NoError(t, fs.MkdirAll(dir, directoryPermissions()))
 	p := l.sszPath(ident)
 	require.NoError(t, afero.WriteFile(fs, p, scb, 0666))
 	_, err = fs.Stat(p)

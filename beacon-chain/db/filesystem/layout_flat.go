@@ -25,7 +25,6 @@ func newFlatLayout(fs afero.Fs, cache *blobStorageCache, pruner *blobPruner) fsL
 	return l
 }
 
-// iterateIdents for flatLayout is tricky because
 func (l *flatLayout) iterateIdents(before primitives.Epoch) (*identIterator, error) {
 	_, err := l.fs.Stat(".")
 	if err != nil {

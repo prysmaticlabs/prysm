@@ -142,7 +142,7 @@ func migrateLayout(fs afero.Fs, from, to fsLayout, cache *blobStorageCache) erro
 		if src != lastMoved {
 			targetParent := filepath.Dir(target)
 			if targetParent != "" && targetParent != "." && !parentDirs[targetParent] {
-				if err := fs.MkdirAll(targetParent, directoryPermissions); err != nil {
+				if err := fs.MkdirAll(targetParent, directoryPermissions()); err != nil {
 					return errors.Wrapf(errMigrationFailure, "failed to make enclosing path before moving %s to %s", src, target)
 				}
 				parentDirs[targetParent] = true
