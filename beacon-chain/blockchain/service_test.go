@@ -96,7 +96,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithAttestationPool(attestations.NewPool()),
 		WithSlashingPool(slashings.NewPool()),
 		WithExitPool(voluntaryexits.NewPool()),
-		WithP2PBroadcaster(&mockAccesser{}),
+		WithP2PAccessor(&mockAccesser{}),
 		WithStateNotifier(&mockBeaconNode{}),
 		WithForkChoiceStore(fc),
 		WithAttestationService(attService),

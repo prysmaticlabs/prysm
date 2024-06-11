@@ -117,8 +117,8 @@ func WithBLSToExecPool(p blstoexec.PoolManager) Option {
 	}
 }
 
-// WithP2PBroadcaster to broadcast messages after appropriate processing.
-func WithP2PBroadcaster(p p2p.Acceser) Option {
+// WithP2PAccessor to broadcast messages after appropriate processing.
+func WithP2PAccessor(p p2p.Acceser) Option {
 	return func(s *Service) error {
 		s.cfg.P2P = p
 		return nil

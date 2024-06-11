@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
@@ -24,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"google.golang.org/protobuf/proto"
 )
 
 type mockBeaconNode struct {
@@ -108,6 +109,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 	blsPool := blstoexec.NewPool()
 	dc, err := depositsnapshot.New()
 	require.NoError(t, err)
+	p2p := &mockAccesser{}
 	req := &testServiceRequirements{
 		ctx:     ctx,
 		db:      beaconDB,
@@ -120,7 +122,8 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		blsPool: blsPool,
 		dc:      dc,
 	}
-	defOpts := []Option{WithDatabase(req.db),
+	defOpts := []Option{
+		WithDatabase(req.db),
 		WithStateNotifier(req.notif),
 		WithStateGen(req.sg),
 		WithForkChoiceStore(req.fcs),
@@ -133,6 +136,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
 		WithSyncChecker(mock.MockChecker{}),
 		WithExecutionEngineCaller(&mockExecution.EngineClient{}),
+		WithP2PAccessor(p2p),
 	}
 	// append the variadic opts so they override the defaults by being processed afterwards
 	opts = append(defOpts, opts...)

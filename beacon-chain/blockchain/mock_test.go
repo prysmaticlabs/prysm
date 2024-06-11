@@ -18,6 +18,7 @@ func testServiceOptsWithDB(t *testing.T) []Option {
 		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 		WithClockSynchronizer(cs),
+		WithP2PAccessor(&mockAccesser{}),
 	}
 }
 
@@ -26,5 +27,8 @@ func testServiceOptsWithDB(t *testing.T) []Option {
 // initialization requirements w/o the overhead of db init.
 func testServiceOptsNoDB() []Option {
 	cs := startup.NewClockSynchronizer()
-	return []Option{WithClockSynchronizer(cs)}
+	return []Option{
+		WithClockSynchronizer(cs),
+		WithP2PAccessor(&mockAccesser{}),
+	}
 }

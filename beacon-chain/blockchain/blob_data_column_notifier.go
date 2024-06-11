@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"fmt"
 	"sort"
 	"sync"
 
@@ -83,7 +82,11 @@ func (bn *blobDataColumnNotifier) receiveBlobDataColumn(blockRoot [32]byte, colu
 	}
 
 	notifier, _ := bn.notifiers[blockRoot]
-	notifier <- struct{}{}
+	select {
+	case notifier <- struct{}{}:
+	default:
+		// do not block if the channel is full.
+	}
 }
 
 // missingBlobDataColumns returns the list of missing data columns for the given blockRoot.
@@ -118,14 +121,11 @@ func (bn *blobDataColumnNotifier) deleteBlockRoot(blockRoot [32]byte) {
 
 // allColumnsDownloaded returns true if all the data columns required to custody are available for the given blockRoot.
 func (bn *blobDataColumnNotifier) allColumnsDownloaded(seenColumns map[uint64]bool) bool {
-	fmt.Println(seenColumns)
-	fmt.Println(bn.columnsNeedsCustody)
 	for k := range bn.columnsNeedsCustody {
 		if !seenColumns[k] {
 			return false
 		}
 	}
 
-	fmt.Println("all columns downloaded")
 	return true
 }

@@ -194,6 +194,12 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	srv.blobDataColumnNotifier, err = newBlobDataColumnNotifier(srv.cfg.P2P.NodeID())
+	if err != nil {
+		return nil, err
+	}
+
 	return srv, nil
 }
 

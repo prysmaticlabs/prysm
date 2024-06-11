@@ -649,7 +649,7 @@ func (s *Service) isDataAvailableDataColumns(ctx context.Context, root [32]byte,
 				return
 			}
 
-			fields := daCheckLogFields(root, signed.Block().Slot(), len(kzgCommitments), len(missing))
+			fields := dasCheckLogFields(root, signed.Block().Slot(), len(s.blobDataColumnNotifier.columnsNeedsCustody), len(missing))
 			log.WithFields(fields).Error("Still waiting for DA check at slot end.")
 		})
 		defer nst.Stop()
@@ -673,6 +673,15 @@ func daCheckLogFields(root [32]byte, slot primitives.Slot, expected, missing int
 		"root":          fmt.Sprintf("%#x", root),
 		"blobsExpected": expected,
 		"blobsWaiting":  missing,
+	}
+}
+
+func dasCheckLogFields(root [32]byte, slot primitives.Slot, expected, missing int) logrus.Fields {
+	return logrus.Fields{
+		"slot":                slot,
+		"root":                fmt.Sprintf("%#x", root),
+		"blobColumnsExpected": expected,
+		"blobColumnsWaiting":  missing,
 	}
 }
 
