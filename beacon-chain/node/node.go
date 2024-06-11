@@ -119,7 +119,6 @@ type BeaconNode struct {
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
 	BlobStorageOptions      []filesystem.BlobStorageOption
-	blobRetentionEpochs     primitives.Epoch
 	verifyInitWaiter        *verification.InitializerWaiter
 	syncChecker             *initialsync.SyncChecker
 }
