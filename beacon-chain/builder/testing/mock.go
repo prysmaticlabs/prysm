@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/client/builder"
@@ -30,6 +31,7 @@ type MockBuilderService struct {
 	PayloadDeneb          *v1.ExecutionPayloadDeneb
 	BlobBundle            *v1.BlobsBundle
 	ErrSubmitBlindedBlock error
+	GetHeaderSleep        time.Duration
 	Bid                   *ethpb.SignedBuilderBid
 	BidCapella            *ethpb.SignedBuilderBidCapella
 	BidDeneb              *ethpb.SignedBuilderBidDeneb
@@ -72,6 +74,9 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, b interfaces.
 
 // GetHeader for mocking.
 func (s *MockBuilderService) GetHeader(_ context.Context, slot primitives.Slot, _ [32]byte, _ [48]byte) (builder.SignedBid, error) {
+	if s.GetHeaderSleep > 0 {
+		time.Sleep(s.GetHeaderSleep)
+	}
 	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch || s.BidDeneb != nil {
 		return builder.WrappedSignedBuilderBidDeneb(s.BidDeneb)
 	}

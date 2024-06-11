@@ -725,6 +725,21 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			err: "can't get header",
 		},
 		{
+			name: "fails if tolerance is exceeded",
+			mock: &builderTest.MockBuilderService{
+				GetHeaderSleep: 1100 * time.Millisecond,
+			},
+			fetcher: &blockchainTest.ChainService{
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
+					return wb
+				}(),
+			},
+			err: "context deadline exceeded",
+		},
+		{
 			name: "0 bid",
 			mock: &builderTest.MockBuilderService{
 				Bid: &ethpb.SignedBuilderBid{
