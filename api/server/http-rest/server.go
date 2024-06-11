@@ -1,5 +1,4 @@
-// Package gateway defines a grpc-gateway server that serves HTTP-JSON traffic and acts a proxy between HTTP and gRPC.
-package rest
+package http_rest
 
 import (
 	"context"
@@ -21,16 +20,16 @@ type restHandler func(
 	req *http.Request,
 )
 
-// Config parameters for setting up the gateway service.
+// Config parameters for setting up the http-rest service.
 type config struct {
-	gatewayAddr    string
+	httpAddr       string
 	allowedOrigins []string
 	muxHandler     restHandler
 	router         *mux.Router
 	timeout        time.Duration
 }
 
-// Server is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.
+// Server serves HTTP JSON traffic.
 type Server struct {
 	cfg          *config
 	server       *http.Server
@@ -58,7 +57,7 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 	corsMux := middleware.CorsHandler(g.cfg.allowedOrigins).Middleware(g.cfg.router)
 	// TODO: actually use the timeout config provided
 	g.server = &http.Server{
-		Addr:              g.cfg.gatewayAddr,
+		Addr:              g.cfg.httpAddr,
 		Handler:           corsMux,
 		ReadHeaderTimeout: time.Second,
 	}
@@ -70,22 +69,22 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 	return g, nil
 }
 
-// Start the gateway service.
+// Start the http rest service.
 func (g *Server) Start() {
 	_, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
 	go func() {
-		log.WithField("address", g.cfg.gatewayAddr).Info("Starting gRPC gateway")
+		log.WithField("address", g.cfg.httpAddr).Info("Starting HTTP server")
 		if err := g.server.ListenAndServe(); err != http.ErrServerClosed {
-			log.WithError(err).Error("Failed to start gRPC gateway")
+			log.WithError(err).Error("Failed to start HTTP server")
 			g.startFailure = err
 			return
 		}
 	}()
 }
 
-// Status of grpc gateway. Returns an error if this service is unhealthy.
+// Status of the HTTP server. Returns an error if this service is unhealthy.
 func (g *Server) Status() error {
 	if g.startFailure != nil {
 		return g.startFailure
@@ -93,7 +92,7 @@ func (g *Server) Status() error {
 	return nil
 }
 
-// Stop the gateway with a graceful shutdown.
+// Stop the HTTP server with a graceful shutdown.
 func (g *Server) Stop() error {
 	if g.server != nil {
 		shutdownCtx, shutdownCancel := context.WithTimeout(g.ctx, 2*time.Second)

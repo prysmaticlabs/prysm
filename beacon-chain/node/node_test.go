@@ -255,9 +255,9 @@ func TestCORS(t *testing.T) {
 	// Mock CLI context with a test CORS domain
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.GPRCGatewayCorsDomain.Name, "http://allowed-example.com", "")
+	set.String(flags.HTTPServerCorsDomain.Name, "http://allowed-example.com", "")
 	cliCtx := cli.NewContext(&app, set, nil)
-	require.NoError(t, cliCtx.Set(flags.GPRCGatewayCorsDomain.Name, "http://allowed-example.com"))
+	require.NoError(t, cliCtx.Set(flags.HTTPServerCorsDomain.Name, "http://allowed-example.com"))
 
 	router := newRouter(cliCtx)
 

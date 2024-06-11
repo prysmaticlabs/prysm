@@ -1,4 +1,4 @@
-package rest
+package http_rest
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -16,25 +17,26 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func TestGateway_StartStop(t *testing.T) {
+func TestServer_StartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(&app, set, nil)
 
-	gatewayPort := ctx.Int(flags.GRPCGatewayPort.Name)
-	gatewayHost := ctx.String(flags.GRPCGatewayHost.Name)
-	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	port := ctx.Int(flags.HTTPServerPort.Name)
+	host := ctx.String(flags.HTTPServerHost.Name)
+	address := fmt.Sprintf("%s:%d", host, port)
 
 	opts := []Option{
-		WithGatewayAddr(gatewayAddress),
+		WithHTTPAddr(address),
 		WithMuxHandler(func(
 			_ http.HandlerFunc,
 			_ http.ResponseWriter,
 			_ *http.Request,
 		) {
 		}),
+		WithRouter(mux.NewRouter()),
 	}
 
 	g, err := New(context.Background(), opts...)
@@ -42,24 +44,25 @@ func TestGateway_StartStop(t *testing.T) {
 
 	g.Start()
 	go func() {
-		require.LogsContain(t, hook, "Starting gRPC gateway")
+		require.LogsContain(t, hook, "Starting HTTP server")
 		require.LogsDoNotContain(t, hook, "Starting API middleware")
 	}()
 	err = g.Stop()
 	require.NoError(t, err)
 }
 
-func TestGateway_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
+func TestServer_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(&app, set, nil)
 
-	gatewayPort := ctx.Int(flags.GRPCGatewayPort.Name)
-	gatewayHost := ctx.String(flags.GRPCGatewayHost.Name)
-	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	port := ctx.Int(flags.HTTPServerPort.Name)
+	host := ctx.String(flags.HTTPServerHost.Name)
+	address := fmt.Sprintf("%s:%d", host, port)
 
 	opts := []Option{
-		WithGatewayAddr(gatewayAddress),
+		WithHTTPAddr(address),
+		WithRouter(mux.NewRouter()),
 	}
 
 	g, err := New(context.Background(), opts...)

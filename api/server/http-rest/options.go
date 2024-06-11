@@ -1,4 +1,4 @@
-package rest
+package http_rest
 
 import (
 	"time"
@@ -15,9 +15,9 @@ func WithMuxHandler(m restHandler) Option {
 	}
 }
 
-func WithGatewayAddr(addr string) Option {
+func WithHTTPAddr(addr string) Option {
 	return func(g *Server) error {
-		g.cfg.gatewayAddr = addr
+		g.cfg.httpAddr = addr
 		return nil
 	}
 }

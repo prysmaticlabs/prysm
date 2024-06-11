@@ -23,8 +23,8 @@ import (
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/api/server/http-rest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
-	"github.com/prysmaticlabs/prysm/v5/api/server/rest"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
@@ -146,10 +146,10 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 func newRouter(cliCtx *cli.Context) *mux.Router {
 	var allowedOrigins []string
-	if cliCtx.IsSet(flags.GRPCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.GRPCGatewayCorsDomain.Name), ",")
+	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
 	} else {
-		allowedOrigins = strings.Split(flags.GRPCGatewayCorsDomain.Value, ",")
+		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 	r := mux.NewRouter()
 	r.Use(middleware.NormalizeQueryValuesHandler)
@@ -292,7 +292,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 		if err := c.registerRPCService(router); err != nil {
 			return err
 		}
-		if err := c.registerRPCGatewayService(router); err != nil {
+		if err := c.registerHTTPService(router); err != nil {
 			return err
 		}
 	}
@@ -335,12 +335,12 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Rout
 	if err := c.registerRPCService(router); err != nil {
 		return err
 	}
-	if err := c.registerRPCGatewayService(router); err != nil {
+	if err := c.registerHTTPService(router); err != nil {
 		return err
 	}
-	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
-	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
-	webAddress := fmt.Sprintf("http://%s:%d", gatewayHost, gatewayPort)
+	host := cliCtx.String(flags.HTTPServerHost.Name)
+	port := cliCtx.Int(flags.HTTPServerPort.Name)
+	webAddress := fmt.Sprintf("http://%s:%d", host, port)
 	log.WithField("address", webAddress).Info(
 		"Starting Prysm web UI on address, open in browser to access",
 	)
@@ -624,8 +624,8 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 	s := rpc.NewServer(c.cliCtx.Context, &rpc.Config{
 		Host:                   c.cliCtx.String(flags.RPCHost.Name),
 		Port:                   fmt.Sprintf("%d", c.cliCtx.Int(flags.RPCPort.Name)),
-		GRPCGatewayHost:        c.cliCtx.String(flags.GRPCGatewayHost.Name),
-		GRPCGatewayPort:        c.cliCtx.Int(flags.GRPCGatewayPort.Name),
+		HTTPHost:               c.cliCtx.String(flags.HTTPServerHost.Name),
+		HTTPPort:               c.cliCtx.Int(flags.HTTPServerPort.Name),
 		GRPCMaxCallRecvMsgSize: c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 		GRPCRetries:            c.cliCtx.Uint(flags.GRPCRetriesFlag.Name),
 		GRPCRetryDelay:         c.cliCtx.Duration(flags.GRPCRetryDelayFlag.Name),
@@ -645,44 +645,43 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 	return c.services.RegisterService(s)
 }
 
-func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
-	gatewayHost := c.cliCtx.String(flags.GRPCGatewayHost.Name)
-	if gatewayHost != flags.DefaultGatewayHost {
-		log.WithField("webHost", gatewayHost).Warn(
+func (c *ValidatorClient) registerHTTPService(router *mux.Router) error {
+	host := c.cliCtx.String(flags.HTTPServerHost.Name)
+	if host != flags.DefaultHTTPServerHost {
+		log.WithField("webHost", host).Warn(
 			"You are using a non-default web host. Web traffic is served by HTTP, so be wary of " +
 				"changing this parameter if you are exposing this host to the Internet!",
 		)
 	}
-	gatewayPort := c.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	gatewayAddress := net.JoinHostPort(gatewayHost, fmt.Sprintf("%d", gatewayPort))
+	port := c.cliCtx.Int(flags.HTTPServerPort.Name)
+	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	timeout := c.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	var allowedOrigins []string
-	if c.cliCtx.IsSet(flags.GRPCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(c.cliCtx.String(flags.GRPCGatewayCorsDomain.Name), ",")
+	if c.cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
+		allowedOrigins = strings.Split(c.cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
 	} else {
-		allowedOrigins = strings.Split(flags.GRPCGatewayCorsDomain.Value, ",")
+		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 
 	muxHandler := func(h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
 		// The validator api handler requires this special logic as it serves the web APIs and the web UI.
 		if strings.HasPrefix(req.URL.Path, "/api") {
 			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1) // used to redirect apis to standard rest APIs
-			// Else, we handle with the Prysm API gateway without a middleware.
-			h(w, req) //TODO: test this handler wrapper ...
+			h(w, req)
 		} else {
 			// Finally, we handle with the web server.
 			web.Handler(w, req)
 		}
 	}
 
-	opts := []rest.Option{
-		rest.WithMuxHandler(muxHandler),
-		rest.WithRouter(router), // note some routes are registered in server.go
-		rest.WithGatewayAddr(gatewayAddress),
-		rest.WithAllowedOrigins(allowedOrigins),
-		rest.WithTimeout(uint64(timeout)),
+	opts := []http_rest.Option{
+		http_rest.WithMuxHandler(muxHandler),
+		http_rest.WithRouter(router), // note some routes are registered in server.go
+		http_rest.WithHTTPAddr(address),
+		http_rest.WithAllowedOrigins(allowedOrigins),
+		http_rest.WithTimeout(uint64(timeout)),
 	}
-	gw, err := rest.New(c.cliCtx.Context, opts...)
+	gw, err := http_rest.New(c.cliCtx.Context, opts...)
 	if err != nil {
 		return err
 	}

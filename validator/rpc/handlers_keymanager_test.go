@@ -40,7 +40,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/v5/validator/testing"
 	"go.uber.org/mock/gomock"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -691,7 +690,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	ctx := grpc.NewContextWithServerTransportStream(context.Background(), grpc.ServerTransportStreamFromContext(context.Background()))
+	ctx := context.Background()
 	defaultWalletPath = setupWalletDir(t)
 	opts := []accounts.Option{
 		accounts.WithWalletDir(defaultWalletPath),
@@ -954,7 +953,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	beaconClient := validatormock.NewMockValidatorClient(ctrl)
-	ctx := grpc.NewContextWithServerTransportStream(context.Background(), grpc.ServerTransportStreamFromContext(context.Background()))
+	ctx := context.Background()
 
 	pubkey1, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
 	pubkey2, err2 := hexutil.Decode("0xbedefeaa94e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2cdddddddddddddddddddddddd")
@@ -1162,7 +1161,7 @@ func TestServer_SetGasLimit_InvalidPubKey(t *testing.T) {
 }
 
 func TestServer_DeleteGasLimit(t *testing.T) {
-	ctx := grpc.NewContextWithServerTransportStream(context.Background(), grpc.ServerTransportStreamFromContext(context.Background()))
+	ctx := context.Background()
 	pubkey1, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
 	pubkey2, err2 := hexutil.Decode("0xbedefeaa94e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2cdddddddddddddddddddddddd")
 	require.NoError(t, err)
@@ -1599,7 +1598,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 	defer ctrl.Finish()
 
 	beaconClient := validatormock.NewMockValidatorClient(ctrl)
-	ctx := grpc.NewContextWithServerTransportStream(context.Background(), grpc.ServerTransportStreamFromContext(context.Background()))
+	ctx := context.Background()
 	pubkey := "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"
 	byteval, err := hexutil.Decode(pubkey)
 	require.NoError(t, err)
@@ -1809,7 +1808,7 @@ func TestServer_SetFeeRecipientByPubkey_InvalidFeeRecipient(t *testing.T) {
 }
 
 func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
-	ctx := grpc.NewContextWithServerTransportStream(context.Background(), grpc.ServerTransportStreamFromContext(context.Background()))
+	ctx := context.Background()
 	pubkey := "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"
 	byteval, err := hexutil.Decode(pubkey)
 	require.NoError(t, err)

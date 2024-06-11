@@ -133,7 +133,7 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 		expected = 0.95
 	}
 	if partRate < expected {
-		path := fmt.Sprintf("http://localhost:%d/eth/v2/debug/beacon/states/head", e2eparams.TestParams.Ports.PrysmBeaconNodeGatewayPort)
+		path := fmt.Sprintf("http://localhost:%d/eth/v2/debug/beacon/states/head", e2eparams.TestParams.Ports.PrysmBeaconNodeHTTPPort)
 		resp := structs.GetBeaconStateV2Response{}
 		httpResp, err := http.Get(path) // #nosec G107 -- path can't be constant because it depends on port param
 		if err != nil {

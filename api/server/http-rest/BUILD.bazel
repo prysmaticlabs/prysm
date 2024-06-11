@@ -7,7 +7,7 @@ go_library(
         "options.go",
         "server.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v5/api/server/rest",
+    importpath = "github.com/prysmaticlabs/prysm/v5/api/server/http-rest",
     visibility = ["//visibility:public"],
     deps = [
         "//api/server/middleware:go_default_library",
@@ -26,6 +26,7 @@ go_test(
         "//cmd/beacon-chain/flags:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
+        "@com_github_gorilla_mux//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],

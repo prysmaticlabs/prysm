@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
-	syncmock "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -24,51 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
-
-func TestValidateSync(t *testing.T) {
-	// TODO: determine if we should create our own serverTransportStream or remove the gRPC sync header metatdata
-	//ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
-	//t.Run("syncing", func(t *testing.T) {
-	//	syncChecker := &syncmock.Sync{
-	//		IsSyncing: true,
-	//	}
-	//	headSlot := primitives.Slot(100)
-	//	st, err := util.NewBeaconState()
-	//	require.NoError(t, err)
-	//	require.NoError(t, st.SetSlot(50))
-	//	chainService := &chainmock.ChainService{
-	//		Slot:  &headSlot,
-	//		State: st,
-	//	}
-	//	err = ValidateSyncGRPC(ctx, syncChecker, chainService, chainService, chainService)
-	//	require.NotNil(t, err)
-	//	sts, ok := grpc.ServerTransportStreamFromContext(ctx).(*runtime.ServerTransportStream)
-	//	require.Equal(t, true, ok, "type assertion failed")
-	//	md := sts.Header()
-	//	v, ok := md[strings.ToLower(grpcutil.CustomErrorMetadataKey)]
-	//	require.Equal(t, true, ok, "could not retrieve custom error metadata value")
-	//	assert.DeepEqual(
-	//		t,
-	//		[]string{`{"data":{"head_slot":"50","sync_distance":"50","is_syncing":true,"is_optimistic":false,"el_offline":false}}`},
-	//		v,
-	//	)
-	//})
-	t.Run("not syncing", func(t *testing.T) {
-		syncChecker := &syncmock.Sync{
-			IsSyncing: false,
-		}
-		headSlot := primitives.Slot(100)
-		st, err := util.NewBeaconState()
-		require.NoError(t, err)
-		require.NoError(t, st.SetSlot(50))
-		chainService := &chainmock.ChainService{
-			Slot:  &headSlot,
-			State: st,
-		}
-		err = ValidateSyncGRPC(context.Background(), syncChecker, nil, nil, chainService)
-		require.NoError(t, err)
-	})
-}
 
 func TestIsOptimistic(t *testing.T) {
 	ctx := context.Background()

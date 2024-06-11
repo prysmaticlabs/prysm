@@ -179,7 +179,7 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 	// beacon node, we split half the validators to run with
 	// lighthouse and the other half with prysm.
 	if v.config.UseValidatorCrossClient && index%2 == 0 {
-		httpPort = e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort
+		httpPort = e2e.TestParams.Ports.PrysmBeaconNodeHTTPPort
 	}
 	args := []string{
 		"validator_client",

@@ -58,17 +58,3 @@ func TestAppendHeaders(t *testing.T) {
 		assert.Equal(t, "value=1", md.Get("first")[0])
 	})
 }
-
-//func TestAppendCustomErrorHeader(t *testing.T) {
-//	ctx := context.Background()
-//	stream := &runtime.ServerTransportStream{}
-//	ctx = grpc.NewContextWithServerTransportStream(ctx, stream)
-//	data := &customErrorData{Message: "foo"}
-//	require.NoError(t, AppendCustomErrorHeader(ctx, data))
-//	// The stream used in test setup sets the metadata key in lowercase.
-//	value, ok := stream.Header()[strings.ToLower(CustomErrorMetadataKey)]
-//	require.Equal(t, true, ok, "Failed to retrieve custom error metadata value")
-//	expected, err := json.Marshal(data)
-//	require.NoError(t, err)
-//	assert.Equal(t, string(expected), value[0])
-//}

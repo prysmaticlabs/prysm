@@ -1,4 +1,4 @@
-package rest
+package http_rest
 
 import "github.com/sirupsen/logrus"
 
