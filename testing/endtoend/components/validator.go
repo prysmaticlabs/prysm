@@ -1,7 +1,6 @@
 package components
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -398,19 +397,11 @@ func writeLinesToFile(lines []string, filename string) error {
 		}
 	}(f)
 
-	// Create a buffered writer from the file
-	writer := bufio.NewWriter(f)
-
 	// Iterate through all lines in the slice and write them to the file
 	for _, line := range lines {
-		if _, err := writer.WriteString(line + "\n"); err != nil {
+		if _, err := f.WriteString(line + "\n"); err != nil {
 			return fmt.Errorf("error writing line to file: %w", err)
 		}
-	}
-
-	// Flush remaining buffered data to the file
-	if err := writer.Flush(); err != nil {
-		return fmt.Errorf("error flushing data to file: %w", err)
 	}
 
 	return nil
