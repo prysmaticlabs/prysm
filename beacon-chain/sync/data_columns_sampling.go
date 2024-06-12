@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -15,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -50,40 +48,6 @@ func sortedListFromMap(m map[uint64]bool) []uint64 {
 	return result
 }
 
-// extractNodeID extracts the node ID from a peer ID.
-func extractNodeID(pid peer.ID) ([32]byte, error) {
-	var nodeID [32]byte
-
-	// Retrieve the public key object of the peer under "crypto" form.
-	pubkeyObjCrypto, err := pid.ExtractPublicKey()
-	if err != nil {
-		return nodeID, errors.Wrap(err, "extract public key")
-	}
-
-	// Extract the bytes representation of the public key.
-	compressedPubKeyBytes, err := pubkeyObjCrypto.Raw()
-	if err != nil {
-		return nodeID, errors.Wrap(err, "public key raw")
-	}
-
-	// Retrieve the public key object of the peer under "SECP256K1" form.
-	pubKeyObjSecp256k1, err := btcec.ParsePubKey(compressedPubKeyBytes)
-	if err != nil {
-		return nodeID, errors.Wrap(err, "parse public key")
-	}
-
-	// Concatenate the X and Y coordinates represented in bytes.
-	buf := make([]byte, 64)
-	math.ReadBits(pubKeyObjSecp256k1.X(), buf[:32])
-	math.ReadBits(pubKeyObjSecp256k1.Y(), buf[32:])
-
-	// Get the node ID by hashing the concatenated X and Y coordinates.
-	nodeIDBytes := crypto.Keccak256(buf)
-	copy(nodeID[:], nodeIDBytes)
-
-	return nodeID, nil
-}
-
 // sampleDataColumnFromPeer samples data columns from a peer.
 // It returns the missing columns after sampling.
 func (s *Service) sampleDataColumnFromPeer(
@@ -101,7 +65,7 @@ func (s *Service) sampleDataColumnFromPeer(
 	peerCustodiedSubnetCount := s.cfg.p2p.CustodyCountFromRemotePeer(pid)
 
 	// Extract the node ID from the peer ID.
-	nodeID, err := extractNodeID(pid)
+	nodeID, err := p2p.ConvertPeerIDToNodeID(pid)
 	if err != nil {
 		return nil, errors.Wrap(err, "extract node ID")
 	}
