@@ -530,10 +530,6 @@ func retrieveLatestRecord(recs []*dbCommon.AttestationRecord) *dbCommon.Attestat
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
 func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) error {
-	if !slots.IsEpochStart(slot) && v.duties != nil {
-		// Do nothing if not epoch start AND assignments already exist.
-		return nil
-	}
 	// Set deadline to end of epoch.
 	ss, err := slots.EpochStart(slots.ToEpoch(slot) + 1)
 	if err != nil {
@@ -541,7 +537,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	}
 	ctx, cancel := context.WithDeadline(ctx, v.SlotDeadline(ss))
 	defer cancel()
-	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
+	ctx, span := trace.StartSpan(ctx, "validator.UpdateDuties")
 	defer span.End()
 
 	validatingKeys, err := v.km.FetchValidatingPublicKeys(ctx)
@@ -572,17 +568,14 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	// If duties is nil it means we have had no prior duties and just started up.
 	resp, err := v.validatorClient.Duties(ctx, req)
 	if err != nil {
-		v.dutiesLock.Lock()
-		v.duties = nil // Clear assignments so we know to retry the request.
-		v.dutiesLock.Unlock()
-		log.WithError(err).Error("error getting validator duties")
 		return err
 	}
 
 	v.dutiesLock.Lock()
 	v.duties = resp
-	v.logDuties(slot, v.duties.CurrentEpochDuties, v.duties.NextEpochDuties)
 	v.dutiesLock.Unlock()
+
+	v.logDuties(slot, resp.CurrentEpochDuties, resp.NextEpochDuties)
 
 	allExitedCounter := 0
 	for i := range resp.CurrentEpochDuties {

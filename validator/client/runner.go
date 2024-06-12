@@ -24,6 +24,7 @@ import (
 // Time to wait before trying to reconnect with beacon node.
 var backOffPeriod = 10 * time.Second
 
+// TODO: rewrite this?
 // Run the main validator routine. This routine exits if the context is
 // canceled.
 //
@@ -38,18 +39,15 @@ func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
 
-	headSlot, err := initializeValidatorAndGetHeadSlot(ctx, v)
-	if err != nil {
+	// TODO: What if we get disconnected here? Does it work in grpc?
+	if err := initializeValidator(ctx, v); err != nil {
 		log.WithError(err).Error("Could not initialize validator")
 		return
 	}
-	if err := v.UpdateDuties(ctx, headSlot); err != nil {
-		handleUpdateDutiesError(err, headSlot)
-	}
-
-	if v.ProposerSettings() == nil {
-		log.Warn("Validator client started without proposer settings such as fee recipient" +
-			" and will continue to use settings provided in the beacon node.")
+	headSlot, err := v.CanonicalHeadSlot(ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not get canonical head slot")
+		return
 	}
 
 	km, err := v.Keymanager()
@@ -60,101 +58,141 @@ func run(ctx context.Context, v iface.Validator) {
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 
-	eventsChan := make(chan *event.Event, 1)
-	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
+	if v.ProposerSettings() == nil {
+		log.Warn("Validator client started without proposer settings such as fee recipient" +
+			" and will continue to use settings provided in the beacon node.")
+	}
 
-	updateProposerSettings := true
-	nodeIsHealthyPrev := true
-
-	for {
-		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
-		select {
-		case <-ctx.Done():
-			log.Info("Context canceled, stopping validator")
-			span.End()
-			sub.Unsubscribe()
-			close(accountsChangedChan)
-			close(eventsChan)
-			return // Exit if context is canceled.
-		case slot := <-v.NextSlot():
-			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
-			slotCtx, slotCancel := context.WithDeadline(ctx, v.SlotDeadline(slot))
-
-			// update proposer settings at the start of each epoch to account for the following edge case:
-			// proposer is activated at the start of epoch and tries to propose immediately
-			if slots.IsEpochStart(slot) {
-				updateProposerSettings = true
-			}
-
-			if updateProposerSettings {
-				updateProposerSettings = false
+	pushProposerSettingsChan := make(chan primitives.Slot, 1)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case slot := <-pushProposerSettingsChan:
 				go func() {
-					proposerSettingsCtx, proposerSettingsCancel := context.WithDeadline(ctx, time.Now().Add(5*time.Minute))
+					ctx, cancel := context.WithDeadline(ctx, time.Now().Add(5*time.Minute))
 
 					// TODO: remove log
 					log.Info("Updating proposer settings")
-					if err := v.PushProposerSettings(proposerSettingsCtx, km, slot); err != nil {
-						log.WithError(err).Warn("Failed to update proposer settings. Trying again in the next slot")
-						// try updating again next slot in case the request failed
-						updateProposerSettings = true
+					if err := v.PushProposerSettings(ctx, km, slot); err != nil {
+						log.WithError(err).Warn("Failed to update proposer settings")
 					}
 					// release resources
-					proposerSettingsCancel()
+					cancel()
 				}()
 			}
+		}
+	}()
+	pushProposerSettingsChan <- headSlot
 
-			// Keep trying to update assignments if they are nil or if we are past an
-			// epoch transition in the beacon node's state.
-			if err := v.UpdateDuties(ctx, slot); err != nil {
-				handleUpdateDutiesError(err, slot)
+	updateDutiesNeeded := false
+	if err = v.UpdateDuties(ctx, headSlot); err != nil {
+		handleUpdateDutiesError(err, headSlot)
+		updateDutiesNeeded = true
+	}
+
+	eventsChan := make(chan *event.Event, 1)
+	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
+
+	var (
+		slotSpan             *trace.Span
+		slotCtx              context.Context
+		slotCancel           context.CancelFunc
+		initializationNeeded = false
+		nodeIsHealthyPrev    = true
+	)
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Context canceled, stopping validator")
+			sub.Unsubscribe()
+			close(accountsChangedChan)
+			close(eventsChan)
+			if slotCancel != nil {
 				slotCancel()
-				span.End()
+			}
+			return
+		case slot := <-v.NextSlot(): // This case should be always handled first so that other actions don't block slot processing
+			if !nodeIsHealthyPrev {
 				continue
 			}
+			// TODO: it would be better if we could start everything from scratch
+			if initializationNeeded {
+				initializationNeeded = false
+				if err := initializeValidator(ctx, v); err != nil {
+					log.WithError(err).Error("Could not initialize validator")
+					slotCancel()
+					return
+				}
+			}
+
+			slotCtx, slotCancel = context.WithDeadline(ctx, v.SlotDeadline(slot))
+			slotCtx, slotSpan = trace.StartSpan(slotCtx, "validator.processSlot")
+			slotSpan.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
+
+			if slots.IsEpochStart(slot) {
+				updateDutiesNeeded = true
+				// Update proposer settings at the start of each epoch because new validators could have become active
+				pushProposerSettingsChan <- slot
+			}
+
+			if updateDutiesNeeded {
+				updateDutiesNeeded = false
+				// Keep trying to update assignments if they are nil or if we are past an
+				// epoch transition in the beacon node's state.
+				if err = v.UpdateDuties(ctx, slot); err != nil {
+					handleUpdateDutiesError(err, slot)
+					updateDutiesNeeded = true
+					slotCancel()
+					slotSpan.End()
+					continue
+				}
+			}
+
+			var wg sync.WaitGroup
+			roles, err := v.RolesAt(slotCtx, slot)
+			if err != nil {
+				log.WithError(err).Error("Could not get validator roles")
+				slotCancel()
+				slotSpan.End()
+				continue
+			}
+			performRoles(slotCtx, roles, v, slot, &wg, slotSpan)
 
 			// Start fetching domain data for the next epoch.
 			if slots.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
-
-			var wg sync.WaitGroup
-			allRoles, err := v.RolesAt(ctx, slot)
-			if err != nil {
-				log.WithError(err).Error("Could not get validator roles")
-				slotCancel()
-				span.End()
-				continue
-			}
-			performRoles(slotCtx, allRoles, v, slot, &wg, span)
-		case <-v.LastSecondOfSlot():
+		case slot := <-v.LastSecondOfSlot():
 			nodeIsHealthyCurr := v.HealthTracker().IsHealthy()
-			if !nodeIsHealthyPrev && nodeIsHealthyCurr {
-				updateProposerSettings = true
-				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
-				if err != nil {
-					log.WithError(err).Error("Could not initialize validator")
-					continue
+			if nodeIsHealthyCurr {
+				if !nodeIsHealthyPrev {
+					pushProposerSettingsChan <- slot
 				}
-				if err = v.UpdateDuties(ctx, headSlot); err != nil {
-					handleUpdateDutiesError(err, headSlot)
-					continue
+				// In case event stream died
+				if !v.EventStreamIsRunning() {
+					log.Info("Event stream reconnecting...")
+					go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
 				}
-			}
-			if !nodeIsHealthyCurr && features.Get().EnableBeaconRESTApi {
+			} else if features.Get().EnableBeaconRESTApi {
 				v.ChangeHost()
-			}
-			// in case of node returning healthy but event stream died
-			if nodeIsHealthyCurr && !v.EventStreamIsRunning() {
-				log.Info("Event stream reconnecting...")
-				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
+				initializationNeeded = true
 			}
 
 			nodeIsHealthyPrev = nodeIsHealthyCurr
 		case e := <-eventsChan:
 			v.ProcessEvent(e)
-		case currentKeys := <-accountsChangedChan: // should be less of a priority than next slot
-			updateProposerSettings = true
-			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
+		case keys := <-accountsChangedChan:
+			onAccountsChanged(ctx, v, keys, accountsChangedChan)
+			updateDutiesNeeded = true
+			headSlot, err := v.CanonicalHeadSlot(ctx)
+			if err != nil {
+				log.WithError(err).Error("Could not get canonical head slot")
+				continue
+			}
+			pushProposerSettingsChan <- headSlot
 		}
 	}
 }
@@ -172,33 +210,19 @@ func onAccountsChanged(ctx context.Context, v iface.Validator, current [][48]byt
 			log.WithError(err).Warn("Could not wait for validator activation")
 		}
 	}
-	headSlot, err := initializeValidatorAndGetHeadSlot(ctx, v)
-	if err != nil {
-		log.WithError(err).Error("Could not initialize validator")
-		return
-	}
-	if err = v.UpdateDuties(ctx, headSlot); err != nil {
-		handleUpdateDutiesError(err, headSlot)
-		return
-	}
 }
 
-func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (primitives.Slot, error) {
+func initializeValidator(ctx context.Context, v iface.Validator) error {
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
 	firstTime := true
 
-	var (
-		headSlot primitives.Slot
-		err      error
-	)
-
 	for {
 		if !firstTime {
 			if ctx.Err() != nil {
 				log.Info("Context canceled, stopping validator")
-				return headSlot, errors.New("context canceled")
+				return errors.New("context canceled")
 			}
 			<-ticker.C
 		}
@@ -233,16 +257,6 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
 
-		headSlot, err = v.CanonicalHeadSlot(ctx)
-		if isConnectionError(err) {
-			log.WithError(err).Warn("Could not get current canonical head slot")
-			continue
-		}
-
-		if err != nil {
-			log.WithError(err).Fatal("Could not get current canonical head slot")
-		}
-
 		if err := v.CheckDoppelGanger(ctx); err != nil {
 			if isConnectionError(err) {
 				log.WithError(err).Warn("Could not wait for checking doppelganger")
@@ -253,7 +267,7 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 		}
 		break
 	}
-	return headSlot, nil
+	return nil
 }
 
 func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, wg *sync.WaitGroup, span *trace.Span) {
