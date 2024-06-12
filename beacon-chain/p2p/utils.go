@@ -95,7 +95,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		return nil, err
 	}
 
-	log.WithField("file", defaultKeyPath).Info("Wrote network key to")
+	log.WithField("path", defaultKeyPath).Info("Wrote network key to file")
 	// Read the key from the defaultKeyPath file just written
 	// for the strongest guarantee that the next start will be the same as this one.
 	return privKeyFromFile(defaultKeyPath)
