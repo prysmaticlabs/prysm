@@ -178,6 +178,21 @@ func (mr *MockValidatorClientMockRecorder) FeeRecipientByPubKey(arg0, arg1 any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeeRecipientByPubKey", reflect.TypeOf((*MockValidatorClient)(nil).FeeRecipientByPubKey), arg0, arg1)
 }
 
+// GetPayloadAttestationData mocks base method.
+func (m *MockValidatorClient) GetPayloadAttestationData(arg0 context.Context, arg1 *eth.GetPayloadAttestationDataRequest) (*eth.PayloadAttestationData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPayloadAttestationData", arg0, arg1)
+	ret0, _ := ret[0].(*eth.PayloadAttestationData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPayloadAttestationData indicates an expected call of GetPayloadAttestationData.
+func (mr *MockValidatorClientMockRecorder) GetPayloadAttestationData(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPayloadAttestationData", reflect.TypeOf((*MockValidatorClient)(nil).GetPayloadAttestationData), arg0, arg1)
+}
+
 // Host mocks base method.
 func (m *MockValidatorClient) Host() string {
 	m.ctrl.T.Helper()
@@ -304,6 +319,21 @@ func (m *MockValidatorClient) SubmitAggregateSelectionProof(arg0 context.Context
 func (mr *MockValidatorClientMockRecorder) SubmitAggregateSelectionProof(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAggregateSelectionProof", reflect.TypeOf((*MockValidatorClient)(nil).SubmitAggregateSelectionProof), arg0, arg1, arg2, arg3)
+}
+
+// SubmitPayloadAttestation mocks base method.
+func (m *MockValidatorClient) SubmitPayloadAttestation(arg0 context.Context, arg1 *eth.PayloadAttestationMessage) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubmitPayloadAttestation", arg0, arg1)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitPayloadAttestation indicates an expected call of SubmitPayloadAttestation.
+func (mr *MockValidatorClientMockRecorder) SubmitPayloadAttestation(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitPayloadAttestation", reflect.TypeOf((*MockValidatorClient)(nil).SubmitPayloadAttestation), arg0, arg1)
 }
 
 // SubmitSignedAggregateSelectionProof mocks base method.

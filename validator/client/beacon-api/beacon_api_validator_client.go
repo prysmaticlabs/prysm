@@ -219,6 +219,14 @@ func (c *beaconApiValidatorClient) AggregatedSyncSelections(ctx context.Context,
 	return c.aggregatedSyncSelections(ctx, selections)
 }
 
+func (c *beaconApiValidatorClient) GetPayloadAttestationData(ctx context.Context, in *ethpb.GetPayloadAttestationDataRequest) (*ethpb.PayloadAttestationData, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (c *beaconApiValidatorClient) SubmitPayloadAttestation(ctx context.Context, in *ethpb.PayloadAttestationMessage) (*empty.Empty, error) {
+	return nil, errors.New("not implemented")
+}
+
 func wrapInMetrics[Resp any](action string, f func() (Resp, error)) (Resp, error) {
 	now := time.Now()
 	resp, err := f()

@@ -41,11 +41,14 @@ go_test(
     srcs = [
         "execution_test.go",
         "factory_test.go",
+        "getters_epbs_test.go",
         "getters_test.go",
         "kzg_test.go",
+        "proto_epbs_test.go",
         "proto_test.go",
         "roblob_test.go",
         "roblock_test.go",
+        "setters_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
