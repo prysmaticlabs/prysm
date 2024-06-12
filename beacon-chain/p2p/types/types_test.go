@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
+
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -193,4 +194,104 @@ func hexDecodeOrDie(t *testing.T, str string) []byte {
 	decoded, err := hex.DecodeString(str)
 	require.NoError(t, err)
 	return decoded
+}
+
+// =====================================
+// DataColumnSidecarsByRootReq section
+// =====================================
+func generateDataColumnIdentifiers(n int) []*eth.DataColumnIdentifier {
+	r := make([]*eth.DataColumnIdentifier, n)
+	for i := 0; i < n; i++ {
+		r[i] = &eth.DataColumnIdentifier{
+			BlockRoot:   bytesutil.PadTo([]byte{byte(i)}, 32),
+			ColumnIndex: uint64(i),
+		}
+	}
+	return r
+}
+
+func TestDataColumnSidecarsByRootReq_MarshalUnmarshal(t *testing.T) {
+	cases := []struct {
+		name         string
+		ids          []*eth.DataColumnIdentifier
+		marshalErr   error
+		unmarshalErr error
+		unmarshalMod func([]byte) []byte
+	}{
+		{
+			name: "empty list",
+		},
+		{
+			name: "single item list",
+			ids:  generateDataColumnIdentifiers(1),
+		},
+		{
+			name: "10 item list",
+			ids:  generateDataColumnIdentifiers(10),
+		},
+		{
+			name: "wonky unmarshal size",
+			ids:  generateDataColumnIdentifiers(10),
+			unmarshalMod: func(in []byte) []byte {
+				in = append(in, byte(0))
+				return in
+			},
+			unmarshalErr: ssz.ErrIncorrectByteSize,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := DataColumnSidecarsByRootReq(c.ids)
+			bytes, err := req.MarshalSSZ()
+			if c.marshalErr != nil {
+				require.ErrorIs(t, err, c.marshalErr)
+				return
+			}
+			require.NoError(t, err)
+			if c.unmarshalMod != nil {
+				bytes = c.unmarshalMod(bytes)
+			}
+			got := &DataColumnSidecarsByRootReq{}
+			err = got.UnmarshalSSZ(bytes)
+			if c.unmarshalErr != nil {
+				require.ErrorIs(t, err, c.unmarshalErr)
+				return
+			}
+			require.NoError(t, err)
+			for i, id := range *got {
+				require.DeepEqual(t, c.ids[i], id)
+			}
+		})
+	}
+}
+
+func TestDataColumnSidecarsByRootReq_Sort(t *testing.T) {
+	ids := []*eth.DataColumnIdentifier{
+		{
+			BlockRoot:   bytesutil.PadTo([]byte{3}, 32),
+			ColumnIndex: 0,
+		},
+		{
+			BlockRoot:   bytesutil.PadTo([]byte{2}, 32),
+			ColumnIndex: 2,
+		},
+		{
+			BlockRoot:   bytesutil.PadTo([]byte{2}, 32),
+			ColumnIndex: 1,
+		},
+		{
+			BlockRoot:   bytesutil.PadTo([]byte{1}, 32),
+			ColumnIndex: 2,
+		},
+		{
+			BlockRoot:   bytesutil.PadTo([]byte{0}, 32),
+			ColumnIndex: 3,
+		},
+	}
+	req := DataColumnSidecarsByRootReq(ids)
+	require.Equal(t, true, req.Less(4, 3))
+	require.Equal(t, true, req.Less(3, 2))
+	require.Equal(t, true, req.Less(2, 1))
+	require.Equal(t, true, req.Less(1, 0))
 }
