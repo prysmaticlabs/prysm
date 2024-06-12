@@ -331,3 +331,17 @@ func TestLastSecondOfSlot_HealthyAgain(t *testing.T) {
 	run(ctx, v)
 	assert.Equal(t, true, v.UpdateDutiesCalled)
 }
+
+func TestClosure(t *testing.T) {
+	var b bool
+	go func() {
+		b = true
+	}()
+	time.Sleep(1000)
+	go func() {
+		if b == true {
+			log.Info("true")
+		}
+	}()
+	time.Sleep(1000)
+}

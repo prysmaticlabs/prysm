@@ -1,8 +1,6 @@
 package rpc
 
 import (
-	"net/http"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -55,8 +53,8 @@ func (s *Server) registerBeaconClient() error {
 	)
 
 	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
-		http.Client{Timeout: s.beaconApiTimeout},
 		s.beaconApiEndpoint,
+		s.beaconApiTimeout,
 	)
 
 	s.chainClient = beaconChainClientFactory.NewChainClient(conn, restHandler)

@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"net/http"
 	"strings"
 	"time"
 
@@ -174,8 +173,8 @@ func (v *ValidatorService) Start() {
 		return
 	}
 	restHandler := beaconApi.NewBeaconApiJsonRestHandler(
-		http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
 		hosts[0],
+		v.conn.GetBeaconApiTimeout(),
 	)
 
 	nodeClient := nodeclientfactory.NewNodeClient(v.conn, restHandler)

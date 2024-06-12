@@ -262,11 +262,8 @@ func (*FakeValidator) HasProposerSettings() bool {
 }
 
 // PushProposerSettings for mocking
-func (fv *FakeValidator) PushProposerSettings(ctx context.Context, _ keymanager.IKeymanager, _ primitives.Slot, deadline time.Time) error {
+func (fv *FakeValidator) PushProposerSettings(ctx context.Context, _ keymanager.IKeymanager, _ primitives.Slot) error {
 	fv.PushProposerSettingsCalled = true
-	nctx, cancel := context.WithDeadline(ctx, deadline)
-	ctx = nctx
-	defer cancel()
 	time.Sleep(fv.ProposerSettingWait)
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		log.Error("deadline exceeded")

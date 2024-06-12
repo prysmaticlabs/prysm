@@ -119,6 +119,7 @@ type validator struct {
 	blacklistedPubkeysLock             sync.RWMutex
 	attSelectionLock                   sync.Mutex
 	dutiesLock                         sync.RWMutex
+	pubkeyToValidatorIndexLock         sync.Mutex
 }
 
 type validatorStatus struct {
@@ -1039,13 +1040,10 @@ func (v *validator) SetProposerSettings(ctx context.Context, settings *proposer.
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
-func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error {
+func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot) error {
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
-	nctx, cancel := context.WithDeadline(ctx, deadline)
-	ctx = nctx
-	defer cancel()
 
 	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -1087,7 +1085,6 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 }
 
 func (v *validator) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *eventClient.Event) {
-	log.WithField("topics", topics).Info("Starting event stream")
 	v.validatorClient.StartEventStream(ctx, topics, eventsChannel)
 }
 
@@ -1143,6 +1140,8 @@ func (v *validator) ChangeHost() {
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	statusRequestKeys := make([][]byte, 0)
+
+	v.pubkeyToValidatorIndexLock.Lock()
 	for _, k := range pubkeys {
 		_, ok := v.pubkeyToValidatorIndex[k]
 		// Get validator index from RPC server if not found.
@@ -1159,6 +1158,8 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 		copiedk := k
 		statusRequestKeys = append(statusRequestKeys, copiedk[:])
 	}
+	v.pubkeyToValidatorIndexLock.Unlock()
+
 	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: statusRequestKeys,
 	})
