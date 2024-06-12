@@ -436,7 +436,7 @@ func NewBeaconStateElectra(options ...func(state *ethpb.BeaconStateElectra) erro
 			BlockHash:              make([]byte, 32),
 			TransactionsRoot:       make([]byte, 32),
 			WithdrawalsRoot:        make([]byte, 32),
-			DepositReceiptsRoot:    make([]byte, 32),
+			DepositRequestsRoot:    make([]byte, 32),
 			WithdrawalRequestsRoot: make([]byte, 32),
 		},
 	}

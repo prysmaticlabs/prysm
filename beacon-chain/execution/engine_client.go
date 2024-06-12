@@ -631,7 +631,7 @@ func fullPayloadFromPayloadBody(
 				Withdrawals:        body.Withdrawals,
 				ExcessBlobGas:      ebg,
 				BlobGasUsed:        bgu,
-				DepositReceipts:    dr,
+				DepositRequests:    dr,
 				WithdrawalRequests: wr,
 			}) // We can't get the block value and don't care about the block value for this instance
 	default:
@@ -780,8 +780,8 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			BlockHash:          make([]byte, fieldparams.RootLength),
 			Transactions:       make([][]byte, 0),
 			Withdrawals:        make([]*pb.Withdrawal, 0),
-			WithdrawalRequests: make([]*pb.ExecutionLayerWithdrawalRequest, 0),
-			DepositReceipts:    make([]*pb.DepositReceipt, 0),
+			WithdrawalRequests: make([]*pb.WithdrawalRequest, 0),
+			DepositRequests:    make([]*pb.DepositRequest, 0),
 		}, nil
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedVersion, "version=%s", version.String(v))

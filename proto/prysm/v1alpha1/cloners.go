@@ -1046,19 +1046,19 @@ func CopyExecutionPayloadElectra(payload *enginev1.ExecutionPayloadElectra) *eng
 		Withdrawals:        CopyWithdrawalSlice(payload.Withdrawals),
 		BlobGasUsed:        payload.BlobGasUsed,
 		ExcessBlobGas:      payload.ExcessBlobGas,
-		DepositReceipts:    CopyDepositReceipts(payload.DepositReceipts),
+		DepositRequests:    CopyDepositRequests(payload.DepositRequests),
 		WithdrawalRequests: CopyWithdrawalRequests(payload.WithdrawalRequests),
 	}
 }
 
-func CopyDepositReceipts(dr []*enginev1.DepositReceipt) []*enginev1.DepositReceipt {
+func CopyDepositRequests(dr []*enginev1.DepositRequest) []*enginev1.DepositRequest {
 	if dr == nil {
 		return nil
 	}
 
-	newDr := make([]*enginev1.DepositReceipt, len(dr))
+	newDr := make([]*enginev1.DepositRequest, len(dr))
 	for i, d := range dr {
-		newDr[i] = &enginev1.DepositReceipt{
+		newDr[i] = &enginev1.DepositRequest{
 			Pubkey:                bytesutil.SafeCopyBytes(d.Pubkey),
 			WithdrawalCredentials: bytesutil.SafeCopyBytes(d.WithdrawalCredentials),
 			Amount:                d.Amount,
@@ -1069,13 +1069,13 @@ func CopyDepositReceipts(dr []*enginev1.DepositReceipt) []*enginev1.DepositRecei
 	return newDr
 }
 
-func CopyWithdrawalRequests(wr []*enginev1.ExecutionLayerWithdrawalRequest) []*enginev1.ExecutionLayerWithdrawalRequest {
+func CopyWithdrawalRequests(wr []*enginev1.WithdrawalRequest) []*enginev1.WithdrawalRequest {
 	if wr == nil {
 		return nil
 	}
-	newWr := make([]*enginev1.ExecutionLayerWithdrawalRequest, len(wr))
+	newWr := make([]*enginev1.WithdrawalRequest, len(wr))
 	for i, w := range wr {
-		newWr[i] = &enginev1.ExecutionLayerWithdrawalRequest{
+		newWr[i] = &enginev1.WithdrawalRequest{
 			SourceAddress:   bytesutil.SafeCopyBytes(w.SourceAddress),
 			ValidatorPubkey: bytesutil.SafeCopyBytes(w.ValidatorPubkey),
 			Amount:          w.Amount,
@@ -1107,7 +1107,7 @@ func CopyExecutionPayloadHeaderElectra(payload *enginev1.ExecutionPayloadHeaderE
 		WithdrawalsRoot:        bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
 		BlobGasUsed:            payload.BlobGasUsed,
 		ExcessBlobGas:          payload.ExcessBlobGas,
-		DepositReceiptsRoot:    bytesutil.SafeCopyBytes(payload.DepositReceiptsRoot),
+		DepositRequestsRoot:    bytesutil.SafeCopyBytes(payload.DepositRequestsRoot),
 		WithdrawalRequestsRoot: bytesutil.SafeCopyBytes(payload.WithdrawalRequestsRoot),
 	}
 }
