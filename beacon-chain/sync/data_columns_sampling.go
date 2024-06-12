@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -11,10 +13,13 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 
+	"github.com/prysmaticlabs/prysm/v5/async"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -22,6 +27,198 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
+
+const PeerRefreshInterval = 1 * time.Minute
+
+// DataColumnSampler defines the interface for sampling data columns from peers for requested block root and samples count.
+type DataColumnSampler interface {
+	// Run starts the data column sampling service.
+	Run(ctx context.Context, stateNotifier statefeed.Notifier)
+}
+
+var _ DataColumnSampler = (*DataColumnSampler1D)(nil)
+
+// DataColumnSampler1D is a 1D data column sampler for PeerDAS 1D.
+type DataColumnSampler1D struct {
+	sync.RWMutex
+
+	p2p p2p.P2P
+
+	// peerToColumnMap maps a peer to the columns it is responsible for custody.
+	peerToColumnMap map[peer.ID]map[uint64]bool
+
+	// columnToPeerMap maps a column to the peer responsible for custody.
+	columnToPeerMap map[uint64]map[peer.ID]bool
+}
+
+// NewDataColumnSampler1D creates a new 1D data column sampler.
+func NewDataColumnSampler1D(p2p p2p.P2P) *DataColumnSampler1D {
+	columnToPeerMap := make(map[uint64]map[peer.ID]bool, params.BeaconConfig().NumberOfColumns)
+	for i := uint64(0); i < params.BeaconConfig().NumberOfColumns; i++ {
+		columnToPeerMap[i] = make(map[peer.ID]bool)
+	}
+
+	return &DataColumnSampler1D{
+		p2p:             p2p,
+		peerToColumnMap: make(map[peer.ID]map[uint64]bool),
+	}
+}
+
+// Run implements DataColumnSampler.
+func (d *DataColumnSampler1D) Run(ctx context.Context, stateNotifier statefeed.Notifier) {
+	// initialize peer info first.
+	d.refreshPeerInfo()
+
+	// periodically refresh peer info to keep peer <-> column mapping up to date.
+	async.RunEvery(ctx, PeerRefreshInterval, d.refreshPeerInfo)
+
+	// start the sampling loop.
+	d.samplingLoop(ctx, stateNotifier)
+}
+
+// sampleDataColumns samples data columns from active peers.
+// It should return an error if sampling fails (depends on the actual failing scenario).
+func (d *DataColumnSampler1D) sampleDataColumns(blockRoot [32]byte, samplesCount uint64) error {
+	peerToColumns, err := d.distributeSamplesToPeer(samplesCount)
+	if err != nil {
+		return err
+	}
+
+	eg, ctx := errgroup.WithContext(context.Background())
+	for pid, columns := range peerToColumns {
+		pid, columns := pid, columns
+
+		eg.Go(func() error {
+			return d.sampleDataColumnsFromPeer(ctx, pid, blockRoot, columns)
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		log.WithFields(logrus.Fields{
+			"blockRoot":    fmt.Sprintf("%#x", blockRoot),
+			"samplesCount": samplesCount,
+			"error":        err.Error(),
+		}).Error("Failed to sample data columns from peers")
+		return errors.Wrap(err, "error sampling data columns")
+	}
+
+	return nil
+}
+
+// distributeSamplesToPeer dynamically matches samples to peers based on the number of peers the node have.
+// It will try to intelligently choose samples to request from peers that:
+// *. minimizes the chance of false positive result
+// *. maximizes the change to evenly distribute the samples to the peers if possible.
+func (d *DataColumnSampler1D) distributeSamplesToPeer(samplesCount uint64) (map[peer.ID]map[uint64]bool, error) {
+	res := make(map[peer.ID]map[uint64]bool)
+
+	columnsToSample := randomIntegers(samplesCount, params.BeaconConfig().NumberOfColumns)
+	for col := range columnsToSample {
+		peers := d.columnToPeerMap[col]
+		if len(peers) == 0 {
+			return nil, errors.Errorf("no peers responsible for column %d", col)
+		}
+
+		// randomly choose a peer to sample the column.
+		pid := randomPeerFromMap(peers)
+		if _, ok := res[pid]; !ok {
+			res[pid] = make(map[uint64]bool)
+		}
+		res[pid][col] = true
+	}
+
+	return res, nil
+}
+
+// sampleDataColumnsFromPeer samples data columns from a peer.
+func (d *DataColumnSampler1D) sampleDataColumnsFromPeer(ctx context.Context, pid peer.ID, blockRoot [32]byte, columns map[uint64]bool) error {
+	// SendDataColumnSidecarByRoot()
+
+	// dataColumnIdentifiers := make(types.BlobSidecarsByRootReq, 0, len(columns))
+	panic("not implemented")
+}
+
+// Refresh peer information.
+func (d *DataColumnSampler1D) refreshPeerInfo() {
+	for _, pid := range d.p2p.Peers().Active() {
+		if _, ok := d.peerToColumnMap[pid]; ok {
+			continue
+		}
+
+		peerCustodiedSubnetCount := d.p2p.CustodyCountFromRemotePeer(pid)
+		nodeID, err := p2p.ConvertPeerIDToNodeID(pid)
+		if err != nil {
+			log.WithError(err).WithField("peerID", pid).Error("Failed to convert peer ID to node ID")
+			continue
+		}
+
+		peerCustodiedColumns, err := peerdas.CustodyColumns(nodeID, peerCustodiedSubnetCount)
+		if err != nil {
+			log.WithError(err).WithField("peerID", pid).Error("Failed to determine peer custody columns")
+			continue
+		}
+
+		d.peerToColumnMap[pid] = peerCustodiedColumns
+		for column := range peerCustodiedColumns {
+			d.columnToPeerMap[column][pid] = true
+		}
+	}
+}
+
+func (d *DataColumnSampler1D) samplingLoop(ctx context.Context, stateNotifier statefeed.Notifier) {
+	// Create a subscription to the state feed.
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+
+	for {
+		select {
+		case evt := <-stateChannel:
+			if evt.Type != statefeed.BlockProcessed {
+				continue
+			}
+
+			data, ok := evt.Data.(*statefeed.BlockProcessedData)
+			if !ok {
+				log.Error("Event feed data is not of type *statefeed.BlockProcessedData")
+				continue
+			}
+
+			if !data.Verified {
+				// We only process blocks that have been verified
+				log.Error("Data is not verified")
+				continue
+			}
+
+			if data.SignedBlock.Version() < version.Deneb {
+				log.Debug("Pre Deneb block, skipping data column sampling")
+				continue
+			}
+
+			// Get the commitments for this block.
+			commitments, err := data.SignedBlock.Block().Body().BlobKzgCommitments()
+			if err != nil {
+				log.WithError(err).Error("Failed to get blob KZG commitments")
+				continue
+			}
+
+			// Skip if there are no commitments.
+			if len(commitments) == 0 {
+				log.Debug("No commitments in block, skipping data column sampling")
+				continue
+			}
+
+			if err := d.sampleDataColumns(data.BlockRoot, params.BeaconConfig().SamplesPerSlot); err != nil {
+				log.WithError(err).Error("Failed to sample data columns")
+			}
+		case err := <-stateSub.Err():
+			log.WithError(err).Error("DataColumnSampler1D subscription to state feed failed")
+		case <-ctx.Done():
+			log.Debug("Context canceled, exiting data column sampling loop.")
+			return
+		}
+	}
+}
 
 // reandomIntegers returns a map of `count` random integers in the range [0, max[.
 func randomIntegers(count uint64, max uint64) map[uint64]bool {
@@ -48,6 +245,15 @@ func sortedListFromMap(m map[uint64]bool) []uint64 {
 	})
 
 	return result
+}
+
+func randomPeerFromMap(m map[peer.ID]bool) peer.ID {
+	list := make([]peer.ID, 0, len(m))
+	for k := range m {
+		list = append(list, k)
+	}
+
+	return list[rand.NewGenerator().Uint64()%uint64(len(list))]
 }
 
 // extractNodeID extracts the node ID from a peer ID.
