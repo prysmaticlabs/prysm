@@ -141,12 +141,12 @@ func WithdrawalSliceRoot(withdrawals []*enginev1.Withdrawal, limit uint64) ([32]
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
-// DepositReceiptSliceRoot computes the HTR of a slice of deposit receipts.
+// DepositRequestsSliceRoot computes the HTR of a slice of deposit receipts.
 // The limit parameter is used as input to the bitwise merkleization algorithm.
-func DepositReceiptSliceRoot(depositReceipts []*enginev1.DepositReceipt, limit uint64) ([32]byte, error) {
-	roots := make([][32]byte, len(depositReceipts))
-	for i := 0; i < len(depositReceipts); i++ {
-		r, err := depositReceipts[i].HashTreeRoot()
+func DepositRequestsSliceRoot(depositRequests []*enginev1.DepositRequest, limit uint64) ([32]byte, error) {
+	roots := make([][32]byte, len(depositRequests))
+	for i := 0; i < len(depositRequests); i++ {
+		r, err := depositRequests[i].HashTreeRoot()
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -158,7 +158,7 @@ func DepositReceiptSliceRoot(depositReceipts []*enginev1.DepositReceipt, limit u
 		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
 	}
 	bytesRootBuf := new(bytes.Buffer)
-	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(depositReceipts))); err != nil {
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(depositRequests))); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not marshal length")
 	}
 	bytesRootBufRoot := make([]byte, 32)
@@ -166,9 +166,9 @@ func DepositReceiptSliceRoot(depositReceipts []*enginev1.DepositReceipt, limit u
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
-// WithdrawalRequestSliceRoot computes the HTR of a slice of withdrawal requests from the EL.
+// WithdrawalRequestsSliceRoot computes the HTR of a slice of withdrawal requests from the EL.
 // The limit parameter is used as input to the bitwise merkleization algorithm.
-func WithdrawalRequestSliceRoot(withdrawalRequests []*enginev1.ExecutionLayerWithdrawalRequest, limit uint64) ([32]byte, error) {
+func WithdrawalRequestsSliceRoot(withdrawalRequests []*enginev1.WithdrawalRequest, limit uint64) ([32]byte, error) {
 	roots := make([][32]byte, len(withdrawalRequests))
 	for i := 0; i < len(withdrawalRequests); i++ {
 		r, err := withdrawalRequests[i].HashTreeRoot()

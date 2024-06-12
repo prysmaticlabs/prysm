@@ -281,9 +281,9 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	}
 
 	if state.version >= version.Electra {
-		// DepositReceiptsStartIndex root.
-		drsiRoot := ssz.Uint64Root(state.depositReceiptsStartIndex)
-		fieldRoots[types.DepositReceiptsStartIndex.RealPosition()] = drsiRoot[:]
+		// DepositRequestsStartIndex root.
+		drsiRoot := ssz.Uint64Root(state.depositRequestsStartIndex)
+		fieldRoots[types.DepositRequestsStartIndex.RealPosition()] = drsiRoot[:]
 
 		// DepositBalanceToConsume root.
 		dbtcRoot := ssz.Uint64Root(uint64(state.depositBalanceToConsume))

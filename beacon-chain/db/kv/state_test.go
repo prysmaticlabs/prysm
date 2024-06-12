@@ -149,7 +149,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 					BlockHash:              make([]byte, 32),
 					TransactionsRoot:       make([]byte, 32),
 					WithdrawalsRoot:        make([]byte, 32),
-					DepositReceiptsRoot:    make([]byte, 32),
+					DepositRequestsRoot:    make([]byte, 32),
 					WithdrawalRequestsRoot: make([]byte, 32),
 				})
 				require.NoError(t, err)

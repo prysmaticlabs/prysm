@@ -685,12 +685,12 @@ func TestCopyExecutionPayloadElectra(t *testing.T) {
 	}
 }
 
-func TestCopyDepositReceipts(t *testing.T) {
-	drs := genDepositReceipts(10)
+func TestCopyDepositRequests(t *testing.T) {
+	drs := genDepositRequests(10)
 
-	got := v1alpha1.CopyDepositReceipts(drs)
+	got := v1alpha1.CopyDepositRequests(drs)
 	if !reflect.DeepEqual(got, drs) {
-		t.Errorf("TestCopyDepositReceipts() = %v, want %v", got, drs)
+		t.Errorf("TestCopyDepositRequests() = %v, want %v", got, drs)
 	}
 }
 
@@ -1442,7 +1442,7 @@ func genExecutionPayloadHeaderElectra() *enginev1.ExecutionPayloadHeaderElectra 
 		WithdrawalsRoot:        bytes(32),
 		BlobGasUsed:            5,
 		ExcessBlobGas:          6,
-		DepositReceiptsRoot:    bytes(32),
+		DepositRequestsRoot:    bytes(32),
 		WithdrawalRequestsRoot: bytes(32),
 	}
 }
@@ -1524,21 +1524,21 @@ func genExecutionPayloadElectra() *enginev1.ExecutionPayloadElectra {
 		Withdrawals:        genWithdrawals(10),
 		BlobGasUsed:        5,
 		ExcessBlobGas:      6,
-		DepositReceipts:    genDepositReceipts(10),
+		DepositRequests:    genDepositRequests(10),
 		WithdrawalRequests: genWithdrawalRequests(10),
 	}
 }
 
-func genDepositReceipts(num int) []*enginev1.DepositReceipt {
-	drs := make([]*enginev1.DepositReceipt, num)
+func genDepositRequests(num int) []*enginev1.DepositRequest {
+	drs := make([]*enginev1.DepositRequest, num)
 	for i := 0; i < num; i++ {
-		drs[i] = genDepositReceipt()
+		drs[i] = genDepositRequest()
 	}
 	return drs
 }
 
-func genDepositReceipt() *enginev1.DepositReceipt {
-	return &enginev1.DepositReceipt{
+func genDepositRequest() *enginev1.DepositRequest {
+	return &enginev1.DepositRequest{
 		Pubkey:                bytes(48),
 		WithdrawalCredentials: bytes(32),
 		Amount:                55555,
@@ -1547,16 +1547,16 @@ func genDepositReceipt() *enginev1.DepositReceipt {
 	}
 }
 
-func genWithdrawalRequests(num int) []*enginev1.ExecutionLayerWithdrawalRequest {
-	wrs := make([]*enginev1.ExecutionLayerWithdrawalRequest, num)
+func genWithdrawalRequests(num int) []*enginev1.WithdrawalRequest {
+	wrs := make([]*enginev1.WithdrawalRequest, num)
 	for i := 0; i < num; i++ {
 		wrs[i] = genWithdrawalRequest()
 	}
 	return wrs
 }
 
-func genWithdrawalRequest() *enginev1.ExecutionLayerWithdrawalRequest {
-	return &enginev1.ExecutionLayerWithdrawalRequest{
+func genWithdrawalRequest() *enginev1.WithdrawalRequest {
+	return &enginev1.WithdrawalRequest{
 		SourceAddress:   bytes(20),
 		ValidatorPubkey: bytes(48),
 		Amount:          55555,
