@@ -1371,8 +1371,8 @@ func HydrateBeaconBlockBodyElectra(b *ethpb.BeaconBlockBodyElectra) *ethpb.Beaco
 			BlockHash:          make([]byte, fieldparams.RootLength),
 			Transactions:       make([][]byte, 0),
 			Withdrawals:        make([]*enginev1.Withdrawal, 0),
-			DepositReceipts:    make([]*enginev1.DepositReceipt, 0),
-			WithdrawalRequests: make([]*enginev1.ExecutionLayerWithdrawalRequest, 0),
+			DepositRequests:    make([]*enginev1.DepositRequest, 0),
+			WithdrawalRequests: make([]*enginev1.WithdrawalRequest, 0),
 		}
 	}
 	return b
@@ -1578,7 +1578,7 @@ func HydrateBlindedBeaconBlockBodyElectra(b *ethpb.BlindedBeaconBlockBodyElectra
 			TransactionsRoot:       make([]byte, fieldparams.RootLength),
 			WithdrawalsRoot:        make([]byte, fieldparams.RootLength),
 			WithdrawalRequestsRoot: make([]byte, fieldparams.RootLength),
-			DepositReceiptsRoot:    make([]byte, fieldparams.RootLength),
+			DepositRequestsRoot:    make([]byte, fieldparams.RootLength),
 		}
 	}
 	return b

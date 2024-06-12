@@ -6,6 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/spectest/shared/electra/operations"
 )
 
-func TestMainnet_Electra_Operations_ExecutionLayerWithdrawalRequest(t *testing.T) {
-	operations.RunExecutionLayerWithdrawalRequestTest(t, "mainnet")
+func TestMainnet_Electra_Operations_WithdrawalRequest(t *testing.T) {
+	operations.RunWithdrawalRequestTest(t, "mainnet")
 }

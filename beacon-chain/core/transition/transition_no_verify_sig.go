@@ -227,7 +227,7 @@ func ProcessBlockNoVerifyAnySig(
 //	def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
 //	    # [Modified in Electra:EIP6110]
 //	    # Disable former deposit mechanism once all prior deposits are processed
-//	    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_receipts_start_index)
+//	    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_requests_start_index)
 //	    if state.eth1_deposit_index < eth1_deposit_index_limit:
 //	        assert len(body.deposits) == min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
 //	    else:
@@ -245,7 +245,7 @@ func ProcessBlockNoVerifyAnySig(
 //	    for_ops(body.bls_to_execution_changes, process_bls_to_execution_change)
 //	    # [New in Electra:EIP7002:EIP7251]
 //	    for_ops(body.execution_payload.withdrawal_requests, process_execution_layer_withdrawal_request)
-//	    for_ops(body.execution_payload.deposit_receipts, process_deposit_receipt)  # [New in Electra:EIP6110]
+//	    for_ops(body.execution_payload.deposit_requests, process_deposit_requests)  # [New in Electra:EIP6110]
 //	    for_ops(body.consolidations, process_consolidation)  # [New in Electra:EIP7251]
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
@@ -401,7 +401,7 @@ func VerifyBlobCommitmentCount(blk interfaces.ReadOnlyBeaconBlock) error {
 //	def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
 //	    # [Modified in Electra:EIP6110]
 //	    # Disable former deposit mechanism once all prior deposits are processed
-//	    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_receipts_start_index)
+//	    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_requests_start_index)
 //	    if state.eth1_deposit_index < eth1_deposit_index_limit:
 //	        assert len(body.deposits) == min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
 //	    else:
@@ -419,7 +419,7 @@ func VerifyBlobCommitmentCount(blk interfaces.ReadOnlyBeaconBlock) error {
 //	    for_ops(body.bls_to_execution_changes, process_bls_to_execution_change)
 //	    # [New in Electra:EIP7002:EIP7251]
 //	    for_ops(body.execution_payload.withdrawal_requests, process_execution_layer_withdrawal_request)
-//	    for_ops(body.execution_payload.deposit_receipts, process_deposit_receipt)  # [New in Electra:EIP6110]
+//	    for_ops(body.execution_payload.deposit_requests, process_deposit_requests)  # [New in Electra:EIP6110]
 //	    for_ops(body.consolidations, process_consolidation)  # [New in Electra:EIP7251]
 func electraOperations(
 	ctx context.Context,
@@ -445,12 +445,12 @@ func electraOperations(
 	if !ok {
 		return nil, errors.New("could not cast execution data to electra execution data")
 	}
-	st, err = electra.ProcessExecutionLayerWithdrawalRequests(ctx, st, exe.WithdrawalRequests())
+	st, err = electra.ProcessWithdrawalRequests(ctx, st, exe.WithdrawalRequests())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
 	}
 
-	st, err = electra.ProcessDepositReceipts(ctx, st, exe.DepositReceipts()) // TODO: EIP-6110 deposit changes.
+	st, err = electra.ProcessDepositRequests(ctx, st, exe.DepositRequests()) // TODO: EIP-6110 deposit changes.
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}

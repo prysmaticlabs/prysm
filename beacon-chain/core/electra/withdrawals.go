@@ -19,15 +19,15 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ProcessExecutionLayerWithdrawalRequests processes the validator withdrawals from the provided execution payload
+// ProcessWithdrawalRequests processes the validator withdrawals from the provided execution payload
 // into the beacon state triggered by the execution layer.
 //
 // Spec pseudocode definition:
 //
-// def process_execution_layer_withdrawal_request(
+// def process_withdrawal_request(
 //
 //		state: BeaconState,
-//		execution_layer_withdrawal_request: ExecutionLayerWithdrawalRequest
+//		withdrawal_request: WithdrawalRequest
 //
 //	 ) -> None:
 //	   amount = execution_layer_withdrawal_request.amount
@@ -86,8 +86,8 @@ import (
 //	   amount=to_withdraw,
 //	   withdrawable_epoch=withdrawable_epoch,
 //	   ))
-func ProcessExecutionLayerWithdrawalRequests(ctx context.Context, st state.BeaconState, wrs []*enginev1.ExecutionLayerWithdrawalRequest) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "electra.ProcessExecutionLayerWithdrawalRequests")
+func ProcessWithdrawalRequests(ctx context.Context, st state.BeaconState, wrs []*enginev1.WithdrawalRequest) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "electra.ProcessWithdrawalRequests")
 	defer span.End()
 	currentEpoch := slots.ToEpoch(st.Slot())
 	for _, wr := range wrs {
