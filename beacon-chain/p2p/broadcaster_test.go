@@ -526,7 +526,7 @@ func TestService_BroadcastBlob(t *testing.T) {
 	require.Equal(t, false, util.WaitTimeout(&wg, 1*time.Second), "Failed to receive pubsub within 1s")
 }
 
-func TestService_BroadcastBlobDataColumn(t *testing.T) {
+func TestService_BroadcastDataColumn(t *testing.T) {
 	require.NoError(t, kzg.Start())
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
