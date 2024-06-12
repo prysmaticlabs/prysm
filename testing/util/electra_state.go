@@ -195,7 +195,7 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 
 		// Electra Data
-		DepositReceiptsStartIndex:     params.BeaconConfig().UnsetDepositReceiptsStartIndex,
+		DepositRequestsStartIndex:     params.BeaconConfig().UnsetDepositRequestsStartIndex,
 		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(primitives.Gwei(tab)),
 		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(preState.Slot())),
 		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(primitives.Gwei(tab)),
@@ -228,8 +228,8 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 			BlockHash:          make([]byte, 32),
 			Transactions:       make([][]byte, 0),
 			Withdrawals:        make([]*enginev1.Withdrawal, 0),
-			DepositReceipts:    make([]*enginev1.DepositReceipt, 0),
-			WithdrawalRequests: make([]*enginev1.ExecutionLayerWithdrawalRequest, 0),
+			DepositRequests:    make([]*enginev1.DepositRequest, 0),
+			WithdrawalRequests: make([]*enginev1.WithdrawalRequest, 0),
 		},
 	}).HashTreeRoot()
 	if err != nil {
@@ -273,7 +273,7 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 		BlockHash:              make([]byte, 32),
 		TransactionsRoot:       make([]byte, 32),
 		WithdrawalsRoot:        make([]byte, 32),
-		DepositReceiptsRoot:    make([]byte, 32),
+		DepositRequestsRoot:    make([]byte, 32),
 		WithdrawalRequestsRoot: make([]byte, 32),
 	}
 

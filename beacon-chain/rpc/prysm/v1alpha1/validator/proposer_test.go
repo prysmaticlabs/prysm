@@ -630,14 +630,14 @@ func TestServer_GetBeaconBlock_Electra(t *testing.T) {
 	require.NoError(t, err)
 	timeStamp, err := slots.ToTime(beaconState.GenesisTime(), electraSlot+1)
 	require.NoError(t, err)
-	dr := []*enginev1.DepositReceipt{{
+	dr := []*enginev1.DepositRequest{{
 		Pubkey:                bytesutil.PadTo(privKeys[0].PublicKey().Marshal(), 48),
 		WithdrawalCredentials: bytesutil.PadTo([]byte("wc"), 32),
 		Amount:                123,
 		Signature:             bytesutil.PadTo([]byte("sig"), 96),
 		Index:                 456,
 	}}
-	wr := []*enginev1.ExecutionLayerWithdrawalRequest{
+	wr := []*enginev1.WithdrawalRequest{
 		{
 			SourceAddress:   bytesutil.PadTo([]byte("sa"), 20),
 			ValidatorPubkey: bytesutil.PadTo(privKeys[1].PublicKey().Marshal(), 48),
@@ -654,7 +654,7 @@ func TestServer_GetBeaconBlock_Electra(t *testing.T) {
 		PrevRandao:         random,
 		BaseFeePerGas:      make([]byte, fieldparams.RootLength),
 		BlockHash:          make([]byte, fieldparams.RootLength),
-		DepositReceipts:    dr,
+		DepositRequests:    dr,
 		WithdrawalRequests: wr,
 	}
 
@@ -680,7 +680,7 @@ func TestServer_GetBeaconBlock_Electra(t *testing.T) {
 	got, err := proposerServer.GetBeaconBlock(ctx, req)
 	require.NoError(t, err)
 	p := got.GetElectra().Block.Body.ExecutionPayload
-	require.DeepEqual(t, dr, p.DepositReceipts)
+	require.DeepEqual(t, dr, p.DepositRequests)
 	require.DeepEqual(t, wr, p.WithdrawalRequests)
 }
 

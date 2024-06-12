@@ -36,7 +36,7 @@ var placeholderFields = []string{
 	"MAX_BLOBS_PER_BLOCK",
 	"MAX_BLOB_COMMITMENTS_PER_BLOCK",   // Compile time constant on BeaconBlockBodyDeneb.blob_kzg_commitments.
 	"MAX_BYTES_PER_TRANSACTION",        // Used for ssz of EL transactions. Unused in Prysm.
-	"MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD", // Compile time constant on ExecutionPayload.deposit_receipts.
+	"MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD", // Compile time constant on ExecutionPayload.deposit_receipts. TODO: rename when updating spec configs
 	"MAX_EXTRA_DATA_BYTES",             // Compile time constant on ExecutionPayload.extra_data.
 	"MAX_TRANSACTIONS_PER_PAYLOAD",     // Compile time constant on ExecutionPayload.transactions.
 	"REORG_HEAD_WEIGHT_THRESHOLD",
