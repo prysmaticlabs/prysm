@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
@@ -206,6 +207,13 @@ func (s BlobSidecarsByRootReq) Swap(i, j int) {
 func (s BlobSidecarsByRootReq) Len() int {
 	return len(s)
 }
+
+// =====================================
+// DataColumnSidecarsByRootReq section
+// =====================================
+
+// DataColumnSidecarsByRootReq is used to specify a list of data column targets (root+index) in a DataColumnSidecarsByRoot RPC request.
+type DataColumnSidecarsByRootReq []*eth.DataColumnIdentifier
 
 func init() {
 	sizer := &eth.BlobIdentifier{}
