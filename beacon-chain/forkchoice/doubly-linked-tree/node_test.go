@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestNode_ApplyWeightChanges_PositiveChange(t *testing.T) {
@@ -86,7 +86,7 @@ func TestNode_UpdateBestDescendant_NonViableChild(t *testing.T) {
 func TestNode_UpdateBestDescendant_ViableChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	// Input child is best descendant
+	// Input child is the best descendant
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
@@ -99,7 +99,7 @@ func TestNode_UpdateBestDescendant_ViableChild(t *testing.T) {
 func TestNode_UpdateBestDescendant_HigherWeightChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	// Input child is best descendant
+	// Input child is the best descendant
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
@@ -119,7 +119,7 @@ func TestNode_UpdateBestDescendant_HigherWeightChild(t *testing.T) {
 func TestNode_UpdateBestDescendant_LowerWeightChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	// Input child is best descendant
+	// Input child is the best descendant
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
@@ -146,7 +146,9 @@ func TestNode_ViableForHead(t *testing.T) {
 		{&Node{}, 1, false},
 		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, true},
 		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, false},
-		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, true},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 2}, 3, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 2}, 4, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 3}, 4, true},
 	}
 	for _, tc := range tests {
 		got := tc.n.viableForHead(tc.justifiedEpoch, 5)
@@ -237,7 +239,7 @@ func TestNode_SetFullyValidated(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, opt)
 
-	respNodes := make([]*v1.ForkChoiceNode, 0)
+	respNodes := make([]*forkchoice.Node, 0)
 	respNodes, err = f.store.treeRootNode.nodeTreeDump(ctx, respNodes)
 	require.NoError(t, err)
 	require.Equal(t, len(respNodes), f.NodeCount())
@@ -277,6 +279,7 @@ func TestNode_TimeStampsChecks(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, late)
 
+	orphanLateBlockFirstThreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
 	// late block
 	driftGenesisTime(f, 2, orphanLateBlockFirstThreshold+1)
 	root = [32]byte{'b'}

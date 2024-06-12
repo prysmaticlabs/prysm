@@ -10,35 +10,35 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	mockstategen "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen/mock"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	blocktest "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks/testing"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	dbTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	mockstategen "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen/mock"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	blocktest "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks/testing"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -121,7 +121,7 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 
-	bs.ReplayerBuilder = mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState))
+	bs.ReplayerBuilder = mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState))
 
 	wanted := &ethpb.ValidatorBalances{
 		Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
@@ -180,7 +180,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
 	}
 	res, err := bs.ListValidatorBalances(
 		ctx,
@@ -209,7 +209,7 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 200, len(headState.Balances()))
@@ -258,7 +258,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	tests := []struct {
@@ -342,7 +342,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	tests := []struct {
@@ -410,7 +410,7 @@ func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	req := &ethpb.ListValidatorBalancesRequest{Indices: []primitives.ValidatorIndex{primitives.ValidatorIndex(1)}, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}}
@@ -461,7 +461,7 @@ func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: nil,
 		},
-		StateGen: &mockstategen.MockStateManager{
+		StateGen: &mockstategen.StateManager{
 			StatesBySlot: map[primitives.Slot]state.BeaconState{
 				0: nil,
 			},
@@ -673,7 +673,7 @@ func TestServer_ListValidatorBalances_UnknownValidatorInResponse(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	nonExistentPubKey := [32]byte{8}
@@ -2236,28 +2236,6 @@ func TestGetValidatorPerformanceCapella_OK(t *testing.T) {
 	require.NoError(t, err)
 	if !proto.Equal(want, res) {
 		t.Errorf("Wanted %v\nReceived %v", want, res)
-	}
-}
-
-func BenchmarkListValidatorBalances(b *testing.B) {
-	b.StopTimer()
-	beaconDB := dbTest.SetupDB(b)
-	ctx := context.Background()
-
-	count := 1000
-	_, _, headState := setupValidators(b, beaconDB, count)
-	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
-	}
-	addDefaultReplayerBuilder(bs, beaconDB)
-
-	req := &ethpb.ListValidatorBalancesRequest{PageSize: 100}
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := bs.ListValidatorBalances(ctx, req)
-		require.NoError(b, err)
 	}
 }
 

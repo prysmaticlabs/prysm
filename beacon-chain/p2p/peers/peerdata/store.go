@@ -10,8 +10,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/metadata"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
 )
 
 var (
@@ -118,7 +118,7 @@ func (s *Store) SetTrustedPeers(peers []peer.ID) {
 // GetTrustedPeers gets our desired trusted peer ids.
 // Important: it is assumed that store mutex is locked when calling this method.
 func (s *Store) GetTrustedPeers() []peer.ID {
-	peers := []peer.ID{}
+	var peers []peer.ID
 	for p := range s.trustedPeers {
 		peers = append(peers, p)
 	}

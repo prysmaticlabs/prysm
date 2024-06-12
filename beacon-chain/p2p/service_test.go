@@ -15,17 +15,17 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	noise "github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/multiformats/go-multiaddr"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -102,8 +102,9 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 
 	cs := startup.NewClockSynchronizer()
 	cfg := &Config{
-		TCPPort:     2000,
 		UDPPort:     2000,
+		TCPPort:     3000,
+		QUICPort:    3000,
 		ClockWaiter: cs,
 	}
 	s, err := NewService(context.Background(), cfg)
@@ -147,8 +148,9 @@ func TestService_Start_NoDiscoverFlag(t *testing.T) {
 
 	cs := startup.NewClockSynchronizer()
 	cfg := &Config{
-		TCPPort:       2000,
 		UDPPort:       2000,
+		TCPPort:       3000,
+		QUICPort:      3000,
 		StateNotifier: &mock.MockStateNotifier{},
 		NoDiscovery:   true, // <-- no s.dv5Listener is created
 		ClockWaiter:   cs,
@@ -213,10 +215,9 @@ func TestListenForNewNodes(t *testing.T) {
 	// setup other nodes.
 	cs := startup.NewClockSynchronizer()
 	cfg = &Config{
-		BootstrapNodeAddr:   []string{bootNode.String()},
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		MaxPeers:            30,
-		ClockWaiter:         cs,
+		Discv5BootStrapAddrs: []string{bootNode.String()},
+		MaxPeers:             30,
+		ClockWaiter:          cs,
 	}
 	for i := 1; i <= 5; i++ {
 		h, pkey, ipAddr := createHost(t, port+i)

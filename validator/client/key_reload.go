@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -39,7 +39,7 @@ func (v *validator) HandleKeyReload(ctx context.Context, currentKeys [][fieldpar
 
 	// "-1" indicates that validator count endpoint is not supported by the beacon node.
 	var valCount int64 = -1
-	valCounts, err := v.prysmBeaconClient.GetValidatorCount(ctx, "head", []validator2.ValidatorStatus{validator2.Active})
+	valCounts, err := v.prysmChainClient.ValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
 	if err != nil && !errors.Is(err, iface.ErrNotSupported) {
 		return false, errors.Wrap(err, "could not get active validator count")
 	}
@@ -48,10 +48,5 @@ func (v *validator) HandleKeyReload(ctx context.Context, currentKeys [][fieldpar
 		valCount = int64(valCounts[0].Count)
 	}
 
-	anyActive = v.checkAndLogValidatorStatus(statuses, valCount)
-	if anyActive {
-		logActiveValidatorStatus(statuses)
-	}
-
-	return anyActive, nil
+	return v.checkAndLogValidatorStatus(statuses, valCount), nil
 }

@@ -7,39 +7,40 @@ import (
 	"testing"
 	"time"
 
-	validatorType "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	validatorType "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/mock"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
-	walletMock "github.com/prysmaticlabs/prysm/v4/validator/accounts/testing"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
-	constant "github.com/prysmaticlabs/prysm/v4/validator/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/mock"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	validatormock "github.com/prysmaticlabs/prysm/v5/testing/validator-mock"
+	walletMock "github.com/prysmaticlabs/prysm/v5/validator/accounts/testing"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/derived"
+	constant "github.com/prysmaticlabs/prysm/v5/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	mock2 "github.com/stretchr/testify/mock"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
+	"go.uber.org/mock/gomock"
 )
 
 func TestWaitActivation_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	chainClient := validatormock.NewMockChainClient(ctrl)
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
-		keyManager:      newMockKeymanager(t, kp),
-		beaconClient:    beaconClient,
+		km:              newMockKeymanager(t, kp),
+		chainClient:     chainClient,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-
+	ctx, cancel := context.WithCancel(context.Background())
 	validatorClient.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
@@ -49,9 +50,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ValidatorActivationResponse{},
 		nil,
-	)
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+	).Do(func() { cancel() })
 	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx, nil))
 }
 
@@ -59,14 +58,14 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+	chainClient := validatormock.NewMockChainClient(ctrl)
+	prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
-		beaconClient:      beaconClient,
-		prysmBeaconClient: prysmBeaconClient,
+		validatorClient:  validatorClient,
+		km:               newMockKeymanager(t, kp),
+		chainClient:      chainClient,
+		prysmChainClient: prysmChainClient,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
@@ -75,10 +74,10 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, errors.New("failed stream")).Return(clientStream, nil)
-	prysmBeaconClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validatorType.ValidatorStatus{validatorType.Active},
+		[]validatorType.Status{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -90,14 +89,14 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+	chainClient := validatormock.NewMockChainClient(ctrl)
+	prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
-		beaconClient:      beaconClient,
-		prysmBeaconClient: prysmBeaconClient,
+		validatorClient:  validatorClient,
+		km:               newMockKeymanager(t, kp),
+		chainClient:      chainClient,
+		prysmChainClient: prysmChainClient,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
@@ -106,10 +105,10 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	prysmBeaconClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validatorType.ValidatorStatus{validatorType.Active},
+		[]validatorType.Status{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	// A stream fails the first time, but succeeds the second time.
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
@@ -126,15 +125,15 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+	chainClient := validatormock.NewMockChainClient(ctrl)
+	prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
-		genesisTime:       1,
-		beaconClient:      beaconClient,
-		prysmBeaconClient: prysmBeaconClient,
+		validatorClient:  validatorClient,
+		km:               newMockKeymanager(t, kp),
+		genesisTime:      1,
+		chainClient:      chainClient,
+		prysmChainClient: prysmChainClient,
 	}
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -145,10 +144,10 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	prysmBeaconClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validatorType.ValidatorStatus{validatorType.Active},
+		[]validatorType.Status{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	clientStream.EXPECT().Recv().Return(
 		resp,
@@ -162,14 +161,14 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+	chainClient := validatormock.NewMockChainClient(ctrl)
+	prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
-		beaconClient:      beaconClient,
-		prysmBeaconClient: prysmBeaconClient,
+		validatorClient:  validatorClient,
+		km:               newMockKeymanager(t, kp),
+		chainClient:      chainClient,
+		prysmChainClient: prysmChainClient,
 	}
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_EXITING
@@ -180,10 +179,10 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	prysmBeaconClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validatorType.ValidatorStatus{validatorType.Active},
+		[]validatorType.Status{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	clientStream.EXPECT().Recv().Return(
 		resp,
@@ -193,28 +192,26 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 }
 
 func TestWaitForActivation_RefetchKeys(t *testing.T) {
-	originalPeriod := keyRefetchPeriod
-	defer func() {
-		keyRefetchPeriod = originalPeriod
-	}()
-	keyRefetchPeriod = 1 * time.Second
-
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.ConfigName = "test"
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+	chainClient := validatormock.NewMockChainClient(ctrl)
+	prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 
 	kp := randKeypair(t)
-	km := newMockKeymanager(t, kp)
-	km.fetchNoKeys = true
+	km := newMockKeymanager(t)
 
 	v := validator{
-		validatorClient:   validatorClient,
-		keyManager:        km,
-		beaconClient:      beaconClient,
-		prysmBeaconClient: prysmBeaconClient,
+		validatorClient:  validatorClient,
+		km:               km,
+		chainClient:      chainClient,
+		prysmChainClient: prysmChainClient,
 	}
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -225,15 +222,27 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	prysmBeaconClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validatorType.ValidatorStatus{validatorType.Active},
+		[]validatorType.Status{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	clientStream.EXPECT().Recv().Return(
 		resp,
 		nil)
-	assert.NoError(t, v.internalWaitForActivation(context.Background(), make(chan [][fieldparams.BLSPubkeyLength]byte)), "Could not wait for activation")
+	accountChan := make(chan [][fieldparams.BLSPubkeyLength]byte)
+	sub := km.SubscribeAccountChanges(accountChan)
+	defer func() {
+		sub.Unsubscribe()
+		close(accountChan)
+	}()
+	// update the accounts after a delay
+	go func() {
+		time.Sleep(2 * time.Second)
+		require.NoError(t, km.add(kp))
+		km.SimulateAccountChanges([][48]byte{kp.pub})
+	}()
+	assert.NoError(t, v.internalWaitForActivation(context.Background(), accountChan), "Could not wait for activation")
 	assert.LogsContain(t, hook, msgNoKeysFetched)
 	assert.LogsContain(t, hook, "Validator activated")
 }
@@ -249,13 +258,13 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		active := randKeypair(t)
 		km := newMockKeymanager(t, inactive)
 		validatorClient := validatormock.NewMockValidatorClient(ctrl)
-		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-		prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+		chainClient := validatormock.NewMockChainClient(ctrl)
+		prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 		v := validator{
-			validatorClient:   validatorClient,
-			keyManager:        km,
-			beaconClient:      beaconClient,
-			prysmBeaconClient: prysmBeaconClient,
+			validatorClient:  validatorClient,
+			km:               km,
+			chainClient:      chainClient,
+			prysmChainClient: prysmChainClient,
 		}
 		inactiveResp := generateMockStatusResponse([][]byte{inactive.pub[:]})
 		inactiveResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
@@ -265,11 +274,15 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			&ethpb.ValidatorActivationRequest{
 				PublicKeys: [][]byte{inactive.pub[:]},
 			},
-		).Return(inactiveClientStream, nil)
-		prysmBeaconClient.EXPECT().GetValidatorCount(
+		).DoAndReturn(func(ctx context.Context, in *ethpb.ValidatorActivationRequest) (*mock.MockBeaconNodeValidator_WaitForActivationClient, error) {
+			//delay a bit so that other key can be added
+			time.Sleep(time.Second * 2)
+			return inactiveClientStream, nil
+		})
+		prysmChainClient.EXPECT().GetValidatorCount(
 			gomock.Any(),
 			"head",
-			[]validatorType.ValidatorStatus{validatorType.Active},
+			[]validatorType.Status{validatorType.Active},
 		).Return([]iface.ValidatorCount{}, nil).AnyTimes()
 		inactiveClientStream.EXPECT().Recv().Return(
 			inactiveResp,
@@ -335,14 +348,14 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", 1)
 		require.NoError(t, err)
 		validatorClient := validatormock.NewMockValidatorClient(ctrl)
-		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-		prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+		chainClient := validatormock.NewMockChainClient(ctrl)
+		prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 		v := validator{
-			validatorClient:   validatorClient,
-			keyManager:        km,
-			genesisTime:       1,
-			beaconClient:      beaconClient,
-			prysmBeaconClient: prysmBeaconClient,
+			validatorClient:  validatorClient,
+			km:               km,
+			genesisTime:      1,
+			chainClient:      chainClient,
+			prysmChainClient: prysmChainClient,
 		}
 
 		inactiveResp := generateMockStatusResponse([][]byte{inactivePubKey[:]})
@@ -353,11 +366,15 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			&ethpb.ValidatorActivationRequest{
 				PublicKeys: [][]byte{inactivePubKey[:]},
 			},
-		).Return(inactiveClientStream, nil)
-		prysmBeaconClient.EXPECT().GetValidatorCount(
+		).DoAndReturn(func(ctx context.Context, in *ethpb.ValidatorActivationRequest) (*mock.MockBeaconNodeValidator_WaitForActivationClient, error) {
+			//delay a bit so that other key can be added
+			time.Sleep(time.Second * 2)
+			return inactiveClientStream, nil
+		})
+		prysmChainClient.EXPECT().GetValidatorCount(
 			gomock.Any(),
 			"head",
-			[]validatorType.ValidatorStatus{validatorType.Active},
+			[]validatorType.Status{validatorType.Active},
 		).Return([]iface.ValidatorCount{}, nil).AnyTimes()
 		inactiveClientStream.EXPECT().Recv().Return(
 			inactiveResp,
@@ -392,4 +409,41 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
 	})
+}
+
+func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	validatorClient := validatormock.NewMockValidatorClient(ctrl)
+	chainClient := validatormock.NewMockChainClient(ctrl)
+	prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
+
+	kp := randKeypair(t)
+	v := validator{
+		validatorClient:  validatorClient,
+		km:               newMockKeymanager(t, kp),
+		chainClient:      chainClient,
+		prysmChainClient: prysmChainClient,
+	}
+	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
+	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
+	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	validatorClient.EXPECT().WaitForActivation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(clientStream, nil)
+	prysmChainClient.EXPECT().GetValidatorCount(
+		gomock.Any(),
+		"head",
+		[]validatorType.Status{validatorType.Active},
+	).Return([]iface.ValidatorCount{}, nil).Times(2)
+	clientStream.EXPECT().Recv().Return(
+		&ethpb.ValidatorActivationResponse{},
+		nil,
+	)
+	clientStream.EXPECT().Recv().Return(
+		resp,
+		nil,
+	)
+	assert.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 }

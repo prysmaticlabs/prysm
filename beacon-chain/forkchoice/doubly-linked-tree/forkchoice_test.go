@@ -6,19 +6,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 // prepareForkchoiceState prepares a beacon State with the given data to mock
@@ -780,9 +780,9 @@ func TestForkChoiceIsViableForCheckpoint(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, viable)
 
-	st, broot, err := prepareForkchoiceState(ctx, 1, [32]byte{'b'}, root, [32]byte{'B'}, 0, 0)
+	st, bRoot, err := prepareForkchoiceState(ctx, 1, [32]byte{'b'}, root, [32]byte{'B'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, st, broot))
+	require.NoError(t, f.InsertNode(ctx, st, bRoot))
 
 	// Epoch start
 	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root})
@@ -794,55 +794,55 @@ func TestForkChoiceIsViableForCheckpoint(t *testing.T) {
 	require.Equal(t, false, viable)
 
 	// No Children but impossible checkpoint
-	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot})
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot})
 	require.NoError(t, err)
 	require.Equal(t, false, viable)
 
-	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot, Epoch: 1})
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot, Epoch: 1})
 	require.NoError(t, err)
 	require.Equal(t, true, viable)
 
-	st, croot, err := prepareForkchoiceState(ctx, 2, [32]byte{'c'}, broot, [32]byte{'C'}, 0, 0)
+	st, cRoot, err := prepareForkchoiceState(ctx, 2, [32]byte{'c'}, bRoot, [32]byte{'C'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, st, croot))
+	require.NoError(t, f.InsertNode(ctx, st, cRoot))
 
 	// Children in same epoch
-	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot})
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot})
 	require.NoError(t, err)
 	require.Equal(t, false, viable)
 
-	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot, Epoch: 1})
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot, Epoch: 1})
 	require.NoError(t, err)
 	require.Equal(t, false, viable)
 
-	st, droot, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{'d'}, broot, [32]byte{'D'}, 0, 0)
+	st, dRoot, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{'d'}, bRoot, [32]byte{'D'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, st, droot))
+	require.NoError(t, f.InsertNode(ctx, st, dRoot))
 
 	// Children in next epoch but boundary
-	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot})
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot})
 	require.NoError(t, err)
 	require.Equal(t, false, viable)
 
-	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot, Epoch: 1})
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot, Epoch: 1})
 	require.NoError(t, err)
 	require.Equal(t, false, viable)
 
 	// Boundary block
-	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: droot, Epoch: 1})
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: dRoot, Epoch: 1})
 	require.NoError(t, err)
 	require.Equal(t, true, viable)
 
-	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: droot, Epoch: 0})
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: dRoot, Epoch: 0})
 	require.NoError(t, err)
 	require.Equal(t, false, viable)
 
 	// Children in next epoch
-	st, eroot, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'e'}, broot, [32]byte{'E'}, 0, 0)
+	st, eRoot, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'e'}, bRoot, [32]byte{'E'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, st, eroot))
+	require.NoError(t, f.InsertNode(ctx, st, eRoot))
 
-	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot, Epoch: 1})
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot, Epoch: 1})
 	require.NoError(t, err)
 	require.Equal(t, true, viable)
 }

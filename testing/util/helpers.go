@@ -3,21 +3,22 @@ package util
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
@@ -54,8 +55,12 @@ func BlockSignature(
 		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: b})
 	case *ethpb.BeaconBlockCapella:
 		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{Block: b})
+	case *ethpb.BeaconBlockDeneb:
+		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockDeneb{Block: b})
+	case *ethpb.BeaconBlockElectra:
+		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockElectra{Block: b})
 	default:
-		return nil, errors.New("unsupported block type")
+		return nil, fmt.Errorf("unsupported block type %T", b)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap block")
@@ -74,6 +79,10 @@ func BlockSignature(
 		b.StateRoot = s[:]
 	case *ethpb.BeaconBlockCapella:
 		b.StateRoot = s[:]
+	case *ethpb.BeaconBlockDeneb:
+		b.StateRoot = s[:]
+	case *ethpb.BeaconBlockElectra:
+		b.StateRoot = s[:]
 	}
 
 	// Temporarily increasing the beacon state slot here since BeaconProposerIndex is a
@@ -87,6 +96,10 @@ func BlockSignature(
 	case *ethpb.BeaconBlockBellatrix:
 		blockSlot = b.Slot
 	case *ethpb.BeaconBlockCapella:
+		blockSlot = b.Slot
+	case *ethpb.BeaconBlockDeneb:
+		blockSlot = b.Slot
+	case *ethpb.BeaconBlockElectra:
 		blockSlot = b.Slot
 	}
 
@@ -110,6 +123,10 @@ func BlockSignature(
 	case *ethpb.BeaconBlockBellatrix:
 		blockRoot, err = signing.ComputeSigningRoot(b, domain)
 	case *ethpb.BeaconBlockCapella:
+		blockRoot, err = signing.ComputeSigningRoot(b, domain)
+	case *ethpb.BeaconBlockDeneb:
+		blockRoot, err = signing.ComputeSigningRoot(b, domain)
+	case *ethpb.BeaconBlockElectra:
 		blockRoot, err = signing.ComputeSigningRoot(b, domain)
 	}
 	if err != nil {

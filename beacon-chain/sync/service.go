@@ -13,32 +13,38 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async"
-	"github.com/prysmaticlabs/prysm/v4/async/abool"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/async"
+	"github.com/prysmaticlabs/prysm/v5/async/abool"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/backfill/coverage"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/trailofbits/go-mutexasserts"
 )
 
 var _ runtime.Service = (*Service)(nil)
@@ -47,7 +53,7 @@ const rangeLimit uint64 = 1024
 const seenBlockSize = 1000
 const seenBlobSize = seenBlockSize * 4 // Each block can have max 4 blobs. Worst case 164kB for cache.
 const seenUnaggregatedAttSize = 20000
-const seenAggregatedAttSize = 1024
+const seenAggregatedAttSize = 16384
 const seenSyncMsgSize = 1000         // Maximum of 512 sync committee members, 1000 is a safe amount.
 const seenSyncContributionSize = 512 // Maximum of SYNC_COMMITTEE_SIZE as specified by the spec.
 const seenExitSize = 100
@@ -61,7 +67,7 @@ var (
 	// time to allow processing early blocks.
 	earlyBlockProcessingTolerance = slots.MultiplySlotBy(2)
 	// time to allow processing early attestations.
-	earlyAttestationProcessingTolerance = params.BeaconNetworkConfig().MaximumGossipClockDisparity
+	earlyAttestationProcessingTolerance = params.BeaconConfig().MaximumGossipClockDisparityDuration()
 	errWrongMessage                     = errors.New("wrong pubsub message")
 	errNilMessage                       = errors.New("nil pubsub message")
 )
@@ -83,11 +89,13 @@ type config struct {
 	initialSync                   Checker
 	blockNotifier                 blockfeed.Notifier
 	operationNotifier             operation.Notifier
-	executionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	executionPayloadReconstructor execution.PayloadReconstructor
 	stateGen                      *stategen.State
 	slasherAttestationsFeed       *event.Feed
 	slasherBlockHeadersFeed       *event.Feed
 	clock                         *startup.Clock
+	stateNotifier                 statefeed.Notifier
+	blobStorage                   *filesystem.BlobStorage
 }
 
 // This defines the interface for interacting with block chain service
@@ -146,11 +154,15 @@ type Service struct {
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
+	verifierWaiter                   *verification.InitializerWaiter
+	newBlobVerifier                  verification.NewBlobVerifier
+	availableBlocker                 coverage.AvailableBlocker
+	ctxMap                           ContextByteVersions
 }
 
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, opts ...Option) *Service {
-	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
+	c := gcache.New(pendingBlockExpTime /* exp time */, 0 /* disable janitor */)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
 		ctx:                  ctx,
@@ -167,6 +179,28 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 			return nil
 		}
 	}
+	// Correctly remove it from our seen pending block map.
+	// The eviction method always assumes that the mutex is held.
+	r.slotToPendingBlocks.OnEvicted(func(s string, i interface{}) {
+		if !mutexasserts.RWMutexLocked(&r.pendingQueueLock) {
+			log.Errorf("Mutex is not locked during cache eviction of values")
+			// Continue on to allow elements to be properly removed.
+		}
+		blks, ok := i.([]interfaces.ReadOnlySignedBeaconBlock)
+		if !ok {
+			log.Errorf("Invalid type retrieved from the cache: %T", i)
+			return
+		}
+
+		for _, b := range blks {
+			root, err := b.Block().HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Error("Could not calculate htr of block")
+				continue
+			}
+			delete(r.seenPendingBlocks, root)
+		}
+	})
 	r.subHandler = newSubTopicHandler()
 	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 	r.initCaches()
@@ -174,8 +208,21 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 	return r
 }
 
+func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.NewBlobVerifier {
+	return func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+		return ini.NewBlobVerifier(b, reqs)
+	}
+}
+
 // Start the regular sync service.
 func (s *Service) Start() {
+	v, err := s.verifierWaiter.WaitForInitializer(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not get verification initializer")
+		return
+	}
+	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
+
 	go s.verifierRoutine()
 	go s.registerHandlers()
 
@@ -203,7 +250,7 @@ func (s *Service) Stop() error {
 	}()
 	// Removing RPC Stream handlers.
 	for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
-		s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(p))
+		s.cfg.p2p.Host().RemoveStreamHandler(p)
 	}
 	// Deregister Topic Subscribers.
 	for _, t := range s.cfg.p2p.PubSub().GetTopics() {
@@ -248,14 +295,23 @@ func (s *Service) waitForChainStart() {
 	}
 	s.cfg.clock = clock
 	startTime := clock.GenesisTime()
-	log.WithField("starttime", startTime).Debug("Received state initialized event")
+	log.WithField("startTime", startTime).Debug("Received state initialized event")
+
+	ctxMap, err := ContextByteVersionsForValRoot(clock.GenesisValidatorsRoot())
+	if err != nil {
+		log.WithError(err).WithField("genesisValidatorRoot", clock.GenesisValidatorsRoot()).
+			Error("sync service failed to initialize context version map")
+		return
+	}
+	s.ctxMap = ctxMap
+
 	// Register respective rpc handlers at state initialized event.
 	s.registerRPCHandlers()
 	// Wait for chainstart in separate routine.
 	if startTime.After(prysmTime.Now()) {
 		time.Sleep(prysmTime.Until(startTime))
 	}
-	log.WithField("starttime", startTime).Debug("Chain started in sync service")
+	log.WithField("startTime", startTime).Debug("Chain started in sync service")
 	s.markForChainStart()
 }
 

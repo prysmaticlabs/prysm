@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	fssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/math"
+	"github.com/prysmaticlabs/prysm/v5/math"
 )
 
 var _ fssz.HashRoot = (Slot)(0)
@@ -122,6 +122,14 @@ func (s Slot) SafeSub(x uint64) (Slot, error) {
 // In case of arithmetic issues (overflow/underflow/div by zero) panic is thrown.
 func (s Slot) SubSlot(x Slot) Slot {
 	return s.Sub(uint64(x))
+}
+
+// FlooredSubSlot safely subtracts x from the slot, returning 0 if the result would underflow.
+func (s Slot) FlooredSubSlot(x Slot) Slot {
+	if s < x {
+		return 0
+	}
+	return s - x
 }
 
 // SafeSubSlot finds difference between two slot values.

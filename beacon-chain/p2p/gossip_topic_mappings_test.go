@@ -4,11 +4,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
 
 func TestMappingHasNoDuplicates(t *testing.T) {
@@ -28,13 +28,19 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	altairForkEpoch := primitives.Epoch(100)
 	BellatrixForkEpoch := primitives.Epoch(200)
 	CapellaForkEpoch := primitives.Epoch(300)
+	DenebForkEpoch := primitives.Epoch(400)
+	ElectraForkEpoch := primitives.Epoch(500)
 
 	bCfg.AltairForkEpoch = altairForkEpoch
 	bCfg.BellatrixForkEpoch = BellatrixForkEpoch
 	bCfg.CapellaForkEpoch = CapellaForkEpoch
+	bCfg.DenebForkEpoch = DenebForkEpoch
+	bCfg.ElectraForkEpoch = ElectraForkEpoch
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = primitives.Epoch(100)
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.BellatrixForkVersion)] = primitives.Epoch(200)
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.CapellaForkVersion)] = primitives.Epoch(300)
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.DenebForkVersion)] = primitives.Epoch(400)
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.ElectraForkVersion)] = primitives.Epoch(500)
 	params.OverrideBeaconConfig(bCfg)
 
 	// Phase 0
@@ -55,5 +61,15 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	// Capella Fork
 	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, CapellaForkEpoch)
 	_, ok = pMessage.(*ethpb.SignedBeaconBlockCapella)
+	assert.Equal(t, true, ok)
+
+	// Deneb Fork
+	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, DenebForkEpoch)
+	_, ok = pMessage.(*ethpb.SignedBeaconBlockDeneb)
+	assert.Equal(t, true, ok)
+
+	// Electra Fork
+	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, ElectraForkEpoch)
+	_, ok = pMessage.(*ethpb.SignedBeaconBlockElectra)
 	assert.Equal(t, true, ok)
 }

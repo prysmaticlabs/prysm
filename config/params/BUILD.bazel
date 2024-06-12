@@ -17,13 +17,12 @@ go_library(
         "network_config.go",
         "testnet_e2e_config.go",
         "testnet_holesky_config.go",
-        "testnet_prater_config.go",
         "testnet_sepolia_config.go",
         "testutils.go",
         "testutils_develop.go",  # keep
         "values.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/config/params",
+    importpath = "github.com/prysmaticlabs/prysm/v5/config/params",
     visibility = ["//visibility:public"],
     deps = [
         "//config/fieldparams:go_default_library",
@@ -48,9 +47,9 @@ go_test(
         "config_test.go",
         "configset_test.go",
         "loader_test.go",
+        "mainnet_config_test.go",
         "testnet_config_test.go",
         "testnet_holesky_config_test.go",
-        "testnet_prater_config_test.go",
     ],
     data = glob(["*.yaml"]) + [
         "testdata/e2e_config.yaml",
@@ -62,7 +61,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     gotags = ["develop"],
-    race = "on",
+    tags = ["CI_race_detection"],
     deps = [
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",

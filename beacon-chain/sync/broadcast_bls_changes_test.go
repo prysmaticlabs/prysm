@@ -5,22 +5,22 @@ import (
 	"testing"
 	"time"
 
-	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	testingdb "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
-	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	testingdb "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
+	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -93,7 +93,7 @@ func TestRateBLSChanges(t *testing.T) {
 		epoch := params.BeaconConfig().CapellaForkEpoch + 1
 		domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 		assert.NoError(t, err)
-		htr, err := signing.SigningData(message.HashTreeRoot, domain)
+		htr, err := signing.Data(message.HashTreeRoot, domain)
 		assert.NoError(t, err)
 		signed := &ethpb.SignedBLSToExecutionChange{
 			Message:   message,
@@ -103,17 +103,17 @@ func TestRateBLSChanges(t *testing.T) {
 		s.cfg.blsToExecPool.InsertBLSToExecChange(signed)
 	}
 
-	require.Equal(t, false, p1.BroadcastCalled)
+	require.Equal(t, false, p1.BroadcastCalled.Load())
 	slot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
 	require.NoError(t, err)
 	s.broadcastBLSChanges(slot)
 	time.Sleep(100 * time.Millisecond) // Need a sleep for the go routine to be ready
-	require.Equal(t, true, p1.BroadcastCalled)
+	require.Equal(t, true, p1.BroadcastCalled.Load())
 	require.LogsDoNotContain(t, logHook, "could not")
 
-	p1.BroadcastCalled = false
+	p1.BroadcastCalled.Store(false)
 	time.Sleep(500 * time.Millisecond) // Need a sleep for the second batch to be broadcast
-	require.Equal(t, true, p1.BroadcastCalled)
+	require.Equal(t, true, p1.BroadcastCalled.Load())
 	require.LogsDoNotContain(t, logHook, "could not")
 }
 

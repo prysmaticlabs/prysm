@@ -6,7 +6,8 @@ const (
 	AltairE2EForkEpoch    = 6
 	BellatrixE2EForkEpoch = 8
 	CapellaE2EForkEpoch   = 10
-	DenebE2EForkEpoch     = math.MaxUint64
+	DenebE2EForkEpoch     = 12
+	ElectraE2EForkEpoch   = math.MaxUint64
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -42,6 +43,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = BellatrixE2EForkEpoch
 	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
 	e2eConfig.DenebForkEpoch = DenebE2EForkEpoch
+	e2eConfig.ElectraForkEpoch = ElectraE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "480"
@@ -53,6 +55,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 253}
 	e2eConfig.CapellaForkVersion = []byte{3, 0, 0, 253}
 	e2eConfig.DenebForkVersion = []byte{4, 0, 0, 253}
+	e2eConfig.ElectraForkVersion = []byte{5, 0, 0, 253}
 
 	e2eConfig.InitializeForkSchedule()
 	return e2eConfig
@@ -84,6 +87,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = BellatrixE2EForkEpoch
 	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
 	e2eConfig.DenebForkEpoch = DenebE2EForkEpoch
+	e2eConfig.ElectraForkEpoch = ElectraE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "480"
@@ -95,6 +99,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 254}
 	e2eConfig.CapellaForkVersion = []byte{3, 0, 0, 254}
 	e2eConfig.DenebForkVersion = []byte{4, 0, 0, 254}
+	e2eConfig.ElectraForkVersion = []byte{5, 0, 0, 254}
 
 	// Deneb changes.
 	e2eConfig.MinPerEpochChurnLimit = 2

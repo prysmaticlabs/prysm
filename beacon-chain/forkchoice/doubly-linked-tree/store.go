@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -61,7 +61,7 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 }
 
 // insert registers a new block node to the fork choice store's node list.
-// It then updates the new node's parent with best child and descendant node.
+// It then updates the new node's parent with the best child and descendant node.
 func (s *Store) insert(ctx context.Context,
 	slot primitives.Slot,
 	root, parentRoot, payloadHash [fieldparams.RootLength]byte,
@@ -75,7 +75,6 @@ func (s *Store) insert(ctx context.Context,
 	}
 
 	parent := s.nodeByRoot[parentRoot]
-
 	n := &Node{
 		slot:                     slot,
 		root:                     root,
@@ -87,6 +86,17 @@ func (s *Store) insert(ctx context.Context,
 		optimistic:               true,
 		payloadHash:              payloadHash,
 		timestamp:                uint64(time.Now().Unix()),
+	}
+
+	// Set the node's target checkpoint
+	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		n.target = n
+	} else if parent != nil {
+		if slots.ToEpoch(slot) == slots.ToEpoch(parent.slot) {
+			n.target = parent.target
+		} else {
+			n.target = parent
+		}
 	}
 
 	s.nodeByPayload[payloadHash] = n
@@ -145,6 +155,9 @@ func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalized
 		return ctx.Err()
 	}
 	if node == finalizedNode {
+		if node.target != node {
+			node.target = nil
+		}
 		return nil
 	}
 	for _, child := range node.children {
@@ -225,6 +238,20 @@ func (f *ForkChoice) HighestReceivedBlockSlot() primitives.Slot {
 		return 0
 	}
 	return f.store.highestReceivedNode.slot
+}
+
+// HighestReceivedBlockSlotDelay returns the number of slots that the highest
+// received block was late when receiving it
+func (f *ForkChoice) HighestReceivedBlockDelay() primitives.Slot {
+	n := f.store.highestReceivedNode
+	if n == nil {
+		return 0
+	}
+	secs, err := slots.SecondsSinceSlotStart(n.slot, f.store.genesisTime, n.timestamp)
+	if err != nil {
+		return 0
+	}
+	return primitives.Slot(secs / params.BeaconConfig().SecondsPerSlot)
 }
 
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch

@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 )
 
 func TestSlotsSinceGenesis(t *testing.T) {
@@ -150,6 +150,37 @@ func TestEpochStartSlot_OK(t *testing.T) {
 		} else {
 			require.ErrorContains(t, "start slot calculation overflow", err)
 		}
+	}
+}
+
+func TestBeginsAtOK(t *testing.T) {
+	cases := []struct {
+		name     string
+		genesis  int64
+		slot     primitives.Slot
+		slotTime time.Time
+	}{
+		{
+			name:     "genesis",
+			slotTime: time.Unix(0, 0),
+		},
+		{
+			name:     "slot 1",
+			slot:     1,
+			slotTime: time.Unix(int64(params.BeaconConfig().SecondsPerSlot), 0),
+		},
+		{
+			name:     "slot 1",
+			slot:     32,
+			slotTime: time.Unix(int64(params.BeaconConfig().SecondsPerSlot)*32, 0),
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			genesis := time.Unix(c.genesis, 0)
+			st := BeginsAt(c.slot, genesis)
+			require.Equal(t, c.slotTime, st)
+		})
 	}
 }
 
@@ -568,4 +599,11 @@ func TestTimeIntoSlot(t *testing.T) {
 	genesisTime := uint64(time.Now().Add(-37 * time.Second).Unix())
 	require.Equal(t, true, TimeIntoSlot(genesisTime) > 900*time.Millisecond)
 	require.Equal(t, true, TimeIntoSlot(genesisTime) < 3000*time.Millisecond)
+}
+
+func TestWithinVotingWindow(t *testing.T) {
+	genesisTime := uint64(time.Now().Add(-37 * time.Second).Unix())
+	require.Equal(t, true, WithinVotingWindow(genesisTime, 3))
+	genesisTime = uint64(time.Now().Add(-40 * time.Second).Unix())
+	require.Equal(t, false, WithinVotingWindow(genesisTime, 3))
 }

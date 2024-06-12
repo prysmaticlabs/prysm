@@ -5,10 +5,10 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // Uint64Root computes the HashTreeRoot Merkleization of
@@ -96,7 +96,7 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 func TransactionsRoot(txs [][]byte) ([32]byte, error) {
 	txRoots := make([][32]byte, 0)
 	for i := 0; i < len(txs); i++ {
-		rt, err := transactionRoot(txs[i])
+		rt, err := ByteSliceRoot(txs[i], fieldparams.MaxBytesPerTxLength) // getting the transaction root here
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -141,19 +141,71 @@ func WithdrawalSliceRoot(withdrawals []*enginev1.Withdrawal, limit uint64) ([32]
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
-func transactionRoot(tx []byte) ([32]byte, error) {
-	chunkedRoots, err := PackByChunk([][]byte{tx})
-	if err != nil {
-		return [32]byte{}, err
+// DepositReceiptSliceRoot computes the HTR of a slice of deposit receipts.
+// The limit parameter is used as input to the bitwise merkleization algorithm.
+func DepositReceiptSliceRoot(depositReceipts []*enginev1.DepositReceipt, limit uint64) ([32]byte, error) {
+	roots := make([][32]byte, len(depositReceipts))
+	for i := 0; i < len(depositReceipts); i++ {
+		r, err := depositReceipts[i].HashTreeRoot()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		roots[i] = r
 	}
 
-	maxLength := (fieldparams.MaxBytesPerTxLength + 31) / 32
-	bytesRoot, err := BitwiseMerkleize(chunkedRoots, uint64(len(chunkedRoots)), uint64(maxLength))
+	bytesRoot, err := BitwiseMerkleize(roots, uint64(len(roots)), limit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
 	}
 	bytesRootBuf := new(bytes.Buffer)
-	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(tx))); err != nil {
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(depositReceipts))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
+// WithdrawalRequestSliceRoot computes the HTR of a slice of withdrawal requests from the EL.
+// The limit parameter is used as input to the bitwise merkleization algorithm.
+func WithdrawalRequestSliceRoot(withdrawalRequests []*enginev1.ExecutionLayerWithdrawalRequest, limit uint64) ([32]byte, error) {
+	roots := make([][32]byte, len(withdrawalRequests))
+	for i := 0; i < len(withdrawalRequests); i++ {
+		r, err := withdrawalRequests[i].HashTreeRoot()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		roots[i] = r
+	}
+
+	bytesRoot, err := BitwiseMerkleize(roots, uint64(len(roots)), limit)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(withdrawalRequests))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
+// ByteSliceRoot is a helper func to merkleize an arbitrary List[Byte, N]
+// this func runs Chunkify + MerkleizeVector
+// max length is dividable by 32 ( root length )
+func ByteSliceRoot(slice []byte, maxLength uint64) ([32]byte, error) {
+	chunkedRoots, err := PackByChunk([][]byte{slice})
+	if err != nil {
+		return [32]byte{}, err
+	}
+	maxRootLength := (maxLength + 31) / 32 // nearest number divisible by root length (32)
+	bytesRoot, err := BitwiseMerkleize(chunkedRoots, uint64(len(chunkedRoots)), maxRootLength)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(slice))); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not marshal length")
 	}
 	bytesRootBufRoot := make([]byte, 32)

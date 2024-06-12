@@ -5,15 +5,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v4/proto/migration"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v5/proto/migration"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 const (
@@ -63,7 +62,7 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	attestedState state.BeaconState) (*ethpbv2.LightClientUpdate, error) {
 	// assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
 	attestedEpoch := slots.ToEpoch(attestedState.Slot())
-	if attestedEpoch < types.Epoch(params.BeaconConfig().AltairForkEpoch) {
+	if attestedEpoch < params.BeaconConfig().AltairForkEpoch {
 		return nil, fmt.Errorf("invalid attested epoch %d", attestedEpoch)
 	}
 

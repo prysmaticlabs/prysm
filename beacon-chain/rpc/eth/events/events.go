@@ -1,29 +1,31 @@
 package events
 
 import (
-	"strings"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	time2 "time"
 
-	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v4/proto/migration"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
+	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -47,74 +49,112 @@ const (
 	PayloadAttributesTopic = "payload_attributes"
 	// BlobSidecarTopic represents a new blob sidecar event topic
 	BlobSidecarTopic = "blob_sidecar"
+	// ProposerSlashingTopic represents a new proposer slashing event topic
+	ProposerSlashingTopic = "proposer_slashing"
+	// AttesterSlashingTopic represents a new attester slashing event topic
+	AttesterSlashingTopic = "attester_slashing"
+	// LightClientFinalityUpdateTopic represents a new light client finality update event topic.
+	LightClientFinalityUpdateTopic = "light_client_finality_update"
+	// LightClientOptimisticUpdateTopic represents a new light client optimistic update event topic.
+	LightClientOptimisticUpdateTopic = "light_client_optimistic_update"
 )
 
+const topicDataMismatch = "Event data type %T does not correspond to event topic %s"
+
+const chanBuffer = 1000
+
 var casesHandled = map[string]bool{
-	HeadTopic:                      true,
-	BlockTopic:                     true,
-	AttestationTopic:               true,
-	VoluntaryExitTopic:             true,
-	FinalizedCheckpointTopic:       true,
-	ChainReorgTopic:                true,
-	SyncCommitteeContributionTopic: true,
-	BLSToExecutionChangeTopic:      true,
-	PayloadAttributesTopic:         true,
-	BlobSidecarTopic:               true,
+	HeadTopic:                        true,
+	BlockTopic:                       true,
+	AttestationTopic:                 true,
+	VoluntaryExitTopic:               true,
+	FinalizedCheckpointTopic:         true,
+	ChainReorgTopic:                  true,
+	SyncCommitteeContributionTopic:   true,
+	BLSToExecutionChangeTopic:        true,
+	PayloadAttributesTopic:           true,
+	BlobSidecarTopic:                 true,
+	ProposerSlashingTopic:            true,
+	AttesterSlashingTopic:            true,
+	LightClientFinalityUpdateTopic:   true,
+	LightClientOptimisticUpdateTopic: true,
 }
 
-// StreamEvents allows requesting all events from a set of topics defined in the Ethereum consensus API standard.
-// The topics supported include block events, attestations, chain reorgs, voluntary exits,
-// chain finality, and more.
-func (s *Server) StreamEvents(
-	req *ethpb.StreamEventsRequest, stream ethpbservice.Events_StreamEventsServer,
-) error {
-	if req == nil || len(req.Topics) == 0 {
-		return status.Error(codes.InvalidArgument, "No topics specified to subscribe to")
+// StreamEvents provides an endpoint to subscribe to the beacon node Server-Sent-Events stream.
+// Consumers should use the eventsource implementation to listen for those events.
+// Servers may send SSE comments beginning with ':' for any purpose,
+// including to keep the event stream connection alive in the presence of proxy servers.
+func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "events.StreamEvents")
+	defer span.End()
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		httputil.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
+		return
 	}
-	// Check if the topics in the request are valid.
-	requestedTopics := make(map[string]bool)
-	for _, rawTopic := range req.Topics {
-		splitTopic := strings.Split(rawTopic, ",")
-		for _, topic := range splitTopic {
-			if _, ok := casesHandled[topic]; !ok {
-				return status.Errorf(codes.InvalidArgument, "Topic %s not allowed for event subscriptions", topic)
-			}
-			requestedTopics[topic] = true
+
+	topics := r.URL.Query()["topics"]
+	if len(topics) == 0 {
+		httputil.HandleError(w, "No topics specified to subscribe to", http.StatusBadRequest)
+		return
+	}
+	topicsMap := make(map[string]bool)
+	for _, topic := range topics {
+		if _, ok := casesHandled[topic]; !ok {
+			httputil.HandleError(w, fmt.Sprintf("Invalid topic: %s", topic), http.StatusBadRequest)
+			return
 		}
+		topicsMap[topic] = true
 	}
 
 	// Subscribe to event feeds from information received in the beacon node runtime.
-	opsChan := make(chan *feed.Event, 1)
+	opsChan := make(chan *feed.Event, chanBuffer)
 	opsSub := s.OperationNotifier.OperationFeed().Subscribe(opsChan)
-
-	stateChan := make(chan *feed.Event, 1)
+	stateChan := make(chan *feed.Event, chanBuffer)
 	stateSub := s.StateNotifier.StateFeed().Subscribe(stateChan)
-
 	defer opsSub.Unsubscribe()
 	defer stateSub.Unsubscribe()
 
-	// Handle each event received and context cancelation.
+	// Set up SSE response headers
+	w.Header().Set("Content-Type", api.EventStreamMediaType)
+	w.Header().Set("Connection", api.KeepAlive)
+
+	// Handle each event received and context cancellation.
+	// We send a keepalive dummy message immediately to prevent clients
+	// stalling while waiting for the first response chunk.
+	// After that we send a keepalive dummy message every SECONDS_PER_SLOT
+	// to prevent anyone (e.g. proxy servers) from closing connections.
+	if err := sendKeepalive(w, flusher); err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	keepaliveTicker := time2.NewTicker(time2.Duration(params.BeaconConfig().SecondsPerSlot) * time2.Second)
+
 	for {
 		select {
 		case event := <-opsChan:
-			if err := handleBlockOperationEvents(stream, requestedTopics, event); err != nil {
-				return status.Errorf(codes.Internal, "Could not handle block operations event: %v", err)
+			if err := handleBlockOperationEvents(w, flusher, topicsMap, event); err != nil {
+				httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 		case event := <-stateChan:
-			if err := s.handleStateEvents(stream, requestedTopics, event); err != nil {
-				return status.Errorf(codes.Internal, "Could not handle state event: %v", err)
+			if err := s.handleStateEvents(ctx, w, flusher, topicsMap, event); err != nil {
+				httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
-		case <-s.Ctx.Done():
-			return status.Errorf(codes.Canceled, "Context canceled")
-		case <-stream.Context().Done():
-			return status.Errorf(codes.Canceled, "Context canceled")
+		case <-keepaliveTicker.C:
+			if err := sendKeepalive(w, flusher); err != nil {
+				httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }
 
-func handleBlockOperationEvents(
-	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
-) error {
+func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) error {
 	switch event.Type {
 	case operation.AggregatedAttReceived:
 		if _, ok := requestedTopics[AttestationTopic]; !ok {
@@ -122,240 +162,362 @@ func handleBlockOperationEvents(
 		}
 		attData, ok := event.Data.(*operation.AggregatedAttReceivedData)
 		if !ok {
-			return nil
+			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
 		}
-		v1Data := migration.V1Alpha1AggregateAttAndProofToV1(attData.Attestation)
-		return streamData(stream, AttestationTopic, v1Data)
+		att := structs.AttFromConsensus(attData.Attestation.Aggregate)
+		return send(w, flusher, AttestationTopic, att)
 	case operation.UnaggregatedAttReceived:
 		if _, ok := requestedTopics[AttestationTopic]; !ok {
 			return nil
 		}
 		attData, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 		if !ok {
-			return nil
+			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
 		}
-		v1Data := migration.V1Alpha1AttestationToV1(attData.Attestation)
-		return streamData(stream, AttestationTopic, v1Data)
+		a, ok := attData.Attestation.(*eth.Attestation)
+		if !ok {
+			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
+		}
+		att := structs.AttFromConsensus(a)
+		return send(w, flusher, AttestationTopic, att)
 	case operation.ExitReceived:
 		if _, ok := requestedTopics[VoluntaryExitTopic]; !ok {
 			return nil
 		}
 		exitData, ok := event.Data.(*operation.ExitReceivedData)
 		if !ok {
-			return nil
+			return write(w, flusher, topicDataMismatch, event.Data, VoluntaryExitTopic)
 		}
-		v1Data := migration.V1Alpha1ExitToV1(exitData.Exit)
-		return streamData(stream, VoluntaryExitTopic, v1Data)
+		exit := structs.SignedExitFromConsensus(exitData.Exit)
+		return send(w, flusher, VoluntaryExitTopic, exit)
 	case operation.SyncCommitteeContributionReceived:
 		if _, ok := requestedTopics[SyncCommitteeContributionTopic]; !ok {
 			return nil
 		}
 		contributionData, ok := event.Data.(*operation.SyncCommitteeContributionReceivedData)
 		if !ok {
-			return nil
+			return write(w, flusher, topicDataMismatch, event.Data, SyncCommitteeContributionTopic)
 		}
-		v2Data := migration.V1Alpha1SignedContributionAndProofToV2(contributionData.Contribution)
-		return streamData(stream, SyncCommitteeContributionTopic, v2Data)
+		contribution := structs.SignedContributionAndProofFromConsensus(contributionData.Contribution)
+		return send(w, flusher, SyncCommitteeContributionTopic, contribution)
 	case operation.BLSToExecutionChangeReceived:
 		if _, ok := requestedTopics[BLSToExecutionChangeTopic]; !ok {
 			return nil
 		}
 		changeData, ok := event.Data.(*operation.BLSToExecutionChangeReceivedData)
 		if !ok {
-			return nil
+			return write(w, flusher, topicDataMismatch, event.Data, BLSToExecutionChangeTopic)
 		}
-		v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(changeData.Change)
-		return streamData(stream, BLSToExecutionChangeTopic, v2Change)
+		return send(w, flusher, BLSToExecutionChangeTopic, structs.SignedBLSChangeFromConsensus(changeData.Change))
 	case operation.BlobSidecarReceived:
 		if _, ok := requestedTopics[BlobSidecarTopic]; !ok {
 			return nil
 		}
 		blobData, ok := event.Data.(*operation.BlobSidecarReceivedData)
 		if !ok {
+			return write(w, flusher, topicDataMismatch, event.Data, BlobSidecarTopic)
+		}
+		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.KzgCommitment)
+		blobEvent := &structs.BlobSidecarEvent{
+			BlockRoot:     hexutil.Encode(blobData.Blob.BlockRootSlice()),
+			Index:         fmt.Sprintf("%d", blobData.Blob.Index),
+			Slot:          fmt.Sprintf("%d", blobData.Blob.Slot()),
+			VersionedHash: versionedHash.String(),
+			KzgCommitment: hexutil.Encode(blobData.Blob.KzgCommitment),
+		}
+		return send(w, flusher, BlobSidecarTopic, blobEvent)
+	case operation.AttesterSlashingReceived:
+		if _, ok := requestedTopics[AttesterSlashingTopic]; !ok {
 			return nil
 		}
-		if blobData == nil || blobData.Blob == nil {
+		attesterSlashingData, ok := event.Data.(*operation.AttesterSlashingReceivedData)
+		if !ok {
+			return write(w, flusher, topicDataMismatch, event.Data, AttesterSlashingTopic)
+		}
+		slashing, ok := attesterSlashingData.AttesterSlashing.(*eth.AttesterSlashing)
+		if ok {
+			return send(w, flusher, AttesterSlashingTopic, structs.AttesterSlashingFromConsensus(slashing))
+		}
+		// TODO: extend to Electra
+	case operation.ProposerSlashingReceived:
+		if _, ok := requestedTopics[ProposerSlashingTopic]; !ok {
 			return nil
 		}
-		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.Message.KzgCommitment)
-		blobEvent := &ethpb.EventBlobSidecar{
-			BlockRoot:     bytesutil.SafeCopyBytes(blobData.Blob.Message.BlockRoot),
-			Index:         blobData.Blob.Message.Index,
-			Slot:          blobData.Blob.Message.Slot,
-			VersionedHash: bytesutil.SafeCopyBytes(versionedHash.Bytes()),
-			KzgCommitment: bytesutil.SafeCopyBytes(blobData.Blob.Message.KzgCommitment),
+		proposerSlashingData, ok := event.Data.(*operation.ProposerSlashingReceivedData)
+		if !ok {
+			return write(w, flusher, topicDataMismatch, event.Data, ProposerSlashingTopic)
 		}
-		return streamData(stream, BlobSidecarTopic, blobEvent)
-	default:
-		return nil
+		return send(w, flusher, ProposerSlashingTopic, structs.ProposerSlashingFromConsensus(proposerSlashingData.ProposerSlashing))
 	}
+	return nil
 }
 
-func (s *Server) handleStateEvents(
-	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
-) error {
+func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) error {
 	switch event.Type {
 	case statefeed.NewHead:
 		if _, ok := requestedTopics[HeadTopic]; ok {
-			head, ok := event.Data.(*ethpb.EventHead)
+			headData, ok := event.Data.(*ethpb.EventHead)
 			if !ok {
-				return nil
+				return write(w, flusher, topicDataMismatch, event.Data, HeadTopic)
 			}
-			return streamData(stream, HeadTopic, head)
+			head := &structs.HeadEvent{
+				Slot:                      fmt.Sprintf("%d", headData.Slot),
+				Block:                     hexutil.Encode(headData.Block),
+				State:                     hexutil.Encode(headData.State),
+				EpochTransition:           headData.EpochTransition,
+				ExecutionOptimistic:       headData.ExecutionOptimistic,
+				PreviousDutyDependentRoot: hexutil.Encode(headData.PreviousDutyDependentRoot),
+				CurrentDutyDependentRoot:  hexutil.Encode(headData.CurrentDutyDependentRoot),
+			}
+			return send(w, flusher, HeadTopic, head)
 		}
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if err := s.streamPayloadAttributes(stream); err != nil {
-				log.WithError(err).Error("Unable to obtain stream payload attributes")
-			}
-			return nil
+			return s.sendPayloadAttributes(ctx, w, flusher)
 		}
-		return nil
 	case statefeed.MissedSlot:
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if err := s.streamPayloadAttributes(stream); err != nil {
-				log.WithError(err).Error("Unable to obtain stream payload attributes")
-			}
-			return nil
+			return s.sendPayloadAttributes(ctx, w, flusher)
 		}
-		return nil
 	case statefeed.FinalizedCheckpoint:
 		if _, ok := requestedTopics[FinalizedCheckpointTopic]; !ok {
 			return nil
 		}
-		finalizedCheckpoint, ok := event.Data.(*ethpb.EventFinalizedCheckpoint)
+		checkpointData, ok := event.Data.(*ethpb.EventFinalizedCheckpoint)
 		if !ok {
+			return write(w, flusher, topicDataMismatch, event.Data, FinalizedCheckpointTopic)
+		}
+		checkpoint := &structs.FinalizedCheckpointEvent{
+			Block:               hexutil.Encode(checkpointData.Block),
+			State:               hexutil.Encode(checkpointData.State),
+			Epoch:               fmt.Sprintf("%d", checkpointData.Epoch),
+			ExecutionOptimistic: checkpointData.ExecutionOptimistic,
+		}
+		return send(w, flusher, FinalizedCheckpointTopic, checkpoint)
+	case statefeed.LightClientFinalityUpdate:
+		if _, ok := requestedTopics[LightClientFinalityUpdateTopic]; !ok {
 			return nil
 		}
-		return streamData(stream, FinalizedCheckpointTopic, finalizedCheckpoint)
+		updateData, ok := event.Data.(*ethpbv2.LightClientFinalityUpdateWithVersion)
+		if !ok {
+			return write(w, flusher, topicDataMismatch, event.Data, LightClientFinalityUpdateTopic)
+		}
+
+		var finalityBranch []string
+		for _, b := range updateData.Data.FinalityBranch {
+			finalityBranch = append(finalityBranch, hexutil.Encode(b))
+		}
+		update := &structs.LightClientFinalityUpdateEvent{
+			Version: version.String(int(updateData.Version)),
+			Data: &structs.LightClientFinalityUpdate{
+				AttestedHeader: &structs.BeaconBlockHeader{
+					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.StateRoot),
+					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.BodyRoot),
+				},
+				FinalizedHeader: &structs.BeaconBlockHeader{
+					Slot:          fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.FinalizedHeader.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.FinalizedHeader.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.FinalizedHeader.StateRoot),
+				},
+				FinalityBranch: finalityBranch,
+				SyncAggregate: &structs.SyncAggregate{
+					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
+					SyncCommitteeSignature: hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeSignature),
+				},
+				SignatureSlot: fmt.Sprintf("%d", updateData.Data.SignatureSlot),
+			},
+		}
+		return send(w, flusher, LightClientFinalityUpdateTopic, update)
+	case statefeed.LightClientOptimisticUpdate:
+		if _, ok := requestedTopics[LightClientOptimisticUpdateTopic]; !ok {
+			return nil
+		}
+		updateData, ok := event.Data.(*ethpbv2.LightClientOptimisticUpdateWithVersion)
+		if !ok {
+			return write(w, flusher, topicDataMismatch, event.Data, LightClientOptimisticUpdateTopic)
+		}
+		update := &structs.LightClientOptimisticUpdateEvent{
+			Version: version.String(int(updateData.Version)),
+			Data: &structs.LightClientOptimisticUpdate{
+				AttestedHeader: &structs.BeaconBlockHeader{
+					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.StateRoot),
+					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.BodyRoot),
+				},
+				SyncAggregate: &structs.SyncAggregate{
+					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
+					SyncCommitteeSignature: hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeSignature),
+				},
+				SignatureSlot: fmt.Sprintf("%d", updateData.Data.SignatureSlot),
+			},
+		}
+		return send(w, flusher, LightClientOptimisticUpdateTopic, update)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return nil
 		}
-		reorg, ok := event.Data.(*ethpb.EventChainReorg)
+		reorgData, ok := event.Data.(*ethpb.EventChainReorg)
 		if !ok {
-			return nil
+			return write(w, flusher, topicDataMismatch, event.Data, ChainReorgTopic)
 		}
-		return streamData(stream, ChainReorgTopic, reorg)
+		reorg := &structs.ChainReorgEvent{
+			Slot:                fmt.Sprintf("%d", reorgData.Slot),
+			Depth:               fmt.Sprintf("%d", reorgData.Depth),
+			OldHeadBlock:        hexutil.Encode(reorgData.OldHeadBlock),
+			NewHeadBlock:        hexutil.Encode(reorgData.NewHeadBlock),
+			OldHeadState:        hexutil.Encode(reorgData.OldHeadState),
+			NewHeadState:        hexutil.Encode(reorgData.NewHeadState),
+			Epoch:               fmt.Sprintf("%d", reorgData.Epoch),
+			ExecutionOptimistic: reorgData.ExecutionOptimistic,
+		}
+		return send(w, flusher, ChainReorgTopic, reorg)
 	case statefeed.BlockProcessed:
 		if _, ok := requestedTopics[BlockTopic]; !ok {
 			return nil
 		}
 		blkData, ok := event.Data.(*statefeed.BlockProcessedData)
 		if !ok {
-			return nil
+			return write(w, flusher, topicDataMismatch, event.Data, BlockTopic)
 		}
-		v1Data, err := migration.BlockIfaceToV1BlockHeader(blkData.SignedBlock)
+		blockRoot, err := blkData.SignedBlock.Block().HashTreeRoot()
 		if err != nil {
-			return err
+			return write(w, flusher, "Could not get block root: "+err.Error())
 		}
-		item, err := v1Data.Message.HashTreeRoot()
-		if err != nil {
-			return errors.Wrap(err, "could not hash tree root block")
-		}
-		eventBlock := &ethpb.EventBlock{
-			Slot:                blkData.Slot,
-			Block:               item[:],
+		blk := &structs.BlockEvent{
+			Slot:                fmt.Sprintf("%d", blkData.Slot),
+			Block:               hexutil.Encode(blockRoot[:]),
 			ExecutionOptimistic: blkData.Optimistic,
 		}
-		return streamData(stream, BlockTopic, eventBlock)
-	default:
-		return nil
+		return send(w, flusher, BlockTopic, blk)
 	}
+	return nil
 }
 
-// streamPayloadAttributes on new head event.
 // This event stream is intended to be used by builders and relays.
-// parent_ fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
-func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer) error {
-	headRoot, err := s.HeadFetcher.HeadRoot(s.Ctx)
+// Parent fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
+func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWriter, flusher http.Flusher) error {
+	headRoot, err := s.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not get head root")
+		return write(w, flusher, "Could not get head root: "+err.Error())
 	}
-	st, err := s.HeadFetcher.HeadState(s.Ctx)
+	st, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not get head state")
+		return write(w, flusher, "Could not get head state: "+err.Error())
 	}
-	// advance the headstate
-	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
+	// advance the head state
+	headState, err := transition.ProcessSlotsIfPossible(ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
 	if err != nil {
-		return err
+		return write(w, flusher, "Could not advance head state: "+err.Error())
 	}
 
-	headBlock, err := s.HeadFetcher.HeadBlock(s.Ctx)
+	headBlock, err := s.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
-		return err
+		return write(w, flusher, "Could not get head block: "+err.Error())
 	}
 
 	headPayload, err := headBlock.Block().Body().Execution()
 	if err != nil {
-		return err
+		return write(w, flusher, "Could not get execution payload: "+err.Error())
 	}
 
-	t, err := slots.ToTime(uint64(headState.GenesisTime()), headState.Slot())
+	t, err := slots.ToTime(headState.GenesisTime(), headState.Slot())
 	if err != nil {
-		return err
+		return write(w, flusher, "Could not get head state slot time: "+err.Error())
 	}
 
 	prevRando, err := helpers.RandaoMix(headState, time.CurrentEpoch(headState))
 	if err != nil {
-		return err
+		return write(w, flusher, "Could not get head state randao mix: "+err.Error())
 	}
 
-	proposerIndex, err := helpers.BeaconProposerIndex(s.Ctx, headState)
+	proposerIndex, err := helpers.BeaconProposerIndex(ctx, headState)
 	if err != nil {
-		return err
+		return write(w, flusher, "Could not get head state proposer index: "+err.Error())
 	}
 
+	var attributes interface{}
 	switch headState.Version() {
 	case version.Bellatrix:
-		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV1{
-			Version: version.String(headState.Version()),
-			Data: &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
-				ProposerIndex:     proposerIndex,
-				ProposalSlot:      headState.Slot(),
-				ParentBlockNumber: headPayload.BlockNumber(),
-				ParentBlockRoot:   headRoot,
-				ParentBlockHash:   headPayload.BlockHash(),
-				PayloadAttributes: &enginev1.PayloadAttributes{
-					Timestamp:             uint64(t.Unix()),
-					PrevRandao:            prevRando,
-					SuggestedFeeRecipient: headPayload.FeeRecipient(),
-				},
-			},
-		})
-	case version.Capella, version.Deneb:
-		withdrawals, err := headState.ExpectedWithdrawals()
-		if err != nil {
-			return err
+		attributes = &structs.PayloadAttributesV1{
+			Timestamp:             fmt.Sprintf("%d", t.Unix()),
+			PrevRandao:            hexutil.Encode(prevRando),
+			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
 		}
-		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV2{
-			Version: version.String(headState.Version()),
-			Data: &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
-				ProposerIndex:     proposerIndex,
-				ProposalSlot:      headState.Slot(),
-				ParentBlockNumber: headPayload.BlockNumber(),
-				ParentBlockRoot:   headRoot,
-				ParentBlockHash:   headPayload.BlockHash(),
-				PayloadAttributes: &enginev1.PayloadAttributesV2{
-					Timestamp:             uint64(t.Unix()),
-					PrevRandao:            prevRando,
-					SuggestedFeeRecipient: headPayload.FeeRecipient(),
-					Withdrawals:           withdrawals,
-				},
-			},
-		})
+	case version.Capella:
+		withdrawals, _, err := headState.ExpectedWithdrawals()
+		if err != nil {
+			return write(w, flusher, "Could not get head state expected withdrawals: "+err.Error())
+		}
+		attributes = &structs.PayloadAttributesV2{
+			Timestamp:             fmt.Sprintf("%d", t.Unix()),
+			PrevRandao:            hexutil.Encode(prevRando),
+			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
+		}
+	case version.Deneb:
+		withdrawals, _, err := headState.ExpectedWithdrawals()
+		if err != nil {
+			return write(w, flusher, "Could not get head state expected withdrawals: "+err.Error())
+		}
+		parentRoot, err := headBlock.Block().HashTreeRoot()
+		if err != nil {
+			return write(w, flusher, "Could not get head block root: "+err.Error())
+		}
+		attributes = &structs.PayloadAttributesV3{
+			Timestamp:             fmt.Sprintf("%d", t.Unix()),
+			PrevRandao:            hexutil.Encode(prevRando),
+			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
+			ParentBeaconBlockRoot: hexutil.Encode(parentRoot[:]),
+		}
 	default:
-		return errors.New("payload version is not supported")
+		return write(w, flusher, "Payload version %s is not supported", version.String(headState.Version()))
 	}
+
+	attributesBytes, err := json.Marshal(attributes)
+	if err != nil {
+		return write(w, flusher, err.Error())
+	}
+	eventData := structs.PayloadAttributesEventData{
+		ProposerIndex:     fmt.Sprintf("%d", proposerIndex),
+		ProposalSlot:      fmt.Sprintf("%d", headState.Slot()),
+		ParentBlockNumber: fmt.Sprintf("%d", headPayload.BlockNumber()),
+		ParentBlockRoot:   hexutil.Encode(headRoot),
+		ParentBlockHash:   hexutil.Encode(headPayload.BlockHash()),
+		PayloadAttributes: attributesBytes,
+	}
+	eventDataBytes, err := json.Marshal(eventData)
+	if err != nil {
+		return write(w, flusher, err.Error())
+	}
+	return send(w, flusher, PayloadAttributesTopic, &structs.PayloadAttributesEvent{
+		Version: version.String(headState.Version()),
+		Data:    eventDataBytes,
+	})
 }
 
-func streamData(stream ethpbservice.Events_StreamEventsServer, name string, data proto.Message) error {
-	returnData, err := anypb.New(data)
+func send(w http.ResponseWriter, flusher http.Flusher, name string, data interface{}) error {
+	j, err := json.Marshal(data)
 	if err != nil {
-		return err
+		return write(w, flusher, "Could not marshal event to JSON: "+err.Error())
 	}
-	return stream.Send(&gwpb.EventSource{
-		Event: name,
-		Data:  returnData,
-	})
+	return write(w, flusher, "event: %s\ndata: %s\n\n", name, string(j))
+}
+
+func sendKeepalive(w http.ResponseWriter, flusher http.Flusher) error {
+	return write(w, flusher, ":\n\n")
+}
+
+func write(w http.ResponseWriter, flusher http.Flusher, format string, a ...any) error {
+	_, err := fmt.Fprintf(w, format, a...)
+	if err != nil {
+		return errors.Wrap(err, "could not write to response writer")
+	}
+	flusher.Flush()
+	return nil
 }

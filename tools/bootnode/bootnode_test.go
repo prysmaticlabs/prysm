@@ -11,11 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p/core/crypto"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v4/network"
-	_ "github.com/prysmaticlabs/prysm/v4/runtime/maxprocs"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v5/network"
+	_ "github.com/prysmaticlabs/prysm/v5/runtime/maxprocs"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/sirupsen/logrus"
 )
 

@@ -28,6 +28,14 @@ const (
 	MaxWithdrawalsPerPayload              = 4             // MaxWithdrawalsPerPayloadLength defines the maximum number of withdrawals that can be included in a payload.
 	MaxBlobsPerBlock                      = 6             // MaxBlobsPerBlock defines the maximum number of blobs with respect to consensus rule can be included in a block.
 	MaxBlobCommitmentsPerBlock            = 16            // MaxBlobCommitmentsPerBlock defines the theoretical limit of blobs can be included in a block.
-	BlobLength                            = 4             // BlobLength defines the byte length of a blob.
-	BlobSize                              = 128           // defined to match blob.size in bazel ssz codegen
+	LogMaxBlobCommitments                 = 4             // Log_2 of MaxBlobCommitmentsPerBlock
+	BlobLength                            = 131072        // BlobLength defines the byte length of a blob.
+	BlobSize                              = 131072        // defined to match blob.size in bazel ssz codegen
+	KzgCommitmentInclusionProofDepth      = 17            // Merkle proof depth for blob_kzg_commitments list item
+	NextSyncCommitteeBranchDepth          = 5             // NextSyncCommitteeBranchDepth defines the depth of the next sync committee branch.
+	PendingBalanceDepositsLimit           = 134217728     // Maximum number of pending balance deposits in the beacon state.
+	PendingPartialWithdrawalsLimit        = 64            // Maximum number of pending partial withdrawals in the beacon state.
+	PendingConsolidationsLimit            = 64            // Maximum number of pending consolidations in the beacon state.
+	MaxDepositReceiptsPerPayload          = 4             // Maximum number of deposit receipts in an execution payload.
+	MaxWithdrawalRequestsPerPayload       = 2             // Maximum number of execution layer withdrawal requests in an execution payload.
 )

@@ -8,14 +8,13 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/internal"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/v1/mock"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/internal"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/v1/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -176,7 +175,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := km.Sign(ctx, tt.args.request)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetVoluntaryExitSignRequest() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("name:%s error = %v, wantErr %v", tt.name, err, tt.wantErr)
 				return
 			}
 			require.DeepEqual(t, got, tt.want)
@@ -291,20 +290,14 @@ func TestKeymanager_AddPublicKeys(t *testing.T) {
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
-	pubkey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
-	require.NoError(t, err)
-	publicKeys := [][fieldparams.BLSPubkeyLength]byte{
-		bytesutil.ToBytes48(pubkey),
-	}
-	statuses, err := km.AddPublicKeys(ctx, publicKeys)
-	require.NoError(t, err)
+	publicKeys := []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"}
+	statuses := km.AddPublicKeys(publicKeys)
 	for _, status := range statuses {
-		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_IMPORTED, status.Status)
+		require.Equal(t, keymanager.StatusImported, status.Status)
 	}
-	statuses, err = km.AddPublicKeys(ctx, publicKeys)
-	require.NoError(t, err)
+	statuses = km.AddPublicKeys(publicKeys)
 	for _, status := range statuses {
-		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_DUPLICATE, status.Status)
+		require.Equal(t, keymanager.StatusDuplicate, status.Status)
 	}
 }
 
@@ -322,26 +315,19 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
-	pubkey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
-	require.NoError(t, err)
-	publicKeys := [][fieldparams.BLSPubkeyLength]byte{
-		bytesutil.ToBytes48(pubkey),
-	}
-	statuses, err := km.AddPublicKeys(ctx, publicKeys)
-	require.NoError(t, err)
+	publicKeys := []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"}
+	statuses := km.AddPublicKeys(publicKeys)
 	for _, status := range statuses {
-		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_IMPORTED, status.Status)
+		require.Equal(t, keymanager.StatusImported, status.Status)
 	}
 
-	s, err := km.DeletePublicKeys(ctx, publicKeys)
-	require.NoError(t, err)
+	s := km.DeletePublicKeys(publicKeys)
 	for _, status := range s {
-		require.Equal(t, ethpbservice.DeletedRemoteKeysStatus_DELETED, status.Status)
+		require.Equal(t, keymanager.StatusDeleted, status.Status)
 	}
 
-	s, err = km.DeletePublicKeys(ctx, publicKeys)
-	require.NoError(t, err)
+	s = km.DeletePublicKeys(publicKeys)
 	for _, status := range s {
-		require.Equal(t, ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND, status.Status)
+		require.Equal(t, keymanager.StatusNotFound, status.Status)
 	}
 }

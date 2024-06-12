@@ -4,9 +4,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 // Test cases can be executed in an arbitrary order. TestOverrideBeaconConfigTestTeardown checks
@@ -64,7 +64,7 @@ func TestConfig_WithinDAPeriod(t *testing.T) {
 		{
 			name:    "before",
 			block:   0,
-			current: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest + 1,
+			current: params.BeaconConfig().MinEpochsForBlobsSidecarsRequest + 1,
 			within:  false,
 		},
 		{
@@ -76,13 +76,13 @@ func TestConfig_WithinDAPeriod(t *testing.T) {
 		{
 			name:    "boundary",
 			block:   0,
-			current: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest,
+			current: params.BeaconConfig().MinEpochsForBlobsSidecarsRequest,
 			within:  true,
 		},
 		{
 			name:    "one less",
-			block:   params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest - 1,
-			current: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest,
+			block:   params.BeaconConfig().MinEpochsForBlobsSidecarsRequest - 1,
+			current: params.BeaconConfig().MinEpochsForBlobsSidecarsRequest,
 			within:  true,
 		},
 	}

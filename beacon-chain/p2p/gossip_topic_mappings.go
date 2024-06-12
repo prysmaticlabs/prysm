@@ -3,9 +3,9 @@ package p2p
 import (
 	"reflect"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -21,13 +21,16 @@ var gossipTopicMappings = map[string]proto.Message{
 	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
 	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
 	BlsToExecutionChangeSubnetTopicFormat:     &ethpb.SignedBLSToExecutionChange{},
-	BlobSubnetTopicFormat:                     &ethpb.SignedBlobSidecar{},
+	BlobSubnetTopicFormat:                     &ethpb.BlobSidecar{},
 }
 
 // GossipTopicMappings is a function to return the assigned data type
 // versioned by epoch.
 func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 	if topic == BlockSubnetTopicFormat {
+		if epoch >= params.BeaconConfig().ElectraForkEpoch {
+			return &ethpb.SignedBeaconBlockElectra{}
+		}
 		if epoch >= params.BeaconConfig().DenebForkEpoch {
 			return &ethpb.SignedBeaconBlockDeneb{}
 		}
@@ -70,4 +73,6 @@ func init() {
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockCapella{})] = BlockSubnetTopicFormat
 	// Specially handle Deneb objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockDeneb{})] = BlockSubnetTopicFormat
+	// Specially handle Electra objects.
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockElectra{})] = BlockSubnetTopicFormat
 }

@@ -4,17 +4,16 @@ go_library(
     name = "go_default_library",
     srcs = [
         "error_handling.go",
-        "http.go",
         "sync.go",
         "validator_status.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers",
     visibility = ["//visibility:public"],
     deps = [
         "//api/grpc:go_default_library",
+        "//api/server/structs:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/db:go_default_library",
-        "//beacon-chain/rpc/eth/shared:go_default_library",
         "//beacon-chain/rpc/lookup:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
@@ -36,7 +35,6 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "http_test.go",
         "sync_test.go",
         "validator_status_test.go",
     ],

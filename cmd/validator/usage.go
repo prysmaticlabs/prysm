@@ -5,34 +5,42 @@ import (
 	"io"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/runtime/debug"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/runtime/debug"
 	"github.com/urfave/cli/v2"
 )
 
 var appHelpTemplate = `NAME:
    {{.App.Name}} - {{.App.Usage}}
+
 USAGE:
    {{.App.HelpName}} [options]{{if .App.Commands}} command [command options]{{end}} {{if .App.ArgsUsage}}{{.App.ArgsUsage}}{{else}}[arguments...]{{end}}
-   {{if .App.Version}}
-AUTHOR:
-   {{range .App.Authors}}{{ . }}{{end}}
-   {{end}}{{if .App.Commands}}
-GLOBAL OPTIONS:
+{{if .App.Version}}
+VERSION:
+	{{.App.Version}}
+{{end -}}
+{{if len .App.Authors}}
+AUTHORS:
+   {{range .App.Authors}}{{ . }}
+   {{end -}}
+{{end -}}
+{{if .App.Commands}}
+global OPTIONS:
    {{range .App.Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}{{end}}{{if .FlagGroups}}
+   {{end -}}
+{{end -}}
+{{if .FlagGroups}}
 {{range .FlagGroups}}{{.Name}} OPTIONS:
   {{range .Flags}}{{.}}
   {{end}}
-{{end}}{{end}}{{if .App.Copyright }}
+{{end -}}
+{{end -}}
+{{if .App.Copyright }}
 COPYRIGHT:
    {{.App.Copyright}}
-VERSION:
-   {{.App.Version}}
-   {{end}}{{if len .App.Authors}}
-   {{end}}
+{{end -}}
 `
 
 type flagGroup struct {
@@ -48,6 +56,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.E2EConfigFlag,
 			cmd.VerbosityFlag,
 			cmd.DataDirFlag,
+			flags.WalletDirFlag,
+			flags.WalletPasswordFileFlag,
 			cmd.ClearDB,
 			cmd.ForceClearDB,
 			cmd.EnableBackupWebhookFlag,
@@ -82,37 +92,58 @@ var appHelpFlagGroups = []flagGroup{
 		},
 	},
 	{
-		Name: "validator",
+		Name: "rpc",
 		Flags: []cli.Flag{
+			flags.CertFlag,
 			flags.BeaconRPCProviderFlag,
 			flags.BeaconRPCGatewayProviderFlag,
-			flags.BeaconRESTApiProviderFlag,
-			flags.CertFlag,
-			flags.EnableWebFlag,
-			flags.DisablePenaltyRewardLogFlag,
-			flags.GraffitiFlag,
 			flags.EnableRPCFlag,
 			flags.RPCHost,
 			flags.RPCPort,
 			flags.GRPCGatewayPort,
 			flags.GRPCGatewayHost,
-			flags.GrpcRetriesFlag,
-			flags.GrpcRetryDelayFlag,
-			flags.GPRCGatewayCorsDomain,
-			flags.GrpcHeadersFlag,
-			flags.SlasherRPCProviderFlag,
-			flags.SlasherCertFlag,
-			flags.DisableAccountMetricsFlag,
-			flags.WalletDirFlag,
-			flags.WalletPasswordFileFlag,
-			flags.GraffitiFileFlag,
-			flags.Web3SignerURLFlag,
-			flags.Web3SignerPublicValidatorKeysFlag,
+			flags.GRPCRetriesFlag,
+			flags.GRPCRetryDelayFlag,
+			flags.GRPCGatewayCorsDomain,
+			flags.GRPCHeadersFlag,
+			flags.BeaconRESTApiProviderFlag,
+		},
+	},
+	{
+		Name: "proposer",
+		Flags: []cli.Flag{
 			flags.ProposerSettingsFlag,
 			flags.ProposerSettingsURLFlag,
 			flags.SuggestedFeeRecipientFlag,
 			flags.EnableBuilderFlag,
 			flags.BuilderGasLimitFlag,
+			flags.ValidatorsRegistrationBatchSizeFlag,
+			flags.GraffitiFlag,
+			flags.GraffitiFileFlag,
+		},
+	},
+	{
+		Name: "remote signer",
+		Flags: []cli.Flag{
+			flags.Web3SignerURLFlag,
+			flags.Web3SignerPublicValidatorKeysFlag,
+		},
+	},
+	{
+		Name: "slasher",
+		Flags: []cli.Flag{
+			flags.SlasherRPCProviderFlag,
+			flags.SlasherCertFlag,
+		},
+	},
+	{
+		Name: "misc",
+		Flags: []cli.Flag{
+			flags.EnableWebFlag,
+			flags.DisablePenaltyRewardLogFlag,
+			flags.DisableAccountMetricsFlag,
+			flags.EnableDistributed,
+			flags.AuthTokenPathFlag,
 		},
 	},
 	{

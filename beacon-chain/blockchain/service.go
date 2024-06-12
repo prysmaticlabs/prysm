@@ -11,58 +11,63 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
-	f "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
+	f "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg                  *config
-	ctx                  context.Context
-	cancel               context.CancelFunc
-	genesisTime          time.Time
-	head                 *head
-	headLock             sync.RWMutex
-	originBlockRoot      [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	boundaryRoots        [][32]byte
-	checkpointStateCache *cache.CheckpointStateCache
-	initSyncBlocks       map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
-	initSyncBlocksLock   sync.RWMutex
-	wsVerifier           *WeakSubjectivityVerifier
-	clockSetter          startup.ClockSetter
-	clockWaiter          startup.ClockWaiter
-	syncComplete         chan struct{}
-	blobNotifiers        *blobNotifierMap
-	blockBeingSynced     *currentlySyncingBlock
+	cfg                           *config
+	ctx                           context.Context
+	cancel                        context.CancelFunc
+	genesisTime                   time.Time
+	head                          *head
+	headLock                      sync.RWMutex
+	originBlockRoot               [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
+	boundaryRoots                 [][32]byte
+	checkpointStateCache          *cache.CheckpointStateCache
+	initSyncBlocks                map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
+	initSyncBlocksLock            sync.RWMutex
+	wsVerifier                    *WeakSubjectivityVerifier
+	clockSetter                   startup.ClockSetter
+	clockWaiter                   startup.ClockWaiter
+	syncComplete                  chan struct{}
+	blobNotifiers                 *blobNotifierMap
+	blockBeingSynced              *currentlySyncingBlock
+	blobStorage                   *filesystem.BlobStorage
+	lastPublishedLightClientEpoch primitives.Epoch
 }
 
 // config options for the service.
@@ -71,7 +76,8 @@ type config struct {
 	ChainStartFetcher       execution.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
 	DepositCache            cache.DepositCache
-	ProposerSlotIndexCache  *cache.ProposerPayloadIDsCache
+	PayloadIDCache          *cache.PayloadIDCache
+	TrackedValidatorsCache  *cache.TrackedValidatorsCache
 	AttPool                 attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingPool            slashings.PoolManager
@@ -87,6 +93,13 @@ type config struct {
 	BlockFetcher            execution.POWBlockFetcher
 	FinalizedStateAtStartUp state.BeaconState
 	ExecutionEngineCaller   execution.EngineCaller
+	SyncChecker             Checker
+}
+
+// Checker is an interface used to determine if a node is in initial sync
+// or regular sync.
+type Checker interface {
+	Synced() bool
 }
 
 var ErrMissingClockSetter = errors.New("blockchain Service initialized without a startup.ClockSetter")
@@ -94,6 +107,35 @@ var ErrMissingClockSetter = errors.New("blockchain Service initialized without a
 type blobNotifierMap struct {
 	sync.RWMutex
 	notifiers map[[32]byte]chan uint64
+	seenIndex map[[32]byte][fieldparams.MaxBlobsPerBlock]bool
+}
+
+// notifyIndex notifies a blob by its index for a given root.
+// It uses internal maps to keep track of seen indices and notifier channels.
+func (bn *blobNotifierMap) notifyIndex(root [32]byte, idx uint64) {
+	if idx >= fieldparams.MaxBlobsPerBlock {
+		return
+	}
+
+	bn.Lock()
+	seen := bn.seenIndex[root]
+	if seen[idx] {
+		bn.Unlock()
+		return
+	}
+	seen[idx] = true
+	bn.seenIndex[root] = seen
+
+	// Retrieve or create the notifier channel for the given root.
+	c, ok := bn.notifiers[root]
+	if !ok {
+		c = make(chan uint64, fieldparams.MaxBlobsPerBlock)
+		bn.notifiers[root] = c
+	}
+
+	bn.Unlock()
+
+	c <- idx
 }
 
 func (bn *blobNotifierMap) forRoot(root [32]byte) chan uint64 {
@@ -110,6 +152,7 @@ func (bn *blobNotifierMap) forRoot(root [32]byte) chan uint64 {
 func (bn *blobNotifierMap) delete(root [32]byte) {
 	bn.Lock()
 	defer bn.Unlock()
+	delete(bn.seenIndex, root)
 	delete(bn.notifiers, root)
 }
 
@@ -126,6 +169,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	bn := &blobNotifierMap{
 		notifiers: make(map[[32]byte]chan uint64),
+		seenIndex: make(map[[32]byte][fieldparams.MaxBlobsPerBlock]bool),
 	}
 	srv := &Service{
 		ctx:                  ctx,
@@ -134,7 +178,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
 		blobNotifiers:        bn,
-		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
+		cfg:                  &config{},
 		blockBeingSynced:     &currentlySyncingBlock{roots: make(map[[32]byte]struct{})},
 	}
 	for _, opt := range opts {
@@ -155,6 +199,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 // Start a blockchain service's main event loop.
 func (s *Service) Start() {
 	saved := s.cfg.FinalizedStateAtStartUp
+	defer s.removeStartupState()
 
 	if saved != nil && !saved.IsNil() {
 		if err := s.StartFromSavedState(saved); err != nil {
@@ -374,7 +419,7 @@ func (s *Service) startFromExecutionChain() error {
 						log.Error("event data is not type *statefeed.ChainStartedData")
 						return
 					}
-					log.WithField("starttime", data.StartTime).Debug("Received chain start event")
+					log.WithField("startTime", data.StartTime).Debug("Received chain start event")
 					s.onExecutionChainStart(s.ctx, data.StartTime)
 					return
 				}
@@ -504,6 +549,10 @@ func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
 	}
 
 	return s.cfg.BeaconDB.HasBlock(ctx, root)
+}
+
+func (s *Service) removeStartupState() {
+	s.cfg.FinalizedStateAtStartUp = nil
 }
 
 func spawnCountdownIfPreGenesis(ctx context.Context, genesisTime time.Time, db db.HeadAccessDatabase) {

@@ -9,7 +9,7 @@ go_library(
         "deposit_tree_snapshot.go",
         "merkle_tree.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot",
+    importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/cache:go_default_library",
@@ -34,6 +34,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "deposit_cache_test.go",
+        "deposit_fetcher_test.go",
         "deposit_tree_snapshot_test.go",
         "merkle_tree_test.go",
         "spec_test.go",
