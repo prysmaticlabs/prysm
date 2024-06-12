@@ -129,7 +129,7 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*proposer.Settings, error)
 			return nil, err
 		}
 		loadConfig = dbps.ToConsensus()
-		log.Debug("DB Loaded Proposer Settings: %s", func() string {
+		log.Debugf("DB Loaded Proposer Settings: %s", func() string {
 			b, err := json.Marshal(loadConfig)
 			if err != nil {
 				return err.Error()
@@ -168,7 +168,7 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*proposer.Settings, error)
 				return nil, errors.Errorf("proposer settings is empty after unmarshalling from file specified by %s flag", flags.ProposerSettingsFlag.Name)
 			}
 			loadConfig = psl.processProposerSettings(settingFromFile, loadConfig)
-			log.Info("Proposer settings loaded from file: %s", cliCtx.String(flags.ProposerSettingsFlag.Name))
+			log.Infof("Proposer settings loaded from file: %s", cliCtx.String(flags.ProposerSettingsFlag.Name))
 		case urlFlag:
 			var settingFromURL *validatorpb.ProposerSettingsPayload
 			if err := config.UnmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ProposerSettingsURLFlag.Name), &settingFromURL); err != nil {
@@ -178,7 +178,7 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*proposer.Settings, error)
 				return nil, errors.New("proposer settings is empty after unmarshalling from url")
 			}
 			loadConfig = psl.processProposerSettings(settingFromURL, loadConfig)
-			log.Info("Proposer settings loaded from URL: %s", cliCtx.String(flags.ProposerSettingsURLFlag.Name))
+			log.Infof("Proposer settings loaded from URL: %s", cliCtx.String(flags.ProposerSettingsURLFlag.Name))
 		case onlyDB:
 			loadConfig = psl.processProposerSettings(nil, loadConfig)
 			log.Info("Proposer settings loaded from the DB")
