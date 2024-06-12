@@ -6,6 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/spectest/shared/electra/operations"
 )
 
-func TestMainnet_Electra_Operations_DepositReceipts(t *testing.T) {
-	operations.RunDepositReceiptsTest(t, "mainnet")
+func TestMainnet_Electra_Operations_DepositRequests(t *testing.T) {
+	operations.RunDepositRequestsTest(t, "minimal")
 }

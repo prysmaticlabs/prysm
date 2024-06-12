@@ -6,11 +6,15 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestProcessPendingBalanceDeposits(t *testing.T) {
@@ -125,4 +129,47 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProcessDepositRequests(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateElectra(t, 1)
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	vals := st.Validators()
+	vals[0].PublicKey = sk.PublicKey().Marshal()
+	vals[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	require.NoError(t, st.SetValidators(vals))
+	bals := st.Balances()
+	bals[0] = params.BeaconConfig().MinActivationBalance + 2000
+	require.NoError(t, st.SetBalances(bals))
+	require.NoError(t, st.SetPendingBalanceDeposits(make([]*eth.PendingBalanceDeposit, 0))) // reset pbd as the determinitstic state populates this already
+	withdrawalCred := make([]byte, 32)
+	withdrawalCred[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
+	depositMessage := &eth.DepositMessage{
+		PublicKey:             sk.PublicKey().Marshal(),
+		Amount:                1000,
+		WithdrawalCredentials: withdrawalCred,
+	}
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	require.NoError(t, err)
+	sr, err := signing.ComputeSigningRoot(depositMessage, domain)
+	require.NoError(t, err)
+	sig := sk.Sign(sr[:])
+	requests := []*enginev1.DepositRequest{
+		{
+			Pubkey:                depositMessage.PublicKey,
+			Index:                 0,
+			WithdrawalCredentials: depositMessage.WithdrawalCredentials,
+			Amount:                depositMessage.Amount,
+			Signature:             sig.Marshal(),
+		},
+	}
+	st, err = electra.ProcessDepositRequests(context.Background(), st, requests)
+	require.NoError(t, err)
+
+	pbd, err := st.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 2, len(pbd))
+	require.Equal(t, uint64(1000), pbd[0].Amount)
+	require.Equal(t, uint64(2000), pbd[1].Amount)
 }

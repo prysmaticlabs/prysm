@@ -394,16 +394,16 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interf
 		// Electra and beyond
 		//  # [Modified in Electra:EIP6110]
 		//    # Disable former deposit mechanism once all prior deposits are processed
-		//    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_receipts_start_index)
+		//    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_requests_start_index)
 		//    if state.eth1_deposit_index < eth1_deposit_index_limit:
 		//        assert len(body.deposits) == min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
 		//    else:
 		//        assert len(body.deposits) == 0
-		receiptsStartIndex, err := state.DepositReceiptsStartIndex()
+		requestsStartIndex, err := state.DepositRequestsStartIndex()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get receipts start index")
+			return nil, errors.Wrap(err, "failed to get requests start index")
 		}
-		eth1DepositIndexLimit := math.Min(eth1Data.DepositCount, receiptsStartIndex)
+		eth1DepositIndexLimit := math.Min(eth1Data.DepositCount, requestsStartIndex)
 		if state.Eth1DepositIndex() < eth1DepositIndexLimit {
 			if uint64(len(body.Deposits())) != math.Min(params.BeaconConfig().MaxDeposits, eth1DepositIndexLimit-state.Eth1DepositIndex()) {
 				return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d", math.Min(params.BeaconConfig().MaxDeposits, eth1DepositIndexLimit-state.Eth1DepositIndex()), len(body.Deposits()))

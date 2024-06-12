@@ -34,10 +34,10 @@ func TestSwitchToCompoundingValidator(t *testing.T) {
 	})
 	// Test that a validator with no withdrawal credentials cannot be switched to compounding.
 	require.NoError(t, err)
-	require.ErrorContains(t, "validator has no withdrawal credentials", electra.SwitchToCompoundingValidator(context.TODO(), s, 0))
+	require.ErrorContains(t, "validator has no withdrawal credentials", electra.SwitchToCompoundingValidator(s, 0))
 
 	// Test that a validator with withdrawal credentials can be switched to compounding.
-	require.NoError(t, electra.SwitchToCompoundingValidator(context.TODO(), s, 1))
+	require.NoError(t, electra.SwitchToCompoundingValidator(s, 1))
 	v, err := s.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	require.Equal(t, true, bytes.HasPrefix(v.WithdrawalCredentials, []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte}), "withdrawal credentials were not updated")
@@ -50,7 +50,7 @@ func TestSwitchToCompoundingValidator(t *testing.T) {
 	require.Equal(t, 0, len(pbd), "pending balance deposits should be empty")
 
 	// Test that a validator with excess balance can be switched to compounding, excess balance is queued.
-	require.NoError(t, electra.SwitchToCompoundingValidator(context.TODO(), s, 2))
+	require.NoError(t, electra.SwitchToCompoundingValidator(s, 2))
 	b, err = s.BalanceAtIndex(2)
 	require.NoError(t, err)
 	require.Equal(t, params.BeaconConfig().MinActivationBalance, b, "balance was not changed")

@@ -117,16 +117,16 @@ func (vs *Server) deposits(
 		} else {
 			// Electra change EIP6110
 			// def get_eth1_pending_deposit_count(state: BeaconState) -> uint64:
-			//    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_receipts_start_index)
+			//    eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_requests_start_index)
 			//    if state.eth1_deposit_index < eth1_deposit_index_limit:
 			//        return min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
 			//    else:
 			//        return uint64(0)
-			receiptsStartIndex, err := beaconState.DepositReceiptsStartIndex()
+			requestsStartIndex, err := beaconState.DepositRequestsStartIndex()
 			if err != nil {
-				return nil, errors.Wrap(err, "could not retrieve receipts start index")
+				return nil, errors.Wrap(err, "could not retrieve requests start index")
 			}
-			eth1DepositIndexLimit := math.Min(canonicalEth1Data.DepositCount, receiptsStartIndex)
+			eth1DepositIndexLimit := math.Min(canonicalEth1Data.DepositCount, requestsStartIndex)
 			if beaconState.Eth1DepositIndex() < eth1DepositIndexLimit {
 				if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < eth1DepositIndexLimit {
 					pendingDeps = append(pendingDeps, dep)

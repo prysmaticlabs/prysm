@@ -2,12 +2,16 @@ package electra
 
 import (
 	"context"
-	"errors"
 
+	"github.com/pkg/errors"
+	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -81,7 +85,44 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 func ProcessDepositRequests(ctx context.Context, beaconState state.BeaconState, requests []*enginev1.DepositRequest) (state.BeaconState, error) {
 	_, span := trace.StartSpan(ctx, "electra.ProcessDepositRequests")
 	defer span.End()
-	// TODO: replace with 6110 logic
-	// return b.ProcessDepositRequests(beaconState, requests)
+	var err error
+	for _, receipt := range requests {
+		beaconState, err = processDepositRequest(beaconState, receipt)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not apply deposit receipt")
+		}
+	}
 	return beaconState, nil
+}
+
+// processDepositRequest processes the specific deposit receipt
+// def process_deposit_request(state: BeaconState, deposit_request: DepositRequest) -> None:
+//
+//	# Set deposit request start index
+//	if state.deposit_requests_start_index == UNSET_DEPOSIT_REQUEST_START_INDEX:
+//	    state.deposit_requests_start_index = deposit_request.index
+//
+//	apply_deposit(
+//	    state=state,
+//	    pubkey=deposit_request.pubkey,
+//	    withdrawal_credentials=deposit_request.withdrawal_credentials,
+//	    amount=deposit_request.amount,
+//	    signature=deposit_request.signature,
+//	)
+func processDepositRequest(beaconState state.BeaconState, request *enginev1.DepositRequest) (state.BeaconState, error) {
+	receiptsStartIndex, err := beaconState.DepositRequestsStartIndex()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get deposit requests start index")
+	}
+	if receiptsStartIndex == params.BeaconConfig().UnsetDepositRequestsStartIndex {
+		if err := beaconState.SetDepositRequestsStartIndex(request.Index); err != nil {
+			return nil, errors.Wrap(err, "could not set deposit requests start index")
+		}
+	}
+	return b.ApplyDeposit(beaconState, &ethpb.Deposit_Data{
+		PublicKey:             bytesutil.SafeCopyBytes(request.Pubkey),
+		Amount:                request.Amount,
+		WithdrawalCredentials: bytesutil.SafeCopyBytes(request.WithdrawalCredentials),
+		Signature:             bytesutil.SafeCopyBytes(request.Signature),
+	}, true) // individually verify signatures instead of batch verify
 }

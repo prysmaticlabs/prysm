@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
@@ -1139,6 +1140,54 @@ func TestSwitchToCompoundingValidator_Ok(t *testing.T) {
 	require.NoError(t, err)
 
 	bytes.HasPrefix(val.WithdrawalCredentials, []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte})
+}
+
+func TestSwitchToCompoundingValidator(t *testing.T) {
+	s, err := state_native.InitializeFromProtoElectra(&ethpb.BeaconStateElectra{
+		Validators: []*ethpb.Validator{
+			{
+				WithdrawalCredentials: []byte{}, // No withdrawal credentials
+			},
+			{
+				WithdrawalCredentials: []byte{0x01, 0xFF}, // Has withdrawal credentials
+			},
+			{
+				WithdrawalCredentials: []byte{0x01, 0xFF}, // Has withdrawal credentials
+			},
+		},
+		Balances: []uint64{
+			params.BeaconConfig().MinActivationBalance,
+			params.BeaconConfig().MinActivationBalance,
+			params.BeaconConfig().MinActivationBalance + 100_000, // Has excess balance
+		},
+	})
+	// Test that a validator with no withdrawal credentials cannot be switched to compounding.
+	require.NoError(t, err)
+	require.ErrorContains(t, "validator has no withdrawal credentials", helpers.SwitchToCompoundingValidator(s, 0))
+
+	// Test that a validator with withdrawal credentials can be switched to compounding.
+	require.NoError(t, helpers.SwitchToCompoundingValidator(s, 1))
+	v, err := s.ValidatorAtIndex(1)
+	require.NoError(t, err)
+	require.Equal(t, true, bytes.HasPrefix(v.WithdrawalCredentials, []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte}), "withdrawal credentials were not updated")
+	// val_1 Balance is not changed
+	b, err := s.BalanceAtIndex(1)
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MinActivationBalance, b, "balance was changed")
+	pbd, err := s.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(pbd), "pending balance deposits should be empty")
+
+	// Test that a validator with excess balance can be switched to compounding, excess balance is queued.
+	require.NoError(t, electra.SwitchToCompoundingValidator(s, 2))
+	b, err = s.BalanceAtIndex(2)
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MinActivationBalance, b, "balance was not changed")
+	pbd, err = s.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pbd), "pending balance deposits should have one element")
+	require.Equal(t, uint64(100_000), pbd[0].Amount, "pending balance deposit amount is incorrect")
+	require.Equal(t, primitives.ValidatorIndex(2), pbd[0].Index, "pending balance deposit index is incorrect")
 }
 
 func TestQueueExcessActiveBalance_Ok(t *testing.T) {

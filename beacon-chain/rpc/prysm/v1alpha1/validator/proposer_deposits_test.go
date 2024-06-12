@@ -750,7 +750,7 @@ func TestProposer_PendingDeposits_Electra(t *testing.T) {
 			DepositCount: 5,
 		},
 		Eth1DepositIndex:          1,
-		DepositReceiptsStartIndex: 7,
+		DepositRequestsStartIndex: 7,
 		Eth1DataVotes:             votes,
 	})
 	require.NoError(t, err)
@@ -852,7 +852,7 @@ func TestProposer_PendingDeposits_Electra(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(recentDeposits), len(deposits), "Received unexpected number of pending deposits")
 
-	require.NoError(t, beaconState.SetDepositReceiptsStartIndex(0)) // set it to 0 so it's less than Eth1DepositIndex
+	require.NoError(t, beaconState.SetDepositRequestsStartIndex(0)) // set it to 0 so it's less than Eth1DepositIndex
 	deposits, err = bs.deposits(ctx, beaconState, vote)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(deposits), "Received unexpected number of pending deposits")

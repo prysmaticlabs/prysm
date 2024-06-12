@@ -9,12 +9,10 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	blocks2 "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -457,50 +455,4 @@ func TestApplyDeposit_Electra_SwitchToCompoundingValidator(t *testing.T) {
 	require.Equal(t, 5, len(pbd))
 	require.Equal(t, uint64(1000), pbd[3].Amount)
 	require.Equal(t, uint64(2000), pbd[4].Amount)
-}
-
-func TestProcessDepositReceipts(t *testing.T) {
-	st, _ := util.DeterministicGenesisStateElectra(t, 1)
-	block := util.NewBeaconBlockElectra()
-	sk, err := bls.RandKey()
-	require.NoError(t, err)
-	vals := st.Validators()
-	vals[0].PublicKey = sk.PublicKey().Marshal()
-	vals[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
-	require.NoError(t, st.SetValidators(vals))
-	bals := st.Balances()
-	bals[0] = params.BeaconConfig().MinActivationBalance + 2000
-	require.NoError(t, st.SetBalances(bals))
-	require.NoError(t, st.SetPendingBalanceDeposits(make([]*ethpb.PendingBalanceDeposit, 0))) // reset pbd as the determinitstic state populates this already
-	withdrawalCred := make([]byte, 32)
-	withdrawalCred[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
-	depositMessage := &ethpb.DepositMessage{
-		PublicKey:             sk.PublicKey().Marshal(),
-		Amount:                1000,
-		WithdrawalCredentials: withdrawalCred,
-	}
-	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
-	require.NoError(t, err)
-	sr, err := signing.ComputeSigningRoot(depositMessage, domain)
-	require.NoError(t, err)
-	sig := sk.Sign(sr[:])
-	block.Block.Body.ExecutionPayload.DepositReceipts = []*enginev1.DepositReceipt{
-		{
-			Pubkey:                depositMessage.PublicKey,
-			Index:                 0,
-			WithdrawalCredentials: depositMessage.WithdrawalCredentials,
-			Amount:                depositMessage.Amount,
-			Signature:             sig.Marshal(),
-		},
-	}
-	roBlock, err := blocks2.NewSignedBeaconBlock(block)
-	require.NoError(t, err)
-	st, err = blocks.ProcessDepositReceipts(st, roBlock.Block())
-	require.NoError(t, err)
-
-	pbd, err := st.PendingBalanceDeposits()
-	require.NoError(t, err)
-	require.Equal(t, 2, len(pbd))
-	require.Equal(t, uint64(1000), pbd[0].Amount)
-	require.Equal(t, uint64(2000), pbd[1].Amount)
 }

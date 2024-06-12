@@ -706,7 +706,7 @@ func TestVerifyOperationLengths_Electra(t *testing.T) {
 		sb, err := consensusblocks.NewSignedBeaconBlock(util.NewBeaconBlockElectra())
 		require.NoError(t, err)
 		require.NoError(t, s.SetEth1DepositIndex(0))
-		require.NoError(t, s.SetDepositReceiptsStartIndex(1))
+		require.NoError(t, s.SetDepositRequestsStartIndex(1))
 		_, err = transition.VerifyOperationLengths(context.Background(), s, sb.Block())
 		require.ErrorContains(t, "incorrect outstanding deposits in block body", err)
 	})
@@ -725,7 +725,7 @@ func TestVerifyOperationLengths_Electra(t *testing.T) {
 			},
 		})
 		require.NoError(t, s.SetEth1DepositIndex(1))
-		require.NoError(t, s.SetDepositReceiptsStartIndex(1))
+		require.NoError(t, s.SetDepositRequestsStartIndex(1))
 		_, err = transition.VerifyOperationLengths(context.Background(), s, sb.Block())
 		require.ErrorContains(t, "incorrect outstanding deposits in block body", err)
 	})

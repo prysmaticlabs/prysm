@@ -9,13 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
-	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
@@ -410,58 +408,4 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		return errors.New("one or more deposit signatures did not verify")
 	}
 	return nil
-}
-
-// ProcessDepositReceipts is a function as part of electra to process execution layer deposits
-func ProcessDepositReceipts(beaconState state.BeaconState, beaconBlock interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
-	if beaconState.Version() < version.Electra {
-		return beaconState, nil
-	}
-	payload, err := beaconBlock.Body().Execution()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload")
-	}
-	ede, ok := payload.(interfaces.ExecutionDataElectra)
-	if !ok {
-		return nil, errors.New("invalid electra execution payload")
-	}
-	for _, receipt := range ede.DepositReceipts() {
-		beaconState, err = processDepositReceipt(beaconState, receipt)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not apply deposit receipt")
-		}
-	}
-	return beaconState, nil
-}
-
-// processDepositReceipt processes the specific deposit receipt
-// def process_deposit_receipt(state: BeaconState, deposit_receipt: DepositReceipt) -> None:
-//
-//	# Set deposit receipt start index
-//	if state.deposit_receipts_start_index == UNSET_DEPOSIT_RECEIPTS_START_INDEX:
-//	    state.deposit_receipts_start_index = deposit_receipt.index
-//
-//	apply_deposit(
-//	    state=state,
-//	    pubkey=deposit_receipt.pubkey,
-//	    withdrawal_credentials=deposit_receipt.withdrawal_credentials,
-//	    amount=deposit_receipt.amount,
-//	    signature=deposit_receipt.signature,
-//	)
-func processDepositReceipt(beaconState state.BeaconState, receipt *enginev1.DepositReceipt) (state.BeaconState, error) {
-	receiptsStartIndex, err := beaconState.DepositReceiptsStartIndex()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get deposit receipts start index")
-	}
-	if receiptsStartIndex == params.BeaconConfig().UnsetDepositReceiptsStartIndex {
-		if err := beaconState.SetDepositReceiptsStartIndex(receipt.Index); err != nil {
-			return nil, errors.Wrap(err, "could not set deposit receipts start index")
-		}
-	}
-	return ApplyDeposit(beaconState, &ethpb.Deposit_Data{
-		PublicKey:             bytesutil.SafeCopyBytes(receipt.Pubkey),
-		Amount:                receipt.Amount,
-		WithdrawalCredentials: bytesutil.SafeCopyBytes(receipt.WithdrawalCredentials),
-		Signature:             bytesutil.SafeCopyBytes(receipt.Signature),
-	}, true) // individually verify signatures instead of batch verify
 }
