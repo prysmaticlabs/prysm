@@ -6,7 +6,7 @@ package cache
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // FakeCommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
@@ -68,4 +68,17 @@ func (c *FakeCommitteeCache) MarkInProgress(seed [32]byte) error {
 // MarkNotInProgress is a stub.
 func (c *FakeCommitteeCache) MarkNotInProgress(seed [32]byte) error {
 	return nil
+}
+
+// Clear is a stub.
+func (c *FakeCommitteeCache) Clear() {
+	return
+}
+
+func (c *FakeCommitteeCache) ExpandCommitteeCache() {
+	return
+}
+
+func (c *FakeCommitteeCache) CompressCommitteeCache() {
+	return
 }

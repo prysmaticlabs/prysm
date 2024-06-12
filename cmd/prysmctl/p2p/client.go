@@ -14,22 +14,23 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
-	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
+	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
+	libp2ptcp "github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/network"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/network"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -43,7 +44,7 @@ type client struct {
 	nodeClient   pb.NodeClient
 }
 
-func newClient(beaconEndpoints []string, clientPort uint) (*client, error) {
+func newClient(beaconEndpoints []string, tcpPort, quicPort uint) (*client, error) {
 	ipAdd := ipAddr()
 	priv, err := privKey()
 	if err != nil {
@@ -53,15 +54,16 @@ func newClient(beaconEndpoints []string, clientPort uint) (*client, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set up p2p metadata")
 	}
-	listen, err := p2p.MultiAddressBuilder(ipAdd.String(), clientPort)
+	multiaddrs, err := p2p.MultiAddressBuilder(ipAdd, tcpPort, quicPort)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set up listening multiaddr")
 	}
 	options := []libp2p.Option{
 		privKeyOption(priv),
-		libp2p.ListenAddrs(listen),
+		libp2p.ListenAddrs(multiaddrs...),
 		libp2p.UserAgent(version.BuildData()),
-		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Transport(libp2pquic.NewTransport),
+		libp2p.Transport(libp2ptcp.NewTCPTransport),
 	}
 	options = append(options, libp2p.Security(noise.ID, noise.New))
 	options = append(options, libp2p.Ping(false))

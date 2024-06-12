@@ -6,9 +6,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/grpc"
 )
 
@@ -44,6 +44,12 @@ func WithValidatorRESTApi() E2EConfigOpt {
 	}
 }
 
+func WithBuilder() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseBuilder = true
+	}
+}
+
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
 	TestCheckpointSync      bool
@@ -56,6 +62,7 @@ type E2EConfig struct {
 	UseFixedPeerIDs         bool
 	UseValidatorCrossClient bool
 	UseBeaconRestApi        bool
+	UseBuilder              bool
 	EpochsToRun             uint64
 	Seed                    int64
 	TracingSinkEndpoint     string

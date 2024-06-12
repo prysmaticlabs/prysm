@@ -20,6 +20,7 @@ package event
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"sync"
 )
 
@@ -144,6 +145,7 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 
 	if !f.typecheck(rvalue.Type()) {
 		f.sendLock <- struct{}{}
+		f.mu.Unlock()
 		panic(feedTypeError{op: "Send", got: rvalue.Type(), want: f.etype})
 	}
 	f.mu.Unlock()
@@ -218,12 +220,9 @@ type caseList []reflect.SelectCase
 
 // find returns the index of a case containing the given channel.
 func (cs caseList) find(channel interface{}) int {
-	for i, cas := range cs {
-		if cas.Chan.Interface() == channel {
-			return i
-		}
-	}
-	return -1
+	return slices.IndexFunc(cs, func(selectCase reflect.SelectCase) bool {
+		return selectCase.Chan.Interface() == channel
+	})
 }
 
 // delete removes the given case from cs.

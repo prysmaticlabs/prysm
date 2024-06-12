@@ -1,13 +1,15 @@
 package state_native
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	_ "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	_ "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // SetLatestExecutionPayloadHeader for the beacon state.
@@ -21,6 +23,9 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 
 	switch header := val.Proto().(type) {
 	case *enginev1.ExecutionPayload:
+		if b.version != version.Bellatrix {
+			return fmt.Errorf("wrong state version (%s) for bellatrix execution payload", version.String(b.version))
+		}
 		latest, err := consensusblocks.PayloadToHeader(val)
 		if err != nil {
 			return errors.Wrap(err, "could not convert payload to header")
@@ -29,6 +34,9 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 		b.markFieldAsDirty(types.LatestExecutionPayloadHeader)
 		return nil
 	case *enginev1.ExecutionPayloadCapella:
+		if b.version != version.Capella {
+			return fmt.Errorf("wrong state version (%s) for capella execution payload", version.String(b.version))
+		}
 		latest, err := consensusblocks.PayloadToHeaderCapella(val)
 		if err != nil {
 			return errors.Wrap(err, "could not convert payload to header")
@@ -36,13 +44,59 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 		b.latestExecutionPayloadHeaderCapella = latest
 		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderCapella)
 		return nil
+	case *enginev1.ExecutionPayloadDeneb:
+		if b.version != version.Deneb {
+			return fmt.Errorf("wrong state version (%s) for deneb execution payload", version.String(b.version))
+		}
+		latest, err := consensusblocks.PayloadToHeaderDeneb(val)
+		if err != nil {
+			return errors.Wrap(err, "could not convert payload to header")
+		}
+		b.latestExecutionPayloadHeaderDeneb = latest
+		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderDeneb)
+		return nil
+	case *enginev1.ExecutionPayloadElectra:
+		if b.version != version.Electra {
+			return fmt.Errorf("wrong state version (%s) for electra execution payload", version.String(b.version))
+		}
+		eVal, ok := val.(interfaces.ExecutionDataElectra)
+		if !ok {
+			return fmt.Errorf("could not cast %T to ExecutionDataElectra: %w", val, interfaces.ErrInvalidCast)
+		}
+		latest, err := consensusblocks.PayloadToHeaderElectra(eVal)
+		if err != nil {
+			return errors.Wrap(err, "could not convert payload to header")
+		}
+		b.latestExecutionPayloadHeaderElectra = latest
+		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderElectra)
+		return nil
 	case *enginev1.ExecutionPayloadHeader:
+		if b.version != version.Bellatrix {
+			return fmt.Errorf("wrong state version (%s) for bellatrix execution payload header", version.String(b.version))
+		}
 		b.latestExecutionPayloadHeader = header
 		b.markFieldAsDirty(types.LatestExecutionPayloadHeader)
 		return nil
 	case *enginev1.ExecutionPayloadHeaderCapella:
+		if b.version != version.Capella {
+			return fmt.Errorf("wrong state version (%s) for capella execution payload header", version.String(b.version))
+		}
 		b.latestExecutionPayloadHeaderCapella = header
 		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderCapella)
+		return nil
+	case *enginev1.ExecutionPayloadHeaderDeneb:
+		if b.version != version.Deneb {
+			return fmt.Errorf("wrong state version (%s) for deneb execution payload header", version.String(b.version))
+		}
+		b.latestExecutionPayloadHeaderDeneb = header
+		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderDeneb)
+		return nil
+	case *enginev1.ExecutionPayloadHeaderElectra:
+		if b.version != version.Electra {
+			return fmt.Errorf("wrong state version (%s) for electra execution payload header", version.String(b.version))
+		}
+		b.latestExecutionPayloadHeaderElectra = header
+		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderElectra)
 		return nil
 	default:
 		return errors.New("value must be an execution payload header")

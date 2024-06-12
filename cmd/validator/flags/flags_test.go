@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -40,8 +40,7 @@ func TestLoadFlagsFromConfig_PreProcessing_Web3signer(t *testing.T) {
 			return cmd.LoadFlagsFromConfig(cliCtx, comFlags)
 		},
 		Action: func(cliCtx *cli.Context) error {
-			//TODO: https://github.com/urfave/cli/issues/1197 right now does not set flag
-			require.Equal(t, false, cliCtx.IsSet(Web3SignerPublicValidatorKeysFlag.Name))
+			require.Equal(t, true, cliCtx.IsSet(Web3SignerPublicValidatorKeysFlag.Name))
 
 			require.Equal(t, strings.Join([]string{pubkey1, pubkey2}, ","),
 				strings.Join(cliCtx.StringSlice(Web3SignerPublicValidatorKeysFlag.Name), ","))

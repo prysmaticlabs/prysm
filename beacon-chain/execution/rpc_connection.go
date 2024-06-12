@@ -3,18 +3,18 @@ package execution
 import (
 	"context"
 	"fmt"
-	"net/url"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/v4/io/logs"
-	"github.com/prysmaticlabs/prysm/v4/network"
-	"github.com/prysmaticlabs/prysm/v4/network/authorization"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	contracts "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v5/io/logs"
+	"github.com/prysmaticlabs/prysm/v5/network"
+	"github.com/prysmaticlabs/prysm/v5/network/authorization"
 )
 
 func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpoint network.Endpoint) error {
@@ -77,7 +77,7 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 			if currClient != nil {
 				currClient.Close()
 			}
-			log.Infof("Connected to new endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
+			log.WithField("endpoint", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url)).Info("Connected to new endpoint")
 			return
 		case <-s.ctx.Done():
 			log.Debug("Received cancelled context,closing existing powchain service")
@@ -107,44 +107,26 @@ func (s *Service) retryExecutionClientConnection(ctx context.Context, err error)
 
 // Initializes an RPC connection with authentication headers.
 func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.Endpoint) (*gethRPC.Client, error) {
-	// Need to handle ipc and http
-	var client *gethRPC.Client
-	u, err := url.Parse(endpoint.Url)
-	if err != nil {
-		return nil, err
-	}
-	switch u.Scheme {
-	case "http", "https":
-		client, err = gethRPC.DialOptions(ctx, endpoint.Url, gethRPC.WithHTTPClient(endpoint.HttpClient()))
-		if err != nil {
-			return nil, err
-		}
-	case "", "ipc":
-		client, err = gethRPC.DialIPC(ctx, endpoint.Url)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("no known transport for URL scheme %q", u.Scheme)
-	}
+	headers := http.Header{}
 	if endpoint.Auth.Method != authorization.None {
 		header, err := endpoint.Auth.ToHeaderValue()
 		if err != nil {
 			return nil, err
 		}
-		client.SetHeader("Authorization", header)
+		headers.Set("Authorization", header)
 	}
 	for _, h := range s.cfg.headers {
-		if h != "" {
-			keyValue := strings.Split(h, "=")
-			if len(keyValue) < 2 {
-				log.Warnf("Incorrect HTTP header flag format. Skipping %v", keyValue[0])
-				continue
-			}
-			client.SetHeader(keyValue[0], strings.Join(keyValue[1:], "="))
+		if h == "" {
+			continue
 		}
+		keyValue := strings.Split(h, "=")
+		if len(keyValue) < 2 {
+			log.Warnf("Incorrect HTTP header flag format. Skipping %v", keyValue[0])
+			continue
+		}
+		headers.Set(keyValue[0], strings.Join(keyValue[1:], "="))
 	}
-	return client, nil
+	return network.NewExecutionRPCClient(ctx, endpoint, headers)
 }
 
 // Checks the chain ID of the execution client to ensure

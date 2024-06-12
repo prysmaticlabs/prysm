@@ -22,7 +22,7 @@ import "google/protobuf/timestamp.proto";
 import "proto/eth/ext/options.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "NodeProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -51,6 +51,13 @@ service Node {
     rpc GetVersion(google.protobuf.Empty) returns (Version) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/node/version"
+        };
+    }
+
+    // Retrieve the current health of the node.
+    rpc GetHealth(HealthRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/node/health"
         };
     }
 
@@ -92,6 +99,10 @@ service Node {
             get: "/eth/v1alpha1/node/eth1/connections"
         };
     }
+}
+
+message HealthRequest {
+    uint64 syncing_status = 1;
 }
 
 // Information about the current network sync status of the node.

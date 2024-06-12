@@ -6,26 +6,21 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	// Error when event feed data is not statefeed.SyncedData.
-	errNotSyncedData = errors.New("event feed data is not of type *statefeed.SyncedData")
-
-	// Error when the context is closed while waiting for sync.
-	errContextClosedWhileWaiting = errors.New("context closed while waiting for beacon to sync to latest Head")
-)
+// Error when the context is closed while waiting for sync.
+var errContextClosedWhileWaiting = errors.New("context closed while waiting for beacon to sync to latest Head")
 
 // ValidatorLatestPerformance keeps track of the latest participation of the validator
 type ValidatorLatestPerformance struct {
@@ -63,6 +58,7 @@ type ValidatorMonitorConfig struct {
 	AttestationNotifier operation.Notifier
 	HeadFetcher         blockchain.HeadFetcher
 	StateGen            stategen.StateManager
+	InitialSyncComplete chan struct{}
 }
 
 // Service is the main structure that tracks validators and reports logs and
@@ -115,23 +111,15 @@ func (s *Service) Start() {
 	sort.Slice(tracked, func(i, j int) bool { return tracked[i] < tracked[j] })
 
 	log.WithFields(logrus.Fields{
-		"ValidatorIndices": tracked,
+		"validatorIndices": tracked,
 	}).Info("Starting service")
 
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-
-	go s.run(stateChannel, stateSub)
+	go s.run()
 }
 
 // run waits until the beacon is synced and starts the monitoring system.
-func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription) {
-	if stateChannel == nil {
-		log.Error("State state is nil")
-		return
-	}
-
-	if err := s.waitForSync(stateChannel, stateSub); err != nil {
+func (s *Service) run() {
+	if err := s.waitForSync(s.config.InitialSyncComplete); err != nil {
 		log.WithError(err)
 		return
 	}
@@ -146,7 +134,7 @@ func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription
 	}
 
 	epoch := slots.ToEpoch(st.Slot())
-	log.WithField("Epoch", epoch).Info("Synced to head epoch, starting reporting performance")
+	log.WithField("epoch", epoch).Info("Synced to head epoch, starting reporting performance")
 
 	s.Lock()
 	s.initializePerformanceStructures(st, epoch)
@@ -158,6 +146,8 @@ func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription
 	s.isLogging = true
 	s.Unlock()
 
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 	s.monitorRoutine(stateChannel, stateSub)
 }
 
@@ -167,7 +157,7 @@ func (s *Service) initializePerformanceStructures(state state.BeaconState, epoch
 	for idx := range s.TrackedValidators {
 		balance, err := state.BalanceAtIndex(idx)
 		if err != nil {
-			log.WithError(err).WithField("ValidatorIndex", idx).Error(
+			log.WithError(err).WithField("validatorIndex", idx).Error(
 				"Could not fetch starting balance, skipping aggregated logs.")
 			balance = 0
 		}
@@ -197,24 +187,13 @@ func (s *Service) Stop() error {
 }
 
 // waitForSync waits until the beacon node is synced to the latest head.
-func (s *Service) waitForSync(stateChannel chan *feed.Event, stateSub event.Subscription) error {
-	for {
-		select {
-		case e := <-stateChannel:
-			if e.Type == statefeed.Synced {
-				_, ok := e.Data.(*statefeed.SyncedData)
-				if !ok {
-					return errNotSyncedData
-				}
-				return nil
-			}
-		case <-s.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
-			return errContextClosedWhileWaiting
-		case err := <-stateSub.Err():
-			log.WithError(err).Error("Could not subscribe to state notifier")
-			return err
-		}
+func (s *Service) waitForSync(syncChan chan struct{}) error {
+	select {
+	case <-syncChan:
+		return nil
+	case <-s.ctx.Done():
+		log.Debug("Context closed, exiting goroutine")
+		return errContextClosedWhileWaiting
 	}
 }
 
@@ -297,7 +276,7 @@ func (s *Service) updateSyncCommitteeTrackedVals(state state.BeaconState) {
 	for idx := range s.TrackedValidators {
 		syncIdx, err := helpers.CurrentPeriodSyncSubcommitteeIndices(state, idx)
 		if err != nil {
-			log.WithError(err).WithField("ValidatorIndex", idx).Error(
+			log.WithError(err).WithField("validatorIndex", idx).Error(
 				"Sync committee assignments will not be reported")
 			delete(s.trackedSyncCommitteeIndices, idx)
 		} else if len(syncIdx) == 0 {

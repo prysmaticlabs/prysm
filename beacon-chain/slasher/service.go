@@ -6,20 +6,21 @@ package slasher
 
 import (
 	"context"
+	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	beaconChainSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 const (
@@ -38,16 +39,8 @@ type ServiceConfig struct {
 	StateGen                stategen.StateManager
 	SlashingPoolInserter    slashings.PoolInserter
 	HeadStateFetcher        blockchain.HeadFetcher
-	SyncChecker             sync.Checker
-}
-
-// SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.
-type SlashingChecker interface {
-	IsSlashableBlock(ctx context.Context, proposal *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error)
-	IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
-	HighestAttestations(
-		ctx context.Context, indices []primitives.ValidatorIndex,
-	) ([]*ethpb.HighestAttestation, error)
+	SyncChecker             beaconChainSync.Checker
+	ClockWaiter             startup.ClockWaiter
 }
 
 // Service defining a slasher implementation as part of
@@ -55,7 +48,7 @@ type SlashingChecker interface {
 type Service struct {
 	params                         *Parameters
 	serviceCfg                     *ServiceConfig
-	indexedAttsChan                chan *ethpb.IndexedAttestation
+	indexedAttsChan                chan ethpb.IndexedAtt
 	beaconBlockHeadersChan         chan *ethpb.SignedBeaconBlockHeader
 	attsQueue                      *attestationsQueue
 	blksQueue                      *blocksQueue
@@ -65,7 +58,8 @@ type Service struct {
 	attsSlotTicker                 *slots.SlotTicker
 	blocksSlotTicker               *slots.SlotTicker
 	pruningSlotTicker              *slots.SlotTicker
-	latestEpochWrittenForValidator map[primitives.ValidatorIndex]primitives.Epoch
+	latestEpochUpdatedForValidator map[primitives.ValidatorIndex]primitives.Epoch
+	wg                             sync.WaitGroup
 }
 
 // New instantiates a new slasher from configuration values.
@@ -74,13 +68,13 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	return &Service{
 		params:                         DefaultParams(),
 		serviceCfg:                     srvCfg,
-		indexedAttsChan:                make(chan *ethpb.IndexedAttestation, 1),
+		indexedAttsChan:                make(chan ethpb.IndexedAtt, 1),
 		beaconBlockHeadersChan:         make(chan *ethpb.SignedBeaconBlockHeader, 1),
 		attsQueue:                      newAttestationsQueue(),
 		blksQueue:                      newBlocksQueue(),
 		ctx:                            ctx,
 		cancel:                         cancel,
-		latestEpochWrittenForValidator: make(map[primitives.ValidatorIndex]primitives.Epoch),
+		latestEpochUpdatedForValidator: make(map[primitives.ValidatorIndex]primitives.Epoch),
 	}, nil
 }
 
@@ -117,29 +111,41 @@ func (s *Service) run() {
 		return
 	}
 	for _, item := range epochsByValidator {
-		s.latestEpochWrittenForValidator[item.ValidatorIndex] = item.Epoch
+		s.latestEpochUpdatedForValidator[item.ValidatorIndex] = item.Epoch
 	}
 	log.WithField("elapsed", time.Since(start)).Info(
 		"Finished retrieving last epoch written per validator",
 	)
 
-	indexedAttsChan := make(chan *ethpb.IndexedAttestation, 1)
+	indexedAttsChan := make(chan ethpb.IndexedAtt, 1)
 	beaconBlockHeadersChan := make(chan *ethpb.SignedBeaconBlockHeader, 1)
+
+	s.wg.Add(1)
 	go s.receiveAttestations(s.ctx, indexedAttsChan)
+
+	s.wg.Add(1)
 	go s.receiveBlocks(s.ctx, beaconBlockHeadersChan)
 
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	s.attsSlotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
 	s.blocksSlotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
 	s.pruningSlotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
+
+	s.wg.Add(1)
 	go s.processQueuedAttestations(s.ctx, s.attsSlotTicker.C())
+
+	s.wg.Add(1)
 	go s.processQueuedBlocks(s.ctx, s.blocksSlotTicker.C())
+
+	s.wg.Add(1)
 	go s.pruneSlasherData(s.ctx, s.pruningSlotTicker.C())
 }
 
 // Stop the slasher service.
 func (s *Service) Stop() error {
 	s.cancel()
+	s.wg.Wait()
+
 	if s.attsSlotTicker != nil {
 		s.attsSlotTicker.Done()
 	}
@@ -155,8 +161,8 @@ func (s *Service) Stop() error {
 	ctx, innerCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer innerCancel()
 	log.Info("Flushing last epoch written for each validator to disk, please wait")
-	if err := s.serviceCfg.Database.SaveLastEpochsWrittenForValidators(
-		ctx, s.latestEpochWrittenForValidator,
+	if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(
+		ctx, s.latestEpochUpdatedForValidator,
 	); err != nil {
 		log.Error(err)
 	}
@@ -167,44 +173,19 @@ func (s *Service) Stop() error {
 }
 
 // Status of the slasher service.
-func (_ *Service) Status() error {
+func (*Service) Status() error {
 	return nil
 }
 
 func (s *Service) waitForChainInitialization() {
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.serviceCfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-	for {
-		select {
-		case stateEvent := <-stateChannel:
-			// Wait for us to receive the genesis time via a chain started notification.
-			if stateEvent.Type == statefeed.Initialized {
-				// Alternatively, if the chain has already started, we then read the genesis
-				// time value from this data.
-				data, ok := stateEvent.Data.(*statefeed.InitializedData)
-				if !ok {
-					log.Error(
-						"Could not receive chain start notification, want *statefeed.ChainStartedData",
-					)
-					return
-				}
-				s.genesisTime = data.StartTime
-				log.WithField("genesisTime", s.genesisTime).Info(
-					"Slasher received chain initialization event",
-				)
-				return
-			}
-		case err := <-stateSub.Err():
-			log.WithError(err).Error(
-				"Slasher could not subscribe to state events",
-			)
-			return
-		case <-s.ctx.Done():
-			return
-		}
+	clock, err := s.serviceCfg.ClockWaiter.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not receive chain start notification")
 	}
-
+	s.genesisTime = clock.GenesisTime()
+	log.WithField("genesisTime", s.genesisTime).Info(
+		"Slasher received chain initialization event",
+	)
 }
 
 func (s *Service) waitForSync(genesisTime time.Time) {

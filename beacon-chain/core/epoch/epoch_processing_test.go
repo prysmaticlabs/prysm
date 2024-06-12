@@ -7,20 +7,20 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -311,8 +311,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 6, Root: make([]byte, fieldparams.RootLength)},
 	}
-	limit, err := helpers.ValidatorChurnLimit(0)
-	require.NoError(t, err)
+	limit := helpers.ValidatorActivationChurnLimit(0)
 	for i := uint64(0); i < limit+10; i++ {
 		base.Validators = append(base.Validators, &ethpb.Validator{
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -332,6 +331,42 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 				i, helpers.ActivationExitEpoch(currentEpoch), validator.ActivationEpoch)
 		}
 		if uint64(i) >= limit && validator.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
+			t.Errorf("Could not update registry %d, validators should not have been activated, wanted activation epoch: %d, got %d",
+				i, params.BeaconConfig().FarFutureEpoch, validator.ActivationEpoch)
+		}
+	}
+}
+
+func TestProcessRegistryUpdates_EligibleToActivate_Cancun(t *testing.T) {
+	base := &ethpb.BeaconStateDeneb{
+		Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
+		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 6, Root: make([]byte, fieldparams.RootLength)},
+	}
+	cfg := params.BeaconConfig()
+	cfg.MinPerEpochChurnLimit = 10
+	cfg.ChurnLimitQuotient = 1
+	params.OverrideBeaconConfig(cfg)
+
+	for i := uint64(0); i < 10; i++ {
+		base.Validators = append(base.Validators, &ethpb.Validator{
+			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+		})
+	}
+	beaconState, err := state_native.InitializeFromProtoDeneb(base)
+	require.NoError(t, err)
+	currentEpoch := time.CurrentEpoch(beaconState)
+	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
+	require.NoError(t, err)
+	for i, validator := range newState.Validators() {
+		assert.Equal(t, currentEpoch+1, validator.ActivationEligibilityEpoch, "Could not update registry %d, unexpected activation eligibility epoch", i)
+		// Note: In Deneb, only validators indices before `MaxPerEpochActivationChurnLimit` should be activated.
+		if uint64(i) < params.BeaconConfig().MaxPerEpochActivationChurnLimit && validator.ActivationEpoch != helpers.ActivationExitEpoch(currentEpoch) {
+			t.Errorf("Could not update registry %d, validators failed to activate: wanted activation epoch %d, got %d",
+				i, helpers.ActivationExitEpoch(currentEpoch), validator.ActivationEpoch)
+		}
+		if uint64(i) >= params.BeaconConfig().MaxPerEpochActivationChurnLimit && validator.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
 			t.Errorf("Could not update registry %d, validators should not have been activated, wanted activation epoch: %d, got %d",
 				i, params.BeaconConfig().FarFutureEpoch, validator.ActivationEpoch)
 		}

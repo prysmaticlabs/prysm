@@ -1,13 +1,13 @@
 package state_native
 
 import (
-	"math/big"
+	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // LatestExecutionPayloadHeader of the beacon state.
@@ -19,10 +19,18 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionData, 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.version == version.Bellatrix {
+	switch b.version {
+	case version.Bellatrix:
 		return blocks.WrappedExecutionPayloadHeader(b.latestExecutionPayloadHeaderVal())
+	case version.Capella:
+		return blocks.WrappedExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapellaVal())
+	case version.Deneb:
+		return blocks.WrappedExecutionPayloadHeaderDeneb(b.latestExecutionPayloadHeaderDenebVal())
+	case version.Electra:
+		return blocks.WrappedExecutionPayloadHeaderElectra(b.latestExecutionPayloadHeaderElectraVal())
+	default:
+		return nil, fmt.Errorf("unsupported version (%s) for latest execution payload header", version.String(b.version))
 	}
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapellaVal(), big.NewInt(0))
 }
 
 // latestExecutionPayloadHeaderVal of the beacon state.
@@ -35,4 +43,12 @@ func (b *BeaconState) latestExecutionPayloadHeaderVal() *enginev1.ExecutionPaylo
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) latestExecutionPayloadHeaderCapellaVal() *enginev1.ExecutionPayloadHeaderCapella {
 	return ethpb.CopyExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapella)
+}
+
+func (b *BeaconState) latestExecutionPayloadHeaderDenebVal() *enginev1.ExecutionPayloadHeaderDeneb {
+	return ethpb.CopyExecutionPayloadHeaderDeneb(b.latestExecutionPayloadHeaderDeneb)
+}
+
+func (b *BeaconState) latestExecutionPayloadHeaderElectraVal() *enginev1.ExecutionPayloadHeaderElectra {
+	return ethpb.CopyExecutionPayloadHeaderElectra(b.latestExecutionPayloadHeaderElectra)
 }

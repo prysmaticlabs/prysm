@@ -7,19 +7,19 @@ import (
 	"testing"
 	"time"
 
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -93,6 +93,7 @@ func setupService(t *testing.T) *Service {
 			StateNotifier:       chainService.StateNotifier(),
 			HeadFetcher:         chainService,
 			AttestationNotifier: chainService.OperationNotifier(),
+			InitialSyncComplete: make(chan struct{}),
 		},
 
 		ctx:                         context.Background(),
@@ -140,39 +141,14 @@ func TestNewService(t *testing.T) {
 func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := setupService(t)
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
 	s.Start()
-
-	go func() {
-		select {
-		case stateEvent := <-stateChannel:
-			if stateEvent.Type == statefeed.Synced {
-				_, ok := stateEvent.Data.(*statefeed.SyncedData)
-				require.Equal(t, true, ok, "Event feed data is not type *statefeed.SyncedData")
-			}
-		case <-s.ctx.Done():
-		}
-		wg.Done()
-	}()
-
-	for sent := 0; sent == 0; {
-		sent = s.config.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Synced,
-			Data: &statefeed.SyncedData{
-				StartTime: time.Now(),
-			},
-		})
-	}
+	close(s.config.InitialSyncComplete)
 
 	// wait for Logrus
 	time.Sleep(1000 * time.Millisecond)
 	require.LogsContain(t, hook, "Synced to head epoch, starting reporting performance")
-	require.LogsContain(t, hook, "\"Starting service\" ValidatorIndices=\"[1 2 12 15]\"")
+	require.LogsContain(t, hook, "\"Starting service\" prefix=monitor validatorIndices=\"[1 2 12 15]\"")
 	s.Lock()
 	require.Equal(t, s.isLogging, true, "monitor is not running")
 	s.Unlock()
@@ -261,55 +237,46 @@ func TestMonitorRoutine(t *testing.T) {
 
 	// Wait for Logrus
 	time.Sleep(1000 * time.Millisecond)
-	wanted1 := fmt.Sprintf("\"Proposed beacon block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=32000000000 ParentRoot=0xf732eaeb7fae ProposerIndex=15 Slot=1 Version=1 prefix=monitor", bytesutil.Trunc(root[:]))
+	wanted1 := fmt.Sprintf("\"Proposed beacon block was included\" balanceChange=100000000 blockRoot=%#x newBalance=32000000000 parentRoot=0xf732eaeb7fae prefix=monitor proposerIndex=15 slot=1 version=1", bytesutil.Trunc(root[:]))
 	require.LogsContain(t, hook, wanted1)
 
 }
 
 func TestWaitForSync(t *testing.T) {
-	s := setupService(t)
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Service{ctx: ctx}
+	syncChan := make(chan struct{})
 
 	go func() {
-		err := s.waitForSync(stateChannel, stateSub)
-		require.NoError(t, err)
-		wg.Done()
+		// Failsafe to make sure tests never get deadlocked; we should always go through the happy path before 500ms.
+		// Otherwise, the NoError assertion below will fail.
+		time.Sleep(500 * time.Millisecond)
+		cancel()
 	}()
+	go func() {
+		close(syncChan)
+	}()
+	require.NoError(t, s.waitForSync(syncChan))
+}
 
-	stateChannel <- &feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: time.Now(),
-		},
-	}
+func TestWaitForSyncCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Service{ctx: ctx}
+	syncChan := make(chan struct{})
+
+	cancel()
+	require.ErrorIs(t, s.waitForSync(syncChan), errContextClosedWhileWaiting)
 }
 
 func TestRun(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := setupService(t)
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
 	go func() {
-		s.run(stateChannel, stateSub)
-		wg.Done()
+		s.run()
 	}()
+	close(s.config.InitialSyncComplete)
 
-	stateChannel <- &feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: time.Now(),
-		},
-	}
-	//wait for Logrus
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	require.LogsContain(t, hook, "Synced to head epoch, starting reporting performance")
 }

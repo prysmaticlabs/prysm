@@ -3,16 +3,16 @@ package time_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestSlotToEpoch_OK(t *testing.T) {
@@ -294,6 +294,76 @@ func TestCanUpgradeToCapella(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := time.CanUpgradeToCapella(tt.slot); got != tt.want {
 				t.Errorf("CanUpgradeToCapella() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCanUpgradeToDeneb(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	bc := params.BeaconConfig()
+	bc.DenebForkEpoch = 5
+	params.OverrideBeaconConfig(bc)
+	tests := []struct {
+		name string
+		slot primitives.Slot
+		want bool
+	}{
+		{
+			name: "not epoch start",
+			slot: 1,
+			want: false,
+		},
+		{
+			name: "not deneb epoch",
+			slot: params.BeaconConfig().SlotsPerEpoch,
+			want: false,
+		},
+		{
+			name: "deneb epoch",
+			slot: primitives.Slot(params.BeaconConfig().DenebForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := time.CanUpgradeToDeneb(tt.slot); got != tt.want {
+				t.Errorf("CanUpgradeToDeneb() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCanUpgradeToElectra(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	bc := params.BeaconConfig()
+	bc.ElectraForkEpoch = 5
+	params.OverrideBeaconConfig(bc)
+	tests := []struct {
+		name string
+		slot primitives.Slot
+		want bool
+	}{
+		{
+			name: "not epoch start",
+			slot: 1,
+			want: false,
+		},
+		{
+			name: "not electra epoch",
+			slot: params.BeaconConfig().SlotsPerEpoch,
+			want: false,
+		},
+		{
+			name: "electra epoch",
+			slot: primitives.Slot(params.BeaconConfig().ElectraForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := time.CanUpgradeToElectra(tt.slot); got != tt.want {
+				t.Errorf("CanUpgradeToElectra() = %v, want %v", got, tt.want)
 			}
 		})
 	}

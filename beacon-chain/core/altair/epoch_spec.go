@@ -3,15 +3,16 @@ package altair
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	log "github.com/sirupsen/logrus"
 )
 
 // ProcessSyncCommitteeUpdates  processes sync client committee updates for the beacon state.
 //
+// nolint:dupword
 // Spec code:
 // def process_sync_committee_updates(state: BeaconState) -> None:
 //
@@ -45,6 +46,7 @@ func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconSt
 
 // ProcessParticipationFlagUpdates processes participation flag updates by rotating current to previous.
 //
+// nolint:dupword
 // Spec code:
 // def process_participation_flag_updates(state: BeaconState) -> None:
 //

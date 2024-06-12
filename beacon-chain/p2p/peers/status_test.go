@@ -12,16 +12,17 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestStatus(t *testing.T) {
@@ -548,6 +549,10 @@ func TestPrune(t *testing.T) {
 }
 
 func TestPeerIPTracker(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnablePeerScorer: false,
+	})
+	defer resetCfg()
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
@@ -560,7 +565,7 @@ func TestPeerIPTracker(t *testing.T) {
 
 	badIP := "211.227.218.116"
 	var badPeers []peer.ID
-	for i := 0; i < peers.ColocationLimit+10; i++ {
+	for i := 0; i < peers.CollocationLimit+10; i++ {
 		port := strconv.Itoa(3000 + i)
 		addr, err := ma.NewMultiaddr("/ip4/" + badIP + "/tcp/" + port)
 		if err != nil {
@@ -582,7 +587,7 @@ func TestPeerIPTracker(t *testing.T) {
 	p.Prune()
 
 	for _, pr := range badPeers {
-		assert.Equal(t, true, p.IsBad(pr), "peer with good ip is regarded as bad")
+		assert.Equal(t, false, p.IsBad(pr), "peer with good ip is regarded as bad")
 	}
 }
 
@@ -686,6 +691,10 @@ func TestAtInboundPeerLimit(t *testing.T) {
 }
 
 func TestPrunePeers(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnablePeerScorer: false,
+	})
+	defer resetCfg()
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
 		ScorerParams: &scorers.Config{
@@ -736,10 +745,117 @@ func TestPrunePeers(t *testing.T) {
 	}
 
 	// Ensure it is in the descending order.
+	currCount, err := p.Scorers().BadResponsesScorer().Count(peersToPrune[0])
+	require.NoError(t, err)
+	for _, pid := range peersToPrune {
+		count, err := p.Scorers().BadResponsesScorer().Count(pid)
+		require.NoError(t, err)
+		assert.Equal(t, true, currCount >= count)
+		currCount = count
+	}
+}
+
+func TestPrunePeers_TrustedPeers(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 1,
+			},
+		},
+	})
+
+	for i := 0; i < 15; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirOutbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+	// Assert there are no prunable peers.
+	peersToPrune := p.PeersToPrune()
+	assert.Equal(t, 0, len(peersToPrune))
+
+	for i := 0; i < 18; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	// Assert there are the correct prunable peers.
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 3, len(peersToPrune))
+
+	// Add in more peers.
+	for i := 0; i < 13; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	var trustedPeers []peer.ID
+	// Set up bad scores for inbound peers.
+	inboundPeers := p.InboundConnected()
+	for i, pid := range inboundPeers {
+		modulo := i % 5
+		// Increment bad scores for peers.
+		for j := 0; j < modulo; j++ {
+			p.Scorers().BadResponsesScorer().Increment(pid)
+		}
+		if modulo == 4 {
+			trustedPeers = append(trustedPeers, pid)
+		}
+	}
+	p.SetTrustedPeers(trustedPeers)
+
+	// Assert we have correct trusted peers
+	trustedPeers = p.GetTrustedPeers()
+	assert.Equal(t, 6, len(trustedPeers))
+
+	// Assert all peers more than max are prunable.
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 16, len(peersToPrune))
+
+	// Check that trusted peers are not pruned.
+	for _, pid := range peersToPrune {
+		for _, tPid := range trustedPeers {
+			assert.NotEqual(t, pid.String(), tPid.String())
+		}
+	}
+
+	// Add more peers to check if trusted peers can be pruned after they are deleted from trusted peer set.
+	for i := 0; i < 9; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	// Delete trusted peers.
+	p.DeleteTrustedPeers(trustedPeers)
+
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 25, len(peersToPrune))
+
+	// Check that trusted peers are pruned.
+	for _, tPid := range trustedPeers {
+		pruned := false
+		for _, pid := range peersToPrune {
+			if pid.String() == tPid.String() {
+				pruned = true
+			}
+		}
+		assert.Equal(t, true, pruned)
+	}
+
+	// Assert have zero trusted peers
+	trustedPeers = p.GetTrustedPeers()
+	assert.Equal(t, 0, len(trustedPeers))
+
+	for _, pid := range peersToPrune {
+		dir, err := p.Direction(pid)
+		require.NoError(t, err)
+		assert.Equal(t, network.DirInbound, dir)
+	}
+
+	// Ensure it is in the descending order.
 	currScore := p.Scorers().Score(peersToPrune[0])
 	for _, pid := range peersToPrune {
-		score := p.Scorers().BadResponsesScorer().Score(pid)
-		assert.Equal(t, true, currScore >= score)
+		score := p.Scorers().Score(pid)
+		assert.Equal(t, true, currScore <= score)
 		currScore = score
 	}
 }
@@ -992,7 +1108,88 @@ func TestInbound(t *testing.T) {
 
 	result := p.Inbound()
 	require.Equal(t, 1, len(result))
-	assert.Equal(t, inbound.Pretty(), result[0].Pretty())
+	assert.Equal(t, inbound.String(), result[0].String())
+}
+
+func TestInboundConnected(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+
+	addr, err := ma.NewMultiaddr("/ip4/127.0.0.1/tcp/33333")
+	require.NoError(t, err)
+	inbound := createPeer(t, p, addr, network.DirInbound, peers.PeerConnected)
+	createPeer(t, p, addr, network.DirInbound, peers.PeerConnecting)
+
+	result := p.InboundConnected()
+	require.Equal(t, 1, len(result))
+	assert.Equal(t, inbound.String(), result[0].String())
+}
+
+func TestInboundConnectedWithProtocol(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+
+	addrsTCP := []string{
+		"/ip4/127.0.0.1/tcp/33333",
+		"/ip4/127.0.0.2/tcp/44444",
+	}
+
+	addrsQUIC := []string{
+		"/ip4/192.168.1.3/udp/13000/quic-v1",
+		"/ip4/192.168.1.4/udp/14000/quic-v1",
+		"/ip4/192.168.1.5/udp/14000/quic-v1",
+	}
+
+	expectedTCP := make(map[string]bool, len(addrsTCP))
+	for _, addr := range addrsTCP {
+		multiaddr, err := ma.NewMultiaddr(addr)
+		require.NoError(t, err)
+
+		peer := createPeer(t, p, multiaddr, network.DirInbound, peers.PeerConnected)
+		expectedTCP[peer.String()] = true
+	}
+
+	expectedQUIC := make(map[string]bool, len(addrsQUIC))
+	for _, addr := range addrsQUIC {
+		multiaddr, err := ma.NewMultiaddr(addr)
+		require.NoError(t, err)
+
+		peer := createPeer(t, p, multiaddr, network.DirInbound, peers.PeerConnected)
+		expectedQUIC[peer.String()] = true
+	}
+
+	// TCP
+	// ---
+
+	actualTCP := p.InboundConnectedWithProtocol(peers.TCP)
+	require.Equal(t, len(expectedTCP), len(actualTCP))
+
+	for _, actualPeer := range actualTCP {
+		_, ok := expectedTCP[actualPeer.String()]
+		require.Equal(t, true, ok)
+	}
+
+	// QUIC
+	// ----
+	actualQUIC := p.InboundConnectedWithProtocol(peers.QUIC)
+	require.Equal(t, len(expectedQUIC), len(actualQUIC))
+
+	for _, actualPeer := range actualQUIC {
+		_, ok := expectedQUIC[actualPeer.String()]
+		require.Equal(t, true, ok)
+	}
 }
 
 func TestOutbound(t *testing.T) {
@@ -1011,7 +1208,88 @@ func TestOutbound(t *testing.T) {
 
 	result := p.Outbound()
 	require.Equal(t, 1, len(result))
-	assert.Equal(t, outbound.Pretty(), result[0].Pretty())
+	assert.Equal(t, outbound.String(), result[0].String())
+}
+
+func TestOutboundConnected(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+
+	addr, err := ma.NewMultiaddr("/ip4/127.0.0.1/tcp/33333")
+	require.NoError(t, err)
+	inbound := createPeer(t, p, addr, network.DirOutbound, peers.PeerConnected)
+	createPeer(t, p, addr, network.DirOutbound, peers.PeerConnecting)
+
+	result := p.OutboundConnected()
+	require.Equal(t, 1, len(result))
+	assert.Equal(t, inbound.String(), result[0].String())
+}
+
+func TestOutboundConnectedWithProtocol(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+
+	addrsTCP := []string{
+		"/ip4/127.0.0.1/tcp/33333",
+		"/ip4/127.0.0.2/tcp/44444",
+	}
+
+	addrsQUIC := []string{
+		"/ip4/192.168.1.3/udp/13000/quic-v1",
+		"/ip4/192.168.1.4/udp/14000/quic-v1",
+		"/ip4/192.168.1.5/udp/14000/quic-v1",
+	}
+
+	expectedTCP := make(map[string]bool, len(addrsTCP))
+	for _, addr := range addrsTCP {
+		multiaddr, err := ma.NewMultiaddr(addr)
+		require.NoError(t, err)
+
+		peer := createPeer(t, p, multiaddr, network.DirOutbound, peers.PeerConnected)
+		expectedTCP[peer.String()] = true
+	}
+
+	expectedQUIC := make(map[string]bool, len(addrsQUIC))
+	for _, addr := range addrsQUIC {
+		multiaddr, err := ma.NewMultiaddr(addr)
+		require.NoError(t, err)
+
+		peer := createPeer(t, p, multiaddr, network.DirOutbound, peers.PeerConnected)
+		expectedQUIC[peer.String()] = true
+	}
+
+	// TCP
+	// ---
+
+	actualTCP := p.OutboundConnectedWithProtocol(peers.TCP)
+	require.Equal(t, len(expectedTCP), len(actualTCP))
+
+	for _, actualPeer := range actualTCP {
+		_, ok := expectedTCP[actualPeer.String()]
+		require.Equal(t, true, ok)
+	}
+
+	// QUIC
+	// ----
+	actualQUIC := p.OutboundConnectedWithProtocol(peers.QUIC)
+	require.Equal(t, len(expectedQUIC), len(actualQUIC))
+
+	for _, actualPeer := range actualQUIC {
+		_, ok := expectedQUIC[actualPeer.String()]
+		require.Equal(t, true, ok)
+	}
 }
 
 // addPeer is a helper to add a peer with a given connection state)

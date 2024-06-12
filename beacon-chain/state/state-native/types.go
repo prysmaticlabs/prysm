@@ -3,14 +3,15 @@ package state_native
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // Ensure type BeaconState below implements BeaconState interface.
 var _ state.BeaconState = (*BeaconState)(nil)
 
+// initialization for tests
 func init() {
 	fieldMap = make(map[types.FieldIndex]types.DataType)
 	// Initialize the fixed sized arrays.

@@ -16,33 +16,41 @@ load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 
 rules_pkg_dependencies()
 
+HERMETIC_CC_TOOLCHAIN_VERSION = "v3.0.1"
+
 http_archive(
-    name = "com_grail_bazel_toolchain",
-    sha256 = "b210fc8e58782ef171f428bfc850ed7179bdd805543ebd1aa144b9c93489134f",
-    strip_prefix = "bazel-toolchain-83e69ba9e4b4fdad0d1d057fcb87addf77c281c9",
-    urls = ["https://github.com/grailbio/bazel-toolchain/archive/83e69ba9e4b4fdad0d1d057fcb87addf77c281c9.tar.gz"],
+    name = "hermetic_cc_toolchain",
+    sha256 = "3bc6ec127622fdceb4129cb06b6f7ab098c4d539124dde96a6318e7c32a53f7a",
+    urls = [
+        "https://mirror.bazel.build/github.com/uber/hermetic_cc_toolchain/releases/download/{0}/hermetic_cc_toolchain-{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
+        "https://github.com/uber/hermetic_cc_toolchain/releases/download/{0}/hermetic_cc_toolchain-{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
+    ],
 )
 
-load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
+load("@hermetic_cc_toolchain//toolchain:defs.bzl", zig_toolchains = "toolchains")
 
-bazel_toolchain_dependencies()
+zig_toolchains()
 
-load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
-
-llvm_toolchain(
-    name = "llvm_toolchain",
-    llvm_version = "13.0.1",
+# Register zig sdk toolchains with support for Ubuntu 20.04 (Focal Fossa) which has an EOL date of April, 2025.
+# For ubuntu glibc support, see https://launchpad.net/ubuntu/+source/glibc
+register_toolchains(
+    "@zig_sdk//toolchain:linux_amd64_gnu.2.31",
+    "@zig_sdk//toolchain:linux_arm64_gnu.2.31",
+    # Hermetic cc toolchain is not yet supported on darwin. Sysroot needs to be provided.
+    # See https://github.com/uber/hermetic_cc_toolchain#osx-sysroot
+    #    "@zig_sdk//toolchain:darwin_amd64",
+    #    "@zig_sdk//toolchain:darwin_arm64",
+    # Windows builds are not supported yet.
+    #    "@zig_sdk//toolchain:windows_amd64",
 )
 
-load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
+load("@prysm//tools/cross-toolchain:darwin_cc_hack.bzl", "configure_nonhermetic_darwin")
 
-llvm_register_toolchains()
+configure_nonhermetic_darwin()
 
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
 
 configure_prysm_toolchains()
-
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_skylib",
@@ -59,10 +67,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "5982e5463f171da99e3bdaeff8c0f48283a7a5f396ec5282910b9e8a49c0dd7e",
+    integrity = "sha256-MpOL2hbmcABjA1R5Bj2dJMYO2o15/Uc5Vj9Q0zHLMgk=",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.25.0/bazel-gazelle-v0.25.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.25.0/bazel-gazelle-v0.25.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.35.0/bazel-gazelle-v0.35.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.35.0/bazel-gazelle-v0.35.0.tar.gz",
     ],
 )
 
@@ -74,9 +82,52 @@ http_archive(
 )
 
 http_archive(
-    name = "io_bazel_rules_docker",
-    sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
+    name = "rules_distroless",
+    sha256 = "e64f06e452cd153aeab81f752ccf4642955b3af319e64f7bc7a7c9252f76b10e",
+    strip_prefix = "rules_distroless-f5e678217b57ce3ad2f1c0204bd4e9d416255773",
+    url = "https://github.com/GoogleContainerTools/rules_distroless/archive/f5e678217b57ce3ad2f1c0204bd4e9d416255773.tar.gz",
+)
+
+load("@rules_distroless//distroless:dependencies.bzl", "rules_distroless_dependencies")
+
+rules_distroless_dependencies()
+
+http_archive(
+    name = "distroless",
+    integrity = "sha256-Cf00kUp1NyXA3LzbdyYy4Kda27wbkB8+A9MliTxq4jE=",
+    strip_prefix = "distroless-9dc924b9fe812eec2fa0061824dcad39eb09d0d6",
+    url = "https://github.com/GoogleContainerTools/distroless/archive/9dc924b9fe812eec2fa0061824dcad39eb09d0d6.tar.gz",  # 2024-01-24
+)
+
+http_archive(
+    name = "aspect_bazel_lib",
+    sha256 = "f5ea76682b209cc0bd90d0f5a3b26d2f7a6a2885f0c5f615e72913f4805dbb0d",
+    strip_prefix = "bazel-lib-2.5.0",
+    url = "https://github.com/aspect-build/bazel-lib/releases/download/v2.5.0/bazel-lib-v2.5.0.tar.gz",
+)
+
+load("@aspect_bazel_lib//lib:repositories.bzl", "aspect_bazel_lib_dependencies", "aspect_bazel_lib_register_toolchains")
+
+aspect_bazel_lib_dependencies()
+
+aspect_bazel_lib_register_toolchains()
+
+http_archive(
+    name = "rules_oci",
+    sha256 = "4a276e9566c03491649eef63f27c2816cc222f41ccdebd97d2c5159e84917c3b",
+    strip_prefix = "rules_oci-1.7.4",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.7.4/rules_oci-v1.7.4.tar.gz",
+)
+
+load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
+
+rules_oci_dependencies()
+
+load("@rules_oci//oci:repositories.bzl", "LATEST_CRANE_VERSION", "oci_register_toolchains")
+
+oci_register_toolchains(
+    name = "oci",
+    crane_version = LATEST_CRANE_VERSION,
 )
 
 http_archive(
@@ -86,10 +137,10 @@ http_archive(
         # Expose internals of go_test for custom build transitions.
         "//third_party:io_bazel_rules_go_test.patch",
     ],
-    sha256 = "dd926a88a564a9246713a9c00b35315f54cbd46b31a26d5d8fb264c07045f05d",
+    sha256 = "80a98277ad1311dacd837f9b16db62887702e9f1d1c4c9f796d0121a46c8e184",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.38.1/rules_go-v0.38.1.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.38.1/rules_go-v0.38.1.zip",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.46.0/rules_go-v0.46.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.46.0/rules_go-v0.46.0.zip",
     ],
 )
 
@@ -108,65 +159,36 @@ git_repository(
     # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
 )
 
-load(
-    "@io_bazel_rules_docker//repositories:repositories.bzl",
-    container_repositories = "repositories",
+load("@rules_oci//oci:pull.bzl", "oci_pull")
+
+# A multi-arch base image
+oci_pull(
+    name = "linux_debian11_multiarch_base",  # Debian bullseye
+    digest = "sha256:b82f113425c5b5c714151aaacd8039bc141821cdcd3c65202d42bdf9c43ae60b",  # 2023-12-12
+    image = "gcr.io/distroless/cc-debian11",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64/v8",
+    ],
+    reproducible = True,
 )
 
-container_repositories()
+load("@prysm//tools:image_deps.bzl", "prysm_image_deps")
 
-load(
-    "@io_bazel_rules_docker//container:container.bzl",
-    "container_pull",
-)
-
-# Pulled gcr.io/distroless/cc-debian11:latest on 2022-02-23
-container_pull(
-    name = "cc_image_base_amd64",
-    digest = "sha256:2a0daf90a7deb78465bfca3ef2eee6e91ce0a5706059f05d79d799a51d339523",
-    registry = "gcr.io",
-    repository = "distroless/cc-debian11",
-)
-
-# Pulled gcr.io/distroless/cc-debian11:debug on 2022-02-23
-container_pull(
-    name = "cc_debug_image_base_amd64",
-    digest = "sha256:7bd596f5f200588f13a69c268eea6ce428b222b67cd7428d6a7fef95e75c052a",
-    registry = "gcr.io",
-    repository = "distroless/cc-debian11",
-)
-
-# Pulled from gcr.io/distroless/base-debian11:latest on 2022-02-23
-container_pull(
-    name = "go_image_base_amd64",
-    digest = "sha256:34e682800774ecbd0954b1663d90238505f1ba5543692dbc75feef7dd4839e90",
-    registry = "gcr.io",
-    repository = "distroless/base-debian11",
-)
-
-# Pulled from gcr.io/distroless/base-debian11:debug on 2022-02-23
-container_pull(
-    name = "go_debug_image_base_amd64",
-    digest = "sha256:0f503c6bfd207793bc416f20a35bf6b75d769a903c48f180ad73f60f7b60d7bd",
-    registry = "gcr.io",
-    repository = "distroless/base-debian11",
-)
-
-container_pull(
-    name = "alpine_cc_linux_amd64",
-    digest = "sha256:752aa0c9a88461ffc50c5267bb7497ef03a303e38b2c8f7f2ded9bebe5f1f00e",
-    registry = "index.docker.io",
-    repository = "pinglamb/alpine-glibc",
-)
+prysm_image_deps()
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.19.8",
+    go_version = "1.21.8",
     nogo = "@//:nogo",
 )
+
+load("//:distroless_deps.bzl", "distroless_deps")
+
+distroless_deps()
 
 http_archive(
     name = "io_kubernetes_build",
@@ -186,8 +208,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "91434d5fd5e1c6eb7b0174fed2afe25e09bddf00e1e4c431db931b2cee4e7773",
-    url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
+    sha256 = "516d551cfb3e50e4ac2f42db0992f4ceb573a7cb1616d727a725c8161485329f",
+    url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/refs/tags/v5.3.0.tar.gz",
 )
 
 http_archive(
@@ -205,7 +227,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.3.0-rc.5"
+consensus_spec_version = "v1.5.0-alpha.2"
 
 bls_test_version = "v0.1.1"
 
@@ -221,7 +243,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "266006512e71e62396e8f31be01639560c9d59a93c38220fd8f51fabefc8f5f3",
+    integrity = "sha256-NNXBa7SZ2sFb68HPNahgu1p0yDBpjuKJuLfRCl7vvoQ=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -237,7 +259,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "2ebf483830165909cb7961562fd369dedf079997a4832cc215a543898a73aa46",
+    integrity = "sha256-7BnlBvGWU92iAB100cMaAXVQhRrqpMQbavgrI+/paCw=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -253,7 +275,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "333718ba5c907e0a99580caa8d28dd710543b3b271e4251581006d0e101fbce9",
+    integrity = "sha256-VCHhcNt+fynf/sHK11qbRBAy608u9T1qAafvAGfxQhA=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -268,7 +290,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "78b6925b5a4208e32385fa4387d2c27b381a8ddd18d66d5a7787e7846b86bfc8",
+    integrity = "sha256-a2aCNFyFkYLtf6QSwGOHdx7xXHjA2NNT8x8ZuxB0aes=",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -299,43 +321,51 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "2701e1e1a3ec10c673fe7dbdbbe6f02c8ae8c922aebbf6e720d8c72d5458aafe",
-    strip_prefix = "eth2-networks-7b4897888cebef23801540236f73123e21774954",
-    url = "https://github.com/eth-clients/eth2-networks/archive/7b4897888cebef23801540236f73123e21774954.tar.gz",
+    sha256 = "77e7e3ed65e33b7bb19d30131f4c2bb39e4dfeb188ab9ae84651c3cc7600131d",
+    strip_prefix = "eth2-networks-934c948e69205dcf2deb87e4ae6cc140c335f94d",
+    url = "https://github.com/eth-clients/eth2-networks/archive/934c948e69205dcf2deb87e4ae6cc140c335f94d.tar.gz",
 )
 
 http_archive(
-    name = "com_github_bazelbuild_buildtools",
-    sha256 = "7a182df18df1debabd9e36ae07c8edfa1378b8424a04561b674d933b965372b3",
-    strip_prefix = "buildtools-f2aed9ee205d62d45c55cfabbfd26342f8526862",
-    url = "https://github.com/bazelbuild/buildtools/archive/f2aed9ee205d62d45c55cfabbfd26342f8526862.zip",
-)
-
-git_repository(
-    name = "com_google_protobuf",
-    commit = "436bd7880e458532901c58f4d9d1ea23fa7edd52",
-    remote = "https://github.com/protocolbuffers/protobuf",
-    shallow_since = "1617835118 -0700",
-)
-
-# Group the sources of the library so that CMake rule have access to it
-all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
-
-# External dependencies
-
-http_archive(
-    name = "prysm_web_ui",
+    name = "holesky_testnet",
     build_file_content = """
 filegroup(
-    name = "site",
-    srcs = glob(["**/*"]),
+    name = "configs",
+    srcs = [
+        "custom_config_data/config.yaml",
+    ],
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "5006614c33e358699b4e072c649cd4c3866f7d41a691449d5156f6c6e07a4c60",
+    sha256 = "5f4be6fd088683ea9db45c863b9c5a1884422449e5b59fd2d561d3ba0f73ffd9",
+    strip_prefix = "holesky-9d9aabf2d4de51334ee5fed6c79a4d55097d1a43",
+    url = "https://github.com/eth-clients/holesky/archive/9d9aabf2d4de51334ee5fed6c79a4d55097d1a43.tar.gz",  # 2024-01-22
+)
+
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "9bd87b8280ef720d3240514f884e56a712f2218f0d693b48050c836028940a42",
+    strip_prefix = "protobuf-25.1",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.3/prysm-web-ui.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v25.1.tar.gz",
     ],
+)
+
+# External dependencies
+http_archive(
+    name = "googleapis",
+    sha256 = "9d1a930e767c93c825398b8f8692eca3fe353b9aaadedfbcf1fca2282c85df88",
+    strip_prefix = "googleapis-64926d52febbf298cb82a8f472ade4a3969ba922",
+    urls = [
+        "https://github.com/googleapis/googleapis/archive/64926d52febbf298cb82a8f472ade4a3969ba922.zip",
+    ],
+)
+
+load("@googleapis//:repository_rules.bzl", "switched_rules_by_language")
+
+switched_rules_by_language(
+    name = "com_google_googleapis_imports",
+    go = True,
 )
 
 load("//:deps.bzl", "prysm_deps")
@@ -351,28 +381,6 @@ load("@prysm//testing/endtoend:deps.bzl", "e2e_deps")
 
 e2e_deps()
 
-load(
-    "@io_bazel_rules_docker//go:image.bzl",
-    _go_image_repos = "repositories",
-)
-
-# Golang images
-# This is using gcr.io/distroless/base
-_go_image_repos()
-
-# CC images
-# This is using gcr.io/distroless/base
-load(
-    "@io_bazel_rules_docker//cc:image.bzl",
-    _cc_image_repos = "repositories",
-)
-
-_cc_image_repos()
-
-load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
-
-go_embed_data_dependencies()
-
 load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
 
 gometalinter_dependencies()
@@ -380,10 +388,6 @@ gometalinter_dependencies()
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
-
-load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
-
-buildifier_dependencies()
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 

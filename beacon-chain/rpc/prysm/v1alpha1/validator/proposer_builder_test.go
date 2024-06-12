@@ -5,18 +5,20 @@ import (
 	"testing"
 	"time"
 
-	blockchainTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	blockchainTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
+	testing2 "github.com/prysmaticlabs/prysm/v5/beacon-chain/builder/testing"
+	dbTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -70,22 +72,28 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 }
 
 func TestServer_validatorRegistered(t *testing.T) {
-	proposerServer := &Server{}
+	b, err := builder.NewService(context.Background())
+	require.NoError(t, err)
+	proposerServer := &Server{
+		BlockBuilder: b,
+	}
 	ctx := context.Background()
 
 	reg, err := proposerServer.validatorRegistered(ctx, 0)
 	require.ErrorContains(t, "nil beacon db", err)
 	require.Equal(t, false, reg)
-
-	proposerServer.BeaconDB = dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
+	realBuilder, err := builder.NewService(context.Background(), builder.WithDatabase(db))
+	require.NoError(t, err)
+	proposerServer.BlockBuilder = realBuilder
 	reg, err = proposerServer.validatorRegistered(ctx, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
 
 	f := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	p := bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)
-	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0, 1},
-		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Pubkey: p}, {FeeRecipient: f, Pubkey: p}}))
+	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0, 1},
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: uint64(time.Now().Unix()), Pubkey: p}, {FeeRecipient: f, Timestamp: uint64(time.Now().Unix()), Pubkey: p}}))
 
 	reg, err = proposerServer.validatorRegistered(ctx, 0)
 	require.NoError(t, err)
@@ -93,31 +101,41 @@ func TestServer_validatorRegistered(t *testing.T) {
 	reg, err = proposerServer.validatorRegistered(ctx, 1)
 	require.NoError(t, err)
 	require.Equal(t, true, reg)
+
 }
 
 func TestServer_canUseBuilder(t *testing.T) {
-	proposerServer := &Server{}
+	proposerServer := &Server{
+		BlockBuilder: &testing2.MockBuilderService{
+			HasConfigured: false,
+		},
+	}
+	reg, err := proposerServer.canUseBuilder(context.Background(), 0, 0)
+	require.NoError(t, err)
+	require.Equal(t, false, reg)
+
 	ctx := context.Background()
 
 	proposerServer.ForkchoiceFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
 	proposerServer.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
-	reg, err := proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
+	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
+	db := dbTest.SetupDB(t)
 
-	reg, err = proposerServer.validatorRegistered(ctx, 0)
-	require.ErrorContains(t, "nil beacon db", err)
-	require.Equal(t, false, reg)
+	proposerServer.BlockBuilder = &testing2.MockBuilderService{
+		HasConfigured: true,
+		Cfg:           &testing2.Config{BeaconDB: db},
+	}
 
-	proposerServer.BeaconDB = dbTest.SetupDB(t)
 	reg, err = proposerServer.canUseBuilder(ctx, 1, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
 
 	f := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	p := bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)
-	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0},
-		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Pubkey: p}}))
+	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0},
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: uint64(time.Now().Unix()), Pubkey: p}}))
 
 	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots-1, 0)
 	require.NoError(t, err)

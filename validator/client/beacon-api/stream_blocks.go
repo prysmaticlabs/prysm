@@ -8,9 +8,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 )
 
@@ -24,7 +24,7 @@ type abstractSignedBlockResponseJson struct {
 type streamBlocksAltairClient struct {
 	grpc.ClientStream
 	ctx                 context.Context
-	beaconApiClient     beaconApiValidatorClient
+	beaconApiClient     *beaconApiValidatorClient
 	streamBlocksRequest *ethpb.StreamBlocksRequest
 	prevBlockSlot       primitives.Slot
 	pingDelay           time.Duration
@@ -36,7 +36,7 @@ type headSignedBeaconBlockResult struct {
 	slot                 primitives.Slot
 }
 
-func (c beaconApiValidatorClient) streamBlocks(ctx context.Context, in *ethpb.StreamBlocksRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamBlocksAltairClient {
+func (c *beaconApiValidatorClient) streamBlocks(ctx context.Context, in *ethpb.StreamBlocksRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamBlocksAltairClient {
 	return &streamBlocksAltairClient{
 		ctx:                 ctx,
 		beaconApiClient:     c,
@@ -46,7 +46,7 @@ func (c beaconApiValidatorClient) streamBlocks(ctx context.Context, in *ethpb.St
 }
 
 func (c *streamBlocksAltairClient) Recv() (*ethpb.StreamBlocksResponse, error) {
-	result, err := c.beaconApiClient.getHeadSignedBeaconBlock(c.ctx)
+	result, err := c.beaconApiClient.headSignedBeaconBlock(c.ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get latest signed block")
 	}
@@ -55,7 +55,7 @@ func (c *streamBlocksAltairClient) Recv() (*ethpb.StreamBlocksResponse, error) {
 	for (c.streamBlocksRequest.VerifiedOnly && result.executionOptimistic) || c.prevBlockSlot == result.slot {
 		select {
 		case <-time.After(c.pingDelay):
-			result, err = c.beaconApiClient.getHeadSignedBeaconBlock(c.ctx)
+			result, err = c.beaconApiClient.headSignedBeaconBlock(c.ctx)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to get latest signed block")
 			}
@@ -68,24 +68,23 @@ func (c *streamBlocksAltairClient) Recv() (*ethpb.StreamBlocksResponse, error) {
 	return result.streamBlocksResponse, nil
 }
 
-func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) (*headSignedBeaconBlockResult, error) {
+func (c *beaconApiValidatorClient) headSignedBeaconBlock(ctx context.Context) (*headSignedBeaconBlockResult, error) {
 	// Since we don't know yet what the json looks like, we unmarshal into an abstract structure that has only a version
 	// and a blob of data
 	signedBlockResponseJson := abstractSignedBlockResponseJson{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v2/beacon/blocks/head", &signedBlockResponseJson); err != nil {
-		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
+	if err := c.jsonRestHandler.Get(ctx, "/eth/v2/beacon/blocks/head", &signedBlockResponseJson); err != nil {
+		return nil, err
 	}
 
 	// Once we know what the consensus version is, we can go ahead and unmarshal into the specific structs unique to each version
 	decoder := json.NewDecoder(bytes.NewReader(signedBlockResponseJson.Data))
-	decoder.DisallowUnknownFields()
 
 	response := &ethpb.StreamBlocksResponse{}
 	var slot primitives.Slot
 
 	switch signedBlockResponseJson.Version {
 	case "phase0":
-		jsonPhase0Block := apimiddleware.SignedBeaconBlockContainerJson{}
+		jsonPhase0Block := structs.SignedBeaconBlock{}
 		if err := decoder.Decode(&jsonPhase0Block); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed phase0 block response json")
 		}
@@ -110,7 +109,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = phase0Block.Slot
 
 	case "altair":
-		jsonAltairBlock := apimiddleware.SignedBeaconBlockAltairContainerJson{}
+		jsonAltairBlock := structs.SignedBeaconBlockAltair{}
 		if err := decoder.Decode(&jsonAltairBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed altair block response json")
 		}
@@ -135,7 +134,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = altairBlock.Slot
 
 	case "bellatrix":
-		jsonBellatrixBlock := apimiddleware.SignedBeaconBlockBellatrixContainerJson{}
+		jsonBellatrixBlock := structs.SignedBeaconBlockBellatrix{}
 		if err := decoder.Decode(&jsonBellatrixBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed bellatrix block response json")
 		}
@@ -160,7 +159,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = bellatrixBlock.Slot
 
 	case "capella":
-		jsonCapellaBlock := apimiddleware.SignedBeaconBlockCapellaContainerJson{}
+		jsonCapellaBlock := structs.SignedBeaconBlockCapella{}
 		if err := decoder.Decode(&jsonCapellaBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed capella block response json")
 		}
@@ -183,6 +182,25 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		}
 
 		slot = capellaBlock.Slot
+	case "deneb":
+		jsonDenebBlock := structs.SignedBeaconBlockDeneb{}
+		if err := decoder.Decode(&jsonDenebBlock); err != nil {
+			return nil, errors.Wrap(err, "failed to decode signed deneb block response json")
+		}
+
+		denebBlock, err := jsonDenebBlock.ToConsensus()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get signed deneb block")
+		}
+
+		response.Block = &ethpb.StreamBlocksResponse_DenebBlock{
+			DenebBlock: &ethpb.SignedBeaconBlockDeneb{
+				Signature: denebBlock.Signature,
+				Block:     denebBlock.Block,
+			},
+		}
+
+		slot = denebBlock.Block.Slot
 
 	default:
 		return nil, errors.Errorf("unsupported consensus version `%s`", signedBlockResponseJson.Version)

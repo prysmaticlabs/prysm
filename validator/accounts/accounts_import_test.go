@@ -2,21 +2,21 @@ package accounts
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
 )
 
 func TestImportAccounts_NoPassword(t *testing.T) {
@@ -53,7 +53,7 @@ func TestImportAccounts_NoPassword(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(resp))
-	require.Equal(t, resp[0].Status, ethpbservice.ImportedKeystoreStatus_ERROR)
+	require.Equal(t, resp[0].Status, keymanager.StatusError)
 }
 
 func TestImport_SortByDerivationPath(t *testing.T) {
@@ -173,4 +173,31 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pubKeys))
 	assert.DeepEqual(t, pubKeys[0], bytesutil.ToBytes48(privKey.PublicKey().Marshal()))
+}
+
+func Test_NameToDescriptionChangeIsOK(t *testing.T) {
+	jsonString := `{"version":1, "name":"hmmm"}`
+	type Obj struct {
+		Version     uint   `json:"version"`
+		Description string `json:"description"`
+	}
+	a := &Obj{}
+	require.NoError(t, json.Unmarshal([]byte(jsonString), a))
+	require.Equal(t, a.Description, "")
+}
+
+func Test_MarshalOmitsName(t *testing.T) {
+	type Obj struct {
+		Version     uint   `json:"version"`
+		Description string `json:"description"`
+		Name        string `json:"name,omitempty"`
+	}
+	a := &Obj{
+		Version:     1,
+		Description: "hmm",
+	}
+
+	bytes, err := json.Marshal(a)
+	require.NoError(t, err)
+	require.Equal(t, string(bytes), `{"version":1,"description":"hmm"}`)
 }

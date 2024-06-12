@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	beaconsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	beaconsync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,7 +30,7 @@ const (
 	skippedMachineTimeout = 10 * staleEpochTimeout
 	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
 	// Each step is managed by assigned finite state machine. Must be >= 2.
-	lookaheadSteps = 8
+	lookaheadSteps = 4
 	// noRequiredPeersErrMaxRetries defines number of retries when no required peers are found.
 	noRequiredPeersErrMaxRetries = 1000
 	// noRequiredPeersErrRefreshInterval defines interval for which queue will be paused before
@@ -62,10 +64,13 @@ type syncMode uint8
 type blocksQueueConfig struct {
 	blocksFetcher       *blocksFetcher
 	chain               blockchainService
+	clock               *startup.Clock
+	ctxMap              beaconsync.ContextByteVersions
 	highestExpectedSlot primitives.Slot
 	p2p                 p2p.P2P
 	db                  db.ReadOnlyDatabase
 	mode                syncMode
+	bs                  filesystem.BlobStorageSummarizer
 }
 
 // blocksQueue is a priority queue that serves as a intermediary between block fetchers (producers)
@@ -88,8 +93,8 @@ type blocksQueue struct {
 
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
 type blocksQueueFetchedData struct {
-	pid    peer.ID
-	blocks []interfaces.ReadOnlySignedBeaconBlock
+	pid peer.ID
+	bwb []blocks.BlockWithROBlobs
 }
 
 // newBlocksQueue creates initialized priority queue.
@@ -98,10 +103,16 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 
 	blocksFetcher := cfg.blocksFetcher
 	if blocksFetcher == nil {
+		if cfg.bs == nil {
+			log.Warn("rpc fetcher starting without blob availability cache, duplicate blobs may be requested.")
+		}
 		blocksFetcher = newBlocksFetcher(ctx, &blocksFetcherConfig{
-			chain: cfg.chain,
-			p2p:   cfg.p2p,
-			db:    cfg.db,
+			ctxMap: cfg.ctxMap,
+			chain:  cfg.chain,
+			p2p:    cfg.p2p,
+			db:     cfg.db,
+			clock:  cfg.clock,
+			bs:     cfg.bs,
 		})
 	}
 	highestExpectedSlot := cfg.highestExpectedSlot
@@ -134,7 +145,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	queue.smm.addEventHandler(eventDataReceived, stateScheduled, queue.onDataReceivedEvent(ctx))
 	queue.smm.addEventHandler(eventTick, stateDataParsed, queue.onReadyToSendEvent(ctx))
 	queue.smm.addEventHandler(eventTick, stateSkipped, queue.onProcessSkippedEvent(ctx))
-	queue.smm.addEventHandler(eventTick, stateSent, queue.onCheckStaleEvent(ctx))
+	queue.smm.addEventHandler(eventTick, stateSent, onCheckStaleEvent(ctx))
 
 	return queue
 }
@@ -316,15 +327,15 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 			return m.state, errInputNotFetchRequestParams
 		}
 		if response.err != nil {
-			switch response.err {
-			case errSlotIsTooHigh:
+			if errors.Is(response.err, errSlotIsTooHigh) {
 				// Current window is already too big, re-request previous epochs.
 				for _, fsm := range q.smm.machines {
 					if fsm.start < response.start && fsm.state == stateSkipped {
 						fsm.setState(stateNew)
 					}
 				}
-			case beaconsync.ErrInvalidFetchedData:
+			}
+			if errors.Is(response.err, beaconsync.ErrInvalidFetchedData) {
 				// Peer returned invalid data, penalize.
 				q.blocksFetcher.p2p.Peers().Scorers().BadResponsesScorer().Increment(m.pid)
 				log.WithField("pid", response.pid).Debug("Peer is penalized for invalid blocks")
@@ -332,7 +343,7 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 			return m.state, response.err
 		}
 		m.pid = response.pid
-		m.blocks = response.blocks
+		m.bwb = response.bwb
 		return stateDataParsed, nil
 	}
 }
@@ -347,14 +358,14 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 			return m.state, errInvalidInitialState
 		}
 
-		if len(m.blocks) == 0 {
+		if len(m.bwb) == 0 {
 			return stateSkipped, nil
 		}
 
 		send := func() (stateID, error) {
 			data := &blocksQueueFetchedData{
-				pid:    m.pid,
-				blocks: m.blocks,
+				pid: m.pid,
+				bwb: m.bwb,
 			}
 			select {
 			case <-ctx.Done():
@@ -446,7 +457,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 // onCheckStaleEvent is an event that allows to mark stale epochs,
 // so that they can be re-processed.
-func (_ *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
+func onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 	return func(m *stateMachine, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()

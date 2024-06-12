@@ -3,9 +3,8 @@ package doublylinkedtree
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // orphanLateBlockProposingEarly determines the maximum threshold that we
@@ -28,7 +27,7 @@ const orphanLateBlockProposingEarly = 2
 // 3- The beacon node is serving a validator that will propose during the next
 // slot.
 //
-// This function only applies an heuristic to decide if the beacon will update
+// This function only applies a heuristic to decide if the beacon will update
 // the engine's view of head with the parent block or the incoming block. It
 // does not guarantee an attempted reorg. This will only be decided later at
 // proposal time by calling GetProposerHead.
@@ -82,6 +81,20 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 	if head.weight*100 > f.store.committeeWeight*params.BeaconConfig().ReorgWeightThreshold {
 		return
 	}
+
+	// Return early if we are checking before 10 seconds into the slot
+	secs, err := slots.SecondsSinceSlotStart(head.slot, f.store.genesisTime, uint64(time.Now().Unix()))
+	if err != nil {
+		log.WithError(err).Error("could not check current slot")
+		return true
+	}
+	if secs < ProcessAttestationsThreshold {
+		return true
+	}
+	// Only orphan a block if the parent LMD vote is strong
+	if parent.weight*100 < f.store.committeeWeight*params.BeaconConfig().ReorgParentWeightThreshold {
+		return
+	}
 	return true
 }
 
@@ -93,9 +106,6 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 // This function needs to be called only when proposing a block and all
 // attestation processing has already happened.
 func (f *ForkChoice) GetProposerHead() [32]byte {
-	if features.Get().DisableReorgLateBlocks {
-		return f.CachedHeadRoot()
-	}
 	head := f.store.headNode
 	if head == nil {
 		return [32]byte{}
@@ -134,6 +144,11 @@ func (f *ForkChoice) GetProposerHead() [32]byte {
 
 	// Only orphan a block if the head LMD vote is weak
 	if head.weight*100 > f.store.committeeWeight*params.BeaconConfig().ReorgWeightThreshold {
+		return head.root
+	}
+
+	// Only orphan a block if the parent LMD vote is strong
+	if parent.weight*100 < f.store.committeeWeight*params.BeaconConfig().ReorgParentWeightThreshold {
 		return head.root
 	}
 

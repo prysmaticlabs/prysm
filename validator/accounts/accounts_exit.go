@@ -3,18 +3,23 @@ package accounts
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	beacon_api "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -25,13 +30,11 @@ type PerformExitCfg struct {
 	Keymanager       keymanager.IKeymanager
 	RawPubKeys       [][]byte
 	FormattedPubKeys []string
+	OutputDirectory  string
 }
 
-// ExitPassphrase exported for use in test.
-const ExitPassphrase = "Exit my validator"
-
 // Exit performs a voluntary exit on one or more accounts.
-func (acm *AccountsCLIManager) Exit(ctx context.Context) error {
+func (acm *CLIManager) Exit(ctx context.Context) error {
 	// User decided to cancel the voluntary exit.
 	if acm.rawPubKeys == nil && acm.formattedPubKeys == nil {
 		return nil
@@ -44,7 +47,7 @@ func (acm *AccountsCLIManager) Exit(ctx context.Context) error {
 	if nodeClient == nil {
 		return errors.New("could not prepare beacon node client")
 	}
-	syncStatus, err := (*nodeClient).GetSyncStatus(ctx, &emptypb.Empty{})
+	syncStatus, err := (*nodeClient).SyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -62,6 +65,7 @@ func (acm *AccountsCLIManager) Exit(ctx context.Context) error {
 		acm.keymanager,
 		acm.rawPubKeys,
 		acm.formattedPubKeys,
+		acm.exitJSONOutputPath,
 	}
 	rawExitedKeys, trimmedExitedKeys, err := PerformVoluntaryExit(ctx, cfg)
 	if err != nil {
@@ -77,8 +81,32 @@ func PerformVoluntaryExit(
 	ctx context.Context, cfg PerformExitCfg,
 ) (rawExitedKeys [][]byte, formattedExitedKeys []string, err error) {
 	var rawNotExitedKeys [][]byte
+	genesisResponse, err := cfg.NodeClient.Genesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.WithError(err).Errorf("voluntary exit failed: %v", err)
+	}
 	for i, key := range cfg.RawPubKeys {
-		if err := client.ProposeExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.Keymanager.Sign, key); err != nil {
+		// When output directory is present, only create the signed exit, but do not propose it.
+		// Otherwise, propose the exit immediately.
+		epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
+		if err != nil {
+			log.WithError(err).Errorf("voluntary exit failed: %v", err)
+		}
+		if len(cfg.OutputDirectory) > 0 {
+			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.Keymanager.Sign, key, epoch)
+			if err != nil {
+				rawNotExitedKeys = append(rawNotExitedKeys, key)
+				msg := err.Error()
+				if strings.Contains(msg, blocks.ValidatorAlreadyExitedMsg) ||
+					strings.Contains(msg, blocks.ValidatorCannotExitYetMsg) {
+					log.Warningf("Could not create voluntary exit for account %s: %s", cfg.FormattedPubKeys[i], msg)
+				} else {
+					log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.FormattedPubKeys[i])
+				}
+			} else if err := writeSignedVoluntaryExitJSON(sve, cfg.OutputDirectory); err != nil {
+				log.WithError(err).Error("failed to write voluntary exit")
+			}
+		} else if err := client.ProposeExit(ctx, cfg.ValidatorClient, cfg.Keymanager.Sign, key, epoch); err != nil {
 			rawNotExitedKeys = append(rawNotExitedKeys, key)
 
 			msg := err.Error()
@@ -125,14 +153,7 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 	if len(rawExitedKeys) > 0 {
 		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
 		for i, key := range rawExitedKeys {
-			var baseUrl string
-			if params.BeaconConfig().ConfigName == params.PraterName || params.BeaconConfig().ConfigName == params.GoerliName {
-				baseUrl = "https://goerli.beaconcha.in/validator/"
-			} else {
-				baseUrl = "https://beaconcha.in/validator/"
-			}
-			// Remove '0x' prefix
-			urlFormattedPubKeys[i] = baseUrl + hexutil.Encode(key)[2:]
+			urlFormattedPubKeys[i] = formatBeaconChaURL(key)
 		}
 
 		ifaceKeys := make([]interface{}, len(urlFormattedPubKeys))
@@ -143,8 +164,43 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 		info := fmt.Sprintf("Voluntary exit was successful for the accounts listed. "+
 			"URLs where you can track each validator's exit:\n"+strings.Repeat("%s\n", len(ifaceKeys)), ifaceKeys...)
 
-		log.WithField("publicKeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
+		log.WithField("pubkeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
 	} else {
 		log.Info("No successful voluntary exits")
 	}
+}
+
+func formatBeaconChaURL(key []byte) string {
+	baseURL := "https://%sbeaconcha.in/validator/%s"
+	keyWithout0x := hexutil.Encode(key)[2:]
+
+	switch env := params.BeaconConfig().ConfigName; env {
+	case params.HoleskyName:
+		return fmt.Sprintf(baseURL, "holesky.", keyWithout0x)
+	case params.SepoliaName:
+		return fmt.Sprintf(baseURL, "sepolia.", keyWithout0x)
+	default:
+		return fmt.Sprintf(baseURL, "", keyWithout0x)
+	}
+}
+
+func writeSignedVoluntaryExitJSON(sve *eth.SignedVoluntaryExit, outputDirectory string) error {
+	if err := file.MkdirAll(outputDirectory); err != nil {
+		return err
+	}
+
+	jsve := beacon_api.JsonifySignedVoluntaryExits([]*eth.SignedVoluntaryExit{sve})[0]
+	b, err := json.Marshal(jsve)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal JSON signed voluntary exit")
+	}
+
+	filepath := path.Join(outputDirectory, fmt.Sprintf("validator-exit-%s.json", jsve.Message.ValidatorIndex))
+	if err := file.WriteFile(filepath, b); err != nil {
+		return errors.Wrap(err, "failed to write validator exist json")
+	}
+
+	log.Infof("Wrote signed validator exit JSON to %s", filepath)
+
+	return nil
 }

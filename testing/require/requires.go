@@ -1,7 +1,7 @@
 package require
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/testing/assertions"
+	"github.com/prysmaticlabs/prysm/v5/testing/assertions"
 	"github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -51,6 +51,11 @@ func ErrorContains(tb assertions.AssertionTestingTB, want string, err error, msg
 	assertions.ErrorContains(tb.Fatalf, want, err, msg...)
 }
 
+// IsNil asserts that the observed value is nil.
+func IsNil(tb assertions.AssertionTestingTB, got interface{}, msg ...interface{}) {
+	assertions.IsNil(tb.Fatalf, got, msg...)
+}
+
 // NotNil asserts that passed value is not nil.
 func NotNil(tb assertions.AssertionTestingTB, obj interface{}, msg ...interface{}) {
 	assertions.NotNil(tb.Fatalf, obj, msg...)
@@ -76,4 +81,9 @@ func NotEmpty(tb assertions.AssertionTestingTB, obj interface{}, msg ...interfac
 // If any error in the chain matches target, the assertion will pass.
 func ErrorIs(tb assertions.AssertionTestingTB, err, target error, msg ...interface{}) {
 	assertions.ErrorIs(tb.Fatalf, err, target, msg)
+}
+
+// StringContains asserts that actual string contains expected message.
+func StringContains(tb assertions.AssertionTestingTB, expected, actual string, msg ...interface{}) {
+	assertions.StringContains(tb.Fatalf, expected, actual, true, msg)
 }

@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	_ "github.com/prysmaticlabs/prysm/v4/runtime/maxprocs"
+	_ "github.com/prysmaticlabs/prysm/v5/runtime/maxprocs"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,7 +30,7 @@ var (
 
 var (
 	port            = flag.Int("port", 9090, "Port to serve /metrics")
-	web3URL         = flag.String("web3-provider", "https://goerli.prylabs.net", "Web3 URL to access information about ETH1")
+	web3URL         = flag.String("web3-provider", "https://holesky.prylabs.net", "Web3 URL to access information about ETH1")
 	prefix          = flag.String("prefix", "", "Metrics prefix.")
 	addressFilePath = flag.String("addresses", "", "File path to addresses text file.")
 )
@@ -76,7 +76,11 @@ func main() {
 
 	http.HandleFunc("/metrics", MetricsHTTP)
 	http.HandleFunc("/reload", ReloadHTTP)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", *port), nil))
+	srv := &http.Server{
+		Addr:              fmt.Sprintf("127.0.0.1:%d", *port),
+		ReadHeaderTimeout: 3 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
 }
 
 // Watching address wrapper

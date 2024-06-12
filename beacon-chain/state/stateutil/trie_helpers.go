@@ -5,11 +5,11 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash/htr"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/v4/math"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash/htr"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v5/math"
 )
 
 // ReturnTrieLayer returns the representation of a merkle trie when
@@ -71,9 +71,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 		}
 
 		layers[i+1] = make([]*[32]byte, layerLen/2)
-		newElems := make([][32]byte, layerLen/2)
-		htr.VectorizedSha256(elements, newElems)
-		elements = newElems
+		elements = htr.VectorizedSha256(elements)
 		for j := range elements {
 			layers[i+1][j] = &elements[j]
 		}
@@ -237,7 +235,7 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 	return root, layers, nil
 }
 
-// AddInMixin describes a method from which a lenth mixin is added to the
+// AddInMixin describes a method from which a length mixin is added to the
 // provided root.
 func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 	rootBuf := new(bytes.Buffer)
@@ -252,11 +250,11 @@ func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 
 // Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
 // the resulting layers of the trie based on the appropriate depth. This function
-// pads the leaves to a length of 32.
+// pads the leaves to a length of a multiple of 32.
 func Merkleize(leaves [][]byte) [][][]byte {
 	hashFunc := hash.CustomSHA256Hasher()
 	layers := make([][][]byte, ssz.Depth(uint64(len(leaves)))+1)
-	for len(leaves) != 32 {
+	for len(leaves)%32 != 0 {
 		leaves = append(leaves, make([]byte, 32))
 	}
 	currentLayer := leaves
@@ -295,9 +293,7 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte) ([][][32]byt
 		if !math.IsPowerOf2(uint64(len(hashLayer))) {
 			return nil, nil, errors.Errorf("hash layer is a non power of 2: %d", len(hashLayer))
 		}
-		newLayer := make([][32]byte, len(hashLayer)/2)
-		htr.VectorizedSha256(hashLayer, newLayer)
-		hashLayer = newLayer
+		hashLayer = htr.VectorizedSha256(hashLayer)
 		layers[i] = hashLayer
 		i++
 	}

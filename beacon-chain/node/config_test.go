@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -158,8 +158,7 @@ func TestConfigureNetwork_ConfigFile(t *testing.T) {
 			return cmd.LoadFlagsFromConfig(cliCtx, comFlags)
 		},
 		Action: func(cliCtx *cli.Context) error {
-			//TODO: https://github.com/urfave/cli/issues/1197 right now does not set flag
-			require.Equal(t, false, cliCtx.IsSet(cmd.BootstrapNode.Name))
+			require.Equal(t, true, cliCtx.IsSet(cmd.BootstrapNode.Name))
 
 			require.Equal(t, strings.Join([]string{"node1", "node2"}, ","),
 				strings.Join(cliCtx.StringSlice(cmd.BootstrapNode.Name), ","))

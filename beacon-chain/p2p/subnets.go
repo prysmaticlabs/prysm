@@ -4,21 +4,28 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
-	mathutil "github.com/prysmaticlabs/prysm/v4/math"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	mathutil "github.com/prysmaticlabs/prysm/v5/math"
 	"go.opencensus.io/trace"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
+var attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount
 var syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
@@ -31,10 +38,21 @@ var syncCommsSubnetEnrKey = params.BeaconNetworkConfig().SyncCommsSubnetKey
 // chosen as more than 64(attestation subnet count).
 const syncLockerVal = 100
 
+// The value used with the blob sidecar subnet, in order
+// to create an appropriate key to retrieve
+// the relevant lock. This is used to differentiate
+// blob subnets from others. This is deliberately
+// chosen more than sync and attestation subnet combined.
+const blobSubnetLockerVal = 110
+
 // FindPeersWithSubnet performs a network search for peers
-// subscribed to a particular subnet. Then we try to connect
-// with those peers. This method will block until the required amount of
-// peers are found, the method only exits in the event of context timeouts.
+// subscribed to a particular subnet. Then it tries to connect
+// with those peers. This method will block until either:
+// - the required amount of peers are found, or
+// - the context is terminated.
+// On some edge cases, this method may hang indefinitely while peers
+// are actually found. In such a case, the user should cancel the context
+// and re-run the method again.
 func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	index uint64, threshold int) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
@@ -49,6 +67,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 
 	topic += s.Encoding().ProtocolSuffix()
 	iterator := s.dv5Listener.RandomNodes()
+	defer iterator.Close()
 	switch {
 	case strings.Contains(topic, GossipAttestationMessage):
 		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(index))
@@ -58,22 +77,32 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		return false, errors.New("no subnet exists for provided topic")
 	}
 
-	currNum := len(s.pubsub.ListPeers(topic))
 	wg := new(sync.WaitGroup)
 	for {
+		currNum := len(s.pubsub.ListPeers(topic))
+		if currNum >= threshold {
+			break
+		}
 		if err := ctx.Err(); err != nil {
 			return false, errors.Errorf("unable to find requisite number of peers for topic %s - "+
 				"only %d out of %d peers were able to be found", topic, currNum, threshold)
 		}
-		if currNum >= threshold {
-			break
+		nodeCount := int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch)
+		// Restrict dials if limit is applied.
+		if flags.MaxDialIsActive() {
+			nodeCount = min(nodeCount, flags.Get().MaxConcurrentDials)
 		}
-		nodes := enode.ReadNodes(iterator, int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch))
+		nodes := enode.ReadNodes(iterator, nodeCount)
 		for _, node := range nodes {
 			info, _, err := convertToAddrInfo(node)
 			if err != nil {
 				continue
 			}
+
+			if info == nil {
+				continue
+			}
+
 			wg.Add(1)
 			go func() {
 				if err := s.connectWithPeer(ctx, *info); err != nil {
@@ -84,7 +113,6 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		}
 		// Wait for all dials to be completed.
 		wg.Wait()
-		currNum = len(s.pubsub.ListPeers(topic))
 	}
 	return true, nil
 }
@@ -95,18 +123,13 @@ func (s *Service) filterPeerForAttSubnet(index uint64) func(node *enode.Node) bo
 		if !s.filterPeer(node) {
 			return false
 		}
+
 		subnets, err := attSubnets(node.Record())
 		if err != nil {
 			return false
 		}
-		indExists := false
-		for _, comIdx := range subnets {
-			if comIdx == index {
-				indExists = true
-				break
-			}
-		}
-		return indExists
+
+		return subnets[index]
 	}
 }
 
@@ -170,6 +193,84 @@ func (s *Service) updateSubnetRecordWithMetadataV2(bitVAtt bitfield.Bitvector64,
 	})
 }
 
+func initializePersistentSubnets(id enode.ID, epoch primitives.Epoch) error {
+	_, ok, expTime := cache.SubnetIDs.GetPersistentSubnets()
+	if ok && expTime.After(time.Now()) {
+		return nil
+	}
+	subs, err := computeSubscribedSubnets(id, epoch)
+	if err != nil {
+		return err
+	}
+	newExpTime := computeSubscriptionExpirationTime(id, epoch)
+	cache.SubnetIDs.AddPersistentCommittee(subs, newExpTime)
+	return nil
+}
+
+// Spec pseudocode definition:
+//
+// def compute_subscribed_subnets(node_id: NodeID, epoch: Epoch) -> Sequence[SubnetID]:
+//
+//	return [compute_subscribed_subnet(node_id, epoch, index) for index in range(SUBNETS_PER_NODE)]
+func computeSubscribedSubnets(nodeID enode.ID, epoch primitives.Epoch) ([]uint64, error) {
+	subnetsPerNode := params.BeaconConfig().SubnetsPerNode
+	subs := make([]uint64, 0, subnetsPerNode)
+
+	for i := uint64(0); i < subnetsPerNode; i++ {
+		sub, err := computeSubscribedSubnet(nodeID, epoch, i)
+		if err != nil {
+			return nil, err
+		}
+		subs = append(subs, sub)
+	}
+	return subs, nil
+}
+
+//	Spec pseudocode definition:
+//
+// def compute_subscribed_subnet(node_id: NodeID, epoch: Epoch, index: int) -> SubnetID:
+//
+//	node_id_prefix = node_id >> (NODE_ID_BITS - ATTESTATION_SUBNET_PREFIX_BITS)
+//	node_offset = node_id % EPOCHS_PER_SUBNET_SUBSCRIPTION
+//	permutation_seed = hash(uint_to_bytes(uint64((epoch + node_offset) // EPOCHS_PER_SUBNET_SUBSCRIPTION)))
+//	permutated_prefix = compute_shuffled_index(
+//	    node_id_prefix,
+//	    1 << ATTESTATION_SUBNET_PREFIX_BITS,
+//	    permutation_seed,
+//	)
+//	return SubnetID((permutated_prefix + index) % ATTESTATION_SUBNET_COUNT)
+func computeSubscribedSubnet(nodeID enode.ID, epoch primitives.Epoch, index uint64) (uint64, error) {
+	nodeOffset, nodeIdPrefix := computeOffsetAndPrefix(nodeID)
+	seedInput := (nodeOffset + uint64(epoch)) / params.BeaconConfig().EpochsPerSubnetSubscription
+	permSeed := hash.Hash(bytesutil.Bytes8(seedInput))
+	permutatedPrefix, err := helpers.ComputeShuffledIndex(primitives.ValidatorIndex(nodeIdPrefix), 1<<params.BeaconConfig().AttestationSubnetPrefixBits, permSeed, true)
+	if err != nil {
+		return 0, err
+	}
+	subnet := (uint64(permutatedPrefix) + index) % params.BeaconConfig().AttestationSubnetCount
+	return subnet, nil
+}
+
+func computeSubscriptionExpirationTime(nodeID enode.ID, epoch primitives.Epoch) time.Duration {
+	nodeOffset, _ := computeOffsetAndPrefix(nodeID)
+	pastEpochs := (nodeOffset + uint64(epoch)) % params.BeaconConfig().EpochsPerSubnetSubscription
+	remEpochs := params.BeaconConfig().EpochsPerSubnetSubscription - pastEpochs
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	epochTime := time.Duration(remEpochs) * epochDuration
+	return epochTime * time.Second
+}
+
+func computeOffsetAndPrefix(nodeID enode.ID) (uint64, uint64) {
+	num := uint256.NewInt(0).SetBytes(nodeID.Bytes())
+	remBits := params.BeaconConfig().NodeIdBits - params.BeaconConfig().AttestationSubnetPrefixBits
+	// Number of bits left will be representable by a uint64 value.
+	nodeIdPrefix := num.Rsh(num, uint(remBits)).Uint64()
+	// Reinitialize big int.
+	num = uint256.NewInt(0).SetBytes(nodeID.Bytes())
+	nodeOffset := num.Mod(num, uint256.NewInt(params.BeaconConfig().EpochsPerSubnetSubscription)).Uint64()
+	return nodeOffset, nodeIdPrefix
+}
+
 // Initializes a bitvector of attestation subnets beacon nodes is subscribed to
 // and creates a new ENR entry with its default value.
 func initializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
@@ -190,19 +291,20 @@ func initializeSyncCommSubnets(node *enode.LocalNode) *enode.LocalNode {
 
 // Reads the attestation subnets entry from a node's ENR and determines
 // the committee indices of the attestation subnets the node is subscribed to.
-func attSubnets(record *enr.Record) ([]uint64, error) {
+func attSubnets(record *enr.Record) (map[uint64]bool, error) {
 	bitV, err := attBitvector(record)
 	if err != nil {
 		return nil, err
 	}
+	committeeIdxs := make(map[uint64]bool)
 	// lint:ignore uintcast -- subnet count can be safely cast to int.
 	if len(bitV) != byteCount(int(attestationSubnetCount)) {
-		return []uint64{}, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
+		return committeeIdxs, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
 	}
-	var committeeIdxs []uint64
+
 	for i := uint64(0); i < attestationSubnetCount; i++ {
 		if bitV.BitAt(i) {
-			committeeIdxs = append(committeeIdxs, i)
+			committeeIdxs[i] = true
 		}
 	}
 	return committeeIdxs, nil

@@ -2,25 +2,30 @@ package altair
 
 import (
 	"context"
+	goErrors "errors"
 	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 const maxRandomByte = uint64(1<<8 - 1)
+
+var (
+	ErrTooLate = errors.New("sync message is too late")
+)
 
 // ValidateNilSyncContribution validates the following fields are not nil:
 // -the contribution and proof itself
@@ -190,6 +195,7 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 }
 
 // ValidateSyncMessageTime validates sync message to ensure that the provided slot is valid.
+// Spec: [IGNORE] The message's slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance), i.e. sync_committee_message.slot == current_slot
 func ValidateSyncMessageTime(slot primitives.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
 	if err := slots.ValidateClock(slot, uint64(genesisTime.Unix())); err != nil {
 		return err
@@ -217,15 +223,19 @@ func ValidateSyncMessageTime(slot primitives.Slot, genesisTime time.Time, clockD
 	upperBound := time.Now().Add(clockDisparity)
 	// Verify sync message slot is within the time range.
 	if messageTime.Before(lowerBound) || messageTime.After(upperBound) {
-		return fmt.Errorf(
-			"sync message time %v (slot %d) not within allowable range of %v (slot %d) to %v (slot %d)",
+		syncErr := fmt.Errorf(
+			"sync message time %v (message slot %d) not within allowable range of %v to %v (current slot %d)",
 			messageTime,
 			slot,
 			lowerBound,
-			uint64(lowerBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
 			upperBound,
-			uint64(upperBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
+			currentSlot,
 		)
+		// Wrap error message if sync message is too late.
+		if messageTime.Before(lowerBound) {
+			syncErr = goErrors.Join(ErrTooLate, syncErr)
+		}
+		return syncErr
 	}
 	return nil
 }

@@ -5,18 +5,23 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	log "github.com/sirupsen/logrus"
+	base "github.com/prysmaticlabs/prysm/v5/api/client"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz/detect"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/mod/semver"
 )
+
+var errCheckpointBlockMismatch = errors.New("mismatch between checkpoint sync state and block")
 
 // OriginData represents the BeaconState and ReadOnlySignedBeaconBlock necessary to start an empty Beacon Node
 // using Checkpoint Sync.
@@ -69,42 +74,50 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	if err != nil {
 		return nil, errors.Wrap(err, "error detecting chain config for finalized state")
 	}
-	log.Printf("detected supported config in remote finalized state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
+
+	log.WithFields(logrus.Fields{
+		"name": vu.Config.ConfigName,
+		"fork": version.String(vu.Fork),
+	}).Info("Detected supported config in remote finalized state")
+
 	s, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
 		return nil, errors.Wrap(err, "error unmarshaling finalized state to correct version")
 	}
-	if s.Slot() != s.LatestBlockHeader().Slot {
-		return nil, fmt.Errorf("finalized state slot does not match latest block header slot %d != %d", s.Slot(), s.LatestBlockHeader().Slot)
-	}
 
-	sr, err := s.HashTreeRoot(ctx)
+	slot := s.LatestBlockHeader().Slot
+	bb, err := client.GetBlock(ctx, IdFromSlot(slot))
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compute htr for finalized state at slot=%d", s.Slot())
-	}
-	header := s.LatestBlockHeader()
-	header.StateRoot = sr[:]
-	br, err := header.HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "error while computing block root using state data")
-	}
-
-	bb, err := client.GetBlock(ctx, IdFromRoot(br))
-	if err != nil {
-		return nil, errors.Wrapf(err, "error requesting block by root = %#x", br)
+		return nil, errors.Wrapf(err, "error requesting block by slot = %d", slot)
 	}
 	b, err := vu.UnmarshalBeaconBlock(bb)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to unmarshal block to a supported type using the detected fork schedule")
 	}
-	realBlockRoot, err := b.Block().HashTreeRoot()
+	br, err := b.Block().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "error computing hash_tree_root of retrieved block")
 	}
+	bodyRoot, err := b.Block().Body().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "error computing hash_tree_root of retrieved block body")
+	}
 
-	log.Printf("BeaconState slot=%d, Block slot=%d", s.Slot(), b.Block().Slot())
-	log.Printf("BeaconState htr=%#x, Block state_root=%#x", sr, b.Block().StateRoot())
-	log.Printf("BeaconState latest_block_header htr=%#x, block htr=%#x", br, realBlockRoot)
+	sbr := bytesutil.ToBytes32(s.LatestBlockHeader().BodyRoot)
+	if sbr != bodyRoot {
+		return nil, errors.Wrapf(errCheckpointBlockMismatch, "state body root = %#x, block body root = %#x", sbr, bodyRoot)
+	}
+	sr, err := s.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compute htr for finalized state at slot=%d", s.Slot())
+	}
+
+	log.
+		WithField("blockSlot", b.Block().Slot()).
+		WithField("stateSlot", s.Slot()).
+		WithField("stateRoot", hexutil.Encode(sr[:])).
+		WithField("blockRoot", hexutil.Encode(br[:])).
+		Info("Downloaded checkpoint sync state and block.")
 	return &OriginData{
 		st: s,
 		b:  b,
@@ -126,7 +139,7 @@ type WeakSubjectivityData struct {
 }
 
 // CheckpointString returns the standard string representation of a Checkpoint.
-// The format is a a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
+// The format is a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
 // "0x1c35540cac127315fabb6bf29181f2ae0de1a3fc909d2e76ba771e61312cc49a:74888"
 func (wsd *WeakSubjectivityData) CheckpointString() string {
 	return fmt.Sprintf("%#x:%d", wsd.BlockRoot, wsd.Epoch)
@@ -140,7 +153,7 @@ func ComputeWeakSubjectivityCheckpoint(ctx context.Context, client *Client) (*We
 	ws, err := client.GetWeakSubjectivity(ctx)
 	if err != nil {
 		// a 404/405 is expected if querying an endpoint that doesn't support the weak subjectivity checkpoint api
-		if !errors.Is(err, ErrNotOK) {
+		if !errors.Is(err, base.ErrNotOK) {
 			return nil, errors.Wrap(err, "unexpected API response for prysm-only weak subjectivity checkpoint API")
 		}
 		// fall back to vanilla Beacon Node API method

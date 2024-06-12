@@ -32,16 +32,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/async"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/io/logs"
-	"github.com/prysmaticlabs/prysm/v4/network"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	_ "github.com/prysmaticlabs/prysm/v4/runtime/maxprocs"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/async"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/logs"
+	"github.com/prysmaticlabs/prysm/v5/network"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	_ "github.com/prysmaticlabs/prysm/v5/runtime/maxprocs"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -114,7 +114,13 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/p2p", handler.httpHandler)
 
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), mux); err != nil {
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%d", *metricsPort),
+		ReadHeaderTimeout: 3 * time.Second,
+		Handler:           mux,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
 		log.WithError(err).Fatal("Failed to start server")
 	}
 
@@ -179,7 +185,7 @@ func (h *handler) httpHandler(w http.ResponseWriter, _ *http.Request) {
 		write(w, []byte("Node ID: "+n.ID().String()+"\n"))
 		write(w, []byte("IP: "+n.IP().String()+"\n"))
 		write(w, []byte(fmt.Sprintf("UDP Port: %d", n.UDP())+"\n"))
-		write(w, []byte(fmt.Sprintf("TCP Port: %d", n.UDP())+"\n\n"))
+		write(w, []byte(fmt.Sprintf("TCP Port: %d", n.TCP())+"\n\n"))
 	}
 }
 
@@ -253,7 +259,6 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		if err != nil {
 			panic(err)
 		}
-
 	} else {
 		privInterfaceKey, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 		if err != nil {

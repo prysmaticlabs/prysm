@@ -8,24 +8,23 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestNewRateLimiter(t *testing.T) {
 	rlimiter := newRateLimiter(mockp2p.NewTestP2P(t))
-	assert.Equal(t, len(rlimiter.limiterMap), 10, "correct number of topics not registered")
+	assert.Equal(t, len(rlimiter.limiterMap), 12, "correct number of topics not registered")
 }
 
 func TestNewRateLimiter_FreeCorrectly(t *testing.T) {
 	rlimiter := newRateLimiter(mockp2p.NewTestP2P(t))
 	rlimiter.free()
 	assert.Equal(t, len(rlimiter.limiterMap), 0, "rate limiter not freed correctly")
-
 }
 
 func TestRateLimiter_ExceedCapacity(t *testing.T) {

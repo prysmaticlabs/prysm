@@ -8,14 +8,13 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 )
 
 // EngineClient --
@@ -23,26 +22,24 @@ type EngineClient struct {
 	NewPayloadResp              []byte
 	PayloadIDBytes              *pb.PayloadIDBytes
 	ForkChoiceUpdatedResp       []byte
-	ExecutionPayload            *pb.ExecutionPayload
-	ExecutionPayloadCapella     *pb.ExecutionPayloadCapella
 	ExecutionBlock              *pb.ExecutionBlock
 	Err                         error
 	ErrLatestExecBlock          error
 	ErrExecBlockByHash          error
 	ErrForkchoiceUpdated        error
 	ErrNewPayload               error
-	ErrGetPayload               error
 	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
 	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
 	NumReconstructedPayloads    uint64
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
 	OverrideValidHash           [32]byte
-	BlockValue                  *big.Int
+	GetPayloadResponse          *blocks.GetPayloadResponse
+	ErrGetPayload               error
 }
 
 // NewPayload --
-func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData) ([]byte, error) {
+func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData, _ []common.Hash, _ *common.Hash) ([]byte, error) {
 	return e.NewPayloadResp, e.ErrNewPayload
 }
 
@@ -57,20 +54,8 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, error) {
-	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
-		return blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, e.BlockValue)
-	}
-	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
-	if err != nil {
-		return nil, err
-	}
-	return p, e.ErrGetPayload
-}
-
-// ExchangeTransitionConfiguration --
-func (e *EngineClient) ExchangeTransitionConfiguration(_ context.Context, _ *pb.TransitionConfiguration) error {
-	return e.Err
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (*blocks.GetPayloadResponse, error) {
+	return e.GetPayloadResponse, e.ErrGetPayload
 }
 
 // LatestExecutionBlock --

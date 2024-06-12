@@ -12,23 +12,48 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedDisablePeerScorer = &cli.BoolFlag{
-		Name:   "disable-peer-scorer",
+	deprecatedEnableOptionalEngineMethods = &cli.BoolFlag{
+		Name:   "enable-optional-engine-methods",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedDisableVecHTR = &cli.BoolFlag{
-		Name:   "disable-vectorized-htr",
+	deprecatedDisableBuildBlockParallel = &cli.BoolFlag{
+		Name:   "disable-build-block-parallel",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableReorgLateBlocks = &cli.BoolFlag{
-		Name:   "enable-reorg-late-blocks",
+	deprecatedDisableReorgLateBlocks = &cli.BoolFlag{
+		Name:   "disable-reorg-late-blocks",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedDisableGossipBatchAggregation = &cli.BoolFlag{
-		Name:   "disable-gossip-batch-aggregation",
+	deprecatedDisableOptionalEngineMethods = &cli.BoolFlag{
+		Name:   "disable-optional-engine-methods",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableAggregateParallel = &cli.BoolFlag{
+		Name:   "disable-aggregate-parallel",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableEIP4881 = &cli.BoolFlag{
+		Name:   "enable-eip-4881",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableEIP4881 = &cli.BoolFlag{
+		Name:   "disable-eip-4881",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedVerboseSigVerification = &cli.BoolFlag{
+		Name:   "enable-verbose-sig-verification",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableDebugRPCEndpoints = &cli.BoolFlag{
+		Name:   "enable-debug-rpc-endpoints",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -37,12 +62,17 @@ var (
 // Deprecated flags for both the beacon node and validator client.
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
-	deprecatedDisablePeerScorer,
-	deprecatedDisableVecHTR,
-	deprecatedEnableReorgLateBlocks,
-	deprecatedDisableGossipBatchAggregation,
+	deprecatedEnableOptionalEngineMethods,
+	deprecatedDisableBuildBlockParallel,
+	deprecatedDisableReorgLateBlocks,
+	deprecatedDisableOptionalEngineMethods,
+	deprecatedDisableAggregateParallel,
+	deprecatedEnableEIP4881,
+	deprecatedDisableEIP4881,
+	deprecatedVerboseSigVerification,
+	deprecatedEnableDebugRPCEndpoints,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
 // and therefore cannot be added to deprecatedFlags
-var deprecatedBeaconFlags = []cli.Flag{}
+var deprecatedBeaconFlags []cli.Flag

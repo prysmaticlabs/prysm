@@ -4,28 +4,29 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	v1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	v1alpha1 "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
 var (
 	beacon  = flag.String("beacon", "127.0.0.1:4000", "gRPC address of the Prysm beacon node")
-	genesis = flag.Uint64("genesis", 1606824023, "Genesis time. mainnet=1606824023, prater=1616508000")
+	genesis = flag.Uint64("genesis", 1606824023, "Genesis time. mainnet=1606824023, holesky=1695902400")
 )
 
 func main() {
 	flag.Parse()
 	ctx := context.Background()
 
-	cc, err := grpc.DialContext(ctx, *beacon, grpc.WithInsecure())
+	cc, err := grpc.DialContext(ctx, *beacon, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt64)))
 	if err != nil {
 		panic(err)
 	}
@@ -82,6 +83,10 @@ func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.ReadOnlyBeaconBlock 
 		wb, err = blocks.NewSignedBeaconBlock(bb.AltairBlock)
 	case *v1alpha1.BeaconBlockContainer_BellatrixBlock:
 		wb, err = blocks.NewSignedBeaconBlock(bb.BellatrixBlock)
+	case *v1alpha1.BeaconBlockContainer_CapellaBlock:
+		wb, err = blocks.NewSignedBeaconBlock(bb.CapellaBlock)
+	case *v1alpha1.BeaconBlockContainer_BlindedCapellaBlock:
+		wb, err = blocks.NewSignedBeaconBlock(bb.BlindedCapellaBlock)
 	}
 	if err != nil {
 		panic("no block")

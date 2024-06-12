@@ -10,18 +10,18 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/math"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // sortableIndices implements the Sort interface to sort newly activated validator indices
@@ -99,7 +99,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 	activationEligibilityEpoch := time.CurrentEpoch(state) + 1
 	for idx, validator := range vals {
 		// Process the validators for activation eligibility.
-		if helpers.IsEligibleForActivationQueue(validator) {
+		if helpers.IsEligibleForActivationQueue(validator, currentEpoch) {
 			validator.ActivationEligibilityEpoch = activationEligibilityEpoch
 			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), validator); err != nil {
 				return nil, err
@@ -110,8 +110,11 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
 		belowEjectionBalance := validator.EffectiveBalance <= ejectionBal
 		if isActive && belowEjectionBalance {
-			state, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx))
-			if err != nil {
+			// Here is fine to do a quadratic loop since this should
+			// barely happen
+			maxExitEpoch, churn := validators.MaxExitEpochAndChurn(state)
+			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), maxExitEpoch, churn)
+			if err != nil && !errors.Is(err, validators.ErrValidatorAlreadyExited) {
 				return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
 			}
 		}
@@ -134,9 +137,10 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		return nil, errors.Wrap(err, "could not get active validator count")
 	}
 
-	churnLimit, err := helpers.ValidatorChurnLimit(activeValidatorCount)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get churn limit")
+	churnLimit := helpers.ValidatorActivationChurnLimit(activeValidatorCount)
+
+	if state.Version() >= version.Deneb {
+		churnLimit = helpers.ValidatorActivationChurnLimitDeneb(activeValidatorCount)
 	}
 
 	// Prevent churn limit cause index out of bound.
@@ -345,7 +349,7 @@ func ProcessRandaoMixesReset(state state.BeaconState) (state.BeaconState, error)
 	if err != nil {
 		return nil, err
 	}
-	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), mix); err != nil {
+	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), [32]byte(mix)); err != nil {
 		return nil, err
 	}
 
@@ -393,6 +397,7 @@ func ProcessHistoricalDataUpdate(state state.BeaconState) (state.BeaconState, er
 
 // ProcessParticipationRecordUpdates rotates current/previous epoch attestations during epoch processing.
 //
+// nolint:dupword
 // Spec pseudocode definition:
 //
 //	def process_participation_record_updates(state: BeaconState) -> None:
@@ -465,11 +470,11 @@ func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconSt
 	seen := make(map[uint64]bool)
 
 	for _, att := range atts {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}
-		attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+		attestingIndices, err := attestation.AttestingIndices(att, committee)
 		if err != nil {
 			return nil, err
 		}

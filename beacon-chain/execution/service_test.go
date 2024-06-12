@@ -14,23 +14,24 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
-	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/types"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/v4/contracts/deposit/mock"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/clientstats"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
+	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	contracts "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v5/contracts/deposit/mock"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/clientstats"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -155,7 +156,7 @@ func TestStop_OK(t *testing.T) {
 	require.NoError(t, err, "Unable to stop web3 ETH1.0 chain service")
 
 	// The context should have been canceled.
-	assert.NotNil(t, web3Service.ctx.Err(), "Context wasnt canceled")
+	assert.NotNil(t, web3Service.ctx.Err(), "Context wasn't canceled")
 
 	hook.Reset()
 }
@@ -347,7 +348,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 		cfg:             &config{beaconDB: beaconDB},
 	}
 	var err error
-	s.cfg.depositCache, err = depositcache.New()
+	s.cfg.depositCache, err = depositsnapshot.New()
 	require.NoError(t, err)
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
 
@@ -408,7 +409,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 		cfg:             &config{beaconDB: beaconDB},
 	}
 	var err error
-	s.cfg.depositCache, err = depositcache.New()
+	s.cfg.depositCache, err = depositsnapshot.New()
 	require.NoError(t, err)
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
 
@@ -433,8 +434,9 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 
 	s.chainStartData.Chainstarted = true
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
-	fDeposits := s.cfg.depositCache.FinalizedDeposits(ctx)
-	deps := s.cfg.depositCache.NonFinalizedDeposits(context.Background(), fDeposits.MerkleTrieIndex, nil)
+	fDeposits, err := s.cfg.depositCache.FinalizedDeposits(ctx)
+	require.NoError(t, err)
+	deps := s.cfg.depositCache.NonFinalizedDeposits(context.Background(), fDeposits.MerkleTrieIndex(), nil)
 	assert.Equal(t, 0, len(deps))
 }
 
@@ -551,7 +553,7 @@ func Test_batchRequestHeaders_UnderflowChecks(t *testing.T) {
 
 func TestService_EnsureConsistentPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	cache, err := depositcache.New()
+	cache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	srv, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
@@ -569,7 +571,8 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 	assert.NoError(t, genState.SetSlot(1000))
 
 	require.NoError(t, s1.cfg.beaconDB.SaveGenesisData(context.Background(), genState))
-	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
+	_, err = s1.validPowchainData(context.Background())
+	require.NoError(t, err)
 
 	eth1Data, err := s1.cfg.beaconDB.ExecutionChainData(context.Background())
 	assert.NoError(t, err)
@@ -580,7 +583,7 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 
 func TestService_InitializeCorrectly(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	cache, err := depositcache.New()
+	cache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	srv, endpoint, err := mockExecution.SetupRPCServer()
@@ -599,7 +602,8 @@ func TestService_InitializeCorrectly(t *testing.T) {
 	assert.NoError(t, genState.SetSlot(1000))
 
 	require.NoError(t, s1.cfg.beaconDB.SaveGenesisData(context.Background(), genState))
-	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
+	_, err = s1.validPowchainData(context.Background())
+	require.NoError(t, err)
 
 	eth1Data, err := s1.cfg.beaconDB.ExecutionChainData(context.Background())
 	assert.NoError(t, err)
@@ -610,7 +614,7 @@ func TestService_InitializeCorrectly(t *testing.T) {
 
 func TestService_EnsureValidPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	cache, err := depositcache.New()
+	cache, err := depositsnapshot.New()
 	require.NoError(t, err)
 	srv, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
@@ -634,7 +638,8 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 		DepositContainers: []*ethpb.DepositContainer{{Index: 1}},
 	})
 	require.NoError(t, err)
-	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
+	_, err = s1.validPowchainData(context.Background())
+	require.NoError(t, err)
 
 	eth1Data, err := s1.cfg.beaconDB.ExecutionChainData(context.Background())
 	assert.NoError(t, err)
@@ -800,4 +805,51 @@ func (s *slowRPCClient) BatchCall(b []rpc.BatchElem) error {
 
 func (s *slowRPCClient) CallContext(_ context.Context, _ interface{}, _ string, _ ...interface{}) error {
 	panic("implement me")
+}
+
+func TestService_migrateOldDepositTree(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	cache, err := depositsnapshot.New()
+	require.NoError(t, err)
+
+	srv, endpoint, err := mockExecution.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		srv.Stop()
+	})
+	s, err := NewService(context.Background(),
+		WithHttpEndpoint(endpoint),
+		WithDatabase(beaconDB),
+		WithDepositCache(cache),
+	)
+	require.NoError(t, err)
+	eth1Data := &ethpb.ETH1ChainData{
+		BeaconState: &ethpb.BeaconState{
+			Eth1Data: &ethpb.Eth1Data{
+				DepositCount: 800,
+			},
+		},
+		CurrentEth1Data: &ethpb.LatestETH1Data{
+			BlockHeight: 100,
+		},
+	}
+
+	totalDeposits := 1000
+	input := bytesutil.ToBytes32([]byte("foo"))
+	dt, err := trie.NewTrie(32)
+	require.NoError(t, err)
+
+	for i := 0; i < totalDeposits; i++ {
+		err := dt.Insert(input[:], i)
+		require.NoError(t, err)
+	}
+	eth1Data.Trie = dt.ToProto()
+
+	err = s.migrateOldDepositTree(eth1Data)
+	require.NoError(t, err)
+	oldDepositTreeRoot, err := dt.HashTreeRoot()
+	require.NoError(t, err)
+	newDepositTreeRoot, err := s.depositTrie.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, oldDepositTreeRoot, newDepositTreeRoot)
 }

@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"testing"
@@ -10,23 +11,28 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	p2pm "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	beaconsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/libp2p/go-libp2p/core/peer"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
+	dbtest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	p2pm "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2pt "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	beaconsync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -272,6 +278,9 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
 
+			gt := time.Now()
+			vr := [32]byte{}
+			clock := startup.NewClock(gt, vr)
 			mc := &mock.ChainService{
 				State: st,
 				Root:  genesisRoot[:],
@@ -287,6 +296,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 				chain: mc,
 				p2p:   p,
+				clock: clock,
 			})
 			require.NoError(t, fetcher.start())
 
@@ -298,9 +308,9 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				fetcher.stop()
 			}()
 
-			processFetchedBlocks := func() ([]interfaces.ReadOnlySignedBeaconBlock, error) {
+			processFetchedBlocks := func() ([]blocks.BlockWithROBlobs, error) {
 				defer cancel()
-				var unionRespBlocks []interfaces.ReadOnlySignedBeaconBlock
+				var unionRespBlocks []blocks.BlockWithROBlobs
 
 				for {
 					select {
@@ -312,8 +322,8 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 						if resp.err != nil {
 							log.WithError(resp.err).Debug("Block fetcher returned error")
 						} else {
-							unionRespBlocks = append(unionRespBlocks, resp.blocks...)
-							if len(resp.blocks) == 0 {
+							unionRespBlocks = append(unionRespBlocks, resp.bwb...)
+							if len(resp.bwb) == 0 {
 								log.WithFields(logrus.Fields{
 									"start": resp.start,
 									"count": resp.count,
@@ -336,30 +346,27 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				maxExpectedBlocks += requestParams.count
 			}
 
-			blocks, err := processFetchedBlocks()
+			bwb, err := processFetchedBlocks()
 			assert.NoError(t, err)
 
-			sort.Slice(blocks, func(i, j int) bool {
-				return blocks[i].Block().Slot() < blocks[j].Block().Slot()
-			})
-
-			ss := make([]primitives.Slot, len(blocks))
-			for i, block := range blocks {
-				ss[i] = block.Block().Slot()
+			sort.Sort(blocks.BlockWithROBlobsSlice(bwb))
+			ss := make([]primitives.Slot, len(bwb))
+			for i, b := range bwb {
+				ss[i] = b.Block.Block().Slot()
 			}
 
 			log.WithFields(logrus.Fields{
-				"blocksLen": len(blocks),
+				"blocksLen": len(bwb),
 				"slots":     ss,
 			}).Debug("Finished block fetching")
 
-			if len(blocks) > int(maxExpectedBlocks) {
-				t.Errorf("Too many blocks returned. Wanted %d got %d", maxExpectedBlocks, len(blocks))
+			if len(bwb) > int(maxExpectedBlocks) {
+				t.Errorf("Too many blocks returned. Wanted %d got %d", maxExpectedBlocks, len(bwb))
 			}
-			assert.Equal(t, len(tt.expectedBlockSlots), len(blocks), "Processes wrong number of blocks")
+			assert.Equal(t, len(tt.expectedBlockSlots), len(bwb), "Processes wrong number of blocks")
 			var receivedBlockSlots []primitives.Slot
-			for _, blk := range blocks {
-				receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
+			for _, b := range bwb {
+				receivedBlockSlots = append(receivedBlockSlots, b.Block.Block().Slot())
 			}
 			missing := slice.NotSlot(slice.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
@@ -416,11 +423,13 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 	mc.ValidatorsRoot = [32]byte{}
 	mc.Genesis = time.Now()
+
 	t.Run("context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 			chain: mc,
 			p2p:   p2p,
+			clock: startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 		})
 
 		cancel()
@@ -434,6 +443,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 			chain: mc,
 			p2p:   p2p,
+			clock: startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 		})
 
 		requestCtx, reqCancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -446,7 +456,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 			}
 		}()
 
-		var blocks []interfaces.ReadOnlySignedBeaconBlock
+		var bwb []blocks.BlockWithROBlobs
 		select {
 		case <-ctx.Done():
 			t.Error(ctx.Err())
@@ -454,16 +464,16 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 			if resp.err != nil {
 				t.Error(resp.err)
 			} else {
-				blocks = resp.blocks
+				bwb = resp.bwb
 			}
 		}
-		if uint64(len(blocks)) != uint64(blockBatchLimit) {
-			t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchLimit, len(blocks))
+		if uint64(len(bwb)) != uint64(blockBatchLimit) {
+			t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchLimit, len(bwb))
 		}
 
 		var receivedBlockSlots []primitives.Slot
-		for _, blk := range blocks {
-			receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
+		for _, b := range bwb {
+			receivedBlockSlots = append(receivedBlockSlots, b.Block.Block().Slot())
 		}
 		missing := slice.NotSlot(slice.IntersectionSlot(chainConfig.expectedBlockSlots, receivedBlockSlots), chainConfig.expectedBlockSlots)
 		if len(missing) > 0 {
@@ -548,7 +558,9 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1})
 	fetcher.rateLimiter = leakybucket.NewCollector(float64(req.Count), int64(req.Count*burstFactor), 1*time.Second, false)
-	fetcher.chain = &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+	gt := time.Now()
+	vr := [32]byte{}
+	fetcher.chain = &mock.ChainService{Genesis: gt, ValidatorsRoot: vr}
 	hook := logTest.NewGlobal()
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
@@ -596,9 +608,7 @@ func TestBlocksFetcher_WaitForBandwidth(t *testing.T) {
 	p1.Connect(p2)
 	require.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	req := &ethpb.BeaconBlocksByRangeRequest{
-		StartSlot: 100,
-		Step:      1,
-		Count:     64,
+		Count: 64,
 	}
 
 	topic := p2pm.RPCBlocksByRangeTopicV1
@@ -614,7 +624,9 @@ func TestBlocksFetcher_WaitForBandwidth(t *testing.T) {
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1})
 	fetcher.rateLimiter = leakybucket.NewCollector(float64(req.Count), int64(req.Count*burstFactor), 5*time.Second, false)
-	fetcher.chain = &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+	gt := time.Now()
+	vr := [32]byte{}
+	fetcher.chain = &mock.ChainService{Genesis: gt, ValidatorsRoot: vr}
 	start := time.Now()
 	assert.NoError(t, fetcher.waitForBandwidth(p2.PeerID(), 10))
 	dur := time.Since(start)
@@ -647,10 +659,10 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
 						blk := util.NewBeaconBlock()
 						blk.Block.Slot = i
-						mchain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+						tor := startup.NewClock(time.Now(), [32]byte{})
 						wsb, err := blocks.NewSignedBeaconBlock(blk)
 						require.NoError(t, err)
-						assert.NoError(t, beaconsync.WriteBlockChunk(stream, mchain, p1.Encoding(), wsb))
+						assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 					}
 					assert.NoError(t, stream.Close())
 				}
@@ -671,10 +683,10 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step+1); i += primitives.Slot(req.Step) {
 						blk := util.NewBeaconBlock()
 						blk.Block.Slot = i
-						chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+						tor := startup.NewClock(time.Now(), [32]byte{})
 						wsb, err := blocks.NewSignedBeaconBlock(blk)
 						require.NoError(t, err)
-						assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+						assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 					}
 					assert.NoError(t, stream.Close())
 				}
@@ -695,16 +707,16 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := util.NewBeaconBlock()
 					blk.Block.Slot = 163
-					chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+					tor := startup.NewClock(time.Now(), [32]byte{})
 					wsb, err := blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
-					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 
 					blk = util.NewBeaconBlock()
 					blk.Block.Slot = 162
 					wsb, err = blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
-					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 					assert.NoError(t, stream.Close())
 				}
 			},
@@ -724,17 +736,17 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := util.NewBeaconBlock()
 					blk.Block.Slot = 160
-					chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+					tor := startup.NewClock(time.Now(), [32]byte{})
 
 					wsb, err := blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
-					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 
 					blk = util.NewBeaconBlock()
 					blk.Block.Slot = 160
 					wsb, err = blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
-					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 					assert.NoError(t, stream.Close())
 				}
 			},
@@ -757,19 +769,19 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					}()
 					for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
 						blk := util.NewBeaconBlock()
-						chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+						tor := startup.NewClock(time.Now(), [32]byte{})
 						// Patch mid block, with invalid slot number.
 						if i == req.StartSlot.Add(req.Count*req.Step/2) {
 							blk.Block.Slot = req.StartSlot - 1
 							wsb, err := blocks.NewSignedBeaconBlock(blk)
 							require.NoError(t, err)
-							assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+							assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 							break
 						}
 						blk.Block.Slot = i
 						wsb, err := blocks.NewSignedBeaconBlock(blk)
 						require.NoError(t, err)
-						assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+						assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 					}
 				}
 			},
@@ -792,19 +804,19 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					}()
 					for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
 						blk := util.NewBeaconBlock()
-						chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+						tor := startup.NewClock(time.Now(), [32]byte{})
 						// Patch mid block, with invalid slot number.
 						if i == req.StartSlot.Add(req.Count*req.Step/2) {
 							blk.Block.Slot = req.StartSlot.Add(req.Count * req.Step)
 							wsb, err := blocks.NewSignedBeaconBlock(blk)
 							require.NoError(t, err)
-							assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+							assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 							break
 						}
 						blk.Block.Slot = i
 						wsb, err := blocks.NewSignedBeaconBlock(blk)
 						require.NoError(t, err)
-						assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+						assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 					}
 				}
 			},
@@ -824,16 +836,16 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := util.NewBeaconBlock()
 					blk.Block.Slot = 100
-					chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+					tor := startup.NewClock(time.Now(), [32]byte{})
 					wsb, err := blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
-					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 
 					blk = util.NewBeaconBlock()
 					blk.Block.Slot = 105
 					wsb, err = blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
-					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 					assert.NoError(t, stream.Close())
 				}
 			},
@@ -852,16 +864,16 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := util.NewBeaconBlock()
 					blk.Block.Slot = 100
-					chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+					tor := startup.NewClock(time.Now(), [32]byte{})
 					wsb, err := blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
-					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 
 					blk = util.NewBeaconBlock()
 					blk.Block.Slot = 103
 					wsb, err = blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
-					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, tor, p1.Encoding(), wsb))
 					assert.NoError(t, stream.Close())
 				}
 			},
@@ -946,4 +958,348 @@ func TestTimeToWait(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBlobRangeForBlocks(t *testing.T) {
+	blks, _ := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
+	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
+	for i := range blks {
+		sbbs[i] = blks[i]
+	}
+	retentionStart := primitives.Slot(5)
+	bwb, err := sortedBlockWithVerifiedBlobSlice(sbbs)
+	require.NoError(t, err)
+	bounds := countCommitments(bwb, retentionStart).blobRange(nil)
+	require.Equal(t, retentionStart, bounds.low)
+	higher := primitives.Slot(len(blks) + 1)
+	bounds = countCommitments(bwb, higher).blobRange(nil)
+	var nilBounds *blobRange
+	require.Equal(t, nilBounds, bounds)
+
+	blks, _ = util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
+	sbbs = make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
+	for i := range blks {
+		sbbs[i] = blks[i]
+	}
+	bwb, err = sortedBlockWithVerifiedBlobSlice(sbbs)
+	require.NoError(t, err)
+	retentionStart = bwb[5].Block.Block().Slot()
+	next := bwb[6].Block.Block().Slot()
+	skip := bwb[5].Block.Block()
+	bwb[5].Block, _ = util.GenerateTestDenebBlockWithSidecar(t, skip.ParentRoot(), skip.Slot(), 0)
+	bounds = countCommitments(bwb, retentionStart).blobRange(nil)
+	require.Equal(t, next, bounds.low)
+}
+
+func TestBlobRequest(t *testing.T) {
+	var nilReq *ethpb.BlobSidecarsByRangeRequest
+	// no blocks
+	req := countCommitments([]blocks.BlockWithROBlobs{}, 0).blobRange(nil).Request()
+	require.Equal(t, nilReq, req)
+	blks, _ := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
+	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
+	for i := range blks {
+		sbbs[i] = blks[i]
+	}
+	bwb, err := sortedBlockWithVerifiedBlobSlice(sbbs)
+	require.NoError(t, err)
+	maxBlkSlot := primitives.Slot(len(blks) - 1)
+
+	tooHigh := primitives.Slot(len(blks) + 1)
+	req = countCommitments(bwb, tooHigh).blobRange(nil).Request()
+	require.Equal(t, nilReq, req)
+
+	req = countCommitments(bwb, maxBlkSlot).blobRange(nil).Request()
+	require.Equal(t, uint64(1), req.Count)
+	require.Equal(t, maxBlkSlot, req.StartSlot)
+
+	halfway := primitives.Slot(5)
+	req = countCommitments(bwb, halfway).blobRange(nil).Request()
+	require.Equal(t, halfway, req.StartSlot)
+	// adding 1 to include the halfway slot itself
+	require.Equal(t, uint64(1+maxBlkSlot-halfway), req.Count)
+
+	before := bwb[0].Block.Block().Slot()
+	allAfter := bwb[1:]
+	req = countCommitments(allAfter, before).blobRange(nil).Request()
+	require.Equal(t, allAfter[0].Block.Block().Slot(), req.StartSlot)
+	require.Equal(t, len(allAfter), int(req.Count))
+}
+
+func TestCountCommitments(t *testing.T) {
+	// no blocks
+	// blocks before retention start filtered
+	// blocks without commitments filtered
+	// pre-deneb filtered
+	// variety of commitment counts are accurate, from 1 to max
+	type testcase struct {
+		name      string
+		bwb       func(t *testing.T, c testcase) []blocks.BlockWithROBlobs
+		numBlocks int
+		retStart  primitives.Slot
+		resCount  int
+	}
+	cases := []testcase{
+		{
+			name: "nil blocks is safe",
+			bwb: func(t *testing.T, c testcase) []blocks.BlockWithROBlobs {
+				return nil
+			},
+			retStart: 0,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			bwb := c.bwb(t, c)
+			cc := countCommitments(bwb, c.retStart)
+			require.Equal(t, c.resCount, len(cc))
+		})
+	}
+}
+
+func TestCommitmentCountList(t *testing.T) {
+	cases := []struct {
+		name     string
+		cc       commitmentCountList
+		bss      func(*testing.T) filesystem.BlobStorageSummarizer
+		expected *blobRange
+		request  *ethpb.BlobSidecarsByRangeRequest
+	}{
+		{
+			name:     "nil commitmentCount is safe",
+			cc:       nil,
+			expected: nil,
+			request:  nil,
+		},
+		{
+			name: "nil bss, single slot",
+			cc: []commitmentCount{
+				{slot: 11235, count: 1},
+			},
+			expected: &blobRange{low: 11235, high: 11235},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 11235, Count: 1},
+		},
+		{
+			name: "nil bss, sparse slots",
+			cc: []commitmentCount{
+				{slot: 11235, count: 1},
+				{slot: 11240, count: fieldparams.MaxBlobsPerBlock},
+				{slot: 11250, count: 3},
+			},
+			expected: &blobRange{low: 11235, high: 11250},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 11235, Count: 16},
+		},
+		{
+			name: "AllAvailable in middle, some avail low, none high",
+			bss: func(t *testing.T) filesystem.BlobStorageSummarizer {
+				onDisk := map[[32]byte][]int{
+					bytesutil.ToBytes32([]byte("0")): {0, 1},
+					bytesutil.ToBytes32([]byte("1")): {0, 1, 2, 3, 4, 5},
+				}
+				return filesystem.NewMockBlobStorageSummarizer(t, onDisk)
+			},
+			cc: []commitmentCount{
+				{slot: 0, count: 3, root: bytesutil.ToBytes32([]byte("0"))},
+				{slot: 5, count: fieldparams.MaxBlobsPerBlock, root: bytesutil.ToBytes32([]byte("1"))},
+				{slot: 15, count: 3},
+			},
+			expected: &blobRange{low: 0, high: 15},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 0, Count: 16},
+		},
+		{
+			name: "AllAvailable at high and low",
+			bss: func(t *testing.T) filesystem.BlobStorageSummarizer {
+				onDisk := map[[32]byte][]int{
+					bytesutil.ToBytes32([]byte("0")): {0, 1},
+					bytesutil.ToBytes32([]byte("2")): {0, 1, 2, 3, 4, 5},
+				}
+				return filesystem.NewMockBlobStorageSummarizer(t, onDisk)
+			},
+			cc: []commitmentCount{
+				{slot: 0, count: 2, root: bytesutil.ToBytes32([]byte("0"))},
+				{slot: 5, count: 3},
+				{slot: 15, count: fieldparams.MaxBlobsPerBlock, root: bytesutil.ToBytes32([]byte("2"))},
+			},
+			expected: &blobRange{low: 5, high: 5},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 5, Count: 1},
+		},
+		{
+			name: "AllAvailable at high and low, adjacent range in middle",
+			bss: func(t *testing.T) filesystem.BlobStorageSummarizer {
+				onDisk := map[[32]byte][]int{
+					bytesutil.ToBytes32([]byte("0")): {0, 1},
+					bytesutil.ToBytes32([]byte("2")): {0, 1, 2, 3, 4, 5},
+				}
+				return filesystem.NewMockBlobStorageSummarizer(t, onDisk)
+			},
+			cc: []commitmentCount{
+				{slot: 0, count: 2, root: bytesutil.ToBytes32([]byte("0"))},
+				{slot: 5, count: 3},
+				{slot: 6, count: 3},
+				{slot: 15, count: fieldparams.MaxBlobsPerBlock, root: bytesutil.ToBytes32([]byte("2"))},
+			},
+			expected: &blobRange{low: 5, high: 6},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 5, Count: 2},
+		},
+		{
+			name: "AllAvailable at high and low, range in middle",
+			bss: func(t *testing.T) filesystem.BlobStorageSummarizer {
+				onDisk := map[[32]byte][]int{
+					bytesutil.ToBytes32([]byte("0")): {0, 1},
+					bytesutil.ToBytes32([]byte("1")): {0, 1},
+					bytesutil.ToBytes32([]byte("2")): {0, 1, 2, 3, 4, 5},
+				}
+				return filesystem.NewMockBlobStorageSummarizer(t, onDisk)
+			},
+			cc: []commitmentCount{
+				{slot: 0, count: 2, root: bytesutil.ToBytes32([]byte("0"))},
+				{slot: 5, count: 3, root: bytesutil.ToBytes32([]byte("1"))},
+				{slot: 10, count: 3},
+				{slot: 15, count: fieldparams.MaxBlobsPerBlock, root: bytesutil.ToBytes32([]byte("2"))},
+			},
+			expected: &blobRange{low: 5, high: 10},
+			request:  &ethpb.BlobSidecarsByRangeRequest{StartSlot: 5, Count: 6},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var bss filesystem.BlobStorageSummarizer
+			if c.bss != nil {
+				bss = c.bss(t)
+			}
+			br := c.cc.blobRange(bss)
+			require.DeepEqual(t, c.expected, br)
+			if c.request == nil {
+				require.IsNil(t, br.Request())
+			} else {
+				req := br.Request()
+				require.DeepEqual(t, req.StartSlot, c.request.StartSlot)
+				require.DeepEqual(t, req.Count, c.request.Count)
+			}
+		})
+	}
+}
+
+func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithROBlobs, []blocks.ROBlob) {
+	blks, blobs := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, nblocks)
+	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
+	for i := range blks {
+		sbbs[i] = blks[i]
+	}
+	bwb, err := sortedBlockWithVerifiedBlobSlice(sbbs)
+	require.NoError(t, err)
+	return bwb, blobs
+}
+
+func testReqFromResp(bwb []blocks.BlockWithROBlobs) *ethpb.BlobSidecarsByRangeRequest {
+	return &ethpb.BlobSidecarsByRangeRequest{
+		StartSlot: bwb[0].Block.Block().Slot(),
+		Count:     uint64(bwb[len(bwb)-1].Block.Block().Slot()-bwb[0].Block.Block().Slot()) + 1,
+	}
+}
+
+func TestVerifyAndPopulateBlobs(t *testing.T) {
+	t.Run("happy path", func(t *testing.T) {
+		bwb, blobs := testSequenceBlockWithBlob(t, 10)
+
+		expectedCommits := make(map[[48]byte]bool)
+		for _, bl := range blobs {
+			expectedCommits[bytesutil.ToBytes48(bl.KzgCommitment)] = true
+		}
+		require.Equal(t, len(blobs), len(expectedCommits))
+
+		bwb, err := verifyAndPopulateBlobs(bwb, blobs, testReqFromResp(bwb), nil)
+		require.NoError(t, err)
+		for _, bw := range bwb {
+			commits, err := bw.Block.Block().Body().BlobKzgCommitments()
+			require.NoError(t, err)
+			require.Equal(t, len(commits), len(bw.Blobs))
+			for i := range commits {
+				bc := bytesutil.ToBytes48(commits[i])
+				require.Equal(t, bc, bytesutil.ToBytes48(bw.Blobs[i].KzgCommitment))
+				// Since we delete entries we've seen, duplicates will cause an error here.
+				_, ok := expectedCommits[bc]
+				// Make sure this was an expected delete, then delete it from the map so we can make sure we saw all of them.
+				require.Equal(t, true, ok)
+				delete(expectedCommits, bc)
+			}
+		}
+		// We delete each entry we've seen, so if we see all expected commits, the map should be empty at the end.
+		require.Equal(t, 0, len(expectedCommits))
+	})
+	t.Run("missing blobs", func(t *testing.T) {
+		bwb, blobs := testSequenceBlockWithBlob(t, 10)
+		_, err := verifyAndPopulateBlobs(bwb, blobs[1:], testReqFromResp(bwb), nil)
+		require.ErrorIs(t, err, errMissingBlobsForBlockCommitments)
+	})
+	t.Run("no blobs for last block", func(t *testing.T) {
+		bwb, blobs := testSequenceBlockWithBlob(t, 10)
+		lastIdx := len(bwb) - 1
+		lastBlk := bwb[lastIdx].Block
+		cmts, err := lastBlk.Block().Body().BlobKzgCommitments()
+		require.NoError(t, err)
+		blobs = blobs[0 : len(blobs)-len(cmts)]
+		lastBlk, _ = util.GenerateTestDenebBlockWithSidecar(t, lastBlk.Block().ParentRoot(), lastBlk.Block().Slot(), 0)
+		bwb[lastIdx].Block = lastBlk
+		_, err = verifyAndPopulateBlobs(bwb, blobs, testReqFromResp(bwb), nil)
+		require.NoError(t, err)
+	})
+	t.Run("blobs not copied if all locally available", func(t *testing.T) {
+		bwb, blobs := testSequenceBlockWithBlob(t, 10)
+		// r1 only has some blobs locally available, so we'll still copy them all.
+		// r7 has all blobs locally available, so we shouldn't copy them.
+		i1, i7 := 1, 7
+		r1, r7 := bwb[i1].Block.Root(), bwb[i7].Block.Root()
+		onDisk := map[[32]byte][]int{
+			r1: {0, 1},
+			r7: {0, 1, 2, 3, 4, 5},
+		}
+		bss := filesystem.NewMockBlobStorageSummarizer(t, onDisk)
+		bwb, err := verifyAndPopulateBlobs(bwb, blobs, testReqFromResp(bwb), bss)
+		require.NoError(t, err)
+		require.Equal(t, 6, len(bwb[i1].Blobs))
+		require.Equal(t, 0, len(bwb[i7].Blobs))
+	})
+}
+
+func TestBatchLimit(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	testCfg := params.BeaconConfig().Copy()
+	testCfg.DenebForkEpoch = math.MaxUint64
+	params.OverrideBeaconConfig(testCfg)
+
+	resetFlags := flags.Get()
+	flags.Init(&flags.GlobalFlags{
+		BlockBatchLimit:            640,
+		BlockBatchLimitBurstFactor: 10,
+	})
+	defer func() {
+		flags.Init(resetFlags)
+	}()
+
+	assert.Equal(t, 640, maxBatchLimit())
+
+	testCfg.DenebForkEpoch = 100000
+	params.OverrideBeaconConfig(testCfg)
+
+	assert.Equal(t, params.BeaconConfig().MaxRequestBlocksDeneb, uint64(maxBatchLimit()))
+}
+
+func TestBlockFetcher_HasSufficientBandwidth(t *testing.T) {
+	bf := newBlocksFetcher(context.Background(), &blocksFetcherConfig{})
+	currCap := bf.rateLimiter.Capacity()
+	wantedAmt := currCap - 100
+	bf.rateLimiter.Add(peer.ID("a").String(), wantedAmt)
+	bf.rateLimiter.Add(peer.ID("c").String(), wantedAmt)
+	bf.rateLimiter.Add(peer.ID("f").String(), wantedAmt)
+	bf.rateLimiter.Add(peer.ID("d").String(), wantedAmt)
+
+	receivedPeers := bf.hasSufficientBandwidth([]peer.ID{"a", "b", "c", "d", "e", "f"}, 110)
+	for _, p := range receivedPeers {
+		switch p {
+		case "a", "c", "f", "d":
+			t.Errorf("peer has exceeded capacity: %s", p)
+		}
+	}
+	assert.Equal(t, 2, len(receivedPeers))
 }

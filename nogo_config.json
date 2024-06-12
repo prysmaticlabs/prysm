@@ -94,7 +94,8 @@
   },
   "logruswitherror": {
     "exclude_files": {
-      "external/.*": "Third party code"
+      "external/.*": "Third party code",
+      ".*/testmain.go": "Generated/test code"
     }
   },
   "cryptorand": {
@@ -147,11 +148,11 @@
     }
   },
   "ineffassign": {
-    "only_files": {
-      "beacon-chain/.*": "",
-      "shared/.*": "",
-      "slasher/.*": "",
-      "validator/.*": ""
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code",
+      ".*\\.pb.*.go": "Generated code is ok",
+      ".*generated\\.ssz\\.go": "Generated code is ok"
     }
   },
   "properpermissions": {
@@ -163,7 +164,8 @@
     },
     "exclude_files": {
       ".*_test\\.go": "Tests are ok",
-      "io/file/fileutil.go": "Package which defines the proper rules"
+      "io/file/fileutil.go": "Package which defines the proper rules",
+      "validator/web/site_data.go": "Generated web ui assets"
     }
   },
   "uintcast": {
@@ -184,6 +186,24 @@
     }
   },
   "shift": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
+    }
+  },
+  "reflectvaluecompare": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
+    }
+  },
+  "unusedwrite": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
+    }
+  },
+  "stringintconv": {
     "exclude_files": {
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code"

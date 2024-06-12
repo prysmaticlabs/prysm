@@ -7,20 +7,58 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"gopkg.in/yaml.v2"
 )
 
 // Variables defined in the placeholderFields will not be tested in `TestLoadConfigFile`.
 // These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
-var placeholderFields = []string{"UPDATE_TIMEOUT", "DENEB_FORK_EPOCH", "DENEB_FORK_VERSION"}
+// IMPORTANT: Use one field per line and sort these alphabetically to reduce conflicts.
+var placeholderFields = []string{
+	"BYTES_PER_LOGS_BLOOM", // Compile time constant on ExecutionPayload.logs_bloom.
+	"EIP6110_FORK_EPOCH",
+	"EIP6110_FORK_VERSION",
+	"EIP7002_FORK_EPOCH",
+	"EIP7002_FORK_VERSION",
+	"EIP7594_FORK_EPOCH",
+	"EIP7594_FORK_VERSION",
+	"FIELD_ELEMENTS_PER_BLOB",              // Compile time constant.
+	"KZG_COMMITMENT_INCLUSION_PROOF_DEPTH", // Compile time constant on BlobSidecar.commitment_inclusion_proof.
+	"MAX_BLOBS_PER_BLOCK",
+	"MAX_BLOB_COMMITMENTS_PER_BLOCK",   // Compile time constant on BeaconBlockBodyDeneb.blob_kzg_commitments.
+	"MAX_BYTES_PER_TRANSACTION",        // Used for ssz of EL transactions. Unused in Prysm.
+	"MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD", // Compile time constant on ExecutionPayload.deposit_receipts.
+	"MAX_EXTRA_DATA_BYTES",             // Compile time constant on ExecutionPayload.extra_data.
+	"MAX_TRANSACTIONS_PER_PAYLOAD",     // Compile time constant on ExecutionPayload.transactions.
+	"REORG_HEAD_WEIGHT_THRESHOLD",
+	"UPDATE_TIMEOUT",
+	"WHISK_EPOCHS_PER_SHUFFLING_PHASE",
+	"WHISK_FORK_EPOCH",
+	"WHISK_FORK_VERSION",
+	"WHISK_PROPOSER_SELECTION_GAP",
+}
+
+func TestPlaceholderFieldsDistinctSorted(t *testing.T) {
+	m := make(map[string]struct{})
+	for i := 0; i < len(placeholderFields)-1; i++ {
+		if _, ok := m[placeholderFields[i]]; ok {
+			t.Fatalf("duplicate placeholder field %s", placeholderFields[i])
+		}
+		m[placeholderFields[i]] = struct{}{}
+	}
+	if !sort.StringsAreSorted(placeholderFields) {
+		t.Fatal("placeholderFields must be sorted")
+	}
+}
 
 func assertEqualConfigs(t *testing.T, name string, fields []string, expected, actual *params.BeaconChainConfig) {
 	//  Misc params.
@@ -35,9 +73,6 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.HysteresisQuotient, actual.HysteresisQuotient, "%s: HysteresisQuotient", name)
 	assert.Equal(t, expected.HysteresisDownwardMultiplier, actual.HysteresisDownwardMultiplier, "%s: HysteresisDownwardMultiplier", name)
 	assert.Equal(t, expected.HysteresisUpwardMultiplier, actual.HysteresisUpwardMultiplier, "%s: HysteresisUpwardMultiplier", name)
-
-	// Fork Choice params.
-	assert.Equal(t, expected.DeprecatedSafeSlotsToUpdateJustified, actual.DeprecatedSafeSlotsToUpdateJustified, "%s: SafeSlotsToUpdateJustified", name)
 
 	// Validator params.
 	assert.Equal(t, expected.Eth1FollowDistance, actual.Eth1FollowDistance, "%s: Eth1FollowDistance", name)
@@ -111,11 +146,15 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.AltairForkEpoch, actual.AltairForkEpoch, "%s: AltairForkEpoch", name)
 	assert.Equal(t, expected.BellatrixForkEpoch, actual.BellatrixForkEpoch, "%s: BellatrixForkEpoch", name)
 	assert.Equal(t, expected.CapellaForkEpoch, actual.CapellaForkEpoch, "%s: CapellaForkEpoch", name)
+	assert.Equal(t, expected.DenebForkEpoch, actual.DenebForkEpoch, "%s: DenebForkEpoch", name)
+	assert.Equal(t, expected.ElectraForkEpoch, actual.ElectraForkEpoch, "%s: ElectraForkEpoch", name)
 	assert.Equal(t, expected.SqrRootSlotsPerEpoch, actual.SqrRootSlotsPerEpoch, "%s: SqrRootSlotsPerEpoch", name)
 	assert.DeepEqual(t, expected.GenesisForkVersion, actual.GenesisForkVersion, "%s: GenesisForkVersion", name)
 	assert.DeepEqual(t, expected.AltairForkVersion, actual.AltairForkVersion, "%s: AltairForkVersion", name)
 	assert.DeepEqual(t, expected.BellatrixForkVersion, actual.BellatrixForkVersion, "%s: BellatrixForkVersion", name)
 	assert.DeepEqual(t, expected.CapellaForkVersion, actual.CapellaForkVersion, "%s: CapellaForkVersion", name)
+	assert.DeepEqual(t, expected.DenebForkVersion, actual.DenebForkVersion, "%s: DenebForkVersion", name)
+	assert.DeepEqual(t, expected.ElectraForkVersion, actual.ElectraForkVersion, "%s: ElectraForkVersion", name)
 
 	assertYamlFieldsMatch(t, name, fields, expected, actual)
 }
@@ -124,8 +163,10 @@ func TestModifiedE2E(t *testing.T) {
 	c := params.E2ETestConfig().Copy()
 	c.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 	c.TerminalTotalDifficulty = "0"
-	c.AltairForkEpoch = 0
-	c.BellatrixForkEpoch = 0
+	c.AltairForkEpoch = 112
+	c.BellatrixForkEpoch = 123
+	c.CapellaForkEpoch = 235
+	c.DenebForkEpoch = 358
 	y := params.ConfigToYaml(c)
 	cfg, err := params.UnmarshalConfig(y, nil)
 	require.NoError(t, err)
@@ -311,9 +352,14 @@ func configFilePath(t *testing.T, config string) string {
 func presetsFilePath(t *testing.T, config string) []string {
 	fPath, err := bazel.Runfile("external/consensus_spec")
 	require.NoError(t, err)
+
 	return []string{
 		path.Join(fPath, "presets", config, "phase0.yaml"),
 		path.Join(fPath, "presets", config, "altair.yaml"),
+		path.Join(fPath, "presets", config, "bellatrix.yaml"),
+		path.Join(fPath, "presets", config, "capella.yaml"),
+		path.Join(fPath, "presets", config, "deneb.yaml"),
+		path.Join(fPath, "presets", config, "electra.yaml"),
 	}
 }
 
@@ -371,10 +417,5 @@ func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *p
 }
 
 func isPlaceholderField(field string) bool {
-	for _, f := range placeholderFields {
-		if f == field {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(placeholderFields, field)
 }

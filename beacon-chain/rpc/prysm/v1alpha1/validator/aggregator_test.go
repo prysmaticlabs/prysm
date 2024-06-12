@@ -7,24 +7,25 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
-	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
@@ -73,8 +74,8 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators: []*ethpb.Validator{
-			{PublicKey: pubKey(0)},
-			{PublicKey: pubKey(1)},
+			{PublicKey: pubKey(0), ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+			{PublicKey: pubKey(1), ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
 	})
 	require.NoError(t, err)
@@ -225,7 +226,7 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att, committee)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +265,7 @@ func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, priv
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att, committee)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +336,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]*ethpb.Attestation{
+	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]ethpb.Att{
 		att0,
 		att1,
 		att2,
@@ -386,7 +387,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]*ethpb.Attestation{
+	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]ethpb.Att{
 		att0,
 		att1,
 	})
@@ -398,7 +399,9 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 }
 
 func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) {
-	aggregatorServer := &Server{}
+	aggregatorServer := &Server{
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+	}
 	req := &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
 			Signature: make([]byte, fieldparams.BLSSignatureLength),
@@ -410,7 +413,7 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 		},
 	}
 	_, err := aggregatorServer.SubmitSignedAggregateSelectionProof(context.Background(), req)
-	require.ErrorContains(t, "Signed signatures can't be zero hashes", err)
+	require.ErrorContains(t, "signed signatures can't be zero hashes", err)
 
 	req = &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
@@ -424,12 +427,16 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 		},
 	}
 	_, err = aggregatorServer.SubmitSignedAggregateSelectionProof(context.Background(), req)
-	require.ErrorContains(t, "Signed signatures can't be zero hashes", err)
+	require.ErrorContains(t, "signed signatures can't be zero hashes", err)
 }
 
 func TestSubmitSignedAggregateSelectionProof_InvalidSlot(t *testing.T) {
 	c := &mock.ChainService{Genesis: time.Now()}
-	aggregatorServer := &Server{TimeFetcher: c}
+	aggregatorServer := &Server{
+		CoreService: &core.Service{
+			GenesisTimeFetcher: c,
+		},
+	}
 	req := &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
 			Signature: []byte{'a'},
@@ -442,5 +449,5 @@ func TestSubmitSignedAggregateSelectionProof_InvalidSlot(t *testing.T) {
 		},
 	}
 	_, err := aggregatorServer.SubmitSignedAggregateSelectionProof(context.Background(), req)
-	require.ErrorContains(t, "Attestation slot is no longer valid from current time", err)
+	require.ErrorContains(t, "attestation slot is no longer valid from current time", err)
 }

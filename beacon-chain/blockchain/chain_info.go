@@ -6,18 +6,20 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	f "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which
@@ -44,7 +46,7 @@ type ForkchoiceFetcher interface {
 	HighestReceivedBlockSlot() primitives.Slot
 	ReceivedBlocksLastEpoch() (uint64, error)
 	InsertNode(context.Context, state.BeaconState, [32]byte) error
-	ForkChoiceDump(context.Context) (*ethpbv1.ForkChoiceDump, error)
+	ForkChoiceDump(context.Context) (*forkchoice.Dump, error)
 	NewSlot(context.Context, primitives.Slot) error
 	ProposerBoost() [32]byte
 }
@@ -74,6 +76,7 @@ type HeadFetcher interface {
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool)
 	HeadValidatorIndexToPublicKey(ctx context.Context, index primitives.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ChainHeads() ([][32]byte, []primitives.Slot)
+	TargetRootForEpoch([32]byte, primitives.Epoch) ([32]byte, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
@@ -81,6 +84,12 @@ type HeadFetcher interface {
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
 	CurrentFork() *ethpb.Fork
+	GenesisFetcher
+	TimeFetcher
+}
+
+// TemporalOracle is like ForkFetcher minus CurrentFork()
+type TemporalOracle interface {
 	GenesisFetcher
 	TimeFetcher
 }
@@ -96,7 +105,7 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
-	UnrealizedJustifiedPayloadBlockHash() ([32]byte, error)
+	UnrealizedJustifiedPayloadBlockHash() [32]byte
 	FinalizedBlockHash() [32]byte
 	InForkchoice([32]byte) bool
 	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
@@ -326,14 +335,29 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index primiti
 	return v.PublicKey(), nil
 }
 
+// ForkChoicer returns the forkchoice interface.
+func (s *Service) ForkChoicer() f.ForkChoicer {
+	return s.cfg.ForkChoiceStore
+}
+
 // IsOptimistic returns true if the current head is optimistic.
-func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
+func (s *Service) IsOptimistic(_ context.Context) (bool, error) {
 	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return false, nil
 	}
 	s.headLock.RLock()
+	if s.head == nil {
+		s.headLock.RUnlock()
+		return false, ErrNilHead
+	}
 	headRoot := s.head.root
+	headSlot := s.head.slot
+	headOptimistic := s.head.optimistic
 	s.headLock.RUnlock()
+	// we trust the head package for recent head slots, otherwise fallback to forkchoice
+	if headSlot+2 >= s.CurrentSlot() {
+		return headOptimistic, nil
+	}
 
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
@@ -443,6 +467,13 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	return !isCanonical, nil
 }
 
+// TargetRootForEpoch wraps the corresponding method in forkchoice
+func (s *Service) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.TargetRootForEpoch(root, epoch)
+}
+
 // Ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
@@ -496,4 +527,29 @@ func (s *Service) recoverStateSummary(ctx context.Context, blockRoot [32]byte) (
 		return summary, nil
 	}
 	return nil, errBlockDoesNotExist
+}
+
+// BlockBeingSynced returns whether the block with the given root is currently being synced
+func (s *Service) BlockBeingSynced(root [32]byte) bool {
+	return s.blockBeingSynced.isSyncing(root)
+}
+
+// RecentBlockSlot returns block slot form fork choice store
+func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.Slot(root)
+}
+
+// inRegularSync queries the initial sync service to
+// determine if the node is in regular sync or is still
+// syncing to the head of the chain.
+func (s *Service) inRegularSync() bool {
+	return s.cfg.SyncChecker.Synced()
+}
+
+// validating returns true if the beacon is tracking some validators that have
+// registered for proposing.
+func (s *Service) validating() bool {
+	return s.cfg.TrackedValidatorsCache.Validating()
 }

@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 )
 
 func TestSlotsSinceGenesis(t *testing.T) {
@@ -150,6 +150,37 @@ func TestEpochStartSlot_OK(t *testing.T) {
 		} else {
 			require.ErrorContains(t, "start slot calculation overflow", err)
 		}
+	}
+}
+
+func TestBeginsAtOK(t *testing.T) {
+	cases := []struct {
+		name     string
+		genesis  int64
+		slot     primitives.Slot
+		slotTime time.Time
+	}{
+		{
+			name:     "genesis",
+			slotTime: time.Unix(0, 0),
+		},
+		{
+			name:     "slot 1",
+			slot:     1,
+			slotTime: time.Unix(int64(params.BeaconConfig().SecondsPerSlot), 0),
+		},
+		{
+			name:     "slot 1",
+			slot:     32,
+			slotTime: time.Unix(int64(params.BeaconConfig().SecondsPerSlot)*32, 0),
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			genesis := time.Unix(c.genesis, 0)
+			st := BeginsAt(c.slot, genesis)
+			require.Equal(t, c.slotTime, st)
+		})
 	}
 }
 
@@ -354,6 +385,14 @@ func TestVerifySlotTime(t *testing.T) {
 			wantedErr: "could not process slot from the future",
 		},
 		{
+			name: "future slot but ok given 2s tolerance",
+			args: args{
+				genesisTime:   prysmTime.Now().Add(-1*time.Duration(params.BeaconConfig().SecondsPerSlot) - 10*time.Second).Unix(),
+				slot:          1,
+				timeTolerance: 2 * time.Second,
+			},
+		},
+		{
 			name: "max future slot",
 			args: args{
 				genesisTime: prysmTime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
@@ -482,4 +521,89 @@ func TestSecondsSinceSlotStart(t *testing.T) {
 			require.Equal(t, w, test.wanted)
 		}
 	}
+}
+
+func TestDuration(t *testing.T) {
+	oneSlot := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	cases := []struct {
+		name     string
+		start    time.Time
+		endDelta time.Duration
+		expected primitives.Slot
+	}{
+		{
+			name:     "end before start",
+			start:    time.Now(),
+			endDelta: -64 * time.Second,
+			expected: 0,
+		},
+		{
+			name:     "end equals start",
+			start:    time.Now(),
+			endDelta: 0,
+			expected: 0,
+		},
+		{
+			name:     "one slot apart",
+			start:    time.Now(),
+			endDelta: oneSlot,
+			expected: 1,
+		},
+		{
+			name:     "same slot",
+			start:    time.Now(),
+			endDelta: time.Second,
+			expected: 0,
+		},
+		{
+			name:     "don't round up",
+			start:    time.Now(),
+			endDelta: oneSlot - time.Second,
+			expected: 0,
+		},
+		{
+			name:     "don't round up pt 2",
+			start:    time.Now(),
+			endDelta: 2*oneSlot - time.Second,
+			expected: 1,
+		},
+		{
+			name:     "2 slots",
+			start:    time.Now(),
+			endDelta: 2 * oneSlot,
+			expected: 2,
+		},
+		{
+			name:     "1 epoch",
+			start:    time.Now(),
+			endDelta: time.Duration(params.BeaconConfig().SlotsPerEpoch) * oneSlot,
+			expected: params.BeaconConfig().SlotsPerEpoch,
+		},
+		{
+			name:     "1 epoch and change",
+			start:    time.Now(),
+			endDelta: oneSlot + time.Second + time.Duration(params.BeaconConfig().SlotsPerEpoch)*oneSlot,
+			expected: params.BeaconConfig().SlotsPerEpoch + 1,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			end := c.start.Add(c.endDelta)
+			a := Duration(c.start, end)
+			require.Equal(t, c.expected, a)
+		})
+	}
+}
+
+func TestTimeIntoSlot(t *testing.T) {
+	genesisTime := uint64(time.Now().Add(-37 * time.Second).Unix())
+	require.Equal(t, true, TimeIntoSlot(genesisTime) > 900*time.Millisecond)
+	require.Equal(t, true, TimeIntoSlot(genesisTime) < 3000*time.Millisecond)
+}
+
+func TestWithinVotingWindow(t *testing.T) {
+	genesisTime := uint64(time.Now().Add(-37 * time.Second).Unix())
+	require.Equal(t, true, WithinVotingWindow(genesisTime, 3))
+	genesisTime = uint64(time.Now().Add(-40 * time.Second).Unix())
+	require.Equal(t, false, WithinVotingWindow(genesisTime, 3))
 }

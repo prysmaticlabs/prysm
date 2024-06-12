@@ -4,13 +4,13 @@ import (
 	"math"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	doublylinkedlist "github.com/prysmaticlabs/prysm/v4/container/doubly-linked-list"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	doublylinkedlist "github.com/prysmaticlabs/prysm/v5/container/doubly-linked-list"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -90,7 +90,7 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 			}
 			continue
 		}
-		if err = blocks.VerifyExitAndSignature(validator, state.Slot(), state.Fork(), exit, state.GenesisValidatorsRoot()); err != nil {
+		if err = blocks.VerifyExitAndSignature(validator, state, exit); err != nil {
 			logrus.WithError(err).Warning("removing invalid exit from pool")
 			p.lock.RUnlock()
 			// MarkIncluded removes the invalid exit from the pool

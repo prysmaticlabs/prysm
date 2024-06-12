@@ -1,6 +1,6 @@
 # Contribution Guidelines
 
-Note: The latest and most up to date documenation can be found on our [docs portal](https://docs.prylabs.network/docs/contribute/contribution-guidelines).
+Note: The latest and most up-to-date documentation can be found on our [docs portal](https://docs.prylabs.network/docs/contribute/contribution-guidelines).
 
 Excited by our work and want to get involved in building out our sharding releases? Or maybe you haven't learned as much about the Ethereum protocol but are a savvy developer? 
 
@@ -10,9 +10,9 @@ You can explore our [Open Issues](https://github.com/prysmaticlabs/prysm/issues)
 
 **1. Set up Prysm following the instructions in README.md.**
 
-**2. Fork the prysm repo.**
+**2. Fork the Prysm repo.**
 
-Sign in to your Github account or create a new account if you do not have one already. Then navigate your browser to https://github.com/prysmaticlabs/prysm/. In the upper right hand corner of the page, click “fork”. This will create a copy of the Prysm repo in your account.
+Sign in to your GitHub account or create a new account if you do not have one already. Then navigate your browser to https://github.com/prysmaticlabs/prysm/. In the upper right hand corner of the page, click “fork”. This will create a copy of the Prysm repo in your account.
 
 **3. Create a local clone of Prysm.**
 
@@ -23,7 +23,7 @@ $ git clone https://github.com/prysmaticlabs/prysm.git
 $ cd $GOPATH/src/github.com/prysmaticlabs/prysm
 ```
 
-**4. Link your local clone to the fork on your Github repo.**
+**4. Link your local clone to the fork on your GitHub repo.**
 
 ```
 $ git remote add myprysmrepo https://github.com/<your_github_user_name>/prysm.git
@@ -68,7 +68,7 @@ $ go test <file_you_are_working_on>
 $ git add --all
 ```
 
-This command stages all of the files that you have changed. You can add individual files by specifying the file name or names and eliminating the “-- all”.
+This command stages all the files that you have changed. You can add individual files by specifying the file name or names and eliminating the “-- all”.
 
 **11. Commit the file or files.**
 
@@ -96,8 +96,7 @@ If there are conflicts between your edits and those made by others since you sta
 $ git status
 ```
 
-Open those files one at a time and you
-will see lines inserted by Git that identify the conflicts:
+Open those files one at a time, and you will see lines inserted by Git that identify the conflicts:
 
 ```
 <<<<<< HEAD
@@ -119,7 +118,7 @@ $ git push myrepo feature-in-progress-branch
 
 **15. Check to be sure your fork of the Prysm repo contains your feature branch with the latest edits.**
 
-Navigate to your fork of the repo on Github. On the upper left where the current branch is listed, change the branch to your feature-in-progress-branch. Open the files that you have worked on and check to make sure they include your changes.
+Navigate to your fork of the repo on GitHub. On the upper left where the current branch is listed, change the branch to your feature-in-progress-branch. Open the files that you have worked on and check to make sure they include your changes.
 
 **16. Create a pull request.**
 
@@ -151,7 +150,7 @@ pick 	hash 	fix a bug
 pick 	hash 	add a feature
 ```
 
-Replace the word pick with the word “squash” for every line but the first so you end with ….
+Replace the word pick with the word “squash” for every line but the first, so you end with ….
 
 ```
 pick    hash	do some work
@@ -178,7 +177,7 @@ We consider two types of contributions to our repo and categorize them as follow
 Anyone can become a part-time contributor and help out on implementing Ethereum consensus. The responsibilities of a part-time contributor include:
 
 -   Engaging in Gitter conversations, asking the questions on how to begin contributing to the project
--   Opening up github issues to express interest in code to implement
+-   Opening up GitHub issues to express interest in code to implement
 -   Opening up PRs referencing any open issue in the repo. PRs should include:
     -   Detailed context of what would be required for merge
     -   Tests that are consistent with how other tests are written in our implementation
@@ -188,12 +187,12 @@ Anyone can become a part-time contributor and help out on implementing Ethereum 
 
 ### Core Contributors
 
-Core contributors are remote contractors of Prysmatic Labs, LLC. and are considered critical team members of our organization. Core devs have all of the responsibilities of part-time contributors plus the majority of the following:
+Core contributors are remote contractors of Prysmatic Labs, LLC. and are considered critical team members of our organization. Core devs have all the responsibilities of part-time contributors plus the majority of the following:
 
 -   Stay up to date on the latest beacon chain specification
--   Monitor github issues and PR’s to make sure owner, labels, descriptions are correct
+-   Monitor GitHub issues and PR’s to make sure owner, labels, descriptions are correct
 -   Formulate independent ideas, suggest new work to do, point out improvements to existing approaches
--   Participate in code review, ensure code quality is excellent, and have ensure high code coverage
+-   Participate in code review, ensure code quality is excellent, and ensure high code coverage
 -   Help with social media presence, write bi-weekly development update
 -   Represent Prysmatic Labs at events to help spread the word on scalability research and solutions
 

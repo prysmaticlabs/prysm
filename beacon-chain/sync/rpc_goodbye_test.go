@@ -8,16 +8,17 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	db "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	db "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
+	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
@@ -153,11 +154,13 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
+	chain := &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
 			beaconDB: d,
 			p2p:      p1,
-			chain:    &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -198,11 +201,13 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
+	chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 	r := &Service{
 		cfg: &config{
 			beaconDB: d,
 			p2p:      p1,
-			chain:    &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		rateLimiter: newRateLimiter(p1),
 	}

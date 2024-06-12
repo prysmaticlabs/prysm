@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	v1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
 
 func TestCopyETH1Data(t *testing.T) {
@@ -329,6 +329,16 @@ func TestCopyPayloadHeaderCapella(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
 }
 
+func TestCopyPayloadHeaderDeneb(t *testing.T) {
+	p := genPayloadHeaderDeneb()
+
+	got := v1alpha1.CopyExecutionPayloadHeaderDeneb(p)
+	if !reflect.DeepEqual(got, p) {
+		t.Errorf("TestCopyPayloadHeaderDeneb() = %v, want %v", got, p)
+	}
+	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
+}
+
 func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 	sbb := genSignedBeaconBlockBellatrix()
 
@@ -449,16 +459,70 @@ func TestCopyBlindedBeaconBlockBodyCapella(t *testing.T) {
 	assert.NotEmpty(t, bb, "Copied blinded beacon block body Capella has empty fields")
 }
 
+func TestCopySignedBeaconBlockDeneb(t *testing.T) {
+	sbb := genSignedBeaconBlockDeneb()
+
+	got := v1alpha1.CopySignedBeaconBlockDeneb(sbb)
+	if !reflect.DeepEqual(got, sbb) {
+		t.Errorf("CopySignedBeaconBlockDeneb() = %v, want %v", got, sbb)
+	}
+	assert.NotEmpty(t, sbb, "Copied signed beacon block Deneb has empty fields")
+}
+
+func TestCopyBeaconBlockDeneb(t *testing.T) {
+	b := genBeaconBlockDeneb()
+
+	got := v1alpha1.CopyBeaconBlockDeneb(b)
+	if !reflect.DeepEqual(got, b) {
+		t.Errorf("CopyBeaconBlockDeneb() = %v, want %v", got, b)
+	}
+	assert.NotEmpty(t, b, "Copied beacon block Deneb has empty fields")
+}
+
+func TestCopyBeaconBlockBodyDeneb(t *testing.T) {
+	bb := genBeaconBlockBodyDeneb()
+
+	got := v1alpha1.CopyBeaconBlockBodyDeneb(bb)
+	if !reflect.DeepEqual(got, bb) {
+		t.Errorf("CopyBeaconBlockBodyDeneb() = %v, want %v", got, bb)
+	}
+	assert.NotEmpty(t, bb, "Copied beacon block body Deneb has empty fields")
+}
+
+func TestCopySignedBlindedBeaconBlockDeneb(t *testing.T) {
+	sbb := genSignedBlindedBeaconBlockDeneb()
+
+	got := v1alpha1.CopySignedBlindedBeaconBlockDeneb(sbb)
+	if !reflect.DeepEqual(got, sbb) {
+		t.Errorf("CopySignedBlindedBeaconBlockDeneb() = %v, want %v", got, sbb)
+	}
+	assert.NotEmpty(t, sbb, "Copied signed blinded beacon block Deneb has empty fields")
+}
+
+func TestCopyBlindedBeaconBlockDeneb(t *testing.T) {
+	b := genBlindedBeaconBlockDeneb()
+
+	got := v1alpha1.CopyBlindedBeaconBlockDeneb(b)
+	if !reflect.DeepEqual(got, b) {
+		t.Errorf("CopyBlindedBeaconBlockDeneb() = %v, want %v", got, b)
+	}
+	assert.NotEmpty(t, b, "Copied blinded beacon block Deneb has empty fields")
+}
+
+func TestCopyBlindedBeaconBlockBodyDeneb(t *testing.T) {
+	bb := genBlindedBeaconBlockBodyDeneb()
+
+	got := v1alpha1.CopyBlindedBeaconBlockBodyDeneb(bb)
+	if !reflect.DeepEqual(got, bb) {
+		t.Errorf("CopyBlindedBeaconBlockBodyDeneb() = %v, want %v", got, bb)
+	}
+	assert.NotEmpty(t, bb, "Copied blinded beacon block body Deneb has empty fields")
+}
+
 func bytes(length int) []byte {
 	b := make([]byte, length)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
 	for i := 0; i < length; i++ {
-		if b[i] == 0x00 {
-			b[i] = uint8(rand.Int())
-		}
+		b[i] = uint8(rand.Int31n(255) + 1)
 	}
 	return b
 }
@@ -501,6 +565,177 @@ func TestCopyHistoricalSummaries(t *testing.T) {
 	got := v1alpha1.CopyHistoricalSummaries(summaries)
 	if !reflect.DeepEqual(got, summaries) {
 		t.Errorf("TestCopyHistoricalSummariesing() = %v, want %v", got, summaries)
+	}
+}
+
+func TestCopyAttestationElectra(t *testing.T) {
+	att := genAttestationElectra()
+
+	got := v1alpha1.CopyAttestationElectra(att)
+	if !reflect.DeepEqual(got, att) {
+		t.Errorf("TestCopyAttestationElectra() = %v, want %v", got, att)
+	}
+}
+
+func TestCopyAttesterSlashingsElectra(t *testing.T) {
+	as := genAttesterSlashingsElectra(10)
+
+	got := v1alpha1.CopyAttesterSlashingsElectra(as)
+	if !reflect.DeepEqual(got, as) {
+		t.Errorf("TestCopyAttesterSlashingsElectra() = %v, want %v", got, as)
+	}
+}
+
+func TestCopyIndexedAttestationElectra(t *testing.T) {
+	ia := genIndexedAttestationElectra()
+
+	got := v1alpha1.CopyIndexedAttestationElectra(ia)
+	if !reflect.DeepEqual(got, ia) {
+		t.Errorf("TestCopyIndexedAttestationElectra() = %v, want %v", got, ia)
+	}
+}
+
+func TestCopyAttestationsElectra(t *testing.T) {
+	atts := genAttestationsElectra(10)
+
+	got := v1alpha1.CopyAttestationsElectra(atts)
+	if !reflect.DeepEqual(got, atts) {
+		t.Errorf("TestCopyAttestationsElectra() = %v, want %v", got, atts)
+	}
+}
+
+func TestCopySignedBlindedBeaconBlockElectra(t *testing.T) {
+	sbb := genSignedBlindedBeaconBlockElectra()
+
+	got := v1alpha1.CopySignedBlindedBeaconBlockElectra(sbb)
+	if !reflect.DeepEqual(got, sbb) {
+		t.Errorf("TestCopySignedBlindedBeaconBlockElectra() = %v, want %v", got, sbb)
+	}
+}
+
+func TestCopyBlindedBeaconBlockElectra(t *testing.T) {
+	b := genBlindedBeaconBlockElectra()
+
+	got := v1alpha1.CopyBlindedBeaconBlockElectra(b)
+	if !reflect.DeepEqual(got, b) {
+		t.Errorf("TestCopyBlindedBeaconBlockElectra() = %v, want %v", got, b)
+	}
+}
+
+func TestCopyBlindedBeaconBlockBodyElectra(t *testing.T) {
+	bb := genBlindedBeaconBlockBodyElectra()
+
+	got := v1alpha1.CopyBlindedBeaconBlockBodyElectra(bb)
+	if !reflect.DeepEqual(got, bb) {
+		t.Errorf("TestCopyBlindedBeaconBlockBodyElectra() = %v, want %v", got, bb)
+	}
+}
+
+func TestCopySignedConsolidations(t *testing.T) {
+	cs := genSignedConsolidations(10)
+
+	got := v1alpha1.CopySignedConsolidations(cs)
+	if !reflect.DeepEqual(got, cs) {
+		t.Errorf("TestCopySignedConsolidations() = %v, want %v", got, cs)
+	}
+}
+
+func TestCopySignedConsolidation(t *testing.T) {
+	c := genSignedConsolidation()
+
+	got := v1alpha1.CopySignedConsolidation(c)
+	if !reflect.DeepEqual(got, c) {
+		t.Errorf("TestCopySignedConsolidation() = %v, want %v", got, c)
+	}
+}
+
+func TestCopySignedBeaconBlockElectra(t *testing.T) {
+	sbb := genSignedBeaconBlockElectra()
+
+	got := v1alpha1.CopySignedBeaconBlockElectra(sbb)
+	if !reflect.DeepEqual(got, sbb) {
+		t.Errorf("TestCopySignedBeaconBlockElectra() = %v, want %v", got, sbb)
+	}
+}
+
+func TestCopyBeaconBlockElectra(t *testing.T) {
+	b := genBeaconBlockElectra()
+
+	got := v1alpha1.CopyBeaconBlockElectra(b)
+	if !reflect.DeepEqual(got, b) {
+		t.Errorf("TestCopyBeaconBlockElectra() = %v, want %v", got, b)
+	}
+}
+
+func TestCopyBeaconBlockBodyElectra(t *testing.T) {
+	bb := genBeaconBlockBodyElectra()
+
+	got := v1alpha1.CopyBeaconBlockBodyElectra(bb)
+	if !reflect.DeepEqual(got, bb) {
+		t.Errorf("TestCopyBeaconBlockBodyElectra() = %v, want %v", got, bb)
+	}
+}
+
+func TestCopyExecutionPayloadElectra(t *testing.T) {
+	p := genExecutionPayloadElectra()
+
+	got := v1alpha1.CopyExecutionPayloadElectra(p)
+	if !reflect.DeepEqual(got, p) {
+		t.Errorf("TestCopyExecutionPayloadElectra() = %v, want %v", got, p)
+	}
+}
+
+func TestCopyDepositReceipts(t *testing.T) {
+	drs := genDepositReceipts(10)
+
+	got := v1alpha1.CopyDepositReceipts(drs)
+	if !reflect.DeepEqual(got, drs) {
+		t.Errorf("TestCopyDepositReceipts() = %v, want %v", got, drs)
+	}
+}
+
+func TestCopyWithdrawalRequests(t *testing.T) {
+	wrs := genWithdrawalRequests(10)
+
+	got := v1alpha1.CopyWithdrawalRequests(wrs)
+	if !reflect.DeepEqual(got, wrs) {
+		t.Errorf("TestCopyWithdrawalRequests() = %v, want %v", got, wrs)
+	}
+}
+
+func TestCopyExecutionPayloadHeaderElectra(t *testing.T) {
+	p := genExecutionPayloadHeaderElectra()
+
+	got := v1alpha1.CopyExecutionPayloadHeaderElectra(p)
+	if !reflect.DeepEqual(got, p) {
+		t.Errorf("TestCopyExecutionPayloadHeaderElectra() = %v, want %v", got, p)
+	}
+}
+
+func TestCopyPendingPartialWithdrawals(t *testing.T) {
+	ppws := genPendingPartialWithdrawals(10)
+
+	got := v1alpha1.CopyPendingPartialWithdrawals(ppws)
+	if !reflect.DeepEqual(got, ppws) {
+		t.Errorf("TestCopyPendingPartialWithdrawals() = %v, want %v", got, ppws)
+	}
+}
+
+func TestCopyPendingConsolidations(t *testing.T) {
+	pcs := genPendingConsolidations(10)
+
+	got := v1alpha1.CopyPendingConsolidations(pcs)
+	if !reflect.DeepEqual(got, pcs) {
+		t.Errorf("TestCopyPendingConsolidations() = %v, want %v", got, pcs)
+	}
+}
+
+func TestCopyPendingBalanceDeposits(t *testing.T) {
+	pbds := genPendingBalanceDeposits(10)
+
+	got := v1alpha1.CopyPendingBalanceDeposits(pbds)
+	if !reflect.DeepEqual(got, pbds) {
+		t.Errorf("TestCopyPendingBalanceDeposits() = %v, want %v", got, pbds)
 	}
 }
 
@@ -844,6 +1079,82 @@ func genSignedBlindedBeaconBlockCapella() *v1alpha1.SignedBlindedBeaconBlockCape
 	}
 }
 
+func genBeaconBlockBodyDeneb() *v1alpha1.BeaconBlockBodyDeneb {
+	return &v1alpha1.BeaconBlockBodyDeneb{
+		RandaoReveal:          bytes(96),
+		Eth1Data:              genEth1Data(),
+		Graffiti:              bytes(32),
+		ProposerSlashings:     genProposerSlashings(5),
+		AttesterSlashings:     genAttesterSlashings(5),
+		Attestations:          genAttestations(10),
+		Deposits:              genDeposits(5),
+		VoluntaryExits:        genSignedVoluntaryExits(12),
+		SyncAggregate:         genSyncAggregate(),
+		ExecutionPayload:      genPayloadDeneb(),
+		BlsToExecutionChanges: genBLSToExecutionChanges(10),
+		BlobKzgCommitments:    getKZGCommitments(4),
+	}
+}
+
+func genBeaconBlockDeneb() *v1alpha1.BeaconBlockDeneb {
+	return &v1alpha1.BeaconBlockDeneb{
+		Slot:          123455,
+		ProposerIndex: 55433,
+		ParentRoot:    bytes(32),
+		StateRoot:     bytes(32),
+		Body:          genBeaconBlockBodyDeneb(),
+	}
+}
+
+func genSignedBeaconBlockDeneb() *v1alpha1.SignedBeaconBlockDeneb {
+	return &v1alpha1.SignedBeaconBlockDeneb{
+		Block:     genBeaconBlockDeneb(),
+		Signature: bytes(96),
+	}
+}
+
+func genBlindedBeaconBlockBodyDeneb() *v1alpha1.BlindedBeaconBlockBodyDeneb {
+	return &v1alpha1.BlindedBeaconBlockBodyDeneb{
+		RandaoReveal:           bytes(96),
+		Eth1Data:               genEth1Data(),
+		Graffiti:               bytes(32),
+		ProposerSlashings:      genProposerSlashings(5),
+		AttesterSlashings:      genAttesterSlashings(5),
+		Attestations:           genAttestations(10),
+		Deposits:               genDeposits(5),
+		VoluntaryExits:         genSignedVoluntaryExits(12),
+		SyncAggregate:          genSyncAggregate(),
+		ExecutionPayloadHeader: genPayloadHeaderDeneb(),
+		BlsToExecutionChanges:  genBLSToExecutionChanges(10),
+		BlobKzgCommitments:     getKZGCommitments(4),
+	}
+}
+
+func getKZGCommitments(n int) [][]byte {
+	kzgs := make([][]byte, n)
+	for i := 0; i < n; i++ {
+		kzgs[i] = bytes(48)
+	}
+	return kzgs
+}
+
+func genBlindedBeaconBlockDeneb() *v1alpha1.BlindedBeaconBlockDeneb {
+	return &v1alpha1.BlindedBeaconBlockDeneb{
+		Slot:          123455,
+		ProposerIndex: 55433,
+		ParentRoot:    bytes(32),
+		StateRoot:     bytes(32),
+		Body:          genBlindedBeaconBlockBodyDeneb(),
+	}
+}
+
+func genSignedBlindedBeaconBlockDeneb() *v1alpha1.SignedBlindedBeaconBlockDeneb {
+	return &v1alpha1.SignedBlindedBeaconBlockDeneb{
+		Message:   genBlindedBeaconBlockDeneb(),
+		Signature: bytes(32),
+	}
+}
+
 func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 	return &v1alpha1.SyncCommitteeMessage{
 		Slot:           424555,
@@ -905,6 +1216,41 @@ func genPayloadCapella() *enginev1.ExecutionPayloadCapella {
 	}
 }
 
+func genPayloadDeneb() *enginev1.ExecutionPayloadDeneb {
+	return &enginev1.ExecutionPayloadDeneb{
+		ParentHash:    bytes(32),
+		FeeRecipient:  bytes(20),
+		StateRoot:     bytes(32),
+		ReceiptsRoot:  bytes(32),
+		LogsBloom:     bytes(256),
+		PrevRandao:    bytes(32),
+		BlockNumber:   1,
+		GasLimit:      2,
+		GasUsed:       3,
+		Timestamp:     4,
+		ExtraData:     bytes(32),
+		BaseFeePerGas: bytes(32),
+		BlockHash:     bytes(32),
+		Transactions:  [][]byte{{'a'}, {'b'}, {'c'}},
+		Withdrawals: []*enginev1.Withdrawal{
+			{
+				Index:          123,
+				ValidatorIndex: 123,
+				Address:        bytes(20),
+				Amount:         123,
+			},
+			{
+				Index:          124,
+				ValidatorIndex: 456,
+				Address:        bytes(20),
+				Amount:         456,
+			},
+		},
+		BlobGasUsed:   5,
+		ExcessBlobGas: 6,
+	}
+}
+
 func genPayloadHeader() *enginev1.ExecutionPayloadHeader {
 	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytes(32),
@@ -944,6 +1290,28 @@ func genPayloadHeaderCapella() *enginev1.ExecutionPayloadHeaderCapella {
 	}
 }
 
+func genPayloadHeaderDeneb() *enginev1.ExecutionPayloadHeaderDeneb {
+	return &enginev1.ExecutionPayloadHeaderDeneb{
+		ParentHash:       bytes(32),
+		FeeRecipient:     bytes(20),
+		StateRoot:        bytes(32),
+		ReceiptsRoot:     bytes(32),
+		LogsBloom:        bytes(256),
+		PrevRandao:       bytes(32),
+		BlockNumber:      1,
+		GasLimit:         2,
+		GasUsed:          3,
+		Timestamp:        4,
+		ExtraData:        bytes(32),
+		BaseFeePerGas:    bytes(32),
+		BlockHash:        bytes(32),
+		TransactionsRoot: bytes(32),
+		WithdrawalsRoot:  bytes(32),
+		BlobGasUsed:      5,
+		ExcessBlobGas:    6,
+	}
+}
+
 func genWithdrawals(num int) []*enginev1.Withdrawal {
 	ws := make([]*enginev1.Withdrawal, num)
 	for i := 0; i < num; i++ {
@@ -977,5 +1345,266 @@ func genBLSToExecutionChange() *v1alpha1.SignedBLSToExecutionChange {
 			ToExecutionAddress: bytes(20),
 		},
 		Signature: bytes(96),
+	}
+}
+
+func genAttestationElectra() *v1alpha1.AttestationElectra {
+	return &v1alpha1.AttestationElectra{
+		AggregationBits: bytes(32),
+		CommitteeBits:   bytes(8),
+		Data:            genAttData(),
+		Signature:       bytes(96),
+	}
+}
+
+func genAttesterSlashingsElectra(num int) []*v1alpha1.AttesterSlashingElectra {
+	as := make([]*v1alpha1.AttesterSlashingElectra, num)
+	for i := 0; i < num; i++ {
+		as[i] = genAttesterSlashingElectra()
+	}
+	return as
+}
+
+func genAttesterSlashingElectra() *v1alpha1.AttesterSlashingElectra {
+	return &v1alpha1.AttesterSlashingElectra{
+		Attestation_1: genIndexedAttestationElectra(),
+		Attestation_2: genIndexedAttestationElectra(),
+	}
+}
+
+func genIndexedAttestationElectra() *v1alpha1.IndexedAttestationElectra {
+	return &v1alpha1.IndexedAttestationElectra{
+		AttestingIndices: []uint64{1, 2, 3},
+		Data:             genAttData(),
+		Signature:        bytes(96),
+	}
+}
+
+func genAttestationsElectra(num int) []*v1alpha1.AttestationElectra {
+	atts := make([]*v1alpha1.AttestationElectra, num)
+	for i := 0; i < num; i++ {
+		atts[i] = genAttestationElectra()
+	}
+	return atts
+}
+
+func genSignedBlindedBeaconBlockElectra() *v1alpha1.SignedBlindedBeaconBlockElectra {
+	return &v1alpha1.SignedBlindedBeaconBlockElectra{
+		Message:   genBlindedBeaconBlockElectra(),
+		Signature: bytes(96),
+	}
+}
+
+func genBlindedBeaconBlockElectra() *v1alpha1.BlindedBeaconBlockElectra {
+	return &v1alpha1.BlindedBeaconBlockElectra{
+		Slot:          123455,
+		ProposerIndex: 55433,
+		ParentRoot:    bytes(32),
+		StateRoot:     bytes(32),
+		Body:          genBlindedBeaconBlockBodyElectra(),
+	}
+}
+
+func genBlindedBeaconBlockBodyElectra() *v1alpha1.BlindedBeaconBlockBodyElectra {
+	return &v1alpha1.BlindedBeaconBlockBodyElectra{
+		RandaoReveal:           bytes(96),
+		Eth1Data:               genEth1Data(),
+		Graffiti:               bytes(32),
+		ProposerSlashings:      genProposerSlashings(5),
+		AttesterSlashings:      genAttesterSlashingsElectra(5),
+		Attestations:           genAttestationsElectra(10),
+		Deposits:               genDeposits(5),
+		VoluntaryExits:         genSignedVoluntaryExits(12),
+		SyncAggregate:          genSyncAggregate(),
+		ExecutionPayloadHeader: genExecutionPayloadHeaderElectra(),
+		BlsToExecutionChanges:  genBLSToExecutionChanges(10),
+		BlobKzgCommitments:     getKZGCommitments(4),
+		Consolidations:         genSignedConsolidations(5),
+	}
+}
+
+func genExecutionPayloadHeaderElectra() *enginev1.ExecutionPayloadHeaderElectra {
+	return &enginev1.ExecutionPayloadHeaderElectra{
+		ParentHash:             bytes(32),
+		FeeRecipient:           bytes(20),
+		StateRoot:              bytes(32),
+		ReceiptsRoot:           bytes(32),
+		LogsBloom:              bytes(256),
+		PrevRandao:             bytes(32),
+		BlockNumber:            1,
+		GasLimit:               2,
+		GasUsed:                3,
+		Timestamp:              4,
+		ExtraData:              bytes(32),
+		BaseFeePerGas:          bytes(32),
+		BlockHash:              bytes(32),
+		TransactionsRoot:       bytes(32),
+		WithdrawalsRoot:        bytes(32),
+		BlobGasUsed:            5,
+		ExcessBlobGas:          6,
+		DepositReceiptsRoot:    bytes(32),
+		WithdrawalRequestsRoot: bytes(32),
+	}
+}
+
+func genSignedConsolidations(num int) []*v1alpha1.SignedConsolidation {
+	cs := make([]*v1alpha1.SignedConsolidation, num)
+	for i := 0; i < num; i++ {
+		cs[i] = genSignedConsolidation()
+	}
+	return cs
+}
+
+func genSignedConsolidation() *v1alpha1.SignedConsolidation {
+	return &v1alpha1.SignedConsolidation{
+		Message:   genConsolidation(),
+		Signature: bytes(96),
+	}
+}
+
+func genConsolidation() *v1alpha1.Consolidation {
+	return &v1alpha1.Consolidation{
+		SourceIndex: 1,
+		TargetIndex: 2,
+		Epoch:       3,
+	}
+}
+
+func genSignedBeaconBlockElectra() *v1alpha1.SignedBeaconBlockElectra {
+	return &v1alpha1.SignedBeaconBlockElectra{
+		Block:     genBeaconBlockElectra(),
+		Signature: bytes(96),
+	}
+}
+
+func genBeaconBlockElectra() *v1alpha1.BeaconBlockElectra {
+	return &v1alpha1.BeaconBlockElectra{
+		Slot:          123455,
+		ProposerIndex: 55433,
+		ParentRoot:    bytes(32),
+		StateRoot:     bytes(32),
+		Body:          genBeaconBlockBodyElectra(),
+	}
+}
+
+func genBeaconBlockBodyElectra() *v1alpha1.BeaconBlockBodyElectra {
+	return &v1alpha1.BeaconBlockBodyElectra{
+		RandaoReveal:          bytes(96),
+		Eth1Data:              genEth1Data(),
+		Graffiti:              bytes(32),
+		ProposerSlashings:     genProposerSlashings(5),
+		AttesterSlashings:     genAttesterSlashingsElectra(5),
+		Attestations:          genAttestationsElectra(10),
+		Deposits:              genDeposits(5),
+		VoluntaryExits:        genSignedVoluntaryExits(12),
+		SyncAggregate:         genSyncAggregate(),
+		ExecutionPayload:      genExecutionPayloadElectra(),
+		BlsToExecutionChanges: genBLSToExecutionChanges(10),
+		BlobKzgCommitments:    getKZGCommitments(4),
+		Consolidations:        genSignedConsolidations(5),
+	}
+}
+
+func genExecutionPayloadElectra() *enginev1.ExecutionPayloadElectra {
+	return &enginev1.ExecutionPayloadElectra{
+		ParentHash:         bytes(32),
+		FeeRecipient:       bytes(20),
+		StateRoot:          bytes(32),
+		ReceiptsRoot:       bytes(32),
+		LogsBloom:          bytes(256),
+		PrevRandao:         bytes(32),
+		BlockNumber:        1,
+		GasLimit:           2,
+		GasUsed:            3,
+		Timestamp:          4,
+		ExtraData:          bytes(32),
+		BaseFeePerGas:      bytes(32),
+		BlockHash:          bytes(32),
+		Transactions:       [][]byte{{'a'}, {'b'}, {'c'}},
+		Withdrawals:        genWithdrawals(10),
+		BlobGasUsed:        5,
+		ExcessBlobGas:      6,
+		DepositReceipts:    genDepositReceipts(10),
+		WithdrawalRequests: genWithdrawalRequests(10),
+	}
+}
+
+func genDepositReceipts(num int) []*enginev1.DepositReceipt {
+	drs := make([]*enginev1.DepositReceipt, num)
+	for i := 0; i < num; i++ {
+		drs[i] = genDepositReceipt()
+	}
+	return drs
+}
+
+func genDepositReceipt() *enginev1.DepositReceipt {
+	return &enginev1.DepositReceipt{
+		Pubkey:                bytes(48),
+		WithdrawalCredentials: bytes(32),
+		Amount:                55555,
+		Signature:             bytes(96),
+		Index:                 123444,
+	}
+}
+
+func genWithdrawalRequests(num int) []*enginev1.ExecutionLayerWithdrawalRequest {
+	wrs := make([]*enginev1.ExecutionLayerWithdrawalRequest, num)
+	for i := 0; i < num; i++ {
+		wrs[i] = genWithdrawalRequest()
+	}
+	return wrs
+}
+
+func genWithdrawalRequest() *enginev1.ExecutionLayerWithdrawalRequest {
+	return &enginev1.ExecutionLayerWithdrawalRequest{
+		SourceAddress:   bytes(20),
+		ValidatorPubkey: bytes(48),
+		Amount:          55555,
+	}
+}
+
+func genPendingPartialWithdrawals(num int) []*v1alpha1.PendingPartialWithdrawal {
+	ppws := make([]*v1alpha1.PendingPartialWithdrawal, num)
+	for i := 0; i < num; i++ {
+		ppws[i] = genPendingPartialWithdrawal()
+	}
+	return ppws
+}
+
+func genPendingPartialWithdrawal() *v1alpha1.PendingPartialWithdrawal {
+	return &v1alpha1.PendingPartialWithdrawal{
+		Index:             123456,
+		Amount:            55555,
+		WithdrawableEpoch: 444444,
+	}
+}
+
+func genPendingConsolidations(num int) []*v1alpha1.PendingConsolidation {
+	pcs := make([]*v1alpha1.PendingConsolidation, num)
+	for i := 0; i < num; i++ {
+		pcs[i] = genPendingConsolidation()
+	}
+	return pcs
+}
+
+func genPendingConsolidation() *v1alpha1.PendingConsolidation {
+	return &v1alpha1.PendingConsolidation{
+		SourceIndex: 1,
+		TargetIndex: 2,
+	}
+}
+
+func genPendingBalanceDeposits(num int) []*v1alpha1.PendingBalanceDeposit {
+	pbds := make([]*v1alpha1.PendingBalanceDeposit, num)
+	for i := 0; i < num; i++ {
+		pbds[i] = genPendingBalanceDeposit()
+	}
+	return pbds
+}
+
+func genPendingBalanceDeposit() *v1alpha1.PendingBalanceDeposit {
+	return &v1alpha1.PendingBalanceDeposit{
+		Index:  123456,
+		Amount: 55555,
 	}
 }

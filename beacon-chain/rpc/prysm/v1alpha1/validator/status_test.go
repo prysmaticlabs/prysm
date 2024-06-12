@@ -7,24 +7,24 @@ import (
 	"time"
 
 	"github.com/d4l3k/messagediff"
-	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	mockstategen "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen/mock"
-	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	mockstategen "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen/mock"
+	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -38,7 +38,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	pubKey1 := deposit.Data.PublicKey
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	root, err := depositTrie.HashTreeRoot()
@@ -71,19 +71,16 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 func TestValidatorStatus_Deposited(t *testing.T) {
 	ctx := context.Background()
 
-	pubKey1 := pubKey(1)
-	depData := &ethpb.Deposit_Data{
-		Amount:                params.BeaconConfig().MaxEffectiveBalance,
-		PublicKey:             pubKey1,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
-	}
+	deps, keys, err := util.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	pubKey1 := keys[0].PublicKey().Marshal()
+	depData := deps[0].Data
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	root, err := depositTrie.HashTreeRoot()
@@ -95,14 +92,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{
-		Validators: []*ethpb.Validator{
-			{
-				PublicKey:                  pubKey1,
-				ActivationEligibilityEpoch: 1,
-			},
-		},
-	})
+	stateObj, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	vs := &Server{
 		DepositFetcher: depositCache,
@@ -135,7 +125,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 	}
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	root, err := depositTrie.HashTreeRoot()
@@ -152,6 +142,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 			{
 				PublicKey:                  pubKey1,
 				ActivationEligibilityEpoch: 1,
+				EffectiveBalance:           params.BeaconConfig().MinDepositAmount,
 			},
 		},
 	})
@@ -170,6 +161,65 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	require.NoError(t, err, "Could not get validator status")
 	assert.Equal(t, ethpb.ValidatorStatus_PARTIALLY_DEPOSITED, resp.Status)
+}
+
+func TestValidatorStatus_Pending_MultipleDeposits(t *testing.T) {
+	ctx := context.Background()
+
+	pubKey1 := pubKey(1)
+	depData := &ethpb.Deposit_Data{
+		Amount:                16 * params.BeaconConfig().MinDepositAmount,
+		PublicKey:             pubKey1,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
+	}
+	deposit := &ethpb.Deposit{
+		Data: depData,
+	}
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	require.NoError(t, err, "Could not setup deposit trie")
+	depositCache, err := depositsnapshot.New()
+	require.NoError(t, err)
+
+	root, err := depositTrie.HashTreeRoot()
+	require.NoError(t, err)
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, root))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 1, root))
+
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
+	p := &mockExecution.Chain{
+		TimesByHeight: map[int]uint64{
+			0: uint64(height),
+		},
+	}
+	stateObj, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				PublicKey:                  pubKey1,
+				ActivationEligibilityEpoch: 1,
+				EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+				ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+				WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.NoError(t, stateObj.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	vs := &Server{
+		DepositFetcher: depositCache,
+		BlockFetcher:   p,
+		HeadFetcher: &mockChain.ChainService{
+			State: stateObj,
+		},
+		Eth1InfoFetcher: p,
+	}
+	req := &ethpb.ValidatorStatusRequest{
+		PublicKey: pubKey1,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	require.NoError(t, err, "Could not get validator status")
+	assert.Equal(t, ethpb.ValidatorStatus_PENDING, resp.Status)
 }
 
 func TestValidatorStatus_Pending(t *testing.T) {
@@ -205,7 +255,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	}
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	root, err := depositTrie.HashTreeRoot()
@@ -268,7 +318,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	}
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	root, err := depositTrie.HashTreeRoot()
@@ -327,7 +377,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	}
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	root, err := depositTrie.HashTreeRoot()
@@ -385,7 +435,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	}
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	root, err := depositTrie.HashTreeRoot()
@@ -414,7 +464,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 
 func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	pubKey := pubKey(1)
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	stateObj, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{
@@ -470,7 +520,7 @@ func TestActivationStatus_OK(t *testing.T) {
 	dep := deposits[0]
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	root, err := depositTrie.HashTreeRoot()
@@ -609,7 +659,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	for i := 0; i < 6; i++ {
@@ -701,7 +751,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	dep := deposits[0]
@@ -757,7 +807,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	assert.Equal(t, len(pubKeys), len(response.Statuses))
 	for i, resp := range response.Statuses {
 		if !proto.Equal(want[i], resp) {
-			t.Fatalf("Wanted %v\n Recieved: %v\n", want[i], resp)
+			t.Fatalf("Wanted %v\n Received: %v\n", want[i], resp)
 		}
 	}
 }
@@ -852,7 +902,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	assert.Equal(t, len(beaconState.Validators), len(response.Statuses))
 	for i, resp := range response.Statuses {
 		if !proto.Equal(want[i], resp) {
-			t.Fatalf("Wanted %v\n Recieved: %v\n", want[i], resp)
+			t.Fatalf("Wanted %v\n Received: %v\n", want[i], resp)
 		}
 	}
 }
@@ -866,7 +916,7 @@ func TestValidatorStatus_Invalid(t *testing.T) {
 	deposit.Data.Signature = deposit.Data.Signature[1:]
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	root, err := depositTrie.HashTreeRoot()
@@ -913,7 +963,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 				vs := &Server{
 					HeadFetcher: &mockChain.ChainService{
@@ -945,7 +995,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 				currentIndices := make([]byte, 64)
 				currentIndices[2] = 1
@@ -995,7 +1045,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				prevIndices := make([]byte, 64)
 				prevIndices[2] = 1
 				require.NoError(t, ps.SetPreviousParticipationBits(prevIndices))
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 
 				vs := &Server{
@@ -1043,7 +1093,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				currentIndices[10] = 1
 				currentIndices[11] = 2
 				require.NoError(t, hs.SetPreviousParticipationBits(currentIndices))
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 
 				prevIndices := make([]byte, 64)
@@ -1095,7 +1145,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 				currentIndices := make([]byte, 64)
 				currentIndices[0] = 1
@@ -1132,7 +1182,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 				currentIndices := make([]byte, 64)
 				currentIndices[0] = 1

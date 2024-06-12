@@ -9,10 +9,10 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
-	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/v5/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v5/testing/endtoend/policies"
+	e2etypes "github.com/prysmaticlabs/prysm/v5/testing/endtoend/types"
 	"google.golang.org/grpc"
 )
 
@@ -363,16 +363,20 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 
 // Compares a regular beacon chain head GET request with no arguments gRPC and gRPC gateway.
 func withCompareChainHead(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	// used for gateway, if using pure HTTP use shared.ChainHead
 	type chainHeadResponseJSON struct {
-		HeadSlot           string `json:"headSlot"`
-		HeadEpoch          string `json:"headEpoch"`
-		HeadBlockRoot      string `json:"headBlockRoot"`
-		FinalizedSlot      string `json:"finalizedSlot"`
-		FinalizedEpoch     string `json:"finalizedEpoch"`
-		FinalizedBlockRoot string `json:"finalizedBlockRoot"`
-		JustifiedSlot      string `json:"justifiedSlot"`
-		JustifiedEpoch     string `json:"justifiedEpoch"`
-		JustifiedBlockRoot string `json:"justifiedBlockRoot"`
+		HeadSlot                   string `json:"headSlot"`
+		HeadEpoch                  string `json:"headEpoch"`
+		HeadBlockRoot              string `json:"headBlockRoot"`
+		FinalizedSlot              string `json:"finalizedSlot"`
+		FinalizedEpoch             string `json:"finalizedEpoch"`
+		FinalizedBlockRoot         string `json:"finalizedBlockRoot"`
+		JustifiedSlot              string `json:"justifiedSlot"`
+		JustifiedEpoch             string `json:"justifiedEpoch"`
+		JustifiedBlockRoot         string `json:"justifiedBlockRoot"`
+		PreviousJustifiedSlot      string `json:"previousJustifiedSlot"`
+		PreviousJustifiedEpoch     string `json:"previousJustifiedEpoch"`
+		PreviousJustifiedBlockRoot string `json:"previousJustifiedBlockRoot"`
 	}
 	beaconClient := ethpb.NewBeaconChainClient(conn)
 	ctx := context.Background()
@@ -434,18 +438,39 @@ func withCompareChainHead(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if respJSON.JustifiedSlot != fmt.Sprintf("%d", resp.JustifiedSlot) {
 		return fmt.Errorf(
 			"HTTP gateway justified slot %s does not match gRPC %d",
+			respJSON.JustifiedSlot,
+			resp.JustifiedSlot,
+		)
+	}
+	if respJSON.JustifiedEpoch != fmt.Sprintf("%d", resp.JustifiedEpoch) {
+		return fmt.Errorf(
+			"HTTP gateway justified epoch %s does not match gRPC %d",
+			respJSON.JustifiedEpoch,
+			resp.JustifiedEpoch,
+		)
+	}
+	if respJSON.JustifiedBlockRoot != base64.StdEncoding.EncodeToString(resp.JustifiedBlockRoot) {
+		return fmt.Errorf(
+			"HTTP gateway justified block root %s does not match gRPC %s",
+			respJSON.JustifiedBlockRoot,
+			resp.JustifiedBlockRoot,
+		)
+	}
+	if respJSON.PreviousJustifiedSlot != fmt.Sprintf("%d", resp.PreviousJustifiedSlot) {
+		return fmt.Errorf(
+			"HTTP gateway justified slot %s does not match gRPC %d",
 			respJSON.FinalizedSlot,
 			resp.FinalizedSlot,
 		)
 	}
-	if respJSON.JustifiedEpoch != fmt.Sprintf("%d", resp.JustifiedEpoch) {
+	if respJSON.PreviousJustifiedEpoch != fmt.Sprintf("%d", resp.PreviousJustifiedEpoch) {
 		return fmt.Errorf(
 			"HTTP gateway justified epoch %s does not match gRPC %d",
 			respJSON.FinalizedEpoch,
 			resp.FinalizedEpoch,
 		)
 	}
-	if respJSON.JustifiedBlockRoot != base64.StdEncoding.EncodeToString(resp.JustifiedBlockRoot) {
+	if respJSON.PreviousJustifiedBlockRoot != base64.StdEncoding.EncodeToString(resp.PreviousJustifiedBlockRoot) {
 		return fmt.Errorf(
 			"HTTP gateway justified block root %s does not match gRPC %s",
 			respJSON.JustifiedBlockRoot,

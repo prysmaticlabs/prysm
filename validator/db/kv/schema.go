@@ -37,4 +37,21 @@ var (
 	// Graffiti ordered index and hash keys
 	graffitiOrderedIndexKey = []byte("graffiti-ordered-index")
 	graffitiFileHashKey     = []byte("graffiti-file-hash")
+
+	// ProposerSettings stores the encoded proposer settings file
+	proposerSettingsBucket = []byte("proposer-settings-bucket")
+	proposerSettingsKey    = []byte("proposer-settings")
 )
+
+// Attestations:
+// -------------
+// lowest-signed-source-bucket --> <pubkey> --> <epoch>
+// lowest-signed-target-bucket --> <pubkey> --> <epoch>
+//
+// pubkeys-bucket --> <pubkey> --> att-signing-roots-bucket --> <target epoch> --> <signing root>
+//                             |-> att-source-epochs-bucket --> <source epoch> --> []<target epoch>
+//                             |-> att-target-epochs-bucket --> <target epoch> --> []<source epoch>
+
+// Proposals:
+// ----------
+// proposal-history-bucket-interchange -> <pubkey> --> <slot> --> <signing root>

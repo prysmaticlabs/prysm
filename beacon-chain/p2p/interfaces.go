@@ -10,10 +10,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -33,8 +33,9 @@ type P2P interface {
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
 type Broadcaster interface {
 	Broadcast(context.Context, proto.Message) error
-	BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error
+	BroadcastAttestation(ctx context.Context, subnet uint64, att ethpb.Att) error
 	BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint64, sMsg *ethpb.SyncCommitteeMessage) error
+	BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.BlobSidecar) error
 }
 
 // SetStreamHandler configures p2p to handle streams of a certain topic ID.

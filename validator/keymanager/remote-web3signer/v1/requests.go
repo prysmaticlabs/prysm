@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 )
 
 // GetBlockSignRequest maps the request for signing type BLOCK.
@@ -271,8 +271,8 @@ func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRe
 	}, nil
 }
 
-// GetBlockV2BlindedSignRequest maps the request for signing types
-// Supports Bellatrix and Capella
+// GetBlockV2BlindedSignRequest maps the request for signing types (GetBlockV2 id defined by the remote signer interface and not the beacon APIs)
+// Supports Bellatrix, Capella, Deneb
 func GetBlockV2BlindedSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2BlindedSignRequest, error) {
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
@@ -333,6 +333,34 @@ func GetBlockV2BlindedSignRequest(request *validatorpb.SignRequest, genesisValid
 			return nil, errors.New("invalid sign request: blinded capella block is nil")
 		}
 		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockCapella.BlindedBlockCapella)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
+	case *validatorpb.SignRequest_BlockDeneb:
+		version = "DENEB"
+		blockDeneb, ok := request.Object.(*validatorpb.SignRequest_BlockDeneb)
+		if !ok {
+			return nil, errors.New("failed to cast request object to deneb block")
+		}
+		if blockDeneb == nil {
+			return nil, errors.New("invalid sign request: deneb block is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blockDeneb.BlockDeneb)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
+	case *validatorpb.SignRequest_BlindedBlockDeneb:
+		version = "DENEB"
+		blindedBlockDeneb, ok := request.Object.(*validatorpb.SignRequest_BlindedBlockDeneb)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blinded deneb block")
+		}
+		if blindedBlockDeneb == nil {
+			return nil, errors.New("invalid sign request: blinded deneb block is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockDeneb.BlindedBlockDeneb)
 		if err != nil {
 			return nil, err
 		}

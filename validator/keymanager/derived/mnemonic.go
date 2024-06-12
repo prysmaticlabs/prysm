@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v4/io/prompt"
+	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v5/io/prompt"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
 )
@@ -20,7 +20,7 @@ type MnemonicGenerator struct {
 	skipMnemonicConfirm bool
 }
 
-// ErrUnsupportedMnemonicLanguage is returned when trying to use an unsupported mnemonic langauge.
+// ErrUnsupportedMnemonicLanguage is returned when trying to use an unsupported mnemonic language.
 var (
 	DefaultMnemonicLanguage        = "english"
 	ErrUnsupportedMnemonicLanguage = errors.New("unsupported mnemonic language")

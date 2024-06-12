@@ -6,16 +6,16 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"go.opencensus.io/trace"
 )
 
@@ -24,12 +24,12 @@ import (
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	b interfaces.ReadOnlySignedBeaconBlock,
+	b interfaces.ReadOnlyBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+	if b == nil || b.IsNil() {
+		return nil, consensusblocks.ErrNilBeaconBlock
 	}
-	body := b.Block().Body()
+	body := b.Body()
 	totalBalance, err := helpers.TotalActiveBalance(beaconState)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func ProcessAttestationsNoVerifySignature(
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	att *ethpb.Attestation,
+	att ethpb.Att,
 	totalBalance uint64,
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
@@ -58,24 +58,24 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 
-	delay, err := beaconState.Slot().SafeSubSlot(att.Data.Slot)
+	delay, err := beaconState.Slot().SafeSubSlot(att.GetData().Slot)
 	if err != nil {
-		return nil, fmt.Errorf("att slot %d can't be greater than state slot %d", att.Data.Slot, beaconState.Slot())
+		return nil, fmt.Errorf("att slot %d can't be greater than state slot %d", att.GetData().Slot, beaconState.Slot())
 	}
-	participatedFlags, err := AttestationParticipationFlagIndices(beaconState, att.Data, delay)
-	if err != nil {
-		return nil, err
-	}
-	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	participatedFlags, err := AttestationParticipationFlagIndices(beaconState, att.GetData(), delay)
 	if err != nil {
 		return nil, err
 	}
-	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+	committees, err := helpers.AttestationCommittees(ctx, beaconState, att)
+	if err != nil {
+		return nil, err
+	}
+	indices, err := attestation.AttestingIndices(att, committees...)
 	if err != nil {
 		return nil, err
 	}
 
-	return SetParticipationAndRewardProposer(ctx, beaconState, att.Data.Target.Epoch, indices, participatedFlags, totalBalance)
+	return SetParticipationAndRewardProposer(ctx, beaconState, att.GetData().Target.Epoch, indices, participatedFlags, totalBalance)
 }
 
 // SetParticipationAndRewardProposer retrieves and sets the epoch participation bits in state. Based on the epoch participation, it rewards
@@ -289,13 +289,13 @@ func AttestationParticipationFlagIndices(beaconState state.BeaconState, data *et
 	sourceFlagIndex := cfg.TimelySourceFlagIndex
 	targetFlagIndex := cfg.TimelyTargetFlagIndex
 	headFlagIndex := cfg.TimelyHeadFlagIndex
-	slotsPerEpoch := cfg.SlotsPerEpoch
 	sqtRootSlots := cfg.SqrRootSlotsPerEpoch
 	if matchedSrc && delay <= sqtRootSlots {
 		participatedFlags[sourceFlagIndex] = true
 	}
 	matchedSrcTgt := matchedSrc && matchedTgt
-	if matchedSrcTgt && delay <= slotsPerEpoch {
+	// Before Deneb no attestation should pass validation without having delay <= slotsPerEpoch.
+	if matchedSrcTgt {
 		participatedFlags[targetFlagIndex] = true
 	}
 	matchedSrcTgtHead := matchedHead && matchedSrcTgt

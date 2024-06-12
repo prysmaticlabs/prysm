@@ -6,13 +6,15 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	mock "github.com/prysmaticlabs/prysm/v4/validator/accounts/testing"
-	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v5/validator/accounts/testing"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -28,11 +30,11 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
 	return &keymanager.Keystore{
-		Crypto:  cryptoFields,
-		Pubkey:  fmt.Sprintf("%x", pubKey),
-		ID:      id.String(),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
+		Crypto:      cryptoFields,
+		Pubkey:      fmt.Sprintf("%x", pubKey),
+		ID:          id.String(),
+		Version:     encryptor.Version(),
+		Description: encryptor.Name(),
 	}
 }
 
@@ -94,6 +96,7 @@ func TestLocalKeymanager_NoDuplicates(t *testing.T) {
 }
 
 func TestLocalKeymanager_ImportKeystores(t *testing.T) {
+	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	// Setup the keymanager.
 	wallet := &mock.Wallet{
@@ -121,8 +124,9 @@ func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, numKeystores, len(statuses))
 		for _, status := range statuses {
-			require.Equal(t, ethpbservice.ImportedKeystoreStatus_IMPORTED, status.Status)
+			require.Equal(t, keymanager.StatusImported, status.Status)
 		}
+		require.LogsContain(t, hook, "Successfully imported validator key(s)")
 	})
 	t.Run("each imported keystore with a different password succeeds", func(t *testing.T) {
 		numKeystores := 5
@@ -141,8 +145,9 @@ func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, numKeystores, len(statuses))
 		for _, status := range statuses {
-			require.Equal(t, ethpbservice.ImportedKeystoreStatus_IMPORTED, status.Status)
+			require.Equal(t, keymanager.StatusImported, status.Status)
 		}
+		require.LogsContain(t, hook, "Successfully imported validator key(s)")
 	})
 	t.Run("some succeed, some fail to decrypt, some duplicated", func(t *testing.T) {
 		keystores := make([]*keymanager.Keystore, 0)
@@ -171,17 +176,17 @@ func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 		require.Equal(t, len(keystores), len(statuses))
 		require.Equal(
 			t,
-			ethpbservice.ImportedKeystoreStatus_IMPORTED,
+			keymanager.StatusImported,
 			statuses[0].Status,
 		)
 		require.Equal(
 			t,
-			ethpbservice.ImportedKeystoreStatus_DUPLICATE,
+			keymanager.StatusDuplicate,
 			statuses[1].Status,
 		)
 		require.Equal(
 			t,
-			ethpbservice.ImportedKeystoreStatus_ERROR,
+			keymanager.StatusError,
 			statuses[2].Status,
 		)
 		require.Equal(
@@ -189,5 +194,70 @@ func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 			fmt.Sprintf("incorrect password for key 0x%s", keystores[2].Pubkey),
 			statuses[2].Message,
 		)
+		b, err := hexutil.Decode("0x" + keystore1.Pubkey)
+		require.NoError(t, err)
+		require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(b)))
+		require.LogsContain(t, hook, "Successfully imported validator key(s)")
+	})
+	t.Run("All fail or duplicated", func(t *testing.T) {
+		// First keystore is normal.
+		keystore1 := createRandomKeystore(t, password)
+		// First Import successfully
+		statuses, err := dr.ImportKeystores(
+			ctx,
+			[]*keymanager.Keystore{keystore1},
+			[]string{password},
+		)
+		require.NoError(t, err)
+		require.Equal(t, len(statuses), 1)
+
+		keystores := make([]*keymanager.Keystore, 0)
+		passwords := make([]string, 0)
+		// Second keystore is a duplicate of the first.
+		keystores = append(keystores, keystore1)
+		passwords = append(passwords, password)
+
+		// Third keystore has a wrong password.
+		keystore3 := createRandomKeystore(t, password)
+		keystores = append(keystores, keystore3)
+		passwords = append(passwords, "foobar")
+
+		statuses, err = dr.ImportKeystores(
+			ctx,
+			keystores,
+			passwords,
+		)
+		require.NoError(t, err)
+		require.Equal(t, len(keystores), len(statuses))
+		require.Equal(
+			t,
+			keymanager.StatusDuplicate,
+			statuses[0].Status,
+		)
+		require.Equal(
+			t,
+			keymanager.StatusError,
+			statuses[1].Status,
+		)
+		require.Equal(
+			t,
+			fmt.Sprintf("incorrect password for key 0x%s", keystores[1].Pubkey),
+			statuses[1].Message,
+		)
+		require.LogsContain(t, hook, "no keys were imported")
+	})
+	t.Run("file write fails during import", func(t *testing.T) {
+		wallet.HasWriteFileError = true
+		copyStore := dr.accountsStore.Copy()
+		keystore1 := createRandomKeystore(t, password)
+		statuses, err := dr.ImportKeystores(
+			ctx,
+			[]*keymanager.Keystore{keystore1},
+			[]string{password},
+		)
+		require.ErrorContains(t, "could not write keystore file for accounts", err)
+		require.Equal(t, len(statuses), 0)
+		// local copy did not update due to bad file write
+		require.DeepEqual(t, dr.accountsStore, copyStore)
 	})
 }

@@ -1,12 +1,20 @@
 package accounts
 
 import (
+	"encoding/json"
+	"fmt"
+	"path"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/build/bazel"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -15,6 +23,14 @@ func TestDisplayExitInfo(t *testing.T) {
 	key := []byte("0x123456")
 	displayExitInfo([][]byte{key}, []string{string(key)})
 	assert.LogsContain(t, logHook, "https://beaconcha.in/validator/3078313233343536")
+
+	params.BeaconConfig().ConfigName = params.HoleskyName
+	displayExitInfo([][]byte{key}, []string{string(key)})
+	assert.LogsContain(t, logHook, "https://holesky.beaconcha.in/validator/3078313233343536")
+
+	params.BeaconConfig().ConfigName = params.SepoliaName
+	displayExitInfo([][]byte{key}, []string{string(key)})
+	assert.LogsContain(t, logHook, "https://sepolia.beaconcha.in/validator/3078313233343536")
 }
 
 func TestDisplayExitInfo_NoKeys(t *testing.T) {
@@ -33,4 +49,27 @@ func TestPrepareAllKeys(t *testing.T) {
 	assert.DeepEqual(t, bytesutil.ToBytes48([]byte{107, 101, 121, 50}), bytesutil.ToBytes48(raw[1]))
 	assert.Equal(t, "0x6b6579310000", formatted[0])
 	assert.Equal(t, "0x6b6579320000", formatted[1])
+}
+
+func TestWriteSignedVoluntaryExitJSON(t *testing.T) {
+	sve := &eth.SignedVoluntaryExit{
+		Exit: &eth.VoluntaryExit{
+			Epoch:          5,
+			ValidatorIndex: 300,
+		},
+		Signature: []byte{0x01, 0x02},
+	}
+
+	output := path.Join(bazel.TestTmpDir(), "TestWriteSignedVoluntaryExitJSON")
+	require.NoError(t, writeSignedVoluntaryExitJSON(sve, output))
+
+	b, err := file.ReadFileAsBytes(path.Join(output, "validator-exit-300.json"))
+	require.NoError(t, err)
+
+	svej := &structs.SignedVoluntaryExit{}
+	require.NoError(t, json.Unmarshal(b, svej))
+
+	require.Equal(t, fmt.Sprintf("%d", sve.Exit.Epoch), svej.Message.Epoch)
+	require.Equal(t, fmt.Sprintf("%d", sve.Exit.ValidatorIndex), svej.Message.ValidatorIndex)
+	require.Equal(t, "0x0102", svej.Signature)
 }

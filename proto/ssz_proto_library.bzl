@@ -2,7 +2,6 @@
 SSZ proto templating rules.
 
 These rules allow for variable substitution for hardcoded tag values like ssz-size and ssz-max.
-
 """
 
 ####### Configuration #######
@@ -15,12 +14,27 @@ mainnet = {
     "previous_epoch_attestations.max": "4096",  # MAX_ATTESTATIONS * SLOTS_PER_EPOCH
     "current_epoch_attestations.max": "4096",  # MAX_ATTESTATIONS * SLOTS_PER_EPOCH
     "slashings.size": "8192",  # EPOCHS_PER_SLASHINGS_VECTOR
-    "sync_committee_bits.size": "512", #SYNC_COMMITTEE_SIZE
+    "sync_committee_bits.size": "512",  # SYNC_COMMITTEE_SIZE
     "sync_committee_bytes.size": "64",
     "sync_committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector512",
     "sync_committee_aggregate_bytes.size": "16",
     "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector128",
     "withdrawal.size": "16",
+    "blob.size": "131072",  # BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
+    "logs_bloom.size": "256",
+    "extra_data.size": "32",
+    "max_blobs_per_block.size": "6",
+    "max_blob_commitments.size": "4096",
+    "kzg_commitment_inclusion_proof_depth.size": "17",
+    "max_withdrawal_requests_per_payload.size":"16",
+    "max_deposit_receipts": "8192",
+    "max_attesting_indices.size": "131072",
+    "max_committees_per_slot.size": "64",
+    "committee_bits.size": "8",
+    "committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector64",
+    "pending_balance_deposits_limit": "134217728",
+    "pending_partial_withdrawals_limit": "134217728",
+    "pending_consolidations_limit": "262144",
 }
 
 minimal = {
@@ -37,6 +51,21 @@ minimal = {
     "sync_committee_aggregate_bytes.size": "1",
     "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector8",
     "withdrawal.size": "4",
+    "blob.size": "131072",
+    "logs_bloom.size": "256",
+    "extra_data.size": "32",
+    "max_blobs_per_block.size": "6",
+    "max_blob_commitments.size": "16",
+    "kzg_commitment_inclusion_proof_depth.size": "9",
+    "max_withdrawal_requests_per_payload.size":"2",
+    "max_deposit_receipts": "4",
+    "max_attesting_indices.size": "8192",
+    "max_committees_per_slot.size": "4",
+    "committee_bits.size": "1",
+    "committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector4",
+    "pending_balance_deposits_limit": "134217728",
+    "pending_partial_withdrawals_limit": "64",
+    "pending_consolidations_limit": "64",
 }
 
 ###### Rules definitions #######

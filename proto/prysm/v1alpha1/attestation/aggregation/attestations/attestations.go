@@ -2,20 +2,20 @@ package attestations
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
 	"github.com/sirupsen/logrus"
 )
 
 // attList represents list of attestations, defined for easier en masse operations (filtering, sorting).
-type attList []*ethpb.Attestation
+type attList []ethpb.Att
 
 // BLS aggregate signature aliases for testing / benchmark substitution. These methods are
 // significantly more expensive than the inner logic of AggregateAttestations so they must be
 // substituted for benchmarks which analyze AggregateAttestations.
 var aggregateSignatures = bls.AggregateSignatures
-var signatureFromBytes = bls.SignatureFromBytes
+var signatureFromBytes = bls.SignatureFromBytesNoValidation
 
 var _ = logrus.WithField("prefix", "aggregation.attestations")
 
@@ -32,8 +32,45 @@ var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 //	    clonedAtts[i] = stateTrie.CopyAttestation(a)
 //	}
 //	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
-func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func Aggregate(atts []ethpb.Att) ([]ethpb.Att, error) {
 	return MaxCoverAttestationAggregation(atts)
+}
+
+// AggregateDisjointOneBitAtts aggregates unaggregated attestations with the
+// exact same attestation data.
+func AggregateDisjointOneBitAtts(atts []ethpb.Att) (ethpb.Att, error) {
+	if len(atts) == 0 {
+		return nil, nil
+	}
+	if len(atts) == 1 {
+		return atts[0], nil
+	}
+	coverage, err := atts[0].GetAggregationBits().ToBitlist64()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get aggregation bits")
+	}
+	for _, att := range atts[1:] {
+		bits, err := att.GetAggregationBits().ToBitlist64()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get aggregation bits")
+		}
+		err = coverage.NoAllocOr(bits, coverage)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get aggregation bits")
+		}
+	}
+	keys := make([]int, len(atts))
+	for i := 0; i < len(atts); i++ {
+		keys[i] = i
+	}
+	idx, err := aggregateAttestations(atts, keys, coverage)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not aggregate attestations")
+	}
+	if idx != 0 {
+		return nil, errors.New("could not aggregate attestations, obtained non zero index")
+	}
+	return atts[0], nil
 }
 
 // AggregatePair aggregates pair of attestations a1 and a2 together.

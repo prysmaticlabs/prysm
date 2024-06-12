@@ -9,16 +9,14 @@ import (
 
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/network/forks"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 )
 
 func TestService_CanSubscribe(t *testing.T) {
@@ -92,7 +90,7 @@ func TestService_CanSubscribe(t *testing.T) {
 		formatting := []interface{}{digest}
 
 		// Special case for attestation subnets which have a second formatting placeholder.
-		if topic == AttestationSubnetTopicFormat || topic == SyncCommitteeSubnetTopicFormat {
+		if topic == AttestationSubnetTopicFormat || topic == SyncCommitteeSubnetTopicFormat || topic == BlobSubnetTopicFormat {
 			formatting = append(formatting, 0 /* some subnet ID */)
 		}
 
@@ -204,7 +202,7 @@ func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testi
 				if string(c) == "%" {
 					next := string(topic[i+1])
 					if next != "d" && next != "x" {
-						t.Errorf("Topic %s has formatting incompatiable with scanfcheck. Only %%d and %%x are supported", topic)
+						t.Errorf("Topic %s has formatting incompatible with scanfcheck. Only %%d and %%x are supported", topic)
 					}
 				}
 			}
@@ -337,28 +335,16 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	notifier := &mock.MockStateNotifier{}
-	s, err := NewService(ctx, &Config{
-		StateNotifier: notifier,
-	})
+	cs := startup.NewClockSynchronizer()
+	s, err := NewService(ctx, &Config{ClockWaiter: cs})
 	require.NoError(t, err)
 
 	require.Equal(t, false, s.isInitialized())
 
 	go s.awaitStateInitialized()
 
-	for n := 0; n == 0; {
-		if ctx.Err() != nil {
-			t.Fatal(ctx.Err())
-		}
-		n = notifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Initialized,
-			Data: &statefeed.InitializedData{
-				StartTime:             prysmTime.Now(),
-				GenesisValidatorsRoot: bytesutil.PadTo([]byte("genesis"), 32),
-			},
-		})
-	}
+	vr := bytesutil.ToBytes32(bytesutil.PadTo([]byte("genesis"), 32))
+	require.NoError(t, cs.SetClock(startup.NewClock(prysmTime.Now(), vr)))
 
 	time.Sleep(50 * time.Millisecond)
 

@@ -6,18 +6,20 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/capella"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/execution"
-	prysmtime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/capella"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/deneb"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/execution"
+	prysmtime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -25,7 +27,7 @@ import (
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 //
 // WARNING Blocks passed to the function must be in decreasing slots order.
-func (_ *State) replayBlocks(
+func (*State) replayBlocks(
 	ctx context.Context,
 	state state.BeaconState,
 	signed []interfaces.ReadOnlySignedBeaconBlock,
@@ -36,12 +38,12 @@ func (_ *State) replayBlocks(
 	var err error
 
 	start := time.Now()
-	log = log.WithFields(logrus.Fields{
+	rLog := log.WithFields(logrus.Fields{
 		"startSlot": state.Slot(),
 		"endSlot":   targetSlot,
 		"diff":      targetSlot - state.Slot(),
 	})
-	log.Debug("Replaying state")
+	rLog.Debug("Replaying state")
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
@@ -71,9 +73,11 @@ func (_ *State) replayBlocks(
 	}
 
 	duration := time.Since(start)
-	log.WithFields(logrus.Fields{
+	rLog.WithFields(logrus.Fields{
 		"duration": duration,
 	}).Debug("Replayed state")
+
+	replayBlocksSummary.Observe(float64(duration.Milliseconds()))
 
 	return state, nil
 }
@@ -198,21 +202,18 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if prysmtime.CanProcessEpoch(state) {
-			switch state.Version() {
-			case version.Phase0:
+			if state.Version() == version.Phase0 {
 				state, err = transition.ProcessEpochPrecompute(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Bellatrix, version.Capella:
-				state, err = altair.ProcessEpoch(ctx, state)
+			} else {
+				err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch")
 				}
-			default:
-				return nil, fmt.Errorf("unsupported beacon state version: %s", version.String(state.Version()))
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
@@ -238,6 +239,22 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 
 		if prysmtime.CanUpgradeToCapella(state.Slot()) {
 			state, err = capella.UpgradeToCapella(state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if prysmtime.CanUpgradeToDeneb(state.Slot()) {
+			state, err = deneb.UpgradeToDeneb(state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if prysmtime.CanUpgradeToElectra(state.Slot()) {
+			state, err = electra.UpgradeToElectra(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

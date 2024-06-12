@@ -7,13 +7,13 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
-	b "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 // RunAttestationTest executes "operations/attestation" tests.
@@ -35,7 +35,7 @@ func RunAttestationTest(t *testing.T, config string) {
 
 			body := &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{att}}
 			processAtt := func(ctx context.Context, st state.BeaconState, blk interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
-				st, err = b.ProcessAttestationsNoVerifySignature(ctx, st, blk)
+				st, err = b.ProcessAttestationsNoVerifySignature(ctx, st, blk.Block())
 				if err != nil {
 					return nil, err
 				}

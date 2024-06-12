@@ -3,9 +3,10 @@ package monitor
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,13 +21,16 @@ func (s *Service) processSyncCommitteeContribution(contribution *ethpb.SignedCon
 		aggPerf.totalSyncCommitteeAggregations++
 		s.aggregatedPerformance[idx] = aggPerf
 
-		log.WithField("ValidatorIndex", contribution.Message.AggregatorIndex).Info("Sync committee aggregation processed")
+		log.WithField("validatorIndex", contribution.Message.AggregatorIndex).Info("Sync committee aggregation processed")
 	}
 }
 
 // processSyncAggregate logs the event when tracked validators is a sync-committee member and its contribution has been included
 func (s *Service) processSyncAggregate(state state.BeaconState, blk interfaces.ReadOnlyBeaconBlock) {
 	if blk == nil || blk.Body() == nil {
+		return
+	}
+	if blk.Version() == version.Phase0 {
 		return
 	}
 	bits, err := blk.Body().SyncAggregate()
@@ -65,11 +69,11 @@ func (s *Service) processSyncAggregate(state state.BeaconState, blk interfaces.R
 				fmt.Sprintf("%d", validatorIdx)).Add(float64(contrib))
 
 			log.WithFields(logrus.Fields{
-				"ValidatorIndex":       validatorIdx,
-				"ExpectedContribCount": len(committeeIndices),
-				"ContribCount":         contrib,
-				"NewBalance":           balance,
-				"BalanceChange":        balanceChg,
+				"validatorIndex":       validatorIdx,
+				"expectedContribCount": len(committeeIndices),
+				"contribCount":         contrib,
+				"newBalance":           balance,
+				"balanceChange":        balanceChg,
 			}).Info("Sync committee contribution included")
 		}
 	}

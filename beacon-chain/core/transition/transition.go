@@ -9,22 +9,24 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/capella"
-	e "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/execution"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/math"
-	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/capella"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/deneb"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
+	e "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/execution"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -254,14 +256,16 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			} else if state.Version() >= version.Altair {
-				state, err = altair.ProcessEpoch(ctx, state)
-				if err != nil {
+			} else if state.Version() <= version.Deneb {
+				if err = altair.ProcessEpoch(ctx, state); err != nil {
 					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
+					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
 				}
 			} else {
-				return nil, errors.New("beacon state should have a version")
+				if err = electra.ProcessEpoch(ctx, state); err != nil {
+					tracing.AnnotateError(span, err)
+					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+				}
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
@@ -269,28 +273,10 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
 
-		if time.CanUpgradeToAltair(state.Slot()) {
-			state, err = altair.UpgradeToAltair(ctx, state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
-		}
-
-		if time.CanUpgradeToBellatrix(state.Slot()) {
-			state, err = execution.UpgradeToBellatrix(state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
-		}
-
-		if time.CanUpgradeToCapella(state.Slot()) {
-			state, err = capella.UpgradeToCapella(state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
+		state, err = UpgradeState(ctx, state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "failed to upgrade state")
 		}
 	}
 
@@ -301,12 +287,59 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 	return state, nil
 }
 
-// VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+// UpgradeState upgrades the state to the next version if possible.
+func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "core.state.UpgradeState")
+	defer span.End()
+	var err error
+	if time.CanUpgradeToAltair(state.Slot()) {
+		state, err = altair.UpgradeToAltair(ctx, state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
 	}
-	body := b.Block().Body()
+
+	if time.CanUpgradeToBellatrix(state.Slot()) {
+		state, err = execution.UpgradeToBellatrix(state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
+
+	if time.CanUpgradeToCapella(state.Slot()) {
+		state, err = capella.UpgradeToCapella(state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
+
+	if time.CanUpgradeToDeneb(state.Slot()) {
+		state, err = deneb.UpgradeToDeneb(state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
+
+	if time.CanUpgradeToElectra(state.Slot()) {
+		state, err = electra.UpgradeToElectra(state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
+	return state, nil
+}
+
+// VerifyOperationLengths verifies that block operation lengths are valid.
+func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+	if b == nil || b.IsNil() {
+		return nil, blocks.ErrNilBeaconBlock
+	}
+	body := b.Body()
 
 	if uint64(len(body.ProposerSlashings())) > params.BeaconConfig().MaxProposerSlashings {
 		return nil, fmt.Errorf(

@@ -3,15 +3,16 @@ package state_native
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -19,6 +20,9 @@ import (
 func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "ComputeFieldRootsWithHasher")
 	defer span.End()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	if state == nil {
 		return nil, errors.New("nil state")
@@ -33,6 +37,12 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 	case version.Capella:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount)
+	case version.Deneb:
+		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateDenebFieldCount)
+	case version.Electra:
+		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateElectraFieldCount)
+	default:
+		return nil, fmt.Errorf("unknown state version %s", version.String(state.version))
 	}
 
 	// Genesis time root.
@@ -63,22 +73,14 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.LatestBlockHeader.RealPosition()] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	bRoots := make([][]byte, len(state.blockRoots))
-	for i := range bRoots {
-		bRoots[i] = state.blockRoots[i][:]
-	}
-	blockRootsRoot, err := stateutil.ArraysRoot(bRoots, fieldparams.BlockRootsLength)
+	blockRootsRoot, err := stateutil.ArraysRoot(state.blockRootsVal().Slice(), fieldparams.BlockRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[types.BlockRoots.RealPosition()] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	sRoots := make([][]byte, len(state.stateRoots))
-	for i := range sRoots {
-		sRoots[i] = state.stateRoots[i][:]
-	}
-	stateRootsRoot, err := stateutil.ArraysRoot(sRoots, fieldparams.StateRootsLength)
+	stateRootsRoot, err := stateutil.ArraysRoot(state.stateRootsVal().Slice(), fieldparams.StateRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
@@ -116,25 +118,21 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.Eth1DepositIndex.RealPosition()] = eth1DepositBuf[:]
 
 	// Validators slice root.
-	validatorsRoot, err := stateutil.ValidatorRegistryRoot(state.validators)
+	validatorsRoot, err := stateutil.ValidatorRegistryRoot(state.validatorsVal())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
 	fieldRoots[types.Validators.RealPosition()] = validatorsRoot[:]
 
 	// Balances slice root.
-	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.balances)
+	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.balancesVal())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator balances merkleization")
 	}
 	fieldRoots[types.Balances.RealPosition()] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	mixes := make([][]byte, len(state.randaoMixes))
-	for i := range mixes {
-		mixes[i] = state.randaoMixes[i][:]
-	}
-	randaoRootsRoot, err := stateutil.ArraysRoot(mixes, fieldparams.RandaoMixesLength)
+	randaoRootsRoot, err := stateutil.ArraysRoot(state.randaoMixesVal().Slice(), fieldparams.RandaoMixesLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
@@ -206,7 +204,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 
 	if state.version >= version.Altair {
 		// Inactivity scores root.
-		inactivityScoresRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.inactivityScores)
+		inactivityScoresRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.inactivityScoresVal())
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute inactivityScoreRoot")
 		}
@@ -243,7 +241,27 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 			return nil, err
 		}
 		fieldRoots[types.LatestExecutionPayloadHeaderCapella.RealPosition()] = executionPayloadRoot[:]
+	}
 
+	if state.version == version.Deneb {
+		// Execution payload root.
+		executionPayloadRoot, err := state.latestExecutionPayloadHeaderDeneb.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		fieldRoots[types.LatestExecutionPayloadHeaderDeneb.RealPosition()] = executionPayloadRoot[:]
+	}
+
+	if state.version == version.Electra {
+		// Execution payload root.
+		executionPayloadRoot, err := state.latestExecutionPayloadHeaderElectra.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		fieldRoots[types.LatestExecutionPayloadHeaderElectra.RealPosition()] = executionPayloadRoot[:]
+	}
+
+	if state.version >= version.Capella {
 		// Next withdrawal index root.
 		nextWithdrawalIndexRoot := make([]byte, 32)
 		binary.LittleEndian.PutUint64(nextWithdrawalIndexRoot, state.nextWithdrawalIndex)
@@ -260,6 +278,53 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 			return nil, errors.Wrap(err, "could not compute historical summary merkleization")
 		}
 		fieldRoots[types.HistoricalSummaries.RealPosition()] = historicalSummaryRoot[:]
+	}
+
+	if state.version >= version.Electra {
+		// DepositReceiptsStartIndex root.
+		drsiRoot := ssz.Uint64Root(state.depositReceiptsStartIndex)
+		fieldRoots[types.DepositReceiptsStartIndex.RealPosition()] = drsiRoot[:]
+
+		// DepositBalanceToConsume root.
+		dbtcRoot := ssz.Uint64Root(uint64(state.depositBalanceToConsume))
+		fieldRoots[types.DepositBalanceToConsume.RealPosition()] = dbtcRoot[:]
+
+		// ExitBalanceToConsume root.
+		ebtcRoot := ssz.Uint64Root(uint64(state.exitBalanceToConsume))
+		fieldRoots[types.ExitBalanceToConsume.RealPosition()] = ebtcRoot[:]
+
+		// EarliestExitEpoch root.
+		eeeRoot := ssz.Uint64Root(uint64(state.earliestExitEpoch))
+		fieldRoots[types.EarliestExitEpoch.RealPosition()] = eeeRoot[:]
+
+		// ConsolidationBalanceToConsume root.
+		cbtcRoot := ssz.Uint64Root(uint64(state.consolidationBalanceToConsume))
+		fieldRoots[types.ConsolidationBalanceToConsume.RealPosition()] = cbtcRoot[:]
+
+		// EarliestConsolidationEpoch root.
+		eceRoot := ssz.Uint64Root(uint64(state.earliestConsolidationEpoch))
+		fieldRoots[types.EarliestConsolidationEpoch.RealPosition()] = eceRoot[:]
+
+		// PendingBalanceDeposits root.
+		pbdRoot, err := stateutil.PendingBalanceDepositsRoot(state.pendingBalanceDeposits)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute pending balance deposits merkleization")
+		}
+		fieldRoots[types.PendingBalanceDeposits.RealPosition()] = pbdRoot[:]
+
+		// PendingPartialWithdrawals root.
+		ppwRoot, err := stateutil.PendingPartialWithdrawalsRoot(state.pendingPartialWithdrawals)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute pending partial withdrawals merkleization")
+		}
+		fieldRoots[types.PendingPartialWithdrawals.RealPosition()] = ppwRoot[:]
+
+		// PendingConsolidations root.
+		pcRoot, err := stateutil.PendingConsolidationsRoot(state.pendingConsolidations)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute pending consolidations merkleization")
+		}
+		fieldRoots[types.PendingConsolidations.RealPosition()] = pcRoot[:]
 	}
 
 	return fieldRoots, nil

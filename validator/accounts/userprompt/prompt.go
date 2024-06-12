@@ -4,9 +4,9 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v4/io/file"
-	"github.com/prysmaticlabs/prysm/v4/io/prompt"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
+	"github.com/prysmaticlabs/prysm/v5/io/prompt"
 	"github.com/urfave/cli/v2"
 )
 
@@ -16,7 +16,7 @@ const (
 	// DataDirDirPromptText for the validator database directory.
 	DataDirDirPromptText = "Enter the directory of the validator database you would like to use"
 	// SlashingProtectionJSONPromptText for the EIP-3076 slashing protection JSON userprompt.
-	SlashingProtectionJSONPromptText = "Enter the the filepath of your EIP-3076 Slashing Protection JSON from your previously used validator client"
+	SlashingProtectionJSONPromptText = "Enter the filepath of your EIP-3076 Slashing Protection JSON from your previously used validator client"
 	// WalletDirPromptText for the wallet.
 	WalletDirPromptText = "Enter a wallet directory"
 	// SelectAccountsDeletePromptText --

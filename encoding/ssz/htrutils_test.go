@@ -4,12 +4,13 @@ import (
 	"reflect"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestUint64Root(t *testing.T) {
@@ -122,6 +123,58 @@ func TestTransactionsRoot(t *testing.T) {
 	}
 }
 
+func TestByteSliceRoot(t *testing.T) {
+	tests := []struct {
+		name      string
+		slice     []byte
+		maxLength uint64
+		want      [32]byte
+		wantErr   bool
+	}{
+		{
+			name:  "nil",
+			slice: nil,
+			want:  [32]byte{245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169, 39, 89, 251, 75},
+		},
+		{
+			name:  "empty",
+			slice: []byte{},
+			want:  [32]byte{245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169, 39, 89, 251, 75},
+		},
+		{
+			name:  "byte slice 3 values",
+			slice: []byte{1, 2, 3},
+			want:  [32]byte{20, 159, 26, 252, 247, 204, 44, 159, 161, 135, 211, 195, 106, 59, 220, 149, 199, 163, 228, 155, 113, 118, 64, 126, 173, 223, 102, 1, 241, 158, 164, 185},
+		},
+		{
+			name:  "byte slice 32 values",
+			slice: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32},
+			want:  [32]byte{7, 30, 46, 77, 237, 240, 59, 126, 232, 232, 232, 6, 145, 210, 31, 18, 117, 12, 217, 40, 204, 141, 90, 236, 241, 128, 221, 45, 126, 39, 39, 202},
+		},
+		{
+			name:    "over max length",
+			slice:   make([]byte, fieldparams.RootLength+1),
+			want:    [32]byte{},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.maxLength == 0 {
+				tt.maxLength = fieldparams.RootLength
+			}
+			got, err := ssz.ByteSliceRoot(tt.slice, tt.maxLength)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ByteSliceRoot() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ByteSliceRoot() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPackByChunk_SingleList(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -222,6 +275,78 @@ func TestWithrawalSliceRoot(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ssz.WithdrawalSliceRoot(tt.input, 16)
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, tt.want, got)
+		})
+	}
+}
+
+func TestDepositReceiptSliceRoot(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []*enginev1.DepositReceipt
+		limit uint64
+		want  [32]byte
+	}{
+		{
+			name:  "empty",
+			input: make([]*enginev1.DepositReceipt, 0),
+			want:  [32]byte{0xf5, 0xa5, 0xfd, 0x42, 0xd1, 0x6a, 0x20, 0x30, 0x27, 0x98, 0xef, 0x6e, 0xd3, 0x9, 0x97, 0x9b, 0x43, 0x0, 0x3d, 0x23, 0x20, 0xd9, 0xf0, 0xe8, 0xea, 0x98, 0x31, 0xa9, 0x27, 0x59, 0xfb, 0x4b},
+		},
+		{
+			name: "non-empty",
+			input: []*enginev1.DepositReceipt{
+				{
+					Pubkey:                bytesutil.PadTo([]byte{0x01, 0x02}, 48),
+					WithdrawalCredentials: bytesutil.PadTo([]byte{0x03, 0x04}, 32),
+					Amount:                5,
+					Signature:             bytesutil.PadTo([]byte{0x06, 0x07}, 96),
+					Index:                 8,
+				},
+			},
+			limit: 16,
+			want:  [32]byte{0x34, 0xe3, 0x76, 0x5, 0xe5, 0x12, 0xe4, 0x75, 0x14, 0xf6, 0x72, 0x1c, 0x56, 0x5a, 0xa7, 0xf8, 0x8d, 0xaf, 0x84, 0xb7, 0xd7, 0x3e, 0xe6, 0x5f, 0x3f, 0xb1, 0x9f, 0x41, 0xf0, 0x10, 0x2b, 0xe6},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ssz.DepositReceiptSliceRoot(tt.input, tt.limit)
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, tt.want, got)
+		})
+	}
+}
+
+func TestWithdrawalRequestSliceRoot(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []*enginev1.ExecutionLayerWithdrawalRequest
+		limit uint64
+		want  [32]byte
+	}{
+		{
+			name:  "empty",
+			input: make([]*enginev1.ExecutionLayerWithdrawalRequest, 0),
+			want:  [32]byte{0xf5, 0xa5, 0xfd, 0x42, 0xd1, 0x6a, 0x20, 0x30, 0x27, 0x98, 0xef, 0x6e, 0xd3, 0x9, 0x97, 0x9b, 0x43, 0x0, 0x3d, 0x23, 0x20, 0xd9, 0xf0, 0xe8, 0xea, 0x98, 0x31, 0xa9, 0x27, 0x59, 0xfb, 0x4b},
+		},
+		{
+			name: "non-empty",
+			input: []*enginev1.ExecutionLayerWithdrawalRequest{
+				{
+					SourceAddress:   bytesutil.PadTo([]byte{0x01, 0x02}, 20),
+					ValidatorPubkey: bytesutil.PadTo([]byte{0x03, 0x04}, 48),
+					Amount:          5,
+				},
+			},
+			limit: 16,
+			want:  [32]byte{0xa8, 0xab, 0xb2, 0x20, 0xe6, 0xd6, 0x5a, 0x7e, 0x56, 0x60, 0xe4, 0x9d, 0xae, 0x36, 0x17, 0x3d, 0x8b, 0xd, 0xde, 0x28, 0x96, 0x5, 0x82, 0x72, 0x18, 0xda, 0xc7, 0x5a, 0x53, 0xe0, 0x35, 0xf7},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ssz.WithdrawalRequestSliceRoot(tt.input, tt.limit)
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, tt.want, got)
 		})

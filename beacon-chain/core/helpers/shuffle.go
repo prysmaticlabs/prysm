@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/container/slice"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/container/slice"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 )
 
 const seedSize = int8(32)
@@ -184,7 +184,7 @@ func innerShuffleList(input []primitives.ValidatorIndex, seed [32]byte, shuffle 
 	for {
 		buf[seedSize] = r
 		ph := hashfunc(buf[:pivotViewSize])
-		pivot := bytesutil.FromBytes8(ph[:8]) % listSize
+		pivot := binary.LittleEndian.Uint64(ph[:8]) % listSize
 		mirror := (pivot + 1) >> 1
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(pivot>>8))
 		source := hashfunc(buf)

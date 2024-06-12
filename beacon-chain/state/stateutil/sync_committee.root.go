@@ -2,9 +2,9 @@ package stateutil
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash/htr"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash/htr"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // SyncCommitteeRoot computes the HashTreeRoot Merkleization of a committee root.
@@ -48,8 +48,7 @@ func merkleizePubkey(pubkey []byte) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	outputChunk := make([][32]byte, 1)
-	htr.VectorizedSha256(chunks, outputChunk)
+	outputChunk := htr.VectorizedSha256(chunks)
 
 	return outputChunk[0], nil
 }

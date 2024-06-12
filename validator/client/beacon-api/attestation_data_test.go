@@ -8,12 +8,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/mock/gomock"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	"go.uber.org/mock/gomock"
 )
 
 func TestGetAttestationData_ValidAttestation(t *testing.T) {
@@ -29,28 +29,27 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", expectedCommitteeIndex, expectedSlot),
 		&produceAttestationDataResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
-		rpcmiddleware.ProduceAttestationDataResponseJson{
-			Data: &rpcmiddleware.AttestationDataJson{
+		structs.GetAttestationDataResponse{
+			Data: &structs.AttestationData{
 				Slot:            strconv.FormatUint(expectedSlot, 10),
 				CommitteeIndex:  strconv.FormatUint(expectedCommitteeIndex, 10),
 				BeaconBlockRoot: expectedBeaconBlockRoot,
-				Source: &rpcmiddleware.CheckpointJson{
+				Source: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(expectedSourceEpoch, 10),
 					Root:  expectedSourceRoot,
 				},
-				Target: &rpcmiddleware.CheckpointJson{
+				Target: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(expectedTargetEpoch, 10),
 					Root:  expectedTargetRoot,
 				},
@@ -59,7 +58,7 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	resp, err := validatorClient.getAttestationData(ctx, primitives.Slot(expectedSlot), primitives.CommitteeIndex(expectedCommitteeIndex))
+	resp, err := validatorClient.attestationData(ctx, primitives.Slot(expectedSlot), primitives.CommitteeIndex(expectedCommitteeIndex))
 	assert.NoError(t, err)
 
 	require.NotNil(t, resp)
@@ -81,13 +80,13 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		generateData         func() rpcmiddleware.ProduceAttestationDataResponseJson
+		generateData         func() structs.GetAttestationDataResponse
 		expectedErrorMessage string
 	}{
 		{
 			name: "nil attestation data",
-			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
-				return rpcmiddleware.ProduceAttestationDataResponseJson{
+			generateData: func() structs.GetAttestationDataResponse {
+				return structs.GetAttestationDataResponse{
 					Data: nil,
 				}
 			},
@@ -95,7 +94,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid committee index",
-			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.CommitteeIndex = "foo"
 				return attestation
@@ -104,7 +103,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid block root",
-			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.BeaconBlockRoot = "foo"
 				return attestation
@@ -113,7 +112,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid slot",
-			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Slot = "foo"
 				return attestation
@@ -122,7 +121,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "nil source",
-			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Source = nil
 				return attestation
@@ -131,7 +130,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid source epoch",
-			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Source.Epoch = "foo"
 				return attestation
@@ -140,7 +139,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid source root",
-			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Source.Root = "foo"
 				return attestation
@@ -149,7 +148,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "nil target",
-			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Target = nil
 				return attestation
@@ -158,7 +157,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid target epoch",
-			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Target.Epoch = "foo"
 				return attestation
@@ -167,7 +166,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid target root",
-			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Target.Root = "foo"
 				return attestation
@@ -181,14 +180,13 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v1/validator/attestation_data?committee_index=2&slot=1",
 				&produceAttestationDataResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -196,7 +194,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			_, err := validatorClient.getAttestationData(ctx, 1, 2)
+			_, err := validatorClient.attestationData(ctx, 1, 2)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}
@@ -211,34 +209,32 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
 		&produceAttestationDataResponseJson,
 	).Return(
-		nil,
 		errors.New("some specific json response error"),
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, err := validatorClient.getAttestationData(ctx, slot, committeeIndex)
-	assert.ErrorContains(t, "failed to get json response", err)
+	_, err := validatorClient.attestationData(ctx, slot, committeeIndex)
 	assert.ErrorContains(t, "some specific json response error", err)
 }
 
-func generateValidAttestation(slot uint64, committeeIndex uint64) rpcmiddleware.ProduceAttestationDataResponseJson {
-	return rpcmiddleware.ProduceAttestationDataResponseJson{
-		Data: &rpcmiddleware.AttestationDataJson{
+func generateValidAttestation(slot, committeeIndex uint64) structs.GetAttestationDataResponse {
+	return structs.GetAttestationDataResponse{
+		Data: &structs.AttestationData{
 			Slot:            strconv.FormatUint(slot, 10),
 			CommitteeIndex:  strconv.FormatUint(committeeIndex, 10),
 			BeaconBlockRoot: "0x5ecf3bff35e39d5f75476d42950d549f81fa93038c46b6652ae89ae1f7ad834f",
-			Source: &rpcmiddleware.CheckpointJson{
+			Source: &structs.Checkpoint{
 				Epoch: "3",
 				Root:  "0x9023c9e64f23c1d451d5073c641f5f69597c2ad7d82f6f16e67d703e0ce5db8b",
 			},
-			Target: &rpcmiddleware.CheckpointJson{
+			Target: &structs.Checkpoint{
 				Epoch: "4",
 				Root:  "0xb154d46803b15b458ca822466547b054bc124338c6ee1d9c433dcde8c4457cca",
 			},

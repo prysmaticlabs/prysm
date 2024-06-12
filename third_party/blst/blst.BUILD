@@ -16,14 +16,14 @@ go_library(
     name = "go_default_library",
     srcs = [
         "bindings/go/blst.go",
-        "bindings/go/server.c",
+        "bindings/go/cgo_server.c",
     ],
     cgo = True,
     copts = [
         "-D__BLST_CGO__",
         "-Ibindings",
         "-Isrc",
-        "-O",
+        "-O2",
     ] + select({
         "@io_bazel_rules_go//go/platform:amd64": [
             "-mno-avx",
@@ -86,7 +86,7 @@ cc_library(
         "build/assembly.S",
     ],
     copts = [
-            "-O",
+            "-O2",
     ] + select({
         "@io_bazel_rules_go//go/platform:amd64": [
             "-mno-avx",
@@ -111,7 +111,6 @@ cc_library(
             "src/*.h",
         ],
         exclude = [
-            "src/server.c",
             "src/client_*.c",
         ],
     ),

@@ -3,9 +3,9 @@ package state_native
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	testtmpl "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/testing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	testtmpl "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/testing"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 func TestBeaconState_LatestBlockHeader_Phase0(t *testing.T) {
@@ -52,6 +52,18 @@ func TestBeaconState_LatestBlockHeader_Capella(t *testing.T) {
 		},
 		func(BH *ethpb.BeaconBlockHeader) (state.BeaconState, error) {
 			return InitializeFromProtoCapella(&ethpb.BeaconStateCapella{LatestBlockHeader: BH})
+		},
+	)
+}
+
+func TestBeaconState_LatestBlockHeader_Deneb(t *testing.T) {
+	testtmpl.VerifyBeaconStateLatestBlockHeader(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoDeneb(&ethpb.BeaconStateDeneb{})
+		},
+		func(BH *ethpb.BeaconBlockHeader) (state.BeaconState, error) {
+			return InitializeFromProtoDeneb(&ethpb.BeaconStateDeneb{LatestBlockHeader: BH})
 		},
 	)
 }
@@ -104,6 +116,18 @@ func TestBeaconState_BlockRoots_Capella(t *testing.T) {
 	)
 }
 
+func TestBeaconState_BlockRoots_Deneb(t *testing.T) {
+	testtmpl.VerifyBeaconStateBlockRootsNative(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoDeneb(&ethpb.BeaconStateDeneb{})
+		},
+		func(BR [][]byte) (state.BeaconState, error) {
+			return InitializeFromProtoDeneb(&ethpb.BeaconStateDeneb{BlockRoots: BR})
+		},
+	)
+}
+
 func TestBeaconState_BlockRootAtIndex_Phase0(t *testing.T) {
 	testtmpl.VerifyBeaconStateBlockRootAtIndexNative(
 		t,
@@ -148,6 +172,18 @@ func TestBeaconState_BlockRootAtIndex_Capella(t *testing.T) {
 		},
 		func(BR [][]byte) (state.BeaconState, error) {
 			return InitializeFromProtoCapella(&ethpb.BeaconStateCapella{BlockRoots: BR})
+		},
+	)
+}
+
+func TestBeaconState_BlockRootAtIndex_Deneb(t *testing.T) {
+	testtmpl.VerifyBeaconStateBlockRootAtIndexNative(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoDeneb(&ethpb.BeaconStateDeneb{})
+		},
+		func(BR [][]byte) (state.BeaconState, error) {
+			return InitializeFromProtoDeneb(&ethpb.BeaconStateDeneb{BlockRoots: BR})
 		},
 	)
 }

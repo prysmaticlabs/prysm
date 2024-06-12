@@ -7,13 +7,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 )
 
-func (c beaconApiValidatorClient) waitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
+func (c *beaconApiValidatorClient) waitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
 	return &waitForActivationClient{
 		ctx:                        ctx,
 		beaconApiValidatorClient:   c,
@@ -24,12 +24,12 @@ func (c beaconApiValidatorClient) waitForActivation(ctx context.Context, in *eth
 type waitForActivationClient struct {
 	grpc.ClientStream
 	ctx context.Context
-	beaconApiValidatorClient
+	*beaconApiValidatorClient
 	*ethpb.ValidatorActivationRequest
 	lastRecvTime time.Time
 }
 
-func computeWaitElements(now time.Time, lastRecvTime time.Time) (time.Duration, time.Time) {
+func computeWaitElements(now, lastRecvTime time.Time) (time.Duration, time.Time) {
 	nextRecvTime := lastRecvTime.Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 
 	if lastRecvTime.IsZero() {
@@ -60,7 +60,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 		// Contains all keys in targetPubKeys but not in retrievedPubKeys
 		var missingPubKeys [][]byte
 
-		statuses := []*ethpb.ValidatorActivationResponse_Status{}
+		var statuses []*ethpb.ValidatorActivationResponse_Status
 
 		for index, publicKey := range c.ValidatorActivationRequest.PublicKeys {
 			stringPubKey := hexutil.Encode(publicKey)
@@ -68,18 +68,18 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 			stringTargetPubKeys[index] = stringPubKey
 		}
 
-		stateValidators, err := c.stateValidatorsProvider.GetStateValidators(c.ctx, stringTargetPubKeys, nil, nil)
+		stateValidators, err := c.stateValidatorsProvider.StateValidators(c.ctx, stringTargetPubKeys, nil, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get state validators")
 		}
 
 		for _, data := range stateValidators.Data {
-			pubkey, err := hexutil.Decode(data.Validator.PublicKey)
+			pubkey, err := hexutil.Decode(data.Validator.Pubkey)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to parse validator public key")
 			}
 
-			stringRetrievedPubKeys[data.Validator.PublicKey] = struct{}{}
+			stringRetrievedPubKeys[data.Validator.Pubkey] = struct{}{}
 
 			index, err := strconv.ParseUint(data.Index, 10, 64)
 			if err != nil {
