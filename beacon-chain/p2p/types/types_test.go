@@ -215,7 +215,7 @@ func TestDataColumnSidecarsByRootReq_MarshalUnmarshal(t *testing.T) {
 		name         string
 		ids          []*eth.DataColumnIdentifier
 		marshalErr   error
-		unmarshalErr error
+		unmarshalErr string
 		unmarshalMod func([]byte) []byte
 	}{
 		{
@@ -236,7 +236,18 @@ func TestDataColumnSidecarsByRootReq_MarshalUnmarshal(t *testing.T) {
 				in = append(in, byte(0))
 				return in
 			},
-			unmarshalErr: ssz.ErrIncorrectByteSize,
+			unmarshalErr: ssz.ErrIncorrectByteSize.Error(),
+		},
+		{
+			name: "size too big",
+			ids:  generateDataColumnIdentifiers(1),
+			unmarshalMod: func(in []byte) []byte {
+				maxLen := params.BeaconConfig().MaxRequestDataColumnSidecars * uint64(dataColumnIdSize)
+				add := make([]byte, maxLen)
+				in = append(in, add...)
+				return in
+			},
+			unmarshalErr: "expected buffer with length of up to",
 		},
 	}
 
@@ -254,8 +265,8 @@ func TestDataColumnSidecarsByRootReq_MarshalUnmarshal(t *testing.T) {
 			}
 			got := &DataColumnSidecarsByRootReq{}
 			err = got.UnmarshalSSZ(bytes)
-			if c.unmarshalErr != nil {
-				require.ErrorIs(t, err, c.unmarshalErr)
+			if c.unmarshalErr != "" {
+				require.ErrorContains(t, c.unmarshalErr, err)
 				return
 			}
 			require.NoError(t, err)
@@ -264,6 +275,18 @@ func TestDataColumnSidecarsByRootReq_MarshalUnmarshal(t *testing.T) {
 			}
 		})
 	}
+
+	// Test MarshalSSZTo
+	req := DataColumnSidecarsByRootReq(generateDataColumnIdentifiers(10))
+	buf := make([]byte, 0)
+	buf, err := req.MarshalSSZTo(buf)
+	require.NoError(t, err)
+	require.Equal(t, len(buf), int(req.SizeSSZ()))
+
+	var unmarshalled DataColumnSidecarsByRootReq
+	err = unmarshalled.UnmarshalSSZ(buf)
+	require.NoError(t, err)
+	require.DeepEqual(t, req, unmarshalled)
 }
 
 func TestDataColumnSidecarsByRootReq_Sort(t *testing.T) {
@@ -294,4 +317,14 @@ func TestDataColumnSidecarsByRootReq_Sort(t *testing.T) {
 	require.Equal(t, true, req.Less(3, 2))
 	require.Equal(t, true, req.Less(2, 1))
 	require.Equal(t, true, req.Less(1, 0))
+	require.Equal(t, 5, req.Len())
+
+	ids = []*eth.DataColumnIdentifier{
+		{
+			BlockRoot:   bytesutil.PadTo([]byte{0}, 32),
+			ColumnIndex: 3,
+		},
+	}
+	req = DataColumnSidecarsByRootReq(ids)
+	require.Equal(t, 1, req.Len())
 }
