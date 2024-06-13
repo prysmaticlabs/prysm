@@ -1135,7 +1135,7 @@ func TestSwitchToCompoundingValidator_Ok(t *testing.T) {
 
 	pbd, err := st.PendingBalanceDeposits()
 	require.NoError(t, err)
-	require.Equal(t, uint64(1010), pbd[2048].Amount) // appends it at the end
+	require.Equal(t, uint64(1010), pbd[0].Amount) // appends it at the end
 	val, err := st.ValidatorAtIndex(0)
 	require.NoError(t, err)
 
@@ -1213,21 +1213,13 @@ func TestQueueEntireBalanceAndResetValidator_Ok(t *testing.T) {
 	bals := st.Balances()
 	bals[0] = params.BeaconConfig().MinActivationBalance - 1000
 	require.NoError(t, st.SetBalances(bals))
+	err := helpers.QueueEntireBalanceAndResetValidator(st, 0)
+	require.NoError(t, err)
+
 	pbd, err := st.PendingBalanceDeposits()
 	require.NoError(t, err)
-	require.Equal(t, 2048, len(pbd))
-	require.NoError(t, st.SetPendingBalanceDeposits(pbd[1:]))
-	pbd, err = st.PendingBalanceDeposits()
-	require.NoError(t, err)
-	require.Equal(t, 2047, len(pbd))
-
-	err = helpers.QueueEntireBalanceAndResetValidator(st, 0)
-	require.NoError(t, err)
-
-	pbd, err = st.PendingBalanceDeposits()
-	require.NoError(t, err)
-	require.Equal(t, 2048, len(pbd))
-	require.Equal(t, params.BeaconConfig().MinActivationBalance-1000, pbd[2047].Amount)
+	require.Equal(t, 1, len(pbd))
+	require.Equal(t, params.BeaconConfig().MinActivationBalance-1000, pbd[0].Amount)
 	bal, err := st.BalanceAtIndex(0)
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), bal)

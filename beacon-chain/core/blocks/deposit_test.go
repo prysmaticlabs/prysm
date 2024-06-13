@@ -452,7 +452,7 @@ func TestApplyDeposit_Electra_SwitchToCompoundingValidator(t *testing.T) {
 	require.NoError(t, err)
 	pbd, err := adSt.PendingBalanceDeposits()
 	require.NoError(t, err)
-	require.Equal(t, 5, len(pbd))
-	require.Equal(t, uint64(1000), pbd[3].Amount)
-	require.Equal(t, uint64(2000), pbd[4].Amount)
+	require.Equal(t, 2, len(pbd))
+	require.Equal(t, uint64(1000), pbd[0].Amount)
+	require.Equal(t, uint64(2000), pbd[1].Amount)
 }
