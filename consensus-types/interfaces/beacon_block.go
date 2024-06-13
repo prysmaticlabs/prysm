@@ -130,6 +130,6 @@ type ExecutionData interface {
 
 type ExecutionDataElectra interface {
 	ExecutionData
-	DepositReceipts() []*enginev1.DepositReceipt
-	WithdrawalRequests() []*enginev1.ExecutionLayerWithdrawalRequest
+	DepositRequests() []*enginev1.DepositRequest
+	WithdrawalRequests() []*enginev1.WithdrawalRequest
 }
