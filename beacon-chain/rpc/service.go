@@ -4,7 +4,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"sync"
 
@@ -154,7 +153,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		connectedRPCClients: make(map[net.Addr]bool),
 	}
 
-	address := fmt.Sprintf("%s:%s", s.cfg.Host, s.cfg.Port)
+	address := net.JoinHostPort(s.cfg.Host, s.cfg.Port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)

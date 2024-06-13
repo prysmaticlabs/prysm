@@ -70,7 +70,7 @@ func (s *Service) endpoints(
 	endpoints = append(endpoints, s.eventsEndpoints()...)
 	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch, stater)...)
 	endpoints = append(endpoints, s.prysmNodeEndpoints()...)
-	endpoints = append(endpoints, s.prysmValidatorEndpoints(coreService, stater)...)
+	endpoints = append(endpoints, s.prysmValidatorEndpoints(coreService)...)
 	if enableDebug {
 		endpoints = append(endpoints, s.debugEndpoints(stater)...)
 	}
@@ -143,7 +143,7 @@ func (s *Service) builderEndpoints(stater lookup.Stater) []endpoint {
 	}
 }
 
-func (s *Service) blobEndpoints(blocker lookup.Blocker) []endpoint {
+func (*Service) blobEndpoints(blocker lookup.Blocker) []endpoint {
 	server := &blob.Server{
 		Blocker: blocker,
 	}
@@ -777,7 +777,7 @@ func (s *Service) beaconEndpoints(
 	}
 }
 
-func (s *Service) configEndpoints() []endpoint {
+func (*Service) configEndpoints() []endpoint {
 	const namespace = "config"
 	return []endpoint{
 		{
@@ -1045,7 +1045,7 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 	}
 }
 
-func (s *Service) prysmValidatorEndpoints(coreService *core.Service, stater lookup.Stater) []endpoint {
+func (*Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint {
 	server := &validatorprysm.Server{
 		CoreService: coreService,
 	}
