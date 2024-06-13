@@ -24,22 +24,18 @@ import (
 // Time to wait before trying to reconnect with beacon node.
 var backOffPeriod = 10 * time.Second
 
-// TODO: rewrite this?
-// Run the main validator routine. This routine exits if the context is
-// canceled.
+// run is the main validator routine. It runs indefinitely until the context is canceled.
 //
-// Order of operations:
-// 1 - Initialize validator data
-// 2 - Wait for validator activation
-// 3 - Wait for the next slot start
-// 4 - Update assignments
-// 5 - Determine role at current slot
-// 6 - Perform assigned role, if any
+// Main responsibilities of the routine:
+// a) fetch and perform validator roles every slot,
+// b) periodically check if the beacon node is healthy and perform a switchover if possible
+// c) push proposer settings when appropriate
+// d) process events
+// e) act on account changes
 func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
 
-	// TODO: What if we get disconnected here? Does it work in grpc?
 	if err := initializeValidator(ctx, v); err != nil {
 		log.WithError(err).Error("Could not initialize validator")
 		return
@@ -71,15 +67,12 @@ func run(ctx context.Context, v iface.Validator) {
 				return
 			case slot := <-pushProposerSettingsChan:
 				go func() {
-					ctx, cancel := context.WithDeadline(ctx, time.Now().Add(5*time.Minute))
-
-					// TODO: remove log
-					log.Info("Updating proposer settings")
-					if err := v.PushProposerSettings(ctx, km, slot); err != nil {
+					psCtx, psCancel := context.WithDeadline(ctx, time.Now().Add(5*time.Minute))
+					if err := v.PushProposerSettings(psCtx, km, slot); err != nil {
 						log.WithError(err).Warn("Failed to update proposer settings")
 					}
 					// release resources
-					cancel()
+					psCancel()
 				}()
 			}
 		}
@@ -118,12 +111,13 @@ func run(ctx context.Context, v iface.Validator) {
 			if !nodeIsHealthyPrev {
 				continue
 			}
-			// TODO: it would be better if we could start everything from scratch
 			if initializationNeeded {
 				initializationNeeded = false
 				if err := initializeValidator(ctx, v); err != nil {
 					log.WithError(err).Error("Could not initialize validator")
-					slotCancel()
+					if slotCancel != nil {
+						slotCancel()
+					}
 					return
 				}
 			}
@@ -179,6 +173,9 @@ func run(ctx context.Context, v iface.Validator) {
 			} else if features.Get().EnableBeaconRESTApi {
 				v.ChangeHost()
 				initializationNeeded = true
+				if slotCancel != nil {
+					slotCancel()
+				}
 			}
 
 			nodeIsHealthyPrev = nodeIsHealthyCurr
