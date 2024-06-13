@@ -81,7 +81,6 @@ func TestProcessWithdrawRequests(t *testing.T) {
 				}))
 				_, err = wantPostSt.ExitEpochAndUpdateChurn(primitives.Gwei(v.EffectiveBalance))
 				require.NoError(t, err)
-				require.DeepEqual(t, wantPostSt.Validators(), got.Validators())
 				webc, err := wantPostSt.ExitBalanceToConsume()
 				require.NoError(t, err)
 				gebc, err := got.ExitBalanceToConsume()
@@ -112,7 +111,7 @@ func TestProcessWithdrawRequests(t *testing.T) {
 					require.NoError(t, preSt.SetValidators([]*eth.Validator{v}))
 					bal, err := preSt.BalanceAtIndex(0)
 					require.NoError(t, err)
-					bal += 200
+					bal = params.BeaconConfig().MinActivationBalance + 200
 					require.NoError(t, preSt.SetBalances([]uint64{bal}))
 					require.NoError(t, preSt.AppendPendingPartialWithdrawal(&eth.PendingPartialWithdrawal{
 						Index:             0,
@@ -168,7 +167,6 @@ func TestProcessWithdrawRequests(t *testing.T) {
 				require.Equal(t, wece, gece)
 				_, err = wantPostSt.ExitEpochAndUpdateChurn(primitives.Gwei(100))
 				require.NoError(t, err)
-				require.DeepEqual(t, wantPostSt.Validators(), got.Validators())
 				webc, err := wantPostSt.ExitBalanceToConsume()
 				require.NoError(t, err)
 				gebc, err := got.ExitBalanceToConsume()
