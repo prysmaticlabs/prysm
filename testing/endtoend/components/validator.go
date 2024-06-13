@@ -226,7 +226,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
 		fmt.Sprintf("--%s=%s", flags.GraffitiFileFlag.Name, gFile),
 		fmt.Sprintf("--%s=%d", flags.MonitoringPortFlag.Name, e2e.TestParams.Ports.ValidatorMetricsPort+index),
-		fmt.Sprintf("--%s=%d", flags.GRPCGatewayPort.Name, e2e.TestParams.Ports.ValidatorGatewayPort+index),
+		fmt.Sprintf("--%s=%d", flags.HTTPServerPort.Name, e2e.TestParams.Ports.ValidatorHTTPPort+index),
 		fmt.Sprintf("--%s=localhost:%d", flags.BeaconRPCProviderFlag.Name, beaconRPCPort),
 
 		fmt.Sprintf("--%s=%s", flags.GRPCHeadersFlag.Name, "dummy=value,foo=bar"), // Sending random headers shouldn't break anything.
@@ -238,10 +238,10 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	}
 
 	if v.config.UseBeaconRestApi {
-		beaconRestApiPort := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort + index
-		if beaconRestApiPort >= e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+e2e.TestParams.BeaconNodeCount {
+		beaconRestApiPort := e2e.TestParams.Ports.PrysmBeaconNodeHTTPPort + index
+		if beaconRestApiPort >= e2e.TestParams.Ports.PrysmBeaconNodeHTTPPort+e2e.TestParams.BeaconNodeCount {
 			// Point any extra validator clients to a node we know is running.
-			beaconRestApiPort = e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort
+			beaconRestApiPort = e2e.TestParams.Ports.PrysmBeaconNodeHTTPPort
 		}
 
 		args = append(args,

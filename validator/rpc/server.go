@@ -32,8 +32,8 @@ import (
 type Config struct {
 	Host                   string
 	Port                   string
-	GRPCGatewayHost        string
-	GRPCGatewayPort        int
+	HTTPHost               string
+	HTTPPort               int
 	GRPCMaxCallRecvMsgSize int
 	GRPCRetries            uint
 	GRPCRetryDelay         time.Duration
@@ -57,8 +57,8 @@ type Server struct {
 	cancel                    context.CancelFunc
 	host                      string
 	port                      string
-	grpcGatewayHost           string
-	grpcGatewayPort           int
+	httpHost                  string
+	httpPort                  int
 	listener                  net.Listener
 	grpcMaxCallRecvMsgSize    int
 	grpcRetries               uint
@@ -97,8 +97,8 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		logStreamerBufferSize:  1000, // Enough to handle most bursts of logs in the validator client.
 		host:                   cfg.Host,
 		port:                   cfg.Port,
-		grpcGatewayHost:        cfg.GRPCGatewayHost,
-		grpcGatewayPort:        cfg.GRPCGatewayPort,
+		httpHost:               cfg.HTTPHost,
+		httpPort:               cfg.HTTPPort,
 		grpcMaxCallRecvMsgSize: cfg.GRPCMaxCallRecvMsgSize,
 		grpcRetries:            cfg.GRPCRetries,
 		grpcRetryDelay:         cfg.GRPCRetryDelay,
@@ -124,7 +124,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		if err := server.initializeAuthToken(); err != nil {
 			log.WithError(err).Error("Could not initialize web auth token")
 		}
-		validatorWebAddr := fmt.Sprintf("%s:%d", server.grpcGatewayHost, server.grpcGatewayPort)
+		validatorWebAddr := fmt.Sprintf("%s:%d", server.httpHost, server.httpPort)
 		logValidatorWebAuth(validatorWebAddr, server.authToken, server.authTokenPath)
 		go server.refreshAuthTokenFromFileChanges(server.ctx, server.authTokenPath)
 	}

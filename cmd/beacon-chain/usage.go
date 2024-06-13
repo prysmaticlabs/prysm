@@ -103,10 +103,9 @@ var appHelpFlagGroups = []flagGroup{
 			flags.CertFlag,
 			flags.KeyFlag,
 			flags.HTTPModules,
-			flags.DisableGRPCGateway,
-			flags.GRPCGatewayHost,
-			flags.GRPCGatewayPort,
-			flags.GPRCGatewayCorsDomain,
+			flags.HTTPServerHost,
+			flags.HTTPServerPort,
+			flags.HTTPServerCorsDomain,
 			flags.ExecutionEngineEndpoint,
 			flags.ExecutionEngineHeaders,
 			flags.ExecutionJWTSecretFlag,
@@ -195,6 +194,7 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "deprecated",
 		Flags: []cli.Flag{
 			cmd.BackupWebhookOutputDir,
+			flags.DeprecatedDisableGRPCGateway,
 		},
 	},
 }

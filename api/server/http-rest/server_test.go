@@ -1,4 +1,4 @@
-package gateway
+package http_rest
 
 import (
 	"context"
@@ -17,57 +17,26 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func TestGateway_Customized(t *testing.T) {
-	r := mux.NewRouter()
-	cert := "cert"
-	origins := []string{"origin"}
-	size := uint64(100)
-
-	opts := []Option{
-		WithRouter(r),
-		WithRemoteCert(cert),
-		WithAllowedOrigins(origins),
-		WithMaxCallRecvMsgSize(size),
-		WithMuxHandler(func(
-			_ http.HandlerFunc,
-			_ http.ResponseWriter,
-			_ *http.Request,
-		) {
-		}),
-	}
-
-	g, err := New(context.Background(), opts...)
-	require.NoError(t, err)
-
-	assert.Equal(t, r, g.cfg.router)
-	assert.Equal(t, cert, g.cfg.remoteCert)
-	require.Equal(t, 1, len(g.cfg.allowedOrigins))
-	assert.Equal(t, origins[0], g.cfg.allowedOrigins[0])
-	assert.Equal(t, size, g.cfg.maxCallRecvMsgSize)
-}
-
-func TestGateway_StartStop(t *testing.T) {
+func TestServer_StartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(&app, set, nil)
 
-	gatewayPort := ctx.Int(flags.GRPCGatewayPort.Name)
-	gatewayHost := ctx.String(flags.GRPCGatewayHost.Name)
-	rpcHost := ctx.String(flags.RPCHost.Name)
-	selfAddress := fmt.Sprintf("%s:%d", rpcHost, ctx.Int(flags.RPCPort.Name))
-	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	port := ctx.Int(flags.HTTPServerPort.Name)
+	host := ctx.String(flags.HTTPServerHost.Name)
+	address := fmt.Sprintf("%s:%d", host, port)
 
 	opts := []Option{
-		WithGatewayAddr(gatewayAddress),
-		WithRemoteAddr(selfAddress),
+		WithHTTPAddr(address),
 		WithMuxHandler(func(
 			_ http.HandlerFunc,
 			_ http.ResponseWriter,
 			_ *http.Request,
 		) {
 		}),
+		WithRouter(mux.NewRouter()),
 	}
 
 	g, err := New(context.Background(), opts...)
@@ -75,27 +44,25 @@ func TestGateway_StartStop(t *testing.T) {
 
 	g.Start()
 	go func() {
-		require.LogsContain(t, hook, "Starting gRPC gateway")
+		require.LogsContain(t, hook, "Starting HTTP server")
 		require.LogsDoNotContain(t, hook, "Starting API middleware")
 	}()
 	err = g.Stop()
 	require.NoError(t, err)
 }
 
-func TestGateway_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
+func TestServer_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(&app, set, nil)
 
-	gatewayPort := ctx.Int(flags.GRPCGatewayPort.Name)
-	gatewayHost := ctx.String(flags.GRPCGatewayHost.Name)
-	rpcHost := ctx.String(flags.RPCHost.Name)
-	selfAddress := fmt.Sprintf("%s:%d", rpcHost, ctx.Int(flags.RPCPort.Name))
-	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	port := ctx.Int(flags.HTTPServerPort.Name)
+	host := ctx.String(flags.HTTPServerHost.Name)
+	address := fmt.Sprintf("%s:%d", host, port)
 
 	opts := []Option{
-		WithGatewayAddr(gatewayAddress),
-		WithRemoteAddr(selfAddress),
+		WithHTTPAddr(address),
+		WithRouter(mux.NewRouter()),
 	}
 
 	g, err := New(context.Background(), opts...)

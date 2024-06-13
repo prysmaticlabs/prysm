@@ -19,7 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	apigateway "github.com/prysmaticlabs/prysm/v5/api/gateway"
+	http_rest "github.com/prysmaticlabs/prysm/v5/api/server/http-rest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
@@ -34,7 +34,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
@@ -369,9 +368,9 @@ func registerServices(cliCtx *cli.Context, beacon *BeaconNode, synchronizer *sta
 		return errors.Wrap(err, "could not register RPC service")
 	}
 
-	log.Debugln("Registering GRPC Gateway Service")
-	if err := beacon.registerGRPCGateway(router); err != nil {
-		return errors.Wrap(err, "could not register GRPC gateway service")
+	log.Debugln("Registering HTTP Service")
+	if err := beacon.registerHTTPService(router); err != nil {
+		return errors.Wrap(err, "could not register HTTP service")
 	}
 
 	log.Debugln("Registering Validator Monitoring Service")
@@ -402,10 +401,10 @@ func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
 
 func newRouter(cliCtx *cli.Context) *mux.Router {
 	var allowedOrigins []string
-	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
 	} else {
-		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 	r := mux.NewRouter()
 	r.Use(middleware.NormalizeQueryValuesHandler)
@@ -1046,43 +1045,20 @@ func (b *BeaconNode) registerPrometheusService(_ *cli.Context) error {
 	return b.services.RegisterService(service)
 }
 
-func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
-	if b.cliCtx.Bool(flags.DisableGRPCGateway.Name) {
-		return nil
-	}
-	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
-	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	rpcHost := b.cliCtx.String(flags.RPCHost.Name)
-	rpcPort := b.cliCtx.Int(flags.RPCPort.Name)
-	enableDebugRPCEndpoints := !b.cliCtx.Bool(flags.DisableDebugRPCEndpoints.Name)
-	selfAddress := net.JoinHostPort(rpcHost, strconv.Itoa(rpcPort))
-	gatewayAddress := net.JoinHostPort(gatewayHost, strconv.Itoa(gatewayPort))
-	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-	selfCert := b.cliCtx.String(flags.CertFlag.Name)
-	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	httpModules := b.cliCtx.String(flags.HTTPModules.Name)
+func (b *BeaconNode) registerHTTPService(router *mux.Router) error {
+	host := b.cliCtx.String(flags.HTTPServerHost.Name)
+	port := b.cliCtx.Int(flags.HTTPServerPort.Name)
+	address := net.JoinHostPort(host, strconv.Itoa(port))
+	allowedOrigins := strings.Split(b.cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
 	timeout := b.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 
-	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, httpModules)
-	muxs := make([]*apigateway.PbMux, 0)
-	if gatewayConfig.V1AlphaPbMux != nil {
-		muxs = append(muxs, gatewayConfig.V1AlphaPbMux)
+	opts := []http_rest.Option{
+		http_rest.WithRouter(router),
+		http_rest.WithHTTPAddr(address),
+		http_rest.WithAllowedOrigins(allowedOrigins),
+		http_rest.WithTimeout(uint64(timeout)),
 	}
-	if gatewayConfig.EthPbMux != nil {
-		muxs = append(muxs, gatewayConfig.EthPbMux)
-	}
-
-	opts := []apigateway.Option{
-		apigateway.WithRouter(router),
-		apigateway.WithGatewayAddr(gatewayAddress),
-		apigateway.WithRemoteAddr(selfAddress),
-		apigateway.WithPbHandlers(muxs),
-		apigateway.WithRemoteCert(selfCert),
-		apigateway.WithMaxCallRecvMsgSize(maxCallSize),
-		apigateway.WithAllowedOrigins(allowedOrigins),
-		apigateway.WithTimeout(uint64(timeout)),
-	}
-	g, err := apigateway.New(b.ctx, opts...)
+	g, err := http_rest.New(b.ctx, opts...)
 	if err != nil {
 		return err
 	}

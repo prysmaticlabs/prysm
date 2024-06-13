@@ -15,7 +15,7 @@ go_library(
         "//cmd/beacon-chain:__subpackages__",
     ],
     deps = [
-        "//api/gateway:go_default_library",
+        "//api/server/http-rest:go_default_library",
         "//api/server/middleware:go_default_library",
         "//async/event:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
@@ -30,7 +30,6 @@ go_library(
         "//beacon-chain/execution:go_default_library",
         "//beacon-chain/forkchoice:go_default_library",
         "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
-        "//beacon-chain/gateway:go_default_library",
         "//beacon-chain/monitor:go_default_library",
         "//beacon-chain/node/registration:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",

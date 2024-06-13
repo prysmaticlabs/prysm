@@ -132,7 +132,7 @@ func WaitForTextInFile(src *os.File, match string) error {
 
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("could not find requested text \"%s\" in %s before deadline:\n", match, f.Name())
+		return fmt.Errorf("could not find requested text %s in %s before deadline", match, f.Name())
 	case <-foundChan:
 		return nil
 	case err = <-errChan:
@@ -323,7 +323,7 @@ func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn,
 func BeaconAPIHostnames(numConns int) []string {
 	hostnames := make([]string, 0)
 	for i := 0; i < numConns; i++ {
-		port := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort + i
+		port := e2e.TestParams.Ports.PrysmBeaconNodeHTTPPort + i
 		hostnames = append(hostnames, net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
 	}
 	return hostnames
