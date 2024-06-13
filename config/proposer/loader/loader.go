@@ -129,7 +129,7 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*proposer.Settings, error)
 			return nil, err
 		}
 		loadConfig = dbps.ToConsensus()
-		log.Debugf("DB Loaded Proposer Settings: %s", func() string {
+		log.Debugf("DB loaded proposer settings: %s", func() string {
 			b, err := json.Marshal(loadConfig)
 			if err != nil {
 				return err.Error()
