@@ -9,6 +9,10 @@ import (
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -17,9 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
-	"google.golang.org/protobuf/proto"
 )
 
 // ErrMessageNotMapped occurs on a Broadcast attempt when a message has not been defined in the
@@ -369,7 +370,7 @@ func (s *Service) internalBroadcastDataColumn(
 	}
 
 	// Increase the number of successful broadcasts.
-	blobSidecarBroadcasts.Inc()
+	dataColumnSidecarBroadcasts.Inc()
 }
 
 // method to broadcast messages to other peers in our gossip mesh.
