@@ -128,14 +128,12 @@ func run(ctx context.Context, v iface.Validator) {
 
 			if slots.IsEpochStart(slot) {
 				updateDutiesNeeded = true
-				// Update proposer settings at the start of each epoch because new validators could have become active
+				// Update proposer settings at the start of each epoch because new validators could have became active
 				pushProposerSettingsChan <- slot
 			}
 
 			if updateDutiesNeeded {
 				updateDutiesNeeded = false
-				// Keep trying to update assignments if they are nil or if we are past an
-				// epoch transition in the beacon node's state.
 				if err = v.UpdateDuties(ctx, slot); err != nil {
 					handleUpdateDutiesError(err, slot)
 					updateDutiesNeeded = true
