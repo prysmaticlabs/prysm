@@ -3,6 +3,7 @@ package peerdas
 import (
 	"encoding/binary"
 	"math"
+	"math/big"
 
 	cKzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -24,7 +25,7 @@ const bytesPerCell = cKzg4844.FieldElementsPerCell * cKzg4844.BytesPerFieldEleme
 var (
 	// Custom errors
 	errCustodySubnetCountTooLarge = errors.New("custody subnet count larger than data column sidecar subnet count")
-	errIndexTooLarge              = errors.New("column index is larger than the specified number of columns")
+	errIndexTooLarge              = errors.New("column index is larger than the specified columns count")
 	errMismatchLength             = errors.New("mismatch in the length of the commitments and proofs")
 
 	// maxUint256 is the maximum value of a uint256.
@@ -310,4 +311,53 @@ func CustodySubnetCount() uint64 {
 		count = params.BeaconConfig().DataColumnSidecarSubnetCount
 	}
 	return count
+}
+
+// hypergeomCDF computes the hypergeometric cumulative distribution function.
+// https://en.wikipedia.org/wiki/Hypergeometric_distribution
+func hypergeomCDF(k, M, n, N uint64) float64 {
+	denominatorInt := new(big.Int).Binomial(int64(M), int64(N)) // lint:ignore uintcast
+	denominator := new(big.Float).SetInt(denominatorInt)
+
+	rBig := big.NewFloat(0)
+
+	for i := uint64(0); i < k+1; i++ {
+		a := new(big.Int).Binomial(int64(n), int64(i)) // lint:ignore uintcast
+		b := new(big.Int).Binomial(int64(M-n), int64(N-i))
+		numeratorInt := new(big.Int).Mul(a, b)
+		numerator := new(big.Float).SetInt(numeratorInt)
+		item := new(big.Float).Quo(numerator, denominator)
+		rBig.Add(rBig, item)
+	}
+
+	r, _ := rBig.Float64()
+
+	return r
+}
+
+// ExtendedSampleCount computes, for a given number of samples per slot and allowed failures the
+// number of samples we should actually query from peers.
+// TODO: Add link to the specification once it is available.
+func ExtendedSampleCount(samplesPerSlot, allowedFailures uint64) uint64 {
+	// Retrieve the columns count
+	columnsCount := params.BeaconConfig().NumberOfColumns
+
+	// If half of the columns are missing, we are able to reconstruct the data.
+	// If half of the columns + 1 are missing, we are not able to reconstruct the data.
+	// This is the smallest worst case.
+	worstCaseMissing := columnsCount/2 + 1
+
+	// Compute the false positive threshold.
+	falsePositiveThreshold := hypergeomCDF(0, columnsCount, worstCaseMissing, samplesPerSlot)
+
+	var sampleCount uint64
+
+	// Finally, compute the extended sample count.
+	for sampleCount = samplesPerSlot; sampleCount < columnsCount+1; sampleCount++ {
+		if hypergeomCDF(allowedFailures, columnsCount, worstCaseMissing, sampleCount) <= falsePositiveThreshold {
+			break
+		}
+	}
+
+	return sampleCount
 }

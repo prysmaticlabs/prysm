@@ -89,3 +89,30 @@ func TestVerifyDataColumnSidecarKZGProofs(t *testing.T) {
 		require.Equal(t, true, verified, fmt.Sprintf("sidecar %d failed", i))
 	}
 }
+
+func TestExtendedSampleCount(t *testing.T) {
+	const samplesPerSlot = 16
+
+	testCases := []struct {
+		name                string
+		allowedMissings     uint64
+		extendedSampleCount uint64
+	}{
+		{name: "allowedMissings=0", allowedMissings: 0, extendedSampleCount: 16},
+		{name: "allowedMissings=1", allowedMissings: 1, extendedSampleCount: 20},
+		{name: "allowedMissings=2", allowedMissings: 2, extendedSampleCount: 24},
+		{name: "allowedMissings=3", allowedMissings: 3, extendedSampleCount: 27},
+		{name: "allowedMissings=4", allowedMissings: 4, extendedSampleCount: 29},
+		{name: "allowedMissings=5", allowedMissings: 5, extendedSampleCount: 32},
+		{name: "allowedMissings=6", allowedMissings: 6, extendedSampleCount: 35},
+		{name: "allowedMissings=7", allowedMissings: 7, extendedSampleCount: 37},
+		{name: "allowedMissings=8", allowedMissings: 8, extendedSampleCount: 40},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := peerdas.ExtendedSampleCount(samplesPerSlot, tc.allowedMissings)
+			require.Equal(t, tc.extendedSampleCount, result)
+		})
+	}
+}

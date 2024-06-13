@@ -9,62 +9,83 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 )
 
+// GetValidCustodyPeers returns a list of peers that custody a super set of the local node's custody columns.
 func (s *Service) GetValidCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
-	custodiedColumns, err := peerdas.CustodyColumns(s.NodeID(), peerdas.CustodySubnetCount())
-	if err != nil {
-		return nil, err
-	}
-	var validPeers []peer.ID
-	for _, pid := range peers {
-		remoteCount := s.CustodyCountFromRemotePeer(pid)
 
-		nodeId, err := ConvertPeerIDToNodeID(pid)
+	localCustodySubnetCount := peerdas.CustodySubnetCount()
+	localCustodyColumns, err := peerdas.CustodyColumns(s.NodeID(), localCustodySubnetCount)
+	if err != nil {
+		return nil, errors.Wrap(err, "custody columns for local node")
+	}
+
+	var validPeers []peer.ID
+
+loop:
+	for _, pid := range peers {
+		// Get the custody subnets count of the remote peer.
+		remoteCustodySubnetCount := s.CustodyCountFromRemotePeer(pid)
+
+		// Get the remote node ID from the peer ID.
+		remoteNodeID, err := ConvertPeerIDToNodeID(pid)
 		if err != nil {
 			return nil, errors.Wrap(err, "convert peer ID to node ID")
 		}
-		remoteCustodiedColumns, err := peerdas.CustodyColumns(nodeId, remoteCount)
+
+		// Get the custody columns of the remote peer.
+		remoteCustodyColumns, err := peerdas.CustodyColumns(remoteNodeID, remoteCustodySubnetCount)
 		if err != nil {
 			return nil, errors.Wrap(err, "custody columns")
 		}
-		invalidPeer := false
-		for c := range custodiedColumns {
-			if !remoteCustodiedColumns[c] {
-				invalidPeer = true
-				break
+
+		// Filter out invalid peers.
+		for c := range localCustodyColumns {
+			if !remoteCustodyColumns[c] {
+				continue loop
 			}
 		}
-		if invalidPeer {
-			continue
-		}
+
 		copiedId := pid
+
 		// Add valid peer to list
 		validPeers = append(validPeers, copiedId)
 	}
+
 	return validPeers, nil
 }
 
+// CustodyCountFromRemotePeer retrieves the custody count from a remote peer.
 func (s *Service) CustodyCountFromRemotePeer(pid peer.ID) uint64 {
 	// By default, we assume the peer custodies the minimum number of subnets.
-	peerCustodyCountCount := params.BeaconConfig().CustodyRequirement
+	custodyCount := params.BeaconConfig().CustodyRequirement
 
 	// Retrieve the ENR of the peer.
-	peerRecord, err := s.peers.ENR(pid)
+	record, err := s.peers.ENR(pid)
 	if err != nil {
-		log.WithError(err).WithField("peerID", pid).Error("Failed to retrieve ENR for peer")
-		return peerCustodyCountCount
+		log.WithError(err).WithFields(logrus.Fields{
+			"peerID":       pid,
+			"defaultValue": custodyCount,
+		}).Error("Failed to retrieve ENR for peer, defaulting to the default value")
+		return custodyCount
 	}
 
-	if peerRecord == nil {
+	if record == nil {
 		// This is the case for inbound peers. So we don't log an error for this.
-		log.WithField("peerID", pid).Debug("No ENR found for peer")
-		return peerCustodyCountCount
+		log.WithFields(logrus.Fields{
+			"peerID":       pid,
+			"defaultValue": custodyCount,
+		}).Debug("No ENR found for peer, defaulting to the default value")
+		return custodyCount
 	}
 
 	// Load the `custody_subnet_count`
 	var csc CustodySubnetCount
-	if err := peerRecord.Load(&csc); err != nil {
-		log.WithField("peerID", pid).Error("Cannot load the custody_subnet_count from peer")
-		return peerCustodyCountCount
+	if err := record.Load(&csc); err != nil {
+		log.WithFields(logrus.Fields{
+			"peerID":       pid,
+			"defaultValue": custodyCount,
+		}).Warning("Cannot load the custody subnet count from peer, defaulting to the default value")
+
+		return custodyCount
 	}
 
 	log.WithFields(logrus.Fields{
