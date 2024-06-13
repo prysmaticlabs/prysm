@@ -128,7 +128,7 @@ func run(ctx context.Context, v iface.Validator) {
 
 			if slots.IsEpochStart(slot) {
 				updateDutiesNeeded = true
-				// Update proposer settings at the start of each epoch because new validators could have became active
+				// Update proposer settings at the start of each epoch because new validators could have become active
 				pushProposerSettingsChan <- slot
 			}
 
@@ -171,6 +171,7 @@ func run(ctx context.Context, v iface.Validator) {
 			} else if features.Get().EnableBeaconRESTApi {
 				v.ChangeHost()
 				initializationNeeded = true
+				updateDutiesNeeded = true
 				if slotCancel != nil {
 					slotCancel()
 				}
