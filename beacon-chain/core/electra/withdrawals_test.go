@@ -109,10 +109,7 @@ func TestProcessWithdrawRequests(t *testing.T) {
 					prefix[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
 					v.WithdrawalCredentials = append(prefix, source...)
 					require.NoError(t, preSt.SetValidators([]*eth.Validator{v}))
-					bal, err := preSt.BalanceAtIndex(0)
-					require.NoError(t, err)
-					bal = params.BeaconConfig().MinActivationBalance + 200
-					require.NoError(t, preSt.SetBalances([]uint64{bal}))
+					require.NoError(t, preSt.SetBalances([]uint64{params.BeaconConfig().MinActivationBalance + 200}))
 					require.NoError(t, preSt.AppendPendingPartialWithdrawal(&eth.PendingPartialWithdrawal{
 						Index:             0,
 						Amount:            100,
