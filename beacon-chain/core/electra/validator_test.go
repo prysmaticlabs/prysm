@@ -2,7 +2,6 @@ package electra_test
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
@@ -74,7 +73,7 @@ func TestQueueEntireBalanceAndResetValidator(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, electra.QueueEntireBalanceAndResetValidator(context.TODO(), s, 0))
+	require.NoError(t, electra.QueueEntireBalanceAndResetValidator(s, 0))
 	b, err := s.BalanceAtIndex(0)
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), b, "balance was not changed")
