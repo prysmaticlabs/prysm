@@ -675,7 +675,7 @@ func ValidatorMaxEffectiveBalance(val *ethpb.Validator) uint64 {
 	return params.BeaconConfig().MinActivationBalance
 }
 
-// SwitchToCompoundingValidator used to queue excess active balance based on validator.
+// SwitchToCompoundingValidator
 //
 // Spec definition:
 //
@@ -694,6 +694,9 @@ func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorI
 	}
 	if HasETH1WithdrawalCredential(v) {
 		v.WithdrawalCredentials[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
+		if err := s.UpdateValidatorAtIndex(idx, v); err != nil {
+			return err
+		}
 		return QueueExcessActiveBalance(s, idx)
 	}
 	return nil
