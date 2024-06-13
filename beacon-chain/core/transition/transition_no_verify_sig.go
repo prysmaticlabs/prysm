@@ -272,7 +272,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-  } else {
+	} else {
 		state, err = electraOperations(ctx, state, beaconBlock)
 		if err != nil {
 			return nil, err
