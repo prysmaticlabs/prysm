@@ -115,7 +115,7 @@ var (
 	// HTTPServerPort enables a REST server port to be exposed for the validator client.
 	HTTPServerPort = &cli.IntFlag{
 		Name:    "http-port",
-		Usage:   "Port on which the REST server runs on.",
+		Usage:   "Port on which the HTTP server runs on.",
 		Value:   3500,
 		Aliases: []string{"grpc-gateway-port"},
 	}
