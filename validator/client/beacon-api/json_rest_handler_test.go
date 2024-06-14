@@ -99,7 +99,16 @@ func Test_decodeResp(t *testing.T) {
 	type j struct {
 		Foo string `json:"foo"`
 	}
-
+	t.Run("200 JSON with charset", func(t *testing.T) {
+		body := bytes.Buffer{}
+		r := &http.Response{
+			Status:     "200",
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(&body),
+			Header:     map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
+		}
+		require.NoError(t, decodeResp(r, nil))
+	})
 	t.Run("200 non-JSON", func(t *testing.T) {
 		body := bytes.Buffer{}
 		r := &http.Response{

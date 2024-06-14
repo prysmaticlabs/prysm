@@ -36,6 +36,6 @@ const (
 	PendingBalanceDepositsLimit           = 134217728     // Maximum number of pending balance deposits in the beacon state.
 	PendingPartialWithdrawalsLimit        = 134217728     // Maximum number of pending partial withdrawals in the beacon state.
 	PendingConsolidationsLimit            = 262144        // Maximum number of pending consolidations in the beacon state.
-	MaxDepositReceiptsPerPayload          = 8192          // Maximum number of deposit receipts in an execution payload.
+	MaxDepositRequestsPerPayload          = 8192          // Maximum number of deposit requests in an execution payload.
 	MaxWithdrawalRequestsPerPayload       = 16            // Maximum number of execution layer withdrawal requests in an execution payload.
 )

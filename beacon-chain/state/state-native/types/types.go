@@ -96,8 +96,8 @@ func (f FieldIndex) String() string {
 		return "nextWithdrawalValidatorIndex"
 	case HistoricalSummaries:
 		return "historicalSummaries"
-	case DepositReceiptsStartIndex:
-		return "depositReceiptsStartIndex"
+	case DepositRequestsStartIndex:
+		return "depositRequestsStartIndex"
 	case DepositBalanceToConsume:
 		return "depositBalanceToConsume"
 	case ExitBalanceToConsume:
@@ -179,7 +179,7 @@ func (f FieldIndex) RealPosition() int {
 		return 26
 	case HistoricalSummaries:
 		return 27
-	case DepositReceiptsStartIndex:
+	case DepositRequestsStartIndex:
 		return 28
 	case DepositBalanceToConsume:
 		return 29
@@ -253,7 +253,7 @@ const (
 	NextWithdrawalIndex
 	NextWithdrawalValidatorIndex
 	HistoricalSummaries
-	DepositReceiptsStartIndex     // Electra: EIP-6110
+	DepositRequestsStartIndex     // Electra: EIP-6110
 	DepositBalanceToConsume       // Electra: EIP-7251
 	ExitBalanceToConsume          // Electra: EIP-7251
 	EarliestExitEpoch             // Electra: EIP-7251

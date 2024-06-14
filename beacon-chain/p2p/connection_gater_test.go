@@ -336,7 +336,7 @@ func TestService_InterceptAddrDial_Public(t *testing.T) {
 		}),
 	}
 	var err error
-	//test with public filter
+	// test with public filter
 	cidr := "public"
 	ip := "212.67.10.122"
 	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: cidr})
@@ -348,7 +348,7 @@ func TestService_InterceptAddrDial_Public(t *testing.T) {
 		t.Errorf("Expected multiaddress with ip %s to not be rejected since we allow public addresses", ip)
 	}
 
-	ip = "192.168.1.0" //this is private and should fail
+	ip = "192.168.1.0" // this is private and should fail
 	multiAddress, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
 	require.NoError(t, err)
 	valid = s.InterceptAddrDial("", multiAddress)
@@ -356,7 +356,7 @@ func TestService_InterceptAddrDial_Public(t *testing.T) {
 		t.Errorf("Expected multiaddress with ip %s to be rejected since we are only allowing public addresses", ip)
 	}
 
-	//test with public allow filter, with a public address added to the deny list
+	// test with public allow filter, with a public address added to the deny list
 	invalidPublicIp := "212.67.10.122"
 	validPublicIp := "91.65.69.69"
 	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: "public", DenyListCIDR: []string{"212.67.89.112/16"}})
@@ -384,7 +384,7 @@ func TestService_InterceptAddrDial_Private(t *testing.T) {
 		}),
 	}
 	var err error
-	//test with private filter
+	// test with private filter
 	cidr := "private"
 	s.addrFilter, err = configureFilter(&Config{DenyListCIDR: []string{cidr}})
 	require.NoError(t, err)
@@ -413,7 +413,7 @@ func TestService_InterceptAddrDial_AllowPrivate(t *testing.T) {
 		}),
 	}
 	var err error
-	//test with private filter
+	// test with private filter
 	cidr := "private"
 	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: cidr})
 	require.NoError(t, err)
@@ -442,7 +442,7 @@ func TestService_InterceptAddrDial_DenyPublic(t *testing.T) {
 		}),
 	}
 	var err error
-	//test with private filter
+	// test with private filter
 	cidr := "public"
 	s.addrFilter, err = configureFilter(&Config{DenyListCIDR: []string{cidr}})
 	require.NoError(t, err)
@@ -471,7 +471,7 @@ func TestService_InterceptAddrDial_AllowConflict(t *testing.T) {
 		}),
 	}
 	var err error
-	//test with private filter
+	// test with private filter
 	cidr := "public"
 	s.addrFilter, err = configureFilter(&Config{DenyListCIDR: []string{cidr, "192.168.0.0/16"}})
 	require.NoError(t, err)

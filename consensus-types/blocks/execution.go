@@ -812,14 +812,14 @@ func PayloadToHeaderElectra(payload interfaces.ExecutionDataElectra) (*enginev1.
 		return nil, err
 	}
 
-	depositReceipts := payload.DepositReceipts()
-	depositReceiptsRoot, err := ssz.DepositReceiptSliceRoot(depositReceipts, fieldparams.MaxDepositReceiptsPerPayload)
+	depositRequests := payload.DepositRequests()
+	depositRequestsRoot, err := ssz.DepositRequestsSliceRoot(depositRequests, fieldparams.MaxDepositRequestsPerPayload)
 	if err != nil {
 		return nil, err
 	}
 
 	withdrawalRequests := payload.WithdrawalRequests()
-	withdrawalRequestsRoot, err := ssz.WithdrawalRequestSliceRoot(withdrawalRequests, fieldparams.MaxWithdrawalRequestsPerPayload)
+	withdrawalRequestsRoot, err := ssz.WithdrawalRequestsSliceRoot(withdrawalRequests, fieldparams.MaxWithdrawalRequestsPerPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -842,7 +842,7 @@ func PayloadToHeaderElectra(payload interfaces.ExecutionDataElectra) (*enginev1.
 		WithdrawalsRoot:        withdrawalsRoot[:],
 		BlobGasUsed:            blobGasUsed,
 		ExcessBlobGas:          excessBlobGas,
-		DepositReceiptsRoot:    depositReceiptsRoot[:],
+		DepositRequestsRoot:    depositRequestsRoot[:],
 		WithdrawalRequestsRoot: withdrawalRequestsRoot[:],
 	}, nil
 }
@@ -907,7 +907,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 
 	epe, postElectra := data.(interfaces.ExecutionDataElectra)
 	if postElectra {
-		drs := epe.DepositReceipts()
+		drs := epe.DepositRequests()
 		if len(drs) != 0 {
 			return false, nil
 		}
@@ -1389,13 +1389,13 @@ func (e executionPayloadHeaderElectra) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// DepositReceipts --
-func (e executionPayloadHeaderElectra) DepositReceipts() ([]*enginev1.DepositReceipt, error) {
+// DepositRequests --
+func (e executionPayloadHeaderElectra) DepositRequests() ([]*enginev1.DepositRequest, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
 // WithdrawalRequests --
-func (e executionPayloadHeaderElectra) WithdrawalRequests() ([]*enginev1.ExecutionLayerWithdrawalRequest, error) {
+func (e executionPayloadHeaderElectra) WithdrawalRequests() ([]*enginev1.WithdrawalRequest, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
@@ -1556,13 +1556,13 @@ func (e executionPayloadElectra) ExcessBlobGas() (uint64, error) {
 	return e.p.ExcessBlobGas, nil
 }
 
-// DepositReceipts --
-func (e executionPayloadElectra) DepositReceipts() []*enginev1.DepositReceipt {
-	return e.p.DepositReceipts
+// DepositRequests --
+func (e executionPayloadElectra) DepositRequests() []*enginev1.DepositRequest {
+	return e.p.DepositRequests
 }
 
 // WithdrawalRequests --
-func (e executionPayloadElectra) WithdrawalRequests() []*enginev1.ExecutionLayerWithdrawalRequest {
+func (e executionPayloadElectra) WithdrawalRequests() []*enginev1.WithdrawalRequest {
 	return e.p.WithdrawalRequests
 }
 

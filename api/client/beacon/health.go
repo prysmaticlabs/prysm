@@ -48,8 +48,13 @@ func (n *NodeHealthTracker) CheckHealth(ctx context.Context) bool {
 	if isStatusChanged {
 		// Update the health status
 		n.isHealthy = &newStatus
-		// Send the new status to the health channel
-		n.healthChan <- newStatus
+		// Send the new status to the health channel, potentially overwriting the existing value
+		select {
+		case <-n.healthChan:
+			n.healthChan <- newStatus
+		default:
+			n.healthChan <- newStatus
+		}
 	}
 	return newStatus
 }

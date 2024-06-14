@@ -4,7 +4,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"sync"
 
@@ -113,8 +112,8 @@ type Config struct {
 	ExecutionChainInfoFetcher     execution.ChainInfoFetcher
 	GenesisTimeFetcher            blockchain.TimeFetcher
 	GenesisFetcher                blockchain.GenesisFetcher
-	EnableDebugRPCEndpoints       bool
 	MockEth1Votes                 bool
+	EnableDebugRPCEndpoints       bool
 	AttestationsPool              attestations.Pool
 	ExitPool                      voluntaryexits.PoolManager
 	SlashingsPool                 slashings.PoolManager
@@ -154,7 +153,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		connectedRPCClients: make(map[net.Addr]bool),
 	}
 
-	address := fmt.Sprintf("%s:%s", s.cfg.Host, s.cfg.Port)
+	address := net.JoinHostPort(s.cfg.Host, s.cfg.Port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)
@@ -318,7 +317,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	if s.cfg.EnableDebugRPCEndpoints {
-		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debugv1alpha1.Server{
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			BeaconDB:           s.cfg.BeaconDB,

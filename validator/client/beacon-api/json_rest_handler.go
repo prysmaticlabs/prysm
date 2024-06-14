@@ -109,7 +109,7 @@ func decodeResp(httpResp *http.Response, resp interface{}) error {
 		return errors.Wrapf(err, "failed to read response body for %s", httpResp.Request.URL)
 	}
 
-	if httpResp.Header.Get("Content-Type") != api.JsonMediaType {
+	if !strings.Contains(httpResp.Header.Get("Content-Type"), api.JsonMediaType) {
 		// 2XX codes are a success
 		if strings.HasPrefix(httpResp.Status, "2") {
 			return nil
