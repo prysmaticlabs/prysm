@@ -31,7 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -592,7 +592,7 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	if len(validatorIndices) == 0 {
 		return
 	}
-	log.WithFields(log.Fields{
+	log.WithFields(logrus.Fields{
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses")
 }
