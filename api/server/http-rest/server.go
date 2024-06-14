@@ -21,11 +21,10 @@ type httpHandler func(
 
 // Config parameters for setting up the http-rest service.
 type config struct {
-	httpAddr       string
-	allowedOrigins []string
-	handler        httpHandler
-	router         *mux.Router
-	timeout        time.Duration
+	httpAddr string
+	handler  httpHandler
+	router   *mux.Router
+	timeout  time.Duration
 }
 
 // Server serves HTTP traffic.
