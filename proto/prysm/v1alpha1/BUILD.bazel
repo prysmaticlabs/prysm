@@ -251,6 +251,7 @@ ssz_gen_marshal(
         "BuilderBid",
         "DepositSnapshot",
         "DataColumnSidecar",
+        "DataColumnIdentifier",
     ],
 )
 
