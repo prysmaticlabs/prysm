@@ -220,6 +220,7 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 
 	consensusBlockValue, httpError := getConsensusBlockValue(ctx, s.BlockRewardFetcher, v1alpha1resp.Block)
 	if httpError != nil {
+		log.WithError(httpError).Debug("Failed to get consensus block value")
 		// Having the consensus block value is not critical to block production
 		consensusBlockValue = "0"
 	}
