@@ -1201,7 +1201,7 @@ func TestQueueExcessActiveBalance_Ok(t *testing.T) {
 
 	pbd, err := st.PendingBalanceDeposits()
 	require.NoError(t, err)
-	require.Equal(t, uint64(1000), pbd[2048].Amount) // appends it at the end
+	require.Equal(t, uint64(1000), pbd[0].Amount) // appends it at the end
 
 	bals = st.Balances()
 	require.Equal(t, params.BeaconConfig().MinActivationBalance, bals[0])
