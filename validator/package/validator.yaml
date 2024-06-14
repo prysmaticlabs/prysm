@@ -16,6 +16,6 @@ wallet-dir: /var/lib/prysm/validator
 # rpc-host: Specify the RPC host exposed by the validator. Default: localhost
 # rpc-port: Specify the RPC port exposed by the validator. Default: 7000
 # http-host: Specify the http host exposed by the validator. Default: localhost
-# http-port: Specify the http port exposed by the validator. Default: 7500
+# http-port: Specify the HTTP port exposed by the validator. Default: 7500
 # graffiti: A string to include in proposed block.
 # graffiti-file: Path to Yaml file containing advanced graffiti settings. See https://docs.prylabs.network/docs/prysm-usage/graffiti-file
