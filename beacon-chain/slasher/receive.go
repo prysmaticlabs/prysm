@@ -141,7 +141,7 @@ func (s *Service) processAttestations(
 
 	start := time.Now()
 
-	// Check for attestatinos slashings (double, sourrounding, surrounded votes).
+	// Check for attestations slashings (double, surrounding, surrounded votes).
 	slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAttestations)
 	if err != nil {
 		log.WithError(err).Error(couldNotCheckSlashableAtt)
