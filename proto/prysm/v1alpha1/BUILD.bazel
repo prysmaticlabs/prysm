@@ -152,6 +152,7 @@ ssz_gen_marshal(
         "SignedConsolidation",
         "PendingConsolidation",
         "DataColumnSidecar",
+        "DataColumnIdentifier",
     ],
 )
 
