@@ -127,6 +127,7 @@ ssz_deneb_objs = [
     "BlobSidecar",
     "BlobSidecars",
     "BuilderBidDeneb",
+    "DataColumnIdentifier",
     "DataColumnSidecar",
     "SignedBeaconBlockContentsDeneb",
     "SignedBeaconBlockDeneb",
