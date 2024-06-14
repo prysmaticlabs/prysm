@@ -81,7 +81,7 @@ func TestStartDiscV5_FindPeersWithSubnet(t *testing.T) {
 	bootNodeENR := bootListener.Self().String()
 
 	// Create 3 nodes, each subscribed to a different subnet.
-	// Each node is connected to the boostrap node.
+	// Each node is connected to the bootstrap node.
 	services := make([]*Service, 0, 3)
 
 	for i := 1; i <= 3; i++ {
