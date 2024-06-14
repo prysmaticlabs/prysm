@@ -121,7 +121,7 @@ var (
 	}
 	// HTTPServerCorsDomain serves preflight requests when serving HTTP.
 	HTTPServerCorsDomain = &cli.StringFlag{
-		Name:    "corsdomain",
+		Name:    "http-cors-domain",
 		Usage:   "Comma separated list of domains from which to accept cross origin requests.",
 		Value:   "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000",
 		Aliases: []string{"grpc-gateway-corsdomain"},
