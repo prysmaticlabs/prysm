@@ -37,10 +37,8 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	var obj interface{}
 	switch folderName {
 	case "ExecutionPayload":
-		t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 		obj = &enginev1.ExecutionPayloadElectra{}
 	case "ExecutionPayloadHeader":
-		t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 		obj = &enginev1.ExecutionPayloadHeaderElectra{}
 	case "Attestation":
 		obj = &ethpb.AttestationElectra{}
@@ -51,15 +49,12 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "AggregateAndProof":
 		obj = &ethpb.AggregateAttestationAndProofElectra{}
 	case "BeaconBlock":
-		t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 		obj = &ethpb.BeaconBlockElectra{}
 	case "BeaconBlockBody":
-		t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 		obj = &ethpb.BeaconBlockBodyElectra{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
-		t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 		obj = &ethpb.BeaconStateElectra{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
@@ -89,7 +84,6 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SignedAggregateAndProof":
 		obj = &ethpb.SignedAggregateAttestationAndProofElectra{}
 	case "SignedBeaconBlock":
-		t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 		obj = &ethpb.SignedBeaconBlockElectra{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}
@@ -151,19 +145,11 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.PendingBalanceDeposit{}
 	case "PendingPartialWithdrawal":
 		obj = &ethpb.PendingPartialWithdrawal{}
-	case "Consolidation":
-		t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
-		// TODO: Remove this case when the spectests are updated to v1.5.0-alpha.3
-		return nil, nil
-	case "SignedConsolidation":
-		t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
-		// TODO: Remove this case when the spectests are updated to v1.5.0-alpha.3
-		return nil, nil
 	case "PendingConsolidation":
 		obj = &ethpb.PendingConsolidation{}
-	case "ExecutionLayerWithdrawalRequest": // TODO: update in spectest update
+	case "WithdrawalRequest":
 		obj = &enginev1.WithdrawalRequest{}
-	case "DepositReceipt": // TODO: update in spectest update
+	case "DepositRequest":
 		obj = &enginev1.DepositRequest{}
 	case "ConsolidationRequest":
 		obj = &enginev1.ConsolidationRequest{}

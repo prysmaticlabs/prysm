@@ -286,7 +286,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	PendingPartialWithdrawalsLimit:        134_217_728,
 	PendingConsolidationsLimit:            262_144,
 	MinActivationBalance:                  32_000_000_000,
-	MaxConsolidations:                     1,
+	MaxConsolidationsRequestsPerPayload:   1,
 	MaxPendingPartialsPerWithdrawalsSweep: 8,
 	FullExitRequestAmount:                 0,
 	MaxWithdrawalRequestsPerPayload:       16,
