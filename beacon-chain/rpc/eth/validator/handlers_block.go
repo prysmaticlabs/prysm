@@ -222,7 +222,7 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	if httpError != nil {
 		log.WithError(httpError).Debug("Failed to get consensus block value")
 		// Having the consensus block value is not critical to block production
-		consensusBlockValue = "0"
+		consensusBlockValue = ""
 	}
 
 	w.Header().Set(api.ExecutionPayloadBlindedHeader, fmt.Sprintf("%v", v1alpha1resp.IsBlinded))
@@ -299,7 +299,7 @@ func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.Blo
 	}
 	if bb.Version() == version.Phase0 {
 		// Getting the block value for Phase 0 is very hard, so we ignore it
-		return "0", nil
+		return "", nil
 	}
 	// Get consensus payload value which is the same as the total from the block rewards api.
 	// The value is in Gwei, but Wei should be returned from the endpoint.
