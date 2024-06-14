@@ -10,7 +10,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/api/server/http-rest",
     visibility = ["//visibility:public"],
     deps = [
-        "//api/server/middleware:go_default_library",
         "//runtime:go_default_library",
         "@com_github_gorilla_mux//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

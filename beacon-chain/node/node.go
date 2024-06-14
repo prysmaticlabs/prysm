@@ -19,7 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	http_rest "github.com/prysmaticlabs/prysm/v5/api/server/http-rest"
+	"github.com/prysmaticlabs/prysm/v5/api/server/http-rest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
@@ -1049,16 +1049,13 @@ func (b *BeaconNode) registerHTTPService(router *mux.Router) error {
 	host := b.cliCtx.String(flags.HTTPServerHost.Name)
 	port := b.cliCtx.Int(flags.HTTPServerPort.Name)
 	address := net.JoinHostPort(host, strconv.Itoa(port))
-	allowedOrigins := strings.Split(b.cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
 	timeout := b.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
-
-	opts := []http_rest.Option{
-		http_rest.WithRouter(router),
-		http_rest.WithHTTPAddr(address),
-		http_rest.WithAllowedOrigins(allowedOrigins),
-		http_rest.WithTimeout(uint64(timeout)),
+	opts := []httprest.Option{
+		httprest.WithRouter(router),
+		httprest.WithHTTPAddr(address),
+		httprest.WithTimeout(uint64(timeout)),
 	}
-	g, err := http_rest.New(b.ctx, opts...)
+	g, err := httprest.New(b.ctx, opts...)
 	if err != nil {
 		return err
 	}

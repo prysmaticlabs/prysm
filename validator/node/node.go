@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
-	http_rest "github.com/prysmaticlabs/prysm/v5/api/server/http-rest"
+	"github.com/prysmaticlabs/prysm/v5/api/server/http-rest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
@@ -656,12 +656,6 @@ func (c *ValidatorClient) registerHTTPService(router *mux.Router) error {
 	port := c.cliCtx.Int(flags.HTTPServerPort.Name)
 	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	timeout := c.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
-	var allowedOrigins []string
-	if c.cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
-		allowedOrigins = strings.Split(c.cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
-	} else {
-		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
-	}
 
 	muxHandler := func(h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
 		// The validator api handler requires this special logic as it serves the web APIs and the web UI.
@@ -674,14 +668,13 @@ func (c *ValidatorClient) registerHTTPService(router *mux.Router) error {
 		}
 	}
 
-	opts := []http_rest.Option{
-		http_rest.WithMuxHandler(muxHandler),
-		http_rest.WithRouter(router), // note some routes are registered in server.go
-		http_rest.WithHTTPAddr(address),
-		http_rest.WithAllowedOrigins(allowedOrigins),
-		http_rest.WithTimeout(uint64(timeout)),
+	opts := []httprest.Option{
+		httprest.WithMuxHandler(muxHandler),
+		httprest.WithRouter(router), // note some routes are registered in server.go
+		httprest.WithHTTPAddr(address),
+		httprest.WithTimeout(uint64(timeout)),
 	}
-	gw, err := http_rest.New(c.cliCtx.Context, opts...)
+	gw, err := httprest.New(c.cliCtx.Context, opts...)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package http_rest
+package httprest
 
 import (
 	"time"
@@ -8,9 +8,9 @@ import (
 
 type Option func(g *Server) error
 
-func WithMuxHandler(m restHandler) Option {
+func WithMuxHandler(m httpHandler) Option {
 	return func(g *Server) error {
-		g.cfg.muxHandler = m
+		g.cfg.handler = m
 		return nil
 	}
 }
@@ -22,18 +22,10 @@ func WithHTTPAddr(addr string) Option {
 	}
 }
 
-// WithRouter allows adding a custom mux router to the gateway.
+// WithRouter --.
 func WithRouter(r *mux.Router) Option {
 	return func(g *Server) error {
 		g.cfg.router = r
-		return nil
-	}
-}
-
-// WithAllowedOrigins allows adding a set of allowed origins to the gateway.
-func WithAllowedOrigins(origins []string) Option {
-	return func(g *Server) error {
-		g.cfg.allowedOrigins = origins
 		return nil
 	}
 }

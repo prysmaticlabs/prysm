@@ -1,4 +1,4 @@
-package http_rest
+package httprest
 
 import (
 	"context"
@@ -7,14 +7,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 )
 
 var _ runtime.Service = (*Server)(nil)
 
-// restHandler is a functional interface that implements the rest handler functionality.
-type restHandler func(
+// httpHandler is a functional interface that implements the http handler functionality.
+type httpHandler func(
 	h http.HandlerFunc,
 	w http.ResponseWriter,
 	req *http.Request,
@@ -24,12 +23,12 @@ type restHandler func(
 type config struct {
 	httpAddr       string
 	allowedOrigins []string
-	muxHandler     restHandler
+	handler        httpHandler
 	router         *mux.Router
 	timeout        time.Duration
 }
 
-// Server serves HTTP JSON traffic.
+// Server serves HTTP traffic.
 type Server struct {
 	cfg          *config
 	server       *http.Server
@@ -54,17 +53,11 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 		return nil, errors.New("router option not configured")
 	}
 
-	corsMux := middleware.CorsHandler(g.cfg.allowedOrigins).Middleware(g.cfg.router)
 	// TODO: actually use the timeout config provided
 	g.server = &http.Server{
 		Addr:              g.cfg.httpAddr,
-		Handler:           corsMux,
+		Handler:           g.cfg.router,
 		ReadHeaderTimeout: time.Second,
-	}
-	if g.cfg.muxHandler != nil { // rest APIS and Web UI registration
-		g.cfg.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			g.cfg.muxHandler(corsMux.ServeHTTP, w, r)
-		})
 	}
 	return g, nil
 }
