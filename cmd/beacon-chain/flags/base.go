@@ -103,7 +103,7 @@ var (
 	// Deprecated: DeprecatedDisableGRPCGateway for JSON-HTTP requests to the beacon node.
 	DeprecatedDisableGRPCGateway = &cli.BoolFlag{
 		Name:  "disable-grpc-gateway",
-		Usage: "Disable the gRPC gateway for JSON-HTTP requests",
+		Usage: "Flag deprecated and unused",
 	}
 	// HTTPServerHost specifies a HTTP server host for the validator client.
 	HTTPServerHost = &cli.StringFlag{
