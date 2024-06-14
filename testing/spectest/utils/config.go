@@ -23,6 +23,6 @@ func SetConfig(t testing.TB, config string) error {
 	case "":
 		return errors.New("no config provided")
 	default:
-		return fmt.Errorf("did not receive a valid config, instead received this %s", config)
+		return fmt.Errorf("did not receive a valid config, instead received %s", config)
 	}
 }
