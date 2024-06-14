@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"github.com/pkg/errors"
 	"io"
 	"math/big"
 	"sync"
@@ -857,7 +858,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 				if err != nil && err != io.EOF {
 					t.Fatal(err)
 				}
-				if code != 0 || err == io.EOF {
+				if code != 0 || errors.Is(err, io.EOF) {
 					break
 				}
 				blk := util.NewBeaconBlock()

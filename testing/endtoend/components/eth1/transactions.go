@@ -383,7 +383,7 @@ func randomBlobData() ([]byte, error) {
 		return nil, err
 	}
 	if n != size {
-		return nil, fmt.Errorf("could not create random blob data with size %d: %v", size, err)
+		return nil, fmt.Errorf("could not create random blob data with size %d: %w", size, err)
 	}
 	return data, nil
 }

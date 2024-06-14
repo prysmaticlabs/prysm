@@ -253,7 +253,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	log.Info("Syncing with beacon node to align on chain genesis info")
 
 	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		return client.ErrConnectionIssue
 	}
 

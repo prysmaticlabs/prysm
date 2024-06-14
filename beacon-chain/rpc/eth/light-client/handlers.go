@@ -353,24 +353,24 @@ func (s *Server) getLightClientEventBlock(ctx context.Context, minSignaturesRequ
 	// Get the current state
 	state, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get head state %v", err)
+		return nil, fmt.Errorf("could not get head state %w", err)
 	}
 
 	// Get the block
 	latestBlockHeader := *state.LatestBlockHeader()
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get state root %v", err)
+		return nil, fmt.Errorf("could not get state root %w", err)
 	}
 	latestBlockHeader.StateRoot = stateRoot[:]
 	latestBlockHeaderRoot, err := latestBlockHeader.HashTreeRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not get latest block header root %v", err)
+		return nil, fmt.Errorf("could not get latest block header root %w", err)
 	}
 
 	block, err := s.Blocker.Block(ctx, latestBlockHeaderRoot[:])
 	if err != nil {
-		return nil, fmt.Errorf("could not get latest block %v", err)
+		return nil, fmt.Errorf("could not get latest block %w", err)
 	}
 	if block == nil {
 		return nil, fmt.Errorf("latest block is nil")
@@ -387,7 +387,7 @@ func (s *Server) getLightClientEventBlock(ctx context.Context, minSignaturesRequ
 		parentRoot := block.Block().ParentRoot()
 		block, err = s.Blocker.Block(ctx, parentRoot[:])
 		if err != nil {
-			return nil, fmt.Errorf("could not get parent block %v", err)
+			return nil, fmt.Errorf("could not get parent block %w", err)
 		}
 		if block == nil {
 			return nil, fmt.Errorf("parent block is nil")

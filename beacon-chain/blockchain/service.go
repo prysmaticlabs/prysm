@@ -504,7 +504,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	}
 	genesisBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	if err != nil || genesisBlk == nil || genesisBlk.IsNil() {
-		return fmt.Errorf("could not load genesis block: %v", err)
+		return fmt.Errorf("could not load genesis block: %w", err)
 	}
 	genesisBlkRoot, err := genesisBlk.Block().HashTreeRoot()
 	if err != nil {

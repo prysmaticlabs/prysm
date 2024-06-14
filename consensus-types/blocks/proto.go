@@ -979,7 +979,7 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 
 	p, err := WrappedExecutionPayload(pb.ExecutionPayload)
 	// We allow the payload to be nil
-	if err != nil && err != consensus_types.ErrNilObjectWrapped {
+	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -1005,7 +1005,7 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 
 	ph, err := WrappedExecutionPayloadHeader(pb.ExecutionPayloadHeader)
 	// We allow the payload to be nil
-	if err != nil && err != consensus_types.ErrNilObjectWrapped {
+	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -1031,7 +1031,7 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 
 	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload)
 	// We allow the payload to be nil
-	if err != nil && err != consensus_types.ErrNilObjectWrapped {
+	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -1058,7 +1058,7 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 
 	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader)
 	// We allow the payload to be nil
-	if err != nil && err != consensus_types.ErrNilObjectWrapped {
+	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -1085,7 +1085,7 @@ func initBlockBodyFromProtoDeneb(pb *eth.BeaconBlockBodyDeneb) (*BeaconBlockBody
 
 	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload)
 	// We allow the payload to be nil
-	if err != nil && err != consensus_types.ErrNilObjectWrapped {
+	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -1113,7 +1113,7 @@ func initBlindedBlockBodyFromProtoDeneb(pb *eth.BlindedBeaconBlockBodyDeneb) (*B
 
 	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader)
 	// We allow the payload to be nil
-	if err != nil && err != consensus_types.ErrNilObjectWrapped {
+	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -1141,7 +1141,7 @@ func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlock
 
 	p, err := WrappedExecutionPayloadElectra(pb.ExecutionPayload)
 	// We allow the payload to be nil
-	if err != nil && err != consensus_types.ErrNilObjectWrapped {
+	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -1170,7 +1170,7 @@ func initBlindedBlockBodyFromProtoElectra(pb *eth.BlindedBeaconBlockBodyElectra)
 
 	ph, err := WrappedExecutionPayloadHeaderElectra(pb.ExecutionPayloadHeader)
 	// We allow the payload to be nil
-	if err != nil && err != consensus_types.ErrNilObjectWrapped {
+	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
 	}
 	b := &BeaconBlockBody{

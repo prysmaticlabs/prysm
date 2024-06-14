@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"math/big"
 	"net/http"
@@ -1914,7 +1915,8 @@ func TestEmptyResponseBody(t *testing.T) {
 		var b []byte
 		r := &ExecutionPayloadResponse{}
 		err := json.Unmarshal(b, r)
-		_, ok := err.(*json.SyntaxError)
+		var syntaxError *json.SyntaxError
+		ok := errors.As(err, &syntaxError)
 		require.Equal(t, true, ok)
 	})
 	t.Run("empty object", func(t *testing.T) {

@@ -95,7 +95,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 	var req ImportKeystoresRequest
 	err = json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -190,7 +190,7 @@ func (s *Server) DeleteKeystores(w http.ResponseWriter, r *http.Request) {
 	var req DeleteKeystoresRequest
 	err = json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -287,11 +287,11 @@ func (s *Server) publicKeysInDB(ctx context.Context) (map[[fieldparams.BLSPubkey
 	pubKeysInDB := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	attestedPublicKeys, err := s.db.AttestedPublicKeys(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attested public keys from DB: %v", err)
+		return nil, fmt.Errorf("could not get attested public keys from DB: %w", err)
 	}
 	proposedPublicKeys, err := s.db.ProposedPublicKeys(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get proposed public keys from DB: %v", err)
+		return nil, fmt.Errorf("could not get proposed public keys from DB: %w", err)
 	}
 	for _, pk := range append(attestedPublicKeys, proposedPublicKeys...) {
 		pubKeysInDB[pk] = true
@@ -451,7 +451,7 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	var req ImportRemoteKeysRequest
 	err = json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -513,7 +513,7 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	var req DeleteRemoteKeysRequest
 	err = json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -596,7 +596,7 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 	var req SetFeeRecipientByPubkeyRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -747,7 +747,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 	var req SetGasLimitRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -890,7 +890,7 @@ func (s *Server) SetGraffiti(w http.ResponseWriter, r *http.Request) {
 	}
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:

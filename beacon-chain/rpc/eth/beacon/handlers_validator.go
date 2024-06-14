@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
@@ -56,7 +58,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		err = json.NewDecoder(r.Body).Decode(&req)
 		switch {
-		case err == io.EOF:
+		case errors.Is(err, io.EOF):
 			httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 			return
 		case err != nil:
@@ -272,7 +274,7 @@ func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	} else {
 		err = json.NewDecoder(r.Body).Decode(&rawIds)
 		switch {
-		case err == io.EOF:
+		case errors.Is(err, io.EOF):
 			httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 			return
 		case err != nil:

@@ -5,8 +5,9 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -74,8 +75,8 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *fcuConfig) (*
 	}
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, arg.attributes)
 	if err != nil {
-		switch err {
-		case execution.ErrAcceptedSyncingPayloadStatus:
+		switch {
+		case errors.Is(err, execution.ErrAcceptedSyncingPayloadStatus):
 			forkchoiceUpdatedOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
@@ -83,7 +84,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *fcuConfig) (*
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
-		case execution.ErrInvalidPayloadStatus:
+		case errors.Is(err, execution.ErrInvalidPayloadStatus):
 			forkchoiceUpdatedInvalidNodeCount.Inc()
 			headRoot := arg.headRoot
 			if len(lastValidHash) == 0 {
@@ -139,7 +140,6 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *fcuConfig) (*
 				"newHeadRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
 			}).Warn("Pruned invalid blocks")
 			return pid, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
-
 		default:
 			log.WithError(err).Error(ErrUndefinedExecutionEngineError)
 			return nil, nil
@@ -231,18 +231,18 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 	} else {
 		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, []common.Hash{}, &common.Hash{} /*empty version hashes and root before Deneb*/)
 	}
-	switch err {
-	case nil:
+	switch {
+	case err == nil:
 		newPayloadValidNodeCount.Inc()
 		return true, nil
-	case execution.ErrAcceptedSyncingPayloadStatus:
+	case errors.Is(err, execution.ErrAcceptedSyncingPayloadStatus):
 		newPayloadOptimisticNodeCount.Inc()
 		log.WithFields(logrus.Fields{
 			"slot":             blk.Block().Slot(),
 			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
 		}).Info("Called new payload with optimistic block")
 		return false, nil
-	case execution.ErrInvalidPayloadStatus:
+	case errors.Is(err, execution.ErrInvalidPayloadStatus):
 		lvh := bytesutil.ToBytes32(lastValidHash)
 		return false, invalidBlock{
 			error:         ErrInvalidPayload,

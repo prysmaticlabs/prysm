@@ -417,7 +417,7 @@ func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {
 	}
 	logFile, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, valIndex)))
 	if err != nil {
-		return fmt.Errorf("unable to open log file: %v", err)
+		return fmt.Errorf("unable to open log file: %w", err)
 	}
 	r.t.Run("doppelganger found", func(t *testing.T) {
 		assert.NoError(t, helpers.WaitForTextInFile(logFile, "Duplicate instances exists in the network for validator keys"), "Failed to carry out doppelganger check correctly")

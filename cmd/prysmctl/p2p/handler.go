@@ -6,6 +6,8 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	corenet "github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -51,7 +53,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 		// do not decode anything.
 		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 {
 			if err := handle(context.Background(), base, stream); err != nil {
-				if err != p2ptypes.ErrWrongForkDigestVersion {
+				if !errors.Is(err, p2ptypes.ErrWrongForkDigestVersion) {
 					log.WithError(err).Debug("Could not handle p2p RPC")
 				}
 			}
@@ -73,7 +75,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := handle(context.Background(), msg, stream); err != nil {
-				if err != p2ptypes.ErrWrongForkDigestVersion {
+				if !errors.Is(err, p2ptypes.ErrWrongForkDigestVersion) {
 					log.WithError(err).Debug("Could not handle p2p RPC")
 				}
 			}
@@ -89,7 +91,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := handle(context.Background(), nTyp.Elem().Interface(), stream); err != nil {
-				if err != p2ptypes.ErrWrongForkDigestVersion {
+				if !errors.Is(err, p2ptypes.ErrWrongForkDigestVersion) {
 					log.WithError(err).Debug("Could not handle p2p RPC")
 				}
 			}
