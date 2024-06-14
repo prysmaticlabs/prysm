@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
-	"github.com/prysmaticlabs/prysm/v5/api/server/http-rest"
+	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"

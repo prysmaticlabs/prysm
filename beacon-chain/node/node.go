@@ -19,7 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/api/server/http-rest"
+	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
