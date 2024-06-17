@@ -9,6 +9,9 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
@@ -21,8 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
@@ -35,14 +36,12 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", p2p.DataColumnSidecarsByRootName[1:]) // slice the leading slash off the name var
 
-	// We use the same type as for blobs as they are the same data structure.
-	// TODO: Make the type naming more generic to be extensible to data columns
-	ref, ok := msg.(*types.BlobSidecarsByRootReq)
+	req, ok := msg.(*types.DataColumnSidecarsByRootReq)
 	if !ok {
-		return errors.New("message is not type BlobSidecarsByRootReq")
+		return errors.New("message is not type DataColumnSidecarsByRootReq")
 	}
 
-	requestedColumnIdents := *ref
+	requestedColumnIdents := *req
 	if err := validateDataColummnsByRootRequest(requestedColumnIdents); err != nil {
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
@@ -54,11 +53,10 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 
 	requestedColumnsList := make([]uint64, 0, len(requestedColumnIdents))
 	for _, ident := range requestedColumnIdents {
-		requestedColumnsList = append(requestedColumnsList, ident.Index)
+		requestedColumnsList = append(requestedColumnsList, ident.ColumnIndex)
 	}
 
-	// TODO: Customize data column batches too
-	batchSize := flags.Get().BlobBatchLimit
+	batchSize := flags.Get().DataColumnBatchLimit
 	var ticker *time.Ticker
 	if len(requestedColumnIdents) > batchSize {
 		ticker = time.NewTicker(time.Second)
@@ -127,17 +125,16 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		}
 
 		s.rateLimiter.add(stream, 1)
-		requestedRoot, requestedIndex := bytesutil.ToBytes32(requestedColumnIdents[i].BlockRoot), requestedColumnIdents[i].Index
+		requestedRoot, requestedIndex := bytesutil.ToBytes32(requestedColumnIdents[i].BlockRoot), requestedColumnIdents[i].ColumnIndex
 
 		// Decrease the peer's score if it requests a column that is not custodied.
-		isCustodied := custodiedColumns[requestedIndex]
-		if !isCustodied {
+		custodied := custodiedColumns[requestedIndex]
+		if !custodied {
 			s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, types.ErrInvalidColumnIndex.Error(), stream)
 			return types.ErrInvalidColumnIndex
 		}
 
-		// TODO: Differentiate between blobs and columns for our storage engine
 		// If the data column is nil, it means it is not yet available in the db.
 		// We wait for it to be available.
 
@@ -207,7 +204,7 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 	return nil
 }
 
-func validateDataColummnsByRootRequest(colIdents types.BlobSidecarsByRootReq) error {
+func validateDataColummnsByRootRequest(colIdents types.DataColumnSidecarsByRootReq) error {
 	if uint64(len(colIdents)) > params.BeaconConfig().MaxRequestDataColumnSidecars {
 		return types.ErrMaxDataColumnReqExceeded
 	}
