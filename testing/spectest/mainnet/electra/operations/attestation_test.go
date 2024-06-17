@@ -6,6 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/spectest/shared/electra/operations"
 )
 
-func TestMinimal_Electra_Operations_WithdrawalRequest(t *testing.T) {
-	operations.RunWithdrawalRequestTest(t, "minimal")
+func TestMainnet_Electra_Operations_Attestation(t *testing.T) {
+	operations.RunAttestationTest(t, "mainnet")
 }

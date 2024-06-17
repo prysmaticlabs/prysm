@@ -114,7 +114,7 @@ func GenerateTestElectraBlockWithSidecar(t *testing.T, parent [32]byte, slot pri
 			Withdrawals:        make([]*enginev1.Withdrawal, 0),
 			BlobGasUsed:        0,
 			ExcessBlobGas:      0,
-			DepositReceipts:    generateTestDepositRequests(uint64(g.slot), 4),
+			DepositRequests:    generateTestDepositRequests(uint64(g.slot), 4),
 			WithdrawalRequests: generateTestWithdrawalRequests(uint64(g.slot), 4),
 		}
 	}
@@ -171,11 +171,11 @@ func GenerateTestElectraBlockWithSidecar(t *testing.T, parent [32]byte, slot pri
 	return rob, sidecars
 }
 
-func generateTestDepositRequests(offset, n uint64) []*enginev1.DepositReceipt {
-	r := make([]*enginev1.DepositReceipt, n)
+func generateTestDepositRequests(offset, n uint64) []*enginev1.DepositRequest {
+	r := make([]*enginev1.DepositRequest, n)
 	var i uint64
 	for i = 0; i < n; i++ {
-		r[i] = &enginev1.DepositReceipt{
+		r[i] = &enginev1.DepositRequest{
 			Pubkey:                make([]byte, 48),
 			WithdrawalCredentials: make([]byte, 32),
 			Amount:                offset + i,
@@ -186,11 +186,11 @@ func generateTestDepositRequests(offset, n uint64) []*enginev1.DepositReceipt {
 	return r
 }
 
-func generateTestWithdrawalRequests(offset, n uint64) []*enginev1.ExecutionLayerWithdrawalRequest {
-	r := make([]*enginev1.ExecutionLayerWithdrawalRequest, n)
+func generateTestWithdrawalRequests(offset, n uint64) []*enginev1.WithdrawalRequest {
+	r := make([]*enginev1.WithdrawalRequest, n)
 	var i uint64
 	for i = 0; i < n; i++ {
-		r[i] = &enginev1.ExecutionLayerWithdrawalRequest{
+		r[i] = &enginev1.WithdrawalRequest{
 			SourceAddress:   make([]byte, 20),
 			ValidatorPubkey: make([]byte, 48),
 			Amount:          offset + i,

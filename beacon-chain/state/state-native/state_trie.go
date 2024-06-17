@@ -100,7 +100,7 @@ var electraFields = append(
 	types.NextWithdrawalValidatorIndex,
 	types.HistoricalSummaries,
 	types.LatestExecutionPayloadHeaderElectra,
-	types.DepositReceiptsStartIndex,
+	types.DepositRequestsStartIndex,
 	types.DepositBalanceToConsume,
 	types.ExitBalanceToConsume,
 	types.EarliestExitEpoch,
@@ -744,7 +744,7 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 		nextWithdrawalIndex:                 st.NextWithdrawalIndex,
 		nextWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
 		historicalSummaries:                 st.HistoricalSummaries,
-		depositReceiptsStartIndex:           st.DepositReceiptsStartIndex,
+		depositRequestsStartIndex:           st.DepositRequestsStartIndex,
 		depositBalanceToConsume:             st.DepositBalanceToConsume,
 		exitBalanceToConsume:                st.ExitBalanceToConsume,
 		earliestExitEpoch:                   st.EarliestExitEpoch,
@@ -862,7 +862,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		eth1DepositIndex:              b.eth1DepositIndex,
 		nextWithdrawalIndex:           b.nextWithdrawalIndex,
 		nextWithdrawalValidatorIndex:  b.nextWithdrawalValidatorIndex,
-		depositReceiptsStartIndex:     b.depositReceiptsStartIndex,
+		depositRequestsStartIndex:     b.depositRequestsStartIndex,
 		depositBalanceToConsume:       b.depositBalanceToConsume,
 		exitBalanceToConsume:          b.exitBalanceToConsume,
 		earliestExitEpoch:             b.earliestExitEpoch,
@@ -1286,8 +1286,8 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return ssz.Uint64Root(uint64(b.nextWithdrawalValidatorIndex)), nil
 	case types.HistoricalSummaries:
 		return stateutil.HistoricalSummariesRoot(b.historicalSummaries)
-	case types.DepositReceiptsStartIndex:
-		return ssz.Uint64Root(b.depositReceiptsStartIndex), nil
+	case types.DepositRequestsStartIndex:
+		return ssz.Uint64Root(b.depositRequestsStartIndex), nil
 	case types.DepositBalanceToConsume:
 		return ssz.Uint64Root(uint64(b.depositBalanceToConsume)), nil
 	case types.ExitBalanceToConsume:

@@ -62,7 +62,7 @@ type BeaconState struct {
 	nextWithdrawalValidatorIndex        primitives.ValidatorIndex
 
 	// Electra fields
-	depositReceiptsStartIndex     uint64
+	depositRequestsStartIndex     uint64
 	depositBalanceToConsume       primitives.Gwei
 	exitBalanceToConsume          primitives.Gwei
 	earliestExitEpoch             primitives.Epoch
@@ -119,7 +119,7 @@ type beaconStateMarshalable struct {
 	LatestExecutionPayloadHeaderElectra *enginev1.ExecutionPayloadHeaderElectra `json:"latest_execution_payload_header_electra" yaml:"latest_execution_payload_header_electra"`
 	NextWithdrawalIndex                 uint64                                  `json:"next_withdrawal_index" yaml:"next_withdrawal_index"`
 	NextWithdrawalValidatorIndex        primitives.ValidatorIndex               `json:"next_withdrawal_validator_index" yaml:"next_withdrawal_validator_index"`
-	DepositReceiptsStartIndex           uint64                                  `json:"deposit_receipts_start_index" yaml:"deposit_receipts_start_index"`
+	DepositRequestsStartIndex           uint64                                  `json:"deposit_requests_start_index" yaml:"deposit_requests_start_index"`
 	DepositBalanceToConsume             primitives.Gwei                         `json:"deposit_balance_to_consume" yaml:"deposit_balance_to_consume"`
 	ExitBalanceToConsume                primitives.Gwei                         `json:"exit_balance_to_consume" yaml:"exit_balance_to_consume"`
 	EarliestExitEpoch                   primitives.Epoch                        `json:"earliest_exit_epoch" yaml:"earliest_exit_epoch"`
@@ -189,7 +189,7 @@ func (b *BeaconState) MarshalJSON() ([]byte, error) {
 		LatestExecutionPayloadHeaderElectra: b.latestExecutionPayloadHeaderElectra,
 		NextWithdrawalIndex:                 b.nextWithdrawalIndex,
 		NextWithdrawalValidatorIndex:        b.nextWithdrawalValidatorIndex,
-		DepositReceiptsStartIndex:           b.depositReceiptsStartIndex,
+		DepositRequestsStartIndex:           b.depositRequestsStartIndex,
 		DepositBalanceToConsume:             b.depositBalanceToConsume,
 		ExitBalanceToConsume:                b.exitBalanceToConsume,
 		EarliestExitEpoch:                   b.earliestExitEpoch,

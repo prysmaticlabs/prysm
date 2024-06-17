@@ -290,7 +290,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxPendingPartialsPerWithdrawalsSweep: 8,
 	FullExitRequestAmount:                 0,
 	MaxWithdrawalRequestsPerPayload:       16,
-	UnsetDepositReceiptsStartIndex:        math.MaxUint64,
+	MaxDepositRequestsPerPayload:          8192, // 2**13 (= 8192)
+	UnsetDepositRequestsStartIndex:        math.MaxUint64,
 
 	// Values related to networking parameters.
 	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
