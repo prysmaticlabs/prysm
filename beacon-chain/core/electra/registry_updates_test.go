@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestProcessRegistryUpdates(t *testing.T) {
@@ -26,9 +27,9 @@ func TestProcessRegistryUpdates(t *testing.T) {
 		check func(*testing.T, state.BeaconState)
 	}{
 		{
-			name: "No rotation", // No validators exited.
+			name: "No rotation",
 			state: func() state.BeaconState {
-				base := &eth.BeaconState{
+				base := &eth.BeaconStateElectra{
 					Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 					Validators: []*eth.Validator{
 						{ExitEpoch: params.BeaconConfig().MaxSeedLookahead},
@@ -40,7 +41,7 @@ func TestProcessRegistryUpdates(t *testing.T) {
 					},
 					FinalizedCheckpoint: &eth.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 				}
-				st, err := state_native.InitializeFromProtoPhase0(base)
+				st, err := state_native.InitializeFromProtoElectra(base)
 				require.NoError(t, err)
 				return st
 			}(),
@@ -53,8 +54,7 @@ func TestProcessRegistryUpdates(t *testing.T) {
 		{
 			name: "Validators are activated",
 			state: func() state.BeaconState {
-				// Construct a state which
-				base := &eth.BeaconState{
+				base := &eth.BeaconStateElectra{
 					Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 					FinalizedCheckpoint: &eth.Checkpoint{Epoch: 6, Root: make([]byte, fieldparams.RootLength)},
 				}
@@ -65,7 +65,7 @@ func TestProcessRegistryUpdates(t *testing.T) {
 						ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
 					})
 				}
-				st, err := state_native.InitializeFromProtoPhase0(base)
+				st, err := state_native.InitializeFromProtoElectra(base)
 				require.NoError(t, err)
 				return st
 			}(),
@@ -80,8 +80,7 @@ func TestProcessRegistryUpdates(t *testing.T) {
 		{
 			name: "Validators are exited",
 			state: func() state.BeaconState {
-				// Construct a state which
-				base := &eth.BeaconState{
+				base := &eth.BeaconStateElectra{
 					Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 					FinalizedCheckpoint: &eth.Checkpoint{Epoch: 6, Root: make([]byte, fieldparams.RootLength)},
 				}
@@ -92,7 +91,7 @@ func TestProcessRegistryUpdates(t *testing.T) {
 						WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 					})
 				}
-				st, err := state_native.InitializeFromProtoPhase0(base)
+				st, err := state_native.InitializeFromProtoElectra(base)
 				require.NoError(t, err)
 				return st
 			}(),
@@ -108,11 +107,42 @@ func TestProcessRegistryUpdates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := electra.ProcessRegistryUpdates(context.TODO(), tt.state)
+			err := electra.ProcessRegistryUpdates(context.TODO(), tt.state)
 			require.NoError(t, err)
 			if tt.check != nil {
-				tt.check(t, res)
+				tt.check(t, tt.state)
 			}
 		})
 	}
+}
+
+func Benchmark_ProcessRegistryUpdates_MassEjection(b *testing.B) {
+	bal := params.BeaconConfig().EjectionBalance - 1
+	ffe := params.BeaconConfig().FarFutureEpoch
+	genValidators := func(num uint64) []*eth.Validator {
+		vals := make([]*eth.Validator, num)
+		for i := range vals {
+			vals[i] = &eth.Validator{
+				EffectiveBalance: bal,
+				ExitEpoch:        ffe,
+			}
+		}
+		return vals
+	}
+
+	st, err := util.NewBeaconStateElectra()
+	require.NoError(b, err)
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		if err := st.SetValidators(genValidators(100000)); err != nil {
+			panic(err)
+		}
+		b.StartTimer()
+
+		if err := electra.ProcessRegistryUpdates(context.TODO(), st); err != nil {
+			panic(err)
+		}
+	}
+
 }

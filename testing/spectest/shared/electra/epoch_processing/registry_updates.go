@@ -28,5 +28,5 @@ func RunRegistryUpdatesTests(t *testing.T, config string) {
 }
 
 func processRegistryUpdatesWrapper(_ *testing.T, state state.BeaconState) (state.BeaconState, error) {
-	return electra.ProcessRegistryUpdates(context.Background(), state)
+	return state, electra.ProcessRegistryUpdates(context.Background(), state)
 }
