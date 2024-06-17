@@ -74,8 +74,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
 		return errors.Wrap(err, "could not process rewards and penalties")
 	}
 
-	state, err = ProcessRegistryUpdates(ctx, state)
-	if err != nil {
+	if err := ProcessRegistryUpdates(ctx, state); err != nil {
 		return errors.Wrap(err, "could not process registry updates")
 	}
 

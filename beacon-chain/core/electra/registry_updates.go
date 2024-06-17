@@ -11,7 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
-// ProcessRegistryUpdates rotates validators in and out of active pool.
+// ProcessRegistryUpdates processes all validators eligible for the activation queue, all validators
+// which should be ejected, and all validators which are eligible for activation from then queue.
 //
 // Spec pseudocode definition:
 //
@@ -32,34 +33,37 @@ import (
 //	         for validator in state.validators:
 //	             if is_eligible_for_activation(state, validator):
 //	                 validator.activation_epoch = activation_epoch
-func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) error {
 	currentEpoch := time.CurrentEpoch(state)
 	ejectionBal := params.BeaconConfig().EjectionBalance
 	activationEpoch := helpers.ActivationExitEpoch(currentEpoch)
 	vals := state.Validators()
 	for idx, val := range vals {
+		// Handle validators eligible to join the activation queue.
 		if helpers.IsEligibleForActivationQueue(val, currentEpoch) {
 			val.ActivationEligibilityEpoch = currentEpoch + 1
 			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), val); err != nil {
-				return nil, err
+				return err
 			}
 		}
-		if helpers.IsActiveValidator(val, currentEpoch) && val.EffectiveBalance <= ejectionBal {
+		// Handle validator ejections.
+		if val.EffectiveBalance <= ejectionBal && helpers.IsActiveValidator(val, currentEpoch) {
 			var err error
-			maxExitEpoch, churn := validators.MaxExitEpochAndChurn(state) 
-			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), maxExitEpoch, churn)
+			// exitQueueEpoch and churn arguments are not used in electra.
+			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), 0 /*exitQueueEpoch*/, 0 /*churn*/)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 
+		// Activate all eligible validators.
 		if helpers.IsEligibleForActivation(state, val) {
 			val.ActivationEpoch = activationEpoch
 			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), val); err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
 
-	return state, nil
+	return nil
 }
