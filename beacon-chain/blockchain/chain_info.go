@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	coreState "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"go.opencensus.io/trace"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -71,6 +72,7 @@ type HeadFetcher interface {
 	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error)
+	HeadValidatorsIndicesFromAdvancedSlots(ctx context.Context, slot primitives.Slot) ([]primitives.ValidatorIndex, error)
 	HeadGenesisValidatorsRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool)
@@ -242,6 +244,22 @@ func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch primitives.Ep
 		return []primitives.ValidatorIndex{}, nil
 	}
 	return helpers.ActiveValidatorIndices(ctx, s.headState(ctx), epoch)
+}
+
+// HeadValidatorsIndicesFromAdvancedSlots returns a list of active validator indices from the head view of a given epoch.
+func (s *Service) HeadValidatorsIndicesFromAdvancedSlots(ctx context.Context, slot primitives.Slot) ([]primitives.ValidatorIndex, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	if !s.hasHeadState() {
+		return []primitives.ValidatorIndex{}, nil
+	}
+	rt := s.headRoot()
+	st, err := coreState.ProcessSlotsUsingNextSlotCache(ctx, s.headState(ctx), rt[:], slot)
+	if err != nil {
+		return nil, err
+	}
+	return helpers.ActiveValidatorIndices(ctx, st, slots.ToEpoch(slot))
 }
 
 // HeadGenesisValidatorsRoot returns genesis validators root of the head state.
