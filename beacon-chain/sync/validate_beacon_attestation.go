@@ -98,9 +98,9 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		a, ok := att.(*eth.AttestationElectra)
 		// This will never fail in practice because we asserted the version
 		if !ok {
-			err := errors.New("attestation has wrong type")
+			err := fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.AttestationElectra{}, att)
 			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject, err
+			return pubsub.ValidationIgnore, err
 		}
 		committeeIndex, validationRes, err = validateCommitteeIndexElectra(ctx, a)
 		if validationRes != pubsub.ValidationAccept {
@@ -169,7 +169,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 			a, ok := att.(*eth.Attestation)
 			// This will never fail in practice because we asserted the version
 			if !ok {
-				return pubsub.ValidationReject, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.Attestation{}, att)
+				return pubsub.ValidationIgnore, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.Attestation{}, att)
 			}
 			s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: a}})
 		}

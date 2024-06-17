@@ -459,7 +459,7 @@ func TestSavePendingAtts_BeyondLimit(t *testing.T) {
 	assert.Equal(t, 0, len(s.blkRootToPendingAtts[r2]), "Saved pending atts")
 }
 
-func Test_attsAreEqual_committee(t *testing.T) {
+func Test_attsAreEqual_Committee(t *testing.T) {
 	t.Run("Phase 0 equal", func(t *testing.T) {
 		att1 := &ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{

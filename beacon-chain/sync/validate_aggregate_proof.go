@@ -180,9 +180,9 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.Signed
 		a, ok := aggregate.(*ethpb.AttestationElectra)
 		// This will never fail in practice because we asserted the version
 		if !ok {
-			err := errors.New("attestation has wrong type")
+			err := fmt.Errorf("aggregate attestation has wrong type (expected %T, got %T)", &ethpb.AttestationElectra{}, aggregate)
 			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject, err
+			return pubsub.ValidationIgnore, err
 		}
 		committeeIndex, result, err = validateCommitteeIndexElectra(ctx, a)
 		if result != pubsub.ValidationAccept {

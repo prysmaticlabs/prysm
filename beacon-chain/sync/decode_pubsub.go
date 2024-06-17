@@ -56,23 +56,24 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
 	}
 	// Handle different message types across forks.
-	if topic == p2p.BlockSubnetTopicFormat {
+	switch topic {
+	case p2p.BlockSubnetTopicFormat:
 		m, err = extractDataType(types.BlockMap, fDigest[:], s.cfg.clock)
 		if err != nil {
 			return nil, err
 		}
-	}
-	if topic == p2p.AttestationSubnetTopicFormat {
+	case p2p.AttestationSubnetTopicFormat:
 		m, err = extractDataType(types.AttestationMap, fDigest[:], s.cfg.clock)
 		if err != nil {
 			return nil, err
 		}
-	}
-	if topic == p2p.AggregateAndProofSubnetTopicFormat {
+	case p2p.AggregateAndProofSubnetTopicFormat:
 		m, err = extractDataType(types.AggregateAttestationMap, fDigest[:], s.cfg.clock)
 		if err != nil {
 			return nil, err
 		}
+	default:
+		return nil, fmt.Errorf("topic %s is not supported", topic)
 	}
 	if err := s.cfg.p2p.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
