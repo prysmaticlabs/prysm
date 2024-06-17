@@ -182,6 +182,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChangesWithRetry(ctx context.Cont
 	if err != nil {
 		km.updatePublicKeys(make([][48]byte, 0)) // update the keys to empty as the file was never loaded correctly
 		km.retriesRemaining--
+		log.WithError(err).Debug("could not refresh remote keys from file changes")
 		log.WithFields(logrus.Fields{"path": km.keyFilePath, "retries_remaining": km.retriesRemaining, "retry_delay": retryDelay}).Warnf("Key file does not exist. Please create a new one. Retrying ...")
 		time.Sleep(retryDelay)
 		return km.refreshRemoteKeysFromFileChangesWithRetry(ctx, retryDelay)
@@ -253,7 +254,6 @@ func (km *Keymanager) savePublicKeysToFile(providedPublicKeys map[string][48]byt
 		return errors.New("no key file provided")
 	}
 	pubkeys := make([][48]byte, 0)
-	km.lock.Lock()
 	// Open the file with write and truncate permissions
 	f, err := os.OpenFile(km.keyFilePath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
 	if err != nil {
@@ -273,9 +273,7 @@ func (km *Keymanager) savePublicKeysToFile(providedPublicKeys map[string][48]byt
 		}
 		pubkeys = append(pubkeys, value)
 	}
-	km.providedPublicKeys = pubkeys
-	km.accountsChangedFeed.Send(pubkeys)
-	km.lock.Unlock()
+	km.updatePublicKeys(pubkeys)
 	return nil
 }
 
@@ -365,16 +363,17 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) erro
 
 func (km *Keymanager) updatePublicKeys(keys [][48]byte) {
 	km.lock.Lock()
+	defer km.lock.Unlock()
 	km.providedPublicKeys = keys
 	km.accountsChangedFeed.Send(keys)
-	km.lock.Unlock()
-	log.Debug("Updated public keys")
+	log.WithField("count", len(km.providedPublicKeys)).Debug("Updated public keys")
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys
 func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	km.lock.RLock()
 	defer km.lock.RUnlock()
+	log.Debug("Fetched validating public keys", "count", len(km.providedPublicKeys))
 	return km.providedPublicKeys, nil
 }
 
@@ -385,10 +384,14 @@ func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 		erroredResponsesTotal.Inc()
 		return nil, err
 	}
-
+	signature, err := km.client.Sign(ctx, hexutil.Encode(request.PublicKey), signRequest)
+	if err != nil {
+		erroredResponsesTotal.Inc()
+		return nil, errors.Wrap(err, "Failed to sign the request")
+	}
+	log.Debug("Successfully signed the request", "publicKey", request.PublicKey)
 	signRequestsTotal.Inc()
-
-	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), signRequest)
+	return signature, nil
 }
 
 // getSignRequestJson returns a json request based on the SignRequest type.

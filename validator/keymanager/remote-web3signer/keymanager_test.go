@@ -218,6 +218,42 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 	require.Equal(t, "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", hexutil.Encode(km.providedPublicKeys[0][:]))
 }
 
+func TestRefreshRemoteKeysFromFileChangesWithRetry(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	logHook := logTest.NewGlobal()
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	require.NoError(t, err)
+	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
+
+	require.NoError(t, err)
+	km, err := NewKeymanager(ctx, &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+	})
+	require.NoError(t, err)
+	go func() {
+		km.keyFilePath = keyFilePath
+		require.NoError(t, km.refreshRemoteKeysFromFileChangesWithRetry(ctx, 1*time.Second))
+	}()
+	// wait for file detection
+	time.Sleep(1 * time.Second)
+	require.LogsContain(t, logHook, "Key file does not exist")
+	go func() {
+		bytesBuf := new(bytes.Buffer)
+		_, err = bytesBuf.WriteString("8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055") // test without 0x
+		require.NoError(t, err)
+		err = file.WriteFile(keyFilePath, bytesBuf.Bytes())
+		require.NoError(t, err)
+	}()
+	// wait for file write to reinitialize
+	time.Sleep(2 * time.Second)
+	cancel()
+	require.LogsContain(t, logHook, "Successfully initialized file watcher")
+	keys, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(keys))
+}
+
 func TestKeymanager_Sign(t *testing.T) {
 	client := &MockClient{
 		Signature: "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9",
