@@ -221,8 +221,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 
 func (s *Service) executePostFinalizationTasks(ctx context.Context, finalizedState state.BeaconState) {
 	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
-	finalizedState.SaveValidatorIndices() // used to handle Validator index invariant from EIP6110
-	go s.sendNewFinalizedEvent(ctx, finalizedState)
+	go func() {
+		finalizedState.SaveValidatorIndices() // used to handle Validator index invariant from EIP6110
+		s.sendNewFinalizedEvent(ctx, finalizedState)
+	}()
 	depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
 	go func() {
 		s.insertFinalizedDeposits(depCtx, finalized.Root)

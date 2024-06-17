@@ -123,14 +123,14 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 // Spec pseudocode definition:
 // def process_deposit(state: BeaconState, deposit: Deposit) -> None:
 //
-//		# Verify the Merkle branch
-//		assert is_valid_merkle_branch(
-//		    leaf=hash_tree_root(deposit.data),
-//		    branch=deposit.proof,
-//		    depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,  # Add 1 for the List length mix-in
-//		    index=state.eth1_deposit_index,
-//		    root=state.eth1_data.deposit_root,
-//		)
+//	# Verify the Merkle branch
+//	assert is_valid_merkle_branch(
+//		leaf=hash_tree_root(deposit.data),
+//		branch=deposit.proof,
+//		depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,  # Add 1 for the List length mix-in
+//		index=state.eth1_deposit_index,
+//		root=state.eth1_data.deposit_root,
+//	)
 //
 //	 # Deposits must be processed in order
 //	 state.eth1_deposit_index += 1
@@ -200,10 +200,6 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 			if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
 				return nil, err
 			}
-			val, err := beaconState.ValidatorAtIndex(index)
-			if err != nil {
-				return nil, err
-			}
 			if verifySignature {
 				valid, err := IsValidDepositSignature(data)
 				if err != nil {
@@ -212,6 +208,10 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 				if !valid {
 					return beaconState, nil
 				}
+			}
+			val, err := beaconState.ValidatorAtIndex(index)
+			if err != nil {
+				return nil, err
 			}
 			if helpers.IsCompoundingWithdrawalCredential(withdrawalCredentials) && helpers.HasETH1WithdrawalCredential(val) {
 				if err := helpers.SwitchToCompoundingValidator(beaconState, index); err != nil {
