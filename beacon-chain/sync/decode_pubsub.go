@@ -51,11 +51,10 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	if base == nil {
 		return nil, p2p.ErrMessageNotMapped
 	}
-	_, ok := proto.Clone(base).(ssz.Unmarshaler)
+	m, ok := proto.Clone(base).(ssz.Unmarshaler)
 	if !ok {
 		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
 	}
-	var m ssz.Unmarshaler
 	// Handle different message types across forks.
 	switch topic {
 	case p2p.BlockSubnetTopicFormat:
@@ -73,8 +72,6 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		if err != nil {
 			return nil, err
 		}
-	default:
-		return nil, fmt.Errorf("topic %s is not supported", topic)
 	}
 	if err := s.cfg.p2p.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
