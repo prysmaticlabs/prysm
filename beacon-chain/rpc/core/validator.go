@@ -250,37 +250,62 @@ func (s *Service) SubmitSignedContributionAndProof(
 // SubmitSignedAggregateSelectionProof verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
 func (s *Service) SubmitSignedAggregateSelectionProof(
 	ctx context.Context,
-	req *ethpb.SignedAggregateSubmitRequest,
+	agg ethpb.SignedAggregateAttAndProof,
 ) *RpcError {
 	ctx, span := trace.StartSpan(ctx, "coreService.SubmitSignedAggregateSelectionProof")
 	defer span.End()
 
-	if req.SignedAggregateAndProof == nil || req.SignedAggregateAndProof.Message == nil ||
-		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
+	if agg == nil {
+		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
+	}
+	attAndProof := agg.AggregateAttestationAndProof()
+	if attAndProof == nil {
+		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
+	}
+	att := attAndProof.AggregateVal()
+	if att == nil {
+		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
+	}
+	data := att.GetData()
+	if data == nil {
 		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
 	}
 	emptySig := make([]byte, fieldparams.BLSSignatureLength)
-	if bytes.Equal(req.SignedAggregateAndProof.Signature, emptySig) ||
-		bytes.Equal(req.SignedAggregateAndProof.Message.SelectionProof, emptySig) {
+	if bytes.Equal(agg.GetSignature(), emptySig) || bytes.Equal(attAndProof.GetSelectionProof(), emptySig) {
 		return &RpcError{Err: errors.New("signed signatures can't be zero hashes"), Reason: BadRequest}
 	}
 
 	// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
-	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
-		s.GenesisTimeFetcher.GenesisTime(), params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
+	if err := helpers.ValidateAttestationTime(
+		data.Slot,
+		s.GenesisTimeFetcher.GenesisTime(),
+		params.BeaconConfig().MaximumGossipClockDisparityDuration(),
+	); err != nil {
 		return &RpcError{Err: errors.New("attestation slot is no longer valid from current time"), Reason: BadRequest}
 	}
 
-	if err := s.Broadcaster.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
+	if err := s.Broadcaster.Broadcast(ctx, agg); err != nil {
 		return &RpcError{Err: &AggregateBroadcastFailedError{err: err}, Reason: Internal}
 	}
 
-	log.WithFields(logrus.Fields{
-		"slot":            req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
-		"committeeIndex":  req.SignedAggregateAndProof.Message.Aggregate.Data.CommitteeIndex,
-		"validatorIndex":  req.SignedAggregateAndProof.Message.AggregatorIndex,
-		"aggregatedCount": req.SignedAggregateAndProof.Message.Aggregate.AggregationBits.Count(),
-	}).Debug("Broadcasting aggregated attestation and proof")
+	var fields logrus.Fields
+	if agg.Version() >= version.Electra {
+		fields = logrus.Fields{
+			"slot":             data.Slot,
+			"committeeCount":   att.CommitteeBitsVal().Count(),
+			"committeeIndices": att.CommitteeBitsVal().BitIndices(),
+			"validatorIndex":   attAndProof.GetAggregatorIndex(),
+			"aggregatedCount":  att.GetAggregationBits().Count(),
+		}
+	} else {
+		fields = logrus.Fields{
+			"slot":            data.Slot,
+			"committeeIndex":  data.CommitteeIndex,
+			"validatorIndex":  attAndProof.GetAggregatorIndex(),
+			"aggregatedCount": att.GetAggregationBits().Count(),
+		}
+	}
+	log.WithFields(fields).Debug("Broadcasting aggregated attestation and proof")
 
 	return nil
 }
