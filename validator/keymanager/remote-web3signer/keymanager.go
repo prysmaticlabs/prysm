@@ -2,7 +2,6 @@ package remote_web3signer
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/fsnotify/fsnotify"
@@ -30,6 +30,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/exp/maps"
+)
+
+const (
+	maxRetries = 60
+	retryDelay = 10 * time.Second
 )
 
 // SetupConfig includes configuration values for initializing.
@@ -55,10 +60,11 @@ type SetupConfig struct {
 type Keymanager struct {
 	client                internal.HttpSignerClient
 	genesisValidatorsRoot []byte
-	providedPublicKeys    [][48]byte // source of truth flag loaded + file loaded + api loaded keys
-	flagLoadedPublicKeys  [][48]byte // stores what was provided from flag
+	providedPublicKeys    [][48]byte          // source of truth flag loaded + file loaded + api loaded keys
+	flagLoadedKeysMap     map[string][48]byte // stores what was provided from flag as a map
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
+	retriesRemaining      int
 	keyFilePath           string
 	lock                  sync.RWMutex
 }
@@ -80,18 +86,15 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
 		validator:             validator.New(),
+		retriesRemaining:      maxRetries,
 		keyFilePath:           cfg.KeyFilePath,
 	}
 
 	keyFileExists := false
 	if km.keyFilePath != "" {
-		// Check if the directory and file exists, if not create it
-		keyFileExists, err = file.Exists(km.keyFilePath, file.Regular)
+		keyFileExists, err = checkFileExists(km.keyFilePath, maxRetries, retryDelay)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not check if remote signer persistent keys exists in %s", km.keyFilePath)
-		}
-		if !keyFileExists {
-			log.WithField("path", km.keyFilePath).Fatal("Key file does not exist. Please create a new one. The file should contain public keys in hex format 1 on each line.")
+			return nil, errors.Wrap(err, "could not check if file exists")
 		}
 	}
 
@@ -122,7 +125,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		}
 		flagLoadedKeys[key] = bytesutil.ToBytes48(decodedKey)
 	}
-	km.flagLoadedPublicKeys = maps.Values(flagLoadedKeys)
+	km.flagLoadedKeysMap = flagLoadedKeys
 
 	// load from file
 	if keyFileExists {
@@ -135,7 +138,12 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		km.providedPublicKeys = maps.Values(fileKeys)
 		km.lock.Unlock()
 		// create a file watcher
-		go km.refreshRemoteKeysFromFileChanges(ctx)
+		go func() {
+			err = km.refreshRemoteKeysFromFileChangesWithRetry(ctx, retryDelay)
+			if err != nil {
+				log.WithError(err).Error("could not refresh remote keys from file changes")
+			}
+		}()
 	} else {
 		km.lock.Lock()
 		km.providedPublicKeys = maps.Values(flagLoadedKeys)
@@ -143,6 +151,42 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	}
 
 	return km, nil
+}
+
+func checkFileExists(path string, retriesRemaining int, retryDelay time.Duration) (bool, error) {
+	rr := retriesRemaining // make a copy to not alter the original
+	if rr == 0 {
+		return false, errors.New("file check retries remaining exceeded")
+	}
+
+	// Check if the directory and file exists, if not create it
+	keyFileExists, err := file.Exists(path, file.Regular)
+	if err != nil {
+		return false, errors.Wrapf(err, "could not check if remote signer persistent keys exists in %s", path)
+	}
+
+	if !keyFileExists {
+		rr--
+		log.WithFields(logrus.Fields{"path": path, "retries_remaining": rr, "retry_delay": retryDelay}).Warnf("Failed to find the key file. Retrying until the file is detected ...")
+		time.Sleep(retryDelay)
+		return checkFileExists(path, rr, retryDelay)
+	}
+	return true, nil
+}
+
+func (km *Keymanager) refreshRemoteKeysFromFileChangesWithRetry(ctx context.Context, retryDelay time.Duration) error {
+	if km.retriesRemaining == 0 {
+		return errors.New("file check retries remaining exceeded")
+	}
+	err := km.refreshRemoteKeysFromFileChanges(ctx)
+	if err != nil {
+		km.updatePublicKeys(make([][48]byte, 0)) // update the keys to empty as the file was never loaded correctly
+		km.retriesRemaining--
+		log.WithFields(logrus.Fields{"path": km.keyFilePath, "retries_remaining": km.retriesRemaining, "retry_delay": retryDelay}).Warnf("Key file does not exist. Please create a new one. Retrying ...")
+		time.Sleep(retryDelay)
+		return km.refreshRemoteKeysFromFileChangesWithRetry(ctx, retryDelay)
+	}
+	return nil
 }
 
 func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
@@ -180,7 +224,7 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 			log.WithFields(logrus.Fields{
 				"filepath": km.keyFilePath,
 				"key":      line,
-			}).Fatal("Invalid public key in remote signer key file")
+			}).Error("Invalid public key in remote signer key file")
 			continue
 		}
 		if _, found := seenKeys[line]; !found {
@@ -199,7 +243,7 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 		return nil, nil, errors.Wrap(err, "could not scan remote signer public key file")
 	}
 	if len(keys) == 0 {
-		log.Warn("Remote signer key file: no valid public keys found")
+		log.Warn("Remote signer key file: no valid public keys found. Defaulting to flag provided keys if any exist.")
 	}
 	return keys, seenKeys, nil
 }
@@ -209,28 +253,42 @@ func (km *Keymanager) savePublicKeysToFile(providedPublicKeys map[string][48]byt
 		return errors.New("no key file provided")
 	}
 	pubkeys := make([][48]byte, 0)
-	var bytesBuf bytes.Buffer
+	km.lock.Lock()
+	// Open the file with write and truncate permissions
+	f, err := os.OpenFile(km.keyFilePath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.WithError(err).Error("could not close file, proceeding without closing the file")
+		}
+	}(f)
+
+	// Iterate through all lines in the slice and write them to the file
 	for key, value := range providedPublicKeys {
-		bytesBuf.WriteString(key)
-		bytesBuf.WriteString("\n")
+		if _, err := f.WriteString(key + "\n"); err != nil {
+			return fmt.Errorf("error writing line to file: %w", err)
+		}
 		pubkeys = append(pubkeys, value)
 	}
-
-	km.lock.Lock()
-	if err := file.WriteFile(km.keyFilePath, bytesBuf.Bytes()); err != nil {
-		km.lock.Unlock()
-		return errors.Wrapf(err, "could not write to file %s", km.keyFilePath)
-	}
 	km.providedPublicKeys = pubkeys
+	km.accountsChangedFeed.Send(pubkeys)
 	km.lock.Unlock()
 	return nil
 }
 
-func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
+func (km *Keymanager) isEmptyPublicKeys() bool {
+	km.lock.RLock()
+	defer km.lock.RUnlock()
+	return len(km.providedPublicKeys) == 0
+}
+
+func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.WithError(err).Error("Could not initialize file watcher")
-		return
+		return errors.Wrap(err, "could not initialize file watcher")
 	}
 	defer func() {
 		if err := watcher.Close(); err != nil {
@@ -239,45 +297,54 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 	}()
 	initialFileInfo, err := os.Stat(km.keyFilePath)
 	if err != nil {
-		log.WithError(err).Error("Could not stat remote signer public key file")
-		return
+		return errors.Wrap(err, "could not stat remote signer public key file")
 	}
 	initialFileSize := initialFileInfo.Size()
 	if err := watcher.Add(km.keyFilePath); err != nil {
-		log.WithError(err).WithField("filepath", km.keyFilePath).Errorf("Could not add file to file watcher")
-		return
+		return errors.Wrap(err, "could not add file to file watcher")
+	}
+	log.WithField("path", km.keyFilePath).Info("Successfully initialized file watcher")
+	km.retriesRemaining = maxRetries // reset retries to default
+	// reinitialize keys if watcher reinitialized
+	if km.isEmptyPublicKeys() {
+		_, fk, err := km.readKeyFile()
+		if err != nil {
+			return errors.Wrap(err, "Could not read key file")
+		}
+		maps.Copy(fk, km.flagLoadedKeysMap)
+		km.updatePublicKeys(maps.Values(fk))
 	}
 	for {
 		select {
 		case e, ok := <-watcher.Events:
 			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
-				return
+				log.Info("Closing file watcher")
+				return nil
 			}
 			log.WithFields(logrus.Fields{
 				"event": e.Name,
 				"op":    e.Op.String(),
 			}).Debug("Remote signer key file event triggered")
 			if e.Has(fsnotify.Remove) {
-				log.Fatalln("Remote signer key file was removed! Restart the validator client with the appropriate remote signer file")
+				return errors.New("remote signer key file was removed")
 			}
 			currentFileInfo, err := os.Stat(km.keyFilePath)
 			if err != nil {
-				log.Fatalln("Could not stat remote signer public key file")
-				return
+				return errors.Wrap(err, "could not stat remote signer public key file")
 			}
 			if currentFileInfo.Size() != initialFileSize {
 				log.Info("Remote signer key file updated")
 				fileKeys, _, err := km.readKeyFile()
 				if err != nil {
-					log.WithError(err).Fatalln("Could not read key file")
+					return errors.New("could not read key file")
 				}
 				if len(fileKeys) == 0 {
 					log.Warnln("Remote signer key file no longer has keys, defaulting to flag provided keys")
-					fileKeys = km.flagLoadedPublicKeys
+					fileKeys = maps.Values(km.flagLoadedKeysMap)
 				}
 				currentKeys, err := km.FetchValidatingPublicKeys(ctx)
 				if err != nil {
-					log.WithError(err).Fatalln("Could not fetch current keys")
+					return errors.Wrap(err, "could not fetch current keys")
 				}
 				if !slices.Equal(currentKeys, fileKeys) {
 					km.updatePublicKeys(fileKeys)
@@ -286,11 +353,12 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) {
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok { // Channel was closed (i.e. Watcher.Close() was called).
-				return
+				log.Info("Closing file watcher")
+				return nil
 			}
-			log.WithError(err).WithField("filepath", km.keyFilePath).Error("Could not watch for file changes")
+			return errors.Wrap(err, "could not watch for file changes")
 		case <-ctx.Done():
-			return
+			return nil
 		}
 	}
 }
