@@ -9,6 +9,7 @@ import (
 	c "github.com/patrickmn/go-cache"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -251,4 +252,30 @@ func TestKV_Unaggregated_UnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	assert.DeepEqual(t, []*ethpb.Attestation{att2}, returned)
 	returned = cache.UnaggregatedAttestationsBySlotIndex(ctx, 2, 1)
 	assert.DeepEqual(t, []*ethpb.Attestation{att3}, returned)
+}
+
+func TestKV_Unaggregated_UnaggregatedAttestationsBySlotIndexElectra(t *testing.T) {
+	cache := NewAttCaches()
+
+	committeeBits := primitives.NewAttestationCommitteeBits()
+	committeeBits.SetBitAt(1, true)
+	att1 := util.HydrateAttestationElectra(&ethpb.AttestationElectra{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b101}, CommitteeBits: committeeBits})
+	committeeBits = primitives.NewAttestationCommitteeBits()
+	committeeBits.SetBitAt(2, true)
+	att2 := util.HydrateAttestationElectra(&ethpb.AttestationElectra{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b110}, CommitteeBits: committeeBits})
+	committeeBits = primitives.NewAttestationCommitteeBits()
+	committeeBits.SetBitAt(1, true)
+	att3 := util.HydrateAttestationElectra(&ethpb.AttestationElectra{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110}, CommitteeBits: committeeBits})
+	atts := []*ethpb.AttestationElectra{att1, att2, att3}
+
+	for _, att := range atts {
+		require.NoError(t, cache.SaveUnaggregatedAttestation(att))
+	}
+	ctx := context.Background()
+	returned := cache.UnaggregatedAttestationsBySlotIndexElectra(ctx, 1, 1)
+	assert.DeepEqual(t, []*ethpb.AttestationElectra{att1}, returned)
+	returned = cache.UnaggregatedAttestationsBySlotIndexElectra(ctx, 1, 2)
+	assert.DeepEqual(t, []*ethpb.AttestationElectra{att2}, returned)
+	returned = cache.UnaggregatedAttestationsBySlotIndexElectra(ctx, 2, 1)
+	assert.DeepEqual(t, []*ethpb.AttestationElectra{att3}, returned)
 }

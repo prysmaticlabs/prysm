@@ -451,3 +451,57 @@ func TestSubmitSignedAggregateSelectionProof_InvalidSlot(t *testing.T) {
 	_, err := aggregatorServer.SubmitSignedAggregateSelectionProof(context.Background(), req)
 	require.ErrorContains(t, "attestation slot is no longer valid from current time", err)
 }
+
+func TestSubmitSignedAggregateSelectionProofElectra_ZeroHashesSignatures(t *testing.T) {
+	aggregatorServer := &Server{
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+	}
+	req := &ethpb.SignedAggregateSubmitElectraRequest{
+		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProofElectra{
+			Signature: make([]byte, fieldparams.BLSSignatureLength),
+			Message: &ethpb.AggregateAttestationAndProofElectra{
+				Aggregate: &ethpb.AttestationElectra{
+					Data: &ethpb.AttestationData{},
+				},
+			},
+		},
+	}
+	_, err := aggregatorServer.SubmitSignedAggregateSelectionProofElectra(context.Background(), req)
+	require.ErrorContains(t, "signed signatures can't be zero hashes", err)
+
+	req = &ethpb.SignedAggregateSubmitElectraRequest{
+		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProofElectra{
+			Signature: []byte{'a'},
+			Message: &ethpb.AggregateAttestationAndProofElectra{
+				Aggregate: &ethpb.AttestationElectra{
+					Data: &ethpb.AttestationData{},
+				},
+				SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
+			},
+		},
+	}
+	_, err = aggregatorServer.SubmitSignedAggregateSelectionProofElectra(context.Background(), req)
+	require.ErrorContains(t, "signed signatures can't be zero hashes", err)
+}
+
+func TestSubmitSignedAggregateSelectionProofElectra_InvalidSlot(t *testing.T) {
+	c := &mock.ChainService{Genesis: time.Now()}
+	aggregatorServer := &Server{
+		CoreService: &core.Service{
+			GenesisTimeFetcher: c,
+		},
+	}
+	req := &ethpb.SignedAggregateSubmitElectraRequest{
+		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProofElectra{
+			Signature: []byte{'a'},
+			Message: &ethpb.AggregateAttestationAndProofElectra{
+				SelectionProof: []byte{'a'},
+				Aggregate: &ethpb.AttestationElectra{
+					Data: &ethpb.AttestationData{Slot: 1000},
+				},
+			},
+		},
+	}
+	_, err := aggregatorServer.SubmitSignedAggregateSelectionProofElectra(context.Background(), req)
+	require.ErrorContains(t, "attestation slot is no longer valid from current time", err)
+}
