@@ -269,8 +269,8 @@ func (s *Service) incrementalDAS(root [fieldparams.RootLength]byte, sampleCount 
 	}
 }
 
-// DataColumnSamplingLoop runs incremental DAS on block when received.
-func (s *Service) DataColumnSamplingLoop(ctx context.Context) {
+// DataColumnSamplingRoutine runs incremental DAS on block when received.
+func (s *Service) DataColumnSamplingRoutine(ctx context.Context) {
 	// Create a subscription to the state feed.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
