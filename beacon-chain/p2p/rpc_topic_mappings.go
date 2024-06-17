@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -116,7 +117,7 @@ var RPCTopicMappings = map[string]interface{}{
 	// DataColumnSidecarsByRange v1 Message
 	RPCDataColumnSidecarsByRangeTopicV1: new(pb.DataColumnSidecarsByRangeRequest),
 	// DataColumnSidecarsByRoot v1 Message
-	RPCDataColumnSidecarsByRootTopicV1: new(p2ptypes.BlobSidecarsByRootReq),
+	RPCDataColumnSidecarsByRootTopicV1: new(p2ptypes.DataColumnSidecarsByRootReq),
 }
 
 // Maps all registered protocol prefixes.
