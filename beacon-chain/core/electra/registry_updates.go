@@ -12,7 +12,6 @@ import (
 )
 
 // ProcessRegistryUpdates rotates validators in and out of active pool.
-// the amount to rotate is determined churn limit.
 //
 // Spec pseudocode definition:
 //
@@ -47,7 +46,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		}
 		if helpers.IsActiveValidator(val, currentEpoch) && val.EffectiveBalance <= ejectionBal {
 			var err error
-			maxExitEpoch, churn := validators.MaxExitEpochAndChurn(state)
+			maxExitEpoch, churn := validators.MaxExitEpochAndChurn(state) 
 			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), maxExitEpoch, churn)
 			if err != nil {
 				return nil, err
