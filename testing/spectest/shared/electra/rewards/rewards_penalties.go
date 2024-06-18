@@ -39,6 +39,7 @@ func (d *Delta) unmarshalSSZ(buf []byte) error {
 
 // RunPrecomputeRewardsAndPenaltiesTests executes "rewards/{basic, leak, random}" tests.
 func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
+	t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 	require.NoError(t, utils.SetConfig(t, config))
 
 	_, testsFolderPath := utils.TestFolders(t, config, "electra", "rewards")

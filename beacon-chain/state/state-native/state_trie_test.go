@@ -844,6 +844,7 @@ func TestBeaconState_InitializeInactivityScoresCorrectly_Deneb(t *testing.T) {
 }
 
 func TestBeaconChainCopy_Electra(t *testing.T) {
+	t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 	// Load a serialized Electra state from disk.
 	// This is a fully hydrated random test case from spectests.
 	serializedBytes, err := util.BazelFileBytes("tests/mainnet/electra/ssz_static/BeaconState/ssz_random/case_0/serialized.ssz_snappy")
