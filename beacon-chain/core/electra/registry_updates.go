@@ -2,6 +2,7 @@ package electra
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
@@ -43,7 +44,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) error 
 		if helpers.IsEligibleForActivationQueue(val, currentEpoch) {
 			val.ActivationEligibilityEpoch = currentEpoch + 1
 			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), val); err != nil {
-				return err
+				return fmt.Errorf("failed to update eligible validator at index %d: %w", idx, err)
 			}
 		}
 		// Handle validator ejections.
@@ -52,7 +53,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) error 
 			// exitQueueEpoch and churn arguments are not used in electra.
 			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), 0 /*exitQueueEpoch*/, 0 /*churn*/)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to initiate validator exit at index %d: %w", idx, err)
 			}
 		}
 
@@ -60,7 +61,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) error 
 		if helpers.IsEligibleForActivation(state, val) {
 			val.ActivationEpoch = activationEpoch
 			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), val); err != nil {
-				return err
+				return fmt.Errorf("failed to activate validator at index %d: %w", idx, err)
 			}
 		}
 	}
