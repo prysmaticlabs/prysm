@@ -12,7 +12,7 @@ import (
 )
 
 // ProcessRegistryUpdates processes all validators eligible for the activation queue, all validators
-// which should be ejected, and all validators which are eligible for activation from then queue.
+// which should be ejected, and all validators which are eligible for activation from the queue.
 //
 // Spec pseudocode definition:
 //
