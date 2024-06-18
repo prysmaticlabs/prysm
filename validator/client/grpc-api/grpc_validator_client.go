@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -21,6 +22,7 @@ import (
 type grpcValidatorClient struct {
 	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
 	isEventStreamRunning      bool
+	eventStreamLock           sync.Mutex
 }
 
 func (c *grpcValidatorClient) Duties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
@@ -151,17 +153,29 @@ func (*grpcValidatorClient) AggregatedSyncSelections(context.Context, []iface.Sy
 }
 
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
-	return &grpcValidatorClient{ethpb.NewBeaconNodeValidatorClient(cc), false}
+	return &grpcValidatorClient{
+		beaconNodeValidatorClient: ethpb.NewBeaconNodeValidatorClient(cc),
+		isEventStreamRunning:      false,
+	}
 }
 
 func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *eventClient.Event) {
 	ctx, span := trace.StartSpan(ctx, "validator.gRPCClient.StartEventStream")
 	defer span.End()
+
+	c.eventStreamLock.Lock()
+
+	if c.isEventStreamRunning {
+		c.eventStreamLock.Unlock()
+		return
+	}
+
 	if len(topics) == 0 {
 		eventsChannel <- &eventClient.Event{
 			EventType: eventClient.EventError,
 			Data:      []byte(errors.New("no topics were added").Error()),
 		}
+		c.eventStreamLock.Unlock()
 		return
 	}
 	// TODO(13563): ONLY WORKS WITH HEAD TOPIC RIGHT NOW/ONLY PROVIDES THE SLOT
@@ -181,15 +195,21 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 		log.Warn("gRPC only supports the head topic, other topics will be ignored")
 	}
 
+	log.WithField("topics", topics).Info("Starting event stream")
+
 	stream, err := c.beaconNodeValidatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
 	if err != nil {
 		eventsChannel <- &eventClient.Event{
 			EventType: eventClient.EventConnectionError,
 			Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
 		}
+		c.eventStreamLock.Unlock()
 		return
 	}
+
 	c.isEventStreamRunning = true
+	c.eventStreamLock.Unlock()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -243,6 +263,8 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 }
 
 func (c *grpcValidatorClient) EventStreamIsRunning() bool {
+	c.eventStreamLock.Lock()
+	defer c.eventStreamLock.Unlock()
 	return c.isEventStreamRunning
 }
 

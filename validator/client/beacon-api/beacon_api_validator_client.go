@@ -3,6 +3,7 @@ package beacon_api
 import (
 	"context"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -25,6 +26,7 @@ type beaconApiValidatorClient struct {
 	beaconBlockConverter    BeaconBlockConverter
 	prysmChainClient        iface.PrysmChainClient
 	isEventStreamRunning    bool
+	eventStreamLock         sync.Mutex
 }
 
 func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...ValidatorClientOpt) iface.ValidatorClient {
@@ -193,6 +195,15 @@ func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *emp
 }
 
 func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *event.Event) {
+	c.eventStreamLock.Lock()
+
+	if c.isEventStreamRunning {
+		c.eventStreamLock.Unlock()
+		return
+	}
+
+	log.WithField("topics", topics).Info("Starting event stream")
+
 	client := &http.Client{} // event stream should not be subject to the same settings as other api calls, so we won't use c.jsonRestHandler.HttpClient()
 	eventStream, err := event.NewEventStream(ctx, client, c.jsonRestHandler.Host(), topics)
 	if err != nil {
@@ -200,14 +211,19 @@ func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context, topics 
 			EventType: event.EventError,
 			Data:      []byte(errors.Wrap(err, "failed to start event stream").Error()),
 		}
+		c.eventStreamLock.Unlock()
 		return
 	}
+
 	c.isEventStreamRunning = true
+	c.eventStreamLock.Unlock()
 	eventStream.Subscribe(eventsChannel)
 	c.isEventStreamRunning = false
 }
 
 func (c *beaconApiValidatorClient) EventStreamIsRunning() bool {
+	c.eventStreamLock.Lock()
+	defer c.eventStreamLock.Unlock()
 	return c.isEventStreamRunning
 }
 

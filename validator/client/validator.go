@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/client"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	apiiface "github.com/prysmaticlabs/prysm/v5/api/client/beacon/iface"
 	eventClient "github.com/prysmaticlabs/prysm/v5/api/client/event"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
@@ -71,6 +72,7 @@ var (
 type validator struct {
 	duties                             *ethpb.DutiesResponse
 	ticker                             slots.Ticker
+	lastSecondTicker                   slots.Ticker
 	genesisTime                        uint64
 	highestValidSlot                   primitives.Slot
 	slotFeed                           *event.Feed
@@ -90,6 +92,7 @@ type validator struct {
 	chainClient                        iface.ChainClient
 	nodeClient                         iface.NodeClient
 	prysmChainClient                   iface.PrysmChainClient
+	healthTracker                      *beacon.NodeHealthTracker
 	db                                 db.Database
 	km                                 keymanager.IKeymanager
 	web3SignerConfig                   *remoteweb3signer.SetupConfig
@@ -116,6 +119,7 @@ type validator struct {
 	blacklistedPubkeysLock             sync.RWMutex
 	attSelectionLock                   sync.Mutex
 	dutiesLock                         sync.RWMutex
+	pubkeyToValidatorIndexLock         sync.Mutex
 }
 
 type validatorStatus struct {
@@ -132,6 +136,7 @@ type attSelectionKey struct {
 // Done cleans up the validator.
 func (v *validator) Done() {
 	v.ticker.Done()
+	v.lastSecondTicker.Done()
 }
 
 // WaitForKeymanagerInitialization checks if the validator needs to wait for keymanager initialization.
@@ -269,6 +274,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	}
 
 	v.genesisTime = chainStartRes.GenesisTime
+	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
 
 	curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
 	if err != nil {
@@ -280,7 +286,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(err, "could not save genesis validators root")
 		}
 
-		v.setTicker()
+		v.setTickers()
 		return nil
 	}
 
@@ -298,15 +304,14 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		)
 	}
 
-	v.setTicker()
+	v.setTickers()
 	return nil
 }
 
-func (v *validator) setTicker() {
-	// Once the ChainStart log is received, we update the genesis time of the validator client
-	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
-	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
+func (v *validator) setTickers() {
+	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), secondsPerSlot)
+	v.lastSecondTicker = slots.NewSlotTickerWithOffset(time.Unix(int64(v.genesisTime), 0), time.Second*time.Duration(secondsPerSlot-1), secondsPerSlot)
 }
 
 // WaitForSync checks whether the beacon node has sync to the latest head.
@@ -416,6 +421,11 @@ func (v *validator) NextSlot() <-chan primitives.Slot {
 	return v.ticker.C()
 }
 
+// LastSecondOfSlot emits the slot number at the last second of that slot.
+func (v *validator) LastSecondOfSlot() <-chan primitives.Slot {
+	return v.lastSecondTicker.C()
+}
+
 // SlotDeadline is the start time of the next slot.
 func (v *validator) SlotDeadline(slot primitives.Slot) time.Time {
 	secs := time.Duration((slot + 1).Mul(params.BeaconConfig().SecondsPerSlot))
@@ -520,10 +530,6 @@ func retrieveLatestRecord(recs []*dbCommon.AttestationRecord) *dbCommon.Attestat
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
 func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) error {
-	if !slots.IsEpochStart(slot) && v.duties != nil {
-		// Do nothing if not epoch start AND assignments already exist.
-		return nil
-	}
 	// Set deadline to end of epoch.
 	ss, err := slots.EpochStart(slots.ToEpoch(slot) + 1)
 	if err != nil {
@@ -531,7 +537,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	}
 	ctx, cancel := context.WithDeadline(ctx, v.SlotDeadline(ss))
 	defer cancel()
-	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
+	ctx, span := trace.StartSpan(ctx, "validator.UpdateDuties")
 	defer span.End()
 
 	validatingKeys, err := v.km.FetchValidatingPublicKeys(ctx)
@@ -562,17 +568,14 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	// If duties is nil it means we have had no prior duties and just started up.
 	resp, err := v.validatorClient.Duties(ctx, req)
 	if err != nil {
-		v.dutiesLock.Lock()
-		v.duties = nil // Clear assignments so we know to retry the request.
-		v.dutiesLock.Unlock()
-		log.WithError(err).Error("error getting validator duties")
 		return err
 	}
 
 	v.dutiesLock.Lock()
 	v.duties = resp
-	v.logDuties(slot, v.duties.CurrentEpochDuties, v.duties.NextEpochDuties)
 	v.dutiesLock.Unlock()
+
+	v.logDuties(slot, resp.CurrentEpochDuties, resp.NextEpochDuties)
 
 	allExitedCounter := 0
 	for i := range resp.CurrentEpochDuties {
@@ -1030,13 +1033,10 @@ func (v *validator) SetProposerSettings(ctx context.Context, settings *proposer.
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
-func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error {
+func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot) error {
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
-	nctx, cancel := context.WithDeadline(ctx, deadline)
-	ctx = nctx
-	defer cancel()
 
 	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -1078,7 +1078,6 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 }
 
 func (v *validator) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *eventClient.Event) {
-	log.WithField("topics", topics).Info("Starting event stream")
 	v.validatorClient.StartEventStream(ctx, topics, eventsChannel)
 }
 
@@ -1112,8 +1111,8 @@ func (v *validator) EventStreamIsRunning() bool {
 	return v.validatorClient.EventStreamIsRunning()
 }
 
-func (v *validator) HealthTracker() *beacon.NodeHealthTracker {
-	return v.nodeClient.HealthTracker()
+func (v *validator) HealthTracker() apiiface.HealthTracker {
+	return v.healthTracker
 }
 
 func (v *validator) Host() string {
@@ -1134,6 +1133,8 @@ func (v *validator) ChangeHost() {
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	statusRequestKeys := make([][]byte, 0)
+
+	v.pubkeyToValidatorIndexLock.Lock()
 	for _, k := range pubkeys {
 		_, ok := v.pubkeyToValidatorIndex[k]
 		// Get validator index from RPC server if not found.
@@ -1150,6 +1151,8 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 		copiedk := k
 		statusRequestKeys = append(statusRequestKeys, copiedk[:])
 	}
+	v.pubkeyToValidatorIndexLock.Unlock()
+
 	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: statusRequestKeys,
 	})

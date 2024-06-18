@@ -13,7 +13,6 @@ import (
 	context "context"
 	reflect "reflect"
 
-	beacon "github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	gomock "go.uber.org/mock/gomock"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -57,18 +56,18 @@ func (mr *MockNodeClientMockRecorder) Genesis(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Genesis", reflect.TypeOf((*MockNodeClient)(nil).Genesis), arg0, arg1)
 }
 
-// HealthTracker mocks base method.
-func (m *MockNodeClient) HealthTracker() *beacon.NodeHealthTracker {
+// IsHealthy mocks base method.
+func (m *MockNodeClient) IsHealthy(arg0 context.Context) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HealthTracker")
-	ret0, _ := ret[0].(*beacon.NodeHealthTracker)
+	ret := m.ctrl.Call(m, "IsHealthy", arg0)
+	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// HealthTracker indicates an expected call of HealthTracker.
-func (mr *MockNodeClientMockRecorder) HealthTracker() *gomock.Call {
+// IsHealthy indicates an expected call of IsHealthy.
+func (mr *MockNodeClientMockRecorder) IsHealthy(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthTracker", reflect.TypeOf((*MockNodeClient)(nil).HealthTracker))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsHealthy", reflect.TypeOf((*MockNodeClient)(nil).IsHealthy), arg0)
 }
 
 // Peers mocks base method.

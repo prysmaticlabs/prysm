@@ -8,9 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
-	healthTesting "github.com/prysmaticlabs/prysm/v5/api/client/beacon/testing"
-	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon/mock"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
@@ -30,41 +28,25 @@ func cancelledContext() context.Context {
 }
 
 func TestCancelledContext_CleansUpValidator(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
 	v := &testutil.FakeValidator{
-		Km:      &mockKeymanager{accountsChangedFeed: &event.Feed{}},
-		Tracker: tracker,
+		Km: &mockKeymanager{},
 	}
 	run(cancelledContext(), v)
 	assert.Equal(t, true, v.DoneCalled, "Expected Done() to be called")
 }
 
 func TestCancelledContext_WaitsForChainStart(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
 	v := &testutil.FakeValidator{
-		Km:      &mockKeymanager{accountsChangedFeed: &event.Feed{}},
-		Tracker: tracker,
+		Km: &mockKeymanager{},
 	}
 	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 }
 
 func TestRetry_On_ConnectionError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
 	retry := 10
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true)
 	v := &testutil.FakeValidator{
-		Km:               &mockKeymanager{accountsChangedFeed: &event.Feed{}},
-		Tracker:          tracker,
+		Km:               &mockKeymanager{},
 		RetryTillSuccess: retry,
 	}
 	backOffPeriod = 10 * time.Millisecond
@@ -82,27 +64,15 @@ func TestRetry_On_ConnectionError(t *testing.T) {
 }
 
 func TestCancelledContext_WaitsForActivation(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
 	v := &testutil.FakeValidator{
-		Km:      &mockKeymanager{accountsChangedFeed: &event.Feed{}},
-		Tracker: tracker,
+		Km: &mockKeymanager{},
 	}
 	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
 }
 
 func TestUpdateDuties_NextSlot(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
-	// avoid race condition between the cancellation of the context in the go stream from slot and the setting of IsHealthy
-	_ = tracker.CheckHealth(context.Background())
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker}
+	v := &testutil.FakeValidator{Km: &mockKeymanager{}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
@@ -122,14 +92,7 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 
 func TestUpdateDuties_HandlesError(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
-	// avoid race condition between the cancellation of the context in the go stream from slot and the setting of IsHealthy
-	_ = tracker.CheckHealth(context.Background())
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker}
+	v := &testutil.FakeValidator{Km: &mockKeymanager{}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
@@ -148,14 +111,7 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 }
 
 func TestRoleAt_NextSlot(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
-	// avoid race condition between the cancellation of the context in the go stream from slot and the setting of IsHealthy
-	_ = tracker.CheckHealth(context.Background())
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker}
+	v := &testutil.FakeValidator{Km: &mockKeymanager{}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
@@ -174,15 +130,8 @@ func TestRoleAt_NextSlot(t *testing.T) {
 }
 
 func TestAttests_NextSlot(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
-	// avoid race condition between the cancellation of the context in the go stream from slot and the setting of IsHealthy
-	_ = tracker.CheckHealth(context.Background())
 	attSubmitted := make(chan interface{})
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker, AttSubmitted: attSubmitted}
+	v := &testutil.FakeValidator{Km: &mockKeymanager{}, AttSubmitted: attSubmitted}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
@@ -201,15 +150,8 @@ func TestAttests_NextSlot(t *testing.T) {
 }
 
 func TestProposes_NextSlot(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
-	// avoid race condition between the cancellation of the context in the go stream from slot and the setting of IsHealthy
-	_ = tracker.CheckHealth(context.Background())
 	blockProposed := make(chan interface{})
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker, BlockProposed: blockProposed}
+	v := &testutil.FakeValidator{Km: &mockKeymanager{}, BlockProposed: blockProposed}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
@@ -229,16 +171,9 @@ func TestProposes_NextSlot(t *testing.T) {
 }
 
 func TestBothProposesAndAttests_NextSlot(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
-	// avoid race condition between the cancellation of the context in the go stream from slot and the setting of IsHealthy
-	_ = tracker.CheckHealth(context.Background())
 	blockProposed := make(chan interface{})
 	attSubmitted := make(chan interface{})
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker, BlockProposed: blockProposed, AttSubmitted: attSubmitted}
+	v := &testutil.FakeValidator{Km: &mockKeymanager{}, BlockProposed: blockProposed, AttSubmitted: attSubmitted}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
@@ -262,12 +197,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 func TestKeyReload_ActiveKey(t *testing.T) {
 	ctx := context.Background()
 	km := &mockKeymanager{}
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
-	v := &testutil.FakeValidator{Km: km, Tracker: tracker}
+	v := &testutil.FakeValidator{Km: km}
 	ac := make(chan [][fieldparams.BLSPubkeyLength]byte)
 	current := [][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey}
 	onAccountsChanged(ctx, v, current, ac)
@@ -281,12 +211,7 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 	na := notActive(t)
 	ctx := context.Background()
 	km := &mockKeymanager{}
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
-	v := &testutil.FakeValidator{Km: km, Tracker: tracker}
+	v := &testutil.FakeValidator{Km: km}
 	ac := make(chan [][fieldparams.BLSPubkeyLength]byte)
 	current := [][fieldparams.BLSPubkeyLength]byte{na}
 	onAccountsChanged(ctx, v, current, ac)
@@ -308,12 +233,7 @@ func notActive(t *testing.T) [fieldparams.BLSPubkeyLength]byte {
 }
 
 func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, Tracker: tracker}
+	v := &testutil.FakeValidator{Km: &mockKeymanager{}}
 	err := v.SetProposerSettings(context.Background(), &proposer.Settings{
 		DefaultConfig: &proposer.Option{
 			FeeRecipientConfig: &proposer.FeeRecipientConfig{
@@ -338,15 +258,9 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 }
 
 func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
 	v := &testutil.FakeValidator{
-		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
+		Km:                  &mockKeymanager{},
 		ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot-1) * time.Second,
-		Tracker:             tracker,
 	}
 	err := v.SetProposerSettings(context.Background(), &proposer.Settings{
 		DefaultConfig: &proposer.Option{
@@ -373,15 +287,9 @@ func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 
 func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *testing.T) {
 	errSomeOtherError := errors.New("some internal error")
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
 	v := &testutil.FakeValidator{
 		ProposerSettingsErr: errors.Wrap(ErrBuilderValidatorRegistration, errSomeOtherError.Error()),
-		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
-		Tracker:             tracker,
+		Km:                  &mockKeymanager{},
 	}
 	err := v.SetProposerSettings(context.Background(), &proposer.Settings{
 		DefaultConfig: &proposer.Option{
@@ -403,4 +311,37 @@ func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *test
 	}()
 	run(ctx, v)
 	assert.LogsContain(t, hook, ErrBuilderValidatorRegistration.Error())
+}
+
+func TestLastSecondOfSlot_HealthyAgain(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockTracker := mock.NewMockHealthTracker(ctrl)
+	mockTracker.EXPECT().IsHealthy().Times(2).Return(true).Return(false)
+
+	ticker := make(chan primitives.Slot)
+	v := &testutil.FakeValidator{Km: &mockKeymanager{}, LastSecondOfSlotRet: ticker, Tracker: mockTracker}
+	go func() {
+		ticker <- 0
+		ticker <- 1
+		cancel()
+	}()
+	run(ctx, v)
+	assert.Equal(t, true, v.UpdateDutiesCalled)
+}
+
+func TestClosure(t *testing.T) {
+	var b bool
+	go func() {
+		b = true
+	}()
+	time.Sleep(1000)
+	go func() {
+		if b == true {
+			log.Info("true")
+		}
+	}()
+	time.Sleep(1000)
 }

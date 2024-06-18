@@ -310,7 +310,7 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 		chainClient: client,
 		genesisTime: 1,
 	}
-	client.EXPECT().GetChainHead(
+	client.EXPECT().ChainHead(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("failed"))
@@ -325,7 +325,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	v := validator{
 		chainClient: client,
 	}
-	client.EXPECT().GetChainHead(
+	client.EXPECT().ChainHead(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
@@ -364,7 +364,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	prysmChainClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().ValidatorCount(
 		gomock.Any(),
 		"head",
 		[]validatorType.Status{validatorType.Active},
@@ -2012,8 +2012,7 @@ func TestValidator_PushSettings(t *testing.T) {
 					require.Equal(t, len(tt.mockExpectedRequests), len(signedRegisterValidatorRequests))
 					require.Equal(t, len(signedRegisterValidatorRequests), len(v.signedValidatorRegistrations))
 				}
-				deadline := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-				if err := v.PushProposerSettings(ctx, km, 0, deadline); tt.err != "" {
+				if err := v.PushProposerSettings(ctx, km, 0); tt.err != "" {
 					assert.ErrorContains(t, tt.err, err)
 				}
 				if len(tt.logMessages) > 0 {

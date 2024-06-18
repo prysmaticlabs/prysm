@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v5/api/client/beacon/iface"
 	"github.com/prysmaticlabs/prysm/v5/api/client/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
@@ -41,6 +41,7 @@ type Validator interface {
 	WaitForActivation(ctx context.Context, accountsChangedChan chan [][fieldparams.BLSPubkeyLength]byte) error
 	CanonicalHeadSlot(ctx context.Context) (primitives.Slot, error)
 	NextSlot() <-chan primitives.Slot
+	LastSecondOfSlot() <-chan primitives.Slot
 	SlotDeadline(slot primitives.Slot) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot primitives.Slot) error
 	UpdateDuties(ctx context.Context, slot primitives.Slot) error
@@ -57,7 +58,7 @@ type Validator interface {
 	Keymanager() (keymanager.IKeymanager, error)
 	HandleKeyReload(ctx context.Context, currentKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
-	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error
+	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot) error
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
 	StartEventStream(ctx context.Context, topics []string, eventsChan chan<- *event.Event)
 	EventStreamIsRunning() bool
@@ -67,7 +68,7 @@ type Validator interface {
 	Graffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error)
 	SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error
 	DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error
-	HealthTracker() *beacon.NodeHealthTracker
+	HealthTracker() iface.HealthTracker
 	Host() string
 	ChangeHost()
 }

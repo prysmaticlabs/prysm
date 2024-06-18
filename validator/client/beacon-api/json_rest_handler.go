@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
@@ -16,27 +17,21 @@ import (
 type JsonRestHandler interface {
 	Get(ctx context.Context, endpoint string, resp interface{}) error
 	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) error
-	HttpClient() *http.Client
 	Host() string
 	SetHost(host string)
 }
 
 type BeaconApiJsonRestHandler struct {
-	client http.Client
-	host   string
+	timeout time.Duration
+	host    string
 }
 
 // NewBeaconApiJsonRestHandler returns a JsonRestHandler
-func NewBeaconApiJsonRestHandler(client http.Client, host string) JsonRestHandler {
+func NewBeaconApiJsonRestHandler(host string, timeout time.Duration) JsonRestHandler {
 	return &BeaconApiJsonRestHandler{
-		client: client,
-		host:   host,
+		host:    host,
+		timeout: timeout,
 	}
-}
-
-// HttpClient returns the underlying HTTP client of the handler
-func (c *BeaconApiJsonRestHandler) HttpClient() *http.Client {
-	return &c.client
 }
 
 // Host returns the underlying HTTP host
@@ -47,13 +42,20 @@ func (c *BeaconApiJsonRestHandler) Host() string {
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
 func (c *BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) error {
+	_, hasDeadline := ctx.Deadline()
+	if !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}
+
 	url := c.host + endpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create request for endpoint %s", url)
 	}
 
-	httpResp, err := c.client.Do(req)
+	httpResp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return errors.Wrapf(err, "failed to perform request for endpoint %s", url)
 	}
@@ -79,6 +81,13 @@ func (c *BeaconApiJsonRestHandler) Post(
 		return errors.New("data is nil")
 	}
 
+	_, hasDeadline := ctx.Deadline()
+	if !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}
+
 	url := c.host + apiEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, data)
 	if err != nil {
@@ -90,7 +99,7 @@ func (c *BeaconApiJsonRestHandler) Post(
 	}
 	req.Header.Set("Content-Type", api.JsonMediaType)
 
-	httpResp, err := c.client.Do(req)
+	httpResp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return errors.Wrapf(err, "failed to perform request for endpoint %s", url)
 	}
