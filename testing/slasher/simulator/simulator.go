@@ -237,7 +237,7 @@ func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
 		ctx, nil, true, /* no limit */
 	)
 	detectedProposerSlashings := make(map[[32]byte]*ethpb.ProposerSlashing)
-	detectedAttesterSlashings := make(map[[32]byte]*ethpb.AttesterSlashing)
+	detectedAttesterSlashings := make(map[[32]byte]ethpb.AttSlashing)
 	for _, slashing := range poolProposerSlashings {
 		slashingRoot, err := slashing.HashTreeRoot()
 		if err != nil {

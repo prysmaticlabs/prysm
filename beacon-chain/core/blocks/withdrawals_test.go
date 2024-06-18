@@ -1,7 +1,6 @@
 package blocks_test
 
 import (
-	"math/big"
 	"math/rand"
 	"testing"
 
@@ -250,12 +249,12 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
 
 	type args struct {
-		Name                         string
-		NextWithdrawalValidatorIndex primitives.ValidatorIndex
-		NextWithdrawalIndex          uint64
-		FullWithdrawalIndices        []primitives.ValidatorIndex
-		PartialWithdrawalIndices     []primitives.ValidatorIndex
-		Withdrawals                  []*enginev1.Withdrawal
+		Name                            string
+		NextWithdrawalValidatorIndex    primitives.ValidatorIndex
+		NextWithdrawalIndex             uint64
+		FullWithdrawalIndices           []primitives.ValidatorIndex
+		PendingPartialWithdrawalIndices []primitives.ValidatorIndex
+		Withdrawals                     []*enginev1.Withdrawal
 	}
 	type control struct {
 		NextWithdrawalValidatorIndex primitives.ValidatorIndex
@@ -283,7 +282,7 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			Amount:         withdrawalAmount(i),
 		}
 	}
-	partialWithdrawal := func(i primitives.ValidatorIndex, idx uint64) *enginev1.Withdrawal {
+	PendingPartialWithdrawal := func(i primitives.ValidatorIndex, idx uint64) *enginev1.Withdrawal {
 		return &enginev1.Withdrawal{
 			Index:          idx,
 			ValidatorIndex: i,
@@ -321,12 +320,12 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "success one partial withdrawal",
-				NextWithdrawalIndex:          21,
-				NextWithdrawalValidatorIndex: 120,
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{7},
+				Name:                            "success one partial withdrawal",
+				NextWithdrawalIndex:             21,
+				NextWithdrawalValidatorIndex:    120,
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{7},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(7, 21),
+					PendingPartialWithdrawal(7, 21),
 				},
 			},
 			Control: control{
@@ -386,12 +385,12 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "success many partial withdrawals",
-				NextWithdrawalIndex:          22,
-				NextWithdrawalValidatorIndex: 4,
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{7, 19, 28},
+				Name:                            "success many partial withdrawals",
+				NextWithdrawalIndex:             22,
+				NextWithdrawalValidatorIndex:    4,
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{7, 19, 28},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(7, 22), partialWithdrawal(19, 23), partialWithdrawal(28, 24),
+					PendingPartialWithdrawal(7, 22), PendingPartialWithdrawal(19, 23), PendingPartialWithdrawal(28, 24),
 				},
 			},
 			Control: control{
@@ -406,14 +405,14 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "success many withdrawals",
-				NextWithdrawalIndex:          22,
-				NextWithdrawalValidatorIndex: 88,
-				FullWithdrawalIndices:        []primitives.ValidatorIndex{7, 19, 28},
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{2, 1, 89, 15},
+				Name:                            "success many withdrawals",
+				NextWithdrawalIndex:             22,
+				NextWithdrawalValidatorIndex:    88,
+				FullWithdrawalIndices:           []primitives.ValidatorIndex{7, 19, 28},
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{2, 1, 89, 15},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(89, 22), partialWithdrawal(1, 23), partialWithdrawal(2, 24),
-					fullWithdrawal(7, 25), partialWithdrawal(15, 26), fullWithdrawal(19, 27),
+					PendingPartialWithdrawal(89, 22), PendingPartialWithdrawal(1, 23), PendingPartialWithdrawal(2, 24),
+					fullWithdrawal(7, 25), PendingPartialWithdrawal(15, 26), fullWithdrawal(19, 27),
 					fullWithdrawal(28, 28),
 				},
 			},
@@ -453,17 +452,17 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "success more than max partially withdrawals",
-				NextWithdrawalIndex:          22,
-				NextWithdrawalValidatorIndex: 0,
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6, 7, 8, 9, 21, 22, 23, 24, 25, 26, 27, 29, 35, 89},
+				Name:                            "success more than max partially withdrawals",
+				NextWithdrawalIndex:             22,
+				NextWithdrawalValidatorIndex:    0,
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6, 7, 8, 9, 21, 22, 23, 24, 25, 26, 27, 29, 35, 89},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(1, 22), partialWithdrawal(2, 23), partialWithdrawal(3, 24),
-					partialWithdrawal(4, 25), partialWithdrawal(5, 26), partialWithdrawal(6, 27),
-					partialWithdrawal(7, 28), partialWithdrawal(8, 29), partialWithdrawal(9, 30),
-					partialWithdrawal(21, 31), partialWithdrawal(22, 32), partialWithdrawal(23, 33),
-					partialWithdrawal(24, 34), partialWithdrawal(25, 35), partialWithdrawal(26, 36),
-					partialWithdrawal(27, 37),
+					PendingPartialWithdrawal(1, 22), PendingPartialWithdrawal(2, 23), PendingPartialWithdrawal(3, 24),
+					PendingPartialWithdrawal(4, 25), PendingPartialWithdrawal(5, 26), PendingPartialWithdrawal(6, 27),
+					PendingPartialWithdrawal(7, 28), PendingPartialWithdrawal(8, 29), PendingPartialWithdrawal(9, 30),
+					PendingPartialWithdrawal(21, 31), PendingPartialWithdrawal(22, 32), PendingPartialWithdrawal(23, 33),
+					PendingPartialWithdrawal(24, 34), PendingPartialWithdrawal(25, 35), PendingPartialWithdrawal(26, 36),
+					PendingPartialWithdrawal(27, 37),
 				},
 			},
 			Control: control{
@@ -491,12 +490,12 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "failure wrong number of partial withdrawal",
-				NextWithdrawalIndex:          21,
-				NextWithdrawalValidatorIndex: 37,
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{7},
+				Name:                            "failure wrong number of partial withdrawal",
+				NextWithdrawalIndex:             21,
+				NextWithdrawalValidatorIndex:    37,
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{7},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(7, 21), partialWithdrawal(9, 22),
+					PendingPartialWithdrawal(7, 21), PendingPartialWithdrawal(9, 22),
 				},
 			},
 			Control: control{
@@ -540,7 +539,7 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 				NextWithdrawalValidatorIndex: 4,
 				FullWithdrawalIndices:        []primitives.ValidatorIndex{7, 19, 28, 1},
 				Withdrawals: []*enginev1.Withdrawal{
-					fullWithdrawal(7, 22), fullWithdrawal(19, 23), partialWithdrawal(28, 24),
+					fullWithdrawal(7, 22), fullWithdrawal(19, 23), PendingPartialWithdrawal(28, 24),
 					fullWithdrawal(1, 25),
 				},
 			},
@@ -564,10 +563,10 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "failure validator not partially withdrawable",
-				NextWithdrawalIndex:          22,
-				NextWithdrawalValidatorIndex: 4,
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{notPartiallyWithdrawable},
+				Name:                            "failure validator not partially withdrawable",
+				NextWithdrawalIndex:             22,
+				NextWithdrawalValidatorIndex:    4,
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{notPartiallyWithdrawable},
 				Withdrawals: []*enginev1.Withdrawal{
 					fullWithdrawal(notPartiallyWithdrawable, 22),
 				},
@@ -611,7 +610,7 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			st.Balances[idx] = withdrawalAmount(idx)
 			validators[idx].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 		}
-		for _, idx := range arguments.PartialWithdrawalIndices {
+		for _, idx := range arguments.PendingPartialWithdrawalIndices {
 			validators[idx].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 			st.Balances[idx] = withdrawalAmount(idx)
 		}
@@ -629,8 +628,8 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			if test.Args.FullWithdrawalIndices == nil {
 				test.Args.FullWithdrawalIndices = make([]primitives.ValidatorIndex, 0)
 			}
-			if test.Args.PartialWithdrawalIndices == nil {
-				test.Args.PartialWithdrawalIndices = make([]primitives.ValidatorIndex, 0)
+			if test.Args.PendingPartialWithdrawalIndices == nil {
+				test.Args.PendingPartialWithdrawalIndices = make([]primitives.ValidatorIndex, 0)
 			}
 			slot, err := slots.EpochStart(currentEpoch)
 			require.NoError(t, err)
@@ -643,10 +642,7 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			require.NoError(t, err)
 			wdRoot, err := ssz.WithdrawalSliceRoot(test.Args.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 			require.NoError(t, err)
-			p, err := consensusblocks.WrappedExecutionPayloadHeaderCapella(
-				&enginev1.ExecutionPayloadHeaderCapella{WithdrawalsRoot: wdRoot[:]},
-				big.NewInt(0),
-			)
+			p, err := consensusblocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{WithdrawalsRoot: wdRoot[:]})
 			require.NoError(t, err)
 			post, err := blocks.ProcessWithdrawals(st, p)
 			if test.Control.ExpectedError {
@@ -673,12 +669,12 @@ func TestProcessWithdrawals(t *testing.T) {
 	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
 
 	type args struct {
-		Name                         string
-		NextWithdrawalValidatorIndex primitives.ValidatorIndex
-		NextWithdrawalIndex          uint64
-		FullWithdrawalIndices        []primitives.ValidatorIndex
-		PartialWithdrawalIndices     []primitives.ValidatorIndex
-		Withdrawals                  []*enginev1.Withdrawal
+		Name                            string
+		NextWithdrawalValidatorIndex    primitives.ValidatorIndex
+		NextWithdrawalIndex             uint64
+		FullWithdrawalIndices           []primitives.ValidatorIndex
+		PendingPartialWithdrawalIndices []primitives.ValidatorIndex
+		Withdrawals                     []*enginev1.Withdrawal
 	}
 	type control struct {
 		NextWithdrawalValidatorIndex primitives.ValidatorIndex
@@ -706,7 +702,7 @@ func TestProcessWithdrawals(t *testing.T) {
 			Amount:         withdrawalAmount(i),
 		}
 	}
-	partialWithdrawal := func(i primitives.ValidatorIndex, idx uint64) *enginev1.Withdrawal {
+	PendingPartialWithdrawal := func(i primitives.ValidatorIndex, idx uint64) *enginev1.Withdrawal {
 		return &enginev1.Withdrawal{
 			Index:          idx,
 			ValidatorIndex: i,
@@ -744,12 +740,12 @@ func TestProcessWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "success one partial withdrawal",
-				NextWithdrawalIndex:          21,
-				NextWithdrawalValidatorIndex: 120,
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{7},
+				Name:                            "success one partial withdrawal",
+				NextWithdrawalIndex:             21,
+				NextWithdrawalValidatorIndex:    120,
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{7},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(7, 21),
+					PendingPartialWithdrawal(7, 21),
 				},
 			},
 			Control: control{
@@ -809,12 +805,12 @@ func TestProcessWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "success many partial withdrawals",
-				NextWithdrawalIndex:          22,
-				NextWithdrawalValidatorIndex: 4,
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{7, 19, 28},
+				Name:                            "success many partial withdrawals",
+				NextWithdrawalIndex:             22,
+				NextWithdrawalValidatorIndex:    4,
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{7, 19, 28},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(7, 22), partialWithdrawal(19, 23), partialWithdrawal(28, 24),
+					PendingPartialWithdrawal(7, 22), PendingPartialWithdrawal(19, 23), PendingPartialWithdrawal(28, 24),
 				},
 			},
 			Control: control{
@@ -829,14 +825,14 @@ func TestProcessWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "success many withdrawals",
-				NextWithdrawalIndex:          22,
-				NextWithdrawalValidatorIndex: 88,
-				FullWithdrawalIndices:        []primitives.ValidatorIndex{7, 19, 28},
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{2, 1, 89, 15},
+				Name:                            "success many withdrawals",
+				NextWithdrawalIndex:             22,
+				NextWithdrawalValidatorIndex:    88,
+				FullWithdrawalIndices:           []primitives.ValidatorIndex{7, 19, 28},
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{2, 1, 89, 15},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(89, 22), partialWithdrawal(1, 23), partialWithdrawal(2, 24),
-					fullWithdrawal(7, 25), partialWithdrawal(15, 26), fullWithdrawal(19, 27),
+					PendingPartialWithdrawal(89, 22), PendingPartialWithdrawal(1, 23), PendingPartialWithdrawal(2, 24),
+					fullWithdrawal(7, 25), PendingPartialWithdrawal(15, 26), fullWithdrawal(19, 27),
 					fullWithdrawal(28, 28),
 				},
 			},
@@ -876,17 +872,17 @@ func TestProcessWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "success more than max partially withdrawals",
-				NextWithdrawalIndex:          22,
-				NextWithdrawalValidatorIndex: 0,
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6, 7, 8, 9, 21, 22, 23, 24, 25, 26, 27, 29, 35, 89},
+				Name:                            "success more than max partially withdrawals",
+				NextWithdrawalIndex:             22,
+				NextWithdrawalValidatorIndex:    0,
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6, 7, 8, 9, 21, 22, 23, 24, 25, 26, 27, 29, 35, 89},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(1, 22), partialWithdrawal(2, 23), partialWithdrawal(3, 24),
-					partialWithdrawal(4, 25), partialWithdrawal(5, 26), partialWithdrawal(6, 27),
-					partialWithdrawal(7, 28), partialWithdrawal(8, 29), partialWithdrawal(9, 30),
-					partialWithdrawal(21, 31), partialWithdrawal(22, 32), partialWithdrawal(23, 33),
-					partialWithdrawal(24, 34), partialWithdrawal(25, 35), partialWithdrawal(26, 36),
-					partialWithdrawal(27, 37),
+					PendingPartialWithdrawal(1, 22), PendingPartialWithdrawal(2, 23), PendingPartialWithdrawal(3, 24),
+					PendingPartialWithdrawal(4, 25), PendingPartialWithdrawal(5, 26), PendingPartialWithdrawal(6, 27),
+					PendingPartialWithdrawal(7, 28), PendingPartialWithdrawal(8, 29), PendingPartialWithdrawal(9, 30),
+					PendingPartialWithdrawal(21, 31), PendingPartialWithdrawal(22, 32), PendingPartialWithdrawal(23, 33),
+					PendingPartialWithdrawal(24, 34), PendingPartialWithdrawal(25, 35), PendingPartialWithdrawal(26, 36),
+					PendingPartialWithdrawal(27, 37),
 				},
 			},
 			Control: control{
@@ -914,12 +910,12 @@ func TestProcessWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "failure wrong number of partial withdrawal",
-				NextWithdrawalIndex:          21,
-				NextWithdrawalValidatorIndex: 37,
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{7},
+				Name:                            "failure wrong number of partial withdrawal",
+				NextWithdrawalIndex:             21,
+				NextWithdrawalValidatorIndex:    37,
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{7},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(7, 21), partialWithdrawal(9, 22),
+					PendingPartialWithdrawal(7, 21), PendingPartialWithdrawal(9, 22),
 				},
 			},
 			Control: control{
@@ -963,7 +959,7 @@ func TestProcessWithdrawals(t *testing.T) {
 				NextWithdrawalValidatorIndex: 4,
 				FullWithdrawalIndices:        []primitives.ValidatorIndex{7, 19, 28, 1},
 				Withdrawals: []*enginev1.Withdrawal{
-					fullWithdrawal(7, 22), fullWithdrawal(19, 23), partialWithdrawal(28, 24),
+					fullWithdrawal(7, 22), fullWithdrawal(19, 23), PendingPartialWithdrawal(28, 24),
 					fullWithdrawal(1, 25),
 				},
 			},
@@ -987,10 +983,10 @@ func TestProcessWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "failure validator not partially withdrawable",
-				NextWithdrawalIndex:          22,
-				NextWithdrawalValidatorIndex: 4,
-				PartialWithdrawalIndices:     []primitives.ValidatorIndex{notPartiallyWithdrawable},
+				Name:                            "failure validator not partially withdrawable",
+				NextWithdrawalIndex:             22,
+				NextWithdrawalValidatorIndex:    4,
+				PendingPartialWithdrawalIndices: []primitives.ValidatorIndex{notPartiallyWithdrawable},
 				Withdrawals: []*enginev1.Withdrawal{
 					fullWithdrawal(notPartiallyWithdrawable, 22),
 				},
@@ -1034,7 +1030,7 @@ func TestProcessWithdrawals(t *testing.T) {
 			st.Balances[idx] = withdrawalAmount(idx)
 			validators[idx].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 		}
-		for _, idx := range arguments.PartialWithdrawalIndices {
+		for _, idx := range arguments.PendingPartialWithdrawalIndices {
 			validators[idx].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 			st.Balances[idx] = withdrawalAmount(idx)
 		}
@@ -1052,8 +1048,8 @@ func TestProcessWithdrawals(t *testing.T) {
 			if test.Args.FullWithdrawalIndices == nil {
 				test.Args.FullWithdrawalIndices = make([]primitives.ValidatorIndex, 0)
 			}
-			if test.Args.PartialWithdrawalIndices == nil {
-				test.Args.PartialWithdrawalIndices = make([]primitives.ValidatorIndex, 0)
+			if test.Args.PendingPartialWithdrawalIndices == nil {
+				test.Args.PendingPartialWithdrawalIndices = make([]primitives.ValidatorIndex, 0)
 			}
 			slot, err := slots.EpochStart(currentEpoch)
 			require.NoError(t, err)
@@ -1064,7 +1060,7 @@ func TestProcessWithdrawals(t *testing.T) {
 			}
 			st, err := prepareValidators(spb, test.Args)
 			require.NoError(t, err)
-			p, err := consensusblocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{Withdrawals: test.Args.Withdrawals}, big.NewInt(0))
+			p, err := consensusblocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{Withdrawals: test.Args.Withdrawals})
 			require.NoError(t, err)
 			post, err := blocks.ProcessWithdrawals(st, p)
 			if test.Control.ExpectedError {

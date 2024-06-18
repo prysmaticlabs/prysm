@@ -228,7 +228,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						{Index: "22222", Validator: &structs.Validator{Pubkey: stringPubKey2}}, // not recent - duplicate on previous epoch
 						{Index: "33333", Validator: &structs.Validator{Pubkey: stringPubKey3}}, // not recent - duplicate on current epoch
 						{Index: "44444", Validator: &structs.Validator{Pubkey: stringPubKey4}}, // not recent - duplicate on both previous and current epoch
-						// No "55555" sicee corresponding validator does not exist
+						// No "55555" since corresponding validator does not exist
 						{Index: "66666", Validator: &structs.Validator{Pubkey: stringPubKey6}}, // not recent - not duplicate
 					},
 				},
@@ -298,7 +298,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
-					syncingEnpoint,
+					syncingEndpoint,
 					&syncingResponseJson,
 				).Return(
 					nil,
@@ -363,7 +363,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
-				stateValidatorsProvider.EXPECT().GetStateValidators(
+				stateValidatorsProvider.EXPECT().StateValidators(
 					ctx,
 					testCase.getStateValidatorsInterface.input,
 					nil,
@@ -489,7 +489,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			},
 		},
 		{
-			name:                   "getFork on error",
+			name:                   "fork on error",
 			expectedErrorMessage:   "failed to get fork",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
@@ -734,7 +734,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
-					syncingEnpoint,
+					syncingEndpoint,
 					&syncingResponseJson,
 				).Return(
 					testCase.getSyncingError,
@@ -777,7 +777,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
-				stateValidatorsProvider.EXPECT().GetStateValidators(
+				stateValidatorsProvider.EXPECT().StateValidators(
 					ctx,
 					testCase.getStateValidatorsInterface.input,
 					nil,

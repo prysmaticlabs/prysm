@@ -144,6 +144,16 @@ var (
 			Help: "Time for gossiped blob sidecars to arrive",
 		},
 	)
+	blobSidecarVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_blob_sidecar_verification_milliseconds",
+			Help: "Time to verify gossiped blob sidecars",
+		},
+	)
+	pendingAttCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_pending_attestations_total",
+		Help: "increased when receiving a new pending attestation",
+	})
 
 	// Sync committee verification performance.
 	syncMessagesForUnknownBlocks = promauto.NewCounter(

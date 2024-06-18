@@ -50,7 +50,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 func (v *validator) internalWaitForActivation(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
-	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+	validatingKeys, err := v.km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, msgCouldNotFetchKeys)
 	}
@@ -96,7 +96,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 				break
 			}
 			// If context is canceled we return from the function.
-			if ctx.Err() == context.Canceled {
+			if errors.Is(ctx.Err(), context.Canceled) {
 				return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 			}
 			if err != nil {
@@ -120,7 +120,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 
 			// "-1" indicates that validator count endpoint is not supported by the beacon node.
 			var valCount int64 = -1
-			valCounts, err := v.prysmBeaconClient.GetValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
+			valCounts, err := v.prysmChainClient.ValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
 			if err != nil && !errors.Is(err, iface.ErrNotSupported) {
 				return errors.Wrap(err, "could not get active validator count")
 			}

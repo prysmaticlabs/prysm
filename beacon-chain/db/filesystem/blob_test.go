@@ -2,13 +2,12 @@ package filesystem
 
 import (
 	"bytes"
+	"math"
 	"os"
 	"path"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -26,8 +25,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("no error for duplicate", func(t *testing.T) {
-		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-		require.NoError(t, err)
+		fs, bs := NewEphemeralBlobStorageWithFs(t)
 		existingSidecar := testSidecars[0]
 
 		blobPath := namerForSidecar(existingSidecar).path()
@@ -129,33 +127,9 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 }
 
 // pollUntil polls a condition function until it returns true or a timeout is reached.
-func pollUntil(t *testing.T, fs afero.Fs, expected int) error {
-	var remainingFolders []os.FileInfo
-	var err error
-	// Define the condition function for polling
-	conditionFunc := func() bool {
-		remainingFolders, err = afero.ReadDir(fs, ".")
-		require.NoError(t, err)
-		return len(remainingFolders) == expected
-	}
-
-	startTime := time.Now()
-	for {
-		if conditionFunc() {
-			break // Condition met, exit the loop
-		}
-		if time.Since(startTime) > 30*time.Second {
-			return errors.New("timeout")
-		}
-		time.Sleep(1 * time.Second) // Adjust the sleep interval as needed
-	}
-	require.Equal(t, expected, len(remainingFolders))
-	return nil
-}
 
 func TestBlobIndicesBounds(t *testing.T) {
-	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-	require.NoError(t, err)
+	fs, bs := NewEphemeralBlobStorageWithFs(t)
 	root := [32]byte{}
 
 	okIdx := uint64(fieldparams.MaxBlobsPerBlock - 1)
@@ -186,8 +160,7 @@ func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, idx uint64) {
 
 func TestBlobStoragePrune(t *testing.T) {
 	currentSlot := primitives.Slot(200000)
-	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
-	require.NoError(t, err)
+	fs, bs := NewEphemeralBlobStorageWithFs(t)
 
 	t.Run("PruneOne", func(t *testing.T) {
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 300, fieldparams.MaxBlobsPerBlock)
@@ -243,8 +216,7 @@ func TestBlobStoragePrune(t *testing.T) {
 
 func BenchmarkPruning(b *testing.B) {
 	var t *testing.T
-	_, bs, err := NewEphemeralBlobStorageWithFs(t)
-	require.NoError(t, err)
+	_, bs := NewEphemeralBlobStorageWithFs(t)
 
 	blockQty := 10000
 	currentSlot := primitives.Slot(150000)
@@ -272,4 +244,51 @@ func TestNewBlobStorage(t *testing.T) {
 	require.ErrorIs(t, err, errNoBasePath)
 	_, err = NewBlobStorage(WithBasePath(path.Join(t.TempDir(), "good")))
 	require.NoError(t, err)
+}
+
+func TestConfig_WithinRetentionPeriod(t *testing.T) {
+	retention := primitives.Epoch(16)
+	storage := &BlobStorage{retentionEpochs: retention}
+
+	cases := []struct {
+		name      string
+		requested primitives.Epoch
+		current   primitives.Epoch
+		within    bool
+	}{
+		{
+			name:      "before",
+			requested: 0,
+			current:   retention + 1,
+			within:    false,
+		},
+		{
+			name:      "same",
+			requested: 0,
+			current:   0,
+			within:    true,
+		},
+		{
+			name:      "boundary",
+			requested: 0,
+			current:   retention,
+			within:    true,
+		},
+		{
+			name:      "one less",
+			requested: retention - 1,
+			current:   retention,
+			within:    true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			require.Equal(t, c.within, storage.WithinRetentionPeriod(c.requested, c.current))
+		})
+	}
+
+	t.Run("overflow", func(t *testing.T) {
+		storage := &BlobStorage{retentionEpochs: math.MaxUint64}
+		require.Equal(t, true, storage.WithinRetentionPeriod(1, 1))
+	})
 }

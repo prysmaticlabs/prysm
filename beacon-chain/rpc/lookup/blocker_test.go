@@ -146,8 +146,10 @@ func TestGetBlock(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			pbBlock, err := result.PbPhase0Block()
+			pb, err := result.Proto()
 			require.NoError(t, err)
+			pbBlock, ok := pb.(*ethpbalpha.SignedBeaconBlock)
+			require.Equal(t, true, ok)
 			if !reflect.DeepEqual(pbBlock, tt.want) {
 				t.Error("Expected blocks to equal")
 			}
@@ -164,8 +166,7 @@ func TestGetBlob(t *testing.T) {
 	db := testDB.SetupDB(t)
 	denebBlock, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 123, 4)
 	require.NoError(t, db.SaveBlock(context.Background(), denebBlock))
-	_, bs, err := filesystem.NewEphemeralBlobStorageWithFs(t)
-	require.NoError(t, err)
+	_, bs := filesystem.NewEphemeralBlobStorageWithFs(t)
 	testSidecars, err := verification.BlobSidecarSliceNoop(blobs)
 	require.NoError(t, err)
 	for i := range testSidecars {

@@ -20,13 +20,13 @@ var hashFn = hash.Proto
 // such are unaggregated, aggregated or attestations within a block.
 type AttCaches struct {
 	aggregatedAttLock  sync.RWMutex
-	aggregatedAtt      map[[32]byte][]*ethpb.Attestation
+	aggregatedAtt      map[[32]byte][]ethpb.Att
 	unAggregateAttLock sync.RWMutex
-	unAggregatedAtt    map[[32]byte]*ethpb.Attestation
+	unAggregatedAtt    map[[32]byte]ethpb.Att
 	forkchoiceAttLock  sync.RWMutex
-	forkchoiceAtt      map[[32]byte]*ethpb.Attestation
+	forkchoiceAtt      map[[32]byte]ethpb.Att
 	blockAttLock       sync.RWMutex
-	blockAtt           map[[32]byte][]*ethpb.Attestation
+	blockAtt           map[[32]byte][]ethpb.Att
 	seenAtt            *cache.Cache
 }
 
@@ -36,10 +36,10 @@ func NewAttCaches() *AttCaches {
 	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	c := cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second)
 	pool := &AttCaches{
-		unAggregatedAtt: make(map[[32]byte]*ethpb.Attestation),
-		aggregatedAtt:   make(map[[32]byte][]*ethpb.Attestation),
-		forkchoiceAtt:   make(map[[32]byte]*ethpb.Attestation),
-		blockAtt:        make(map[[32]byte][]*ethpb.Attestation),
+		unAggregatedAtt: make(map[[32]byte]ethpb.Att),
+		aggregatedAtt:   make(map[[32]byte][]ethpb.Att),
+		forkchoiceAtt:   make(map[[32]byte]ethpb.Att),
+		blockAtt:        make(map[[32]byte][]ethpb.Att),
 		seenAtt:         c,
 	}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/capella"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/deneb"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	e "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/execution"
@@ -255,14 +256,16 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			} else if state.Version() >= version.Altair {
-				state, err = altair.ProcessEpoch(ctx, state)
-				if err != nil {
+			} else if state.Version() <= version.Deneb {
+				if err = altair.ProcessEpoch(ctx, state); err != nil {
 					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
+					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
 				}
 			} else {
-				return nil, errors.New("beacon state should have a version")
+				if err = electra.ProcessEpoch(ctx, state); err != nil {
+					tracing.AnnotateError(span, err)
+					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+				}
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
@@ -315,6 +318,14 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 
 	if time.CanUpgradeToDeneb(state.Slot()) {
 		state, err = deneb.UpgradeToDeneb(state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
+
+	if time.CanUpgradeToElectra(state.Slot()) {
+		state, err = electra.UpgradeToElectra(state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, err

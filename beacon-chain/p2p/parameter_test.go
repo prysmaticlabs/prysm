@@ -22,7 +22,7 @@ func TestGossipParameters(t *testing.T) {
 	pms := pubsubGossipParam()
 	assert.Equal(t, gossipSubMcacheLen, pms.HistoryLength, "gossipSubMcacheLen")
 	assert.Equal(t, gossipSubMcacheGossip, pms.HistoryGossip, "gossipSubMcacheGossip")
-	assert.Equal(t, gossipSubSeenTTL, int(pubsub.TimeCacheDuration.Milliseconds()/pms.HeartbeatInterval.Milliseconds()), "gossipSubSeenTtl")
+	assert.Equal(t, gossipSubSeenTTL, int(pubsub.TimeCacheDuration.Seconds()), "gossipSubSeenTtl")
 }
 
 func TestFanoutParameters(t *testing.T) {

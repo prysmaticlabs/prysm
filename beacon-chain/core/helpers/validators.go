@@ -12,6 +12,7 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -393,6 +394,24 @@ func ComputeProposerIndex(bState state.ReadOnlyValidators, activeIndices []primi
 // IsEligibleForActivationQueue checks if the validator is eligible to
 // be placed into the activation queue.
 //
+// Spec definition:
+//
+//	def is_eligible_for_activation_queue(validator: Validator) -> bool:
+//	    """
+//	    Check if ``validator`` is eligible to be placed into the activation queue.
+//	    """
+//	    return (
+//	        validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+//	        and validator.effective_balance >= MIN_ACTIVATION_BALANCE  # [Modified in Electra:EIP7251]
+//	    )
+func IsEligibleForActivationQueue(validator *ethpb.Validator, currentEpoch primitives.Epoch) bool {
+	if currentEpoch >= params.BeaconConfig().ElectraForkEpoch {
+		return isEligibleForActivationQueueElectra(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+	}
+	return isEligibleForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+}
+
+// isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue
 // Spec pseudocode definition:
 //
 //	def is_eligible_for_activation_queue(validator: Validator) -> bool:
@@ -403,20 +422,27 @@ func ComputeProposerIndex(bState state.ReadOnlyValidators, activeIndices []primi
 //	      validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
 //	      and validator.effective_balance == MAX_EFFECTIVE_BALANCE
 //	  )
-func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
-	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
-}
-
-// IsEligibleForActivationQueueUsingTrie checks if the read-only validator is eligible to
-// be placed into the activation queue.
-func IsEligibleForActivationQueueUsingTrie(validator state.ReadOnlyValidator) bool {
-	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
-}
-
-// isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue*
-func isEligibileForActivationQueue(activationEligibilityEpoch primitives.Epoch, effectiveBalance uint64) bool {
+func isEligibleForActivationQueue(activationEligibilityEpoch primitives.Epoch, effectiveBalance uint64) bool {
 	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
 		effectiveBalance == params.BeaconConfig().MaxEffectiveBalance
+}
+
+// IsEligibleForActivationQueue checks if the validator is eligible to
+// be placed into the activation queue.
+//
+// Spec definition:
+//
+//	def is_eligible_for_activation_queue(validator: Validator) -> bool:
+//	    """
+//	    Check if ``validator`` is eligible to be placed into the activation queue.
+//	    """
+//	    return (
+//	        validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+//	        and validator.effective_balance >= MIN_ACTIVATION_BALANCE  # [Modified in Electra:EIP7251]
+//	    )
+func isEligibleForActivationQueueElectra(activationEligibilityEpoch primitives.Epoch, effectiveBalance uint64) bool {
+	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
+		effectiveBalance >= params.BeaconConfig().MinActivationBalance
 }
 
 // IsEligibleForActivation checks if the validator is eligible for activation.
@@ -470,4 +496,246 @@ func LastActivatedValidatorIndex(ctx context.Context, st state.ReadOnlyBeaconSta
 		}
 	}
 	return lastActivatedvalidatorIndex, nil
+}
+
+// hasETH1WithdrawalCredential returns whether the validator has an ETH1
+// Withdrawal prefix. It assumes that the caller has a lock on the state
+func HasETH1WithdrawalCredential(val interfaces.WithWithdrawalCredentials) bool {
+	if val == nil {
+		return false
+	}
+	return isETH1WithdrawalCredential(val.GetWithdrawalCredentials())
+}
+
+func isETH1WithdrawalCredential(creds []byte) bool {
+	return bytes.HasPrefix(creds, []byte{params.BeaconConfig().ETH1AddressWithdrawalPrefixByte})
+}
+
+// HasCompoundingWithdrawalCredential checks if the validator has a compounding withdrawal credential.
+// New in Electra EIP-7251: https://eips.ethereum.org/EIPS/eip-7251
+//
+// Spec definition:
+//
+//	def has_compounding_withdrawal_credential(validator: Validator) -> bool:
+//	    """
+//	    Check if ``validator`` has an 0x02 prefixed "compounding" withdrawal credential.
+//	    """
+//	    return is_compounding_withdrawal_credential(validator.withdrawal_credentials)
+func HasCompoundingWithdrawalCredential(v interfaces.WithWithdrawalCredentials) bool {
+	if v == nil {
+		return false
+	}
+	return isCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
+}
+
+// isCompoundingWithdrawalCredential checks if the credentials are a compounding withdrawal credential.
+//
+// Spec definition:
+//
+//	def is_compounding_withdrawal_credential(withdrawal_credentials: Bytes32) -> bool:
+//	    return withdrawal_credentials[:1] == COMPOUNDING_WITHDRAWAL_PREFIX
+func isCompoundingWithdrawalCredential(creds []byte) bool {
+	return bytes.HasPrefix(creds, []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte})
+}
+
+// HasExecutionWithdrawalCredentials checks if the validator has an execution withdrawal credential or compounding credential.
+// New in Electra EIP-7251: https://eips.ethereum.org/EIPS/eip-7251
+//
+// Spec definition:
+//
+//	def has_execution_withdrawal_credential(validator: Validator) -> bool:
+//	    """
+//	    Check if ``validator`` has a 0x01 or 0x02 prefixed withdrawal credential.
+//	    """
+//	    return has_compounding_withdrawal_credential(validator) or has_eth1_withdrawal_credential(validator)
+func HasExecutionWithdrawalCredentials(v *ethpb.Validator) bool {
+	if v == nil {
+		return false
+	}
+	return HasCompoundingWithdrawalCredential(v) || HasETH1WithdrawalCredential(v)
+}
+
+// IsSameWithdrawalCredentials returns true if both validators have the same withdrawal credentials.
+//
+//	return a.withdrawal_credentials[12:] == b.withdrawal_credentials[12:]
+func IsSameWithdrawalCredentials(a, b *ethpb.Validator) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	if len(a.WithdrawalCredentials) <= 12 || len(b.WithdrawalCredentials) <= 12 {
+		return false
+	}
+	return bytes.Equal(a.WithdrawalCredentials[12:], b.WithdrawalCredentials[12:])
+}
+
+// IsFullyWithdrawableValidator returns whether the validator is able to perform a full
+// withdrawal. This function assumes that the caller holds a lock on the state.
+//
+// Spec definition:
+//
+//	def is_fully_withdrawable_validator(validator: Validator, balance: Gwei, epoch: Epoch) -> bool:
+//	    """
+//	    Check if ``validator`` is fully withdrawable.
+//	    """
+//	    return (
+//	        has_execution_withdrawal_credential(validator)  # [Modified in Electra:EIP7251]
+//	        and validator.withdrawable_epoch <= epoch
+//	        and balance > 0
+//	    )
+func IsFullyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch primitives.Epoch) bool {
+	if val == nil || balance <= 0 {
+		return false
+	}
+
+	// Electra / EIP-7251 logic
+	if epoch >= params.BeaconConfig().ElectraForkEpoch {
+		return HasExecutionWithdrawalCredentials(val) && val.WithdrawableEpoch <= epoch
+	}
+
+	return HasETH1WithdrawalCredential(val) && val.WithdrawableEpoch <= epoch
+}
+
+// IsPartiallyWithdrawableValidator returns whether the validator is able to perform a
+// partial withdrawal. This function assumes that the caller has a lock on the state.
+// This method conditionally calls the fork appropriate implementation based on the epoch argument.
+func IsPartiallyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch primitives.Epoch) bool {
+	if val == nil {
+		return false
+	}
+
+	if epoch < params.BeaconConfig().ElectraForkEpoch {
+		return isPartiallyWithdrawableValidatorCapella(val, balance, epoch)
+	}
+
+	return isPartiallyWithdrawableValidatorElectra(val, balance, epoch)
+}
+
+// isPartiallyWithdrawableValidatorElectra implements is_partially_withdrawable_validator in the
+// electra fork.
+//
+// Spec definition:
+//
+// def is_partially_withdrawable_validator(validator: Validator, balance: Gwei) -> bool:
+//
+//	"""
+//	Check if ``validator`` is partially withdrawable.
+//	"""
+//	max_effective_balance = get_validator_max_effective_balance(validator)
+//	has_max_effective_balance = validator.effective_balance == max_effective_balance  # [Modified in Electra:EIP7251]
+//	has_excess_balance = balance > max_effective_balance  # [Modified in Electra:EIP7251]
+//	return (
+//	    has_execution_withdrawal_credential(validator)  # [Modified in Electra:EIP7251]
+//	    and has_max_effective_balance
+//	    and has_excess_balance
+//	)
+func isPartiallyWithdrawableValidatorElectra(val *ethpb.Validator, balance uint64, epoch primitives.Epoch) bool {
+	maxEB := ValidatorMaxEffectiveBalance(val)
+	hasMaxBalance := val.EffectiveBalance == maxEB
+	hasExcessBalance := balance > maxEB
+
+	return HasExecutionWithdrawalCredentials(val) &&
+		hasMaxBalance &&
+		hasExcessBalance
+}
+
+// isPartiallyWithdrawableValidatorCapella implements is_partially_withdrawable_validator in the
+// capella fork.
+//
+// Spec definition:
+//
+//	def is_partially_withdrawable_validator(validator: Validator, balance: Gwei) -> bool:
+//	    """
+//	    Check if ``validator`` is partially withdrawable.
+//	    """
+//	    has_max_effective_balance = validator.effective_balance == MAX_EFFECTIVE_BALANCE
+//	    has_excess_balance = balance > MAX_EFFECTIVE_BALANCE
+//	    return has_eth1_withdrawal_credential(validator) and has_max_effective_balance and has_excess_balance
+func isPartiallyWithdrawableValidatorCapella(val *ethpb.Validator, balance uint64, epoch primitives.Epoch) bool {
+	hasMaxBalance := val.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance
+	hasExcessBalance := balance > params.BeaconConfig().MaxEffectiveBalance
+	return HasETH1WithdrawalCredential(val) && hasExcessBalance && hasMaxBalance
+}
+
+// ValidatorMaxEffectiveBalance returns the maximum effective balance for a validator.
+//
+// Spec definition:
+//
+//	def get_validator_max_effective_balance(validator: Validator) -> Gwei:
+//	    """
+//	    Get max effective balance for ``validator``.
+//	    """
+//	    if has_compounding_withdrawal_credential(validator):
+//	        return MAX_EFFECTIVE_BALANCE_ELECTRA
+//	    else:
+//	        return MIN_ACTIVATION_BALANCE
+func ValidatorMaxEffectiveBalance(val *ethpb.Validator) uint64 {
+	if HasCompoundingWithdrawalCredential(val) {
+		return params.BeaconConfig().MaxEffectiveBalanceElectra
+	}
+	return params.BeaconConfig().MinActivationBalance
+}
+
+// QueueExcessActiveBalance queues validators with balances above the min activation balance and adds to pending balance deposit.
+//
+// Spec definition:
+//
+//	def queue_excess_active_balance(state: BeaconState, index: ValidatorIndex) -> None:
+//	    balance = state.balances[index]
+//	    if balance > MIN_ACTIVATION_BALANCE:
+//	        excess_balance = balance - MIN_ACTIVATION_BALANCE
+//	        state.balances[index] = MIN_ACTIVATION_BALANCE
+//	        state.pending_balance_deposits.append(
+//	            PendingBalanceDeposit(index=index, amount=excess_balance)
+//	        )
+func QueueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex) error {
+	bal, err := s.BalanceAtIndex(idx)
+	if err != nil {
+		return err
+	}
+
+	if bal > params.BeaconConfig().MinActivationBalance {
+		excessBalance := bal - params.BeaconConfig().MinActivationBalance
+		if err := s.UpdateBalancesAtIndex(idx, params.BeaconConfig().MinActivationBalance); err != nil {
+			return err
+		}
+		return s.AppendPendingBalanceDeposit(idx, excessBalance)
+	}
+	return nil
+}
+
+// QueueEntireBalanceAndResetValidator queues the entire balance and resets the validator. This is used in electra fork logic.
+//
+// Spec definition:
+//
+//	def queue_entire_balance_and_reset_validator(state: BeaconState, index: ValidatorIndex) -> None:
+//	    balance = state.balances[index]
+//	    validator = state.validators[index]
+//		state.balances[index] = 0
+//	    validator.effective_balance = 0
+//	    validator.activation_eligibility_epoch = FAR_FUTURE_EPOCH
+//	    state.pending_balance_deposits.append(
+//	        PendingBalanceDeposit(index=index, amount=balance)
+//	    )
+func QueueEntireBalanceAndResetValidator(s state.BeaconState, idx primitives.ValidatorIndex) error {
+	bal, err := s.BalanceAtIndex(idx)
+	if err != nil {
+		return err
+	}
+
+	if err := s.UpdateBalancesAtIndex(idx, 0); err != nil {
+		return err
+	}
+
+	v, err := s.ValidatorAtIndex(idx)
+	if err != nil {
+		return err
+	}
+
+	v.EffectiveBalance = 0
+	v.ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
+	if err := s.UpdateValidatorAtIndex(idx, v); err != nil {
+		return err
+	}
+
+	return s.AppendPendingBalanceDeposit(idx, bal)
 }

@@ -102,17 +102,21 @@ func TestGetAttestationData_OK(t *testing.T) {
 	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for justified block")
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
+	beaconState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(slot))
 	justifiedCheckpoint := &ethpb.Checkpoint{
 		Epoch: 2,
 		Root:  justifiedRoot[:],
 	}
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpoint))
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
-			HeadFetcher: &mock.ChainService{TargetRoot: targetRoot, Root: blockRoot[:]},
+			HeadFetcher: &mock.ChainService{TargetRoot: targetRoot, Root: blockRoot[:], State: beaconState},
 			GenesisTimeFetcher: &mock.ChainService{
 				Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
 			},
@@ -338,10 +342,15 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 
+	beaconState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(slot))
 	justifiedCheckpoint := &ethpb.Checkpoint{
 		Epoch: 0,
 		Root:  justifiedRoot[:],
 	}
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpoint))
+
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
@@ -350,7 +359,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		CoreService: &core.Service{
 			AttestationCache: cache.NewAttestationCache(),
 			HeadFetcher: &mock.ChainService{
-				TargetRoot: targetRoot, Root: blockRoot[:],
+				TargetRoot: targetRoot, Root: blockRoot[:], State: beaconState,
 			},
 			GenesisTimeFetcher:    &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
 			FinalizedFetcher:      &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},

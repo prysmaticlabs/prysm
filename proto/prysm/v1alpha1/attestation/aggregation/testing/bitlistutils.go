@@ -77,8 +77,8 @@ func Bitlists64WithMultipleBitSet(t testing.TB, n, length, count uint64) []*bitf
 }
 
 // MakeAttestationsFromBitlists creates list of attestations from list of bitlist.
-func MakeAttestationsFromBitlists(bl []bitfield.Bitlist) []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, len(bl))
+func MakeAttestationsFromBitlists(bl []bitfield.Bitlist) []ethpb.Att {
+	atts := make([]ethpb.Att, len(bl))
 	for i, b := range bl {
 		atts[i] = &ethpb.Attestation{
 			AggregationBits: b,

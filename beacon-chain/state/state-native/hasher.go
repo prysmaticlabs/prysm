@@ -3,6 +3,7 @@ package state_native
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
@@ -38,6 +39,10 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount)
 	case version.Deneb:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateDenebFieldCount)
+	case version.Electra:
+		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateElectraFieldCount)
+	default:
+		return nil, fmt.Errorf("unknown state version %s", version.String(state.version))
 	}
 
 	// Genesis time root.
@@ -247,6 +252,15 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[types.LatestExecutionPayloadHeaderDeneb.RealPosition()] = executionPayloadRoot[:]
 	}
 
+	if state.version == version.Electra {
+		// Execution payload root.
+		executionPayloadRoot, err := state.latestExecutionPayloadHeaderElectra.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		fieldRoots[types.LatestExecutionPayloadHeaderElectra.RealPosition()] = executionPayloadRoot[:]
+	}
+
 	if state.version >= version.Capella {
 		// Next withdrawal index root.
 		nextWithdrawalIndexRoot := make([]byte, 32)
@@ -264,6 +278,53 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 			return nil, errors.Wrap(err, "could not compute historical summary merkleization")
 		}
 		fieldRoots[types.HistoricalSummaries.RealPosition()] = historicalSummaryRoot[:]
+	}
+
+	if state.version >= version.Electra {
+		// DepositRequestsStartIndex root.
+		drsiRoot := ssz.Uint64Root(state.depositRequestsStartIndex)
+		fieldRoots[types.DepositRequestsStartIndex.RealPosition()] = drsiRoot[:]
+
+		// DepositBalanceToConsume root.
+		dbtcRoot := ssz.Uint64Root(uint64(state.depositBalanceToConsume))
+		fieldRoots[types.DepositBalanceToConsume.RealPosition()] = dbtcRoot[:]
+
+		// ExitBalanceToConsume root.
+		ebtcRoot := ssz.Uint64Root(uint64(state.exitBalanceToConsume))
+		fieldRoots[types.ExitBalanceToConsume.RealPosition()] = ebtcRoot[:]
+
+		// EarliestExitEpoch root.
+		eeeRoot := ssz.Uint64Root(uint64(state.earliestExitEpoch))
+		fieldRoots[types.EarliestExitEpoch.RealPosition()] = eeeRoot[:]
+
+		// ConsolidationBalanceToConsume root.
+		cbtcRoot := ssz.Uint64Root(uint64(state.consolidationBalanceToConsume))
+		fieldRoots[types.ConsolidationBalanceToConsume.RealPosition()] = cbtcRoot[:]
+
+		// EarliestConsolidationEpoch root.
+		eceRoot := ssz.Uint64Root(uint64(state.earliestConsolidationEpoch))
+		fieldRoots[types.EarliestConsolidationEpoch.RealPosition()] = eceRoot[:]
+
+		// PendingBalanceDeposits root.
+		pbdRoot, err := stateutil.PendingBalanceDepositsRoot(state.pendingBalanceDeposits)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute pending balance deposits merkleization")
+		}
+		fieldRoots[types.PendingBalanceDeposits.RealPosition()] = pbdRoot[:]
+
+		// PendingPartialWithdrawals root.
+		ppwRoot, err := stateutil.PendingPartialWithdrawalsRoot(state.pendingPartialWithdrawals)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute pending partial withdrawals merkleization")
+		}
+		fieldRoots[types.PendingPartialWithdrawals.RealPosition()] = ppwRoot[:]
+
+		// PendingConsolidations root.
+		pcRoot, err := stateutil.PendingConsolidationsRoot(state.pendingConsolidations)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute pending consolidations merkleization")
+		}
+		fieldRoots[types.PendingConsolidations.RealPosition()] = pcRoot[:]
 	}
 
 	return fieldRoots, nil

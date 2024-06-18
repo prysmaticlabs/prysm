@@ -12,15 +12,17 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -34,7 +36,8 @@ func startChainService(t testing.TB,
 	st state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	engineMock *engineMock,
-) *blockchain.Service {
+	clockSync *startup.ClockSynchronizer,
+) (*blockchain.Service, *stategen.State, forkchoice.ForkChoicer) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	require.NoError(t, db.SaveBlock(ctx, block))
@@ -54,32 +57,34 @@ func startChainService(t testing.TB,
 	})
 	require.NoError(t, err)
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	fc := doublylinkedtree.New()
+	sg := stategen.New(db, fc)
 	opts := append([]blockchain.Option{},
 		blockchain.WithExecutionEngineCaller(engineMock),
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
 		blockchain.WithForkChoiceStore(fc),
-		blockchain.WithStateGen(stategen.New(db, fc)),
+		blockchain.WithStateGen(sg),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
 		blockchain.WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
 		blockchain.WithPayloadIDCache(cache.NewPayloadIDCache()),
-		blockchain.WithClockSynchronizer(startup.NewClockSynchronizer()),
+		blockchain.WithClockSynchronizer(clockSync),
 		blockchain.WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
 		blockchain.WithSyncChecker(mock.MockChecker{}),
+		blockchain.WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)
 	// force start kzg context here until Deneb fork epoch is decided
 	require.NoError(t, kzg.Start())
 	require.NoError(t, service.StartFromSavedState(st))
-	return service
+	return service, sg, fc
 }
 
 type engineMock struct {
@@ -88,8 +93,8 @@ type engineMock struct {
 	payloadStatus   error
 }
 
-func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
-	return nil, nil, false, nil
+func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (*blocks.GetPayloadResponse, error) {
+	return nil, nil
 }
 func (m *engineMock) GetPayloadV2(context.Context, [8]byte) (*pb.ExecutionPayloadCapella, error) {
 	return nil, nil

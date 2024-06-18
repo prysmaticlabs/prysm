@@ -5,27 +5,20 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
-// ProposalHistoryForPubkey for a validator public key.
-type ProposalHistoryForPubkey struct {
-	Proposals []Proposal
-}
-
-// Proposal representation for a validator public key.
-type Proposal struct {
-	Slot        primitives.Slot `json:"slot"`
-	SigningRoot []byte          `json:"signing_root"`
-}
-
 // ProposedPublicKeys retrieves all public keys in our proposals history bucket.
+// Warning: A public key in this bucket does not necessarily mean it has signed a block.
 func (s *Store) ProposedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	_, span := trace.StartSpan(ctx, "Validator.ProposedPublicKeys")
 	defer span.End()
@@ -83,11 +76,11 @@ func (s *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [fieldpara
 }
 
 // ProposalHistoryForPubKey returns the entire proposal history for a given public key.
-func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) ([]*Proposal, error) {
+func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) ([]*common.Proposal, error) {
 	_, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForPubKey")
 	defer span.End()
 
-	proposals := make([]*Proposal, 0)
+	proposals := make([]*common.Proposal, 0)
 	err := s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket := bucket.Bucket(publicKey[:])
@@ -98,7 +91,7 @@ func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [fieldpa
 			slot := bytesutil.BytesToSlotBigEndian(slotKey)
 			sr := make([]byte, fieldparams.RootLength)
 			copy(sr, signingRootBytes)
-			proposals = append(proposals, &Proposal{
+			proposals = append(proposals, &common.Proposal{
 				Slot:        slot,
 				SigningRoot: sr,
 			})
@@ -200,6 +193,86 @@ func (s *Store) HighestSignedProposal(ctx context.Context, publicKey [fieldparam
 		return nil
 	})
 	return highestSignedProposalSlot, exists, err
+}
+
+// SlashableProposalCheck checks if a block proposal is slashable by comparing it with the
+// block proposals history for the given public key in our complete slashing protection database defined by EIP-3076.
+// If it is not, we then update the history.
+func (s *Store) SlashableProposalCheck(
+	ctx context.Context,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	signedBlock interfaces.ReadOnlySignedBeaconBlock,
+	signingRoot [fieldparams.RootLength]byte,
+	emitAccountMetrics bool,
+	validatorProposeFailVec *prometheus.CounterVec,
+) error {
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+
+	blk := signedBlock.Block()
+	prevSigningRoot, proposalAtSlotExists, prevSigningRootExists, err := s.ProposalHistoryForSlot(ctx, pubKey, blk.Slot())
+	if err != nil {
+		if emitAccountMetrics {
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return errors.Wrap(err, "failed to get proposal history")
+	}
+
+	lowestSignedProposalSlot, lowestProposalExists, err := s.LowestSignedProposal(ctx, pubKey)
+	if err != nil {
+		return err
+	}
+
+	// Based on EIP-3076 - Condition 2
+	// -------------------------------
+	if lowestProposalExists {
+		// If the block slot is (strictly) less than the lowest signed proposal slot in the DB, we consider it slashable.
+		if blk.Slot() < lowestSignedProposalSlot {
+			return fmt.Errorf(
+				"could not sign block with slot < lowest signed slot in db, block slot: %d < lowest signed slot: %d",
+				blk.Slot(),
+				lowestSignedProposalSlot,
+			)
+		}
+
+		// If the block slot is equal to the lowest signed proposal slot and
+		// - condition1: there is no signed proposal in the DB for this slot, or
+		// - condition2: there is  a signed proposal in the DB for this slot, but with no associated signing root, or
+		// - condition3: there is  a signed proposal in the DB for this slot, but the signing root differs,
+		// ==> we consider it slashable.
+		condition1 := !proposalAtSlotExists
+		condition2 := proposalAtSlotExists && !prevSigningRootExists
+		condition3 := proposalAtSlotExists && prevSigningRootExists && prevSigningRoot != signingRoot
+		if blk.Slot() == lowestSignedProposalSlot && (condition1 || condition2 || condition3) {
+			return fmt.Errorf(
+				"could not sign block with slot == lowest signed slot in db if it is not a repeat signing, block slot: %d == slowest signed slot: %d",
+				blk.Slot(),
+				lowestSignedProposalSlot,
+			)
+		}
+	}
+
+	// Based on EIP-3076 - Condition 1
+	// -------------------------------
+	// If there is a signed proposal in the DB for this slot and
+	// - there is no associated signing root, or
+	// - the signing root differs,
+	// ==> we consider it slashable.
+	if proposalAtSlotExists && (!prevSigningRootExists || prevSigningRoot != signingRoot) {
+		if emitAccountMetrics {
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return errors.New(common.FailedBlockSignLocalErr)
+	}
+
+	// Save the proposal for this slot.
+	if err := s.SaveProposalHistoryForSlot(ctx, pubKey, blk.Slot(), signingRoot[:]); err != nil {
+		if emitAccountMetrics {
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return errors.Wrap(err, "failed to save updated proposal history")
+	}
+
+	return nil
 }
 
 func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot primitives.Slot) error {

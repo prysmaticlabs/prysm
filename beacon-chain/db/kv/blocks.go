@@ -813,6 +813,16 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.ReadOnlySignedBea
 		if err := rawBlock.UnmarshalSSZ(enc[len(denebBlindKey):]); err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal blinded Deneb block")
 		}
+	case hasElectraKey(enc):
+		rawBlock = &ethpb.SignedBeaconBlockElectra{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(electraKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal Electra block")
+		}
+	case hasElectraBlindKey(enc):
+		rawBlock = &ethpb.SignedBlindedBeaconBlockElectra{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(electraBlindKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal blinded Electra block")
+		}
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock = &ethpb.SignedBeaconBlock{}
@@ -842,6 +852,11 @@ func encodeBlock(blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
 
 func keyForBlock(blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
 	switch blk.Version() {
+	case version.Electra:
+		if blk.IsBlinded() {
+			return electraBlindKey, nil
+		}
+		return electraKey, nil
 	case version.Deneb:
 		if blk.IsBlinded() {
 			return denebBlindKey, nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -14,15 +15,17 @@ import (
 )
 
 type GenesisProvider interface {
-	GetGenesis(ctx context.Context) (*structs.Genesis, error)
+	Genesis(ctx context.Context) (*structs.Genesis, error)
 }
 
 type beaconApiGenesisProvider struct {
 	jsonRestHandler JsonRestHandler
+	genesis         *structs.Genesis
+	once            sync.Once
 }
 
-func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
-	genesis, err := c.genesisProvider.GetGenesis(ctx)
+func (c *beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
+	genesis, err := c.genesisProvider.Genesis(ctx)
 
 	for err != nil {
 		jsonErr := &httputil.DefaultJsonError{}
@@ -34,7 +37,7 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 		// Error 404 means that the chain genesis info is not yet known, so we query it every second until it's ready
 		select {
 		case <-time.After(time.Second):
-			genesis, err = c.genesisProvider.GetGenesis(ctx)
+			genesis, err = c.genesisProvider.Genesis(ctx)
 		case <-ctx.Done():
 			return nil, errors.New("context canceled")
 		}
@@ -64,15 +67,23 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 }
 
 // GetGenesis gets the genesis information from the beacon node via the /eth/v1/beacon/genesis endpoint
-func (c beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*structs.Genesis, error) {
+func (c *beaconApiGenesisProvider) Genesis(ctx context.Context) (*structs.Genesis, error) {
 	genesisJson := &structs.GetGenesisResponse{}
-	if err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/genesis", genesisJson); err != nil {
-		return nil, err
+	var doErr error
+	c.once.Do(func() {
+		if err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/genesis", genesisJson); err != nil {
+			doErr = err
+			return
+		}
+		if genesisJson.Data == nil {
+			doErr = errors.New("genesis data is nil")
+			return
+		}
+		c.genesis = genesisJson.Data
+	})
+	if doErr != nil {
+		// Allow another call because the current one returned an error
+		c.once = sync.Once{}
 	}
-
-	if genesisJson.Data == nil {
-		return nil, errors.New("genesis data is nil")
-	}
-
-	return genesisJson.Data, nil
+	return c.genesis, doErr
 }

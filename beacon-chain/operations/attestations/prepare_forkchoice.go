@@ -67,7 +67,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
 	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
 
-	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(atts))
 
 	// Consolidate attestations by aggregating them by similar data root.
 	for _, att := range atts {
@@ -79,7 +79,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 			continue
 		}
 
-		attDataRoot, err := att.Data.HashTreeRoot()
+		attDataRoot, err := att.GetData().HashTreeRoot()
 		if err != nil {
 			return err
 		}
@@ -103,10 +103,10 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 
 // This aggregates a list of attestations using the aggregation algorithm defined in AggregateAttestations
 // and saves the attestations for fork choice.
-func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) error {
-	clonedAtts := make([]*ethpb.Attestation, len(atts))
+func (s *Service) aggregateAndSaveForkChoiceAtts(atts []ethpb.Att) error {
+	clonedAtts := make([]ethpb.Att, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = ethpb.CopyAttestation(a)
+		clonedAtts[i] = a.Copy()
 	}
 	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {
@@ -118,12 +118,12 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
-func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
-	attRoot, err := hash.Proto(att.Data)
+func (s *Service) seen(att ethpb.Att) (bool, error) {
+	attRoot, err := hash.Proto(att.GetData())
 	if err != nil {
 		return false, err
 	}
-	incomingBits := att.AggregationBits
+	incomingBits := att.GetAggregationBits()
 	savedBits, ok := s.forkChoiceProcessedRoots.Get(attRoot)
 	if ok {
 		savedBitlist, ok := savedBits.(bitfield.Bitlist)

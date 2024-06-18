@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/mod/semver"
 )
 
@@ -74,7 +74,12 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	if err != nil {
 		return nil, errors.Wrap(err, "error detecting chain config for finalized state")
 	}
-	log.Printf("detected supported config in remote finalized state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
+
+	log.WithFields(logrus.Fields{
+		"name": vu.Config.ConfigName,
+		"fork": version.String(vu.Fork),
+	}).Info("Detected supported config in remote finalized state")
+
 	s, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
 		return nil, errors.Wrap(err, "error unmarshaling finalized state to correct version")

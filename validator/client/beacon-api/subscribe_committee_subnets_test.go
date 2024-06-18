@@ -13,7 +13,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"go.uber.org/mock/gomock"
 )
@@ -67,43 +66,8 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 		}
 	}
 
-	// Even though we have 3 distinct slots, the first 2 ones are in the same epoch so we should only send 2 requests to the beacon node
-	dutiesProvider := mock.NewMockdutiesProvider(ctrl)
-	dutiesProvider.EXPECT().GetAttesterDuties(
-		ctx,
-		slots.ToEpoch(subscribeSlots[0]),
-		validatorIndices,
-	).Return(
-		[]*structs.AttesterDuty{
-			{
-				CommitteesAtSlot: strconv.FormatUint(committeesAtSlot[0], 10),
-				Slot:             strconv.FormatUint(uint64(subscribeSlots[0]), 10),
-			},
-			{
-				CommitteesAtSlot: strconv.FormatUint(committeesAtSlot[1], 10),
-				Slot:             strconv.FormatUint(uint64(subscribeSlots[1]), 10),
-			},
-		},
-		nil,
-	).Times(1)
-
-	dutiesProvider.EXPECT().GetAttesterDuties(
-		ctx,
-		slots.ToEpoch(subscribeSlots[2]),
-		validatorIndices,
-	).Return(
-		[]*structs.AttesterDuty{
-			{
-				CommitteesAtSlot: strconv.FormatUint(committeesAtSlot[2], 10),
-				Slot:             strconv.FormatUint(uint64(subscribeSlots[2]), 10),
-			},
-		},
-		nil,
-	).Times(1)
-
 	validatorClient := &beaconApiValidatorClient{
 		jsonRestHandler: jsonRestHandler,
-		dutiesProvider:  dutiesProvider,
 	}
 	err = validatorClient.subscribeCommitteeSubnets(
 		ctx,
@@ -112,21 +76,31 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 			CommitteeIds: committeeIndices,
 			IsAggregator: isAggregator,
 		},
-		validatorIndices,
+		[]*ethpb.DutiesResponse_Duty{
+			{
+				ValidatorIndex:   validatorIndices[0],
+				CommitteesAtSlot: committeesAtSlot[0],
+			},
+			{
+				ValidatorIndex:   validatorIndices[1],
+				CommitteesAtSlot: committeesAtSlot[1],
+			},
+			{
+				ValidatorIndex:   validatorIndices[2],
+				CommitteesAtSlot: committeesAtSlot[2],
+			},
+		},
 	)
 	require.NoError(t, err)
 }
 
 func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
-	const arraySizeMismatchErrorMessage = "arrays `in.CommitteeIds`, `in.Slots`, `in.IsAggregator` and `validatorIndices` don't have the same length"
+	const arraySizeMismatchErrorMessage = "arrays `in.CommitteeIds`, `in.Slots`, `in.IsAggregator` and `duties` don't have the same length"
 
 	testCases := []struct {
 		name                    string
 		subscribeRequest        *ethpb.CommitteeSubnetsSubscribeRequest
-		validatorIndices        []primitives.ValidatorIndex
-		attesterDuty            *structs.AttesterDuty
-		dutiesError             error
-		expectGetDutiesQuery    bool
+		duties                  []*ethpb.DutiesResponse_Duty
 		expectSubscribeRestCall bool
 		expectedErrorMessage    string
 	}{
@@ -142,7 +116,16 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 				Slots:        []primitives.Slot{1, 2},
 				IsAggregator: []bool{false, true},
 			},
-			validatorIndices:     []primitives.ValidatorIndex{1, 2},
+			duties: []*ethpb.DutiesResponse_Duty{
+				{
+					ValidatorIndex:   1,
+					CommitteesAtSlot: 1,
+				},
+				{
+					ValidatorIndex:   2,
+					CommitteesAtSlot: 2,
+				},
+			},
 			expectedErrorMessage: arraySizeMismatchErrorMessage,
 		},
 		{
@@ -152,7 +135,16 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 				Slots:        []primitives.Slot{1},
 				IsAggregator: []bool{false, true},
 			},
-			validatorIndices:     []primitives.ValidatorIndex{1, 2},
+			duties: []*ethpb.DutiesResponse_Duty{
+				{
+					ValidatorIndex:   1,
+					CommitteesAtSlot: 1,
+				},
+				{
+					ValidatorIndex:   2,
+					CommitteesAtSlot: 2,
+				},
+			},
 			expectedErrorMessage: arraySizeMismatchErrorMessage,
 		},
 		{
@@ -162,75 +154,32 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 				Slots:        []primitives.Slot{1, 2},
 				IsAggregator: []bool{false},
 			},
-			validatorIndices:     []primitives.ValidatorIndex{1, 2},
+			duties: []*ethpb.DutiesResponse_Duty{
+				{
+					ValidatorIndex:   1,
+					CommitteesAtSlot: 1,
+				},
+				{
+					ValidatorIndex:   2,
+					CommitteesAtSlot: 2,
+				},
+			},
 			expectedErrorMessage: arraySizeMismatchErrorMessage,
 		},
 		{
-			name: "ValidatorIndices size mismatch",
+			name: "duties size mismatch",
 			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
 				CommitteeIds: []primitives.CommitteeIndex{1, 2},
 				Slots:        []primitives.Slot{1, 2},
 				IsAggregator: []bool{false, true},
 			},
-			validatorIndices:     []primitives.ValidatorIndex{1},
+			duties: []*ethpb.DutiesResponse_Duty{
+				{
+					ValidatorIndex:   1,
+					CommitteesAtSlot: 1,
+				},
+			},
 			expectedErrorMessage: arraySizeMismatchErrorMessage,
-		},
-		{
-			name: "bad duties query",
-			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				Slots:        []primitives.Slot{1},
-				CommitteeIds: []primitives.CommitteeIndex{2},
-				IsAggregator: []bool{false},
-			},
-			validatorIndices:     []primitives.ValidatorIndex{3},
-			dutiesError:          errors.New("foo error"),
-			expectGetDutiesQuery: true,
-			expectedErrorMessage: "failed to get duties for epoch `0`: foo error",
-		},
-		{
-			name: "bad duty slot",
-			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				Slots:        []primitives.Slot{1},
-				CommitteeIds: []primitives.CommitteeIndex{2},
-				IsAggregator: []bool{false},
-			},
-			validatorIndices: []primitives.ValidatorIndex{3},
-			attesterDuty: &structs.AttesterDuty{
-				Slot:             "foo",
-				CommitteesAtSlot: "1",
-			},
-			expectGetDutiesQuery: true,
-			expectedErrorMessage: "failed to parse slot `foo`",
-		},
-		{
-			name: "bad duty committees at slot",
-			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				Slots:        []primitives.Slot{1},
-				CommitteeIds: []primitives.CommitteeIndex{2},
-				IsAggregator: []bool{false},
-			},
-			validatorIndices: []primitives.ValidatorIndex{3},
-			attesterDuty: &structs.AttesterDuty{
-				Slot:             "1",
-				CommitteesAtSlot: "foo",
-			},
-			expectGetDutiesQuery: true,
-			expectedErrorMessage: "failed to parse CommitteesAtSlot `foo`",
-		},
-		{
-			name: "missing slot in duties",
-			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				Slots:        []primitives.Slot{1},
-				CommitteeIds: []primitives.CommitteeIndex{2},
-				IsAggregator: []bool{false},
-			},
-			validatorIndices: []primitives.ValidatorIndex{3},
-			attesterDuty: &structs.AttesterDuty{
-				Slot:             "2",
-				CommitteesAtSlot: "3",
-			},
-			expectGetDutiesQuery: true,
-			expectedErrorMessage: "failed to get committees for slot `1`",
 		},
 		{
 			name: "bad POST request",
@@ -239,12 +188,12 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 				CommitteeIds: []primitives.CommitteeIndex{2},
 				IsAggregator: []bool{false},
 			},
-			validatorIndices: []primitives.ValidatorIndex{3},
-			attesterDuty: &structs.AttesterDuty{
-				Slot:             "1",
-				CommitteesAtSlot: "2",
+			duties: []*ethpb.DutiesResponse_Duty{
+				{
+					ValidatorIndex:   1,
+					CommitteesAtSlot: 1,
+				},
 			},
-			expectGetDutiesQuery:    true,
 			expectSubscribeRestCall: true,
 			expectedErrorMessage:    "foo error",
 		},
@@ -256,18 +205,6 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 			defer ctrl.Finish()
 
 			ctx := context.Background()
-
-			dutiesProvider := mock.NewMockdutiesProvider(ctrl)
-			if testCase.expectGetDutiesQuery {
-				dutiesProvider.EXPECT().GetAttesterDuties(
-					ctx,
-					gomock.Any(),
-					gomock.Any(),
-				).Return(
-					[]*structs.AttesterDuty{testCase.attesterDuty},
-					testCase.dutiesError,
-				).Times(1)
-			}
 
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			if testCase.expectSubscribeRestCall {
@@ -284,9 +221,8 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 
 			validatorClient := &beaconApiValidatorClient{
 				jsonRestHandler: jsonRestHandler,
-				dutiesProvider:  dutiesProvider,
 			}
-			err := validatorClient.subscribeCommitteeSubnets(ctx, testCase.subscribeRequest, testCase.validatorIndices)
+			err := validatorClient.subscribeCommitteeSubnets(ctx, testCase.subscribeRequest, testCase.duties)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}

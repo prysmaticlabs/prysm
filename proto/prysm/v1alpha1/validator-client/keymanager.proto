@@ -60,6 +60,10 @@ message SignRequest {
         // Deneb objects.
         ethereum.eth.v1alpha1.BeaconBlockDeneb block_deneb = 116;
         ethereum.eth.v1alpha1.BlindedBeaconBlockDeneb blinded_block_deneb = 117;
+
+        // Electra objects.
+        ethereum.eth.v1alpha1.BeaconBlockElectra block_electra = 118;
+        ethereum.eth.v1alpha1.BlindedBeaconBlockElectra blinded_block_electra = 119;
     }
     reserved 4, 5; // Reserving old, deleted fields.
     uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
@@ -87,6 +91,7 @@ message SignResponse {
 message ProposerOptionPayload {
   string fee_recipient = 1;
   BuilderConfig builder = 2;
+  optional string graffiti = 3;
 }
 
 // BuilderConfig is a property of ProposerOptionPayload

@@ -135,7 +135,7 @@ With 1_048_576 validators, we need 4096 * 2MB = 8GB
 Storing both MIN and MAX spans for 1_048_576 validators takes 16GB.
 
 Each chunk is stored snappy-compressed in the database.
-If all validators attest ideally, a MIN SPAN chunk will contain only `2`s, and and MAX SPAN chunk will contain only `0`s.
+If all validators attest ideally, a MIN SPAN chunk will contain only `2`s, and MAX SPAN chunk will contain only `0`s.
 This will compress very well, and will let us store a lot of data in a small amount of space.
 */
 

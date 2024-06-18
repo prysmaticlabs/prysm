@@ -73,8 +73,8 @@ func TestStreamBeaconLogs(t *testing.T) {
 
 	// Setting up the mock in the server struct
 	s := Server{
-		ctx:                    context.Background(),
-		beaconNodeHealthClient: mockClient,
+		ctx:          context.Background(),
+		healthClient: mockClient,
 	}
 
 	// Create a mock ResponseWriter and Request
@@ -119,9 +119,9 @@ func TestStreamValidatorLogs(t *testing.T) {
 	logStreamer := mock.NewMockStreamer(mockLogs)
 	// Setting up the mock in the server struct
 	s := Server{
-		ctx:                  ctx,
-		logsStreamer:         logStreamer,
-		streamLogsBufferSize: 100,
+		ctx:                   ctx,
+		logStreamer:           logStreamer,
+		logStreamerBufferSize: 100,
 	}
 
 	w := &flushableResponseRecorder{
@@ -170,10 +170,10 @@ func TestServer_GetVersion(t *testing.T) {
 	ctx := context.Background()
 	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 	s := Server{
-		ctx:              ctx,
-		beaconNodeClient: mockNodeClient,
+		ctx:        ctx,
+		nodeClient: mockNodeClient,
 	}
-	mockNodeClient.EXPECT().GetVersion(gomock.Any(), gomock.Any()).Return(&eth.Version{
+	mockNodeClient.EXPECT().Version(gomock.Any(), gomock.Any()).Return(&eth.Version{
 		Version:  "4.10.1",
 		Metadata: "beacon node",
 	}, nil)

@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 // EngineClient --
@@ -23,25 +22,20 @@ type EngineClient struct {
 	NewPayloadResp              []byte
 	PayloadIDBytes              *pb.PayloadIDBytes
 	ForkChoiceUpdatedResp       []byte
-	ExecutionPayload            *pb.ExecutionPayload
-	ExecutionPayloadCapella     *pb.ExecutionPayloadCapella
-	ExecutionPayloadDeneb       *pb.ExecutionPayloadDeneb
 	ExecutionBlock              *pb.ExecutionBlock
 	Err                         error
 	ErrLatestExecBlock          error
 	ErrExecBlockByHash          error
 	ErrForkchoiceUpdated        error
 	ErrNewPayload               error
-	ErrGetPayload               error
 	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
 	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
 	NumReconstructedPayloads    uint64
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
-	BuilderOverride             bool
 	OverrideValidHash           [32]byte
-	BlockValue                  uint64
-	BlobsBundle                 *pb.BlobsBundle
+	GetPayloadResponse          *blocks.GetPayloadResponse
+	ErrGetPayload               error
 }
 
 // NewPayload --
@@ -60,26 +54,8 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
-	if slots.ToEpoch(s) >= params.BeaconConfig().DenebForkEpoch {
-		ed, err := blocks.WrappedExecutionPayloadDeneb(e.ExecutionPayloadDeneb, big.NewInt(int64(e.BlockValue)))
-		if err != nil {
-			return nil, nil, false, err
-		}
-		return ed, e.BlobsBundle, e.BuilderOverride, nil
-	}
-	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
-		ed, err := blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, big.NewInt(int64(e.BlockValue)))
-		if err != nil {
-			return nil, nil, false, err
-		}
-		return ed, nil, e.BuilderOverride, nil
-	}
-	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
-	if err != nil {
-		return nil, nil, false, err
-	}
-	return p, nil, e.BuilderOverride, e.ErrGetPayload
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (*blocks.GetPayloadResponse, error) {
+	return e.GetPayloadResponse, e.ErrGetPayload
 }
 
 // LatestExecutionBlock --

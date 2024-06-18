@@ -401,7 +401,19 @@ func (s *Service) GetAttestationData(
 	if err != nil {
 		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get target root")}
 	}
-	justifiedCheckpoint := s.FinalizedFetcher.CurrentJustifiedCheckpt()
+
+	headState, err := s.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get head state")}
+	}
+	if coreTime.CurrentEpoch(headState) < slots.ToEpoch(req.Slot) { // Ensure justified checkpoint safety by processing head state across the boundary.
+		headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.Slot)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not process slots up to %d: %v", req.Slot, err)}
+		}
+	}
+	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint()
+
 	if err = s.AttestationCache.Put(&cache.AttestationConsensusData{
 		Slot:     req.Slot,
 		HeadRoot: headRoot,

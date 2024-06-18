@@ -123,7 +123,7 @@ func TestGetFork_Nominal(t *testing.T) {
 		jsonRestHandler: jsonRestHandler,
 	}
 
-	fork, err := validatorClient.getFork(ctx)
+	fork, err := validatorClient.fork(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, &expected, fork)
 }
@@ -148,7 +148,7 @@ func TestGetFork_Invalid(t *testing.T) {
 		jsonRestHandler: jsonRestHandler,
 	}
 
-	_, err := validatorClient.getFork(ctx)
+	_, err := validatorClient.fork(ctx)
 	require.ErrorContains(t, "custom error", err)
 }
 
@@ -190,7 +190,7 @@ func TestGetHeaders_Nominal(t *testing.T) {
 		jsonRestHandler: jsonRestHandler,
 	}
 
-	headers, err := validatorClient.getHeaders(ctx)
+	headers, err := validatorClient.headers(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, &expected, headers)
 }
@@ -215,7 +215,7 @@ func TestGetHeaders_Invalid(t *testing.T) {
 		jsonRestHandler: jsonRestHandler,
 	}
 
-	_, err := validatorClient.getHeaders(ctx)
+	_, err := validatorClient.headers(ctx)
 	require.ErrorContains(t, "custom error", err)
 }
 
@@ -261,7 +261,7 @@ func TestGetLiveness_Nominal(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	liveness, err := validatorClient.getLiveness(ctx, 42, indexes)
+	liveness, err := validatorClient.liveness(ctx, 42, indexes)
 
 	require.NoError(t, err)
 	assert.DeepEqual(t, &expected, liveness)
@@ -285,12 +285,12 @@ func TestGetLiveness_Invalid(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, err := validatorClient.getLiveness(ctx, 42, nil)
+	_, err := validatorClient.liveness(ctx, 42, nil)
 
 	require.ErrorContains(t, "custom error", err)
 }
 
-const syncingEnpoint = "/eth/v1/node/syncing"
+const syncingEndpoint = "/eth/v1/node/syncing"
 
 func TestGetIsSyncing_Nominal(t *testing.T) {
 	testCases := []struct {
@@ -325,7 +325,7 @@ func TestGetIsSyncing_Nominal(t *testing.T) {
 
 			jsonRestHandler.EXPECT().Get(
 				ctx,
-				syncingEnpoint,
+				syncingEndpoint,
 				&syncingResponseJson,
 			).Return(
 				nil,
@@ -356,7 +356,7 @@ func TestGetIsSyncing_Invalid(t *testing.T) {
 
 	jsonRestHandler.EXPECT().Get(
 		ctx,
-		syncingEnpoint,
+		syncingEndpoint,
 		&syncingResponseJson,
 	).Return(
 		errors.New("custom error"),

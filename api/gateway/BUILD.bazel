@@ -14,7 +14,7 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
-        "//api/server:go_default_library",
+        "//api/server/middleware:go_default_library",
         "//runtime:go_default_library",
         "@com_github_gorilla_mux//:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",

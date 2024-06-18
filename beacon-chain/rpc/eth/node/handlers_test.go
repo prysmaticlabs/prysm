@@ -91,8 +91,10 @@ func TestGetVersion(t *testing.T) {
 
 func TestGetHealth(t *testing.T) {
 	checker := &syncmock.Sync{}
+	optimisticFetcher := &mock.ChainService{Optimistic: false}
 	s := &Server{
-		SyncChecker: checker,
+		SyncChecker:           checker,
+		OptimisticModeFetcher: optimisticFetcher,
 	}
 
 	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/node/health", nil)
@@ -101,25 +103,30 @@ func TestGetHealth(t *testing.T) {
 	s.GetHealth(writer, request)
 	assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
 
-	checker.IsInitialized = true
-	request = httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/node/health", nil)
-	writer = httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
-	s.GetHealth(writer, request)
-	assert.Equal(t, http.StatusPartialContent, writer.Code)
-
+	checker.IsSyncing = true
+	checker.IsSynced = false
 	request = httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com/eth/v1/node/health?syncing_status=%d", http.StatusPaymentRequired), nil)
 	writer = httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 	s.GetHealth(writer, request)
 	assert.Equal(t, http.StatusPaymentRequired, writer.Code)
 
+	checker.IsSyncing = false
 	checker.IsSynced = true
 	request = httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/node/health", nil)
 	writer = httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 	s.GetHealth(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
+
+	checker.IsSyncing = false
+	checker.IsSynced = true
+	optimisticFetcher.Optimistic = true
+	request = httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/node/health", nil)
+	writer = httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+	s.GetHealth(writer, request)
+	assert.Equal(t, http.StatusPartialContent, writer.Code)
 }
 
 func TestGetIdentity(t *testing.T) {

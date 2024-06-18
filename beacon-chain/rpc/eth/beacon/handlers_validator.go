@@ -369,16 +369,7 @@ func decodeIds(w http.ResponseWriter, st state.BeaconState, rawIds []string, ign
 func valsFromIds(w http.ResponseWriter, st state.BeaconState, ids []primitives.ValidatorIndex) ([]state.ReadOnlyValidator, bool) {
 	var vals []state.ReadOnlyValidator
 	if len(ids) == 0 {
-		allVals := st.Validators()
-		vals = make([]state.ReadOnlyValidator, len(allVals))
-		for i, val := range allVals {
-			readOnlyVal, err := statenative.NewValidator(val)
-			if err != nil {
-				httputil.HandleError(w, "Could not convert validator: "+err.Error(), http.StatusInternalServerError)
-				return nil, false
-			}
-			vals[i] = readOnlyVal
-		}
+		vals = st.ValidatorsReadOnly()
 	} else {
 		vals = make([]state.ReadOnlyValidator, 0, len(ids))
 		for _, id := range ids {
@@ -413,7 +404,7 @@ func valContainerFromReadOnlyVal(
 		Status:  valStatus.String(),
 		Validator: &structs.Validator{
 			Pubkey:                     hexutil.Encode(pubkey[:]),
-			WithdrawalCredentials:      hexutil.Encode(val.WithdrawalCredentials()),
+			WithdrawalCredentials:      hexutil.Encode(val.GetWithdrawalCredentials()),
 			EffectiveBalance:           strconv.FormatUint(val.EffectiveBalance(), 10),
 			Slashed:                    val.Slashed(),
 			ActivationEligibilityEpoch: strconv.FormatUint(uint64(val.ActivationEligibilityEpoch()), 10),

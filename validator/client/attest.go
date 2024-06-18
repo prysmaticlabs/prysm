@@ -26,6 +26,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
+
 // SubmitAttestation completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
@@ -73,7 +75,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		Slot:           slot,
 		CommitteeIndex: duty.CommitteeIndex,
 	}
-	data, err := v.validatorClient.GetAttestationData(ctx, req)
+	data, err := v.validatorClient.AttestationData(ctx, req)
 	if err != nil {
 		log.WithError(err).Error("Could not request attestation to sign at slot")
 		if v.emitAccountMetrics {
@@ -88,7 +90,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		Data:             data,
 	}
 
-	_, signingRoot, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
+	_, signingRoot, err := v.domainAndSigningRoot(ctx, indexedAtt.Data)
 	if err != nil {
 		log.WithError(err).Error("Could not get domain and signing root from attestation")
 		if v.emitAccountMetrics {
@@ -135,7 +137,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 
 	// Set the signature of the attestation and send it out to the beacon node.
 	indexedAtt.Signature = sig
-	if err := v.slashableAttestationCheck(ctx, indexedAtt, pubKey, signingRoot); err != nil {
+	if err := v.db.SlashableAttestationCheck(ctx, indexedAtt, pubKey, signingRoot, v.emitAccountMetrics, ValidatorAttestFailVec); err != nil {
 		log.WithError(err).Error("Failed attestation slashing protection check")
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
@@ -197,11 +199,11 @@ func (v *validator) duty(pubKey [fieldparams.BLSPubkeyLength]byte) (*ethpb.Dutie
 
 // Given validator's public key, this function returns the signature of an attestation data and its signing root.
 func (v *validator) signAtt(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, data *ethpb.AttestationData, slot primitives.Slot) ([]byte, [32]byte, error) {
-	domain, root, err := v.getDomainAndSigningRoot(ctx, data)
+	domain, root, err := v.domainAndSigningRoot(ctx, data)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -215,7 +217,7 @@ func (v *validator) signAtt(ctx context.Context, pubKey [fieldparams.BLSPubkeyLe
 	return sig.Marshal(), root, nil
 }
 
-func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.AttestationData) (*ethpb.DomainResponse, [32]byte, error) {
+func (v *validator) domainAndSigningRoot(ctx context.Context, data *ethpb.AttestationData) (*ethpb.DomainResponse, [32]byte, error) {
 	domain, err := v.domainData(ctx, data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester[:])
 	if err != nil {
 		return nil, [32]byte{}, err

@@ -31,7 +31,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
-	stateValidatorsProvider.EXPECT().GetStateValidators(
+	stateValidatorsProvider.EXPECT().StateValidators(
 		ctx,
 		[]string{stringValidatorPubKey},
 		nil,
@@ -55,7 +55,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
-		prysmBeaconChainCLient: prysmBeaconChainClient{
+		prysmChainClient: prysmChainClient{
 			nodeClient: &beaconApiNodeClient{
 				jsonRestHandler: jsonRestHandler,
 			},
@@ -96,7 +96,7 @@ func TestValidatorStatus_Error(t *testing.T) {
 
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
-	stateValidatorsProvider.EXPECT().GetStateValidators(
+	stateValidatorsProvider.EXPECT().StateValidators(
 		ctx,
 		gomock.Any(),
 		nil,
@@ -138,7 +138,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
-	stateValidatorsProvider.EXPECT().GetStateValidators(
+	stateValidatorsProvider.EXPECT().StateValidators(
 		ctx,
 		stringValidatorsPubKey,
 		[]primitives.ValidatorIndex{},
@@ -181,7 +181,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
-		prysmBeaconChainCLient: prysmBeaconChainClient{
+		prysmChainClient: prysmChainClient{
 			nodeClient: &beaconApiNodeClient{
 				jsonRestHandler: jsonRestHandler,
 			},
@@ -223,7 +223,7 @@ func TestMultipleValidatorStatus_Error(t *testing.T) {
 	ctx := context.Background()
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
-	stateValidatorsProvider.EXPECT().GetStateValidators(
+	stateValidatorsProvider.EXPECT().StateValidators(
 		ctx,
 		gomock.Any(),
 		[]primitives.ValidatorIndex{},
@@ -275,7 +275,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
-	stateValidatorsProvider.EXPECT().GetStateValidators(
+	stateValidatorsProvider.EXPECT().StateValidators(
 		ctx,
 		stringValidatorsPubKey,
 		validatorsIndex,
@@ -429,14 +429,14 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
-		prysmBeaconChainCLient: prysmBeaconChainClient{
+		prysmChainClient: prysmChainClient{
 			nodeClient: &beaconApiNodeClient{
 				jsonRestHandler: jsonRestHandler,
 			},
 			jsonRestHandler: jsonRestHandler,
 		},
 	}
-	actualValidatorsPubKey, actualValidatorsIndex, actualValidatorsStatusResponse, err := validatorClient.getValidatorsStatusResponse(ctx, validatorsPubKey, validatorsIndex)
+	actualValidatorsPubKey, actualValidatorsIndex, actualValidatorsStatusResponse, err := validatorClient.validatorsStatusResponse(ctx, validatorsPubKey, validatorsIndex)
 
 	require.NoError(t, err)
 	assert.DeepEqual(t, wantedValidatorsPubKey, actualValidatorsPubKey)
@@ -455,7 +455,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 	ctx := context.Background()
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
-	stateValidatorsProvider.EXPECT().GetStateValidators(
+	stateValidatorsProvider.EXPECT().StateValidators(
 		ctx,
 		[]string{stringValidatorPubKey},
 		nil,
@@ -499,14 +499,14 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
-		prysmBeaconChainCLient: prysmBeaconChainClient{
+		prysmChainClient: prysmChainClient{
 			nodeClient: &beaconApiNodeClient{
 				jsonRestHandler: jsonRestHandler,
 			},
 			jsonRestHandler: jsonRestHandler,
 		},
 	}
-	actualValidatorsPubKey, actualValidatorsIndex, actualValidatorsStatusResponse, err := validatorClient.getValidatorsStatusResponse(ctx, wantedValidatorsPubKey, nil)
+	actualValidatorsPubKey, actualValidatorsIndex, actualValidatorsStatusResponse, err := validatorClient.validatorsStatusResponse(ctx, wantedValidatorsPubKey, nil)
 
 	require.NoError(t, err)
 	require.NoError(t, err)
@@ -705,7 +705,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 
 				ctx := context.Background()
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-				stateValidatorsProvider.EXPECT().GetStateValidators(
+				stateValidatorsProvider.EXPECT().StateValidators(
 					ctx,
 					testCase.inputGetStateValidatorsInterface.inputStringPubKeys,
 					testCase.inputGetStateValidatorsInterface.inputIndexes,
@@ -729,7 +729,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 
 				validatorClient := beaconApiValidatorClient{
 					stateValidatorsProvider: stateValidatorsProvider,
-					prysmBeaconChainCLient: prysmBeaconChainClient{
+					prysmChainClient: prysmChainClient{
 						nodeClient: &beaconApiNodeClient{
 							jsonRestHandler: jsonRestHandler,
 						},
@@ -737,7 +737,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					},
 				}
 
-				_, _, _, err := validatorClient.getValidatorsStatusResponse(
+				_, _, _, err := validatorClient.validatorsStatusResponse(
 					ctx,
 					testCase.inputPubKeys,
 					testCase.inputIndexes,

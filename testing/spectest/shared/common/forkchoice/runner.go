@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -84,6 +85,9 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 				case version.Deneb:
 					beaconState = unmarshalDenebState(t, preBeaconStateSSZ)
 					beaconBlock = unmarshalDenebBlock(t, blockSSZ)
+				case version.Electra:
+					beaconState = unmarshalElectraState(t, preBeaconStateSSZ)
+					beaconBlock = unmarshalElectraBlock(t, blockSSZ)
 				default:
 					t.Fatalf("unknown fork version: %v", fork)
 				}
@@ -111,11 +115,13 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 							beaconBlock = unmarshalSignedCapellaBlock(t, blockSSZ)
 						case version.Deneb:
 							beaconBlock = unmarshalSignedDenebBlock(t, blockSSZ)
+						case version.Electra:
+							beaconBlock = unmarshalSignedElectraBlock(t, blockSSZ)
 						default:
 							t.Fatalf("unknown fork version: %v", fork)
 						}
 					}
-					runBlobStep(t, step.Blobs, beaconBlock, fork, folder, testsFolderPath, step.Proofs, builder)
+					runBlobStep(t, step, beaconBlock, fork, folder, testsFolderPath, builder)
 					if beaconBlock != nil {
 						if step.Valid != nil && !*step.Valid {
 							builder.InvalidBlock(t, beaconBlock)
@@ -280,15 +286,40 @@ func unmarshalSignedDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeacon
 	return blk
 }
 
+func unmarshalElectraState(t *testing.T, raw []byte) state.BeaconState {
+	base := &ethpb.BeaconStateElectra{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	st, err := state_native.InitializeFromProtoElectra(base)
+	require.NoError(t, err)
+	return st
+}
+
+func unmarshalElectraBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.BeaconBlockElectra{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockElectra{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	require.NoError(t, err)
+	return blk
+}
+
+func unmarshalSignedElectraBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.SignedBeaconBlockElectra{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	blk, err := blocks.NewSignedBeaconBlock(base)
+	require.NoError(t, err)
+	return blk
+}
+
 func runBlobStep(t *testing.T,
-	blobs *string,
+	step Step,
 	beaconBlock interfaces.ReadOnlySignedBeaconBlock,
 	fork int,
 	folder os.DirEntry,
 	testsFolderPath string,
-	proofs []*string,
 	builder *Builder,
 ) {
+	blobs := step.Blobs
+	proofs := step.Proofs
 	if blobs != nil && *blobs != "null" {
 		require.NotNil(t, beaconBlock)
 		require.Equal(t, true, fork >= version.Deneb)
@@ -305,44 +336,94 @@ func runBlobStep(t *testing.T,
 		require.NoError(t, err)
 		sh, err := beaconBlock.Header()
 		require.NoError(t, err)
-		for index := uint64(0); index*fieldparams.BlobLength < uint64(len(blobsSSZ)); index++ {
+		requireVerifyExpected := errAssertionForStep(step, verification.ErrBlobInvalid)
+		for index := 0; index*fieldparams.BlobLength < len(blobsSSZ); index++ {
 			var proof []byte
-			if index < uint64(len(proofs)) {
+			if index < len(proofs) {
 				proofPTR := proofs[index]
 				require.NotNil(t, proofPTR)
 				proof, err = hexutil.Decode(*proofPTR)
 				require.NoError(t, err)
 			}
 
-			var kzg []byte
-			if uint64(len(kzgs)) < index {
-				kzg = kzgs[index]
-			}
-			if len(kzg) == 0 {
-				kzg = make([]byte, 48)
-			}
 			blob := [fieldparams.BlobLength]byte{}
 			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
-			fakeProof := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
-			for i := range fakeProof {
-				fakeProof[i] = make([]byte, fieldparams.RootLength)
-			}
 			if len(proof) == 0 {
 				proof = make([]byte, 48)
 			}
+
+			inclusionProof, err := blocks.MerkleProofKZGCommitment(block.Body(), index)
+			require.NoError(t, err)
 			pb := &ethpb.BlobSidecar{
-				Index:                    index,
+				Index:                    uint64(index),
 				Blob:                     blob[:],
-				KzgCommitment:            kzg,
+				KzgCommitment:            kzgs[index],
 				KzgProof:                 proof,
 				SignedBlockHeader:        sh,
-				CommitmentInclusionProof: fakeProof,
+				CommitmentInclusionProof: inclusionProof,
 			}
 			ro, err := blocks.NewROBlobWithRoot(pb, root)
 			require.NoError(t, err)
-			vsc, err := verification.BlobSidecarNoop(ro)
+			ini, err := builder.vwait.WaitForInitializer(context.Background())
 			require.NoError(t, err)
-			require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
+			bv := ini.NewBlobVerifier(ro, verification.SpectestSidecarRequirements)
+			ctx := context.Background()
+			if err := bv.BlobIndexInBounds(); err != nil {
+				t.Logf("BlobIndexInBounds error: %s", err.Error())
+			}
+			if err := bv.NotFromFutureSlot(); err != nil {
+				t.Logf("NotFromFutureSlot error: %s", err.Error())
+			}
+			if err := bv.SlotAboveFinalized(); err != nil {
+				t.Logf("SlotAboveFinalized error: %s", err.Error())
+			}
+			if err := bv.SidecarInclusionProven(); err != nil {
+				t.Logf("SidecarInclusionProven error: %s", err.Error())
+			}
+			if err := bv.SidecarKzgProofVerified(); err != nil {
+				t.Logf("SidecarKzgProofVerified error: %s", err.Error())
+			}
+			if err := bv.ValidProposerSignature(ctx); err != nil {
+				t.Logf("ValidProposerSignature error: %s", err.Error())
+			}
+			if err := bv.SidecarParentSlotLower(); err != nil {
+				t.Logf("SidecarParentSlotLower error: %s", err.Error())
+			}
+			if err := bv.SidecarDescendsFromFinalized(); err != nil {
+				t.Logf("SidecarDescendsFromFinalized error: %s", err.Error())
+			}
+			if err := bv.SidecarProposerExpected(ctx); err != nil {
+				t.Logf("SidecarProposerExpected error: %s", err.Error())
+			}
+
+			vsc, err := bv.VerifiedROBlob()
+			requireVerifyExpected(t, err)
+
+			if err == nil {
+				require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
+			}
+		}
+	}
+}
+
+func errAssertionForStep(step Step, expect error) func(t *testing.T, err error) {
+	if !*step.Valid {
+		return func(t *testing.T, err error) {
+			require.ErrorIs(t, err, expect)
+		}
+	}
+	return func(t *testing.T, err error) {
+		if err != nil {
+			require.ErrorIs(t, err, verification.ErrBlobInvalid)
+			me, ok := err.(verification.VerificationMultiError)
+			require.Equal(t, true, ok)
+			fails := me.Failures()
+			// we haven't performed any verification, so all the results should be this type
+			fmsg := make([]string, 0, len(fails))
+			for k, v := range fails {
+				fmsg = append(fmsg, fmt.Sprintf("%s - %s", v.Error(), k.String()))
+			}
+			t.Fatal(strings.Join(fmsg, ";"))
 		}
 	}
 }

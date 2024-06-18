@@ -54,38 +54,45 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		return privKeyFromFile(cfg.PrivateKey)
 	}
 
+	// Default keys have the next highest precedence, if they exist.
 	_, err := os.Stat(defaultKeyPath)
 	defaultKeysExist := !os.IsNotExist(err)
 	if err != nil && defaultKeysExist {
 		return nil, err
 	}
-	// Default keys have the next highest precedence, if they exist.
+
 	if defaultKeysExist {
 		return privKeyFromFile(defaultKeyPath)
 	}
+
 	// There are no keys on the filesystem, so we need to generate one.
 	priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	if err != nil {
 		return nil, err
 	}
-	// If the StaticPeerID flag is set, save the generated key as the default
-	// key, so that it will be used by default on the next node start.
-	if cfg.StaticPeerID {
-		rawbytes, err := priv.Raw()
-		if err != nil {
-			return nil, err
-		}
-		dst := make([]byte, hex.EncodedLen(len(rawbytes)))
-		hex.Encode(dst, rawbytes)
-		if err := file.WriteFile(defaultKeyPath, dst); err != nil {
-			return nil, err
-		}
-		log.Infof("Wrote network key to file")
-		// Read the key from the defaultKeyPath file just written
-		// for the strongest guarantee that the next start will be the same as this one.
-		return privKeyFromFile(defaultKeyPath)
+
+	// If the StaticPeerID flag is not set, return the private key.
+	if !cfg.StaticPeerID {
+		return ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 	}
-	return ecdsaprysm.ConvertFromInterfacePrivKey(priv)
+
+	// Save the generated key as the default key, so that it will be used by
+	// default on the next node start.
+	rawbytes, err := priv.Raw()
+	if err != nil {
+		return nil, err
+	}
+
+	dst := make([]byte, hex.EncodedLen(len(rawbytes)))
+	hex.Encode(dst, rawbytes)
+	if err := file.WriteFile(defaultKeyPath, dst); err != nil {
+		return nil, err
+	}
+
+	log.Info("Wrote network key to file")
+	// Read the key from the defaultKeyPath file just written
+	// for the strongest guarantee that the next start will be the same as this one.
+	return privKeyFromFile(defaultKeyPath)
 }
 
 // Retrieves a p2p networking private key from a file path.

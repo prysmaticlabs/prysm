@@ -226,7 +226,7 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att, committee)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +265,7 @@ func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, priv
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att, committee)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +336,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]*ethpb.Attestation{
+	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]ethpb.Att{
 		att0,
 		att1,
 		att2,
@@ -387,7 +387,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]*ethpb.Attestation{
+	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]ethpb.Att{
 		att0,
 		att1,
 	})

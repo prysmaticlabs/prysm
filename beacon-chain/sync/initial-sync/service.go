@@ -194,7 +194,7 @@ func (s *Service) Start() {
 		}
 		panic(err)
 	}
-	log.Infof("Synced up to slot %d", s.cfg.Chain.HeadSlot())
+	log.WithField("slot", s.cfg.Chain.HeadSlot()).Info("Synced up to")
 	s.markSynced()
 }
 
@@ -279,34 +279,22 @@ func (s *Service) markSynced() {
 	close(s.cfg.InitialSyncComplete)
 }
 
-func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
-	r, err := s.cfg.DB.OriginCheckpointBlockRoot(s.ctx)
-	if errors.Is(err, db.ErrNotFoundOriginBlockRoot) {
-		return nil
-	}
-	blk, err := s.cfg.DB.Block(s.ctx, r)
-	if err != nil {
-		log.WithField("root", r).Error("Block for checkpoint sync origin root not found in db")
-		return err
-	}
+func missingBlobRequest(blk blocks.ROBlock, store *filesystem.BlobStorage) (p2ptypes.BlobSidecarsByRootReq, error) {
+	r := blk.Root()
 	if blk.Version() < version.Deneb {
-		return nil
+		return nil, nil
 	}
 	cmts, err := blk.Block().Body().BlobKzgCommitments()
 	if err != nil {
 		log.WithField("root", r).Error("Error reading commitments from checkpoint sync origin block")
-		return err
+		return nil, err
 	}
 	if len(cmts) == 0 {
-		return nil
+		return nil, nil
 	}
-	rob, err := blocks.NewROBlockWithRoot(blk, r)
+	onDisk, err := store.Indices(r)
 	if err != nil {
-		return err
-	}
-	onDisk, err := s.cfg.BlobStorage.Indices(r)
-	if err != nil {
-		return errors.Wrapf(err, "error checking existing blobs for checkpoint sync bloc root %#x", r)
+		return nil, errors.Wrapf(err, "error checking existing blobs for checkpoint sync block root %#x", r)
 	}
 	req := make(p2ptypes.BlobSidecarsByRootReq, 0, len(cmts))
 	for i := range cmts {
@@ -315,8 +303,32 @@ func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
 		}
 		req = append(req, &eth.BlobIdentifier{BlockRoot: r[:], Index: uint64(i)})
 	}
+	return req, nil
+}
+
+func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
+	r, err := s.cfg.DB.OriginCheckpointBlockRoot(s.ctx)
+	if errors.Is(err, db.ErrNotFoundOriginBlockRoot) {
+		return nil
+	}
+	blk, err := s.cfg.DB.Block(s.ctx, r)
+	if err != nil {
+		log.WithField("root", fmt.Sprintf("%#x", r)).Error("Block for checkpoint sync origin root not found in db")
+		return err
+	}
+	if !params.WithinDAPeriod(slots.ToEpoch(blk.Block().Slot()), slots.ToEpoch(s.clock.CurrentSlot())) {
+		return nil
+	}
+	rob, err := blocks.NewROBlockWithRoot(blk, r)
+	if err != nil {
+		return err
+	}
+	req, err := missingBlobRequest(rob, s.cfg.BlobStorage)
+	if err != nil {
+		return err
+	}
 	if len(req) == 0 {
-		log.WithField("nBlobs", len(cmts)).WithField("root", fmt.Sprintf("%#x", r)).Debug("All checkpoint block blobs are present")
+		log.WithField("root", fmt.Sprintf("%#x", r)).Debug("All blobs for checkpoint block are present")
 		return nil
 	}
 	shufflePeers(pids)
@@ -328,7 +340,7 @@ func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
 		if len(sidecars) != len(req) {
 			continue
 		}
-		bv := newBlobBatchVerifier(s.newBlobVerifier)
+		bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncSidecarRequirements)
 		avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
 		current := s.clock.CurrentSlot()
 		if err := avs.Persist(current, sidecars...); err != nil {
@@ -349,4 +361,10 @@ func shufflePeers(pids []peer.ID) {
 	rg.Shuffle(len(pids), func(i, j int) {
 		pids[i], pids[j] = pids[j], pids[i]
 	})
+}
+
+func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.NewBlobVerifier {
+	return func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+		return ini.NewBlobVerifier(b, reqs)
+	}
 }

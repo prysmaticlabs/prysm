@@ -201,20 +201,19 @@ func (s *Store) BackfillFinalizedIndex(ctx context.Context, blocks []blocks.ROBl
 			return err
 		}
 		encs[i-1] = penc
-
-		// The final element is the parent of finalizedChildRoot. This is checked inside the db transaction using
-		// the parent_root value stored in the index data for finalizedChildRoot.
-		if i == len(blocks)-1 {
-			fbrs[i].ChildRoot = finalizedChildRoot[:]
-			// Final element is complete, so it is pre-encoded like the others.
-			enc, err := encode(ctx, fbrs[i])
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return err
-			}
-			encs[i] = enc
-		}
 	}
+
+	// The final element is the parent of finalizedChildRoot. This is checked inside the db transaction using
+	// the parent_root value stored in the index data for finalizedChildRoot.
+	lastIdx := len(blocks) - 1
+	fbrs[lastIdx].ChildRoot = finalizedChildRoot[:]
+	// Final element is complete, so it is pre-encoded like the others.
+	enc, err := encode(ctx, fbrs[lastIdx])
+	if err != nil {
+		tracing.AnnotateError(span, err)
+		return err
+	}
+	encs[lastIdx] = enc
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(finalizedBlockRootsIndexBucket)

@@ -85,7 +85,7 @@ var (
 			},
 			&cli.StringFlag{
 				Name:        "config-name",
-				Usage:       "Config kind to be used for generating the genesis state. Default: mainnet. Options include mainnet, interop, minimal, prater, sepolia. --chain-config-file will override this flag.",
+				Usage:       "Config kind to be used for generating the genesis state. Default: mainnet. Options include mainnet, interop, minimal, sepolia, holesky. --chain-config-file will override this flag.",
 				Destination: &generateGenesisStateFlags.ConfigName,
 				Value:       params.MainnetName,
 			},
@@ -273,6 +273,7 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 		gen.Timestamp = f.GenesisTime
 		gen.Config.ShanghaiTime = interop.GethShanghaiTime(f.GenesisTime, params.BeaconConfig())
 		gen.Config.CancunTime = interop.GethCancunTime(f.GenesisTime, params.BeaconConfig())
+		gen.Config.PragueTime = interop.GethPragueTime(f.GenesisTime, params.BeaconConfig())
 
 		fields := logrus.Fields{}
 		if gen.Config.ShanghaiTime != nil {
@@ -280,6 +281,9 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 		}
 		if gen.Config.CancunTime != nil {
 			fields["cancun"] = fmt.Sprintf("%d", *gen.Config.CancunTime)
+		}
+		if gen.Config.PragueTime != nil {
+			fields["prague"] = fmt.Sprintf("%d", *gen.Config.PragueTime)
 		}
 		log.WithFields(fields).Info("Setting fork geth times")
 		if v > version.Altair {

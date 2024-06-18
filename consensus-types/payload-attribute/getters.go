@@ -16,8 +16,8 @@ func (a *data) PrevRandao() []byte {
 	return a.prevRandao
 }
 
-// Timestamps returns the timestamp of the payload attribute.
-func (a *data) Timestamps() uint64 {
+// Timestamp returns the timestamp of the payload attribute.
+func (a *data) Timestamp() uint64 {
 	return a.timeStamp
 }
 
@@ -80,7 +80,7 @@ func (a *data) PbV3() (*enginev1.PayloadAttributesV3, error) {
 	if a == nil {
 		return nil, errNilPayloadAttribute
 	}
-	if a.version != version.Deneb {
+	if a.version < version.Deneb {
 		return nil, consensus_types.ErrNotSupported("PbV3", a.version)
 	}
 	if a.timeStamp == 0 && len(a.prevRandao) == 0 && len(a.parentBeaconBlockRoot) == 0 {
@@ -100,7 +100,7 @@ func (a *data) IsEmpty() bool {
 	if len(a.PrevRandao()) != 0 {
 		return false
 	}
-	if a.Timestamps() != 0 {
+	if a.Timestamp() != 0 {
 		return false
 	}
 	if len(a.SuggestedFeeRecipient()) != 0 {

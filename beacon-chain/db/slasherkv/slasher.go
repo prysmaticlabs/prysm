@@ -70,12 +70,12 @@ func (s *Store) LastEpochWrittenForValidators(
 	return attestedEpochs, err
 }
 
-// SaveLastEpochsWrittenForValidators updates the latest epoch a slice
-// of validator indices has attested to.
-func (s *Store) SaveLastEpochsWrittenForValidators(
+// SaveLastEpochWrittenForValidators saves the latest epoch
+// that each validator has attested to in the provided map.
+func (s *Store) SaveLastEpochWrittenForValidators(
 	ctx context.Context, epochByValIndex map[primitives.ValidatorIndex]primitives.Epoch,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochsWrittenForValidators")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochWrittenForValidators")
 	defer span.End()
 
 	const batchSize = 10000
@@ -156,17 +156,17 @@ func (s *Store) CheckAttesterDoubleVotes(
 				signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 				attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 
-				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
-				localDoubleVotes := []*slashertypes.AttesterDoubleVote{}
+				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.GetData().Target.Epoch)
+				localDoubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
 
-				for _, valIdx := range attToProcess.IndexedAttestation.AttestingIndices {
+				for _, valIdx := range attToProcess.IndexedAttestation.GetAttestingIndices() {
 					// Check if there is signing root in the database for this combination
 					// of validator index and target epoch.
 					encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))
 					validatorEpochKey := append(encEpoch, encIdx...)
 					attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
 
-					// An attestation record key is comprised of a signing root (32 bytes).
+					// An attestation record key consists of a signing root (32 bytes).
 					if len(attRecordsKey) < attestationRecordKeySize {
 						// If there is no signing root for this combination,
 						// then there is no double vote. We can continue to the next validator.
@@ -194,7 +194,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 					// Build the proof of double vote.
 					slashAtt := &slashertypes.AttesterDoubleVote{
 						ValidatorIndex: primitives.ValidatorIndex(valIdx),
-						Target:         attToProcess.IndexedAttestation.Data.Target.Epoch,
+						Target:         attToProcess.IndexedAttestation.GetData().Target.Epoch,
 						Wrapper_1:      existingAttRecord,
 						Wrapper_2:      attToProcess,
 					}
@@ -280,7 +280,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	encodedRecords := make([][]byte, attWrappersCount)
 
 	for i, attestation := range attWrappers {
-		encEpoch := encodeTargetEpoch(attestation.IndexedAttestation.Data.Target.Epoch)
+		encEpoch := encodeTargetEpoch(attestation.IndexedAttestation.GetData().Target.Epoch)
 
 		value, err := encodeAttestationRecord(attestation)
 		if err != nil {
@@ -325,7 +325,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 					return err
 				}
 
-				for _, validatorIndex := range attWrapper.IndexedAttestation.AttestingIndices {
+				for _, validatorIndex := range attWrapper.IndexedAttestation.GetAttestingIndices() {
 					encodedIndex := encodeValidatorIndex(primitives.ValidatorIndex(validatorIndex))
 
 					key := append(encodedTargetEpoch, encodedIndex...)
@@ -638,8 +638,8 @@ func (s *Store) HighestAttestations(
 					}
 					highestAtt := &ethpb.HighestAttestation{
 						ValidatorIndex:     uint64(indices[i]),
-						HighestSourceEpoch: attWrapper.IndexedAttestation.Data.Source.Epoch,
-						HighestTargetEpoch: attWrapper.IndexedAttestation.Data.Target.Epoch,
+						HighestSourceEpoch: attWrapper.IndexedAttestation.GetData().Source.Epoch,
+						HighestTargetEpoch: attWrapper.IndexedAttestation.GetData().Target.Epoch,
 					}
 					history = append(history, highestAtt)
 					break
@@ -697,7 +697,7 @@ func decodeSlasherChunk(enc []byte) ([]uint16, error) {
 }
 
 // Encode attestation record to bytes.
-// The output encoded attestation record consists in the signing root concatened with the compressed attestation record.
+// The output encoded attestation record consists in the signing root concatenated with the compressed attestation record.
 func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byte, error) {
 	if att == nil || att.IndexedAttestation == nil {
 		return []byte{}, errors.New("nil proposal record")
@@ -716,7 +716,7 @@ func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byt
 }
 
 // Decode attestation record from bytes.
-// The input encoded attestation record consists in the signing root concatened with the compressed attestation record.
+// The input encoded attestation record consists in the signing root concatenated with the compressed attestation record.
 func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWrapper, error) {
 	if len(encoded) < rootSize {
 		return nil, fmt.Errorf("wrong length for encoded attestation record, want minimum %d, got %d", rootSize, len(encoded))
