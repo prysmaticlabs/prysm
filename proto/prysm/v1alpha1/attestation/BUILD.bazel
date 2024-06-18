@@ -2,10 +2,14 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["attestation_utils.go"],
+    srcs = [
+        "attestation_utils.go",
+        "id.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
