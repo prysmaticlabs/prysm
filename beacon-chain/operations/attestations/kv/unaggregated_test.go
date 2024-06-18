@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	c "github.com/patrickmn/go-cache"
-	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -39,7 +39,7 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 					BeaconBlockRoot: []byte{0b0},
 				},
 			},
-			wantErrString: fssz.ErrBytesLength.Error(),
+			wantErrString: "could not create attestation ID",
 		},
 		{
 			name:  "normal save",
@@ -57,13 +57,13 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 			count: 0,
 		},
 	}
-	r, err := hashFn(util.HydrateAttestationData(&ethpb.AttestationData{Slot: 100}))
+	id, err := attestation.NewId(util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100}}), attestation.Data)
 	require.NoError(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
-			cache.seenAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
+			cache.seenAtt.Set(id.String(), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
 			assert.Equal(t, 0, len(cache.unAggregatedAtt), "Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 
 			if tt.att != nil && tt.att.GetSignature() == nil {
@@ -246,9 +246,9 @@ func TestKV_Unaggregated_UnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	}
 	ctx := context.Background()
 	returned := cache.UnaggregatedAttestationsBySlotIndex(ctx, 1, 1)
-	assert.DeepEqual(t, []ethpb.Att{att1}, returned)
+	assert.DeepEqual(t, []*ethpb.Attestation{att1}, returned)
 	returned = cache.UnaggregatedAttestationsBySlotIndex(ctx, 1, 2)
-	assert.DeepEqual(t, []ethpb.Att{att2}, returned)
+	assert.DeepEqual(t, []*ethpb.Attestation{att2}, returned)
 	returned = cache.UnaggregatedAttestationsBySlotIndex(ctx, 2, 1)
-	assert.DeepEqual(t, []ethpb.Att{att3}, returned)
+	assert.DeepEqual(t, []*ethpb.Attestation{att3}, returned)
 }
