@@ -9,6 +9,9 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
@@ -21,8 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
@@ -57,8 +58,7 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		requestedColumnsList = append(requestedColumnsList, ident.ColumnIndex)
 	}
 
-	// TODO: Customize data column batches too
-	batchSize := flags.Get().BlobBatchLimit
+	batchSize := flags.Get().DataColumnBatchLimit
 	var ticker *time.Ticker
 	if len(requestedColumnIdents) > batchSize {
 		ticker = time.NewTicker(time.Second)
