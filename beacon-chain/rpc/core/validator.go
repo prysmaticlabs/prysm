@@ -288,24 +288,26 @@ func (s *Service) SubmitSignedAggregateSelectionProof(
 		return &RpcError{Err: &AggregateBroadcastFailedError{err: err}, Reason: Internal}
 	}
 
-	var fields logrus.Fields
-	if agg.Version() >= version.Electra {
-		fields = logrus.Fields{
-			"slot":             data.Slot,
-			"committeeCount":   att.CommitteeBitsVal().Count(),
-			"committeeIndices": att.CommitteeBitsVal().BitIndices(),
-			"validatorIndex":   attAndProof.GetAggregatorIndex(),
-			"aggregatedCount":  att.GetAggregationBits().Count(),
+	if logrus.GetLevel() >= logrus.DebugLevel {
+		var fields logrus.Fields
+		if agg.Version() >= version.Electra {
+			fields = logrus.Fields{
+				"slot":             data.Slot,
+				"committeeCount":   att.CommitteeBitsVal().Count(),
+				"committeeIndices": att.CommitteeBitsVal().BitIndices(),
+				"validatorIndex":   attAndProof.GetAggregatorIndex(),
+				"aggregatedCount":  att.GetAggregationBits().Count(),
+			}
+		} else {
+			fields = logrus.Fields{
+				"slot":            data.Slot,
+				"committeeIndex":  data.CommitteeIndex,
+				"validatorIndex":  attAndProof.GetAggregatorIndex(),
+				"aggregatedCount": att.GetAggregationBits().Count(),
+			}
 		}
-	} else {
-		fields = logrus.Fields{
-			"slot":            data.Slot,
-			"committeeIndex":  data.CommitteeIndex,
-			"validatorIndex":  attAndProof.GetAggregatorIndex(),
-			"aggregatedCount": att.GetAggregationBits().Count(),
-		}
+		log.WithFields(fields).Debug("Broadcasting aggregated attestation and proof")
 	}
-	log.WithFields(fields).Debug("Broadcasting aggregated attestation and proof")
 
 	return nil
 }

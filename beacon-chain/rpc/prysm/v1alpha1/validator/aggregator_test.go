@@ -505,3 +505,104 @@ func TestSubmitSignedAggregateSelectionProofElectra_InvalidSlot(t *testing.T) {
 	_, err := aggregatorServer.SubmitSignedAggregateSelectionProofElectra(context.Background(), req)
 	require.ErrorContains(t, "attestation slot is no longer valid from current time", err)
 }
+
+func Test_bestAggregate(t *testing.T) {
+	type testCase struct {
+		name string
+		atts []*ethpb.Attestation
+		best *ethpb.Attestation
+	}
+
+	var testCases []testCase
+
+	tc := testCase{
+		name: "single attestation",
+		atts: []*ethpb.Attestation{{}},
+	}
+	tc.best = tc.atts[0]
+	testCases = append(testCases, tc)
+
+	tc = testCase{
+		name: "choose attestation with most aggregation bits",
+		atts: []*ethpb.Attestation{
+			{
+				AggregationBits: bitfield.Bitlist{0b10001},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+			{
+				AggregationBits: bitfield.Bitlist{0b11111},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+			{
+				AggregationBits: bitfield.Bitlist{0b10101},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+		},
+	}
+	tc.best = tc.atts[1]
+	testCases = append(testCases, tc)
+
+	tc = testCase{
+		name: "do not choose attestation with other committee index",
+		atts: []*ethpb.Attestation{
+			{
+				AggregationBits: bitfield.Bitlist{0b10001},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+			{
+				AggregationBits: bitfield.Bitlist{0b11111},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 1},
+			},
+			{
+				AggregationBits: bitfield.Bitlist{0b10101},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+		},
+	}
+	tc.best = tc.atts[2]
+	testCases = append(testCases, tc)
+
+	tc = testCase{
+		name: "do not choose attestation with other index in committee",
+		atts: []*ethpb.Attestation{
+			{
+				AggregationBits: bitfield.Bitlist{0b10001},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+			{
+				AggregationBits: bitfield.Bitlist{0b11110},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+			{
+				AggregationBits: bitfield.Bitlist{0b10101},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+		},
+	}
+	tc.best = tc.atts[2]
+	testCases = append(testCases, tc)
+
+	tc = testCase{
+		name: "no attestation with correct index in committee - choose max att bits",
+		atts: []*ethpb.Attestation{
+			{
+				AggregationBits: bitfield.Bitlist{0b11000},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+			{
+				AggregationBits: bitfield.Bitlist{0b11110},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+			{
+				AggregationBits: bitfield.Bitlist{0b10110},
+				Data:            &ethpb.AttestationData{CommitteeIndex: 0},
+			},
+		},
+	}
+	tc.best = tc.atts[1]
+	testCases = append(testCases, tc)
+
+	for _, tc := range testCases {
+		assert.Equal(t, tc.best, bestAggregate(tc.atts, 0, 0), tc.name)
+	}
+}
