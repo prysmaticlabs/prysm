@@ -51,13 +51,19 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 	if g.cfg.router == nil {
 		return nil, errors.New("router option not configured")
 	}
-
+	if g.cfg.handler == nil {
+		return nil, errors.New("handler option not configured")
+	}
 	// TODO: actually use the timeout config provided
 	g.server = &http.Server{
 		Addr:              g.cfg.httpAddr,
 		Handler:           g.cfg.router,
 		ReadHeaderTimeout: time.Second,
 	}
+	// wrap to handle web apis
+	g.cfg.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		g.cfg.handler(g.cfg.router.ServeHTTP, w, r)
+	})
 	return g, nil
 }
 

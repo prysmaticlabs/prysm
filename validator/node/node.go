@@ -667,7 +667,6 @@ func (c *ValidatorClient) registerHTTPService(router *mux.Router) error {
 			web.Handler(w, req)
 		}
 	}
-
 	opts := []httprest.Option{
 		httprest.WithMuxHandler(muxHandler),
 		httprest.WithRouter(router), // note some routes are registered in server.go
