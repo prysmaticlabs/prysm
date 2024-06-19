@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -344,6 +345,13 @@ func (s *ChainService) HeadValidatorsIndices(ctx context.Context, epoch primitiv
 		return []primitives.ValidatorIndex{}, nil
 	}
 	return helpers.ActiveValidatorIndices(ctx, s.State, epoch)
+}
+
+func (s *ChainService) HeadValidatorsIndicesFromAdvancedSlots(ctx context.Context, slot primitives.Slot) ([]primitives.ValidatorIndex, error) {
+	if s.State == nil {
+		return []primitives.ValidatorIndex{}, nil
+	}
+	return helpers.ActiveValidatorIndices(ctx, s.State, slots.ToEpoch(slot))
 }
 
 // HeadETH1Data provides the current ETH1Data of the head state.
