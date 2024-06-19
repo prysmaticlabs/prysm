@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -194,10 +195,18 @@ func ProcessConsolidations(ctx context.Context, st state.BeaconState, cs []*ethp
 		if err != nil {
 			return err
 		}
-		if !helpers.IsActiveValidator(source, currentEpoch) {
+		sourceValidator, err := state_native.NewValidator(source)
+		if err != nil {
+			return err
+		}
+		if !helpers.IsActiveValidator(sourceValidator, currentEpoch) {
 			return errors.New("source is not active")
 		}
-		if !helpers.IsActiveValidator(target, currentEpoch) {
+		targetValidator, err := state_native.NewValidator(target)
+		if err != nil {
+			return err
+		}
+		if !helpers.IsActiveValidator(targetValidator, currentEpoch) {
 			return errors.New("target is not active")
 		}
 		if source.ExitEpoch != params.BeaconConfig().FarFutureEpoch {

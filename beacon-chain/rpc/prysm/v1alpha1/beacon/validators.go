@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -307,7 +308,11 @@ func (bs *Server) ListValidators(
 	if req.Active {
 		filteredValidators := make([]*ethpb.Validators_ValidatorContainer, 0)
 		for _, item := range validatorList {
-			if helpers.IsActiveValidator(item.Validator, requestedEpoch) {
+			roVal, err := state_native.NewValidator(item.Validator)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not create read-only validator: %v", err)
+			}
+			if helpers.IsActiveValidator(roVal, requestedEpoch) {
 				filteredValidators = append(filteredValidators, item)
 			}
 		}

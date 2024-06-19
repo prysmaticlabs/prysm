@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -28,7 +29,7 @@ import (
 // by activation epoch and by index number.
 type sortableIndices struct {
 	indices    []primitives.ValidatorIndex
-	validators []*ethpb.Validator
+	validators []state.ReadOnlyValidator
 }
 
 // Len is the number of elements in the collection.
@@ -39,10 +40,10 @@ func (s sortableIndices) Swap(i, j int) { s.indices[i], s.indices[j] = s.indices
 
 // Less reports whether the element with index i must sort before the element with index j.
 func (s sortableIndices) Less(i, j int) bool {
-	if s.validators[s.indices[i]].ActivationEligibilityEpoch == s.validators[s.indices[j]].ActivationEligibilityEpoch {
+	if s.validators[s.indices[i]].ActivationEligibilityEpoch() == s.validators[s.indices[j]].ActivationEligibilityEpoch() {
 		return s.indices[i] < s.indices[j]
 	}
-	return s.validators[s.indices[i]].ActivationEligibilityEpoch < s.validators[s.indices[j]].ActivationEligibilityEpoch
+	return s.validators[s.indices[i]].ActivationEligibilityEpoch() < s.validators[s.indices[j]].ActivationEligibilityEpoch()
 }
 
 // AttestingBalance returns the total balance from all the attesting indices.
@@ -93,22 +94,30 @@ func AttestingBalance(ctx context.Context, state state.ReadOnlyBeaconState, atts
 //	     validator.activation_epoch = compute_activation_exit_epoch(get_current_epoch(state))
 func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	currentEpoch := time.CurrentEpoch(state)
-	vals := state.Validators()
+	vals := state.ValidatorsReadOnly()
 	var err error
 	ejectionBal := params.BeaconConfig().EjectionBalance
 	activationEligibilityEpoch := time.CurrentEpoch(state) + 1
 	for idx, validator := range vals {
 		// Process the validators for activation eligibility.
 		if helpers.IsEligibleForActivationQueue(validator, currentEpoch) {
-			validator.ActivationEligibilityEpoch = activationEligibilityEpoch
-			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), validator); err != nil {
+			v, err := state.ValidatorAtIndex(primitives.ValidatorIndex(idx))
+			if err != nil {
+				return nil, err
+			}
+			v.ActivationEligibilityEpoch = activationEligibilityEpoch
+			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), v); err != nil {
+				return nil, err
+			}
+			validator, err = state_native.NewValidator(v)
+			if err != nil {
 				return nil, err
 			}
 		}
 
 		// Process the validators for ejection.
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
-		belowEjectionBalance := validator.EffectiveBalance <= ejectionBal
+		belowEjectionBalance := validator.EffectiveBalance() <= ejectionBal
 		if isActive && belowEjectionBalance {
 			// Here is fine to do a quadratic loop since this should
 			// barely happen
@@ -122,6 +131,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 
 	// Queue validators eligible for activation and not yet dequeued for activation.
 	var activationQ []primitives.ValidatorIndex
+	vals = state.ValidatorsReadOnly()
 	for idx, validator := range vals {
 		if helpers.IsEligibleForActivation(state, validator) {
 			activationQ = append(activationQ, primitives.ValidatorIndex(idx))

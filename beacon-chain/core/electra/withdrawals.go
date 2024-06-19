@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -123,7 +124,12 @@ func ProcessWithdrawalRequests(ctx context.Context, st state.BeaconState, wrs []
 		}
 
 		// Verify the validator is active.
-		if !helpers.IsActiveValidator(validator, currentEpoch) {
+		roValidator, err := state_native.NewValidator(validator)
+		if err != nil {
+			return nil, err
+		}
+
+		if !helpers.IsActiveValidator(roValidator, currentEpoch) {
 			log.Debugln("Skipping execution layer withdrawal request, validator not active")
 			continue
 		}
