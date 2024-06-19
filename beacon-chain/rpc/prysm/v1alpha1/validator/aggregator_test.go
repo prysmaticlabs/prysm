@@ -127,7 +127,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey
-	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregateSelectionRequest{Slot: beaconState.Slot(), CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	require.NoError(t, aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0))
 	_, err = aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
@@ -165,7 +165,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey
-	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregateSelectionRequest{Slot: beaconState.Slot(), CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	require.NoError(t, aggregatorServer.AttPool.SaveAggregatedAttestation(att0))
 	require.NoError(t, aggregatorServer.AttPool.SaveAggregatedAttestation(att1))
@@ -205,7 +205,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey
-	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregateSelectionRequest{Slot: beaconState.Slot(), CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	_, err = aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 	assert.ErrorContains(t, "Could not find attestation for slot and committee in pool", err)
@@ -334,7 +334,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey
-	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregateSelectionRequest{Slot: beaconState.Slot(), CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]ethpb.Att{
 		att0,
@@ -385,7 +385,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey
-	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregateSelectionRequest{Slot: beaconState.Slot(), CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	err = aggregatorServer.AttPool.SaveAggregatedAttestations([]ethpb.Att{
 		att0,
