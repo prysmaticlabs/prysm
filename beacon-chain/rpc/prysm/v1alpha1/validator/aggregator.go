@@ -41,7 +41,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine head root: %v", err)
 	}
-	st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, rt[:], req.Slot)
+	st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, rt, req.Slot)
 	if err != nil {
 		return nil, err
 	}
