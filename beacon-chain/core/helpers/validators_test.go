@@ -744,7 +744,9 @@ func TestIsEligibleForActivationQueue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			helpers.ClearCache()
 
-			assert.Equal(t, tt.want, helpers.IsEligibleForActivationQueue(tt.validator, tt.currentEpoch), "IsEligibleForActivationQueue()")
+			v, err := state_native.NewValidator(tt.validator)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, helpers.IsEligibleForActivationQueue(v, tt.currentEpoch), "IsEligibleForActivationQueue()")
 		})
 	}
 }
