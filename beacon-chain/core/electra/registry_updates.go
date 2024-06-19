@@ -34,35 +34,61 @@ import (
 //	         for validator in state.validators:
 //	             if is_eligible_for_activation(state, validator):
 //	                 validator.activation_epoch = activation_epoch
-func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) error {
-	currentEpoch := time.CurrentEpoch(state)
+func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) error {
+	currentEpoch := time.CurrentEpoch(st)
 	ejectionBal := params.BeaconConfig().EjectionBalance
 	activationEpoch := helpers.ActivationExitEpoch(currentEpoch)
-	vals := state.Validators()
-	for idx, val := range vals {
-		// Handle validators eligible to join the activation queue.
+
+	finalizedEpoch := st.FinalizedCheckpointEpoch()
+	eligibleForActivationQueueValidators := make([]primitives.ValidatorIndex, 0)
+	eligibleForActivationValidators := make([]primitives.ValidatorIndex, 0)
+	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+		alreadyActivated := false
 		if helpers.IsEligibleForActivationQueue(val, currentEpoch) {
-			val.ActivationEligibilityEpoch = currentEpoch + 1
-			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), val); err != nil {
-				return fmt.Errorf("failed to update eligible validator at index %d: %w", idx, err)
+			eligibleForActivationQueueValidators = append(eligibleForActivationQueueValidators, primitives.ValidatorIndex(idx))
+
+			if currentEpoch+1 <= finalizedEpoch && val.ActivationEpoch() == params.BeaconConfig().FarFutureEpoch {
+				eligibleForActivationValidators = append(eligibleForActivationValidators, primitives.ValidatorIndex(idx))
+				alreadyActivated = true
 			}
 		}
-		// Handle validator ejections.
-		if val.EffectiveBalance <= ejectionBal && helpers.IsActiveValidator(val, currentEpoch) {
+
+		if val.EffectiveBalance() <= ejectionBal && helpers.IsActiveValidator(val, currentEpoch) {
 			var err error
 			// exitQueueEpoch and churn arguments are not used in electra.
-			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), 0 /*exitQueueEpoch*/, 0 /*churn*/)
+			st, _, err = validators.InitiateValidatorExit(ctx, st, primitives.ValidatorIndex(idx), 0 /*exitQueueEpoch*/, 0 /*churn*/)
 			if err != nil {
 				return fmt.Errorf("failed to initiate validator exit at index %d: %w", idx, err)
 			}
 		}
 
-		// Activate all eligible validators.
-		if helpers.IsEligibleForActivation(state, val) {
-			val.ActivationEpoch = activationEpoch
-			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), val); err != nil {
-				return fmt.Errorf("failed to activate validator at index %d: %w", idx, err)
-			}
+		if !alreadyActivated && helpers.IsEligibleForActivation(st, val) {
+			eligibleForActivationValidators = append(eligibleForActivationValidators, primitives.ValidatorIndex(idx))
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	for _, idx := range eligibleForActivationQueueValidators {
+		val, err := st.ValidatorAtIndex(idx)
+		if err != nil {
+			return fmt.Errorf("failed to get validator at index %d: %w", idx, err)
+		}
+		val.ActivationEligibilityEpoch = currentEpoch + 1
+		if err := st.UpdateValidatorAtIndex(idx, val); err != nil {
+			return fmt.Errorf("failed to update eligible validator at index %d: %w", idx, err)
+		}
+	}
+
+	for _, idx := range eligibleForActivationValidators {
+		val, err := st.ValidatorAtIndex(idx)
+		if err != nil {
+			return fmt.Errorf("failed to get validator at index %d: %w", idx, err)
+		}
+		val.ActivationEpoch = activationEpoch
+		if err := st.UpdateValidatorAtIndex(idx, val); err != nil {
+			return fmt.Errorf("failed to activate validator at index %d: %w", idx, err)
 		}
 	}
 
