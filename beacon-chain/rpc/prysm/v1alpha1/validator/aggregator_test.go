@@ -109,6 +109,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 
 	beaconState, privKeys := util.DeterministicGenesisState(t, 32)
 	att0, err := generateUnaggregatedAtt(beaconState, 0, privKeys)
+	att0.Data.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	require.NoError(t, err)
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
@@ -144,8 +145,10 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	beaconState, privKeys := util.DeterministicGenesisState(t, 32)
 	att0, err := generateAtt(beaconState, 0, privKeys)
+	att0.Data.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	require.NoError(t, err)
 	att1, err := generateAtt(beaconState, 2, privKeys)
+	att1.Data.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	require.NoError(t, err)
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
@@ -308,14 +311,17 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	require.NoError(t, err)
 	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att0.AggregationBits = bitfield.Bitlist{0b11100}
+	att0.Data.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	att1, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
 	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), fieldparams.RootLength)
 	att1.AggregationBits = bitfield.Bitlist{0b11001}
+	att1.Data.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	att2, err := generateAtt(beaconState, 2, privKeys)
 	require.NoError(t, err)
 	att2.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att2.AggregationBits = bitfield.Bitlist{0b11110}
+	att2.Data.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
@@ -363,10 +369,12 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	require.NoError(t, err)
 	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att0.AggregationBits = bitfield.Bitlist{0b11100}
+	att0.Data.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	att1, err := generateAtt(beaconState, 2, privKeys)
 	require.NoError(t, err)
 	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), fieldparams.RootLength)
 	att1.AggregationBits = bitfield.Bitlist{0b11110}
+	att1.Data.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
