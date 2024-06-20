@@ -191,10 +191,7 @@ func AddValidatorToRegistry(beaconState state.BeaconState, pubKey []byte, withdr
 	if err := beaconState.AppendPreviousParticipationBits(0); err != nil {
 		return err
 	}
-	if err := beaconState.AppendCurrentParticipationBits(0); err != nil {
-		return err
-	}
-	return nil
+	return beaconState.AppendCurrentParticipationBits(0)
 }
 
 // GetValidatorFromDeposit gets a new validator object with provided parameters
