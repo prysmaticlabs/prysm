@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 // ActivateValidatorWithEffectiveBalance updates validator's effective balance, and if it's above MaxEffectiveBalance, validator becomes active in genesis.
@@ -62,42 +61,6 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 		verified = true
 	}
 	return verified, nil
-}
-
-// GetValidatorFromDeposit gets a new validator object with provided parameters
-//
-// def get_validator_from_deposit(pubkey: BLSPubkey, withdrawal_credentials: Bytes32) -> Validator:
-//
-//	return Validator(
-//	pubkey=pubkey,
-//	withdrawal_credentials=withdrawal_credentials,
-//	activation_eligibility_epoch=FAR_FUTURE_EPOCH,
-//	activation_epoch=FAR_FUTURE_EPOCH,
-//	exit_epoch=FAR_FUTURE_EPOCH,
-//	withdrawable_epoch=FAR_FUTURE_EPOCH,
-//	effective_balance=0,  # [Modified in Electra:EIP7251]
-//
-// )
-func GetValidatorFromDeposit(stateVersion int, pubKey []byte, withdrawalCredentials []byte, amount uint64) *ethpb.Validator {
-	var effectiveBalance uint64
-	if stateVersion >= version.Electra {
-		effectiveBalance = 0 // [Modified in Electra:EIP7251]
-	} else {
-		effectiveBalance = amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
-		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
-			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-		}
-	}
-
-	return &ethpb.Validator{
-		PublicKey:                  pubKey,
-		WithdrawalCredentials:      withdrawalCredentials,
-		ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
-		ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
-		ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
-		WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
-		EffectiveBalance:           effectiveBalance,
-	}
 }
 
 // IsValidDepositSignature returns whether deposit_data is valid

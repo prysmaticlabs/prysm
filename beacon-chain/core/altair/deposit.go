@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -153,7 +154,7 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 //	set_or_append_list(state.current_epoch_participation, index, ParticipationFlags(0b0000_0000)) // New in Altair
 //	set_or_append_list(state.inactivity_scores, index, uint64(0)) // New in Altair
 func AddValidatorToRegistry(beaconState state.BeaconState, pubKey []byte, withdrawalCredentials []byte, amount uint64) error {
-	val := blocks.GetValidatorFromDeposit(beaconState.Version(), pubKey, withdrawalCredentials, amount)
+	val := GetValidatorFromDeposit(pubKey, withdrawalCredentials, amount)
 	if err := beaconState.AppendValidator(val); err != nil {
 		return err
 	}
@@ -174,4 +175,36 @@ func AddValidatorToRegistry(beaconState state.BeaconState, pubKey []byte, withdr
 		}
 	}
 	return nil
+}
+
+// GetValidatorFromDeposit gets a new validator object with provided parameters
+//
+// def get_validator_from_deposit(pubkey: BLSPubkey, withdrawal_credentials: Bytes32, amount: uint64) -> Validator:
+//
+//	effective_balance = min(amount - amount % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
+//
+//	return Validator(
+//	    pubkey=pubkey,
+//	    withdrawal_credentials=withdrawal_credentials,
+//	    activation_eligibility_epoch=FAR_FUTURE_EPOCH,
+//	    activation_epoch=FAR_FUTURE_EPOCH,
+//	    exit_epoch=FAR_FUTURE_EPOCH,
+//	    withdrawable_epoch=FAR_FUTURE_EPOCH,
+//	    effective_balance=effective_balance,
+//	)
+func GetValidatorFromDeposit(pubKey []byte, withdrawalCredentials []byte, amount uint64) *ethpb.Validator {
+	effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
+	if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
+		effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+	}
+
+	return &ethpb.Validator{
+		PublicKey:                  pubKey,
+		WithdrawalCredentials:      withdrawalCredentials,
+		ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+		ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+		ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+		WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
+		EffectiveBalance:           effectiveBalance,
+	}
 }
