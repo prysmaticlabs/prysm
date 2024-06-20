@@ -47,7 +47,7 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		subscribeCommitteeSubnetsTestEndpoint,
 		nil,
 		bytes.NewBuffer(committeeSubscriptionsBytes),
@@ -209,7 +209,7 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			if testCase.expectSubscribeRestCall {
 				jsonRestHandler.EXPECT().Post(
-					ctx,
+					gomock.Any(),
 					subscribeCommitteeSubnetsTestEndpoint,
 					gomock.Any(),
 					gomock.Any(),
