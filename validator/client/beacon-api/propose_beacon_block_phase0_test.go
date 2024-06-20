@@ -54,7 +54,7 @@ func TestProposeBeaconBlock_Phase0(t *testing.T) {
 	// Make sure that what we send in the POST body is the marshalled version of the protobuf block
 	headers := map[string]string{"Eth-Consensus-Version": "phase0"}
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/blocks",
 		headers,
 		bytes.NewBuffer(marshalledBlock),
