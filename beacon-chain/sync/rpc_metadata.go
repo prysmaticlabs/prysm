@@ -108,7 +108,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	if err != nil {
 		return nil, err
 	}
-	msg, err := extractDataType(types.MetaDataMap, rpcCtx[:], s.cfg.clock)
+	msg, err := extractDataTypeFromTypeMap(types.MetaDataMap, rpcCtx[:], s.cfg.clock)
 	if err != nil {
 		return nil, err
 	}

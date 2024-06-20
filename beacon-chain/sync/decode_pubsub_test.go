@@ -281,7 +281,7 @@ func TestExtractDataType(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotBlock, err := extractDataType(types.BlockMap, tt.args.digest, tt.args.chain)
+			gotBlock, err := extractDataTypeFromTypeMap(types.BlockMap, tt.args.digest, tt.args.chain)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("block: error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -289,7 +289,7 @@ func TestExtractDataType(t *testing.T) {
 			if !reflect.DeepEqual(gotBlock, tt.wantBlock) {
 				t.Errorf("block: got = %v, want %v", gotBlock, tt.wantBlock)
 			}
-			gotAtt, err := extractDataType(types.AttestationMap, tt.args.digest, tt.args.chain)
+			gotAtt, err := extractDataTypeFromTypeMap(types.AttestationMap, tt.args.digest, tt.args.chain)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("attestation: error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -297,7 +297,7 @@ func TestExtractDataType(t *testing.T) {
 			if !reflect.DeepEqual(gotAtt, tt.wantAtt) {
 				t.Errorf("attestation: got = %v, want %v", gotAtt, tt.wantAtt)
 			}
-			gotAggregate, err := extractDataType(types.AggregateAttestationMap, tt.args.digest, tt.args.chain)
+			gotAggregate, err := extractDataTypeFromTypeMap(types.AggregateAttestationMap, tt.args.digest, tt.args.chain)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("aggregate: error = %v, wantErr %v", err, tt.wantErr)
 				return

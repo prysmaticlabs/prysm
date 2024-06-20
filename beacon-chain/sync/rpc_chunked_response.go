@@ -105,7 +105,7 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, tor blockchain.TemporalOrac
 	if err != nil {
 		return nil, err
 	}
-	blk, err := extractDataType(types.BlockMap, rpcCtx, tor)
+	blk, err := extractDataTypeFromTypeMap(types.BlockMap, rpcCtx, tor)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func readResponseChunk(stream libp2pcore.Stream, tor blockchain.TemporalOracle, 
 	if err != nil {
 		return nil, err
 	}
-	blk, err := extractDataType(types.BlockMap, rpcCtx, tor)
+	blk, err := extractDataTypeFromTypeMap(types.BlockMap, rpcCtx, tor)
 	if err != nil {
 		return nil, err
 	}

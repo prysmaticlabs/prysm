@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -56,22 +57,12 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
 	}
 	// Handle different message types across forks.
-	switch topic {
-	case p2p.BlockSubnetTopicFormat:
-		m, err = extractDataType(types.BlockMap, fDigest[:], s.cfg.clock)
-		if err != nil {
-			return nil, err
-		}
-	case p2p.AttestationSubnetTopicFormat:
-		m, err = extractDataType(types.AttestationMap, fDigest[:], s.cfg.clock)
-		if err != nil {
-			return nil, err
-		}
-	case p2p.AggregateAndProofSubnetTopicFormat:
-		m, err = extractDataType(types.AggregateAttestationMap, fDigest[:], s.cfg.clock)
-		if err != nil {
-			return nil, err
-		}
+	dt, err := extractDataTypeFromTopic(topic, fDigest[:], s.cfg.clock)
+	if err != nil {
+		return nil, err
+	}
+	if dt != nil {
+		m = dt
 	}
 	if err := s.cfg.p2p.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
@@ -89,7 +80,19 @@ func (*Service) replaceForkDigest(topic string) (string, error) {
 	return strings.Join(subStrings, "/"), nil
 }
 
-func extractDataType[T any](typeMap map[[4]byte]func() (T, error), digest []byte, tor blockchain.TemporalOracle) (T, error) {
+func extractDataTypeFromTopic(topic string, digest []byte, clock *startup.Clock) (ssz.Unmarshaler, error) {
+	switch topic {
+	case p2p.BlockSubnetTopicFormat:
+		return extractDataTypeFromTypeMap(types.BlockMap, digest, clock)
+	case p2p.AttestationSubnetTopicFormat:
+		return extractDataTypeFromTypeMap(types.AttestationMap, digest, clock)
+	case p2p.AggregateAndProofSubnetTopicFormat:
+		return extractDataTypeFromTypeMap(types.AggregateAttestationMap, digest, clock)
+	}
+	return nil, nil
+}
+
+func extractDataTypeFromTypeMap[T any](typeMap map[[4]byte]func() (T, error), digest []byte, tor blockchain.TemporalOracle) (T, error) {
 	var zero T
 
 	if len(digest) == 0 {
