@@ -182,7 +182,6 @@ func AddValidatorToRegistry(beaconState state.BeaconState, pubKey []byte, withdr
 	if err := beaconState.AppendBalance(0); err != nil {
 		return err
 	}
-	// In specs this function is at the end function
 	if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
 		return err
 	}
