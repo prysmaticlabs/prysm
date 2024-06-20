@@ -23,6 +23,7 @@ import (
 	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
 	"github.com/multiformats/go-multiaddr"
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
@@ -52,9 +53,10 @@ type TestP2P struct {
 }
 
 // NewTestP2P initializes a new p2p test service.
-func NewTestP2P(t *testing.T) *TestP2P {
+func NewTestP2P(t *testing.T, opts ...swarmt.Option) *TestP2P {
+	opts = append(opts, swarmt.OptDisableQUIC)
 	ctx := context.Background()
-	h := bhost.NewBlankHost(swarmt.GenSwarm(t, swarmt.OptDisableQUIC))
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, opts...))
 	ps, err := pubsub.NewFloodSub(ctx, h,
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
