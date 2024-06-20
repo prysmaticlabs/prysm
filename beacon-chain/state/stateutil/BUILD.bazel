@@ -16,7 +16,6 @@ go_library(
         "pending_consolidations_root.go",
         "pending_partial_withdrawals_root.go",
         "reference.go",
-        "slice_root.go",
         "sync_committee.root.go",
         "trie_helpers.go",
         "unrealized_justification.go",
