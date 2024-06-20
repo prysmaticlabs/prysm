@@ -131,7 +131,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if keyFileExists {
 		_, fileKeys, err := km.readKeyFile()
 		if err != nil {
-			return nil, errors.Wrap(err, "Could not read key file")
+			return nil, errors.Wrap(err, "could not read key file")
 		}
 		maps.Copy(fileKeys, flagLoadedKeys)
 		km.lock.Lock()
