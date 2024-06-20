@@ -2,7 +2,7 @@ module github.com/prysmaticlabs/prysm/v5
 
 go 1.21
 
-toolchain go1.21.5
+toolchain go1.21.11
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
