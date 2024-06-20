@@ -75,42 +75,29 @@ loop:
 // CustodyCountFromRemotePeer retrieves the custody count from a remote peer.
 func (s *Service) CustodyCountFromRemotePeer(pid peer.ID) uint64 {
 	// By default, we assume the peer custodies the minimum number of subnets.
-	custodyCount := params.BeaconConfig().CustodyRequirement
+	custodyRequirement := params.BeaconConfig().CustodyRequirement
 
 	// Retrieve the ENR of the peer.
 	record, err := s.peers.ENR(pid)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"peerID":       pid,
-			"defaultValue": custodyCount,
+			"defaultValue": custodyRequirement,
 		}).Error("Failed to retrieve ENR for peer, defaulting to the default value")
-		return custodyCount
+
+		return custodyRequirement
 	}
 
-	if record == nil {
-		// This is the case for inbound peers. So we don't log an error for this.
-		log.WithFields(logrus.Fields{
+	// Retrieve the custody subnets count from the ENR.
+	custodyCount, err := peerdas.CustodyCountFromRecord(record)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
 			"peerID":       pid,
-			"defaultValue": custodyCount,
-		}).Debug("No ENR found for peer, defaulting to the default value")
-		return custodyCount
+			"defaultValue": custodyRequirement,
+		}).Error("Failed to retrieve custody count from ENR for peer, defaulting to the default value")
+
+		return custodyRequirement
 	}
 
-	// Load the `custody_subnet_count`
-	var csc CustodySubnetCount
-	if err := record.Load(&csc); err != nil {
-		log.WithFields(logrus.Fields{
-			"peerID":       pid,
-			"defaultValue": custodyCount,
-		}).Warning("Cannot load the custody subnet count from peer, defaulting to the default value")
-
-		return custodyCount
-	}
-
-	log.WithFields(logrus.Fields{
-		"peerID":       pid,
-		"custodyCount": csc,
-	}).Debug("Custody count read from peer's ENR")
-
-	return uint64(csc)
+	return custodyCount
 }

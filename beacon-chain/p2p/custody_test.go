@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -36,7 +37,7 @@ func createPeer(t *testing.T, privateKeyOffset int, custodyCount uint64) (*enr.R
 	require.NoError(t, err)
 
 	record := &enr.Record{}
-	record.Set(CustodySubnetCount(custodyCount))
+	record.Set(peerdas.Csc(custodyCount))
 	record.Set(enode.Secp256k1(privateKey.PublicKey))
 
 	return record, peerID, privateKey
@@ -102,7 +103,7 @@ func TestCustodyCountFromRemotePeer(t *testing.T) {
 		pid             = "test-id"
 	)
 
-	csc := CustodySubnetCount(expected)
+	csc := peerdas.Csc(expected)
 
 	// Define a nil record
 	var nilRecord *enr.Record = nil
