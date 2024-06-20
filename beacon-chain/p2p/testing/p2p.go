@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
 	"github.com/sirupsen/logrus"
@@ -420,10 +421,25 @@ func (*TestP2P) InterceptUpgraded(network.Conn) (allow bool, reason control.Disc
 	return true, 0
 }
 
-func (_ *TestP2P) CustodyCountFromRemotePeer(peer.ID) uint64 {
-	return 0
+func (s *TestP2P) CustodyCountFromRemotePeer(pid peer.ID) uint64 {
+	// By default, we assume the peer custodies the minimum number of subnets.
+	custodyRequirement := params.BeaconConfig().CustodyRequirement
+
+	// Retrieve the ENR of the peer.
+	record, err := s.peers.ENR(pid)
+	if err != nil {
+		return custodyRequirement
+	}
+
+	// Retrieve the custody subnets count from the ENR.
+	custodyCount, err := peerdas.CustodyCountFromRecord(record)
+	if err != nil {
+		return custodyRequirement
+	}
+
+	return custodyCount
 }
 
-func (_ *TestP2P) GetValidCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
+func (*TestP2P) GetValidCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
 	return peers, nil
 }
