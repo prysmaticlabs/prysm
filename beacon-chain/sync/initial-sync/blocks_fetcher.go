@@ -10,6 +10,9 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
@@ -31,8 +34,6 @@ import (
 	p2ppb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 const (
@@ -575,8 +576,9 @@ func populateBlockWithColumns(bw blocks2.BlockWithROBlobs, columns []blocks.RODa
 		return bw, errDidntPopulate
 	}
 	colsPersub := params.BeaconConfig().NumberOfColumns / params.BeaconConfig().DataColumnSidecarSubnetCount
-	if len(columns) != int(params.BeaconConfig().CustodyRequirement*colsPersub) {
-		return bw, errors.Errorf("unequal custodied columns provided, got %d instead of %d", len(columns), int(params.BeaconConfig().CustodyRequirement))
+	subnetCount := peerdas.CustodySubnetCount()
+	if len(columns) != int(subnetCount*colsPersub) {
+		return bw, errors.Errorf("unequal custodied columns provided, got %d instead of %d", len(columns), subnetCount)
 	}
 	for ci := range columns {
 		if err := verify.ColumnAlignsWithBlock(columns[ci], blk); err != nil {
@@ -655,7 +657,7 @@ func (f *blocksFetcher) fetchColumnsFromPeer(ctx context.Context, bwb []blocks2.
 		return bwb, nil
 	}
 	// Construct request message based on required custodied columns.
-	custodyCols, err := peerdas.CustodyColumns(f.p2p.NodeID(), params.BeaconConfig().CustodyRequirement)
+	custodyCols, err := peerdas.CustodyColumns(f.p2p.NodeID(), peerdas.CustodySubnetCount())
 	if err != nil {
 		return nil, err
 	}
@@ -679,7 +681,8 @@ func (f *blocksFetcher) fetchColumnsFromPeer(ctx context.Context, bwb []blocks2.
 		if err != nil {
 			return nil, err
 		}
-		remoteCustody, err := peerdas.CustodyColumns(nid, params.BeaconConfig().CustodyRequirement)
+
+		remoteCustody, err := peerdas.CustodyColumns(nid, f.p2p.CustodyCountFromRemotePeer(p))
 		if err != nil {
 			return nil, err
 		}
