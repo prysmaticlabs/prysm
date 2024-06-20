@@ -387,7 +387,7 @@ func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 	signature, err := km.client.Sign(ctx, hexutil.Encode(request.PublicKey), signRequest)
 	if err != nil {
 		erroredResponsesTotal.Inc()
-		return nil, errors.Wrap(err, "Failed to sign the request")
+		return nil, errors.Wrap(err, "failed to sign the request")
 	}
 	log.Debug("Successfully signed the request", "publicKey", request.PublicKey)
 	signRequestsTotal.Inc()
