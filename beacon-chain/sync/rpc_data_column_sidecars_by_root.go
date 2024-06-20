@@ -9,6 +9,9 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
@@ -21,8 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
@@ -71,14 +72,8 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		return errors.Wrapf(err, "unexpected error computing min valid blob request slot, current_slot=%d", cs)
 	}
 
-	// Compute all custodied subnets.
-	custodiedSubnets := params.BeaconConfig().CustodyRequirement
-	if flags.Get().SubscribeToAllSubnets {
-		custodiedSubnets = params.BeaconConfig().DataColumnSidecarSubnetCount
-	}
-
 	// Compute all custodied columns.
-	custodiedColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), custodiedSubnets)
+	custodiedColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), peerdas.CustodySubnetCount())
 	if err != nil {
 		log.WithError(err).Errorf("unexpected error retrieving the node id")
 		s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)

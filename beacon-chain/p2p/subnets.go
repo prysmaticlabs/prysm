@@ -11,6 +11,8 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
@@ -22,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"go.opencensus.io/trace"
 )
 
 var attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount
@@ -219,7 +220,7 @@ func initializePersistentColumnSubnets(id enode.ID) error {
 	if ok && expTime.After(time.Now()) {
 		return nil
 	}
-	subsMap, err := peerdas.CustodyColumnSubnets(id, params.BeaconConfig().CustodyRequirement)
+	subsMap, err := peerdas.CustodyColumnSubnets(id, peerdas.CustodySubnetCount())
 	if err != nil {
 		return err
 	}
