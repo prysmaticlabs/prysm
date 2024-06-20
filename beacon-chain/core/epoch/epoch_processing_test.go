@@ -309,7 +309,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	base := &ethpb.BeaconState{
 		Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
-		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, fieldparams.RootLength)},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 6, Root: make([]byte, fieldparams.RootLength)},
 	}
 	limit := helpers.ValidatorActivationChurnLimit(0)
 	for i := uint64(0); i < limit+10; i++ {

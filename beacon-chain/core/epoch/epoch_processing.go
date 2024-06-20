@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -39,8 +40,8 @@ func (s sortableIndices) Swap(i, j int) { s.indices[i], s.indices[j] = s.indices
 
 // Less reports whether the element with index i must sort before the element with index j.
 func (s sortableIndices) Less(i, j int) bool {
-	vi, erri := s.state.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(i))
-	vj, errj := s.state.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(j))
+	vi, erri := s.state.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(s.indices[i]))
+	vj, errj := s.state.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(s.indices[j]))
 
 	if erri != nil || errj != nil {
 		return false
@@ -110,11 +111,20 @@ func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) (state.Be
 	eligibleForActivationQ := make([]primitives.ValidatorIndex, 0)
 	eligibleForActivation := make([]primitives.ValidatorIndex, 0)
 	eligibleForEjection := make([]primitives.ValidatorIndex, 0)
-
+	activationEligibilityEpoch := time.CurrentEpoch(st) + 1
 	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		// Collect validators eligible to enter the activation queue.
 		if helpers.IsEligibleForActivationQueue(val, currentEpoch) {
 			eligibleForActivationQ = append(eligibleForActivationQ, primitives.ValidatorIndex(idx))
+			v, err := st.ValidatorAtIndex(primitives.ValidatorIndex(idx))
+			if err != nil {
+				return err
+			}
+			v.ActivationEligibilityEpoch = activationEligibilityEpoch
+			val, err = state_native.NewValidator(v)
+			if err != nil {
+				return err
+			}
 		}
 
 		// Collect validators to eject.
@@ -135,7 +145,6 @@ func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) (state.Be
 	}
 
 	// Process validators for activation eligibility.
-	activationEligibilityEpoch := time.CurrentEpoch(st) + 1
 	for _, idx := range eligibleForActivationQ {
 		v, err := st.ValidatorAtIndex(idx)
 		if err != nil {
