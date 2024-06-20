@@ -199,6 +199,9 @@ func (v *validator) duty(pubKey [fieldparams.BLSPubkeyLength]byte) (*ethpb.Dutie
 
 // Given validator's public key, this function returns the signature of an attestation data and its signing root.
 func (v *validator) signAtt(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, data *ethpb.AttestationData, slot primitives.Slot) ([]byte, [32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.signAtt")
+	defer span.End()
+
 	domain, root, err := v.domainAndSigningRoot(ctx, data)
 	if err != nil {
 		return nil, [32]byte{}, err

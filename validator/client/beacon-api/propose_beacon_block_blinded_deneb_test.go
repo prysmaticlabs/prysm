@@ -31,7 +31,7 @@ func TestProposeBeaconBlock_BlindedDeneb(t *testing.T) {
 	// Make sure that what we send in the POST body is the marshalled version of the protobuf block
 	headers := map[string]string{"Eth-Consensus-Version": "deneb"}
 	jsonRestHandler.EXPECT().Post(
-		context.Background(),
+		gomock.Any(),
 		"/eth/v1/beacon/blinded_blocks",
 		headers,
 		bytes.NewBuffer(denebBytes),

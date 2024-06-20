@@ -104,7 +104,7 @@ func TestGetAggregatedSyncSelections(t *testing.T) {
 
 			ctx := context.Background()
 			jsonRestHandler.EXPECT().Post(
-				ctx,
+				gomock.Any(),
 				"/eth/v1/validator/sync_committee_selections",
 				nil,
 				bytes.NewBuffer(reqBody),
