@@ -46,7 +46,7 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		context.Background(),
+		gomock.Any(),
 		"/eth/v1/beacon/pool/sync_committees",
 		nil,
 		bytes.NewBuffer(marshalledJsonRegistrations),
@@ -75,7 +75,7 @@ func TestSubmitSyncMessage_BadRequest(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		context.Background(),
+		gomock.Any(),
 		"/eth/v1/beacon/pool/sync_committees",
 		nil,
 		gomock.Any(),
@@ -139,7 +139,7 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 			ctx := context.Background()
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v1/beacon/blocks/head/root",
 				&structs.BlockRootResponse{},
 			).SetArg(
@@ -209,7 +209,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 			ctx := context.Background()
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v1/beacon/blocks/head/root",
 				&structs.BlockRootResponse{},
 			).SetArg(
@@ -224,7 +224,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 			).Times(1)
 
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				fmt.Sprintf("/eth/v1/validator/sync_committee_contribution?beacon_block_root=%s&slot=%d&subcommittee_index=%d",
 					blockRoot, uint64(request.Slot), request.SubnetId),
 				&structs.ProduceSyncCommitteeContributionResponse{},
@@ -316,7 +316,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 			require.NoError(t, err)
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Post(
-				ctx,
+				gomock.Any(),
 				validatorsEndpoint,
 				nil,
 				bytes.NewBuffer(valsReqBytes),
@@ -351,7 +351,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 				query := buildURL("/eth/v1/beacon/states/head/validators", queryParams)
 
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					query,
 					&structs.GetValidatorsResponse{},
 				).Return(
@@ -368,7 +368,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 			}
 
 			jsonRestHandler.EXPECT().Post(
-				ctx,
+				gomock.Any(),
 				fmt.Sprintf("%s/%d", syncDutiesEndpoint, slots.ToEpoch(slot)),
 				nil,
 				bytes.NewBuffer(validatorIndicesBytes),
