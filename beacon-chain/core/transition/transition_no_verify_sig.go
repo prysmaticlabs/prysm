@@ -423,17 +423,36 @@ func electraOperations(
 	st state.BeaconState,
 	block interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
 	// 6110 validations are in VerifyOperationLengths
-
-	// Electra extends the altair operations.
-	st, err := altairOperations(ctx, st, block)
-	if err != nil {
-		return nil, err
-	}
-	b := block.Body()
-	bod, ok := b.(interfaces.ROBlockBodyElectra)
+	bb := block.Body()
+	bod, ok := bb.(interfaces.ROBlockBodyElectra)
 	if !ok {
 		return nil, errors.New("could not cast block body to electra block body")
 	}
+	// Electra extends the altair operations.
+	st, err := b.ProcessProposerSlashings(ctx, st, bb.ProposerSlashings(), v.SlashValidator)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process altair proposer slashing")
+	}
+	st, err = b.ProcessAttesterSlashings(ctx, st, bb.AttesterSlashings(), v.SlashValidator)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process altair attester slashing")
+	}
+	st, err = altair.ProcessAttestationsNoVerifySignature(ctx, st, block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process altair attestation")
+	}
+	if _, err := electra.ProcessDeposits(ctx, st, bb.Deposits()); err != nil { // new in electra
+		return nil, errors.Wrap(err, "could not process altair deposit")
+	}
+	st, err = b.ProcessVoluntaryExits(ctx, st, bb.VoluntaryExits())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process voluntary exits")
+	}
+	st, err = b.ProcessBLSToExecutionChanges(st, block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process bls-to-execution changes")
+	}
+	// new in electra
 	e, err := bod.Execution()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution data from block")
@@ -502,7 +521,7 @@ func phase0Operations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	if _, err := b.ProcessDeposits(ctx, st, beaconBlock.Body().Deposits()); err != nil {
+	if _, err := altair.ProcessDeposits(ctx, st, beaconBlock.Body().Deposits()); err != nil {
 		return nil, errors.Wrap(err, "could not process deposits")
 	}
 	return b.ProcessVoluntaryExits(ctx, st, beaconBlock.Body().VoluntaryExits())

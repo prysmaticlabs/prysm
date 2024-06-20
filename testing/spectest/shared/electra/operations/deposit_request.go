@@ -22,7 +22,7 @@ func RunDepositRequestsTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			depositRequestFile, err := util.BazelFileBytes(folderPath, "deposit_receipt.ssz_snappy") // TODO: update this
+			depositRequestFile, err := util.BazelFileBytes(folderPath, "deposit_receipt.ssz_snappy") // TODO: #14112 should update this value
 			require.NoError(t, err)
 			depositRequestSSZ, err := snappy.Decode(nil /* dst */, depositRequestFile)
 			require.NoError(t, err, "Failed to decompress")

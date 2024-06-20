@@ -8,9 +8,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -168,6 +171,118 @@ func TestProcessDepositRequests(t *testing.T) {
 	require.NoError(t, err)
 
 	pbd, err := st.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 2, len(pbd))
+	require.Equal(t, uint64(1000), pbd[0].Amount)
+	require.Equal(t, uint64(2000), pbd[1].Amount)
+}
+
+func TestProcessDeposit_Electra_Simple(t *testing.T) {
+	deps, _, err := util.DeterministicDepositsAndKeysSameValidator(3)
+	require.NoError(t, err)
+	eth1Data, err := util.DeterministicEth1Data(len(deps))
+	require.NoError(t, err)
+	registry := []*eth.Validator{
+		{
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
+		},
+	}
+	balances := []uint64{0}
+	st, err := state_native.InitializeFromProtoElectra(&eth.BeaconStateElectra{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &eth.Fork{
+			PreviousVersion: params.BeaconConfig().ElectraForkVersion,
+			CurrentVersion:  params.BeaconConfig().ElectraForkVersion,
+		},
+	})
+	require.NoError(t, err)
+	pdSt, err := electra.ProcessDeposits(context.Background(), st, deps)
+	require.NoError(t, err)
+	pbd, err := pdSt.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MinActivationBalance, pbd[2].Amount)
+	require.Equal(t, 3, len(pbd))
+}
+
+func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
+	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an invalid signature
+	dep, _, err := util.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	dep[0].Data.Signature = make([]byte, 96)
+	dt, _, err := util.DepositTrieFromDeposits(dep)
+	require.NoError(t, err)
+	root, err := dt.HashTreeRoot()
+	require.NoError(t, err)
+	eth1Data := &eth.Eth1Data{
+		DepositRoot:  root[:],
+		DepositCount: 1,
+	}
+	registry := []*eth.Validator{
+		{
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
+		},
+	}
+	balances := []uint64{0}
+	beaconState, err := state_native.InitializeFromProtoElectra(&eth.BeaconStateElectra{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &eth.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	})
+	require.NoError(t, err)
+	newState, err := electra.ProcessDeposit(beaconState, dep[0], true)
+	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
+
+	if newState.Eth1DepositIndex() != 1 {
+		t.Errorf(
+			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",
+			newState.Eth1DepositIndex(),
+		)
+	}
+	if len(newState.Validators()) != 1 {
+		t.Errorf("Expected validator list to have length 1, received: %v", len(newState.Validators()))
+	}
+	if len(newState.Balances()) != 1 {
+		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances()))
+	}
+	if newState.Balances()[0] != 0 {
+		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances()[0])
+	}
+}
+
+func TestApplyDeposit_Electra_SwitchToCompoundingValidator(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateElectra(t, 3)
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	withdrawalCred := make([]byte, 32)
+	withdrawalCred[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
+	depositData := &eth.Deposit_Data{
+		PublicKey:             sk.PublicKey().Marshal(),
+		Amount:                1000,
+		WithdrawalCredentials: withdrawalCred,
+		Signature:             make([]byte, fieldparams.BLSSignatureLength),
+	}
+	vals := st.Validators()
+	vals[0].PublicKey = sk.PublicKey().Marshal()
+	vals[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	require.NoError(t, st.SetValidators(vals))
+	bals := st.Balances()
+	bals[0] = params.BeaconConfig().MinActivationBalance + 2000
+	require.NoError(t, st.SetBalances(bals))
+	sr, err := signing.ComputeSigningRoot(depositData, bytesutil.ToBytes(3, 32))
+	require.NoError(t, err)
+	sig := sk.Sign(sr[:])
+	depositData.Signature = sig.Marshal()
+	adSt, err := electra.ApplyDeposit(st, depositData, false)
+	require.NoError(t, err)
+	pbd, err := adSt.PendingBalanceDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 2, len(pbd))
 	require.Equal(t, uint64(1000), pbd[0].Amount)
