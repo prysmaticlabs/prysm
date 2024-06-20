@@ -27,7 +27,7 @@ func TestStreamBlocks_UnsupportedConsensusVersion(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		gomock.Any(),
 		&abstractSignedBlockResponseJson{},
 	).SetArg(
@@ -149,7 +149,7 @@ func TestStreamBlocks_Error(t *testing.T) {
 
 					jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 					jsonRestHandler.EXPECT().Get(
-						ctx,
+						gomock.Any(),
 						gomock.Any(),
 						&abstractSignedBlockResponseJson{},
 					).SetArg(
@@ -214,7 +214,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			require.NoError(t, err)
 
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
@@ -251,7 +251,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			require.NoError(t, err)
 
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
@@ -278,7 +278,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
@@ -375,7 +375,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			require.NoError(t, err)
 
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
@@ -412,7 +412,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			require.NoError(t, err)
 
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
@@ -439,7 +439,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
@@ -536,7 +536,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			require.NoError(t, err)
 
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
@@ -573,7 +573,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			require.NoError(t, err)
 
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
@@ -600,7 +600,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
@@ -697,7 +697,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			require.NoError(t, err)
 
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
@@ -734,7 +734,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			require.NoError(t, err)
 
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
@@ -761,7 +761,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
@@ -858,7 +858,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(denebBlock)
 			require.NoError(t, err)
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
@@ -887,7 +887,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 			require.NoError(t, err)
 
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
@@ -904,7 +904,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(

@@ -160,6 +160,9 @@ func onAccountsChanged(ctx context.Context, v iface.Validator, current [][48]byt
 }
 
 func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (primitives.Slot, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.initializeValidatorAndGetHeadSlot")
+	defer span.End()
+
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 

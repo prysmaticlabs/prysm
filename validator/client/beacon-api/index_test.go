@@ -44,7 +44,7 @@ func TestIndex_Nominal(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validators",
 		nil,
 		reqBuffer,
@@ -94,7 +94,7 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validators",
 		nil,
 		reqBuffer,
@@ -136,7 +136,7 @@ func TestIndex_BadIndexError(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validators",
 		nil,
 		reqBuffer,
@@ -185,7 +185,7 @@ func TestIndex_JsonResponseError(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validators",
 		nil,
 		reqBuffer,
@@ -208,7 +208,7 @@ func TestIndex_JsonResponseError(t *testing.T) {
 	}
 
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		buildURL("/eth/v1/beacon/states/head/validators", queryParams),
 		&stateValidatorsResponseJson,
 	).Return(

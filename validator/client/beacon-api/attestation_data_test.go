@@ -33,7 +33,7 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", expectedCommitteeIndex, expectedSlot),
 		&produceAttestationDataResponseJson,
 	).Return(
@@ -183,7 +183,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 			produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v1/validator/attestation_data?committee_index=2&slot=1",
 				&produceAttestationDataResponseJson,
 			).Return(
@@ -212,7 +212,7 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
 		&produceAttestationDataResponseJson,
 	).Return(

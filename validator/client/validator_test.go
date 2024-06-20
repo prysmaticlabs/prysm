@@ -2080,7 +2080,7 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 	client.EXPECT().ValidatorIndex(
-		ctx,
+		gomock.Any(),
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubkey2[:],
 		},
@@ -2089,7 +2089,7 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	}, nil)
 
 	client.EXPECT().ValidatorIndex(
-		ctx,
+		gomock.Any(),
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubkey3[:],
 		},
@@ -2215,7 +2215,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	client := validatormock.NewMockValidatorClient(ctrl)
 
 	client.EXPECT().ValidatorIndex(
-		ctx,
+		gomock.Any(),
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubkey2[:],
 		},
@@ -2224,7 +2224,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	}, nil)
 
 	client.EXPECT().ValidatorIndex(
-		ctx,
+		gomock.Any(),
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubkey3[:],
 		},

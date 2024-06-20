@@ -118,7 +118,7 @@ func TestGetValidatorCount(t *testing.T) {
 			// Expect node version endpoint call.
 			var nodeVersionResponse structs.GetVersionResponse
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v1/node/version",
 				&nodeVersionResponse,
 			).Return(
@@ -130,7 +130,7 @@ func TestGetValidatorCount(t *testing.T) {
 
 			var validatorCountResponse structs.GetValidatorCountResponse
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				"/eth/v1/beacon/states/head/validator_count?status=active",
 				&validatorCountResponse,
 			).Return(

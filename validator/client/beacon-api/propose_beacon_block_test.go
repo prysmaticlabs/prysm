@@ -101,7 +101,7 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 
 				headers := map[string]string{"Eth-Consensus-Version": testCase.consensusVersion}
 				jsonRestHandler.EXPECT().Post(
-					ctx,
+					gomock.Any(),
 					testCase.endpoint,
 					headers,
 					gomock.Any(),
