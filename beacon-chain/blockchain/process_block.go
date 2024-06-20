@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
-	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 
@@ -15,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
@@ -648,12 +647,8 @@ func (s *Service) isDataAvailableDataColumns(ctx context.Context, root [32]byte,
 	if len(kzgCommitments) == 0 {
 		return nil
 	}
-	custodiedSubnetCount := params.BeaconConfig().CustodyRequirement
-	if flags.Get().SubscribeToAllSubnets {
-		custodiedSubnetCount = params.BeaconConfig().DataColumnSidecarSubnetCount
-	}
 
-	colMap, err := peerdas.CustodyColumns(s.cfg.P2P.NodeID(), custodiedSubnetCount)
+	colMap, err := peerdas.CustodyColumns(s.cfg.P2P.NodeID(), peerdas.CustodySubnetCount())
 	if err != nil {
 		return err
 	}
