@@ -307,7 +307,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) erro
 	if km.isEmptyPublicKeys() {
 		_, fk, err := km.readKeyFile()
 		if err != nil {
-			return errors.Wrap(err, "Could not read key file")
+			return errors.Wrap(err, "could not read key file")
 		}
 		maps.Copy(fk, km.flagLoadedKeysMap)
 		km.updatePublicKeys(maps.Values(fk))
