@@ -1091,7 +1091,6 @@ func (v *validator) ProcessEvent(event *eventClient.Event) {
 	case eventClient.EventConnectionError:
 		log.WithError(errors.New(string(event.Data))).Error("Event stream interrupted")
 	case eventClient.EventHead:
-		log.Debug("Received head event")
 		head := &structs.HeadEvent{}
 		if err := json.Unmarshal(event.Data, head); err != nil {
 			log.WithError(err).Error("Failed to unmarshal head Event into JSON")
@@ -1100,6 +1099,7 @@ func (v *validator) ProcessEvent(event *eventClient.Event) {
 		if err != nil {
 			log.WithError(err).Error("Failed to parse slot")
 		}
+		log.WithField("headSlot", uintSlot).Debug("Received head event")
 		v.setHighestSlot(primitives.Slot(uintSlot))
 	default:
 		// just keep going and log the error
