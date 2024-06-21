@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/io/logs"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -49,7 +50,7 @@ type Server struct {
 	cancel                    context.CancelFunc
 	host                      string // http host, not grpc
 	port                      int    // http port, not grpc
-	server                    *http.Server
+	server                    *httprest.Server
 	grpcMaxCallRecvMsgSize    int
 	grpcRetries               uint
 	grpcRetryDelay            time.Duration
@@ -102,10 +103,6 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		beaconApiEndpoint:      cfg.BeaconApiEndpoint,
 		beaconNodeEndpoint:     cfg.BeaconNodeGRPCEndpoint,
 		router:                 cfg.Router,
-		server: &http.Server{
-			Addr:    net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port)),
-			Handler: cfg.Router,
-		},
 	}
 
 	if server.authTokenPath == "" && server.walletDir != "" {
@@ -130,22 +127,23 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		log.WithError(err).Fatal("Could not initialize routes")
 	}
 
+	opts := []httprest.Option{
+		httprest.WithRouter(cfg.Router),
+		httprest.WithHTTPAddr(net.JoinHostPort(server.host, fmt.Sprintf("%d", server.port))),
+	}
+	// create and set a new http server
+	s, err := httprest.New(server.ctx, opts...)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create HTTP server")
+	}
+	server.server = s
+
 	return server
 }
 
 // Start the HTTP server and registers clients that can communicate via HTTP or gRPC.
 func (s *Server) Start() {
-	_, cancel := context.WithCancel(s.ctx)
-	s.cancel = cancel
-
-	go func() {
-		log.WithField("address", net.JoinHostPort(s.host, fmt.Sprintf("%d", s.port))).Info("Starting HTTP server")
-		if err := s.server.ListenAndServe(); err != http.ErrServerClosed {
-			log.WithError(err).Error("Failed to start HTTP server")
-			s.startFailure = err
-			return
-		}
-	}()
+	s.server.Start()
 }
 
 // InitializeRoutes initializes pure HTTP REST endpoints for the validator client.
@@ -216,21 +214,7 @@ func (s *Server) InitializeRoutes() error {
 
 // Stop the HTTP server.
 func (s *Server) Stop() error {
-	if s.server != nil {
-		shutdownCtx, shutdownCancel := context.WithTimeout(s.ctx, 2*time.Second)
-		defer shutdownCancel()
-		if err := s.server.Shutdown(shutdownCtx); err != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
-				log.Warn("Existing connections terminated")
-			} else {
-				log.WithError(err).Error("Failed to gracefully shut down server")
-			}
-		}
-	}
-	if s.cancel != nil {
-		s.cancel()
-	}
-	return nil
+	return s.server.Stop()
 }
 
 // Status returns an error if the service is unhealthy.

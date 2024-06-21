@@ -59,13 +59,6 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 		ReadHeaderTimeout: time.Second,
 	}
 
-	if g.cfg.handler != nil {
-		// wrap to handle web apis
-		g.cfg.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			g.cfg.handler(g.cfg.router.ServeHTTP, w, r)
-		})
-	}
-
 	return g, nil
 }
 
