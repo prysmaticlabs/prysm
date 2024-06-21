@@ -333,8 +333,6 @@ func (s *Service) DataColumnSamplingRoutine(ctx context.Context) {
 		}
 	}
 
-	log.Warning("CCCCCC")
-
 	for {
 		select {
 		case e := <-stateChannel:
