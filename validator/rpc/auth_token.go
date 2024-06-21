@@ -104,7 +104,7 @@ func (s *Server) refreshAuthTokenFromFileChanges(ctx context.Context, authTokenP
 				log.WithError(err).Errorf("Could not watch for file changes for: %s", authTokenPath)
 				continue
 			}
-			validatorWebAddr := fmt.Sprintf("%s:%d", s.httpHost, s.httpPort)
+			validatorWebAddr := fmt.Sprintf("%s:%d", s.host, s.port)
 			logValidatorWebAuth(validatorWebAddr, s.authToken, authTokenPath)
 		case err := <-watcher.Errors:
 			log.WithError(err).Errorf("Could not watch for file changes for: %s", authTokenPath)

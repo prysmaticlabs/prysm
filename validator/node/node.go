@@ -6,8 +6,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -22,7 +20,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
-	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
@@ -51,7 +48,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/v5/validator/rpc"
-	"github.com/prysmaticlabs/prysm/v5/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -289,9 +285,6 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 		if err := c.registerRPCService(router); err != nil {
 			return err
 		}
-		if err := c.registerHTTPService(router); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -332,9 +325,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Rout
 	if err := c.registerRPCService(router); err != nil {
 		return err
 	}
-	if err := c.registerHTTPService(router); err != nil {
-		return err
-	}
+
 	host := cliCtx.String(flags.HTTPServerHost.Name)
 	port := cliCtx.Int(flags.HTTPServerPort.Name)
 	webAddress := fmt.Sprintf("http://%s:%d", host, port)
@@ -618,11 +609,18 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 			authTokenPath = filepath.Join(walletDir, api.AuthTokenFileName)
 		}
 	}
+	host := c.cliCtx.String(flags.HTTPServerHost.Name)
+	if host != flags.DefaultHTTPServerHost {
+		log.WithField("webHost", host).Warn(
+			"You are using a non-default web host. Web traffic is served by HTTP, so be wary of " +
+				"changing this parameter if you are exposing this host to the Internet!",
+		)
+	}
+	port := c.cliCtx.Int(flags.HTTPServerPort.Name)
+
 	s := rpc.NewServer(c.cliCtx.Context, &rpc.Config{
-		Host:                   c.cliCtx.String(flags.RPCHost.Name),
-		Port:                   fmt.Sprintf("%d", c.cliCtx.Int(flags.RPCPort.Name)),
-		HTTPHost:               c.cliCtx.String(flags.HTTPServerHost.Name),
-		HTTPPort:               c.cliCtx.Int(flags.HTTPServerPort.Name),
+		Host:                   host,
+		Port:                   port,
 		GRPCMaxCallRecvMsgSize: c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 		GRPCRetries:            c.cliCtx.Uint(flags.GRPCRetriesFlag.Name),
 		GRPCRetryDelay:         c.cliCtx.Duration(flags.GRPCRetryDelayFlag.Name),
@@ -640,41 +638,6 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 		Router:                 router,
 	})
 	return c.services.RegisterService(s)
-}
-
-func (c *ValidatorClient) registerHTTPService(router *mux.Router) error {
-	host := c.cliCtx.String(flags.HTTPServerHost.Name)
-	if host != flags.DefaultHTTPServerHost {
-		log.WithField("webHost", host).Warn(
-			"You are using a non-default web host. Web traffic is served by HTTP, so be wary of " +
-				"changing this parameter if you are exposing this host to the Internet!",
-		)
-	}
-	port := c.cliCtx.Int(flags.HTTPServerPort.Name)
-	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
-	timeout := c.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
-
-	muxHandler := func(h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
-		// The validator api handler requires this special logic as it serves the web APIs and the web UI.
-		if strings.HasPrefix(req.URL.Path, "/api") {
-			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1) // used to redirect apis to standard rest APIs
-			h(w, req)
-		} else {
-			// Finally, we handle with the web server.
-			web.Handler(w, req)
-		}
-	}
-	opts := []httprest.Option{
-		httprest.WithMuxHandler(muxHandler),
-		httprest.WithRouter(router), // note some routes are registered in server.go
-		httprest.WithHTTPAddr(address),
-		httprest.WithTimeout(uint64(timeout)),
-	}
-	gw, err := httprest.New(c.cliCtx.Context, opts...)
-	if err != nil {
-		return err
-	}
-	return c.services.RegisterService(gw)
 }
 
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {

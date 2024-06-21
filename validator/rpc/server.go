@@ -6,34 +6,26 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
-	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
-	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/io/logs"
-	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v5/validator/client"
 	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
-	"go.opencensus.io/plugin/ocgrpc"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
+	"github.com/prysmaticlabs/prysm/v5/validator/web"
 )
 
-// Config options for the gRPC server.
+// Config options for the HTTP server.
 type Config struct {
-	Host                   string
-	Port                   string
-	HTTPHost               string
-	HTTPPort               int
+	Host                   string // http host, not grpc
+	Port                   int    // http port, not grpc
 	GRPCMaxCallRecvMsgSize int
 	GRPCRetries            uint
 	GRPCRetryDelay         time.Duration
@@ -51,20 +43,18 @@ type Config struct {
 	Router                 *mux.Router
 }
 
-// Server defining a gRPC server for the remote signer API.
+// Server defining a HTTP server for the remote signer API and registering clients
 type Server struct {
 	ctx                       context.Context
 	cancel                    context.CancelFunc
-	host                      string
-	port                      string
-	httpHost                  string
-	httpPort                  int
+	host                      string // http host, not grpc
+	port                      int    // http port, not grpc
+	server                    *http.Server
 	listener                  net.Listener
 	grpcMaxCallRecvMsgSize    int
 	grpcRetries               uint
 	grpcRetryDelay            time.Duration
 	grpcHeaders               []string
-	grpcServer                *grpc.Server
 	beaconNodeValidatorClient iface.ValidatorClient
 	chainClient               iface.ChainClient
 	nodeClient                iface.NodeClient
@@ -85,9 +75,10 @@ type Server struct {
 	router                    *mux.Router
 	logStreamer               logs.Streamer
 	logStreamerBufferSize     int
+	startFailure              error
 }
 
-// NewServer instantiates a new gRPC server.
+// NewServer instantiates a new HTTP server.
 func NewServer(ctx context.Context, cfg *Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
 	server := &Server{
@@ -97,8 +88,6 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		logStreamerBufferSize:  1000, // Enough to handle most bursts of logs in the validator client.
 		host:                   cfg.Host,
 		port:                   cfg.Port,
-		httpHost:               cfg.HTTPHost,
-		httpPort:               cfg.HTTPPort,
 		grpcMaxCallRecvMsgSize: cfg.GRPCMaxCallRecvMsgSize,
 		grpcRetries:            cfg.GRPCRetries,
 		grpcRetryDelay:         cfg.GRPCRetryDelay,
@@ -114,6 +103,10 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		beaconApiEndpoint:      cfg.BeaconApiEndpoint,
 		beaconNodeEndpoint:     cfg.BeaconNodeGRPCEndpoint,
 		router:                 cfg.Router,
+		server: &http.Server{
+			Addr:    net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port)),
+			Handler: cfg.Router,
+		},
 	}
 
 	if server.authTokenPath == "" && server.walletDir != "" {
@@ -124,62 +117,37 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		if err := server.initializeAuthToken(); err != nil {
 			log.WithError(err).Error("Could not initialize web auth token")
 		}
-		validatorWebAddr := fmt.Sprintf("%s:%d", server.httpHost, server.httpPort)
+		validatorWebAddr := fmt.Sprintf("%s:%d", server.host, server.port)
 		logValidatorWebAuth(validatorWebAddr, server.authToken, server.authTokenPath)
 		go server.refreshAuthTokenFromFileChanges(server.ctx, server.authTokenPath)
+	}
+	// Register a gRPC or HTTP client to the beacon node.
+	// Used for proxy calls to beacon node from validator REST handlers
+	if err := server.registerBeaconClient(); err != nil {
+		log.WithError(err).Fatal("Could not register beacon chain gRPC or HTTP client")
 	}
 	// immediately register routes to override any catchalls
 	if err := server.InitializeRoutes(); err != nil {
 		log.WithError(err).Fatal("Could not initialize routes")
 	}
+
 	return server
 }
 
-// Start the gRPC server.
+// Start the HTTP server and registers clients that can communicate via HTTP or gRPC.
 func (s *Server) Start() {
-	// Setup the gRPC server options and TLS configuration.
-	address := net.JoinHostPort(s.host, s.port)
-	lis, err := net.Listen("tcp", address)
-	if err != nil {
-		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)
-	}
-	s.listener = lis
+	_, cancel := context.WithCancel(s.ctx)
+	s.cancel = cancel
 
-	// Register interceptors for metrics gathering as well as our
-	// own, custom JWT unary interceptor.
-	opts := []grpc.ServerOption{
-		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
-		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
-			recovery.UnaryServerInterceptor(
-				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
-			),
-			grpcprometheus.UnaryServerInterceptor,
-			grpcopentracing.UnaryServerInterceptor(),
-			s.AuthTokenInterceptor(),
-		)),
-	}
-	grpcprometheus.EnableHandlingTimeHistogram()
-
-	s.grpcServer = grpc.NewServer(opts...)
-
-	// Register a gRPC client to the beacon node.
-	if err := s.registerBeaconClient(); err != nil {
-		log.WithError(err).Fatal("Could not register beacon chain gRPC client")
-	}
-
-	// Register services available for the gRPC server.
-	reflection.Register(s.grpcServer)
-
-	// routes needs to be set before the server calls the server function
 	go func() {
-		if s.listener != nil {
-			if err := s.grpcServer.Serve(s.listener); err != nil {
-				log.WithError(err).Error("Could not serve")
-			}
+		log.WithField("address", net.JoinHostPort(s.host, fmt.Sprintf("%d", s.port))).Info("Starting HTTP server")
+		if err := s.server.ListenAndServe(); err != http.ErrServerClosed {
+			log.WithError(err).Error("Failed to start HTTP server")
+			s.startFailure = err
+			return
 		}
 	}()
 
-	log.WithField("address", address).Info("gRPC server listening on address")
 }
 
 // InitializeRoutes initializes pure HTTP REST endpoints for the validator client.
@@ -233,21 +201,44 @@ func (s *Server) InitializeRoutes() error {
 	// slashing protection endpoints
 	s.router.HandleFunc(api.WebUrlPrefix+"slashing-protection/export", s.ExportSlashingProtection).Methods(http.MethodGet)
 	s.router.HandleFunc(api.WebUrlPrefix+"slashing-protection/import", s.ImportSlashingProtection).Methods(http.MethodPost)
+
+	s.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api") {
+			r.URL.Path = strings.Replace(r.URL.Path, "/api", "", 1) // used to redirect apis to standard rest APIs
+			s.router.ServeHTTP(w, r)
+		} else {
+			// Finally, we handle with the web server.
+			web.Handler(w, r)
+		}
+	})
+
 	log.Info("Initialized REST API routes")
 	return nil
 }
 
-// Stop the gRPC server.
+// Stop the HTTP server.
 func (s *Server) Stop() error {
-	s.cancel()
-	if s.listener != nil {
-		s.grpcServer.GracefulStop()
-		log.Debug("Initiated graceful stop of server")
+	if s.server != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(s.ctx, 2*time.Second)
+		defer shutdownCancel()
+		if err := s.server.Shutdown(shutdownCtx); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				log.Warn("Existing connections terminated")
+			} else {
+				log.WithError(err).Error("Failed to gracefully shut down server")
+			}
+		}
+	}
+	if s.cancel != nil {
+		s.cancel()
 	}
 	return nil
 }
 
 // Status returns an error if the service is unhealthy.
 func (s *Server) Status() error {
+	if s.startFailure != nil {
+		return s.startFailure
+	}
 	return nil
 }

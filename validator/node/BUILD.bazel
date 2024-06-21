@@ -36,7 +36,6 @@ go_library(
     ],
     deps = [
         "//api:go_default_library",
-        "//api/server/httprest:go_default_library",
         "//api/server/middleware:go_default_library",
         "//async/event:go_default_library",
         "//cmd:go_default_library",
@@ -65,7 +64,6 @@ go_library(
         "//validator/keymanager/local:go_default_library",
         "//validator/keymanager/remote-web3signer:go_default_library",
         "//validator/rpc:go_default_library",
-        "//validator/web:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_gorilla_mux//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
