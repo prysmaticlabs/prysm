@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	log "github.com/sirupsen/logrus"
@@ -42,7 +41,7 @@ var (
 //	  Check if ``validator`` is active.
 //	  """
 //	  return validator.activation_epoch <= epoch < validator.exit_epoch
-func IsActiveValidator(validator *eth.Validator, epoch primitives.Epoch) bool {
+func IsActiveValidator(validator *ethpb.Validator, epoch primitives.Epoch) bool {
 	return checkValidatorActiveStatus(validator.ActivationEpoch, validator.ExitEpoch, epoch)
 }
 

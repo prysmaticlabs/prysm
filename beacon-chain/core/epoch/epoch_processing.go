@@ -24,35 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
-// sortableIndices implements the Sort interface to sort newly activated validator indices
-// by activation epoch and by index number.
-type sortableIndices struct {
-	indices []primitives.ValidatorIndex
-	state   state.BeaconState
-}
-
-// Len is the number of elements in the collection.
-func (s sortableIndices) Len() int { return len(s.indices) }
-
-// Swap swaps the elements with indexes i and j.
-func (s sortableIndices) Swap(i, j int) { s.indices[i], s.indices[j] = s.indices[j], s.indices[i] }
-
-// Less reports whether the element with index i must sort before the element with index j.
-func (s sortableIndices) Less(i, j int) bool {
-	vi, erri := s.state.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(i))
-	vj, errj := s.state.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(j))
-
-	if erri != nil || errj != nil {
-		return false
-	}
-
-	a, b := vi.ActivationEligibilityEpoch(), vj.ActivationEligibilityEpoch()
-	if a == b {
-		return s.indices[i] < s.indices[j]
-	}
-	return a < b
-}
-
 // AttestingBalance returns the total balance from all the attesting indices.
 //
 // WARNING: This method allocates a new copy of the attesting validator indices set and is
@@ -159,7 +130,6 @@ func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) (state.Be
 	}
 
 	// Queue validators eligible for activation and not yet dequeued for activation.
-
 	sort.Sort(sortableIndices{indices: eligibleForActivation, state: st})
 
 	// Only activate just enough validators according to the activation churn limit.
