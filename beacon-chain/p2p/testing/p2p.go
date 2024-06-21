@@ -23,9 +23,11 @@ import (
 	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
 	"github.com/multiformats/go-multiaddr"
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
 	"github.com/sirupsen/logrus"
@@ -51,9 +53,10 @@ type TestP2P struct {
 }
 
 // NewTestP2P initializes a new p2p test service.
-func NewTestP2P(t *testing.T) *TestP2P {
+func NewTestP2P(t *testing.T, opts ...swarmt.Option) *TestP2P {
+	opts = append(opts, swarmt.OptDisableQUIC)
 	ctx := context.Background()
-	h := bhost.NewBlankHost(swarmt.GenSwarm(t, swarmt.OptDisableQUIC))
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, opts...))
 	ps, err := pubsub.NewFloodSub(ctx, h,
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
@@ -239,7 +242,7 @@ func (p *TestP2P) LeaveTopic(topic string) error {
 }
 
 // Encoding returns ssz encoding.
-func (_ *TestP2P) Encoding() encoder.NetworkEncoding {
+func (*TestP2P) Encoding() encoder.NetworkEncoding {
 	return &encoder.SszNetworkEncoder{}
 }
 
@@ -266,17 +269,17 @@ func (p *TestP2P) Host() host.Host {
 }
 
 // ENR returns the enr of the local peer.
-func (_ *TestP2P) ENR() *enr.Record {
+func (*TestP2P) ENR() *enr.Record {
 	return new(enr.Record)
 }
 
 // NodeID returns the node id of the local peer.
-func (_ *TestP2P) NodeID() enode.ID {
+func (*TestP2P) NodeID() enode.ID {
 	return [32]byte{}
 }
 
 // DiscoveryAddresses --
-func (_ *TestP2P) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
+func (*TestP2P) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 	return nil, nil
 }
 
@@ -358,7 +361,7 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid p
 }
 
 // Started always returns true.
-func (_ *TestP2P) Started() bool {
+func (*TestP2P) Started() bool {
 	return true
 }
 
@@ -368,12 +371,12 @@ func (p *TestP2P) Peers() *peers.Status {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (_ *TestP2P) FindPeersWithSubnet(_ context.Context, _ string, _ uint64, _ int) (bool, error) {
+func (*TestP2P) FindPeersWithSubnet(_ context.Context, _ string, _ uint64, _ int) (bool, error) {
 	return false, nil
 }
 
 // RefreshENR mocks the p2p func.
-func (_ *TestP2P) RefreshPersistentSubnets() {}
+func (*TestP2P) RefreshPersistentSubnets() {}
 
 // ForkDigest mocks the p2p func.
 func (p *TestP2P) ForkDigest() ([4]byte, error) {
@@ -391,39 +394,54 @@ func (p *TestP2P) MetadataSeq() uint64 {
 }
 
 // AddPingMethod mocks the p2p func.
-func (_ *TestP2P) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {
+func (*TestP2P) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {
 	// no-op
 }
 
 // InterceptPeerDial .
-func (_ *TestP2P) InterceptPeerDial(peer.ID) (allow bool) {
+func (*TestP2P) InterceptPeerDial(peer.ID) (allow bool) {
 	return true
 }
 
 // InterceptAddrDial .
-func (_ *TestP2P) InterceptAddrDial(peer.ID, multiaddr.Multiaddr) (allow bool) {
+func (*TestP2P) InterceptAddrDial(peer.ID, multiaddr.Multiaddr) (allow bool) {
 	return true
 }
 
 // InterceptAccept .
-func (_ *TestP2P) InterceptAccept(_ network.ConnMultiaddrs) (allow bool) {
+func (*TestP2P) InterceptAccept(_ network.ConnMultiaddrs) (allow bool) {
 	return true
 }
 
 // InterceptSecured .
-func (_ *TestP2P) InterceptSecured(network.Direction, peer.ID, network.ConnMultiaddrs) (allow bool) {
+func (*TestP2P) InterceptSecured(network.Direction, peer.ID, network.ConnMultiaddrs) (allow bool) {
 	return true
 }
 
 // InterceptUpgraded .
-func (_ *TestP2P) InterceptUpgraded(network.Conn) (allow bool, reason control.DisconnectReason) {
+func (*TestP2P) InterceptUpgraded(network.Conn) (allow bool, reason control.DisconnectReason) {
 	return true, 0
 }
 
-func (_ *TestP2P) CustodyCountFromRemotePeer(peer.ID) uint64 {
-	return 0
+func (s *TestP2P) CustodyCountFromRemotePeer(pid peer.ID) uint64 {
+	// By default, we assume the peer custodies the minimum number of subnets.
+	custodyRequirement := params.BeaconConfig().CustodyRequirement
+
+	// Retrieve the ENR of the peer.
+	record, err := s.peers.ENR(pid)
+	if err != nil {
+		return custodyRequirement
+	}
+
+	// Retrieve the custody subnets count from the ENR.
+	custodyCount, err := peerdas.CustodyCountFromRecord(record)
+	if err != nil {
+		return custodyRequirement
+	}
+
+	return custodyCount
 }
 
-func (_ *TestP2P) GetValidCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
+func (*TestP2P) GetValidCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
 	return peers, nil
 }
