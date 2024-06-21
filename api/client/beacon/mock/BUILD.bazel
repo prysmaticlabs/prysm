@@ -2,6 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
+    testonly = True,
     srcs = ["health_mock.go"],
     importpath = "github.com/prysmaticlabs/prysm/v5/api/client/beacon/mock",
     visibility = ["//visibility:public"],

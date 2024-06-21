@@ -59,16 +59,21 @@ func run(ctx context.Context, v iface.Validator) {
 			" and will continue to use settings provided in the beacon node.")
 	}
 
-	pushProposerSettingsChan := make(chan primitives.Slot, 1)
+	pushProposerSettingsChan := make(chan struct{}, 1)
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case slot := <-pushProposerSettingsChan:
+			case <-pushProposerSettingsChan:
 				go func() {
+					headSlot, err := v.CanonicalHeadSlot(ctx)
+					if err != nil {
+						log.WithError(err).Error("Could not get canonical head slot")
+						return
+					}
 					psCtx, psCancel := context.WithDeadline(ctx, time.Now().Add(5*time.Minute))
-					if err := v.PushProposerSettings(psCtx, km, slot); err != nil {
+					if err := v.PushProposerSettings(psCtx, km, headSlot); err != nil {
 						log.WithError(err).Warn("Failed to update proposer settings")
 					}
 					// release resources
@@ -77,7 +82,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		}
 	}()
-	pushProposerSettingsChan <- headSlot
+	pushProposerSettingsChan <- struct{}{}
 
 	eventsChan := make(chan *event.Event, 1)
 	go func() {
@@ -111,11 +116,11 @@ func run(ctx context.Context, v iface.Validator) {
 			select {
 			case <-ctx.Done():
 				return
-			case slot := <-v.LastSecondOfSlot():
+			case <-v.LastSecondOfSlot():
 				nodeIsHealthyCurr := v.HealthTracker().IsHealthy()
 				if nodeIsHealthyCurr {
 					if !nodeIsHealthyPrev {
-						pushProposerSettingsChan <- slot
+						pushProposerSettingsChan <- struct{}{}
 					}
 					// In case event stream died
 					if !v.EventStreamIsRunning() {
@@ -144,12 +149,7 @@ func run(ctx context.Context, v iface.Validator) {
 			case keys := <-accountsChangedChan:
 				onAccountsChanged(ctx, v, keys, accountsChangedChan)
 				updateDutiesNeeded = true
-				headSlot, err := v.CanonicalHeadSlot(ctx)
-				if err != nil {
-					log.WithError(err).Error("Could not get canonical head slot")
-					continue
-				}
-				pushProposerSettingsChan <- headSlot
+				pushProposerSettingsChan <- struct{}{}
 			}
 		}
 	}()
@@ -187,7 +187,7 @@ func run(ctx context.Context, v iface.Validator) {
 			if slots.IsEpochStart(slot) {
 				updateDutiesNeeded = true
 				// Update proposer settings at the start of each epoch because new validators could have become active
-				pushProposerSettingsChan <- slot
+				pushProposerSettingsChan <- struct{}{}
 			}
 
 			if updateDutiesNeeded {
