@@ -146,7 +146,6 @@ func (s *Server) Start() {
 			return
 		}
 	}()
-
 }
 
 // InitializeRoutes initializes pure HTTP REST endpoints for the validator client.
