@@ -109,7 +109,6 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 		select {
 		case <-h.ctx.Done():
 			log.Info("Context canceled, stopping event stream")
-			close(eventsChannel)
 			return
 		default:
 			line := scanner.Text() // TODO(13730): scanner does not handle /r and does not fully adhere to https://html.spec.whatwg.org/multipage/server-sent-events.html#the-eventsource-interface
