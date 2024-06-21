@@ -68,7 +68,7 @@ func TestRegistration_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		context.Background(),
+		gomock.Any(),
 		"/eth/v1/validator/register_validator",
 		nil,
 		bytes.NewBuffer(marshalledJsonRegistrations),
@@ -143,7 +143,7 @@ func TestRegistration_BadRequest(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		context.Background(),
+		gomock.Any(),
 		"/eth/v1/validator/register_validator",
 		nil,
 		gomock.Any(),
