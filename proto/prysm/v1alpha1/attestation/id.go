@@ -2,7 +2,6 @@ package attestation
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -22,16 +21,19 @@ const (
 )
 
 // Id represents an attestation ID. Its uniqueness depends on the IdSource provided when constructing the Id.
-type Id struct {
-	version int
-	hash    [32]byte
-}
+type Id [33]byte
 
 // NewId --
 func NewId(att ethpb.Att, source IdSource) (Id, error) {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return Id{}, err
 	}
+	if att.Version() < 0 || att.Version() > 255 {
+		return Id{}, errors.New("attestation version must be between 0 and 255")
+	}
+
+	var id Id
+	id[0] = byte(att.Version())
 
 	switch source {
 	case Full:
@@ -39,7 +41,8 @@ func NewId(att ethpb.Att, source IdSource) (Id, error) {
 		if err != nil {
 			return Id{}, err
 		}
-		return Id{version: att.Version(), hash: h}, nil
+		copy(id[1:], h[:])
+		return id, nil
 	case Data:
 		data := att.GetData()
 		if att.Version() >= version.Electra {
@@ -55,7 +58,8 @@ func NewId(att ethpb.Att, source IdSource) (Id, error) {
 		if err != nil {
 			return Id{}, err
 		}
-		return Id{version: att.Version(), hash: h}, nil
+		copy(id[1:], h[:])
+		return id, nil
 	default:
 		return Id{}, errors.New("invalid source requested")
 	}
@@ -63,5 +67,5 @@ func NewId(att ethpb.Att, source IdSource) (Id, error) {
 
 // String --
 func (id Id) String() string {
-	return strconv.Itoa(id.version) + string(id.hash[:])
+	return string(id[:])
 }
