@@ -98,7 +98,7 @@ func TestGetAggregatedSelections(t *testing.T) {
 
 			ctx := context.Background()
 			jsonRestHandler.EXPECT().Post(
-				ctx,
+				gomock.Any(),
 				"/eth/v1/validator/beacon_committee_selections",
 				nil,
 				bytes.NewBuffer(reqBody),

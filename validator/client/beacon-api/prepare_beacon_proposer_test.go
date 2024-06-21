@@ -48,7 +48,7 @@ func TestPrepareBeaconProposer_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		prepareBeaconProposerTestEndpoint,
 		nil,
 		bytes.NewBuffer(marshalledJsonRecipients),
@@ -92,7 +92,7 @@ func TestPrepareBeaconProposer_BadRequest(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		prepareBeaconProposerTestEndpoint,
 		nil,
 		gomock.Any(),
