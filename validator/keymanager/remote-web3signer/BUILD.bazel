@@ -39,7 +39,6 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = ["keymanager_test.go"],
-    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
         "//crypto/bls:go_default_library",

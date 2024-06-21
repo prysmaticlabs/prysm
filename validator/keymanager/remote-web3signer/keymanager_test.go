@@ -56,11 +56,12 @@ func TestNewKeymanager(t *testing.T) {
 		fmt.Printf("error: %v", err)
 	}
 	tests := []struct {
-		name    string
-		args    *SetupConfig
-		want    []string
-		wantErr string
-		wantLog string
+		name         string
+		args         *SetupConfig
+		fileContents []string
+		want         []string
+		wantErr      string
+		wantLog      string
 	}{
 		{
 			name: "happy path public key url",
@@ -112,9 +113,10 @@ func TestNewKeymanager(t *testing.T) {
 			args: &SetupConfig{
 				BaseEndpoint:          "http://prysm.xyz/",
 				GenesisValidatorsRoot: root,
-				KeyFilePath:           "./testdata/good_keyfile.txt",
+				KeyFilePath:           filepath.Join(t.TempDir(), "good_keyfile.txt"),
 			},
-			want: []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
+			fileContents: []string{"8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
+			want:         []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
 		},
 		{
 			name: "happy path public key url with good keyfile",
@@ -122,9 +124,10 @@ func TestNewKeymanager(t *testing.T) {
 				BaseEndpoint:          "http://prysm.xyz/",
 				GenesisValidatorsRoot: root,
 				PublicKeysURL:         srv.URL + "/public_keys",
-				KeyFilePath:           "./testdata/good_keyfile.txt",
+				KeyFilePath:           filepath.Join(t.TempDir(), "good_keyfile.txt"),
 			},
-			want: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
+			fileContents: []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
+			want:         []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
 		},
 		{
 			name: "happy path provided public keys with good keyfile",
@@ -141,6 +144,18 @@ func TestNewKeymanager(t *testing.T) {
 			logHook := logTest.NewGlobal()
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
+			if tt.args.KeyFilePath != "" && len(tt.fileContents) != 0 {
+				bytesBuf := new(bytes.Buffer)
+				for _, content := range tt.fileContents {
+					_, err := bytesBuf.WriteString(content) // test without 0x
+					require.NoError(t, err)
+					_, err = bytesBuf.WriteString("\n")
+					require.NoError(t, err)
+				}
+				err = file.WriteFile(tt.args.KeyFilePath, bytesBuf.Bytes())
+				require.NoError(t, err)
+			}
+
 			km, err := NewKeymanager(ctx, tt.args)
 			if tt.wantLog != "" {
 				require.LogsContain(t, logHook, tt.wantLog)
@@ -156,6 +171,19 @@ func TestNewKeymanager(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewKeyManager_fileMissing(t *testing.T) {
+	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	require.NoError(t, err)
+	_, err = NewKeymanager(context.TODO(), &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+		KeyFilePath:           keyFilePath,
+		ProvidedPublicKeys:    []string{"0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6"},
+	})
+	require.ErrorContains(t, "no file exists in remote signer key file path", err)
 }
 
 func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
@@ -194,17 +222,12 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 	// sleep needs to be at the front because of how watching the file works
 	time.Sleep(1 * time.Second)
 
-	bytesBuf = new(bytes.Buffer)
-	_, err = bytesBuf.WriteString("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055")
-	require.NoError(t, err)
-	_, err = bytesBuf.WriteString("\n")
-	require.NoError(t, err)
 	// Open the file for writing, create it if it does not exist, and truncate it if it does.
 	f, err := os.OpenFile(keyFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	require.NoError(t, err)
 
 	// Write the buffer's contents to the file.
-	_, err = f.Write(bytesBuf.Bytes())
+	_, err = f.WriteString("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055")
 	require.NoError(t, err)
 	require.NoError(t, f.Sync())
 	require.NoError(t, f.Close())
@@ -216,6 +239,35 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 
 	require.Equal(t, 1, len(km.providedPublicKeys))
 	require.Equal(t, "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", hexutil.Encode(km.providedPublicKeys[0][:]))
+}
+
+func TestNewKeyManager_FileAndFlagsWithDifferentKeys(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
+	bytesBuf := new(bytes.Buffer)
+	_, err := bytesBuf.WriteString("8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055") // test without 0x
+	require.NoError(t, err)
+	err = file.WriteFile(keyFilePath, bytesBuf.Bytes())
+	require.NoError(t, err)
+
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	require.NoError(t, err)
+	km, err := NewKeymanager(ctx, &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+		KeyFilePath:           keyFilePath,
+		ProvidedPublicKeys:    []string{"0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6"},
+	})
+	require.NoError(t, err)
+	wantSlice := []string{"0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6",
+		"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"}
+	// provided public keys are saved to the file
+	keys, _, err := km.readKeyFile()
+	for _, key := range keys {
+		require.Equal(t, slices.Contains(wantSlice, hexutil.Encode(key[:])), true)
+	}
 }
 
 func TestRefreshRemoteKeysFromFileChangesWithRetry(t *testing.T) {
@@ -252,6 +304,38 @@ func TestRefreshRemoteKeysFromFileChangesWithRetry(t *testing.T) {
 	keys, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(keys))
+}
+
+func TestReadKeyFile_PathMissing(t *testing.T) {
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	require.NoError(t, err)
+
+	require.NoError(t, err)
+	km, err := NewKeymanager(context.TODO(), &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+	})
+	require.NoError(t, err)
+	_, _, err = km.readKeyFile()
+	require.ErrorContains(t, "no key file path provided", err)
+}
+
+func TestRefreshRemoteKeysFromFileChangesWithRetry_maxRetryReached(t *testing.T) {
+	ctx := context.Background()
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	require.NoError(t, err)
+	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
+
+	require.NoError(t, err)
+	km, err := NewKeymanager(ctx, &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+	})
+	require.NoError(t, err)
+	km.keyFilePath = keyFilePath
+	km.retriesRemaining = 1
+	err = km.refreshRemoteKeysFromFileChangesWithRetry(ctx, 1*time.Millisecond)
+	require.ErrorContains(t, "file check retries remaining exceeded", err)
 }
 
 func TestKeymanager_Sign(t *testing.T) {

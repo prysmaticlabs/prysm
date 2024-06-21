@@ -92,9 +92,12 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 
 	keyFileExists := false
 	if km.keyFilePath != "" {
-		keyFileExists, err = checkFileExists(km.keyFilePath, maxRetries, retryDelay)
+		keyFileExists, err = file.Exists(km.keyFilePath, file.Regular)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not check if file exists")
+			return nil, errors.Wrapf(err, "could not check if remote signer persistent keys exists in %s", km.keyFilePath)
+		}
+		if !keyFileExists {
+			return nil, fmt.Errorf("no file exists in remote signer key file path %s", km.keyFilePath)
 		}
 	}
 
@@ -129,11 +132,18 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 
 	// load from file
 	if keyFileExists {
+		log.WithField("file", km.keyFilePath).Info("Loading keys from file")
 		_, fileKeys, err := km.readKeyFile()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read key file")
 		}
-		maps.Copy(fileKeys, flagLoadedKeys)
+		if len(flagLoadedKeys) != 0 {
+			log.WithField("no_flag_loaded_keys", len(flagLoadedKeys)).Info("Combining flag loaded keys and file loaded keys.")
+			maps.Copy(fileKeys, flagLoadedKeys)
+			if err = km.savePublicKeysToFile(fileKeys); err != nil {
+				return nil, errors.Wrap(err, "could not save public keys to file")
+			}
+		}
 		km.lock.Lock()
 		km.providedPublicKeys = maps.Values(fileKeys)
 		km.lock.Unlock()
@@ -153,34 +163,16 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	return km, nil
 }
 
-func checkFileExists(path string, retriesRemaining int, retryDelay time.Duration) (bool, error) {
-	rr := retriesRemaining // make a copy to not alter the original
-	if rr == 0 {
-		return false, errors.New("file check retries remaining exceeded")
-	}
-
-	// Check if the directory and file exists, if not create it
-	keyFileExists, err := file.Exists(path, file.Regular)
-	if err != nil {
-		return false, errors.Wrapf(err, "could not check if remote signer persistent keys exists in %s", path)
-	}
-
-	if !keyFileExists {
-		rr--
-		log.WithFields(logrus.Fields{"path": path, "retries_remaining": rr, "retry_delay": retryDelay}).Warnf("Failed to find the key file. Retrying until the file is detected ...")
-		time.Sleep(retryDelay)
-		return checkFileExists(path, rr, retryDelay)
-	}
-	return true, nil
-}
-
 func (km *Keymanager) refreshRemoteKeysFromFileChangesWithRetry(ctx context.Context, retryDelay time.Duration) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	if km.retriesRemaining == 0 {
 		return errors.New("file check retries remaining exceeded")
 	}
 	err := km.refreshRemoteKeysFromFileChanges(ctx)
 	if err != nil {
-		km.updatePublicKeys(make([][48]byte, 0)) // update the keys to empty as the file was never loaded correctly
+		km.updatePublicKeys(maps.Values(km.flagLoadedKeysMap)) // update the keys to flag provided defaults
 		km.retriesRemaining--
 		log.WithError(err).Debug("could not refresh remote keys from file changes")
 		log.WithFields(logrus.Fields{"path": km.keyFilePath, "retries_remaining": km.retriesRemaining, "retry_delay": retryDelay}).Warnf("Key file does not exist. Please create a new one. Retrying ...")
@@ -277,7 +269,7 @@ func (km *Keymanager) savePublicKeysToFile(providedPublicKeys map[string][48]byt
 	return nil
 }
 
-func (km *Keymanager) isEmptyPublicKeys() bool {
+func (km *Keymanager) areEmptyPublicKeys() bool {
 	km.lock.RLock()
 	defer km.lock.RUnlock()
 	return len(km.providedPublicKeys) == 0
@@ -304,12 +296,15 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) erro
 	log.WithField("path", km.keyFilePath).Info("Successfully initialized file watcher")
 	km.retriesRemaining = maxRetries // reset retries to default
 	// reinitialize keys if watcher reinitialized
-	if km.isEmptyPublicKeys() {
+	if km.areEmptyPublicKeys() {
 		_, fk, err := km.readKeyFile()
 		if err != nil {
 			return errors.Wrap(err, "could not read key file")
 		}
 		maps.Copy(fk, km.flagLoadedKeysMap)
+		if err = km.savePublicKeysToFile(fk); err != nil {
+			return errors.Wrap(err, "could not save public keys to file")
+		}
 		km.updatePublicKeys(maps.Values(fk))
 	}
 	for {
@@ -336,6 +331,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) erro
 				if err != nil {
 					return errors.New("could not read key file")
 				}
+				// prioritize file keys over flag keys
 				if len(fileKeys) == 0 {
 					log.Warnln("Remote signer key file no longer has keys, defaulting to flag provided keys")
 					fileKeys = maps.Values(km.flagLoadedKeysMap)

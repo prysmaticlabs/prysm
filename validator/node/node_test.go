@@ -212,6 +212,7 @@ func TestWeb3SignerConfig(t *testing.T) {
 	type args struct {
 		baseURL          string
 		publicKeysOrURLs []string
+		persistentFile   string
 	}
 	tests := []struct {
 		name       string
@@ -268,12 +269,24 @@ func TestWeb3SignerConfig(t *testing.T) {
 			want:       nil,
 			wantErrMsg: "web3signer url must be in the format of http(s)://host:port url used: localhost:8545",
 		},
+		{
+			name: "happy path with persistentFile",
+			args: &args{
+				baseURL:        "http://localhost:8545",
+				persistentFile: "/remote/key/file.txt",
+			},
+			want: &remoteweb3signer.SetupConfig{
+				BaseEndpoint: "http://localhost:8545",
+				KeyFilePath:  "/remote/key/file.txt",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet(tt.name, 0)
 			set.String("validators-external-signer-url", tt.args.baseURL, "baseUrl")
+			set.String(flags.Web3SignerKeyFileFlag.Name, "", "")
 			c := &cli.StringSliceFlag{
 				Name: "validators-external-signer-public-keys",
 			}
@@ -282,6 +295,9 @@ func TestWeb3SignerConfig(t *testing.T) {
 			require.NoError(t, set.Set(flags.Web3SignerURLFlag.Name, tt.args.baseURL))
 			for _, key := range tt.args.publicKeysOrURLs {
 				require.NoError(t, set.Set(flags.Web3SignerPublicValidatorKeysFlag.Name, key))
+			}
+			if tt.args.persistentFile != "" {
+				require.NoError(t, set.Set(flags.Web3SignerKeyFileFlag.Name, tt.args.persistentFile))
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
 			got, err := Web3SignerConfig(cliCtx)
