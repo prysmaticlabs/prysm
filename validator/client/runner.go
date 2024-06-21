@@ -79,14 +79,24 @@ func run(ctx context.Context, v iface.Validator) {
 	}()
 	pushProposerSettingsChan <- headSlot
 
+	eventsChan := make(chan *event.Event, 1)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case e := <-eventsChan:
+				v.ProcessEvent(e)
+			}
+		}
+	}()
+	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
+
 	updateDutiesNeeded := false
 	if err = v.UpdateDuties(ctx, headSlot); err != nil {
 		handleUpdateDutiesError(err, headSlot)
 		updateDutiesNeeded = true
 	}
-
-	eventsChan := make(chan *event.Event, 1)
-	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
 
 	var (
 		slotSpan             *trace.Span
@@ -95,6 +105,54 @@ func run(ctx context.Context, v iface.Validator) {
 		initializationNeeded = false
 		nodeIsHealthyPrev    = true
 	)
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case slot := <-v.LastSecondOfSlot():
+				nodeIsHealthyCurr := v.HealthTracker().IsHealthy()
+				if nodeIsHealthyCurr {
+					if !nodeIsHealthyPrev {
+						pushProposerSettingsChan <- slot
+					}
+					// In case event stream died
+					if !v.EventStreamIsRunning() {
+						log.Info("Event stream reconnecting...")
+						go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
+					}
+				} else if features.Get().EnableBeaconRESTApi {
+					v.ChangeHost()
+					initializationNeeded = true
+					updateDutiesNeeded = true
+					if slotCancel != nil {
+						slotCancel()
+					}
+				}
+
+				nodeIsHealthyPrev = nodeIsHealthyCurr
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case keys := <-accountsChangedChan:
+				onAccountsChanged(ctx, v, keys, accountsChangedChan)
+				updateDutiesNeeded = true
+				headSlot, err := v.CanonicalHeadSlot(ctx)
+				if err != nil {
+					log.WithError(err).Error("Could not get canonical head slot")
+					continue
+				}
+				pushProposerSettingsChan <- headSlot
+			}
+		}
+	}()
 
 	for {
 		select {
@@ -157,38 +215,6 @@ func run(ctx context.Context, v iface.Validator) {
 			if slots.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
-		case slot := <-v.LastSecondOfSlot():
-			nodeIsHealthyCurr := v.HealthTracker().IsHealthy()
-			if nodeIsHealthyCurr {
-				if !nodeIsHealthyPrev {
-					pushProposerSettingsChan <- slot
-				}
-				// In case event stream died
-				if !v.EventStreamIsRunning() {
-					log.Info("Event stream reconnecting...")
-					go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
-				}
-			} else if features.Get().EnableBeaconRESTApi {
-				v.ChangeHost()
-				initializationNeeded = true
-				updateDutiesNeeded = true
-				if slotCancel != nil {
-					slotCancel()
-				}
-			}
-
-			nodeIsHealthyPrev = nodeIsHealthyCurr
-		case e := <-eventsChan:
-			v.ProcessEvent(e)
-		case keys := <-accountsChangedChan:
-			onAccountsChanged(ctx, v, keys, accountsChangedChan)
-			updateDutiesNeeded = true
-			headSlot, err := v.CanonicalHeadSlot(ctx)
-			if err != nil {
-				log.WithError(err).Error("Could not get canonical head slot")
-				continue
-			}
-			pushProposerSettingsChan <- headSlot
 		}
 	}
 }
