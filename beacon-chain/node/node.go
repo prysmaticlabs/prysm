@@ -276,8 +276,6 @@ func configureBeacon(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not configure execution setting")
 	}
 
-	configureFastSSZHashingAlgorithm()
-
 	return nil
 }
 
