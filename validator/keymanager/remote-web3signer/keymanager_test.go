@@ -265,6 +265,7 @@ func TestNewKeyManager_FileAndFlagsWithDifferentKeys(t *testing.T) {
 		"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"}
 	// provided public keys are saved to the file
 	keys, _, err := km.readKeyFile()
+	require.NoError(t, err)
 	for _, key := range keys {
 		require.Equal(t, slices.Contains(wantSlice, hexutil.Encode(key[:])), true)
 	}
