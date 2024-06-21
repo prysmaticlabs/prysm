@@ -50,7 +50,6 @@ type Server struct {
 	host                      string // http host, not grpc
 	port                      int    // http port, not grpc
 	server                    *http.Server
-	listener                  net.Listener
 	grpcMaxCallRecvMsgSize    int
 	grpcRetries               uint
 	grpcRetryDelay            time.Duration
