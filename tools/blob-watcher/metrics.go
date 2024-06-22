@@ -21,7 +21,7 @@ var (
 			Help:    "The number of seconds it takes to include a blob transaction on chain",
 			Buckets: []float64{1, 2, 16, 32, 64, 128, 256, 512, 1024},
 		},
-		[]string{"account", "blobCount", "maxBlobBaseFee"},
+		[]string{"account", "blobCount"},
 	)
 	blockNumberGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "block_number",

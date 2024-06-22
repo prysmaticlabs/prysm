@@ -214,5 +214,5 @@ func recordTxInclusion(tx *gethtypes.Transaction, chainID *big.Int, inclusionDel
 	if name, ok := accountLabels[[20]byte(acc.Bytes())]; ok {
 		accName = name
 	}
-	transactionInclusionDelay.WithLabelValues(accName, fmt.Sprintf("%d", len(tx.BlobHashes())), fmt.Sprintf("%d", tx.BlobGasFeeCap().Uint64())).Observe(inclusionDelay.Seconds())
+	transactionInclusionDelay.WithLabelValues(accName, fmt.Sprintf("%d", len(tx.BlobHashes()))).Observe(inclusionDelay.Seconds())
 }
