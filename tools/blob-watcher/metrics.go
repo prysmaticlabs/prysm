@@ -57,7 +57,7 @@ func StartMetricsServer(addr string) *http.Server {
 	go func() {
 		err := srv.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			log.WithError(err).Fatal("Could not listen to host:port :%s", srv.Addr)
+			log.WithError(err).Fatalf("Could not listen to host:port :%s", srv.Addr)
 		}
 	}()
 	return srv
