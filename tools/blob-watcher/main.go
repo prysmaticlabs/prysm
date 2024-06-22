@@ -184,6 +184,7 @@ var accountLabels = map[[20]byte]string{
 	mustDecode("0x2c169dfe5fbba12957bdd0ba47d9cedbfe260ca7"): "Starknet",
 	mustDecode("0xcf2898225ed05be911d3709d9417e86e0b4cfc8f"): "Scroll",
 	mustDecode("0x415c8893d514f9bc5211d36eeda4183226b84aa7"): "Blast",
+	mustDecode("0xa9268341831efa4937537bc3e9eb36dbece83c7e"): "Linea",
 }
 
 func mustDecode(address string) [20]byte {
