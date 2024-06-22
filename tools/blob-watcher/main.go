@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -19,16 +20,19 @@ import (
 
 var (
 	// Required fields
-	endpoint = flag.String("execution-endpoint", "ws://localhost:8546", "Path to webscocket endpoint for execution client.")
-	origin   = flag.String("origin-secret", "", "Origin string for websocket connection")
+	executionEndpoint = flag.String("execution-endpoint", "ws://localhost:8546", "Path to webscocket endpoint for execution client.")
+	wsOrigin          = flag.String("origin-secret", "", "Origin string for websocket connection")
+	metricsEndpoint   = flag.String("metrics-endpoint", "localhost:8080", "Path for our metrics server.")
 )
 
 func main() {
 	flag.Parse()
 	log.Info("Starting blob watcher service")
-	log.Infof("Using websocket endpoint of %s", *endpoint)
+	log.Infof("Using websocket endpoint of %s", *executionEndpoint)
+	srv := StartMetricsServer(*metricsEndpoint)
+	defer srv.Close()
 
-	client, err := rpc.DialWebsocket(context.Background(), *endpoint, *origin)
+	client, err := rpc.DialWebsocket(context.Background(), *executionEndpoint, *wsOrigin)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,6 +81,7 @@ func main() {
 			if tx.Type() == gethtypes.BlobTxType {
 				tHash := tx.Hash()
 				log.WithFields(txData(tx, chainID)).Infof("Received new Transaction from Gossip")
+				recordTxMetrics(tx, chainID)
 				pendingTxs[tHash] = tx
 				txTime[tHash] = time.Now()
 			}
@@ -93,6 +98,8 @@ func main() {
 				"blobBaseFee(wei)": currBaseFee.Uint64(),
 				"baseFee(Gwei)":    float64(h.BaseFee.Uint64()) / params.GWei,
 			}).Infof("Received new block")
+			blockNumberGauge.Set(float64(h.Number.Uint64()))
+			blobBaseFeeGauge.Set(float64(currBaseFee.Uint64()))
 
 			currentPendingTxs := len(pendingTxs)
 			viabletxs := 0
@@ -101,6 +108,7 @@ func main() {
 				r, err := ec.TransactionReceipt(context.Background(), hash)
 				if err == nil && r.BlockHash == h.Hash() {
 					log.WithFields(txData(tx, chainID)).Infof("Transaction was included in block %d in %s", r.BlockNumber.Uint64(), time.Since(txTime[hash]))
+					recordTxInclusion(tx, chainID, time.Since(txTime[hash]))
 					delete(pendingTxs, hash)
 					delete(txTime, hash)
 					continue
@@ -131,6 +139,10 @@ func main() {
 					log.WithFields(txData(tx, chainID)).Infof("Transaction was still not included after %s", time.Since(txTime[hash]))
 				}
 			}
+			pendingTransactionGauge.Set(float64(len(pendingTxs)))
+			transactionInclusionGauge.Set(float64(currentPendingTxs - len(pendingTxs)))
+			viableTransactionGauge.Set(float64(viabletxs))
+
 			log.WithFields(log.Fields{
 				"previousPendingTxs": currentPendingTxs,
 				"currentPendingTxs":  len(pendingTxs),
@@ -177,4 +189,30 @@ var accountLabels = map[[20]byte]string{
 func mustDecode(address string) [20]byte {
 	byteAddr := hexutil.MustDecode(address)
 	return [20]byte(byteAddr)
+}
+
+func recordTxMetrics(tx *gethtypes.Transaction, chainID *big.Int) {
+	acc, err := gethtypes.Sender(gethtypes.NewCancunSigner(chainID), tx)
+	if err != nil {
+		log.WithError(err).Error("Could not get sender's account address")
+		return
+	}
+	accName := acc.String()
+	if name, ok := accountLabels[[20]byte(acc.Bytes())]; ok {
+		accName = name
+	}
+	transactionsObservedGauge.WithLabelValues(accName, fmt.Sprintf("%d", len(tx.BlobHashes())), fmt.Sprintf("%d", tx.BlobGasFeeCap().Uint64())).Inc()
+}
+
+func recordTxInclusion(tx *gethtypes.Transaction, chainID *big.Int, inclusionDelay time.Duration) {
+	acc, err := gethtypes.Sender(gethtypes.NewCancunSigner(chainID), tx)
+	if err != nil {
+		log.WithError(err).Error("Could not get sender's account address")
+		return
+	}
+	accName := acc.String()
+	if name, ok := accountLabels[[20]byte(acc.Bytes())]; ok {
+		accName = name
+	}
+	transactionInclusionDelay.WithLabelValues(accName, fmt.Sprintf("%d", len(tx.BlobHashes())), fmt.Sprintf("%d", tx.BlobGasFeeCap().Uint64())).Observe(inclusionDelay.Seconds())
 }
