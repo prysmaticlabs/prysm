@@ -62,7 +62,8 @@ func main() {
 
 	for {
 		select {
-		case <-pSub.Err():
+		case err := <-pSub.Err():
+			log.WithError(err).Error("Pending transaction subscription error")
 			ec.Close()
 			client.Close()
 			close(txChan)
@@ -71,6 +72,7 @@ func main() {
 			return
 
 		case <-hSub.Err():
+			log.WithError(err).Error("New head subscription error")
 			ec.Close()
 			client.Close()
 			close(txChan)
