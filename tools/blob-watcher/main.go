@@ -1,0 +1,180 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"math/big"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/ethclient/gethclient"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rpc"
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	// Required fields
+	endpoint = flag.String("execution-endpoint", "ws://localhost:8546", "Path to webscocket endpoint for execution client.")
+	origin   = flag.String("origin-secret", "", "Origin string for websocket connection")
+)
+
+func main() {
+	flag.Parse()
+	log.Info("Starting blob watcher service")
+	log.Infof("Using websocket endpoint of %s", *endpoint)
+
+	client, err := rpc.DialWebsocket(context.Background(), *endpoint, *origin)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ec := ethclient.NewClient(client)
+	gc := gethclient.New(client)
+
+	txChan := make(chan *gethtypes.Transaction, 100)
+	pSub, err := gc.SubscribeFullPendingTransactions(context.Background(), txChan)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	hdrChan := make(chan *gethtypes.Header, 100)
+	hSub, err := ec.SubscribeNewHead(context.Background(), hdrChan)
+	if err != nil {
+		log.Fatal(err)
+	}
+	chainID, err := ec.ChainID(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	currBaseFee := new(big.Int)
+	pendingTxs := make(map[common.Hash]*gethtypes.Transaction)
+	txTime := make(map[common.Hash]time.Time)
+
+	for {
+		select {
+		case <-pSub.Err():
+			ec.Close()
+			client.Close()
+			close(txChan)
+			close(hdrChan)
+			hSub.Unsubscribe()
+			return
+
+		case <-hSub.Err():
+			ec.Close()
+			client.Close()
+			close(txChan)
+			close(hdrChan)
+			pSub.Unsubscribe()
+			return
+		case tx := <-txChan:
+			if tx.Type() == gethtypes.BlobTxType {
+				tHash := tx.Hash()
+				log.WithFields(txData(tx, chainID)).Infof("Received new Transaction from Gossip")
+				pendingTxs[tHash] = tx
+				txTime[tHash] = time.Now()
+			}
+
+		case h := <-hdrChan:
+			if h.ExcessBlobGas != nil {
+				currBaseFee = eip4844.CalcBlobFee(*h.ExcessBlobGas)
+			}
+			log.Infof("*/-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/")
+			log.WithFields(log.Fields{
+				"blockHash":        h.Hash(),
+				"blockNumber":      h.Number.Uint64(),
+				"blockTime":        h.Time,
+				"blobBaseFee(wei)": currBaseFee.Uint64(),
+				"baseFee(Gwei)":    float64(h.BaseFee.Uint64()) / params.GWei,
+			}).Infof("Received new block")
+
+			currentPendingTxs := len(pendingTxs)
+			viabletxs := 0
+
+			for hash, tx := range pendingTxs {
+				r, err := ec.TransactionReceipt(context.Background(), hash)
+				if err == nil && r.BlockHash == h.Hash() {
+					log.WithFields(txData(tx, chainID)).Infof("Transaction was included in block %d in %s", r.BlockNumber.Uint64(), time.Since(txTime[hash]))
+					delete(pendingTxs, hash)
+					delete(txTime, hash)
+					continue
+				}
+				acc, err := gethtypes.Sender(gethtypes.NewCancunSigner(chainID), tx)
+				if err != nil {
+					log.WithError(err).Error("Could not get sender's account address")
+					continue
+				}
+
+				currNonce, err := ec.NonceAtHash(context.Background(), acc, h.Hash())
+				if err != nil {
+					log.WithError(err).Error("Could not get sender's account nonce")
+					continue
+				}
+				if tx.Nonce() < currNonce {
+					log.WithFields(txData(tx, chainID)).Infof("Transaction has been successfully replaced and included on chain in %s", time.Since(txTime[hash]))
+					delete(pendingTxs, hash)
+					delete(txTime, hash)
+					continue
+				}
+				if tx.Nonce() != currNonce {
+					// This is not an immediate transaction that can be included.
+					continue
+				}
+				if tx.BlobGasFeeCap().Cmp(currBaseFee) >= 0 {
+					viabletxs++
+					log.WithFields(txData(tx, chainID)).Infof("Transaction was still not included after %s", time.Since(txTime[hash]))
+				}
+			}
+			log.WithFields(log.Fields{
+				"previousPendingTxs": currentPendingTxs,
+				"currentPendingTxs":  len(pendingTxs),
+				"viableTxs":          viabletxs,
+			}).Infof("Post block Summary for blob transactions")
+			log.Infof("*/-------------------------------------------------------------------------------------------------------------------------------------------------------------------*/")
+		}
+	}
+}
+
+func txData(tx *gethtypes.Transaction, chainID *big.Int) log.Fields {
+	acc, err := gethtypes.Sender(gethtypes.NewCancunSigner(chainID), tx)
+	if err != nil {
+		log.WithError(err).Error("Could not get sender's account address")
+		return nil
+	}
+	accName := acc.String()
+	if name, ok := accountLabels[[20]byte(acc.Bytes())]; ok {
+		accName = name
+	}
+
+	return log.Fields{
+		"TxHash":              tx.Hash(),
+		"BlobGasFeeCap(Gwei)": float64(tx.BlobGasFeeCap().Uint64()) / params.GWei,
+		"BlobGas":             tx.BlobGas(),
+		"BlobCount":           len(tx.BlobHashes()),
+		"GasFeeCap(Gwei)":     float64(tx.GasFeeCap().Uint64()) / params.GWei,
+		"GasTipCap(Gwei)":     float64(tx.GasTipCap().Uint64()) / params.GWei,
+		"Gas":                 tx.Gas(),
+		"Account":             accName,
+	}
+}
+
+var accountLabels = map[[20]byte]string{
+	mustDecode("0xc1b634853cb333d3ad8663715b08f41a3aec47cc"): "Arbitrum",
+	mustDecode("0x6887246668a3b87f54deb3b94ba47a6f63f32985"): "Optimism",
+	mustDecode("0x5050f69a9786f081509234f1a7f4684b5e5b76c9"): "Base",
+	mustDecode("0x000000633b68f5d8d3a86593ebb815b4663bcbe0"): "Taiko",
+	mustDecode("0x2c169dfe5fbba12957bdd0ba47d9cedbfe260ca7"): "Starknet",
+	mustDecode("0xcf2898225ed05be911d3709d9417e86e0b4cfc8f"): "Scroll",
+	mustDecode("0x415c8893d514f9bc5211d36eeda4183226b84aa7"): "Blast",
+}
+
+func mustDecode(address string) [20]byte {
+	byteAddr := hexutil.MustDecode(address)
+	return [20]byte(byteAddr)
+}
