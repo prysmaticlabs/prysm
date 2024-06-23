@@ -106,6 +106,7 @@ func main() {
 			currentPendingTxs := len(pendingTxs)
 			blobsIncluded := 0
 			viabletxs := 0
+			viableBlobs := 0
 
 			for hash, tx := range pendingTxs {
 				r, err := ec.TransactionReceipt(context.Background(), hash)
@@ -140,11 +141,13 @@ func main() {
 				}
 				if tx.BlobGasFeeCap().Cmp(currBaseFee) >= 0 {
 					viabletxs++
+					viableBlobs += len(tx.BlobHashes())
 					log.WithFields(txData(tx, chainID)).Infof("Transaction was still not included after %s", time.Since(txTime[hash]))
 				}
 			}
 			pendingTransactionGauge.Set(float64(len(pendingTxs)))
 			viableTransactionGauge.Set(float64(viabletxs))
+			viableBlobsGauge.Set(float64(viableBlobs))
 			transactionInclusionCounter.Add(float64(currentPendingTxs - len(pendingTxs)))
 			blobInclusionCounter.Add(float64(blobsIncluded))
 

@@ -39,6 +39,10 @@ var (
 		Name: "viable_transaction",
 		Help: "The current number of viable transactions in the mempool",
 	})
+	viableBlobsGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "viable_blobs",
+		Help: "The current number of viable blobs in the mempool",
+	})
 	transactionInclusionCounter = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "transaction_inclusion",
 		Help: "The current number of transactions included in a block",
