@@ -144,8 +144,8 @@ func main() {
 				}
 			}
 			pendingTransactionGauge.Set(float64(len(pendingTxs)))
-			transactionInclusionGauge.Set(float64(currentPendingTxs - len(pendingTxs)))
 			viableTransactionGauge.Set(float64(viabletxs))
+			transactionInclusionCounter.Add(float64(currentPendingTxs - len(pendingTxs)))
 			blobInclusionCounter.Add(float64(blobsIncluded))
 
 			log.WithFields(log.Fields{
