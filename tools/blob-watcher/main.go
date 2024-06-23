@@ -104,6 +104,7 @@ func main() {
 			blobBaseFeeGauge.Set(float64(currBaseFee.Uint64()))
 
 			currentPendingTxs := len(pendingTxs)
+			blobsIncluded := 0
 			viabletxs := 0
 
 			for hash, tx := range pendingTxs {
@@ -111,6 +112,7 @@ func main() {
 				if err == nil && r.BlockHash == h.Hash() {
 					log.WithFields(txData(tx, chainID)).Infof("Transaction was included in block %d in %s", r.BlockNumber.Uint64(), time.Since(txTime[hash]))
 					recordTxInclusion(tx, chainID, time.Since(txTime[hash]))
+					blobsIncluded += len(tx.BlobHashes())
 					delete(pendingTxs, hash)
 					delete(txTime, hash)
 					continue
@@ -144,6 +146,7 @@ func main() {
 			pendingTransactionGauge.Set(float64(len(pendingTxs)))
 			transactionInclusionGauge.Set(float64(currentPendingTxs - len(pendingTxs)))
 			viableTransactionGauge.Set(float64(viabletxs))
+			blobInclusionCounter.Add(float64(blobsIncluded))
 
 			log.WithFields(log.Fields{
 				"previousPendingTxs": currentPendingTxs,

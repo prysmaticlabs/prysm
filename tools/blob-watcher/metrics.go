@@ -43,6 +43,10 @@ var (
 		Name: "transaction_inclusion",
 		Help: "The current number of transactions included in a block",
 	})
+	blobInclusionCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "blob_inclusion",
+		Help: "The number of blobs included on chain via a transaction",
+	})
 )
 
 func StartMetricsServer(addr string) *http.Server {
