@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -99,6 +100,7 @@ func main() {
 				"blockTime":        h.Time,
 				"blobBaseFee(wei)": currBaseFee.Uint64(),
 				"baseFee(Gwei)":    float64(h.BaseFee.Uint64()) / params.GWei,
+				"builder":          strings.ToValidUTF8(string(h.Extra), ""),
 			}).Infof("Received new block")
 			blockNumberGauge.Set(float64(h.Number.Uint64()))
 			blobBaseFeeGauge.Set(float64(currBaseFee.Uint64()))
@@ -149,7 +151,7 @@ func main() {
 			viableTransactionGauge.Set(float64(viabletxs))
 			viableBlobsGauge.Set(float64(viableBlobs))
 			transactionInclusionCounter.Add(float64(currentPendingTxs - len(pendingTxs)))
-			blobInclusionCounter.Add(float64(blobsIncluded))
+			blobInclusionCounter.WithLabelValues(strings.ToValidUTF8(string(h.Extra), "")).Add(float64(blobsIncluded))
 
 			log.WithFields(log.Fields{
 				"previousPendingTxs": currentPendingTxs,
