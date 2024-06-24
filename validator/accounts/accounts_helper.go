@@ -49,7 +49,6 @@ func selectAccounts(selectionPrompt string, pubKeys [][fieldparams.BLSPubkeyLeng
 		p := promptui.Select{
 			Label:        selectionPrompt,
 			HideSelected: true,
-			Size:         len(pubKeyStrings),
 			Items:        append([]string{exit, allAccountsText}, pubKeyStrings...),
 			Templates:    templates,
 		}
