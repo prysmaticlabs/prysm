@@ -47,9 +47,13 @@ var (
 		Name: "transaction_inclusion",
 		Help: "The current number of transactions included in a block",
 	})
-	blobInclusionCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+	blobInclusionCounter = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "blob_inclusion",
 		Help: "The number of blobs included on chain via a transaction",
+	})
+	blobInclusionBuilderCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "blob_inclusion_by_builder",
+		Help: "The number of blobs included on chain via a transaction by builder",
 	}, []string{"builder"})
 )
 
