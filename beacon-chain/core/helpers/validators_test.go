@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -595,6 +596,7 @@ func TestComputeProposerIndex(t *testing.T) {
 		validators []*ethpb.Validator
 		indices    []primitives.ValidatorIndex
 		seed       [32]byte
+		minVersion int
 	}
 	tests := []struct {
 		name      string
@@ -682,21 +684,81 @@ func TestComputeProposerIndex(t *testing.T) {
 			},
 			want: 7,
 		},
+		{
+			name: "all_active_indices_above_min_activation_balance",
+			args: args{
+				validators: []*ethpb.Validator{
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+				},
+				indices:    []primitives.ValidatorIndex{0, 1, 2, 3, 4},
+				seed:       seed,
+				minVersion: version.Electra,
+			},
+			want: 2,
+		},
+		{
+			name: "second_half_active_above_min_activation_balance",
+			args: args{
+				validators: []*ethpb.Validator{
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalanceElectra},
+				},
+				indices:    []primitives.ValidatorIndex{5, 6, 7, 8, 9},
+				seed:       seed,
+				minVersion: version.Electra,
+			},
+			want: 7,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			helpers.ClearCache()
+			t.Run("phase0", func(t *testing.T) {
+				if tt.args.minVersion > version.Phase0 {
+					t.Skip("scenario does not apply to phase0")
+				}
+				helpers.ClearCache()
+				bState := &ethpb.BeaconState{Validators: tt.args.validators}
+				stTrie, err := state_native.InitializeFromProtoUnsafePhase0(bState)
+				require.NoError(t, err)
+				got, err := helpers.ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
+				if tt.wantedErr != "" {
+					assert.ErrorContains(t, tt.wantedErr, err)
+					return
+				}
+				assert.NoError(t, err, "received unexpected error")
+				assert.Equal(t, tt.want, got, "ComputeProposerIndex()")
+			})
+			t.Run("electra", func(t *testing.T) {
+				if tt.args.minVersion > version.Electra {
+					t.Skip("scenario does not apply to electra")
+				}
+				helpers.ClearCache()
+				bState := &ethpb.BeaconStateElectra{Validators: tt.args.validators}
+				stTrie, err := state_native.InitializeFromProtoUnsafeElectra(bState)
+				require.NoError(t, err)
 
-			bState := &ethpb.BeaconState{Validators: tt.args.validators}
-			stTrie, err := state_native.InitializeFromProtoUnsafePhase0(bState)
-			require.NoError(t, err)
-			got, err := helpers.ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
-			if tt.wantedErr != "" {
-				assert.ErrorContains(t, tt.wantedErr, err)
-				return
-			}
-			assert.NoError(t, err, "received unexpected error")
-			assert.Equal(t, tt.want, got, "ComputeProposerIndex()")
+				require.Equal(t, stTrie.Version(), version.Electra)
+
+				got, err := helpers.ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
+				if tt.wantedErr != "" {
+					assert.ErrorContains(t, tt.wantedErr, err)
+					return
+				}
+				assert.NoError(t, err, "received unexpected error")
+				assert.Equal(t, tt.want, got, "ComputeProposerIndex()")
+			})
 		})
 	}
 }
