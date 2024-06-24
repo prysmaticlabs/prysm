@@ -55,6 +55,10 @@ var (
 		Name: "blob_inclusion_by_builder",
 		Help: "The number of blobs included on chain via a transaction by builder",
 	}, []string{"builder"})
+	builderCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "builder_blocks",
+		Help: "The number of blocks built by a builder",
+	}, []string{"builder"})
 )
 
 func StartMetricsServer(addr string) *http.Server {

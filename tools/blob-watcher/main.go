@@ -153,6 +153,7 @@ func main() {
 			transactionInclusionCounter.Add(float64(currentPendingTxs - len(pendingTxs)))
 			blobInclusionCounter.Add(float64(blobsIncluded))
 			blobInclusionBuilderCounter.WithLabelValues(strings.ToValidUTF8(string(h.Extra), "")).Add(float64(blobsIncluded))
+			builderCounter.WithLabelValues(strings.ToValidUTF8(string(h.Extra), "")).Add(1)
 
 			log.WithFields(log.Fields{
 				"previousPendingTxs": currentPendingTxs,
