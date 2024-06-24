@@ -1,4 +1,4 @@
-package stateutil
+package ssz
 
 import (
 	"bytes"
@@ -6,11 +6,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 )
 
 // SliceRoot computes the root of a slice of hashable objects.
-func SliceRoot[T ssz.Hashable](slice []T, limit uint64) ([32]byte, error) {
+func SliceRoot[T Hashable](slice []T, limit uint64) ([32]byte, error) {
 	max := limit
 	if uint64(len(slice)) > max {
 		return [32]byte{}, fmt.Errorf("slice exceeds max length %d", max)
@@ -25,7 +24,7 @@ func SliceRoot[T ssz.Hashable](slice []T, limit uint64) ([32]byte, error) {
 		roots[i] = r
 	}
 
-	sliceRoot, err := ssz.BitwiseMerkleize(roots, uint64(len(roots)), limit)
+	sliceRoot, err := BitwiseMerkleize(roots, uint64(len(roots)), limit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not slice merkleization")
 	}
@@ -36,6 +35,5 @@ func SliceRoot[T ssz.Hashable](slice []T, limit uint64) ([32]byte, error) {
 	// We need to mix in the length of the slice.
 	sliceLenRoot := make([]byte, 32)
 	copy(sliceLenRoot, sliceLenBuf.Bytes())
-	res := ssz.MixInLength(sliceRoot, sliceLenRoot)
-	return res, nil
+	return MixInLength(sliceRoot, sliceLenRoot), nil
 }
