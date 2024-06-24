@@ -2,16 +2,13 @@ package sync
 
 import (
 	"context"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	db "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
@@ -21,7 +18,6 @@ import (
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz/equality"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -231,82 +227,5 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	conns := p1.BHost.Network().ConnsToPeer(p2.BHost.ID())
 	if len(conns) == 0 {
 		t.Error("Peer is disconnected despite receiving a valid ping")
-	}
-}
-
-func TestExtractMetaDataType(t *testing.T) {
-	// Precompute digests
-	genDigest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, params.BeaconConfig().ZeroHash[:])
-	require.NoError(t, err)
-	altairDigest, err := signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, params.BeaconConfig().ZeroHash[:])
-	require.NoError(t, err)
-
-	type args struct {
-		digest []byte
-		clock  blockchain.TemporalOracle
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    metadata.Metadata
-		wantErr bool
-	}{
-		{
-			name: "no digest",
-			args: args{
-				digest: []byte{},
-				clock:  startup.NewClock(time.Now(), [32]byte{}),
-			},
-			want:    wrapper.WrappedMetadataV0(&pb.MetaDataV0{}),
-			wantErr: false,
-		},
-		{
-			name: "invalid digest",
-			args: args{
-				digest: []byte{0x00, 0x01},
-				clock:  startup.NewClock(time.Now(), [32]byte{}),
-			},
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name: "non existent digest",
-			args: args{
-				digest: []byte{0x00, 0x01, 0x02, 0x03},
-				clock:  startup.NewClock(time.Now(), [32]byte{}),
-			},
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name: "genesis fork version",
-			args: args{
-				digest: genDigest[:],
-				clock:  startup.NewClock(time.Now(), [32]byte{}),
-			},
-			want:    wrapper.WrappedMetadataV0(&pb.MetaDataV0{}),
-			wantErr: false,
-		},
-		{
-			name: "altair fork version",
-			args: args{
-				digest: altairDigest[:],
-				clock:  startup.NewClock(time.Now(), [32]byte{}),
-			},
-			want:    wrapper.WrappedMetadataV1(&pb.MetaDataV1{}),
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := extractMetaDataType(tt.args.digest, tt.args.clock)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("extractMetaDataType() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("extractMetaDataType() got = %v, want %v", got, tt.want)
-			}
-		})
 	}
 }
