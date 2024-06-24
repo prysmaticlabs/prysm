@@ -40,7 +40,7 @@ import (
 //
 //	    state.pending_consolidations = state.pending_consolidations[next_pending_consolidation:]
 func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "electra.ProcessPendingConsolidations")
+	_, span := trace.StartSpan(ctx, "electra.ProcessPendingConsolidations")
 	defer span.End()
 
 	if st == nil || st.IsNil() {
@@ -68,7 +68,7 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) err
 			break
 		}
 
-		if err := SwitchToCompoundingValidator(ctx, st, pc.TargetIndex); err != nil {
+		if err := SwitchToCompoundingValidator(st, pc.TargetIndex); err != nil {
 			return err
 		}
 
