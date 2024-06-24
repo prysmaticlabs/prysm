@@ -8,6 +8,7 @@ require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20240209103030-ec53fa766bf8
 	github.com/MariusVanDerWijden/tx-fuzz v1.3.3-0.20240227085032-f70dd7c85c97
+	github.com/OffchainLabs/methodical-ssz v0.0.0-20240624183602-504fdd997a9d
 	github.com/aristanetworks/goarista v0.0.0-20200805130819-fd197cf57d96
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
@@ -125,6 +126,7 @@ require (
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
+	github.com/dave/jennifer v1.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set/v2 v2.5.0 // indirect
@@ -284,3 +286,5 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20230315201114-09284ba20446
+
+//replace github.com/OffchainLabs/methodical-ssz => /Users/kasey/src/OffchainLabs/methodical-ssz

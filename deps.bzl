@@ -679,6 +679,12 @@ def prysm_deps():
         version = "v1.5.5",
     )
     go_repository(
+        name = "com_github_dave_jennifer",
+        importpath = "github.com/dave/jennifer",
+        sum = "h1:uRbSBH9UTS64yXbh4FrMHfgfY762RD+C7bUPKODpSJE=",
+        version = "v1.7.0",
+    )
+    go_repository(
         name = "com_github_davecgh_go_spew",
         importpath = "github.com/davecgh/go-spew",
         sum = "h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=",
@@ -2585,6 +2591,12 @@ def prysm_deps():
         importpath = "github.com/NYTimes/gziphandler",
         sum = "h1:lsxEuwrXEAokXB9qhlbKWPpo3KMLZQ5WB5WLQRW1uq0=",
         version = "v0.0.0-20170623195520-56545f4a5d46",
+    )
+    go_repository(
+        name = "com_github_offchainlabs_methodical_ssz",
+        importpath = "github.com/OffchainLabs/methodical-ssz",
+        sum = "h1:s0k2mdXLGd/K59Nb0K1XYkGB6CUBZT2axD5ckjY7Tfo=",
+        version = "v0.0.0-20240624183602-504fdd997a9d",
     )
     go_repository(
         name = "com_github_oklog_oklog",

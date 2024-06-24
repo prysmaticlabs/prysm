@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/checkpointsync"
+	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/codegen"
 	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/db"
 	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/p2p"
 	"github.com/prysmaticlabs/prysm/v5/cmd/prysmctl/testnet"
@@ -32,4 +33,5 @@ func init() {
 	prysmctlCommands = append(prysmctlCommands, testnet.Commands...)
 	prysmctlCommands = append(prysmctlCommands, weaksubjectivity.Commands...)
 	prysmctlCommands = append(prysmctlCommands, validator.Commands...)
+	prysmctlCommands = append(prysmctlCommands, codegen.Commands...)
 }
