@@ -57,7 +57,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
 	}
 	// Handle different message types across forks.
-	dt, err := extractDataTypeFromTopic(topic, fDigest[:], s.cfg.clock)
+	dt, err := extractValidDataTypeFromTopic(topic, fDigest[:], s.cfg.clock)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (*Service) replaceForkDigest(topic string) (string, error) {
 	return strings.Join(subStrings, "/"), nil
 }
 
-func extractDataTypeFromTopic(topic string, digest []byte, clock *startup.Clock) (ssz.Unmarshaler, error) {
+func extractValidDataTypeFromTopic(topic string, digest []byte, clock *startup.Clock) (ssz.Unmarshaler, error) {
 	switch topic {
 	case p2p.BlockSubnetTopicFormat:
 		return extractDataTypeFromTypeMap(types.BlockMap, digest, clock)

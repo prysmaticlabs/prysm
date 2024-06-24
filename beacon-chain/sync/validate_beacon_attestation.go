@@ -35,8 +35,6 @@ import (
 // - attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot).
 // - The signature of attestation is valid.
 func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
-	var validationRes pubsub.ValidationResult
-
 	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
@@ -92,6 +90,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if err := helpers.ValidateSlotTargetEpoch(data); err != nil {
 		return pubsub.ValidationReject, err
 	}
+
+	var validationRes pubsub.ValidationResult
 
 	var committeeIndex primitives.CommitteeIndex
 	if att.Version() >= version.Electra {
@@ -162,7 +162,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 			a, ok := att.(*eth.AttestationElectra)
 			// This will never fail in practice because we asserted the version
 			if !ok {
-				return pubsub.ValidationReject, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.AttestationElectra{}, att)
+				return pubsub.ValidationIgnore, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.AttestationElectra{}, att)
 			}
 			s.savePendingAtt(&eth.SignedAggregateAttestationAndProofElectra{Message: &eth.AggregateAttestationAndProofElectra{Aggregate: a}})
 		} else {
