@@ -198,7 +198,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		beaconRPCPort = e2e.TestParams.Ports.PrysmBeaconNodeRPCPort
 	}
 
-	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, index))
+	logFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, index))
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	}
 	args := []string{
 		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
-		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
+		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, logFile.Name()),
 		fmt.Sprintf("--%s=%s", flags.GraffitiFileFlag.Name, gFile),
 		fmt.Sprintf("--%s=%d", flags.MonitoringPortFlag.Name, e2e.TestParams.Ports.ValidatorMetricsPort+index),
 		fmt.Sprintf("--%s=%d", flags.GRPCGatewayPort.Name, e2e.TestParams.Ports.ValidatorGatewayPort+index),
@@ -260,9 +260,8 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 			fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort),
 		)
 		if v.config.UsePersistentKeyFile {
-			testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/proposer-settings/validator_%d", index)
-			keysPath := filepath.Join(testNetDir, "keys.txt")
-			if err := writeLinesToFile(validatorHexPubKeys, keysPath); err != nil {
+			keysPath := filepath.Join(e2e.TestParams.TestPath, "proposer-settings", fmt.Sprintf("validator_%d", index), "keys.txt")
+			if err := file.WriteLinesToFile(validatorHexPubKeys, keysPath); err != nil {
 				return err
 			}
 			args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerKeyFileFlag.Name, keysPath))
@@ -381,28 +380,4 @@ func createProposerSettingsPath(pubkeys []string, nodeIdx int) (string, error) {
 func FeeRecipientFromPubkey(key string) string {
 	// pubkey[:(2+fieldparams.FeeRecipientLength*2)] slicing 2 (for the 0x preamble) + 2 hex chars for each byte
 	return common.HexToAddress(key[:(2 + fieldparams.FeeRecipientLength*2)]).Hex()
-}
-
-// writeLinesToFile writes a slice of strings to a file, each string on a new line.
-func writeLinesToFile(lines []string, filename string) error {
-	// Open the file for writing. If the file does not exist, create it, or truncate it if it does.
-	f, err := os.Create(filepath.Clean(filename))
-	if err != nil {
-		return fmt.Errorf("error creating file: %w", err)
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Error(err.Error())
-		}
-	}(f)
-
-	// Iterate through all lines in the slice and write them to the file
-	for _, line := range lines {
-		if _, err := f.WriteString(line + "\n"); err != nil {
-			return fmt.Errorf("error writing line to file: %w", err)
-		}
-	}
-
-	return nil
 }

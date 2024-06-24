@@ -258,7 +258,7 @@ func NewWalletForWeb3Signer(cliCtx *cli.Context) *Wallet {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	// wallet is just a temporary wallet for web3 signer used to call initialize keymanager.
 	return &Wallet{
-		walletDir:      walletDir, // it's ok if there's an existing wallet, we just need some metadata to know where
+		walletDir:      walletDir, // it's ok if there's an existing wallet
 		accountsPath:   "",
 		keymanagerKind: keymanager.Web3Signer,
 		walletPassword: "",

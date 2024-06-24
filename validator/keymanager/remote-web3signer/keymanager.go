@@ -61,7 +61,7 @@ type Keymanager struct {
 	client                internal.HttpSignerClient
 	genesisValidatorsRoot []byte
 	providedPublicKeys    [][48]byte          // (source of truth) flag loaded + file loaded + api loaded keys
-	flagLoadedKeysMap     map[string][48]byte // stores what was provided from flag as a map
+	flagLoadedKeysMap     map[string][48]byte // stores what was provided from flag ( as opposed to from file )
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
 	retriesRemaining      int
@@ -71,7 +71,7 @@ type Keymanager struct {
 
 // NewKeymanager instantiates a new web3signer key manager.
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
-	ctx, span := trace.StartSpan(ctx, "remoteKeymanager")
+	ctx, span := trace.StartSpan(ctx, "remote-keymanager.NewKeymanager")
 	defer span.End()
 	if cfg.BaseEndpoint == "" || !bytesutil.IsValidRoot(cfg.GenesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)

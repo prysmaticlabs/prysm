@@ -24,6 +24,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -563,6 +564,67 @@ func TestHasReadWritePermissions(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("HasReadWritePermissions() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWriteLinesToFile(t *testing.T) {
+	// Test cases
+	tests := []struct {
+		name     string
+		lines    []string
+		filename string
+		wantErr  bool
+	}{
+		{
+			name:     "write to a new file",
+			lines:    []string{"line1", "line2", "line3"},
+			filename: "testfile1.txt",
+			wantErr:  false,
+		},
+		{
+			name:     "overwrite existing file",
+			lines:    []string{"line1", "line2"},
+			filename: "testfile2.txt",
+			wantErr:  false,
+		},
+		{
+			name:     "error creating file",
+			lines:    []string{"line1"},
+			filename: "/invalid/testfile.txt", // Invalid path to induce error
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Cleanup after each test case
+			if !tt.wantErr {
+				defer func(name string) {
+					err := os.Remove(name)
+					require.NoError(t, err)
+				}(filepath.Clean(tt.filename))
+			}
+
+			err := file.WriteLinesToFile(tt.lines, tt.filename)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("WriteLinesToFile() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr {
+				// Check file content
+				content, err := os.ReadFile(filepath.Clean(tt.filename))
+				if err != nil {
+					t.Fatalf("failed to read file: %v", err)
+				}
+
+				// Join lines with newline for comparison
+				expectedContent := strings.Join(tt.lines, "\n") + "\n"
+				if string(content) != expectedContent {
+					t.Errorf("file content = %q, want %q", string(content), expectedContent)
+				}
 			}
 		})
 	}

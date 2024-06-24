@@ -98,7 +98,8 @@ func (client *ApiClient) GetPublicKeys(ctx context.Context, url string) ([]strin
 	if len(publicKeys) == 0 {
 		return publicKeys, nil
 	}
-	// check if it's a hex and a public key
+	// early check if it's a hex and a public key
+	// note: a full loop will be conducted in keymanager.go if the quick check passes
 	b, err := hexutil.Decode(publicKeys[0])
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to decode public key")
