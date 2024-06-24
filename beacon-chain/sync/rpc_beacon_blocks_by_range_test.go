@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"io"
 	"math/big"
 	"sync"
@@ -13,6 +12,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/pkg/errors"
 	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	db2 "github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	db "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
