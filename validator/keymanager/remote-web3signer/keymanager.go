@@ -138,7 +138,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 			return nil, errors.Wrap(err, "could not read key file")
 		}
 		if len(flagLoadedKeys) != 0 {
-			log.WithField("no_flag_loaded_keys", len(flagLoadedKeys)).Info("Combining flag loaded keys and file loaded keys.")
+			log.WithField("flagLoadedKeyCount", len(flagLoadedKeys)).WithField("fileLoadedKeyCount", len(fileKeys)).Info("Combining flag loaded keys and file loaded keys.")
 			maps.Copy(fileKeys, flagLoadedKeys)
 			if err = km.savePublicKeysToFile(fileKeys); err != nil {
 				return nil, errors.Wrap(err, "could not save public keys to file")
