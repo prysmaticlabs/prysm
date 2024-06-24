@@ -60,7 +60,7 @@ type SetupConfig struct {
 type Keymanager struct {
 	client                internal.HttpSignerClient
 	genesisValidatorsRoot []byte
-	providedPublicKeys    [][48]byte          // source of truth flag loaded + file loaded + api loaded keys
+	providedPublicKeys    [][48]byte          // (source of truth) flag loaded + file loaded + api loaded keys
 	flagLoadedKeysMap     map[string][48]byte // stores what was provided from flag as a map
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
