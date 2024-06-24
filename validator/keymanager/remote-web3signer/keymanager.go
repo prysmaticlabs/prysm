@@ -174,7 +174,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChangesWithRetry(ctx context.Cont
 	if err != nil {
 		km.updatePublicKeys(maps.Values(km.flagLoadedKeysMap)) // update the keys to flag provided defaults
 		km.retriesRemaining--
-		log.WithError(err).Debug("could not refresh remote keys from file changes")
+		log.WithError(err).Debug("Could not refresh remote keys from file changes")
 		log.WithFields(logrus.Fields{"path": km.keyFilePath, "retriesRemaining": km.retriesRemaining, "retryDelay": retryDelay}).Warnf("Key file does not exist. Please create a new one. Retrying ...")
 		time.Sleep(retryDelay)
 		return km.refreshRemoteKeysFromFileChangesWithRetry(ctx, retryDelay)
