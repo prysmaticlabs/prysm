@@ -94,7 +94,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if km.keyFilePath != "" {
 		keyFileExists, err = file.Exists(km.keyFilePath, file.Regular)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not check if remote signer persistent keys exists in %s", km.keyFilePath)
+			return nil, errors.Wrapf(err, "could not check if remote signer persistent keys exist in %s", km.keyFilePath)
 		}
 		if !keyFileExists {
 			return nil, fmt.Errorf("no file exists in remote signer key file path %s", km.keyFilePath)
