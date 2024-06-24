@@ -7,13 +7,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
@@ -112,7 +108,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	if err != nil {
 		return nil, err
 	}
-	msg, err := extractMetaDataType(rpcCtx[:], s.cfg.clock)
+	msg, err := extractDataTypeFromTypeMap(types.MetaDataMap, rpcCtx[:], s.cfg.clock)
 	if err != nil {
 		return nil, err
 	}
@@ -132,28 +128,4 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 		return nil, err
 	}
 	return msg, nil
-}
-
-func extractMetaDataType(digest []byte, tor blockchain.TemporalOracle) (metadata.Metadata, error) {
-	if len(digest) == 0 {
-		mdFunc, ok := types.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
-		if !ok {
-			return nil, errors.New("no metadata type exists for the genesis fork version.")
-		}
-		return mdFunc(), nil
-	}
-	if len(digest) != forkDigestLength {
-		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
-	}
-	vRoot := tor.GenesisValidatorsRoot()
-	for k, mdFunc := range types.MetaDataMap {
-		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
-		if err != nil {
-			return nil, err
-		}
-		if rDigest == bytesutil.ToBytes4(digest) {
-			return mdFunc(), nil
-		}
-	}
-	return nil, errors.Wrapf(ErrNoValidDigest, "could not extract metadata type, saw digest=%#x, genesis=%v, vr=%#x", digest, tor.GenesisTime(), tor.GenesisValidatorsRoot())
 }
