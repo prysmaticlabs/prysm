@@ -107,7 +107,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, cfg.PublicKeysURL)
 		if err != nil {
 			erroredResponsesTotal.Inc()
-			return nil, errors.Wrapf(err, "could not get public keys from remote server url: %v", cfg.PublicKeysURL)
+			return nil, errors.Wrapf(err, "could not get public keys from remote server URL %v", cfg.PublicKeysURL)
 		}
 		ppk = providedPublicKeys
 	} else if len(cfg.ProvidedPublicKeys) != 0 {
