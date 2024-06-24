@@ -1,7 +1,6 @@
 package electra
 
 import (
-	"context"
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -19,7 +18,7 @@ import (
 //		if has_eth1_withdrawal_credential(validator):
 //		    validator.withdrawal_credentials = COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
 //		    queue_excess_active_balance(state, index)
-func SwitchToCompoundingValidator(ctx context.Context, s state.BeaconState, idx primitives.ValidatorIndex) error {
+func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorIndex) error {
 	v, err := s.ValidatorAtIndex(idx)
 	if err != nil {
 		return err
@@ -32,12 +31,12 @@ func SwitchToCompoundingValidator(ctx context.Context, s state.BeaconState, idx 
 		if err := s.UpdateValidatorAtIndex(idx, v); err != nil {
 			return err
 		}
-		return queueExcessActiveBalance(ctx, s, idx)
+		return QueueExcessActiveBalance(s, idx)
 	}
 	return nil
 }
 
-// queueExcessActiveBalance
+// QueueExcessActiveBalance
 //
 // Spec definition:
 //
@@ -49,7 +48,7 @@ func SwitchToCompoundingValidator(ctx context.Context, s state.BeaconState, idx 
 //	        state.pending_balance_deposits.append(
 //	            PendingBalanceDeposit(index=index, amount=excess_balance)
 //	        )
-func queueExcessActiveBalance(ctx context.Context, s state.BeaconState, idx primitives.ValidatorIndex) error {
+func QueueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex) error {
 	bal, err := s.BalanceAtIndex(idx)
 	if err != nil {
 		return err
@@ -80,7 +79,7 @@ func queueExcessActiveBalance(ctx context.Context, s state.BeaconState, idx prim
 //	    )
 //
 //nolint:dupword
-func QueueEntireBalanceAndResetValidator(ctx context.Context, s state.BeaconState, idx primitives.ValidatorIndex) error {
+func QueueEntireBalanceAndResetValidator(s state.BeaconState, idx primitives.ValidatorIndex) error {
 	bal, err := s.BalanceAtIndex(idx)
 	if err != nil {
 		return err

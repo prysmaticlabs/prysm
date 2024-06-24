@@ -68,7 +68,7 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) err
 			break
 		}
 
-		if err := SwitchToCompoundingValidator(ctx, st, pc.TargetIndex); err != nil {
+		if err := SwitchToCompoundingValidator(st, pc.TargetIndex); err != nil {
 			return err
 		}
 
