@@ -1,6 +1,7 @@
 package registration
 
 import (
+	log "github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 
@@ -53,6 +54,8 @@ func readbootNodes(fileName string) ([]string, error) {
 		var typeError *yaml.TypeError
 		if !errors.As(err, &typeError) {
 			return nil, err
+		} else {
+			log.WithError(err).Error("There were some issues parsing the bootnodes from a yaml file.")
 		}
 	}
 	return listNodes, nil
