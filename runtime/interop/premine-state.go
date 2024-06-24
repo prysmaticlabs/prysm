@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
-	b "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
@@ -206,7 +205,7 @@ func (s *PremineGenesisConfig) processDeposits(ctx context.Context, g state.Beac
 	if _, err = helpers.UpdateGenesisEth1Data(g, deposits, g.Eth1Data()); err != nil {
 		return err
 	}
-	_, err = b.ProcessPreGenesisDeposits(ctx, g, deposits)
+	_, err = altair.ProcessPreGenesisDeposits(ctx, g, deposits)
 	if err != nil {
 		return errors.Wrap(err, "could not process validator deposits")
 	}
