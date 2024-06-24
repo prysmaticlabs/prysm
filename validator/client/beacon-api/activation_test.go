@@ -116,7 +116,7 @@ func TestActivation_Nominal(t *testing.T) {
 
 	// Get does not return any result for non existing key
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validators",
 		nil,
 		bytes.NewBuffer(reqBytes),
@@ -240,7 +240,7 @@ func TestActivation_InvalidData(t *testing.T) {
 
 				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 				jsonRestHandler.EXPECT().Post(
-					ctx,
+					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -281,7 +281,7 @@ func TestActivation_JsonResponseError(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
@@ -291,7 +291,7 @@ func TestActivation_JsonResponseError(t *testing.T) {
 	).Times(1)
 
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
 	).Return(

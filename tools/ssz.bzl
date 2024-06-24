@@ -60,6 +60,9 @@ def _ssz_go_proto_library_impl(ctx):
     if len(ctx.attr.objs) > 0:
         args.append("--objs=%s" % ",".join(ctx.attr.objs))
 
+    if len(ctx.attr.exclude_objs) > 0:
+        args.append("--exclude-objs=%s" % ",".join(ctx.attr.exclude_objs))
+
     ctx.actions.run(
         executable = ctx.executable.sszgen,
         progress_message = "Generating ssz marshal and unmarshal functions",
@@ -79,9 +82,10 @@ ssz_gen_marshal = rule(
             cfg = "exec",
         ),
         "objs": attr.string_list(),
+        "exclude_objs": attr.string_list(),
         "includes": attr.label_list(providers = [GoLibrary]),
+        "out": attr.output(),
     },
-    outputs = {"out": "generated.ssz.go"},
 )
 
 SSZ_DEPS = ["@com_github_prysmaticlabs_fastssz//:go_default_library"]
