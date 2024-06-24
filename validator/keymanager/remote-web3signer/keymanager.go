@@ -151,7 +151,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		go func() {
 			err = km.refreshRemoteKeysFromFileChangesWithRetry(ctx, retryDelay)
 			if err != nil {
-				log.WithError(err).Error("could not refresh remote keys from file changes")
+				log.WithError(err).Error("Could not refresh remote keys from file changes")
 			}
 		}()
 	} else {
