@@ -31,7 +31,11 @@ func main() {
 	log.Info("Starting blob watcher service")
 	log.Infof("Using websocket endpoint of %s", *executionEndpoint)
 	srv := StartMetricsServer(*metricsEndpoint)
-	defer srv.Close()
+	defer func() {
+		if err := srv.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
 
 	client, err := rpc.DialWebsocket(context.Background(), *executionEndpoint, *wsOrigin)
 	if err != nil {
