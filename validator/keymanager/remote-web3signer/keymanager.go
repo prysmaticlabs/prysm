@@ -121,7 +121,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	for _, key := range ppk {
 		decodedKey, err := hexutil.Decode(key)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not decode public key for remote signer")
+			return nil, errors.Wrapf(err, "could not decode public key %s", key)
 		}
 		if len(decodedKey) != fieldparams.BLSPubkeyLength {
 			return nil, fmt.Errorf("public key %s has invalid length (expected %d, got %d)", decodedKey, fieldparams.BLSPubkeyLength, len(decodedKey))
