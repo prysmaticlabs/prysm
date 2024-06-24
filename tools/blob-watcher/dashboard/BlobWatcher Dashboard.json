@@ -1,35 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": {},
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "11.0.0"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -49,15 +18,14 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 1,
   "links": [],
   "panels": [
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "cdpm0r0qz6328a"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -70,7 +38,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "points",
             "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
@@ -118,7 +86,7 @@
         "x": 0,
         "y": 0
       },
-      "id": 4,
+      "id": 5,
       "options": {
         "legend": {
           "calcs": [],
@@ -136,67 +104,25 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "cdpm0r0qz6328a"
           },
           "editorMode": "code",
-          "expr": "viable_transaction",
+          "expr": "increase(blob_inclusion_by_builder[30s]) / increase(builder_blocks[30s])",
           "instant": false,
-          "legendFormat": "Viable Transactions",
+          "interval": "",
+          "legendFormat": "{{builder}}",
           "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "viable_blobs",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "Viable Blobs",
-          "range": true,
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "increase(transaction_inclusion[20s])/increase(block_number[20s])",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "Transactions Included In Block",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "increase(blob_inclusion[20s])/increase(block_number[20s])",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "Blobs Included In Block",
-          "range": true,
-          "refId": "C"
         }
       ],
-      "title": "Blob Mempool",
+      "title": "Builder Blob Inclusion",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "cdpm0r0qz6328a"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -209,7 +135,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "drawStyle": "points",
             "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
@@ -220,7 +146,7 @@
             "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 5,
+            "pointSize": 2,
             "scaleDistribution": {
               "type": "linear"
             },
@@ -257,7 +183,7 @@
         "x": 12,
         "y": 0
       },
-      "id": 1,
+      "id": 6,
       "options": {
         "legend": {
           "calcs": [],
@@ -271,31 +197,28 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "11.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "cdpm0r0qz6328a"
           },
           "editorMode": "code",
-          "exemplar": false,
-          "expr": "increase(transaction_inclusion_delay_sum{account=\"$Account\"}[30s])/increase(transaction_inclusion_delay_count{account=\"$Account\"}[30s])",
-          "format": "time_series",
+          "expr": "avg by (builder) (blob_inclusion_by_builder / builder_blocks)",
           "instant": false,
           "interval": "",
-          "legendFormat": "$Account",
+          "legendFormat": "Average-{{builder}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Blob Transaction Inclusion Delay",
+      "title": "Average Builder Blob Inclusion",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "cdpm0r0qz6328a"
       },
       "description": "",
       "fieldConfig": {
@@ -358,6 +281,246 @@
         "x": 0,
         "y": 8
       },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "maxHeight": 600,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "cdpm0r0qz6328a"
+          },
+          "editorMode": "code",
+          "expr": "viable_transaction",
+          "instant": false,
+          "legendFormat": "Viable Transactions",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "cdpm0r0qz6328a"
+          },
+          "editorMode": "code",
+          "expr": "viable_blobs",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "Viable Blobs",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "cdpm0r0qz6328a"
+          },
+          "editorMode": "code",
+          "expr": "increase(transaction_inclusion[30s])/increase(block_number[30s])",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "Transactions Included In Block",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "cdpm0r0qz6328a"
+          },
+          "editorMode": "code",
+          "expr": "increase(blob_inclusion[30s])/increase(block_number[30s])",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "Blobs Included In Block",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Blob Mempool",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cdpm0r0qz6328a"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "maxHeight": 600,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "cdpm0r0qz6328a"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "increase(transaction_inclusion_delay_sum{account=\"$Account\"}[30s])/increase(transaction_inclusion_delay_count{account=\"$Account\"}[30s])",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "$Account",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Blob Transaction Inclusion Delay",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "cdpm0r0qz6328a"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
       "id": 3,
       "options": {
         "legend": {
@@ -376,7 +539,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "cdpm0r0qz6328a"
           },
           "editorMode": "code",
           "expr": "blob_base_fee",
@@ -392,7 +555,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "cdpm0r0qz6328a"
       },
       "description": "",
       "fieldConfig": {
@@ -453,7 +616,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 16
       },
       "id": 2,
       "options": {
@@ -473,10 +636,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "cdpm0r0qz6328a"
           },
           "editorMode": "code",
-          "expr": "increase(transactions_observed{account=\"$Account\"}[20s])",
+          "expr": "increase(transactions_observed{account=\"$Account\"}[30s])",
           "instant": false,
           "interval": "",
           "legendFormat": "$Account-blobFee - {{maxBlobBaseFee}}",
@@ -494,7 +657,19 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": [
+            "Arbitrum"
+          ],
+          "value": [
+            "Arbitrum"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "cdpm0r0qz6328a"
+        },
         "definition": "label_values(account)",
         "hide": 0,
         "includeAll": false,
@@ -516,7 +691,7 @@
     ]
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-1h",
     "to": "now"
   },
   "timeRangeUpdatedDuringEditOrView": false,
@@ -524,6 +699,6 @@
   "timezone": "browser",
   "title": "BlobWatcher Dashboard",
   "uid": "bdpm1e8v5m48we",
-  "version": 13,
+  "version": 18,
   "weekStart": ""
 }
