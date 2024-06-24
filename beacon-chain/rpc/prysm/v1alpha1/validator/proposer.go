@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
-	cKzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	builderapi "github.com/prysmaticlabs/prysm/v5/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
@@ -385,13 +385,13 @@ func handleUnblindedBlock(block interfaces.SignedBeaconBlock, req *ethpb.Generic
 
 	if isPeerDASEnabled {
 		// Convert blobs from slices to array.
-		blobs := make([]cKzg4844.Blob, 0, len(dbBlockContents.Blobs))
+		blobs := make([]kzg.Blob, 0, len(dbBlockContents.Blobs))
 		for _, blob := range dbBlockContents.Blobs {
-			if len(blob) != cKzg4844.BytesPerBlob {
-				return nil, nil, errors.Errorf("invalid blob size. expected %d bytes, got %d bytes", cKzg4844.BytesPerBlob, len(blob))
+			if len(blob) != kzg.BytesPerBlob {
+				return nil, nil, errors.Errorf("invalid blob size. expected %d bytes, got %d bytes", kzg.BytesPerBlob, len(blob))
 			}
 
-			blobs = append(blobs, cKzg4844.Blob(blob))
+			blobs = append(blobs, kzg.Blob(blob))
 		}
 
 		dataColumnSideCars, err := peerdas.DataColumnSidecars(block, blobs)
