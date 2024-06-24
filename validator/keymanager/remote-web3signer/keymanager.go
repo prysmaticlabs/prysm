@@ -124,7 +124,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 			return nil, errors.Wrap(err, "could not decode public key for remote signer")
 		}
 		if len(decodedKey) != fieldparams.BLSPubkeyLength {
-			return nil, fmt.Errorf("invalid public key length: expected %d, got %d", fieldparams.BLSPubkeyLength, len(decodedKey))
+			return nil, fmt.Errorf("public key %s has invalid length (expected %d, got %d)", decodedKey, fieldparams.BLSPubkeyLength, len(decodedKey))
 		}
 		flagLoadedKeys[key] = bytesutil.ToBytes48(decodedKey)
 	}
