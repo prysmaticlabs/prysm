@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
