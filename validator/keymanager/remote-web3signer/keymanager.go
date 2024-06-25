@@ -369,7 +369,7 @@ func (km *Keymanager) updatePublicKeys(keys [][48]byte) {
 func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	km.lock.RLock()
 	defer km.lock.RUnlock()
-	log.Debug("Fetched validating public keys", "count", len(km.providedPublicKeys))
+	log..WithField("count", len(km.providedPublicKeys)).Debug("Fetched validating public keys")
 	return km.providedPublicKeys, nil
 }
 
