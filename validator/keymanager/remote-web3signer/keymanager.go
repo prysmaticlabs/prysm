@@ -261,7 +261,7 @@ func (km *Keymanager) savePublicKeysToFile(providedPublicKeys map[string][48]byt
 	// Iterate through all lines in the slice and write them to the file
 	for key, value := range providedPublicKeys {
 		if _, err := f.WriteString(key + "\n"); err != nil {
-			return fmt.Errorf("error writing line to file: %w", err)
+			return fmt.Errorf("error writing key %s to file: %w", value, err)
 		}
 		pubkeys = append(pubkeys, value)
 	}
