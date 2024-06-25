@@ -195,7 +195,7 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			log.WithError(err).Error("could not close remote signer public key file")
+			log.WithError(err).Error("Could not close remote signer public key file)
 		}
 	}()
 	// Use a map to track and skip duplicate lines
