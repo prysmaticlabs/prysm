@@ -91,6 +91,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 	if err := beaconState.SetEth1DepositIndex(beaconState.Eth1DepositIndex() + 1); err != nil {
 		return nil, err
 	}
+
 	return ApplyDeposit(beaconState, deposit.Data, verifySignature)
 }
 
