@@ -295,14 +295,14 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 	}
 
 	for _, index := range preActivationIndices {
-		if err := helpers.QueueEntireBalanceAndResetValidator(post, index); err != nil {
+		if err := QueueEntireBalanceAndResetValidator(post, index); err != nil {
 			return nil, errors.Wrap(err, "failed to queue entire balance and reset validator")
 		}
 	}
 
 	// Ensure early adopters of compounding credentials go through the activation churn
 	for _, index := range compoundWithdrawalIndices {
-		if err := helpers.QueueExcessActiveBalance(post, index); err != nil {
+		if err := QueueExcessActiveBalance(post, index); err != nil {
 			return nil, errors.Wrap(err, "failed to queue excess active balance")
 		}
 	}
