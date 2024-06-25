@@ -205,6 +205,7 @@ func (s *PremineGenesisConfig) processDeposits(ctx context.Context, g state.Beac
 	if _, err = helpers.UpdateGenesisEth1Data(g, deposits, g.Eth1Data()); err != nil {
 		return err
 	}
+
 	// TODO: should be updated when electra E2E is updated
 	_, err = altair.ProcessPreGenesisDeposits(ctx, g, deposits)
 	if err != nil {

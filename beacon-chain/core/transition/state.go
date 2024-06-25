@@ -68,6 +68,7 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 	if err != nil {
 		return nil, err
 	}
+
 	st, err = altair.ProcessPreGenesisDeposits(ctx, st, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator deposits")

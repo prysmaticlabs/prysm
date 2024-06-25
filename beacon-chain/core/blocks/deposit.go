@@ -83,6 +83,7 @@ func IsValidDepositSignature(data *ethpb.Deposit_Data) (bool, error) {
 	return true, nil
 }
 
+// VerifyDeposit verifies the deposit data and signature given the beacon state and deposit information
 func VerifyDeposit(beaconState state.ReadOnlyBeaconState, deposit *ethpb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	if deposit == nil || deposit.Data == nil {

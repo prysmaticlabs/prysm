@@ -7,12 +7,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
@@ -334,4 +336,40 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 	newState, err := altair.ProcessDeposit(beaconState, deposit, true /*verifySignature*/)
 	require.NoError(t, err, "Process deposit failed")
 	require.Equal(t, uint64(1000+50), newState.Balances()[1], "Expected balance at index 1 to be 1050")
+}
+
+func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
+	deposit := &ethpb.Deposit{
+		Data: &ethpb.Deposit_Data{
+			PublicKey:             bytesutil.PadTo([]byte{1, 2, 3}, fieldparams.BLSPubkeyLength),
+			WithdrawalCredentials: make([]byte, 32),
+			Signature:             make([]byte, fieldparams.BLSSignatureLength),
+		},
+	}
+	leaf, err := deposit.Data.HashTreeRoot()
+	require.NoError(t, err)
+
+	// We then create a merkle branch for the test.
+	depositTrie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
+	require.NoError(t, err, "Could not generate trie")
+	proof, err := depositTrie.MerkleProof(0)
+	require.NoError(t, err, "Could not generate proof")
+
+	deposit.Proof = proof
+	b := util.NewBeaconBlock()
+	b.Block = &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{
+			Deposits: []*ethpb.Deposit{deposit},
+		},
+	}
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot: []byte{0},
+			BlockHash:   []byte{1},
+		},
+	})
+	require.NoError(t, err)
+	want := "deposit root did not verify"
+	_, err = altair.ProcessDeposits(context.Background(), beaconState, b.Block.Body.Deposits)
+	assert.ErrorContains(t, want, err)
 }

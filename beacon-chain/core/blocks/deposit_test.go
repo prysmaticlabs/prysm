@@ -26,7 +26,6 @@ func TestBatchVerifyDepositsSignatures_Ok(t *testing.T) {
 	}
 	leaf, err := deposit.Data.HashTreeRoot()
 	require.NoError(t, err)
-
 	// We then create a merkle branch for the test.
 	depositTrie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate trie")
