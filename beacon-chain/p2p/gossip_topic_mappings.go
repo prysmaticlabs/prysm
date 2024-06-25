@@ -27,7 +27,8 @@ var gossipTopicMappings = map[string]proto.Message{
 // GossipTopicMappings is a function to return the assigned data type
 // versioned by epoch.
 func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
-	if topic == BlockSubnetTopicFormat {
+	switch topic {
+	case BlockSubnetTopicFormat:
 		if epoch >= params.BeaconConfig().ElectraForkEpoch {
 			return &ethpb.SignedBeaconBlockElectra{}
 		}
@@ -43,8 +44,25 @@ func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 		if epoch >= params.BeaconConfig().AltairForkEpoch {
 			return &ethpb.SignedBeaconBlockAltair{}
 		}
+		return gossipTopicMappings[topic]
+	case AttestationSubnetTopicFormat:
+		if epoch >= params.BeaconConfig().ElectraForkEpoch {
+			return &ethpb.AttestationElectra{}
+		}
+		return gossipTopicMappings[topic]
+	case AttesterSlashingSubnetTopicFormat:
+		if epoch >= params.BeaconConfig().ElectraForkEpoch {
+			return &ethpb.AttesterSlashingElectra{}
+		}
+		return gossipTopicMappings[topic]
+	case AggregateAndProofSubnetTopicFormat:
+		if epoch >= params.BeaconConfig().ElectraForkEpoch {
+			return &ethpb.SignedAggregateAttestationAndProofElectra{}
+		}
+		return gossipTopicMappings[topic]
+	default:
+		return gossipTopicMappings[topic]
 	}
-	return gossipTopicMappings[topic]
 }
 
 // AllTopics returns all topics stored in our
@@ -75,4 +93,7 @@ func init() {
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockDeneb{})] = BlockSubnetTopicFormat
 	// Specially handle Electra objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockElectra{})] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeOf(&ethpb.AttestationElectra{})] = AttestationSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeOf(&ethpb.AttesterSlashingElectra{})] = AttesterSlashingSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedAggregateAttestationAndProofElectra{})] = AggregateAndProofSubnetTopicFormat
 }
