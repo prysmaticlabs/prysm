@@ -190,7 +190,7 @@ func (e *ExecutionPayload) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o10 < 508 {
+	if o10 != 508 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -336,11 +336,7 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			return
 		}
 		hh.PutBytes(e.ExtraData)
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (32+31)/32)
-		} else {
-			hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
-		}
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
 	}
 
 	// Field (11) 'BaseFeePerGas'
@@ -374,25 +370,13 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 					return
 				}
 				hh.AppendBytes32(elem)
-				if ssz.EnableVectorizedHTR {
-					hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (1073741824+31)/32)
-				} else {
-					hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
-				}
+				hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
 			}
 		}
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, num, 1048576)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, num, 1048576)
-		}
+		hh.MerkleizeWithMixin(subIndx, num, 1048576)
 	}
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -594,7 +578,7 @@ func (e *ExecutionPayloadCapella) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o10 < 512 {
+	if o10 != 512 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -766,11 +750,7 @@ func (e *ExecutionPayloadCapella) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			return
 		}
 		hh.PutBytes(e.ExtraData)
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (32+31)/32)
-		} else {
-			hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
-		}
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
 	}
 
 	// Field (11) 'BaseFeePerGas'
@@ -804,18 +784,10 @@ func (e *ExecutionPayloadCapella) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 					return
 				}
 				hh.AppendBytes32(elem)
-				if ssz.EnableVectorizedHTR {
-					hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (1073741824+31)/32)
-				} else {
-					hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
-				}
+				hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
 			}
 		}
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, num, 1048576)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, num, 1048576)
-		}
+		hh.MerkleizeWithMixin(subIndx, num, 1048576)
 	}
 
 	// Field (14) 'Withdrawals'
@@ -831,18 +803,10 @@ func (e *ExecutionPayloadCapella) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 				return
 			}
 		}
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, num, 16)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, num, 16)
-		}
+		hh.MerkleizeWithMixin(subIndx, num, 16)
 	}
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -1050,7 +1014,7 @@ func (e *ExecutionPayloadDeneb) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o10 < 528 {
+	if o10 != 528 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -1228,11 +1192,7 @@ func (e *ExecutionPayloadDeneb) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			return
 		}
 		hh.PutBytes(e.ExtraData)
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (32+31)/32)
-		} else {
-			hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
-		}
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
 	}
 
 	// Field (11) 'BaseFeePerGas'
@@ -1266,18 +1226,10 @@ func (e *ExecutionPayloadDeneb) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 					return
 				}
 				hh.AppendBytes32(elem)
-				if ssz.EnableVectorizedHTR {
-					hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (1073741824+31)/32)
-				} else {
-					hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
-				}
+				hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
 			}
 		}
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, num, 1048576)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, num, 1048576)
-		}
+		hh.MerkleizeWithMixin(subIndx, num, 1048576)
 	}
 
 	// Field (14) 'Withdrawals'
@@ -1293,11 +1245,7 @@ func (e *ExecutionPayloadDeneb) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 				return
 			}
 		}
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, num, 16)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, num, 16)
-		}
+		hh.MerkleizeWithMixin(subIndx, num, 16)
 	}
 
 	// Field (15) 'BlobGasUsed'
@@ -1306,11 +1254,7 @@ func (e *ExecutionPayloadDeneb) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (16) 'ExcessBlobGas'
 	hh.PutUint64(e.ExcessBlobGas)
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -1548,7 +1492,7 @@ func (e *ExecutionPayloadElectra) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o10 < 536 {
+	if o10 != 536 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -1778,11 +1722,7 @@ func (e *ExecutionPayloadElectra) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			return
 		}
 		hh.PutBytes(e.ExtraData)
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (32+31)/32)
-		} else {
-			hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
-		}
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
 	}
 
 	// Field (11) 'BaseFeePerGas'
@@ -1816,18 +1756,10 @@ func (e *ExecutionPayloadElectra) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 					return
 				}
 				hh.AppendBytes32(elem)
-				if ssz.EnableVectorizedHTR {
-					hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (1073741824+31)/32)
-				} else {
-					hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
-				}
+				hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
 			}
 		}
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, num, 1048576)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, num, 1048576)
-		}
+		hh.MerkleizeWithMixin(subIndx, num, 1048576)
 	}
 
 	// Field (14) 'Withdrawals'
@@ -1843,11 +1775,7 @@ func (e *ExecutionPayloadElectra) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 				return
 			}
 		}
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, num, 16)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, num, 16)
-		}
+		hh.MerkleizeWithMixin(subIndx, num, 16)
 	}
 
 	// Field (15) 'BlobGasUsed'
@@ -1869,11 +1797,7 @@ func (e *ExecutionPayloadElectra) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 				return
 			}
 		}
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, num, 8192)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, num, 8192)
-		}
+		hh.MerkleizeWithMixin(subIndx, num, 8192)
 	}
 
 	// Field (18) 'WithdrawalRequests'
@@ -1889,18 +1813,10 @@ func (e *ExecutionPayloadElectra) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 				return
 			}
 		}
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, num, 16)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, num, 16)
-		}
+		hh.MerkleizeWithMixin(subIndx, num, 16)
 	}
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -2067,7 +1983,7 @@ func (e *ExecutionPayloadHeader) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o10 < 536 {
+	if o10 != 536 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -2185,11 +2101,7 @@ func (e *ExecutionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			return
 		}
 		hh.PutBytes(e.ExtraData)
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (32+31)/32)
-		} else {
-			hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
-		}
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
 	}
 
 	// Field (11) 'BaseFeePerGas'
@@ -2213,11 +2125,7 @@ func (e *ExecutionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 	hh.PutBytes(e.TransactionsRoot)
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -2391,7 +2299,7 @@ func (e *ExecutionPayloadHeaderCapella) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o10 < 568 {
+	if o10 != 568 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -2515,11 +2423,7 @@ func (e *ExecutionPayloadHeaderCapella) HashTreeRootWith(hh *ssz.Hasher) (err er
 			return
 		}
 		hh.PutBytes(e.ExtraData)
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (32+31)/32)
-		} else {
-			hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
-		}
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
 	}
 
 	// Field (11) 'BaseFeePerGas'
@@ -2550,11 +2454,7 @@ func (e *ExecutionPayloadHeaderCapella) HashTreeRootWith(hh *ssz.Hasher) (err er
 	}
 	hh.PutBytes(e.WithdrawalsRoot)
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -2734,7 +2634,7 @@ func (e *ExecutionPayloadHeaderDeneb) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o10 < 584 {
+	if o10 != 584 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -2864,11 +2764,7 @@ func (e *ExecutionPayloadHeaderDeneb) HashTreeRootWith(hh *ssz.Hasher) (err erro
 			return
 		}
 		hh.PutBytes(e.ExtraData)
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (32+31)/32)
-		} else {
-			hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
-		}
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
 	}
 
 	// Field (11) 'BaseFeePerGas'
@@ -2905,11 +2801,7 @@ func (e *ExecutionPayloadHeaderDeneb) HashTreeRootWith(hh *ssz.Hasher) (err erro
 	// Field (16) 'ExcessBlobGas'
 	hh.PutUint64(e.ExcessBlobGas)
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -3103,7 +2995,7 @@ func (e *ExecutionPayloadHeaderElectra) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o10 < 648 {
+	if o10 != 648 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -3245,11 +3137,7 @@ func (e *ExecutionPayloadHeaderElectra) HashTreeRootWith(hh *ssz.Hasher) (err er
 			return
 		}
 		hh.PutBytes(e.ExtraData)
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (32+31)/32)
-		} else {
-			hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
-		}
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
 	}
 
 	// Field (11) 'BaseFeePerGas'
@@ -3300,11 +3188,7 @@ func (e *ExecutionPayloadHeaderElectra) HashTreeRootWith(hh *ssz.Hasher) (err er
 	}
 	hh.PutBytes(e.WithdrawalRequestsRoot)
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -3393,11 +3277,7 @@ func (w *Withdrawal) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (3) 'Amount'
 	hh.PutUint64(w.Amount)
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -3481,7 +3361,7 @@ func (b *BlobsBundle) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o0 < 12 {
+	if o0 != 12 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -3586,11 +3466,7 @@ func (b *BlobsBundle) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		}
 
 		numItems := uint64(len(b.KzgCommitments))
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, numItems, 4096)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, numItems, 4096)
-		}
+		hh.MerkleizeWithMixin(subIndx, numItems, 4096)
 	}
 
 	// Field (1) 'Proofs'
@@ -3609,11 +3485,7 @@ func (b *BlobsBundle) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		}
 
 		numItems := uint64(len(b.Proofs))
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, numItems, 4096)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, numItems, 4096)
-		}
+		hh.MerkleizeWithMixin(subIndx, numItems, 4096)
 	}
 
 	// Field (2) 'Blobs'
@@ -3632,18 +3504,10 @@ func (b *BlobsBundle) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		}
 
 		numItems := uint64(len(b.Blobs))
-		if ssz.EnableVectorizedHTR {
-			hh.MerkleizeWithMixinVectorizedHTR(subIndx, numItems, 4096)
-		} else {
-			hh.MerkleizeWithMixin(subIndx, numItems, 4096)
-		}
+		hh.MerkleizeWithMixin(subIndx, numItems, 4096)
 	}
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -3734,11 +3598,7 @@ func (w *WithdrawalRequest) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (2) 'Amount'
 	hh.PutUint64(w.Amount)
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }
 
@@ -3858,10 +3718,6 @@ func (d *DepositRequest) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (4) 'Index'
 	hh.PutUint64(d.Index)
 
-	if ssz.EnableVectorizedHTR {
-		hh.MerkleizeVectorizedHTR(indx)
-	} else {
-		hh.Merkleize(indx)
-	}
+	hh.Merkleize(indx)
 	return
 }

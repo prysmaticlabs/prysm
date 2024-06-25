@@ -58,7 +58,7 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForSlot(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			errors.New("foo error"),
 		)
@@ -78,7 +78,7 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForSlot(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			errors.New("bar error"),
 		)
@@ -96,7 +96,7 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().StateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForHead(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			errors.New("foo error"),
 		)
@@ -114,13 +114,13 @@ func TestListValidators(t *testing.T) {
 		ctx := context.Background()
 
 		stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-		stateValidatorsProvider.EXPECT().StateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		stateValidatorsProvider.EXPECT().StateValidatorsForHead(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 			nil,
 			nil,
 		)
 
 		jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-		jsonRestHandler.EXPECT().Get(ctx, blockHeaderEndpoint, gomock.Any()).Return(errors.New("bar error"))
+		jsonRestHandler.EXPECT().Get(gomock.Any(), blockHeaderEndpoint, gomock.Any()).Return(errors.New("bar error"))
 
 		beaconChainClient := beaconApiChainClient{
 			stateValidatorsProvider: stateValidatorsProvider,
@@ -187,13 +187,13 @@ func TestListValidators(t *testing.T) {
 				ctx := context.Background()
 
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-				stateValidatorsProvider.EXPECT().StateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				stateValidatorsProvider.EXPECT().StateValidatorsForHead(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					nil,
 					nil,
 				)
 
 				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-				jsonRestHandler.EXPECT().Get(ctx, blockHeaderEndpoint, gomock.Any()).Return(
+				jsonRestHandler.EXPECT().Get(gomock.Any(), blockHeaderEndpoint, gomock.Any()).Return(
 					nil,
 				).SetArg(
 					2,
@@ -328,7 +328,7 @@ func TestListValidators(t *testing.T) {
 				ctx := context.Background()
 
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-				stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				stateValidatorsProvider.EXPECT().StateValidatorsForSlot(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					testCase.generateStateValidatorsResponse(),
 					nil,
 				)
@@ -556,7 +556,7 @@ func TestListValidators(t *testing.T) {
 				ctx := context.Background()
 
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-				stateValidatorsProvider.EXPECT().StateValidatorsForSlot(ctx, primitives.Slot(0), make([]string, 0), []primitives.ValidatorIndex{}, nil).Return(
+				stateValidatorsProvider.EXPECT().StateValidatorsForSlot(gomock.Any(), primitives.Slot(0), make([]string, 0), []primitives.ValidatorIndex{}, nil).Return(
 					testCase.generateJsonStateValidatorsResponse(),
 					nil,
 				)
@@ -745,7 +745,7 @@ func TestGetChainHead(t *testing.T) {
 
 				finalityCheckpointsResponse := structs.GetFinalityCheckpointsResponse{}
 				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-				jsonRestHandler.EXPECT().Get(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
+				jsonRestHandler.EXPECT().Get(gomock.Any(), finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
 					testCase.finalityCheckpointsError,
 				).SetArg(
 					2,
@@ -844,7 +844,7 @@ func TestGetChainHead(t *testing.T) {
 				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 				finalityCheckpointsResponse := structs.GetFinalityCheckpointsResponse{}
-				jsonRestHandler.EXPECT().Get(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
+				jsonRestHandler.EXPECT().Get(gomock.Any(), finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
 					nil,
 				).SetArg(
 					2,
@@ -852,7 +852,7 @@ func TestGetChainHead(t *testing.T) {
 				)
 
 				headBlockHeadersResponse := structs.GetBlockHeaderResponse{}
-				jsonRestHandler.EXPECT().Get(ctx, headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
+				jsonRestHandler.EXPECT().Get(gomock.Any(), headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
 					testCase.headBlockHeadersError,
 				).SetArg(
 					2,
@@ -874,7 +874,7 @@ func TestGetChainHead(t *testing.T) {
 		jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 		finalityCheckpointsResponse := structs.GetFinalityCheckpointsResponse{}
-		jsonRestHandler.EXPECT().Get(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
+		jsonRestHandler.EXPECT().Get(gomock.Any(), finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
 			nil,
 		).SetArg(
 			2,
@@ -882,7 +882,7 @@ func TestGetChainHead(t *testing.T) {
 		)
 
 		headBlockHeadersResponse := structs.GetBlockHeaderResponse{}
-		jsonRestHandler.EXPECT().Get(ctx, headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
+		jsonRestHandler.EXPECT().Get(gomock.Any(), headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
 			nil,
 		).SetArg(
 			2,
@@ -940,7 +940,7 @@ func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
 	want := &ethpb.ValidatorPerformanceResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		getValidatorPerformanceEndpoint,
 		nil,
 		bytes.NewBuffer(request),

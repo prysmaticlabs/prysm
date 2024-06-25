@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -34,7 +34,7 @@ func RunDepositTest(t *testing.T, config string) {
 
 			body := &ethpb.BeaconBlockBody{Deposits: []*ethpb.Deposit{deposit}}
 			processDepositsFunc := func(ctx context.Context, s state.BeaconState, b interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
-				return blocks.ProcessDeposits(ctx, s, b.Block().Body().Deposits())
+				return altair.ProcessDeposits(ctx, s, b.Block().Body().Deposits())
 			}
 			RunBlockOperationTest(t, folderPath, body, processDepositsFunc)
 		})

@@ -30,6 +30,59 @@ func TestFuzzProcessDeposits_10000(t *testing.T) {
 	}
 }
 
+func TestFuzzProcessPreGenesisDeposit_10000(t *testing.T) {
+	fuzzer := fuzz.NewWithSeed(0)
+	state := &ethpb.BeaconStateAltair{}
+	deposit := &ethpb.Deposit{}
+	ctx := context.Background()
+
+	for i := 0; i < 10000; i++ {
+		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(deposit)
+		s, err := state_native.InitializeFromProtoUnsafeAltair(state)
+		require.NoError(t, err)
+		r, err := altair.ProcessPreGenesisDeposits(ctx, s, []*ethpb.Deposit{deposit})
+		if err != nil && r != nil {
+			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposit)
+		}
+	}
+}
+
+func TestFuzzProcessPreGenesisDeposit_Phase0_10000(t *testing.T) {
+	fuzzer := fuzz.NewWithSeed(0)
+	state := &ethpb.BeaconState{}
+	deposit := &ethpb.Deposit{}
+	ctx := context.Background()
+
+	for i := 0; i < 10000; i++ {
+		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(deposit)
+		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
+		require.NoError(t, err)
+		r, err := altair.ProcessPreGenesisDeposits(ctx, s, []*ethpb.Deposit{deposit})
+		if err != nil && r != nil {
+			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposit)
+		}
+	}
+}
+
+func TestFuzzProcessDeposit_Phase0_10000(t *testing.T) {
+	fuzzer := fuzz.NewWithSeed(0)
+	state := &ethpb.BeaconState{}
+	deposit := &ethpb.Deposit{}
+
+	for i := 0; i < 10000; i++ {
+		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(deposit)
+		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
+		require.NoError(t, err)
+		r, err := altair.ProcessDeposit(s, deposit, true)
+		if err != nil && r != nil {
+			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposit)
+		}
+	}
+}
+
 func TestFuzzProcessDeposit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &ethpb.BeaconStateAltair{}

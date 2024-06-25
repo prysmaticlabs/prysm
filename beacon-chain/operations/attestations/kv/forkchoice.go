@@ -3,6 +3,7 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 )
 
 // SaveForkchoiceAttestation saves an forkchoice attestation in cache.
@@ -10,14 +11,15 @@ func (c *AttCaches) SaveForkchoiceAttestation(att ethpb.Att) error {
 	if att == nil {
 		return nil
 	}
-	r, err := hashFn(att)
+
+	id, err := attestation.NewId(att, attestation.Full)
 	if err != nil {
-		return errors.Wrap(err, "could not tree hash attestation")
+		return errors.Wrap(err, "could not create attestation ID")
 	}
 
 	c.forkchoiceAttLock.Lock()
 	defer c.forkchoiceAttLock.Unlock()
-	c.forkchoiceAtt[r] = att.Copy()
+	c.forkchoiceAtt[id] = att
 
 	return nil
 }
@@ -51,14 +53,15 @@ func (c *AttCaches) DeleteForkchoiceAttestation(att ethpb.Att) error {
 	if att == nil {
 		return nil
 	}
-	r, err := hashFn(att)
+
+	id, err := attestation.NewId(att, attestation.Full)
 	if err != nil {
-		return errors.Wrap(err, "could not tree hash attestation")
+		return errors.Wrap(err, "could not create attestation ID")
 	}
 
 	c.forkchoiceAttLock.Lock()
 	defer c.forkchoiceAttLock.Unlock()
-	delete(c.forkchoiceAtt, r)
+	delete(c.forkchoiceAtt, id)
 
 	return nil
 }

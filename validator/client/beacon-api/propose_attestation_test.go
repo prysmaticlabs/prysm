@@ -126,7 +126,7 @@ func TestProposeAttestation(t *testing.T) {
 			ctx := context.Background()
 
 			jsonRestHandler.EXPECT().Post(
-				ctx,
+				gomock.Any(),
 				"/eth/v1/beacon/pool/attestations",
 				nil,
 				bytes.NewBuffer(marshalledAttestations),
