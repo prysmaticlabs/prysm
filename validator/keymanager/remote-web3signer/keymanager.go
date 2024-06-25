@@ -823,7 +823,7 @@ func (km *Keymanager) DeletePublicKeys(publicKeys []string) ([]*keymanager.KeySt
 			Status:  keymanager.StatusDeleted,
 			Message: fmt.Sprintf("Successfully deleted pubkey: %v", pubkey),
 		}
-		log.Debug("Deleted pubkey from keymanager for web3signer", "pubkey", pubkey)
+		log.WithField("pubkey", pubkey).Debug("Deleted pubkey from keymanager for remote signer")
 	}
 
 	if originalKeysLen != len(combinedKeys) {
