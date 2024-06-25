@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
@@ -203,7 +203,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		BlockHash:    make([]byte, 32),
 	})
 	require.NoError(t, err)
-	genState, err = blocks.ProcessPreGenesisDeposits(ctx, genState, deposits)
+	genState, err = altair.ProcessPreGenesisDeposits(ctx, genState, deposits)
 	require.NoError(t, err)
 
 	_, err = bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{DepositRoot: hashTreeRoot[:], BlockHash: make([]byte, 32)})
