@@ -224,7 +224,7 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 			// If it's a new line, mark it as seen and process it
 			pubkey, err := hexutil.Decode(line)
 			if err != nil {
-				return nil, nil, errors.Wrapf(err, "could not decode public key line in remote signer key file: %s", line)
+				return nil, nil, errors.Wrapf(err, "could not decode public key %s in remote signer key file, line)
 			}
 			bPubkey := bytesutil.ToBytes48(pubkey)
 			seenKeys[line] = bPubkey
