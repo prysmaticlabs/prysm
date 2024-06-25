@@ -117,7 +117,7 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	sig := privKeys[0].Sign([]byte{'A'})
 	data := util.HydrateAttestationData(&ethpb.AttestationData{})
 
-	_, err := validateSelectionIndex(ctx, beaconState, data, 0, sig.Marshal())
+	_, err := validateSelectionIndex(ctx, beaconState, data.Slot, data.CommitteeIndex, 0, sig.Marshal())
 	wanted := "validator is not an aggregator for slot"
 	assert.ErrorContains(t, wanted, err)
 }
@@ -149,7 +149,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 			attPool:     attestations.NewPool(),
 			chain:       &mock.ChainService{},
 		},
-		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		blkRootToPendingAtts:           make(map[[32]byte][]ethpb.SignedAggregateAttAndProof),
 		seenAggregatedAttestationCache: c,
 	}
 	r.initCaches()
@@ -302,7 +302,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 			attestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAggregatedAttestationCache: lruwrpr.New(10),
-		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		blkRootToPendingAtts:           make(map[[32]byte][]ethpb.SignedAggregateAttAndProof),
 	}
 	r.initCaches()
 
