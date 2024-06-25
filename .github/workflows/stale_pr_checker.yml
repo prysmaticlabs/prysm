@@ -1,0 +1,27 @@
+name: Find stale PRs
+
+on:
+  schedule:
+    - cron: '0 13 * * 1'
+
+jobs:
+  fetch-PRs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch pull requests from here
+        id: local
+        uses: paritytech/stale-pr-finder@main
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          repo: prysm
+      - name: Post to a Slack channel
+        id: slack
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: ${{ secrets.CHANNEL }}
+          slack-message: |
+            Stale PRs this week:
+            ${{ steps.local.outputs.message }}
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          LOCAL_PR: ${{ steps.local.outputs.message }}"
