@@ -105,7 +105,7 @@ func (client *ApiClient) GetPublicKeys(ctx context.Context, url string) ([]strin
 		return nil, errors.Wrap(err, "unable to decode public key")
 	}
 	if len(b) != fieldparams.BLSPubkeyLength {
-		return nil, fmt.Errorf("invalid public key length: %v", len(b))
+		return nil, fmt.Errorf("invalid public key length of %v bytes", len(b))
 	}
 	return publicKeys, nil
 }
