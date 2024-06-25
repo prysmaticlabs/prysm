@@ -147,8 +147,7 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 	failedBroadcasts := make([]string, 0)
 	for i, att := range validAttestations {
 		// Determine subnet to broadcast attestation to
-		wantedEpoch := slots.ToEpoch(att.Data.Slot)
-		vals, err := s.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
+		vals, err := s.HeadFetcher.HeadValidatorsIndicesFromAdvancedSlots(ctx, att.Data.Slot)
 		if err != nil {
 			httputil.HandleError(w, "Could not get head validator indices: "+err.Error(), http.StatusInternalServerError)
 			return

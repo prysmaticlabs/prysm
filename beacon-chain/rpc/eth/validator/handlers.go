@@ -360,8 +360,7 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 	}
 
 	fetchValsLen := func(slot primitives.Slot) (uint64, error) {
-		wantedEpoch := slots.ToEpoch(slot)
-		vals, err := s.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
+		vals, err := s.HeadFetcher.HeadValidatorsIndicesFromAdvancedSlots(ctx, slot)
 		if err != nil {
 			return 0, err
 		}
