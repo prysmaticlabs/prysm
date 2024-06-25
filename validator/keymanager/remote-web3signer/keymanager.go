@@ -254,7 +254,7 @@ func (km *Keymanager) savePublicKeysToFile(providedPublicKeys map[string][48]byt
 	defer func(f *os.File) {
 		err := f.Close()
 		if err != nil {
-			log.WithError(err).Error("could not close file, proceeding without closing the file")
+			log.WithError(err).Error("Could not close file, proceeding without closing the file")
 		}
 	}(f)
 
