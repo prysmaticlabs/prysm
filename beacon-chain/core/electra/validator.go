@@ -69,8 +69,8 @@ func QueueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex
 //
 //	def queue_entire_balance_and_reset_validator(state: BeaconState, index: ValidatorIndex) -> None:
 //	    balance = state.balances[index]
-//	    validator = state.validators[index]
 //		state.balances[index] = 0
+//	    validator = state.validators[index]
 //	    validator.effective_balance = 0
 //	    validator.activation_eligibility_epoch = FAR_FUTURE_EPOCH
 //	    state.pending_balance_deposits.append(
