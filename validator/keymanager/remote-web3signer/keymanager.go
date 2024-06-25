@@ -195,7 +195,7 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			log.WithError(err).Error("Could not close remote signer public key file)
+			log.WithError(err).Error("Could not close remote signer public key file")
 		}
 	}()
 	// Use a map to track and skip duplicate lines
@@ -224,7 +224,7 @@ func (km *Keymanager) readKeyFile() ([][48]byte, map[string][48]byte, error) {
 			// If it's a new line, mark it as seen and process it
 			pubkey, err := hexutil.Decode(line)
 			if err != nil {
-				return nil, nil, errors.Wrapf(err, "could not decode public key %s in remote signer key file, line)
+				return nil, nil, errors.Wrapf(err, "could not decode public key %s in remote signer key file", line)
 			}
 			bPubkey := bytesutil.ToBytes48(pubkey)
 			seenKeys[line] = bPubkey
@@ -269,7 +269,7 @@ func (km *Keymanager) savePublicKeysToFile(providedPublicKeys map[string][48]byt
 	return nil
 }
 
-func (km *Keymanager) areEmptyPublicKeys() bool {
+func (km *Keymanager) arePublicKeysEmpty() bool {
 	km.lock.RLock()
 	defer km.lock.RUnlock()
 	return len(km.providedPublicKeys) == 0
@@ -296,7 +296,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) erro
 	log.WithField("path", km.keyFilePath).Info("Successfully initialized file watcher")
 	km.retriesRemaining = maxRetries // reset retries to default
 	// reinitialize keys if watcher reinitialized
-	if km.areEmptyPublicKeys() {
+	if km.arePublicKeysEmpty() {
 		_, fk, err := km.readKeyFile()
 		if err != nil {
 			return errors.Wrap(err, "could not read key file")
@@ -369,7 +369,7 @@ func (km *Keymanager) updatePublicKeys(keys [][48]byte) {
 func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	km.lock.RLock()
 	defer km.lock.RUnlock()
-	log..WithField("count", len(km.providedPublicKeys)).Debug("Fetched validating public keys")
+	log.WithField("count", len(km.providedPublicKeys)).Debug("Fetched validating public keys")
 	return km.providedPublicKeys, nil
 }
 

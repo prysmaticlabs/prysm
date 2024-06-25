@@ -79,7 +79,7 @@ func TestNewKeymanager(t *testing.T) {
 				GenesisValidatorsRoot: root,
 				PublicKeysURL:         "0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69",
 			},
-			wantErr: "could not get public keys from remote server url",
+			wantErr: "could not get public keys from remote server URL",
 		},
 		{
 			name: "happy path provided public keys",
@@ -97,7 +97,7 @@ func TestNewKeymanager(t *testing.T) {
 				GenesisValidatorsRoot: root,
 				ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "http://prysm.xyz/"},
 			},
-			wantErr: "could not decode public key for remote signer",
+			wantErr: "could not decode public key",
 		},
 		{
 			name: "path provided public keys, some bad hex for key",
@@ -106,7 +106,7 @@ func TestNewKeymanager(t *testing.T) {
 				GenesisValidatorsRoot: root,
 				ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937"},
 			},
-			wantErr: "invalid public key length",
+			wantErr: "has invalid length",
 		},
 		{
 			name: "happy path key file",
@@ -558,7 +558,7 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 		PublicKeysURL:         srv.URL + "/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
-	require.ErrorContains(t, fmt.Sprintf("could not get public keys from remote server url: %s/api/v1/eth2/publicKeys", srv.URL), err)
+	require.ErrorContains(t, fmt.Sprintf("could not get public keys from remote server URL %s/api/v1/eth2/publicKeys", srv.URL), err)
 	assert.Nil(t, km)
 }
 
