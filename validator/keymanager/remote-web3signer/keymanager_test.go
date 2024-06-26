@@ -306,7 +306,7 @@ func TestRefreshRemoteKeysFromFileChangesWithRetry(t *testing.T) {
 	}()
 	// wait for file detection
 	time.Sleep(1 * time.Second)
-	require.LogsContain(t, logHook, "Key file does not exist")
+	require.LogsContain(t, logHook, "Could not refresh keys")
 	go func() {
 		bytesBuf := new(bytes.Buffer)
 		_, err = bytesBuf.WriteString("8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055") // test without 0x
