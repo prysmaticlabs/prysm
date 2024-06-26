@@ -121,6 +121,25 @@ func (s *Service) run() {
 	indexedAttsChan := make(chan *types.WrappedIndexedAtt, 1)
 	beaconBlockHeadersChan := make(chan *ethpb.SignedBeaconBlockHeader, 1)
 
+	// This section can be totally removed once Electra is on mainnet.
+	headSlot := s.serviceCfg.HeadStateFetcher.HeadSlot()
+	headEpoch := slots.ToEpoch(headSlot)
+
+	maxPruningEpoch := primitives.Epoch(0)
+	if headEpoch >= s.params.historyLength {
+		maxPruningEpoch = headEpoch - s.params.historyLength
+	}
+
+	// For database performance reasons, database read/write operations
+	// are chunked into batches of maximum `batchSize` elements.
+	const migrationBatchSize = 100_000
+
+	err = s.serviceCfg.Database.Migrate(s.ctx, headEpoch, maxPruningEpoch, migrationBatchSize)
+	if err != nil {
+		log.WithError(err).Error("Failed to migrate slasher database")
+		return
+	}
+
 	s.wg.Add(1)
 	go s.receiveAttestations(s.ctx, indexedAttsChan)
 
