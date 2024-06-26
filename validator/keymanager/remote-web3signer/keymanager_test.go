@@ -244,7 +244,7 @@ func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
 func TestNewKeyManager_FileAndFlagsWithDifferentKeys(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
+	logHook := logTest.NewGlobal()
 	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
 	bytesBuf := new(bytes.Buffer)
 	_, err := bytesBuf.WriteString("8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055") // test without 0x
@@ -269,6 +269,22 @@ func TestNewKeyManager_FileAndFlagsWithDifferentKeys(t *testing.T) {
 	for _, key := range keys {
 		require.Equal(t, slices.Contains(wantSlice, hexutil.Encode(key[:])), true)
 	}
+	// wait for reading to be done
+	time.Sleep(2 * time.Second)
+	// test fall back by clearing file
+	go func() {
+		err = file.WriteFile(keyFilePath, []byte(" "))
+		require.NoError(t, err)
+	}()
+	// waiting for writing to be done
+	time.Sleep(2 * time.Second)
+	require.LogsContain(t, logHook, "Remote signer key file no longer has keys, defaulting to flag provided keys")
+
+	// fall back to flag provided keys
+	keys, err = km.FetchValidatingPublicKeys(context.TODO())
+	require.NoError(t, err)
+	require.Equal(t, 1, len(keys))
+	require.Equal(t, "0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6", hexutil.Encode(keys[0][:]))
 }
 
 func TestRefreshRemoteKeysFromFileChangesWithRetry(t *testing.T) {
