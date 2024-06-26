@@ -129,9 +129,10 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 
 		err := beaconDB.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(attestationDataRootsBucket)
-			encIdx := encodeValidatorIndex(primitives.ValidatorIndex(0))
-			encodedTargetEpoch := encodeTargetEpoch(lowestStoredEpoch + 1)
-			key := append(encodedTargetEpoch, encIdx...)
+			key := append(
+				encodeTargetEpoch(lowestStoredEpoch+1),
+				encodeValidatorIndex(primitives.ValidatorIndex(0))...,
+			)
 			return bkt.Put(key, []byte("hi"))
 		})
 		require.NoError(t, err)
