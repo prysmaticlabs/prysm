@@ -352,6 +352,7 @@ func (km *Keymanager) refreshRemoteKeysFromFileChanges(ctx context.Context) erro
 			}
 			return errors.Wrap(err, "could not watch for file changes")
 		case <-ctx.Done():
+			log.Info("Closing file watcher")
 			return nil
 		}
 	}
