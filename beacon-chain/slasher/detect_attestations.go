@@ -193,7 +193,15 @@ func (s *Service) checkDoubleVotes(
 			// This is a double vote.
 			doubleVotesTotal.Inc()
 
-			existing, ok := existingAttWrapper.IndexedAttestation.(*ethpb.IndexedAttestation)
+			existingWrapper, ok := existingAttWrapper.IndexedAttestation.(*slashertypes.WrappedIndexedAtt)
+			if !ok {
+				return nil, fmt.Errorf(
+					"existing attestation has wrong type (expected %T, got %T)",
+					&slashertypes.WrappedIndexedAtt{},
+					existingAttWrapper.IndexedAttestation,
+				)
+			}
+			existing, ok := existingWrapper.IndexedAtt.(*ethpb.IndexedAttestation)
 			if !ok {
 				return nil, fmt.Errorf(
 					"existing attestation has wrong type (expected %T, got %T)",
@@ -201,7 +209,15 @@ func (s *Service) checkDoubleVotes(
 					existingAttWrapper.IndexedAttestation,
 				)
 			}
-			incoming, ok := incomingAttWrapper.IndexedAttestation.(*ethpb.IndexedAttestation)
+			incomingWrapper, ok := incomingAttWrapper.IndexedAttestation.(*slashertypes.WrappedIndexedAtt)
+			if !ok {
+				return nil, fmt.Errorf(
+					"incoming attestation has wrong type (expected %T, got %T)",
+					&slashertypes.WrappedIndexedAtt{},
+					incomingAttWrapper.IndexedAttestation,
+				)
+			}
+			incoming, ok := incomingWrapper.IndexedAtt.(*ethpb.IndexedAttestation)
 			if !ok {
 				return nil, fmt.Errorf(
 					"incoming attestation has wrong type (expected %T, got %T)",

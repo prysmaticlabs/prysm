@@ -212,7 +212,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 			}
 			log.WithFields(logrus.Fields{
 				"numAtts":      len(atts),
-				"numSlashable": len(propSlashings),
+				"numSlashable": len(attSlashings),
 			}).Infof("Producing attestations for slot %d", slot)
 			for _, sl := range attSlashings {
 				slashingRoot, err := sl.HashTreeRoot()
