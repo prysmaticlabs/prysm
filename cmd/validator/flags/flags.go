@@ -288,18 +288,30 @@ var (
 	// example:--validators-external-signer-url=http://localhost:9000
 	// web3signer documentation can be found in Consensys' web3signer project docs
 	Web3SignerURLFlag = &cli.StringFlag{
-		Name:  "validators-external-signer-url",
-		Usage: "URL for consensys' web3signer software to use with the Prysm validator client.",
-		Value: "",
+		Name:    "validators-external-signer-url",
+		Usage:   "URL for consensys' web3signer software to use with the Prysm validator client.",
+		Value:   "",
+		Aliases: []string{"remote-signer-url"},
 	}
 	// Web3SignerPublicValidatorKeysFlag defines a comma-separated list of hex string public keys or external url for web3signer to use for validator signing.
 	// example with external url: --validators-external-signer-public-keys= https://web3signer.com/api/v1/eth2/publicKeys
 	// example with public key: --validators-external-signer-public-keys=0xa99a...e44c,0xb89b...4a0b
 	// web3signer documentation can be found in Consensys' web3signer project docs```
 	Web3SignerPublicValidatorKeysFlag = &cli.StringSliceFlag{
-		Name:  "validators-external-signer-public-keys",
-		Usage: "Comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer.",
+		Name:    "validators-external-signer-public-keys",
+		Usage:   "Comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer.",
+		Aliases: []string{"remote-signer-keys"},
 	}
+
+	// Web3SignerKeyFileFlag defines a file for keys to persist to.
+	// example:--validators-external-signer-key-file=./path/to/keys.txt
+	Web3SignerKeyFileFlag = &cli.StringFlag{
+		Name:    "validators-external-signer-key-file",
+		Usage:   "A file path used to load remote public validator keys and persist them through restarts.",
+		Value:   "",
+		Aliases: []string{"remote-signer-keys-file"},
+	}
+
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
 	KeymanagerKindFlag = &cli.StringFlag{
 		Name:  "keymanager-kind",

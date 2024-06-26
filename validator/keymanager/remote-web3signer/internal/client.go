@@ -17,7 +17,6 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -37,7 +36,7 @@ type SignatureResponse struct {
 // HttpSignerClient defines the interface for interacting with a remote web3signer.
 type HttpSignerClient interface {
 	Sign(ctx context.Context, pubKey string, request SignRequestJson) (bls.Signature, error)
-	GetPublicKeys(ctx context.Context, url string) ([][48]byte, error)
+	GetPublicKeys(ctx context.Context, url string) ([]string, error)
 }
 
 // ApiClient a wrapper object around web3signer APIs. Please refer to the docs from Consensys' web3signer project.
@@ -87,8 +86,8 @@ func (client *ApiClient) Sign(ctx context.Context, pubKey string, request SignRe
 }
 
 // GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
-func (client *ApiClient) GetPublicKeys(ctx context.Context, url string) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	resp, err := client.doRequest(ctx, http.MethodGet, url, nil /* no body needed on get request */)
+func (client *ApiClient) GetPublicKeys(ctx context.Context, url string) ([]string, error) {
+	resp, err := client.doRequest(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -96,20 +95,19 @@ func (client *ApiClient) GetPublicKeys(ctx context.Context, url string) ([][fiel
 	if err := unmarshalResponse(resp.Body, &publicKeys); err != nil {
 		return nil, err
 	}
-	decodedKeys := make([][fieldparams.BLSPubkeyLength]byte, len(publicKeys))
-	var errorKeyPositions string
-	for i, value := range publicKeys {
-		decodedKey, err := hexutil.Decode(value)
-		if err != nil {
-			errorKeyPositions += fmt.Sprintf("%v, ", i)
-			continue
-		}
-		decodedKeys[i] = bytesutil.ToBytes48(decodedKey)
+	if len(publicKeys) == 0 {
+		return publicKeys, nil
 	}
-	if errorKeyPositions != "" {
-		return nil, errors.New("failed to decode from Hex from the following public key index locations: " + errorKeyPositions)
+	// early check if it's a hex and a public key
+	// note: a full loop will be conducted in keymanager.go if the quick check passes
+	b, err := hexutil.Decode(publicKeys[0])
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to decode public key")
 	}
-	return decodedKeys, nil
+	if len(b) != fieldparams.BLSPubkeyLength {
+		return nil, fmt.Errorf("invalid public key length of %v bytes", len(b))
+	}
+	return publicKeys, nil
 }
 
 // ReloadSignerKeys is a wrapper method around the web3signer reload api.

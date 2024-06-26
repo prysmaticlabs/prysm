@@ -484,7 +484,12 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		log.Warnf("Setting the remote signer base url within the request is not supported. The remote signer url can only be set from the --%s flag.", flags.Web3SignerURLFlag.Name)
 	}
 
-	httputil.WriteJson(w, &RemoteKeysResponse{Data: adder.AddPublicKeys(remoteKeys)})
+	ks, err := adder.AddPublicKeys(remoteKeys)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, &RemoteKeysResponse{Data: ks})
 }
 
 // DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
@@ -533,8 +538,12 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteJson(w, &RemoteKeysResponse{Data: statuses})
 		return
 	}
-
-	httputil.WriteJson(w, RemoteKeysResponse{Data: deleter.DeletePublicKeys(req.Pubkeys)})
+	data, err := deleter.DeletePublicKeys(req.Pubkeys)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, RemoteKeysResponse{Data: data})
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
