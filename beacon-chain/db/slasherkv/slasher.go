@@ -484,14 +484,10 @@ func (s *Store) CheckDoubleBlockProposals(
 
 		for _, incomingProposal := range incomingProposals {
 			// Build the key corresponding to this slot + validator index combination
-			key, err := keyForValidatorProposal(
+			key := keyForValidatorProposal(
 				incomingProposal.SignedBeaconBlockHeader.Header.Slot,
 				incomingProposal.SignedBeaconBlockHeader.Header.ProposerIndex,
 			)
-
-			if err != nil {
-				return err
-			}
 
 			// Retrieve the existing proposal record from the database
 			encExistingProposalWrapper := bkt.Get(key)
@@ -531,11 +527,9 @@ func (s *Store) BlockProposalForValidator(
 	_, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
 	defer span.End()
 	var record *slashertypes.SignedBlockHeaderWrapper
-	key, err := keyForValidatorProposal(slot, validatorIdx)
-	if err != nil {
-		return nil, err
-	}
-	err = s.db.View(func(tx *bolt.Tx) error {
+	key := keyForValidatorProposal(slot, validatorIdx)
+
+	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposalRecordsBucket)
 		encProposal := bkt.Get(key)
 		if encProposal == nil {
@@ -567,13 +561,10 @@ func (s *Store) SaveBlockProposals(
 	// Loop over all proposals to encode keys and proposals themselves.
 	for i, proposal := range proposals {
 		// Encode the key for this proposal.
-		key, err := keyForValidatorProposal(
+		key := keyForValidatorProposal(
 			proposal.SignedBeaconBlockHeader.Header.Slot,
 			proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
 		)
-		if err != nil {
-			return err
-		}
 
 		// Encode the proposal itself.
 		enc, err := encodeProposalRecord(proposal)
@@ -657,13 +648,11 @@ func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
 }
 
 // keyForValidatorProposal returns a disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
-func keyForValidatorProposal(slot primitives.Slot, proposerIndex primitives.ValidatorIndex) ([]byte, error) {
-	encSlot, err := slot.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
+func keyForValidatorProposal(slot primitives.Slot, proposerIndex primitives.ValidatorIndex) []byte {
+	encSlot := make([]byte, 8)
+	binary.BigEndian.PutUint64(encSlot, uint64(slot))
 	encValidatorIdx := encodeValidatorIndex(proposerIndex)
-	return append(encSlot, encValidatorIdx...), nil
+	return append(encSlot, encValidatorIdx...)
 }
 
 func encodeSlasherChunk(chunk []uint16) ([]byte, error) {
@@ -780,10 +769,10 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 	}, nil
 }
 
-// Encodes an epoch into little-endian bytes.
+// Encodes an epoch into big-endian bytes.
 func encodeTargetEpoch(epoch primitives.Epoch) []byte {
 	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, uint64(epoch))
+	binary.BigEndian.PutUint64(buf, uint64(epoch))
 	return buf
 }
 

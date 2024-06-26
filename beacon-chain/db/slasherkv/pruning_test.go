@@ -23,9 +23,9 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 		hook := logTest.NewGlobal()
 		beaconDB := setupDB(t)
 
-		// With a current epoch of 20 and a history length of 10, we should be pruning
-		// everything before epoch (20 - 10) = 10.
-		currentEpoch := primitives.Epoch(20)
+		// With a current epoch of 30 and a history length of 10, we should be pruning
+		// everything before epoch (30 - 10) = 20.
+		currentEpoch := primitives.Epoch(30)
 		historyLength := primitives.Epoch(10)
 
 		pruningLimitEpoch := currentEpoch - historyLength
@@ -34,10 +34,7 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 
 		err = beaconDB.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(proposalRecordsBucket)
-			key, err := keyForValidatorProposal(lowestStoredSlot+1, 0 /* proposer index */)
-			if err != nil {
-				return err
-			}
+			key := keyForValidatorProposal(lowestStoredSlot+1, 0 /* proposer index */)
 			return bkt.Put(key, []byte("hi"))
 		})
 		require.NoError(t, err)
@@ -60,7 +57,7 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 		params.OverrideBeaconConfig(config)
 
 		historyLength := primitives.Epoch(10)
-		currentEpoch := primitives.Epoch(20)
+		currentEpoch := primitives.Epoch(30)
 		pruningLimitEpoch := currentEpoch - historyLength
 
 		// We create proposals from genesis to the current epoch, with 2 proposals
@@ -97,14 +94,8 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 				endSlot, err := slots.EpochStart(i + 1)
 				require.NoError(t, err)
 				for j := startSlot; j < endSlot; j++ {
-					prop1Key, err := keyForValidatorProposal(j, 0)
-					if err != nil {
-						return err
-					}
-					prop2Key, err := keyForValidatorProposal(j, 1)
-					if err != nil {
-						return err
-					}
+					prop1Key := keyForValidatorProposal(j, 0)
+					prop2Key := keyForValidatorProposal(j, 1)
 					if bkt.Get(prop1Key) != nil {
 						return fmt.Errorf("proposal still exists for epoch %d, validator 0", j)
 					}
@@ -128,9 +119,9 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		hook := logTest.NewGlobal()
 		beaconDB := setupDB(t)
 
-		// With a current epoch of 20 and a history length of 10, we should be pruning
-		// everything before epoch (20 - 10) = 10.
-		currentEpoch := primitives.Epoch(20)
+		// With a current epoch of 30 and a history length of 10, we should be pruning
+		// everything before epoch (30 - 10) = 20.
+		currentEpoch := primitives.Epoch(30)
 		historyLength := primitives.Epoch(10)
 
 		pruningLimitEpoch := currentEpoch - historyLength
@@ -163,7 +154,7 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		params.OverrideBeaconConfig(config)
 
 		historyLength := primitives.Epoch(10)
-		currentEpoch := primitives.Epoch(20)
+		currentEpoch := primitives.Epoch(30)
 		pruningLimitEpoch := currentEpoch - historyLength
 
 		// We create attestations from genesis to the current epoch, with 2 attestations
