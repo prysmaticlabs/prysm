@@ -42,8 +42,9 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = beaconDB.PruneProposalsAtEpoch(ctx, pruningLimitEpoch)
+		numPruned, err := beaconDB.PruneProposalsAtEpoch(ctx, pruningLimitEpoch)
 		require.NoError(t, err)
+		require.Equal(t, uint(0), numPruned)
 		expectedLog := fmt.Sprintf(
 			"Lowest slot %d is > pruning slot %d, nothing to prune", lowestStoredSlot+1, lowestStoredSlot,
 		)
@@ -141,7 +142,8 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = beaconDB.PruneAttestationsAtEpoch(ctx, pruningLimitEpoch)
+		numPruned, err := beaconDB.PruneAttestationsAtEpoch(ctx, pruningLimitEpoch)
+		require.Equal(t, uint(0), numPruned)
 		require.NoError(t, err)
 		expectedLog := fmt.Sprintf(
 			"Lowest epoch %d is > pruning epoch %d, nothing to prune", lowestStoredEpoch+1, lowestStoredEpoch,
