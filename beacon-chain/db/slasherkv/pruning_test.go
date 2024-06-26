@@ -66,6 +66,8 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 		// We create proposals from genesis to the current epoch, with 2 proposals
 		// at each slot to ensure the entire pruning logic works correctly.
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+		expectedNumPruned := 2 * uint(pruningLimitEpoch+1) * uint(slotsPerEpoch)
+
 		proposals := make([]*slashertypes.SignedBlockHeaderWrapper, 0, uint64(currentEpoch)*uint64(slotsPerEpoch)*2)
 		for i := primitives.Epoch(0); i < currentEpoch; i++ {
 			startSlot, err := slots.EpochStart(i)
@@ -82,8 +84,9 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlockProposals(ctx, proposals))
 
 		// We expect pruning completes without an issue and properly logs progress.
-		_, err := beaconDB.PruneProposalsAtEpoch(ctx, pruningLimitEpoch)
+		actualNumPruned, err := beaconDB.PruneProposalsAtEpoch(ctx, pruningLimitEpoch)
 		require.NoError(t, err)
+		require.Equal(t, expectedNumPruned, actualNumPruned)
 
 		// Everything before epoch 10 should be deleted.
 		for i := primitives.Epoch(0); i < pruningLimitEpoch; i++ {
@@ -166,6 +169,8 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		// We create attestations from genesis to the current epoch, with 2 attestations
 		// at each slot to ensure the entire pruning logic works correctly.
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+		expectedNumPruned := 2 * uint(pruningLimitEpoch+1) * uint(slotsPerEpoch)
+
 		attestations := make([]*slashertypes.IndexedAttestationWrapper, 0, uint64(currentEpoch)*uint64(slotsPerEpoch)*2)
 		for i := primitives.Epoch(0); i < currentEpoch; i++ {
 			startSlot, err := slots.EpochStart(i)
@@ -189,8 +194,9 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, attestations))
 
 		// We expect pruning completes without an issue.
-		_, err := beaconDB.PruneAttestationsAtEpoch(ctx, pruningLimitEpoch)
+		actualNumPruned, err := beaconDB.PruneAttestationsAtEpoch(ctx, pruningLimitEpoch)
 		require.NoError(t, err)
+		require.Equal(t, expectedNumPruned, actualNumPruned)
 
 		// Everything before epoch 10 should be deleted.
 		for i := primitives.Epoch(0); i < pruningLimitEpoch; i++ {
