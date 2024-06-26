@@ -26,6 +26,13 @@ func WithRemoteSigner() E2EConfigOpt {
 	}
 }
 
+func WithRemoteSignerAndPersistentKeysFile() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseWeb3RemoteSigner = true
+		cfg.UsePersistentKeyFile = true
+	}
+}
+
 func WithCheckpointSync() E2EConfigOpt {
 	return func(cfg *E2EConfig) {
 		cfg.TestCheckpointSync = true
@@ -58,6 +65,7 @@ type E2EConfig struct {
 	UsePrysmShValidator     bool
 	UsePprof                bool
 	UseWeb3RemoteSigner     bool
+	UsePersistentKeyFile    bool
 	TestDeposits            bool
 	UseFixedPeerIDs         bool
 	UseValidatorCrossClient bool

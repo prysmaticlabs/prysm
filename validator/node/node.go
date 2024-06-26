@@ -18,7 +18,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
@@ -32,8 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer/loader"
-	"github.com/prysmaticlabs/prysm/v5/container/slice"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/prometheus"
@@ -259,7 +256,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 	if !isInteropNumValidatorsSet {
 		// Custom Check For Web3Signer
 		if isWeb3SignerURLFlagSet {
-			c.wallet = wallet.NewWalletForWeb3Signer()
+			c.wallet = wallet.NewWalletForWeb3Signer(cliCtx)
 		} else {
 			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 				return nil, wallet.ErrNoWalletFound
@@ -302,7 +299,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Router) error {
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		// Custom Check For Web3Signer
-		c.wallet = wallet.NewWalletForWeb3Signer()
+		c.wallet = wallet.NewWalletForWeb3Signer(cliCtx)
 	} else {
 		// Read the wallet password file from the cli context.
 		if err := setWalletPasswordFilePath(cliCtx); err != nil {
@@ -565,29 +562,19 @@ func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 		}
 
 		if publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name); len(publicKeysSlice) > 0 {
-			pks := make([]string, 0)
 			if len(publicKeysSlice) == 1 {
 				pURL, err := url.ParseRequestURI(publicKeysSlice[0])
 				if err == nil && pURL.Scheme != "" && pURL.Host != "" {
 					web3signerConfig.PublicKeysURL = publicKeysSlice[0]
 				} else {
-					pks = strings.Split(publicKeysSlice[0], ",")
+					web3signerConfig.ProvidedPublicKeys = strings.Split(publicKeysSlice[0], ",")
 				}
-			} else if len(publicKeysSlice) > 1 {
-				pks = publicKeysSlice
+			} else {
+				web3signerConfig.ProvidedPublicKeys = publicKeysSlice
 			}
-			if len(pks) > 0 {
-				pks = slice.Unique[string](pks)
-				var validatorKeys [][48]byte
-				for _, key := range pks {
-					decodedKey, decodeErr := hexutil.Decode(key)
-					if decodeErr != nil {
-						return nil, errors.Wrapf(decodeErr, "could not decode public key for web3signer: %s", key)
-					}
-					validatorKeys = append(validatorKeys, bytesutil.ToBytes48(decodedKey))
-				}
-				web3signerConfig.ProvidedPublicKeys = validatorKeys
-			}
+		}
+		if cliCtx.IsSet(flags.Web3SignerKeyFileFlag.Name) {
+			web3signerConfig.KeyFilePath = cliCtx.String(flags.Web3SignerKeyFileFlag.Name)
 		}
 	}
 	return web3signerConfig, nil
