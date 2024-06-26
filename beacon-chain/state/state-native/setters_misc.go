@@ -114,12 +114,12 @@ func (b *BeaconState) SaveValidatorIndices() {
 		return
 	}
 
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	
 	if b.validatorIndexCache == nil {
 		b.validatorIndexCache = newFinalizedValidatorIndexCache()
 	}
-
-	b.lock.Lock()
-	defer b.lock.Unlock()
 
 	b.saveValidatorIndices()
 }
