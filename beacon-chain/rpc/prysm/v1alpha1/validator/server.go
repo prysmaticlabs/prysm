@@ -100,14 +100,13 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 	}
 
 	waitTime := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
-	timer := time.NewTimer(waitTime)
-	defer timer.Stop()
+	ticker := time.NewTicker(waitTime)
+	defer ticker.Stop()
 
 	for {
-		timer.Reset(waitTime)
 		select {
 		// Pinging every slot for activation.
-		case <-timer.C:
+		case <-ticker.C:
 			activeValidatorExists, validatorStatuses, err := vs.activationStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)
