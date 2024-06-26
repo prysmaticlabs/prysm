@@ -173,8 +173,8 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 			endSlot, err := slots.EpochStart(i + 1)
 			require.NoError(t, err)
 			for j := startSlot; j < endSlot; j++ {
-				attester1 := uint64(j + 10)
-				attester2 := uint64(j + 11)
+				attester1 := uint64(2 * j)
+				attester2 := uint64(2*j + 1)
 				target := i
 				var source primitives.Epoch
 				if i > 0 {
