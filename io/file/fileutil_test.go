@@ -24,6 +24,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -566,4 +567,38 @@ func TestHasReadWritePermissions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWriteLinesToFile(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "testfile.txt")
+	t.Run("write to a new file", func(t *testing.T) {
+		lines := []string{"line1", "line2", "line3"}
+		require.NoError(t, file.WriteLinesToFile(lines, filename))
+		// Check file content
+		content, err := os.ReadFile(filepath.Clean(filename))
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+
+		// Join lines with newline for comparison
+		expectedContent := strings.Join(lines, "\n") + "\n"
+		if string(content) != expectedContent {
+			t.Errorf("file content = %q, want %q", string(content), expectedContent)
+		}
+	})
+	t.Run("overwrite existing file", func(t *testing.T) {
+		lines := []string{"line4", "line5"}
+		require.NoError(t, file.WriteLinesToFile(lines, filename))
+		// Check file content
+		content, err := os.ReadFile(filepath.Clean(filename))
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+
+		// Join lines with newline for comparison
+		expectedContent := strings.Join(lines, "\n") + "\n"
+		if string(content) != expectedContent {
+			t.Errorf("file content = %q, want %q", string(content), expectedContent)
+		}
+	})
 }
