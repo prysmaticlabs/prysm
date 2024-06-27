@@ -50,10 +50,6 @@ func Operations(
 	block interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
 	// 6110 validations are in VerifyOperationLengths
 	bb := block.Body()
-	bod, ok := bb.(interfaces.ROBlockBodyElectra)
-	if !ok {
-		return nil, errors.New("could not cast block body to electra block body")
-	}
 	// Electra extends the altair operations.
 	st, err := ProcessProposerSlashings(ctx, st, bb.ProposerSlashings(), v.SlashValidator)
 	if err != nil {
@@ -79,7 +75,7 @@ func Operations(
 		return nil, errors.Wrap(err, "could not process bls-to-execution changes")
 	}
 	// new in electra
-	e, err := bod.Execution()
+	e, err := bb.Execution()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution data from block")
 	}
@@ -97,8 +93,6 @@ func Operations(
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
 
-	if err := ProcessConsolidations(ctx, st, bod.Consolidations()); err != nil {
-		return nil, errors.Wrap(err, "could not process consolidations")
-	}
+	// TODO: Process consolidations from execution header.
 	return st, nil
 }
