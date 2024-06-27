@@ -102,6 +102,7 @@ message ExecutionPayloadElectra {
 	uint64 excess_blob_gas  = 17;
 	repeated DepositRequest deposit_requests = 18 [(ethereum.eth.ext.ssz_max) = "max_deposit_requests_per_payload.size"]; // new in electra, eip6110
 	repeated WithdrawalRequest	withdrawal_requests = 19 [(ethereum.eth.ext.ssz_max) = "max_withdrawal_requests_per_payload.size"]; // new in electra, eip7002, eip7251
+  repeated ConsolidationRequest consolidation_requests = 20 [(ethereum.eth.ext.ssz_max) = "max_consolidation_requests_per_payload.size"]; // new in electra, eip6110
 }
 
 message ExecutionPayloadElectraWithValueAndBlobsBundle {
@@ -199,6 +200,7 @@ message ExecutionPayloadHeaderElectra {
 	uint64 excess_blob_gas  = 17;
 	bytes	deposit_requests_root  = 18 [(ethereum.eth.ext.ssz_size) = "32"]; // new in electra, eip6110
 	bytes	withdrawal_requests_root = 19 [(ethereum.eth.ext.ssz_size) = "32"]; // new in electra, eip7002, eip7251
+  bytes consolidation_requests_root = 20 [(ethereum.eth.ext.ssz_size) = "32"]; // new in electra, eip7251
 }
 
 message PayloadAttributes {
@@ -301,4 +303,15 @@ message DepositRequest {
 	uint64 amount = 3;
 	bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
 	uint64 index = 5;
+}
+
+// ConsolidationRequest is the message from the execution layer to trigger the consolidation of one
+// validator to another validator.
+message ConsolidationRequest {
+	// Source address of account which originated the request.
+	bytes source_address = 1 [(ethereum.eth.ext.ssz_size) = "20"];
+	// Funds will be moved from this public key.
+	bytes source_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
+	// Funds will be moved to this public key.
+	bytes target_pubkey = 3 [(ethereum.eth.ext.ssz_size) = "48"];
 }

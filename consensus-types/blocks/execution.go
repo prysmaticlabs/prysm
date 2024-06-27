@@ -14,6 +14,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+var _ interfaces.ExecutionDataElectra = (*executionPayloadElectra)(nil)
+
 // executionPayload is a convenience wrapper around a beacon block body's execution payload data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -824,26 +826,33 @@ func PayloadToHeaderElectra(payload interfaces.ExecutionDataElectra) (*enginev1.
 		return nil, err
 	}
 
+	consolidationRequests := payload.ConsolidationRequests()
+	consolidationRequestsRoot, err := ssz.ConsolidationRequestsSliceRoot(consolidationRequests, fieldparams.MaxConsolidationRequestsPerPayload)
+	if err != nil {
+		return nil, err
+	}
+
 	return &enginev1.ExecutionPayloadHeaderElectra{
-		ParentHash:             bytesutil.SafeCopyBytes(payload.ParentHash()),
-		FeeRecipient:           bytesutil.SafeCopyBytes(payload.FeeRecipient()),
-		StateRoot:              bytesutil.SafeCopyBytes(payload.StateRoot()),
-		ReceiptsRoot:           bytesutil.SafeCopyBytes(payload.ReceiptsRoot()),
-		LogsBloom:              bytesutil.SafeCopyBytes(payload.LogsBloom()),
-		PrevRandao:             bytesutil.SafeCopyBytes(payload.PrevRandao()),
-		BlockNumber:            payload.BlockNumber(),
-		GasLimit:               payload.GasLimit(),
-		GasUsed:                payload.GasUsed(),
-		Timestamp:              payload.Timestamp(),
-		ExtraData:              bytesutil.SafeCopyBytes(payload.ExtraData()),
-		BaseFeePerGas:          bytesutil.SafeCopyBytes(payload.BaseFeePerGas()),
-		BlockHash:              bytesutil.SafeCopyBytes(payload.BlockHash()),
-		TransactionsRoot:       txRoot[:],
-		WithdrawalsRoot:        withdrawalsRoot[:],
-		BlobGasUsed:            blobGasUsed,
-		ExcessBlobGas:          excessBlobGas,
-		DepositRequestsRoot:    depositRequestsRoot[:],
-		WithdrawalRequestsRoot: withdrawalRequestsRoot[:],
+		ParentHash:                bytesutil.SafeCopyBytes(payload.ParentHash()),
+		FeeRecipient:              bytesutil.SafeCopyBytes(payload.FeeRecipient()),
+		StateRoot:                 bytesutil.SafeCopyBytes(payload.StateRoot()),
+		ReceiptsRoot:              bytesutil.SafeCopyBytes(payload.ReceiptsRoot()),
+		LogsBloom:                 bytesutil.SafeCopyBytes(payload.LogsBloom()),
+		PrevRandao:                bytesutil.SafeCopyBytes(payload.PrevRandao()),
+		BlockNumber:               payload.BlockNumber(),
+		GasLimit:                  payload.GasLimit(),
+		GasUsed:                   payload.GasUsed(),
+		Timestamp:                 payload.Timestamp(),
+		ExtraData:                 bytesutil.SafeCopyBytes(payload.ExtraData()),
+		BaseFeePerGas:             bytesutil.SafeCopyBytes(payload.BaseFeePerGas()),
+		BlockHash:                 bytesutil.SafeCopyBytes(payload.BlockHash()),
+		TransactionsRoot:          txRoot[:],
+		WithdrawalsRoot:           withdrawalsRoot[:],
+		BlobGasUsed:               blobGasUsed,
+		ExcessBlobGas:             excessBlobGas,
+		DepositRequestsRoot:       depositRequestsRoot[:],
+		WithdrawalRequestsRoot:    withdrawalRequestsRoot[:],
+		ConsolidationRequestsRoot: consolidationRequestsRoot[:],
 	}, nil
 }
 
@@ -1243,7 +1252,6 @@ type executionPayloadHeaderElectra struct {
 }
 
 var _ interfaces.ExecutionData = &executionPayloadElectra{}
-var _ interfaces.ExecutionDataElectra = &executionPayloadElectra{}
 
 // WrappedExecutionPayloadHeaderElectra is a constructor which wraps a protobuf execution header into an interface.
 func WrappedExecutionPayloadHeaderElectra(p *enginev1.ExecutionPayloadHeaderElectra) (interfaces.ExecutionData, error) {
@@ -1421,7 +1429,6 @@ func WrappedExecutionPayloadElectra(p *enginev1.ExecutionPayloadElectra) (interf
 }
 
 var _ interfaces.ExecutionData = &executionPayloadElectra{}
-var _ interfaces.ExecutionDataElectra = &executionPayloadElectra{}
 
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadElectra) IsNil() bool {
@@ -1564,6 +1571,11 @@ func (e executionPayloadElectra) DepositRequests() []*enginev1.DepositRequest {
 // WithdrawalRequests --
 func (e executionPayloadElectra) WithdrawalRequests() []*enginev1.WithdrawalRequest {
 	return e.p.WithdrawalRequests
+}
+
+// ConsolidationRequests --
+func (e executionPayloadElectra) ConsolidationRequests() []*enginev1.ConsolidationRequest {
+	return e.p.ConsolidationRequests
 }
 
 // IsBlinded returns true if the underlying data is blinded.

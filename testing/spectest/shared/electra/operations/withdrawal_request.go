@@ -37,8 +37,7 @@ func RunWithdrawalRequestTest(t *testing.T, config string) {
 				},
 			}}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s state.BeaconState, b interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
-				bod, ok := b.Block().Body().(interfaces.ROBlockBodyElectra)
-				require.Equal(t, true, ok)
+				bod := b.Block().Body()
 				e, err := bod.Execution()
 				require.NoError(t, err)
 				exe, ok := e.(interfaces.ExecutionDataElectra)

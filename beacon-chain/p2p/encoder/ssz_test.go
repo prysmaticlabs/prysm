@@ -112,8 +112,6 @@ type HistoricalSummaryCreator struct{}
 type BlobIdentifierCreator struct{}
 type PendingBalanceDepositCreator struct{}
 type PendingPartialWithdrawalCreator struct{}
-type ConsolidationCreator struct{}
-type SignedConsolidationCreator struct{}
 type PendingConsolidationCreator struct{}
 type StatusCreator struct{}
 type BeaconBlocksByRangeRequestCreator struct{}
@@ -287,10 +285,6 @@ func (PendingBalanceDepositCreator) Create() MarshalerProtoMessage {
 func (PendingPartialWithdrawalCreator) Create() MarshalerProtoMessage {
 	return &ethpb.PendingPartialWithdrawal{}
 }
-func (ConsolidationCreator) Create() MarshalerProtoMessage { return &ethpb.Consolidation{} }
-func (SignedConsolidationCreator) Create() MarshalerProtoMessage {
-	return &ethpb.SignedConsolidation{}
-}
 func (PendingConsolidationCreator) Create() MarshalerProtoMessage {
 	return &ethpb.PendingConsolidation{}
 }
@@ -405,8 +399,6 @@ var creators = []MarshalerProtoCreator{
 	BlobIdentifierCreator{},
 	PendingBalanceDepositCreator{},
 	PendingPartialWithdrawalCreator{},
-	ConsolidationCreator{},
-	SignedConsolidationCreator{},
 	PendingConsolidationCreator{},
 	StatusCreator{},
 	BeaconBlocksByRangeRequestCreator{},
@@ -550,26 +542,6 @@ func TestSszNetworkEncoder_RoundTrip_SignedVoluntaryExit(t *testing.T) {
 	require.NoError(t, err)
 	decoded := &ethpb.SignedVoluntaryExit{}
 	require.NoError(t, e.DecodeGossip(buf.Bytes(), decoded))
-	assertProtoMessagesEqual(t, decoded, msg)
-}
-
-func TestSszNetworkEncoder_RoundTrip_Consolidation(t *testing.T) {
-	e := &encoder.SszNetworkEncoder{}
-	buf := new(bytes.Buffer)
-
-	data := []byte("\xc800")
-	msg := &ethpb.Consolidation{}
-
-	if err := proto.Unmarshal(data, msg); err != nil {
-		t.Logf("Failed to unmarshal: %v", err)
-		return
-	}
-
-	_, err := e.EncodeGossip(buf, msg)
-	require.NoError(t, err)
-	decoded := &ethpb.Consolidation{}
-	require.NoError(t, e.DecodeGossip(buf.Bytes(), decoded))
-
 	assertProtoMessagesEqual(t, decoded, msg)
 }
 

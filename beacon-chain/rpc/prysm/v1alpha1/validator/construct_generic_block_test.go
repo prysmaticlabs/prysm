@@ -25,16 +25,6 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 	// Test for Electra version
 	t.Run("electra block", func(t *testing.T) {
 		eb := util.NewBeaconBlockElectra()
-		eb.Block.Body.Consolidations = []*eth.SignedConsolidation{
-			{
-				Signature: make([]byte, 96),
-				Message: &eth.Consolidation{
-					SourceIndex: 1,
-					TargetIndex: 2,
-					Epoch:       3,
-				},
-			},
-		}
 		b, err := blocks.NewSignedBeaconBlock(eb)
 		require.NoError(t, err)
 		r1, err := eb.Block.HashTreeRoot()
