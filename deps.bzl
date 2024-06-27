@@ -493,14 +493,14 @@ def prysm_deps():
     go_repository(
         name = "com_github_cncf_udpa_go",
         importpath = "github.com/cncf/udpa/go",
-        sum = "h1:QQ3GSy+MqSHxm/d8nCtnAiZdYFd45cYZPs8vOOIYKfk=",
-        version = "v0.0.0-20220112060539-c52dc94e7fbe",
+        sum = "h1:cqQfy1jclcSy/FwLjemeg3SR1yaINm74aQyupQ0Bl8M=",
+        version = "v0.0.0-20201120205902-5459f2c99403",
     )
     go_repository(
         name = "com_github_cncf_xds_go",
         importpath = "github.com/cncf/xds/go",
-        sum = "h1:/inchEIKaYC1Akx+H+gqO04wryn5h75LSazbRlnya1k=",
-        version = "v0.0.0-20230607035331-e9ce68804cb4",
+        sum = "h1:DBmgJDC9dTfkVyGgipamEh2BpGYxScCH1TOF1LL1cXc=",
+        version = "v0.0.0-20240318125728-8a4994d93e50",
     )
     go_repository(
         name = "com_github_cockroachdb_datadriven",
@@ -801,14 +801,14 @@ def prysm_deps():
     go_repository(
         name = "com_github_envoyproxy_go_control_plane",
         importpath = "github.com/envoyproxy/go-control-plane",
-        sum = "h1:7T++XKzy4xg7PKy+bM+Sa9/oe1OC88yz2hXQUISoXfA=",
-        version = "v0.11.1-0.20230524094728-9239064ad72f",
+        sum = "h1:4X+VP1GHd1Mhj6IB5mMeGbLCleqxjletLK6K0rbxyZI=",
+        version = "v0.12.0",
     )
     go_repository(
         name = "com_github_envoyproxy_protoc_gen_validate",
         importpath = "github.com/envoyproxy/protoc-gen-validate",
-        sum = "h1:c0g45+xCJhdgFGw7a5QAfdS4byAbud7miNWJ1WwEVf8=",
-        version = "v0.10.1",
+        sum = "h1:gVPz/FMfvh57HdSJQyvBtF00j8JU4zdyUgIUNhlgg0A=",
+        version = "v1.0.4",
     )
     go_repository(
         name = "com_github_ethereum_c_kzg_4844",
@@ -1215,8 +1215,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_golang_glog",
         importpath = "github.com/golang/glog",
-        sum = "h1:/d3pCKDPWNnvIWe0vVUpNP32qc8U3PDVxySP/y360qE=",
-        version = "v1.1.0",
+        sum = "h1:uCdmnmatrKCgMBlM4rMuJZWOkPDqdbZPnrMXDY4gI68=",
+        version = "v1.2.0",
     )
     go_repository(
         name = "com_github_golang_groupcache",
@@ -1331,8 +1331,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_google_uuid",
         importpath = "github.com/google/uuid",
-        sum = "h1:MtMxsa51/r9yyhkyLsVeVt0B+BGQZzpQiTQ4eHZ8bc4=",
-        version = "v1.4.0",
+        sum = "h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=",
+        version = "v1.6.0",
     )
     go_repository(
         name = "com_github_googleapis_gax_go",
@@ -3753,14 +3753,14 @@ def prysm_deps():
     go_repository(
         name = "com_google_cloud_go_compute",
         importpath = "cloud.google.com/go/compute",
-        sum = "h1:6aKEtlUiwEpJzM001l0yFkpXmUVXaN8W+fbkb2AZNbg=",
-        version = "v1.20.1",
+        sum = "h1:ZRpHJedLtTpKgr3RV1Fx23NuaAEN1Zfx9hw1u4aJdjU=",
+        version = "v1.25.1",
     )
     go_repository(
         name = "com_google_cloud_go_compute_metadata",
         importpath = "cloud.google.com/go/compute/metadata",
-        sum = "h1:mg4jlk7mCAj6xXp9UJ4fjI9VUI5rubuGBW5aJ7UnBMY=",
-        version = "v0.2.3",
+        sum = "h1:Tz+eQXMEqDIKRsmY3cHTL6FVaynIjX2QxYC4trgAKZc=",
+        version = "v0.3.0",
     )
     go_repository(
         name = "com_google_cloud_go_contactcenterinsights",
@@ -4651,8 +4651,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_google_appengine",
         importpath = "google.golang.org/appengine",
-        sum = "h1:FZR1q0exgwxzPzp/aF+VccGrSfxfPpkBqjIIEq3ru6c=",
-        version = "v1.6.7",
+        sum = "h1:IhEN5q69dyKagZPYMSdIjS2HqprW324FRQZJcGqPAsM=",
+        version = "v1.6.8",
     )
     go_repository(
         name = "org_golang_google_genproto",
@@ -4661,11 +4661,23 @@ def prysm_deps():
         version = "v0.0.0-20230410155749-daa745c078e1",
     )
     go_repository(
+        name = "org_golang_google_genproto_googleapis_api",
+        importpath = "google.golang.org/genproto/googleapis/api",
+        sum = "h1:RFiFrvy37/mpSpdySBDrUdipW/dHwsRwh3J3+A9VgT4=",
+        version = "v0.0.0-20240318140521-94a12d6c2237",
+    )
+    go_repository(
+        name = "org_golang_google_genproto_googleapis_rpc",
+        importpath = "google.golang.org/genproto/googleapis/rpc",
+        sum = "h1:NnYq6UN9ReLM9/Y01KWNOWyI5xQ9kbIms5GGJVwS/Yc=",
+        version = "v0.0.0-20240318140521-94a12d6c2237",
+    )
+    go_repository(
         name = "org_golang_google_grpc",
         build_file_proto_mode = "disable",
         importpath = "google.golang.org/grpc",
-        sum = "h1:8I4C0Yq1EjstUzUJzpcRVbuYA2mODtEmpWiQoN/b2nc=",
-        version = "v1.56.3",
+        sum = "h1:KH3VH9y/MgNQg1dE7b3XfVK0GsPSIzJwdF617gUSbvY=",
+        version = "v1.64.0",
     )
     go_repository(
         name = "org_golang_google_protobuf",
@@ -4730,8 +4742,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_oauth2",
         importpath = "golang.org/x/oauth2",
-        sum = "h1:aDkGMBSYxElaoP81NpoUoz2oo2R2wHdZpGToUxfyQrQ=",
-        version = "v0.16.0",
+        sum = "h1:4mQdhULixXKP1rwYBW0vAijoXnkTG0BLCDRzfe1idMo=",
+        version = "v0.20.0",
     )
     go_repository(
         name = "org_golang_x_perf",

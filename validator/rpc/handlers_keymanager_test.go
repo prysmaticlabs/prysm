@@ -17,8 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
-
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
