@@ -10,16 +10,14 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestProcessRegistryUpdates(t *testing.T) {
-	const electraEpoch = 3
-	cfg := params.BeaconConfig()
-	cfg.ElectraForkEpoch = electraEpoch
-	params.SetActiveTestCleanup(t, cfg)
+	finalizedEpoch := primitives.Epoch(4)
 
 	tests := []struct {
 		name  string
@@ -56,11 +54,11 @@ func TestProcessRegistryUpdates(t *testing.T) {
 			state: func() state.BeaconState {
 				base := &eth.BeaconStateElectra{
 					Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
-					FinalizedCheckpoint: &eth.Checkpoint{Epoch: 6, Root: make([]byte, fieldparams.RootLength)},
+					FinalizedCheckpoint: &eth.Checkpoint{Epoch: finalizedEpoch, Root: make([]byte, fieldparams.RootLength)},
 				}
 				for i := uint64(0); i < 10; i++ {
 					base.Validators = append(base.Validators, &eth.Validator{
-						ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+						ActivationEligibilityEpoch: finalizedEpoch,
 						EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
 						ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
 					})
@@ -82,7 +80,7 @@ func TestProcessRegistryUpdates(t *testing.T) {
 			state: func() state.BeaconState {
 				base := &eth.BeaconStateElectra{
 					Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
-					FinalizedCheckpoint: &eth.Checkpoint{Epoch: 6, Root: make([]byte, fieldparams.RootLength)},
+					FinalizedCheckpoint: &eth.Checkpoint{Epoch: finalizedEpoch, Root: make([]byte, fieldparams.RootLength)},
 				}
 				for i := uint64(0); i < 10; i++ {
 					base.Validators = append(base.Validators, &eth.Validator{
@@ -144,5 +142,4 @@ func Benchmark_ProcessRegistryUpdates_MassEjection(b *testing.B) {
 			panic(err)
 		}
 	}
-
 }

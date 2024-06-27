@@ -34,35 +34,70 @@ import (
 //	         for validator in state.validators:
 //	             if is_eligible_for_activation(state, validator):
 //	                 validator.activation_epoch = activation_epoch
-func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) error {
-	currentEpoch := time.CurrentEpoch(state)
+func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) error {
+	currentEpoch := time.CurrentEpoch(st)
 	ejectionBal := params.BeaconConfig().EjectionBalance
 	activationEpoch := helpers.ActivationExitEpoch(currentEpoch)
-	vals := state.Validators()
-	for idx, val := range vals {
-		// Handle validators eligible to join the activation queue.
+
+	// To avoid copying the state validator set via st.Validators(), we will perform a read only pass
+	// over the validator set while collecting validator indices where the validator copy is actually
+	// necessary, then we will process these operations.
+	eligibleForActivationQ := make([]primitives.ValidatorIndex, 0)
+	eligibleForEjection := make([]primitives.ValidatorIndex, 0)
+	eligibleForActivation := make([]primitives.ValidatorIndex, 0)
+
+	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+		// Collect validators eligible to enter the activation queue.
 		if helpers.IsEligibleForActivationQueue(val, currentEpoch) {
-			val.ActivationEligibilityEpoch = currentEpoch + 1
-			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), val); err != nil {
-				return fmt.Errorf("failed to update eligible validator at index %d: %w", idx, err)
-			}
-		}
-		// Handle validator ejections.
-		if val.EffectiveBalance <= ejectionBal && helpers.IsActiveValidator(val, currentEpoch) {
-			var err error
-			// exitQueueEpoch and churn arguments are not used in electra.
-			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), 0 /*exitQueueEpoch*/, 0 /*churn*/)
-			if err != nil {
-				return fmt.Errorf("failed to initiate validator exit at index %d: %w", idx, err)
-			}
+			eligibleForActivationQ = append(eligibleForActivationQ, primitives.ValidatorIndex(idx))
 		}
 
+		// Collect validators to eject.
+		if val.EffectiveBalance() <= ejectionBal && helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
+			eligibleForEjection = append(eligibleForEjection, primitives.ValidatorIndex(idx))
+		}
+
+		// Collect validators eligible for activation and not yet dequeued for activation.
+		if helpers.IsEligibleForActivationUsingTrie(st, val) {
+			eligibleForActivation = append(eligibleForActivation, primitives.ValidatorIndex(idx))
+		}
+
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to read validators: %w", err)
+	}
+
+	// Handle validators eligible to join the activation queue.
+	for _, idx := range eligibleForActivationQ {
+		v, err := st.ValidatorAtIndex(idx)
+		if err != nil {
+			return err
+		}
+		v.ActivationEligibilityEpoch = currentEpoch + 1
+		if err := st.UpdateValidatorAtIndex(idx, v); err != nil {
+			return fmt.Errorf("failed to updated eligible validator at index %d: %w", idx, err)
+		}
+	}
+
+	// Handle validator ejections.
+	for _, idx := range eligibleForEjection {
+		var err error
+		// exitQueueEpoch and churn arguments are not used in electra.
+		st, _, err = validators.InitiateValidatorExit(ctx, st, idx, 0 /*exitQueueEpoch*/, 0 /*churn*/)
+		if err != nil {
+			return fmt.Errorf("failed to initiate validator exit at index %d: %w", idx, err)
+		}
+	}
+
+	for _, idx := range eligibleForActivation {
 		// Activate all eligible validators.
-		if helpers.IsEligibleForActivation(state, val) {
-			val.ActivationEpoch = activationEpoch
-			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), val); err != nil {
-				return fmt.Errorf("failed to activate validator at index %d: %w", idx, err)
-			}
+		v, err := st.ValidatorAtIndex(idx)
+		if err != nil {
+			return err
+		}
+		v.ActivationEpoch = activationEpoch
+		if err := st.UpdateValidatorAtIndex(idx, v); err != nil {
+			return fmt.Errorf("failed to activate validator at index %d: %w", idx, err)
 		}
 	}
 
