@@ -39,7 +39,7 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 				continue
 			}
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
-				IndexedAttestation: att,
+				IndexedAttestation: att.IndexedAtt,
 				DataRoot:           dataRoot,
 			}
 			s.attsQueue.push(attWrapper)

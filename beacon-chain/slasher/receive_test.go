@@ -47,8 +47,8 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	cancel()
 	s.wg.Wait()
 	wanted := []*slashertypes.IndexedAttestationWrapper{
-		{IndexedAttestation: wrappedAtt1, DataRoot: att1.DataRoot},
-		{IndexedAttestation: wrappedAtt2, DataRoot: att2.DataRoot},
+		{IndexedAttestation: att1.IndexedAttestation, DataRoot: att1.DataRoot},
+		{IndexedAttestation: att2.IndexedAttestation, DataRoot: att2.DataRoot},
 	}
 	require.DeepEqual(t, wanted, s.attsQueue.dequeue())
 }
@@ -239,7 +239,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	// Expect only a single, valid attestation was added to the queue.
 	require.Equal(t, 1, s.attsQueue.size())
 	wanted := []*slashertypes.IndexedAttestationWrapper{
-		{IndexedAttestation: wrappedValidAtt, DataRoot: validAtt.DataRoot},
+		{IndexedAttestation: validAtt.IndexedAttestation, DataRoot: validAtt.DataRoot},
 	}
 	require.DeepEqual(t, wanted, s.attsQueue.dequeue())
 }
