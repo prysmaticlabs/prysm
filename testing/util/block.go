@@ -1360,19 +1360,20 @@ func HydrateBeaconBlockBodyElectra(b *ethpb.BeaconBlockBodyElectra) *ethpb.Beaco
 	}
 	if b.ExecutionPayload == nil {
 		b.ExecutionPayload = &enginev1.ExecutionPayloadElectra{
-			ParentHash:         make([]byte, fieldparams.RootLength),
-			FeeRecipient:       make([]byte, 20),
-			StateRoot:          make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:       make([]byte, fieldparams.RootLength),
-			LogsBloom:          make([]byte, 256),
-			PrevRandao:         make([]byte, fieldparams.RootLength),
-			ExtraData:          make([]byte, 0),
-			BaseFeePerGas:      make([]byte, fieldparams.RootLength),
-			BlockHash:          make([]byte, fieldparams.RootLength),
-			Transactions:       make([][]byte, 0),
-			Withdrawals:        make([]*enginev1.Withdrawal, 0),
-			DepositRequests:    make([]*enginev1.DepositRequest, 0),
-			WithdrawalRequests: make([]*enginev1.WithdrawalRequest, 0),
+			ParentHash:            make([]byte, fieldparams.RootLength),
+			FeeRecipient:          make([]byte, 20),
+			StateRoot:             make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:          make([]byte, fieldparams.RootLength),
+			LogsBloom:             make([]byte, 256),
+			PrevRandao:            make([]byte, fieldparams.RootLength),
+			ExtraData:             make([]byte, 0),
+			BaseFeePerGas:         make([]byte, fieldparams.RootLength),
+			BlockHash:             make([]byte, fieldparams.RootLength),
+			Transactions:          make([][]byte, 0),
+			Withdrawals:           make([]*enginev1.Withdrawal, 0),
+			DepositRequests:       make([]*enginev1.DepositRequest, 0),
+			WithdrawalRequests:    make([]*enginev1.WithdrawalRequest, 0),
+			ConsolidationRequests: make([]*enginev1.ConsolidationRequest, 0),
 		}
 	}
 	return b
@@ -1566,19 +1567,20 @@ func HydrateBlindedBeaconBlockBodyElectra(b *ethpb.BlindedBeaconBlockBodyElectra
 	}
 	if b.ExecutionPayloadHeader == nil {
 		b.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderElectra{
-			ParentHash:             make([]byte, 32),
-			FeeRecipient:           make([]byte, 20),
-			StateRoot:              make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:           make([]byte, fieldparams.RootLength),
-			LogsBloom:              make([]byte, 256),
-			PrevRandao:             make([]byte, 32),
-			ExtraData:              make([]byte, 0),
-			BaseFeePerGas:          make([]byte, 32),
-			BlockHash:              make([]byte, 32),
-			TransactionsRoot:       make([]byte, fieldparams.RootLength),
-			WithdrawalsRoot:        make([]byte, fieldparams.RootLength),
-			WithdrawalRequestsRoot: make([]byte, fieldparams.RootLength),
-			DepositRequestsRoot:    make([]byte, fieldparams.RootLength),
+			ParentHash:                make([]byte, 32),
+			FeeRecipient:              make([]byte, 20),
+			StateRoot:                 make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:              make([]byte, fieldparams.RootLength),
+			LogsBloom:                 make([]byte, 256),
+			PrevRandao:                make([]byte, 32),
+			ExtraData:                 make([]byte, 0),
+			BaseFeePerGas:             make([]byte, 32),
+			BlockHash:                 make([]byte, 32),
+			TransactionsRoot:          make([]byte, fieldparams.RootLength),
+			WithdrawalsRoot:           make([]byte, fieldparams.RootLength),
+			WithdrawalRequestsRoot:    make([]byte, fieldparams.RootLength),
+			DepositRequestsRoot:       make([]byte, fieldparams.RootLength),
+			ConsolidationRequestsRoot: make([]byte, fieldparams.RootLength),
 		}
 	}
 	return b

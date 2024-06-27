@@ -592,16 +592,6 @@ func TestServer_GetBeaconBlock_Electra(t *testing.T) {
 			ParentRoot: parentRoot[:],
 			StateRoot:  genesis.Block.StateRoot,
 			Body: &ethpb.BeaconBlockBodyElectra{
-				Consolidations: []*ethpb.SignedConsolidation{
-					{
-						Message: &ethpb.Consolidation{
-							SourceIndex: 1,
-							TargetIndex: 2,
-							Epoch:       3,
-						},
-						Signature: bytesutil.PadTo([]byte("sig"), 96),
-					},
-				},
 				RandaoReveal:  genesis.Block.Body.RandaoReveal,
 				Graffiti:      genesis.Block.Body.Graffiti,
 				Eth1Data:      genesis.Block.Body.Eth1Data,
@@ -644,18 +634,26 @@ func TestServer_GetBeaconBlock_Electra(t *testing.T) {
 			Amount:          789,
 		},
 	}
+	cr := []*enginev1.ConsolidationRequest{
+		{
+			SourceAddress: bytesutil.PadTo([]byte("sa"), 20),
+			SourcePubkey:  bytesutil.PadTo(privKeys[1].PublicKey().Marshal(), 48),
+			TargetPubkey:  bytesutil.PadTo(privKeys[2].PublicKey().Marshal(), 48),
+		},
+	}
 	payload := &enginev1.ExecutionPayloadElectra{
-		Timestamp:          uint64(timeStamp.Unix()),
-		ParentHash:         make([]byte, fieldparams.RootLength),
-		FeeRecipient:       make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:          make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:       make([]byte, fieldparams.RootLength),
-		LogsBloom:          make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:         random,
-		BaseFeePerGas:      make([]byte, fieldparams.RootLength),
-		BlockHash:          make([]byte, fieldparams.RootLength),
-		DepositRequests:    dr,
-		WithdrawalRequests: wr,
+		Timestamp:             uint64(timeStamp.Unix()),
+		ParentHash:            make([]byte, fieldparams.RootLength),
+		FeeRecipient:          make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:             make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:          make([]byte, fieldparams.RootLength),
+		LogsBloom:             make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:            random,
+		BaseFeePerGas:         make([]byte, fieldparams.RootLength),
+		BlockHash:             make([]byte, fieldparams.RootLength),
+		DepositRequests:       dr,
+		WithdrawalRequests:    wr,
+		ConsolidationRequests: cr,
 	}
 
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])

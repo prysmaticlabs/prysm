@@ -277,7 +277,6 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 						ExecutionPayloadHeader: header,
 						BlsToExecutionChanges:  b.block.body.blsToExecutionChanges,
 						BlobKzgCommitments:     b.block.body.blobKzgCommitments,
-						Consolidations:         b.block.body.signedConsolidations,
 					},
 				},
 				Signature: b.signature[:],
@@ -1130,10 +1129,6 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	default:
 		return nil, errIncorrectBlockVersion
 	}
-}
-
-func (b *BeaconBlockBody) Consolidations() []*eth.SignedConsolidation {
-	return b.signedConsolidations
 }
 
 // Version returns the version of the beacon block body

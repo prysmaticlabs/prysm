@@ -272,19 +272,20 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 	}
 
 	st.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderElectra{
-		ParentHash:             make([]byte, 32),
-		FeeRecipient:           make([]byte, 20),
-		StateRoot:              make([]byte, 32),
-		ReceiptsRoot:           make([]byte, 32),
-		LogsBloom:              make([]byte, 256),
-		PrevRandao:             make([]byte, 32),
-		ExtraData:              make([]byte, 0),
-		BaseFeePerGas:          make([]byte, 32),
-		BlockHash:              make([]byte, 32),
-		TransactionsRoot:       make([]byte, 32),
-		WithdrawalsRoot:        make([]byte, 32),
-		DepositRequestsRoot:    make([]byte, 32),
-		WithdrawalRequestsRoot: make([]byte, 32),
+		ParentHash:                make([]byte, 32),
+		FeeRecipient:              make([]byte, 20),
+		StateRoot:                 make([]byte, 32),
+		ReceiptsRoot:              make([]byte, 32),
+		LogsBloom:                 make([]byte, 256),
+		PrevRandao:                make([]byte, 32),
+		ExtraData:                 make([]byte, 0),
+		BaseFeePerGas:             make([]byte, 32),
+		BlockHash:                 make([]byte, 32),
+		TransactionsRoot:          make([]byte, 32),
+		WithdrawalsRoot:           make([]byte, 32),
+		DepositRequestsRoot:       make([]byte, 32),
+		WithdrawalRequestsRoot:    make([]byte, 32),
+		ConsolidationRequestsRoot: make([]byte, 32),
 	}
 
 	return state_native.InitializeFromProtoElectra(st)

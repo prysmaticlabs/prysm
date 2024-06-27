@@ -824,8 +824,6 @@ message BeaconBlockBodyElectra {
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
     repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
-
-    repeated SignedConsolidation consolidations = 13 [(ethereum.eth.ext.ssz_max) = "1"]; // New in Electra EIP-7251.
 }
 
 message SignedBlindedBeaconBlockElectra {
@@ -889,8 +887,6 @@ message BlindedBeaconBlockBodyElectra {
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
     repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
-
-    repeated SignedConsolidation consolidations = 13 [(ethereum.eth.ext.ssz_max) = "1"]; // New in Electra EIP-7251.
 }
 
 message ValidatorRegistrationV1 {

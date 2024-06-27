@@ -132,16 +132,6 @@ var blockTests = []struct {
 			b.Block.Slot = slot
 			if root != nil {
 				b.Block.ParentRoot = root
-				b.Block.Body.Consolidations = []*ethpb.SignedConsolidation{
-					{
-						Message: &ethpb.Consolidation{
-							SourceIndex: 1,
-							TargetIndex: 2,
-							Epoch:       3,
-						},
-						Signature: make([]byte, 96),
-					},
-				}
 			}
 			return blocks.NewSignedBeaconBlock(b)
 		},
@@ -153,16 +143,6 @@ var blockTests = []struct {
 			b.Message.Slot = slot
 			if root != nil {
 				b.Message.ParentRoot = root
-				b.Message.Body.Consolidations = []*ethpb.SignedConsolidation{
-					{
-						Message: &ethpb.Consolidation{
-							SourceIndex: 1,
-							TargetIndex: 2,
-							Epoch:       3,
-						},
-						Signature: make([]byte, 96),
-					},
-				}
 			}
 			return blocks.NewSignedBeaconBlock(b)
 		}},
