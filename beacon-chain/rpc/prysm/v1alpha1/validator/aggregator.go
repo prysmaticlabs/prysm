@@ -81,7 +81,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 			indexInCommittee = uint64(i)
 		}
 	}
-	
+
 	best := bestAggregate(atts, req.CommitteeIndex, indexInCommittee)
 	attAndProof := &ethpb.AggregateAttestationAndProof{
 		Aggregate:       best,
@@ -159,7 +159,7 @@ func (vs *Server) SubmitAggregateSelectionProofElectra(
 			indexInCommittee = uint64(i)
 		}
 	}
-	
+
 	best := bestAggregate(atts, req.CommitteeIndex, indexInCommittee)
 	attAndProof := &ethpb.AggregateAttestationAndProofElectra{
 		Aggregate:       best,
