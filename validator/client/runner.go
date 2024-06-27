@@ -100,15 +100,12 @@ func run(ctx context.Context, v iface.Validator) {
 
 			// call push proposer setting at the start of each epoch to account for the following edge case:
 			// proposer is activated at the start of epoch and tries to propose immediately
-			if slots.IsEpochStart(slot) {
-				go func() {
-					// deadline set for 1 epoch from call to not overlap.
-					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
-					if err := v.PushProposerSettings(ctx, km, slot, epochDeadline); err != nil {
-						log.WithError(err).Warn("Failed to update proposer settings")
-					}
-				}()
-			}
+
+			go func() {
+				if err := v.PushProposerSettings(ctx, km, slot, time.Now().Add(1*time.Minute)); err != nil {
+					log.WithError(err).Warn("Failed to update proposer settings")
+				}
+			}()
 
 			// Start fetching domain data for the next epoch.
 			if slots.IsEpochEnd(slot) {
