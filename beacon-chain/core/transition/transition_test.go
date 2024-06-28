@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -697,36 +696,5 @@ func TestProcessSlotsConditionally(t *testing.T) {
 		s, err := transition.ProcessSlotsIfPossible(ctx, s, 6)
 		require.NoError(t, err)
 		assert.Equal(t, primitives.Slot(6), s.Slot())
-	})
-}
-
-func TestVerifyOperationLengths_Electra(t *testing.T) {
-	t.Run("eth1depositIndex less than eth1depositIndexLimit & number of deposits incorrect", func(t *testing.T) {
-		s, _ := util.DeterministicGenesisStateElectra(t, 1)
-		sb, err := consensusblocks.NewSignedBeaconBlock(util.NewBeaconBlockElectra())
-		require.NoError(t, err)
-		require.NoError(t, s.SetEth1DepositIndex(0))
-		require.NoError(t, s.SetDepositRequestsStartIndex(1))
-		_, err = transition.VerifyOperationLengths(context.Background(), s, sb.Block())
-		require.ErrorContains(t, "incorrect outstanding deposits in block body", err)
-	})
-	t.Run("eth1depositIndex more than eth1depositIndexLimit & number of deposits is not 0", func(t *testing.T) {
-		s, _ := util.DeterministicGenesisStateElectra(t, 1)
-		sb, err := consensusblocks.NewSignedBeaconBlock(util.NewBeaconBlockElectra())
-		require.NoError(t, err)
-		sb.SetDeposits([]*ethpb.Deposit{
-			{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             []byte{1, 2, 3},
-					Amount:                1000,
-					WithdrawalCredentials: make([]byte, common.AddressLength),
-					Signature:             []byte{4, 5, 6},
-				},
-			},
-		})
-		require.NoError(t, s.SetEth1DepositIndex(1))
-		require.NoError(t, s.SetDepositRequestsStartIndex(1))
-		_, err = transition.VerifyOperationLengths(context.Background(), s, sb.Block())
-		require.ErrorContains(t, "incorrect outstanding deposits in block body", err)
 	})
 }

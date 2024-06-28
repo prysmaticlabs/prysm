@@ -257,6 +257,31 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	}
 }
 
+func TestApplyDeposit_TopUps_WithBadSignature(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateElectra(t, 3)
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	withdrawalCred := make([]byte, 32)
+	withdrawalCred[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
+	topUpAmount := uint64(1234)
+	depositData := &eth.Deposit_Data{
+		PublicKey:             sk.PublicKey().Marshal(),
+		Amount:                topUpAmount,
+		WithdrawalCredentials: withdrawalCred,
+		Signature:             make([]byte, fieldparams.BLSSignatureLength),
+	}
+	vals := st.Validators()
+	vals[0].PublicKey = sk.PublicKey().Marshal()
+	vals[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	require.NoError(t, st.SetValidators(vals))
+	adSt, err := electra.ApplyDeposit(st, depositData, true)
+	require.NoError(t, err)
+	pbd, err := adSt.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pbd))
+	require.Equal(t, topUpAmount, pbd[0].Amount)
+}
+
 func TestApplyDeposit_Electra_SwitchToCompoundingValidator(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateElectra(t, 3)
 	sk, err := bls.RandKey()

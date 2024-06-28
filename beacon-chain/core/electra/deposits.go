@@ -130,24 +130,24 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 			return nil, err
 		}
 	} else {
-		// phase0 bug: no validation on top ups. not something we need to fix here
+		// no validation on top-ups (phase0 feature). no validation before state change
 		if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
 			return nil, err
-		}
-		if verifySignature {
-			valid, err := IsValidDepositSignature(data)
-			if err != nil {
-				return nil, err
-			}
-			if !valid {
-				return beaconState, nil
-			}
 		}
 		val, err := beaconState.ValidatorAtIndex(index)
 		if err != nil {
 			return nil, err
 		}
 		if helpers.IsCompoundingWithdrawalCredential(withdrawalCredentials) && helpers.HasETH1WithdrawalCredential(val) {
+			if verifySignature {
+				valid, err := IsValidDepositSignature(data)
+				if err != nil {
+					return nil, err
+				}
+				if !valid {
+					return beaconState, nil
+				}
+			}
 			if err := SwitchToCompoundingValidator(beaconState, index); err != nil {
 				return nil, err
 			}
