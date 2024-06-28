@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	kzg "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -25,9 +26,9 @@ func recoverCellsAndProofs(
 	dataColumnSideCars []*ethpb.DataColumnSidecar,
 	columnsCount int,
 	blockRoot [fieldparams.RootLength]byte,
-) ([][cKzg4844.CellsPerExtBlob]cKzg4844.Cell, [][cKzg4844.CellsPerExtBlob]cKzg4844.KZGProof, error) {
+) ([]kzg.CellsAndProofs, error) {
 	if len(dataColumnSideCars) == 0 {
-		return nil, nil, errors.New("no data column sidecars")
+		return nil, errors.New("no data column sidecars")
 	}
 
 	// Check if all columns have the same length.
@@ -36,13 +37,12 @@ func recoverCellsAndProofs(
 		length := len(sidecar.DataColumn)
 
 		if length != blobCount {
-			return nil, nil, errors.New("columns do not have the same length")
+			return nil, errors.New("columns do not have the same length")
 		}
 	}
 
-	// Compute cells and proofs.
-	AllRecoveredCells := make([][cKzg4844.CellsPerExtBlob]cKzg4844.Cell, 0, blobCount)
-	AllRecoveredProofs := make([][cKzg4844.CellsPerExtBlob]cKzg4844.KZGProof, 0, blobCount)
+	// Recover cells and compute proofs.
+	recoveredCellsAndProofs := make([]kzg.CellsAndProofs, 0, blobCount)
 
 	for blobIndex := 0; blobIndex < blobCount; blobIndex++ {
 		start := time.Now()
@@ -70,21 +70,22 @@ func recoverCellsAndProofs(
 		// Recover the blob.
 		recoveredCells, err := cKzg4844.RecoverAllCells(cellsId, cKzgCells)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "recover all cells for blob %d", blobIndex)
+			return nil, errors.Wrapf(err, "recover all cells for blob %d", blobIndex)
 		}
 
 		recoveredBlob, err := cKzg4844.CellsToBlob(recoveredCells)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "cells to blob for blob %d", blobIndex)
+			return nil, errors.Wrapf(err, "cells to blob for blob %d", blobIndex)
 		}
 
 		blobCells, blobProofs, err := cKzg4844.ComputeCellsAndKZGProofs(&recoveredBlob)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "compute cells and KZG proofs for blob %d", blobIndex)
+			return nil, errors.Wrapf(err, "compute cells and KZG proofs for blob %d", blobIndex)
 		}
-
-		AllRecoveredCells = append(AllRecoveredCells, blobCells)
-		AllRecoveredProofs = append(AllRecoveredProofs, blobProofs)
+		recoveredCellsAndProofs = append(recoveredCellsAndProofs, kzg.CellsAndProofs{
+			Cells:  blobCells,
+			Proofs: blobProofs,
+		})
 
 		log.WithFields(logrus.Fields{
 			"elapsed": time.Since(start),
@@ -93,7 +94,7 @@ func recoverCellsAndProofs(
 		}).Debug("Recovered cells and proofs")
 	}
 
-	return AllRecoveredCells, AllRecoveredProofs, nil
+	return recoveredCellsAndProofs, nil
 }
 
 func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColumn blocks.VerifiedRODataColumn) error {
@@ -137,7 +138,7 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 	}
 
 	// Recover cells and proofs
-	recoveredCells, recoveredProofs, err := recoverCellsAndProofs(dataColumnSideCars, storedColumnsCount, blockRoot)
+	recoveredCellsAndProofs, err := recoverCellsAndProofs(dataColumnSideCars, storedColumnsCount, blockRoot)
 	if err != nil {
 		return errors.Wrap(err, "recover cells and proofs")
 	}
@@ -147,8 +148,7 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 		verifiedRODataColumn.KzgCommitments,
 		verifiedRODataColumn.SignedBlockHeader,
 		verifiedRODataColumn.KzgCommitmentsInclusionProof,
-		recoveredCells,
-		recoveredProofs,
+		recoveredCellsAndProofs,
 	)
 	if err != nil {
 		return errors.Wrap(err, "data column sidecars")
