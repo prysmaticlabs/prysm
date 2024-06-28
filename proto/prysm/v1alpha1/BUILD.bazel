@@ -12,6 +12,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
 load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
+load("//tools:methodical.bzl", "ssz_methodical")
 
 proto_library(
     name = "proto",
@@ -231,7 +232,6 @@ ssz_gen_marshal(
     exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs + ssz_deneb_objs,
 )
 
-
 ssz_gen_marshal(
     name = "ssz_generated_non_core",
     go_proto = ":go_proto",
@@ -281,6 +281,18 @@ go_proto_library(
     ],
 )
 
+ssz_methodical(
+    name = "methodical_attempt",
+    deps = [
+        ":go_proto",
+        "//consensus-types/primitives:go_default_library",
+        "//proto/engine/v1:go_default_library",
+        "//math:go_default_library",
+        "@com_github_prysmaticlabs_fastssz//:go_default_library",
+    ],
+    out = "derp.go",
+)
+
 go_proto_library(
     name = "go_grpc_gateway_library",
     compilers = [
@@ -319,6 +331,7 @@ go_library(
         ":ssz_generated_capella",  # keep
         ":ssz_generated_deneb",  # keep
         ":ssz_generated_electra",  # keep
+        ":methodical_attempt", # keep
     ],
     embed = [
         ":go_grpc_gateway_library",
