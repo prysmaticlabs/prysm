@@ -113,23 +113,24 @@ func TestUpgradeToElectra(t *testing.T) {
 	wdRoot, err := prevHeader.WithdrawalsRoot()
 	require.NoError(t, err)
 	wanted := &enginev1.ExecutionPayloadHeaderElectra{
-		ParentHash:             prevHeader.ParentHash(),
-		FeeRecipient:           prevHeader.FeeRecipient(),
-		StateRoot:              prevHeader.StateRoot(),
-		ReceiptsRoot:           prevHeader.ReceiptsRoot(),
-		LogsBloom:              prevHeader.LogsBloom(),
-		PrevRandao:             prevHeader.PrevRandao(),
-		BlockNumber:            prevHeader.BlockNumber(),
-		GasLimit:               prevHeader.GasLimit(),
-		GasUsed:                prevHeader.GasUsed(),
-		Timestamp:              prevHeader.Timestamp(),
-		ExtraData:              prevHeader.ExtraData(),
-		BaseFeePerGas:          prevHeader.BaseFeePerGas(),
-		BlockHash:              prevHeader.BlockHash(),
-		TransactionsRoot:       txRoot,
-		WithdrawalsRoot:        wdRoot,
-		DepositReceiptsRoot:    bytesutil.Bytes32(0),
-		WithdrawalRequestsRoot: bytesutil.Bytes32(0),
+		ParentHash:                prevHeader.ParentHash(),
+		FeeRecipient:              prevHeader.FeeRecipient(),
+		StateRoot:                 prevHeader.StateRoot(),
+		ReceiptsRoot:              prevHeader.ReceiptsRoot(),
+		LogsBloom:                 prevHeader.LogsBloom(),
+		PrevRandao:                prevHeader.PrevRandao(),
+		BlockNumber:               prevHeader.BlockNumber(),
+		GasLimit:                  prevHeader.GasLimit(),
+		GasUsed:                   prevHeader.GasUsed(),
+		Timestamp:                 prevHeader.Timestamp(),
+		ExtraData:                 prevHeader.ExtraData(),
+		BaseFeePerGas:             prevHeader.BaseFeePerGas(),
+		BlockHash:                 prevHeader.BlockHash(),
+		TransactionsRoot:          txRoot,
+		WithdrawalsRoot:           wdRoot,
+		DepositRequestsRoot:       bytesutil.Bytes32(0),
+		WithdrawalRequestsRoot:    bytesutil.Bytes32(0),
+		ConsolidationRequestsRoot: bytesutil.Bytes32(0),
 	}
 	require.DeepEqual(t, wanted, protoHeader)
 
@@ -145,9 +146,9 @@ func TestUpgradeToElectra(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, len(summaries))
 
-	startIndex, err := mSt.DepositReceiptsStartIndex()
+	startIndex, err := mSt.DepositRequestsStartIndex()
 	require.NoError(t, err)
-	require.Equal(t, params.BeaconConfig().UnsetDepositReceiptsStartIndex, startIndex)
+	require.Equal(t, params.BeaconConfig().UnsetDepositRequestsStartIndex, startIndex)
 
 	balance, err := mSt.DepositBalanceToConsume()
 	require.NoError(t, err)

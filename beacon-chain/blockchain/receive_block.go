@@ -13,6 +13,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -52,7 +53,7 @@ type BlobReceiver interface {
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
 type SlashingReceiver interface {
-	ReceiveAttesterSlashing(ctx context.Context, slashing interfaces.AttesterSlashing)
+	ReceiveAttesterSlashing(ctx context.Context, slashing ethpb.AttSlashing)
 }
 
 // ReceiveBlock is a function that defines the operations (minus pubsub)
@@ -169,13 +170,8 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	}
 	// Send finalized events and finalized deposits in the background
 	if newFinalized {
-		finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
-		go s.sendNewFinalizedEvent(ctx, postState)
-		depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
-		go func() {
-			s.insertFinalizedDeposits(depCtx, finalized.Root)
-			cancel()
-		}()
+		// hook to process all post state finalization tasks
+		s.executePostFinalizationTasks(ctx, postState)
 	}
 
 	// If slasher is configured, forward the attestations in the block via an event feed for processing.
@@ -222,6 +218,19 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	chainServiceProcessingTime.Observe(float64(timeWithoutDaWait.Milliseconds()))
 
 	return nil
+}
+
+func (s *Service) executePostFinalizationTasks(ctx context.Context, finalizedState state.BeaconState) {
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
+	go func() {
+		finalizedState.SaveValidatorIndices() // used to handle Validator index invariant from EIP6110
+		s.sendNewFinalizedEvent(ctx, finalizedState)
+	}()
+	depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
+	go func() {
+		s.insertFinalizedDeposits(depCtx, finalized.Root)
+		cancel()
+	}()
 }
 
 // ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
@@ -295,10 +304,10 @@ func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 }
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
-func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing interfaces.AttesterSlashing) {
+func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing ethpb.AttSlashing) {
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	s.InsertSlashingsToForkChoiceStore(ctx, []interfaces.AttesterSlashing{slashing})
+	s.InsertSlashingsToForkChoiceStore(ctx, []ethpb.AttSlashing{slashing})
 }
 
 // prunePostBlockOperationPools only runs on new head otherwise should return a nil.
@@ -479,17 +488,17 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 	// is done in the background to avoid adding more load to this critical code path.
 	ctx := context.TODO()
 	for _, att := range signed.Block().Body().Attestations() {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.GetData().Slot, att.GetData().CommitteeIndex)
+		committees, err := helpers.AttestationCommittees(ctx, preState, att)
 		if err != nil {
-			log.WithError(err).Error("Could not get attestation committee")
+			log.WithError(err).Error("Could not get attestation committees")
 			return
 		}
-		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
+		indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committees...)
 		if err != nil {
 			log.WithError(err).Error("Could not convert to indexed attestation")
 			return
 		}
-		s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
+		s.cfg.SlasherAttestationsFeed.Send(&types.WrappedIndexedAtt{IndexedAtt: indexedAtt})
 	}
 }
 

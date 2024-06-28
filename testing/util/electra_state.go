@@ -191,7 +191,7 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 
 		// Electra Data
-		DepositReceiptsStartIndex:     params.BeaconConfig().UnsetDepositReceiptsStartIndex,
+		DepositRequestsStartIndex:     params.BeaconConfig().UnsetDepositRequestsStartIndex,
 		ExitBalanceToConsume:          helpers.ActivationExitChurnLimit(primitives.Gwei(tab)),
 		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(preState.Slot())),
 		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(primitives.Gwei(tab)),
@@ -224,8 +224,8 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 			BlockHash:          make([]byte, 32),
 			Transactions:       make([][]byte, 0),
 			Withdrawals:        make([]*enginev1.Withdrawal, 0),
-			DepositReceipts:    make([]*enginev1.DepositReceipt, 0),
-			WithdrawalRequests: make([]*enginev1.ExecutionLayerWithdrawalRequest, 0),
+			DepositRequests:    make([]*enginev1.DepositRequest, 0),
+			WithdrawalRequests: make([]*enginev1.WithdrawalRequest, 0),
 		},
 	}).HashTreeRoot()
 	if err != nil {
@@ -258,19 +258,20 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 	}
 
 	st.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderElectra{
-		ParentHash:             make([]byte, 32),
-		FeeRecipient:           make([]byte, 20),
-		StateRoot:              make([]byte, 32),
-		ReceiptsRoot:           make([]byte, 32),
-		LogsBloom:              make([]byte, 256),
-		PrevRandao:             make([]byte, 32),
-		ExtraData:              make([]byte, 0),
-		BaseFeePerGas:          make([]byte, 32),
-		BlockHash:              make([]byte, 32),
-		TransactionsRoot:       make([]byte, 32),
-		WithdrawalsRoot:        make([]byte, 32),
-		DepositReceiptsRoot:    make([]byte, 32),
-		WithdrawalRequestsRoot: make([]byte, 32),
+		ParentHash:                make([]byte, 32),
+		FeeRecipient:              make([]byte, 20),
+		StateRoot:                 make([]byte, 32),
+		ReceiptsRoot:              make([]byte, 32),
+		LogsBloom:                 make([]byte, 256),
+		PrevRandao:                make([]byte, 32),
+		ExtraData:                 make([]byte, 0),
+		BaseFeePerGas:             make([]byte, 32),
+		BlockHash:                 make([]byte, 32),
+		TransactionsRoot:          make([]byte, 32),
+		WithdrawalsRoot:           make([]byte, 32),
+		DepositRequestsRoot:       make([]byte, 32),
+		WithdrawalRequestsRoot:    make([]byte, 32),
+		ConsolidationRequestsRoot: make([]byte, 32),
 	}
 
 	return state_native.InitializeFromProtoElectra(st)

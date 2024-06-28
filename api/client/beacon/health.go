@@ -36,20 +36,25 @@ func (n *NodeHealthTracker) IsHealthy() bool {
 }
 
 func (n *NodeHealthTracker) CheckHealth(ctx context.Context) bool {
-	n.RLock()
+	n.Lock()
+	defer n.Unlock()
+
 	newStatus := n.node.IsHealthy(ctx)
 	if n.isHealthy == nil {
 		n.isHealthy = &newStatus
 	}
-	isStatusChanged := newStatus != *n.isHealthy
-	n.RUnlock()
 
+	isStatusChanged := newStatus != *n.isHealthy
 	if isStatusChanged {
-		n.Lock()
-		// Double-check the condition to ensure it hasn't changed since the first check.
+		// Update the health status
 		n.isHealthy = &newStatus
-		n.Unlock() // It's better to unlock as soon as the protected section is over.
-		n.healthChan <- newStatus
+		// Send the new status to the health channel, potentially overwriting the existing value
+		select {
+		case <-n.healthChan:
+			n.healthChan <- newStatus
+		default:
+			n.healthChan <- newStatus
+		}
 	}
 	return newStatus
 }

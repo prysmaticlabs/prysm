@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
@@ -37,7 +36,7 @@ import (
 //
 //	 # Update latest messages for attesting indices
 //	 update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
-func (s *Service) OnAttestation(ctx context.Context, a interfaces.Attestation, disparity time.Duration) error {
+func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time.Duration) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
 
@@ -81,11 +80,11 @@ func (s *Service) OnAttestation(ctx context.Context, a interfaces.Attestation, d
 	}
 
 	// Use the target state to verify attesting indices are valid.
-	committee, err := helpers.BeaconCommitteeFromState(ctx, baseState, a.GetData().Slot, a.GetData().CommitteeIndex)
+	committees, err := helpers.AttestationCommittees(ctx, baseState, a)
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committee)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committees...)
 	if err != nil {
 		return err
 	}

@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -74,10 +75,10 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, _, override, err := srv.GetPayload(ctx, payloadId, 1)
+		resp, err := srv.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
-		require.Equal(t, false, override)
-		pbs := resp.Proto()
+		require.Equal(t, false, resp.OverrideBuilder)
+		pbs := resp.ExecutionData.Proto()
 		resPb, ok := pbs.(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		require.NoError(t, err)
@@ -87,10 +88,10 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayloadCapellaWithValue"].(*pb.ExecutionPayloadCapellaWithValue)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, _, override, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
-		require.Equal(t, false, override)
-		pbs := resp.Proto()
+		require.Equal(t, false, resp.OverrideBuilder)
+		pbs := resp.ExecutionData.Proto()
 		resPb, ok := pbs.(*pb.ExecutionPayloadCapella)
 		require.Equal(t, true, ok)
 		require.DeepEqual(t, want, resPb)
@@ -131,7 +132,7 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
 		require.Equal(t, true, ok)
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req)
 		require.NoError(t, err)
 		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.NoError(t, err)
@@ -203,10 +204,10 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, _, override, err := client.GetPayload(ctx, payloadId, 1)
+		resp, err := client.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
-		require.Equal(t, false, override)
-		pbs := resp.Proto()
+		require.Equal(t, false, resp.OverrideBuilder)
+		pbs := resp.ExecutionData.Proto()
 		pbStruct, ok := pbs.(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		require.DeepEqual(t, want, pbStruct)
@@ -249,10 +250,10 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, _, override, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
-		require.Equal(t, false, override)
-		pbs := resp.Proto()
+		require.Equal(t, false, resp.OverrideBuilder)
+		pbs := resp.ExecutionData.Proto()
 		ep, ok := pbs.(*pb.ExecutionPayloadCapella)
 		require.Equal(t, true, ok)
 		require.DeepEqual(t, want.ExecutionPayload.BlockHash.Bytes(), ep.BlockHash)
@@ -262,9 +263,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.DeepEqual(t, want.ExecutionPayload.PrevRandao.Bytes(), ep.PrevRandao)
 		require.DeepEqual(t, want.ExecutionPayload.ParentHash.Bytes(), ep.ParentHash)
 
-		v, err := resp.ValueInGwei()
-		require.NoError(t, err)
-		require.Equal(t, uint64(1236), v)
+		require.Equal(t, primitives.Gwei(1236), primitives.WeiToGwei(resp.Bid))
 	})
 	t.Run(GetPayloadMethodV3, func(t *testing.T) {
 		payloadId := [8]byte{1}
@@ -304,22 +303,22 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, blobsBundle, override, err := client.GetPayload(ctx, payloadId, 2*params.BeaconConfig().SlotsPerEpoch)
+		resp, err := client.GetPayload(ctx, payloadId, 2*params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
-		require.Equal(t, true, override)
-		g, err := resp.ExcessBlobGas()
+		require.Equal(t, true, resp.OverrideBuilder)
+		g, err := resp.ExecutionData.ExcessBlobGas()
 		require.NoError(t, err)
 		require.DeepEqual(t, uint64(3), g)
-		g, err = resp.BlobGasUsed()
+		g, err = resp.ExecutionData.BlobGasUsed()
 		require.NoError(t, err)
 		require.DeepEqual(t, uint64(2), g)
 
 		commitments := [][]byte{bytesutil.PadTo([]byte("commitment1"), fieldparams.BLSPubkeyLength), bytesutil.PadTo([]byte("commitment2"), fieldparams.BLSPubkeyLength)}
-		require.DeepEqual(t, commitments, blobsBundle.KzgCommitments)
+		require.DeepEqual(t, commitments, resp.BlobsBundle.KzgCommitments)
 		proofs := [][]byte{bytesutil.PadTo([]byte("proof1"), fieldparams.BLSPubkeyLength), bytesutil.PadTo([]byte("proof2"), fieldparams.BLSPubkeyLength)}
-		require.DeepEqual(t, proofs, blobsBundle.Proofs)
+		require.DeepEqual(t, proofs, resp.BlobsBundle.Proofs)
 		blobs := [][]byte{bytesutil.PadTo([]byte("a"), fieldparams.BlobLength), bytesutil.PadTo([]byte("b"), fieldparams.BlobLength)}
-		require.DeepEqual(t, blobs, blobsBundle.Blobs)
+		require.DeepEqual(t, blobs, resp.BlobsBundle.Blobs)
 	})
 	t.Run(GetPayloadMethodV4, func(t *testing.T) {
 		payloadId := [8]byte{1}
@@ -359,22 +358,22 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, blobsBundle, override, err := client.GetPayload(ctx, payloadId, 2*params.BeaconConfig().SlotsPerEpoch)
+		resp, err := client.GetPayload(ctx, payloadId, 2*params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
-		require.Equal(t, true, override)
-		g, err := resp.ExcessBlobGas()
+		require.Equal(t, true, resp.OverrideBuilder)
+		g, err := resp.ExecutionData.ExcessBlobGas()
 		require.NoError(t, err)
 		require.DeepEqual(t, uint64(3), g)
-		g, err = resp.BlobGasUsed()
+		g, err = resp.ExecutionData.BlobGasUsed()
 		require.NoError(t, err)
 		require.DeepEqual(t, uint64(2), g)
 
 		commitments := [][]byte{bytesutil.PadTo([]byte("commitment1"), fieldparams.BLSPubkeyLength), bytesutil.PadTo([]byte("commitment2"), fieldparams.BLSPubkeyLength)}
-		require.DeepEqual(t, commitments, blobsBundle.KzgCommitments)
+		require.DeepEqual(t, commitments, resp.BlobsBundle.KzgCommitments)
 		proofs := [][]byte{bytesutil.PadTo([]byte("proof1"), fieldparams.BLSPubkeyLength), bytesutil.PadTo([]byte("proof2"), fieldparams.BLSPubkeyLength)}
-		require.DeepEqual(t, proofs, blobsBundle.Proofs)
+		require.DeepEqual(t, proofs, resp.BlobsBundle.Proofs)
 		blobs := [][]byte{bytesutil.PadTo([]byte("a"), fieldparams.BlobLength), bytesutil.PadTo([]byte("b"), fieldparams.BlobLength)}
-		require.DeepEqual(t, blobs, blobsBundle.Blobs)
+		require.DeepEqual(t, blobs, resp.BlobsBundle.Blobs)
 	})
 	t.Run(ForkchoiceUpdatedMethod+" VALID status", func(t *testing.T) {
 		forkChoiceState := &pb.ForkchoiceState{
@@ -538,7 +537,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.NoError(t, err)
@@ -552,7 +551,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.NoError(t, err)
@@ -566,7 +565,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV4Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.NoError(t, err)
@@ -594,7 +593,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -608,7 +607,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -622,7 +621,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV4Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -650,7 +649,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -664,7 +663,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -678,7 +677,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV4Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -706,7 +705,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -720,7 +719,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -734,7 +733,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV4Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadElectra(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -1560,7 +1559,7 @@ func fixturesStruct() *payloadFixtures {
 		Withdrawals:        []*pb.Withdrawal{},
 		BlobGasUsed:        2,
 		ExcessBlobGas:      3,
-		DepositReceipts:    dr,
+		DepositRequests:    dr,
 		WithdrawalRequests: wr,
 	}
 	hexUint := hexutil.Uint64(1)

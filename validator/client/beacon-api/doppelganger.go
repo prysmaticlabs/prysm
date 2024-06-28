@@ -73,7 +73,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 	}
 
 	// Retrieve fork version -- Return early if we are in phase0.
-	forkResponse, err := c.getFork(ctx)
+	forkResponse, err := c.fork(ctx)
 	if err != nil || forkResponse == nil || forkResponse.Data == nil {
 		return nil, errors.Wrapf(err, "failed to get fork")
 	}
@@ -91,7 +91,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 	}
 
 	// Retrieve current epoch.
-	headers, err := c.getHeaders(ctx)
+	headers, err := c.headers(ctx)
 	if err != nil || headers == nil || headers.Data == nil || len(headers.Data) == 0 ||
 		headers.Data[0].Header == nil || headers.Data[0].Header.Message == nil {
 		return nil, errors.Wrapf(err, "failed to get headers")
@@ -127,7 +127,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 	}
 
 	// Retrieve correspondence between validator pubkey and index.
-	stateValidators, err := c.stateValidatorsProvider.GetStateValidators(ctx, notRecentStringPubKeys, nil, nil)
+	stateValidators, err := c.stateValidatorsProvider.StateValidators(ctx, notRecentStringPubKeys, nil, nil)
 	if err != nil || stateValidators == nil || stateValidators.Data == nil {
 		return nil, errors.Wrapf(err, "failed to get state validators")
 	}
@@ -156,13 +156,13 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 	// since we assume that we are not in phase0.
 	previousEpoch := currentEpoch - 1
 
-	indexToPreviousLiveness, err := c.getIndexToLiveness(ctx, previousEpoch, indexes)
+	indexToPreviousLiveness, err := c.indexToLiveness(ctx, previousEpoch, indexes)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get map from validator index to liveness for previous epoch %d", previousEpoch)
 	}
 
 	// Get validators liveness for the current epoch.
-	indexToCurrentLiveness, err := c.getIndexToLiveness(ctx, currentEpoch, indexes)
+	indexToCurrentLiveness, err := c.indexToLiveness(ctx, currentEpoch, indexes)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get map from validator index to liveness for current epoch %d", currentEpoch)
 	}
@@ -218,8 +218,8 @@ func buildResponse(
 	}
 }
 
-func (c *beaconApiValidatorClient) getIndexToLiveness(ctx context.Context, epoch primitives.Epoch, indexes []string) (map[string]bool, error) {
-	livenessResponse, err := c.getLiveness(ctx, epoch, indexes)
+func (c *beaconApiValidatorClient) indexToLiveness(ctx context.Context, epoch primitives.Epoch, indexes []string) (map[string]bool, error) {
+	livenessResponse, err := c.liveness(ctx, epoch, indexes)
 	if err != nil || livenessResponse.Data == nil {
 		return nil, errors.Wrapf(err, fmt.Sprintf("failed to get liveness for epoch %d", epoch))
 	}

@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -54,8 +55,12 @@ func BlockSignature(
 		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: b})
 	case *ethpb.BeaconBlockCapella:
 		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{Block: b})
+	case *ethpb.BeaconBlockDeneb:
+		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockDeneb{Block: b})
+	case *ethpb.BeaconBlockElectra:
+		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockElectra{Block: b})
 	default:
-		return nil, errors.New("unsupported block type")
+		return nil, fmt.Errorf("unsupported block type %T", b)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap block")
@@ -74,6 +79,10 @@ func BlockSignature(
 		b.StateRoot = s[:]
 	case *ethpb.BeaconBlockCapella:
 		b.StateRoot = s[:]
+	case *ethpb.BeaconBlockDeneb:
+		b.StateRoot = s[:]
+	case *ethpb.BeaconBlockElectra:
+		b.StateRoot = s[:]
 	}
 
 	// Temporarily increasing the beacon state slot here since BeaconProposerIndex is a
@@ -87,6 +96,10 @@ func BlockSignature(
 	case *ethpb.BeaconBlockBellatrix:
 		blockSlot = b.Slot
 	case *ethpb.BeaconBlockCapella:
+		blockSlot = b.Slot
+	case *ethpb.BeaconBlockDeneb:
+		blockSlot = b.Slot
+	case *ethpb.BeaconBlockElectra:
 		blockSlot = b.Slot
 	}
 
@@ -110,6 +123,10 @@ func BlockSignature(
 	case *ethpb.BeaconBlockBellatrix:
 		blockRoot, err = signing.ComputeSigningRoot(b, domain)
 	case *ethpb.BeaconBlockCapella:
+		blockRoot, err = signing.ComputeSigningRoot(b, domain)
+	case *ethpb.BeaconBlockDeneb:
+		blockRoot, err = signing.ComputeSigningRoot(b, domain)
+	case *ethpb.BeaconBlockElectra:
 		blockRoot, err = signing.ComputeSigningRoot(b, domain)
 	}
 	if err != nil {

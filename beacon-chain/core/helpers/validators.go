@@ -410,11 +410,11 @@ func ComputeProposerIndex(bState state.ReadOnlyBeaconState, activeIndices []prim
 //	        validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
 //	        and validator.effective_balance >= MIN_ACTIVATION_BALANCE  # [Modified in Electra:EIP7251]
 //	    )
-func IsEligibleForActivationQueue(validator *ethpb.Validator, currentEpoch primitives.Epoch) bool {
+func IsEligibleForActivationQueue(validator state.ReadOnlyValidator, currentEpoch primitives.Epoch) bool {
 	if currentEpoch >= params.BeaconConfig().ElectraForkEpoch {
-		return isEligibleForActivationQueueElectra(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+		return isEligibleForActivationQueueElectra(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
 	}
-	return isEligibleForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+	return isEligibleForActivationQueue(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
 }
 
 // isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue
@@ -506,11 +506,11 @@ func LastActivatedValidatorIndex(ctx context.Context, st state.ReadOnlyBeaconSta
 
 // hasETH1WithdrawalCredential returns whether the validator has an ETH1
 // Withdrawal prefix. It assumes that the caller has a lock on the state
-func HasETH1WithdrawalCredential(val *ethpb.Validator) bool {
+func HasETH1WithdrawalCredential(val interfaces.WithWithdrawalCredentials) bool {
 	if val == nil {
 		return false
 	}
-	return isETH1WithdrawalCredential(val.WithdrawalCredentials)
+	return isETH1WithdrawalCredential(val.GetWithdrawalCredentials())
 }
 
 func isETH1WithdrawalCredential(creds []byte) bool {
@@ -679,69 +679,4 @@ func ValidatorMaxEffectiveBalance(val *ethpb.Validator) uint64 {
 		return params.BeaconConfig().MaxEffectiveBalanceElectra
 	}
 	return params.BeaconConfig().MinActivationBalance
-}
-
-// QueueExcessActiveBalance queues validators with balances above the min activation balance and adds to pending balance deposit.
-//
-// Spec definition:
-//
-//	def queue_excess_active_balance(state: BeaconState, index: ValidatorIndex) -> None:
-//	    balance = state.balances[index]
-//	    if balance > MIN_ACTIVATION_BALANCE:
-//	        excess_balance = balance - MIN_ACTIVATION_BALANCE
-//	        state.balances[index] = MIN_ACTIVATION_BALANCE
-//	        state.pending_balance_deposits.append(
-//	            PendingBalanceDeposit(index=index, amount=excess_balance)
-//	        )
-func QueueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex) error {
-	bal, err := s.BalanceAtIndex(idx)
-	if err != nil {
-		return err
-	}
-
-	if bal > params.BeaconConfig().MinActivationBalance {
-		excessBalance := bal - params.BeaconConfig().MinActivationBalance
-		if err := s.UpdateBalancesAtIndex(idx, params.BeaconConfig().MinActivationBalance); err != nil {
-			return err
-		}
-		return s.AppendPendingBalanceDeposit(idx, excessBalance)
-	}
-	return nil
-}
-
-// QueueEntireBalanceAndResetValidator queues the entire balance and resets the validator. This is used in electra fork logic.
-//
-// Spec definition:
-//
-//	def queue_entire_balance_and_reset_validator(state: BeaconState, index: ValidatorIndex) -> None:
-//	    balance = state.balances[index]
-//	    validator = state.validators[index]
-//		state.balances[index] = 0
-//	    validator.effective_balance = 0
-//	    validator.activation_eligibility_epoch = FAR_FUTURE_EPOCH
-//	    state.pending_balance_deposits.append(
-//	        PendingBalanceDeposit(index=index, amount=balance)
-//	    )
-func QueueEntireBalanceAndResetValidator(s state.BeaconState, idx primitives.ValidatorIndex) error {
-	bal, err := s.BalanceAtIndex(idx)
-	if err != nil {
-		return err
-	}
-
-	if err := s.UpdateBalancesAtIndex(idx, 0); err != nil {
-		return err
-	}
-
-	v, err := s.ValidatorAtIndex(idx)
-	if err != nil {
-		return err
-	}
-
-	v.EffectiveBalance = 0
-	v.ActivationEligibilityEpoch = params.BeaconConfig().FarFutureEpoch
-	if err := s.UpdateValidatorAtIndex(idx, v); err != nil {
-		return err
-	}
-
-	return s.AppendPendingBalanceDeposit(idx, bal)
 }

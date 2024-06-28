@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	testhelpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"go.uber.org/mock/gomock"
 )
 
@@ -75,7 +75,7 @@ func TestProposeBeaconBlock_Capella(t *testing.T) {
 	// Make sure that what we send in the POST body is the marshalled version of the protobuf block
 	headers := map[string]string{"Eth-Consensus-Version": "capella"}
 	jsonRestHandler.EXPECT().Post(
-		context.Background(),
+		gomock.Any(),
 		"/eth/v1/beacon/blocks",
 		headers,
 		bytes.NewBuffer(marshalledBlock),
@@ -97,8 +97,8 @@ func TestProposeBeaconBlock_Capella(t *testing.T) {
 func generateSignedCapellaBlock() *ethpb.GenericSignedBeaconBlock_Capella {
 	return &ethpb.GenericSignedBeaconBlock_Capella{
 		Capella: &ethpb.SignedBeaconBlockCapella{
-			Block:     test_helpers.GenerateProtoCapellaBeaconBlock(),
-			Signature: test_helpers.FillByteSlice(96, 127),
+			Block:     testhelpers.GenerateProtoCapellaBeaconBlock(),
+			Signature: testhelpers.FillByteSlice(96, 127),
 		},
 	}
 }

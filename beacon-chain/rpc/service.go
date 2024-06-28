@@ -4,7 +4,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"sync"
 
@@ -16,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
@@ -114,8 +112,8 @@ type Config struct {
 	ExecutionChainInfoFetcher     execution.ChainInfoFetcher
 	GenesisTimeFetcher            blockchain.TimeFetcher
 	GenesisFetcher                blockchain.GenesisFetcher
-	EnableDebugRPCEndpoints       bool
 	MockEth1Votes                 bool
+	EnableDebugRPCEndpoints       bool
 	AttestationsPool              attestations.Pool
 	ExitPool                      voluntaryexits.PoolManager
 	SlashingsPool                 slashings.PoolManager
@@ -155,7 +153,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		connectedRPCClients: make(map[net.Addr]bool),
 	}
 
-	address := fmt.Sprintf("%s:%s", s.cfg.Host, s.cfg.Port)
+	address := net.JoinHostPort(s.cfg.Host, s.cfg.Port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)
@@ -311,13 +309,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	for _, e := range endpoints {
 		s.cfg.Router.HandleFunc(
 			e.template,
-			promhttp.InstrumentHandlerDuration(
-				httpRequestLatency.MustCurryWith(prometheus.Labels{"endpoint": e.name}),
-				promhttp.InstrumentHandlerCounter(
-					httpRequestCount.MustCurryWith(prometheus.Labels{"endpoint": e.name}),
-					e.handler,
-				),
-			),
+			e.handlerWithMiddleware(),
 		).Methods(e.methods...)
 	}
 
@@ -325,7 +317,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	if s.cfg.EnableDebugRPCEndpoints {
-		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debugv1alpha1.Server{
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			BeaconDB:           s.cfg.BeaconDB,

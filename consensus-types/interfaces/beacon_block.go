@@ -3,7 +3,6 @@ package interfaces
 import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/go-bitfield"
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
@@ -28,8 +27,6 @@ type ReadOnlySignedBeaconBlock interface {
 	ssz.Unmarshaler
 	Version() int
 	IsBlinded() bool
-	ValueInWei() primitives.Wei
-	ValueInGwei() uint64
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 
@@ -61,8 +58,8 @@ type ReadOnlyBeaconBlockBody interface {
 	Eth1Data() *ethpb.Eth1Data
 	Graffiti() [field_params.RootLength]byte
 	ProposerSlashings() []*ethpb.ProposerSlashing
-	AttesterSlashings() []AttesterSlashing
-	Attestations() []Attestation
+	AttesterSlashings() []ethpb.AttSlashing
+	Attestations() []ethpb.Att
 	Deposits() []*ethpb.Deposit
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
 	SyncAggregate() (*ethpb.SyncAggregate, error)
@@ -74,11 +71,6 @@ type ReadOnlyBeaconBlockBody interface {
 	BlobKzgCommitments() ([][]byte, error)
 }
 
-type ROBlockBodyElectra interface {
-	ReadOnlyBeaconBlockBody
-	Consolidations() []*ethpb.SignedConsolidation
-}
-
 type SignedBeaconBlock interface {
 	ReadOnlySignedBeaconBlock
 	SetExecution(ExecutionData) error
@@ -87,8 +79,8 @@ type SignedBeaconBlock interface {
 	SetSyncAggregate(*ethpb.SyncAggregate) error
 	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SetDeposits([]*ethpb.Deposit)
-	SetAttestations([]Attestation) error
-	SetAttesterSlashings([]AttesterSlashing) error
+	SetAttestations([]ethpb.Att) error
+	SetAttesterSlashings([]ethpb.AttSlashing) error
 	SetProposerSlashings([]*ethpb.ProposerSlashing)
 	SetGraffiti([]byte)
 	SetEth1Data(*ethpb.Eth1Data)
@@ -129,48 +121,11 @@ type ExecutionData interface {
 	TransactionsRoot() ([]byte, error)
 	Withdrawals() ([]*enginev1.Withdrawal, error)
 	WithdrawalsRoot() ([]byte, error)
-	ValueInWei() (primitives.Wei, error)
-	ValueInGwei() (uint64, error)
 }
 
 type ExecutionDataElectra interface {
 	ExecutionData
-	DepositReceipts() []*enginev1.DepositReceipt
-	WithdrawalRequests() []*enginev1.ExecutionLayerWithdrawalRequest
-}
-
-type Attestation interface {
-	proto.Message
-	ssz.Marshaler
-	ssz.Unmarshaler
-	ssz.HashRoot
-	Version() int
-	GetAggregationBits() bitfield.Bitlist
-	GetData() *ethpb.AttestationData
-	GetCommitteeBitsVal() bitfield.Bitfield
-	GetSignature() []byte
-}
-
-type AttesterSlashing interface {
-	proto.Message
-	ssz.Marshaler
-	ssz.Unmarshaler
-	ssz.HashRoot
-	Version() int
-	GetFirstAttestation() ethpb.IndexedAtt
-	GetSecondAttestation() ethpb.IndexedAtt
-}
-
-// TODO: this is ugly. The proper way to do this is to create a Copy() function on the interface and implement it. But this results in a circular dependency.
-// CopyAttestation copies the provided attestation object.
-func CopyAttestation(att Attestation) Attestation {
-	a, ok := att.(*ethpb.Attestation)
-	if ok {
-		return ethpb.CopyAttestation(a)
-	}
-	ae, ok := att.(*ethpb.AttestationElectra)
-	if ok {
-		return ethpb.CopyAttestationElectra(ae)
-	}
-	return nil
+	DepositRequests() []*enginev1.DepositRequest
+	WithdrawalRequests() []*enginev1.WithdrawalRequest
+	ConsolidationRequests() []*enginev1.ConsolidationRequest
 }

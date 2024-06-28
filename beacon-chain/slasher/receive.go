@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -23,7 +22,7 @@ const (
 // Receive indexed attestations from some source event feed,
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
-func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan ethpb.IndexedAtt) {
+func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan *slashertypes.WrappedIndexedAtt) {
 	defer s.wg.Done()
 
 	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(indexedAttsChan)
@@ -40,7 +39,7 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 				continue
 			}
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
-				IndexedAttestation: att,
+				IndexedAttestation: att.IndexedAtt,
 				DataRoot:           dataRoot,
 			}
 			s.attsQueue.push(attWrapper)
@@ -109,7 +108,7 @@ func (s *Service) processAttestations(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
 	currentSlot primitives.Slot,
-) map[[fieldparams.RootLength]byte]interfaces.AttesterSlashing {
+) map[[fieldparams.RootLength]byte]ethpb.AttSlashing {
 	// Get the current epoch from the current slot.
 	currentEpoch := slots.ToEpoch(currentSlot)
 
@@ -142,7 +141,7 @@ func (s *Service) processAttestations(
 
 	start := time.Now()
 
-	// Check for attestatinos slashings (double, sourrounding, surrounded votes).
+	// Check for attestations slashings (double, surrounding, surrounded votes).
 	slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAttestations)
 	if err != nil {
 		log.WithError(err).Error(couldNotCheckSlashableAtt)

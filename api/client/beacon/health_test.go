@@ -87,21 +87,15 @@ func TestNodeHealth_Concurrency(t *testing.T) {
 	// Number of goroutines to spawn for both reading and writing
 	numGoroutines := 6
 
-	go func() {
-		for range n.HealthUpdates() {
-			// Consume values to avoid blocking on channel send.
-		}
-	}()
-
 	wg.Add(numGoroutines * 2) // for readers and writers
 
 	// Concurrently update health status
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			defer wg.Done()
-			client.EXPECT().IsHealthy(gomock.Any()).Return(false)
+			client.EXPECT().IsHealthy(gomock.Any()).Return(false).Times(1)
 			n.CheckHealth(context.Background())
-			client.EXPECT().IsHealthy(gomock.Any()).Return(true)
+			client.EXPECT().IsHealthy(gomock.Any()).Return(true).Times(1)
 			n.CheckHealth(context.Background())
 		}()
 	}

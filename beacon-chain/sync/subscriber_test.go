@@ -170,7 +170,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		1, /* validator index */
 	)
 	require.NoError(t, err, "Error generating attester slashing")
-	err = r.cfg.beaconDB.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
+	err = r.cfg.beaconDB.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.FirstAttestation().GetData().BeaconBlockRoot))
 	require.NoError(t, err)
 	p2pService.ReceivePubSub(topic, attesterSlashing)
 

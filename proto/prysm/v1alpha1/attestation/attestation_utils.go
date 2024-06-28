@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -40,7 +39,7 @@ import (
 //	     data=attestation.data,
 //	     signature=attestation.signature,
 //	 )
-func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, committees ...[]primitives.ValidatorIndex) (ethpb.IndexedAtt, error) {
+func ConvertToIndexed(ctx context.Context, attestation ethpb.Att, committees ...[]primitives.ValidatorIndex) (ethpb.IndexedAtt, error) {
 	attIndices, err := AttestingIndices(attestation, committees...)
 	if err != nil {
 		return nil, err
@@ -49,12 +48,19 @@ func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, c
 	sort.Slice(attIndices, func(i, j int) bool {
 		return attIndices[i] < attIndices[j]
 	})
-	inAtt := &ethpb.IndexedAttestation{
+
+	if attestation.Version() >= version.Electra {
+		return &ethpb.IndexedAttestationElectra{
+			Data:             attestation.GetData(),
+			Signature:        attestation.GetSignature(),
+			AttestingIndices: attIndices,
+		}, nil
+	}
+	return &ethpb.IndexedAttestation{
 		Data:             attestation.GetData(),
 		Signature:        attestation.GetSignature(),
 		AttestingIndices: attIndices,
-	}
-	return inAtt, err
+	}, nil
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data.
@@ -79,7 +85,7 @@ func ConvertToIndexed(ctx context.Context, attestation interfaces.Attestation, c
 //	        committee_offset += len(committee)
 //
 //	    return output
-func AttestingIndices(att interfaces.Attestation, committees ...[]primitives.ValidatorIndex) ([]uint64, error) {
+func AttestingIndices(att ethpb.Att, committees ...[]primitives.ValidatorIndex) ([]uint64, error) {
 	if len(committees) == 0 {
 		return []uint64{}, nil
 	}

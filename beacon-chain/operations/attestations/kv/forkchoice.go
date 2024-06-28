@@ -2,29 +2,30 @@ package kv
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 )
 
 // SaveForkchoiceAttestation saves an forkchoice attestation in cache.
-func (c *AttCaches) SaveForkchoiceAttestation(att interfaces.Attestation) error {
+func (c *AttCaches) SaveForkchoiceAttestation(att ethpb.Att) error {
 	if att == nil {
 		return nil
 	}
-	r, err := hashFn(att)
+
+	id, err := attestation.NewId(att, attestation.Full)
 	if err != nil {
-		return errors.Wrap(err, "could not tree hash attestation")
+		return errors.Wrap(err, "could not create attestation ID")
 	}
 
-	att = interfaces.CopyAttestation(att)
 	c.forkchoiceAttLock.Lock()
 	defer c.forkchoiceAttLock.Unlock()
-	c.forkchoiceAtt[r] = att
+	c.forkchoiceAtt[id] = att
 
 	return nil
 }
 
 // SaveForkchoiceAttestations saves a list of forkchoice attestations in cache.
-func (c *AttCaches) SaveForkchoiceAttestations(atts []interfaces.Attestation) error {
+func (c *AttCaches) SaveForkchoiceAttestations(atts []ethpb.Att) error {
 	for _, att := range atts {
 		if err := c.SaveForkchoiceAttestation(att); err != nil {
 			return err
@@ -35,31 +36,32 @@ func (c *AttCaches) SaveForkchoiceAttestations(atts []interfaces.Attestation) er
 }
 
 // ForkchoiceAttestations returns the forkchoice attestations in cache.
-func (c *AttCaches) ForkchoiceAttestations() []interfaces.Attestation {
+func (c *AttCaches) ForkchoiceAttestations() []ethpb.Att {
 	c.forkchoiceAttLock.RLock()
 	defer c.forkchoiceAttLock.RUnlock()
 
-	atts := make([]interfaces.Attestation, 0, len(c.forkchoiceAtt))
+	atts := make([]ethpb.Att, 0, len(c.forkchoiceAtt))
 	for _, att := range c.forkchoiceAtt {
-		atts = append(atts, interfaces.CopyAttestation(att) /* Copied */)
+		atts = append(atts, att.Copy())
 	}
 
 	return atts
 }
 
 // DeleteForkchoiceAttestation deletes a forkchoice attestation in cache.
-func (c *AttCaches) DeleteForkchoiceAttestation(att interfaces.Attestation) error {
+func (c *AttCaches) DeleteForkchoiceAttestation(att ethpb.Att) error {
 	if att == nil {
 		return nil
 	}
-	r, err := hashFn(att)
+
+	id, err := attestation.NewId(att, attestation.Full)
 	if err != nil {
-		return errors.Wrap(err, "could not tree hash attestation")
+		return errors.Wrap(err, "could not create attestation ID")
 	}
 
 	c.forkchoiceAttLock.Lock()
 	defer c.forkchoiceAttLock.Unlock()
-	delete(c.forkchoiceAtt, r)
+	delete(c.forkchoiceAtt, id)
 
 	return nil
 }

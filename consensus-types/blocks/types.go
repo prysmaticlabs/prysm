@@ -54,11 +54,9 @@ type BeaconBlockBody struct {
 	executionPayloadHeader   interfaces.ExecutionData
 	blsToExecutionChanges    []*eth.SignedBLSToExecutionChange
 	blobKzgCommitments       [][]byte
-	signedConsolidations     []*eth.SignedConsolidation
 }
 
 var _ interfaces.ReadOnlyBeaconBlockBody = &BeaconBlockBody{}
-var _ interfaces.ROBlockBodyElectra = &BeaconBlockBody{}
 
 // BeaconBlock is the main beacon block structure. It can represent any block type.
 type BeaconBlock struct {

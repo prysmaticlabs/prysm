@@ -10,7 +10,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -217,7 +216,7 @@ func TestFuzzProcessAttesterSlashings_10000(t *testing.T) {
 		fuzzer.Fuzz(a)
 		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
 		require.NoError(t, err)
-		r, err := ProcessAttesterSlashings(ctx, s, []interfaces.AttesterSlashing{a}, v.SlashValidator)
+		r, err := ProcessAttesterSlashings(ctx, s, []ethpb.AttSlashing{a}, v.SlashValidator)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and slashing: %v", r, err, state, a)
 		}
@@ -298,75 +297,6 @@ func TestFuzzVerifyIndexedAttestationn_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzVerifyAttestation_10000(t *testing.T) {
-	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethpb.BeaconState{}
-	attestation := &ethpb.Attestation{}
-	ctx := context.Background()
-	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(attestation)
-		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
-		require.NoError(t, err)
-		err = VerifyAttestationSignature(ctx, s, attestation)
-		_ = err
-	}
-}
-
-func TestFuzzProcessDeposits_10000(t *testing.T) {
-	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethpb.BeaconState{}
-	deposits := make([]*ethpb.Deposit, 100)
-	ctx := context.Background()
-	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
-		for i := range deposits {
-			fuzzer.Fuzz(deposits[i])
-		}
-		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
-		require.NoError(t, err)
-		r, err := ProcessDeposits(ctx, s, deposits)
-		if err != nil && r != nil {
-			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposits)
-		}
-	}
-}
-
-func TestFuzzProcessPreGenesisDeposit_10000(t *testing.T) {
-	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethpb.BeaconState{}
-	deposit := &ethpb.Deposit{}
-	ctx := context.Background()
-
-	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(deposit)
-		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
-		require.NoError(t, err)
-		r, err := ProcessPreGenesisDeposits(ctx, s, []*ethpb.Deposit{deposit})
-		if err != nil && r != nil {
-			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposit)
-		}
-	}
-}
-
-func TestFuzzProcessDeposit_10000(t *testing.T) {
-	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethpb.BeaconState{}
-	deposit := &ethpb.Deposit{}
-
-	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(deposit)
-		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
-		require.NoError(t, err)
-		r, _, err := ProcessDeposit(s, deposit, true)
-		if err != nil && r != nil {
-			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposit)
-		}
-	}
-}
-
 func TestFuzzverifyDeposit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &ethpb.BeaconState{}
@@ -376,7 +306,7 @@ func TestFuzzverifyDeposit_10000(t *testing.T) {
 		fuzzer.Fuzz(deposit)
 		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
 		require.NoError(t, err)
-		err = verifyDeposit(s, deposit)
+		err = VerifyDeposit(s, deposit)
 		_ = err
 	}
 }

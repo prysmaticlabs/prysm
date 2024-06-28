@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -260,11 +259,11 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 	case *enginev1.ExecutionPayload:
 		wrappedPayload, wrapErr = WrappedExecutionPayload(p)
 	case *enginev1.ExecutionPayloadCapella:
-		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p, big.NewInt(0))
+		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p)
 	case *enginev1.ExecutionPayloadDeneb:
-		wrappedPayload, wrapErr = WrappedExecutionPayloadDeneb(p, big.NewInt(0))
+		wrappedPayload, wrapErr = WrappedExecutionPayloadDeneb(p)
 	case *enginev1.ExecutionPayloadElectra:
-		wrappedPayload, wrapErr = WrappedExecutionPayloadElectra(p, big.NewInt(0))
+		wrappedPayload, wrapErr = WrappedExecutionPayloadElectra(p)
 	default:
 		return nil, fmt.Errorf("%T is not a type of execution payload", p)
 	}
@@ -460,11 +459,6 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 		if err != nil {
 			return nil, err
 		}
-		electraBody, ok := b.Body().(interfaces.ROBlockBodyElectra)
-		if !ok {
-			return nil, errors.Wrapf(interfaces.ErrInvalidCast, "%T does not support electra getters", b.Body())
-		}
-		consolidations := electraBody.Consolidations()
 		var atts []*eth.AttestationElectra
 		if b.Body().Attestations() != nil {
 			atts = make([]*eth.AttestationElectra, len(b.Body().Attestations()))
@@ -506,7 +500,6 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 					ExecutionPayload:      p,
 					BlsToExecutionChanges: blsToExecutionChanges,
 					BlobKzgCommitments:    commitments,
-					Consolidations:        consolidations,
 				},
 			},
 			Signature: sig[:],

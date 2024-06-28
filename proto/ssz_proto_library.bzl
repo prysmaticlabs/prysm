@@ -27,7 +27,7 @@ mainnet = {
     "max_blob_commitments.size": "4096",
     "kzg_commitment_inclusion_proof_depth.size": "17",
     "max_withdrawal_requests_per_payload.size":"16",
-    "max_deposit_receipts": "8192",
+    "max_deposit_requests_per_payload.size": "8192",
     "max_attesting_indices.size": "131072",
     "max_committees_per_slot.size": "64",
     "committee_bits.size": "8",
@@ -35,6 +35,7 @@ mainnet = {
     "pending_balance_deposits_limit": "134217728",
     "pending_partial_withdrawals_limit": "134217728",
     "pending_consolidations_limit": "262144",
+    "max_consolidation_requests_per_payload.size": "1",
 }
 
 minimal = {
@@ -58,7 +59,7 @@ minimal = {
     "max_blob_commitments.size": "16",
     "kzg_commitment_inclusion_proof_depth.size": "9",
     "max_withdrawal_requests_per_payload.size":"2",
-    "max_deposit_receipts": "4",
+    "max_deposit_requests_per_payload.size": "4",
     "max_attesting_indices.size": "8192",
     "max_committees_per_slot.size": "4",
     "committee_bits.size": "1",
@@ -66,6 +67,7 @@ minimal = {
     "pending_balance_deposits_limit": "134217728",
     "pending_partial_withdrawals_limit": "64",
     "pending_consolidations_limit": "64",
+    "max_consolidation_requests_per_payload.size": "1",
 }
 
 ###### Rules definitions #######

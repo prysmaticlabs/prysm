@@ -107,6 +107,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.PendingConsolidationsLimit = 64
 	minimalConfig.MaxPartialWithdrawalsPerPayload = 1
 	minimalConfig.MaxWithdrawalRequestsPerPayload = 2
+	minimalConfig.MaxDepositRequestsPerPayload = 4
 	minimalConfig.PendingPartialWithdrawalsLimit = 64
 	minimalConfig.MaxPendingPartialsPerWithdrawalsSweep = 1
 

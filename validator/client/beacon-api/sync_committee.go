@@ -33,7 +33,7 @@ func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMe
 	return c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(marshalledJsonSyncCommitteeMessage), nil)
 }
 
-func (c *beaconApiValidatorClient) getSyncMessageBlockRoot(ctx context.Context) (*ethpb.SyncMessageBlockRootResponse, error) {
+func (c *beaconApiValidatorClient) syncMessageBlockRoot(ctx context.Context) (*ethpb.SyncMessageBlockRootResponse, error) {
 	// Get head beacon block root.
 	var resp structs.BlockRootResponse
 	if err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/blocks/head/root", &resp); err != nil {
@@ -64,11 +64,11 @@ func (c *beaconApiValidatorClient) getSyncMessageBlockRoot(ctx context.Context) 
 	}, nil
 }
 
-func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
+func (c *beaconApiValidatorClient) syncCommitteeContribution(
 	ctx context.Context,
 	req *ethpb.SyncCommitteeContributionRequest,
 ) (*ethpb.SyncCommitteeContribution, error) {
-	blockRootResponse, err := c.getSyncMessageBlockRoot(ctx)
+	blockRootResponse, err := c.syncMessageBlockRoot(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get sync message block root")
 	}
@@ -80,23 +80,21 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 	params.Add("subcommittee_index", strconv.FormatUint(req.SubnetId, 10))
 	params.Add("beacon_block_root", blockRoot)
 
-	url := buildURL("/eth/v1/validator/sync_committee_contribution", params)
-
 	var resp structs.ProduceSyncCommitteeContributionResponse
-	if err = c.jsonRestHandler.Get(ctx, url, &resp); err != nil {
+	if err = c.jsonRestHandler.Get(ctx, buildURL("/eth/v1/validator/sync_committee_contribution", params), &resp); err != nil {
 		return nil, err
 	}
 
 	return convertSyncContributionJsonToProto(resp.Data)
 }
 
-func (c *beaconApiValidatorClient) getSyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
+func (c *beaconApiValidatorClient) syncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
 	validatorIndexResponse, err := c.validatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: in.PublicKey})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator index")
 	}
 
-	syncDuties, err := c.dutiesProvider.GetSyncDuties(ctx, slots.ToEpoch(in.Slot), []primitives.ValidatorIndex{validatorIndexResponse.Index})
+	syncDuties, err := c.dutiesProvider.SyncDuties(ctx, slots.ToEpoch(in.Slot), []primitives.ValidatorIndex{validatorIndexResponse.Index})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get sync committee duties")
 	}

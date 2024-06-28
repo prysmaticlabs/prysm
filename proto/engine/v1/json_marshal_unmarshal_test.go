@@ -289,7 +289,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		bgu := hexutil.Uint64(5)
 		ebg := hexutil.Uint64(6)
 
-		withdrawalReq := []*enginev1.ExecutionLayerWithdrawalRequest{
+		withdrawalReq := []*enginev1.WithdrawalRequest{
 			{
 				SourceAddress:   bytesutil.PadTo([]byte("sourceAddress-1"), 20),
 				ValidatorPubkey: bytesutil.PadTo([]byte("pubKey-1"), 48),
@@ -306,7 +306,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 				Amount:          3,
 			},
 		}
-		depositReq := []*enginev1.DepositReceipt{
+		depositReq := []*enginev1.DepositRequest{
 			{
 				Pubkey:                bytesutil.PadTo([]byte("pubKey-1"), 48),
 				WithdrawalCredentials: bytesutil.PadTo([]byte("creds-1"), 32),
@@ -410,9 +410,9 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		for i := range pb.Payload.WithdrawalRequests {
 			require.DeepEqual(t, pb.Payload.WithdrawalRequests[i], withdrawalReq[i])
 		}
-		require.Equal(t, len(pb.Payload.DepositReceipts), len(depositReq))
-		for i := range pb.Payload.DepositReceipts {
-			require.DeepEqual(t, pb.Payload.DepositReceipts[i], depositReq[i])
+		require.Equal(t, len(pb.Payload.DepositRequests), len(depositReq))
+		for i := range pb.Payload.DepositRequests {
+			require.DeepEqual(t, pb.Payload.DepositRequests[i], depositReq[i])
 		}
 	})
 	t.Run("execution block", func(t *testing.T) {
