@@ -315,7 +315,7 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 		chainClient: client,
 		genesisTime: 1,
 	}
-	client.EXPECT().GetChainHead(
+	client.EXPECT().ChainHead(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("failed"))
@@ -330,7 +330,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	v := validator{
 		chainClient: client,
 	}
-	client.EXPECT().GetChainHead(
+	client.EXPECT().ChainHead(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
@@ -369,7 +369,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	prysmChainClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().ValidatorCount(
 		gomock.Any(),
 		"head",
 		[]validatorType.Status{validatorType.Active},
