@@ -3,9 +3,9 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "kzg.go",
         "trusted_setup.go",
         "validation.go",
-        "kzg.go",
     ],
     embedsrcs = ["trusted_setup.json"],
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg",
