@@ -208,26 +208,14 @@ func DataColumnSidecarsForReconstruct(
 	blobKzgCommitments [][]byte,
 	signedBlockHeader *ethpb.SignedBeaconBlockHeader,
 	kzgCommitmentsInclusionProof [][]byte,
-	blobs []cKzg4844.Blob,
+	cells [][cKzg4844.CellsPerExtBlob]cKzg4844.Cell,
+	proofs [][cKzg4844.CellsPerExtBlob]cKzg4844.KZGProof,
 ) ([]*ethpb.DataColumnSidecar, error) {
-	blobsCount := len(blobs)
+	// There is a set of proofs per blob, so we can get the blobCount
+	// By counting the number of sets.
+	blobsCount := len(proofs)
 	if blobsCount == 0 {
 		return nil, nil
-	}
-
-	// Compute cells and proofs.
-	cells := make([][cKzg4844.CellsPerExtBlob]cKzg4844.Cell, 0, blobsCount)
-	proofs := make([][cKzg4844.CellsPerExtBlob]cKzg4844.KZGProof, 0, blobsCount)
-
-	for i := range blobs {
-		blob := &blobs[i]
-		blobCells, blobProofs, err := cKzg4844.ComputeCellsAndKZGProofs(blob)
-		if err != nil {
-			return nil, errors.Wrap(err, "compute cells and KZG proofs")
-		}
-
-		cells = append(cells, blobCells)
-		proofs = append(proofs, blobProofs)
 	}
 
 	// Get the column sidecars.
