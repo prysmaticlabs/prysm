@@ -52,7 +52,7 @@ var ValidatorsSlashedAfterEpoch = func(n primitives.Epoch) e2eTypes.Evaluator {
 // SlashedValidatorsLoseBalanceAfterEpoch checks if the validators slashed lose the right balance.
 var SlashedValidatorsLoseBalanceAfterEpoch = func(n primitives.Epoch) e2eTypes.Evaluator {
 	return e2eTypes.Evaluator{
-		Name:       "slashed_validators_lose_valance_epoch_%d",
+		Name:       "slashed_validators_lose_balance_epoch_%d",
 		Policy:     policies.AfterNthEpoch(n),
 		Evaluation: validatorsLoseBalance,
 	}
@@ -109,7 +109,7 @@ func validatorsLoseBalance(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientC
 		slashedBal := params.BeaconConfig().MaxEffectiveBalance - slashedPenalty + params.BeaconConfig().EffectiveBalanceIncrement/10
 		if valResp.EffectiveBalance >= slashedBal {
 			return fmt.Errorf(
-				"expected slashed validator %d to balance less than %d, received %d",
+				"expected slashed validator %d balance to be less than %d, received %d",
 				i,
 				slashedBal,
 				valResp.EffectiveBalance,

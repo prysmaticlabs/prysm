@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher"
+	slashertypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
@@ -211,7 +212,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 			}
 			log.WithFields(logrus.Fields{
 				"numAtts":      len(atts),
-				"numSlashable": len(propSlashings),
+				"numSlashable": len(attSlashings),
 			}).Infof("Producing attestations for slot %d", slot)
 			for _, sl := range attSlashings {
 				slashingRoot, err := sl.HashTreeRoot()
@@ -221,7 +222,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 				s.sentAttesterSlashings[slashingRoot] = sl
 			}
 			for _, aa := range atts {
-				s.indexedAttsFeed.Send(aa)
+				s.indexedAttsFeed.Send(&slashertypes.WrappedIndexedAtt{IndexedAtt: aa})
 			}
 		case <-ctx.Done():
 			return
