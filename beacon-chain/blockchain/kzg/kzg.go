@@ -72,15 +72,17 @@ func ComputeCellsAndKZGProofs(blob *Blob) ([ckzg4844.CellsPerExtBlob]Cell, [ckzg
 	}
 
 	var proofs [ckzg4844.CellsPerExtBlob]Proof
-	for i, proof := range _proofs {
-		proofs[i] = Proof(proof)
+	for i := range _proofs {
+		proofs[i] = Proof(_proofs[i])
 	}
 
 	return cells, proofs, nil
 }
 
-func VerifyCellKZGProof(commitmentBytes Bytes48, cellId uint64, cell Cell, proofBytes Bytes48) (bool, error) {
-	return ckzg4844.VerifyCellKZGProof(commitmentBytes, cellId, ckzg4844.Cell(cell), proofBytes)
+// VerifyCellKZGProof is unused. TODO: We can check when the batch size for `VerifyCellKZGProofBatch` is 1
+// and call this, though I think its better if the cryptography library handles this.
+func VerifyCellKZGProof(commitmentBytes Bytes48, cellId uint64, cell *Cell, proofBytes Bytes48) (bool, error) {
+	return ckzg4844.VerifyCellKZGProof(commitmentBytes, cellId, ckzg4844.Cell(*cell), proofBytes)
 }
 
 func VerifyCellKZGProofBatch(commitmentsBytes []Bytes48, rowIndices, columnIndices []uint64, _cells []Cell, proofsBytes []Bytes48) (bool, error) {
@@ -118,9 +120,9 @@ func RecoverAllCells(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsPerExtBlob
 	return ret, nil
 }
 
-// Recovers the cells and compute the KZG Proofs associated with the cells.
+// RecoverCellsAndKZGProofs recovers the cells and compute the KZG Proofs associated with the cells.
 //
-// This method will supercede the `RecoverAllCells` and `CellsToBlob` methods.
+// This method will supersede the `RecoverAllCells` and `CellsToBlob` methods.
 func RecoverCellsAndKZGProofs(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsPerExtBlob]Cell, [ckzg4844.CellsPerExtBlob]Proof, error) {
 	// First recover all of the cells
 	recoveredCells, err := RecoverAllCells(cellIds, _cells)
@@ -129,7 +131,7 @@ func RecoverCellsAndKZGProofs(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsP
 	}
 
 	// Extract the Blob from all of the Cells
-	blob, err := CellsToBlob(recoveredCells)
+	blob, err := CellsToBlob(&recoveredCells)
 	if err != nil {
 		return [ckzg4844.CellsPerExtBlob]Cell{}, [ckzg4844.CellsPerExtBlob]Proof{}, err
 	}
@@ -138,7 +140,7 @@ func RecoverCellsAndKZGProofs(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsP
 	return ComputeCellsAndKZGProofs(&blob)
 }
 
-func CellsToBlob(_cells [ckzg4844.CellsPerExtBlob]Cell) (Blob, error) {
+func CellsToBlob(_cells *[ckzg4844.CellsPerExtBlob]Cell) (Blob, error) {
 	// Convert `Cell` type to `ckzg4844.Cell`
 	var ckzgCells [ckzg4844.CellsPerExtBlob]ckzg4844.Cell
 	for i := range _cells {

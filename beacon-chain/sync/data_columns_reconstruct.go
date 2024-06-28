@@ -71,7 +71,7 @@ func recoverBlobs(
 			return nil, errors.Wrapf(err, "recover all cells for blob %d", blobIndex)
 		}
 
-		recoveredBlob, err := kzg.CellsToBlob(recoveredCells)
+		recoveredBlob, err := kzg.CellsToBlob(&recoveredCells)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cells to blob for blob %d", blobIndex)
 		}
