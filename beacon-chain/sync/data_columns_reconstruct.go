@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	kzg "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -20,12 +21,12 @@ import (
 
 const broadCastMissingDataColumnsTimeIntoSlot = 3 * time.Second
 
-// recoverBlobs recovers the blobs from the data column sidecars.
-func recoverBlobs(
+// recoverCellsAndProofs recovers the cells and proofs from the data column sidecars.
+func recoverCellsAndProofs(
 	dataColumnSideCars []*ethpb.DataColumnSidecar,
 	columnsCount int,
 	blockRoot [fieldparams.RootLength]byte,
-) ([]cKzg4844.Blob, error) {
+) ([]kzg.CellsAndProofs, error) {
 	if len(dataColumnSideCars) == 0 {
 		return nil, errors.New("no data column sidecars")
 	}
@@ -40,7 +41,8 @@ func recoverBlobs(
 		}
 	}
 
-	recoveredBlobs := make([]cKzg4844.Blob, 0, blobCount)
+	// Recover cells and compute proofs.
+	recoveredCellsAndProofs := make([]kzg.CellsAndProofs, 0, blobCount)
 
 	for blobIndex := 0; blobIndex < blobCount; blobIndex++ {
 		start := time.Now()
@@ -76,15 +78,23 @@ func recoverBlobs(
 			return nil, errors.Wrapf(err, "cells to blob for blob %d", blobIndex)
 		}
 
-		recoveredBlobs = append(recoveredBlobs, recoveredBlob)
+		blobCells, blobProofs, err := cKzg4844.ComputeCellsAndKZGProofs(&recoveredBlob)
+		if err != nil {
+			return nil, errors.Wrapf(err, "compute cells and KZG proofs for blob %d", blobIndex)
+		}
+		recoveredCellsAndProofs = append(recoveredCellsAndProofs, kzg.CellsAndProofs{
+			Cells:  blobCells,
+			Proofs: blobProofs,
+		})
+
 		log.WithFields(logrus.Fields{
 			"elapsed": time.Since(start),
 			"index":   blobIndex,
 			"root":    fmt.Sprintf("%x", blockRoot),
-		}).Debug("Recovered blob")
+		}).Debug("Recovered cells and proofs")
 	}
 
-	return recoveredBlobs, nil
+	return recoveredCellsAndProofs, nil
 }
 
 func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColumn blocks.VerifiedRODataColumn) error {
@@ -127,10 +137,10 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 		dataColumnSideCars = append(dataColumnSideCars, dataColumnSidecar)
 	}
 
-	// Recover blobs.
-	recoveredBlobs, err := recoverBlobs(dataColumnSideCars, storedColumnsCount, blockRoot)
+	// Recover cells and proofs
+	recoveredCellsAndProofs, err := recoverCellsAndProofs(dataColumnSideCars, storedColumnsCount, blockRoot)
 	if err != nil {
-		return errors.Wrap(err, "recover blobs")
+		return errors.Wrap(err, "recover cells and proofs")
 	}
 
 	// Reconstruct the data columns sidecars.
@@ -138,7 +148,7 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 		verifiedRODataColumn.KzgCommitments,
 		verifiedRODataColumn.SignedBlockHeader,
 		verifiedRODataColumn.KzgCommitmentsInclusionProof,
-		recoveredBlobs,
+		recoveredCellsAndProofs,
 	)
 	if err != nil {
 		return errors.Wrap(err, "data column sidecars")

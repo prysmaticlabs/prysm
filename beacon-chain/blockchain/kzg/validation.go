@@ -2,8 +2,16 @@ package kzg
 
 import (
 	GoKZG "github.com/crate-crypto/go-kzg-4844"
+	ckzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 )
+
+// CellsAndProofs represents the Cells and Proofs corresponding to
+// a single blob.
+type CellsAndProofs struct {
+	Cells  [ckzg4844.CellsPerExtBlob]ckzg4844.Cell
+	Proofs [ckzg4844.CellsPerExtBlob]ckzg4844.KZGProof
+}
 
 // Verify performs single or batch verification of commitments depending on the number of given BlobSidecars.
 func Verify(sidecars ...blocks.ROBlob) error {
