@@ -118,6 +118,26 @@ func RecoverAllCells(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsPerExtBlob
 	return ret, nil
 }
 
+// Recovers the cells and compute the KZG Proofs associated with the cells.
+//
+// This method will supercede the `RecoverAllCells` and `CellsToBlob` methods.
+func RecoverCellsAndKZGProofs(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsPerExtBlob]Cell, [ckzg4844.CellsPerExtBlob]Proof, error) {
+	// First recover all of the cells
+	recoveredCells, err := RecoverAllCells(cellIds, _cells)
+	if err != nil {
+		return [ckzg4844.CellsPerExtBlob]Cell{}, [ckzg4844.CellsPerExtBlob]Proof{}, err
+	}
+
+	// Extract the Blob from all of the Cells
+	blob, err := CellsToBlob(recoveredCells)
+	if err != nil {
+		return [ckzg4844.CellsPerExtBlob]Cell{}, [ckzg4844.CellsPerExtBlob]Proof{}, err
+	}
+
+	// Compute all of the cells and KZG proofs
+	return ComputeCellsAndKZGProofs(&blob)
+}
+
 func CellsToBlob(_cells [ckzg4844.CellsPerExtBlob]Cell) (Blob, error) {
 	// Convert `Cell` type to `ckzg4844.Cell`
 	var ckzgCells [ckzg4844.CellsPerExtBlob]ckzg4844.Cell
