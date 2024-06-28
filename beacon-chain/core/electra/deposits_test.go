@@ -138,6 +138,17 @@ func TestProcessDepositRequests(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateElectra(t, 1)
 	sk, err := bls.RandKey()
 	require.NoError(t, err)
+
+	t.Run("empty requests continues", func(t *testing.T) {
+		newSt, err := electra.ProcessDepositRequests(context.Background(), st, []*enginev1.DepositRequest{})
+		require.NoError(t, err)
+		require.DeepEqual(t, newSt, st)
+	})
+	t.Run("nil request errors", func(t *testing.T) {
+		_, err = electra.ProcessDepositRequests(context.Background(), st, []*enginev1.DepositRequest{nil})
+		require.ErrorContains(t, "got a nil DepositRequest", err)
+	})
+
 	vals := st.Validators()
 	vals[0].PublicKey = sk.PublicKey().Marshal()
 	vals[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
