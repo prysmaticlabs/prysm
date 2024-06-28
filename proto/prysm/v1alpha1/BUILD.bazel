@@ -284,7 +284,6 @@ go_library(
     srcs = [
         "attestation.go",
         "cloners.go",
-        "eip_7251.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
         ":ssz_generated_non_core",  # keep
@@ -345,7 +344,6 @@ go_test(
     name = "go_default_test",
     srcs = [
         "cloners_test.go",
-        "eip_7251_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

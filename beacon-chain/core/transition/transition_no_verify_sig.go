@@ -432,12 +432,7 @@ func electraOperations(
 	if err != nil {
 		return nil, err
 	}
-	b := block.Body()
-	bod, ok := b.(interfaces.ROBlockBodyElectra)
-	if !ok {
-		return nil, errors.New("could not cast block body to electra block body")
-	}
-	e, err := bod.Execution()
+	e, err := block.Body().Execution()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution data from block")
 	}
@@ -455,9 +450,8 @@ func electraOperations(
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
 
-	if err := electra.ProcessConsolidations(ctx, st, bod.Consolidations()); err != nil {
-		return nil, errors.Wrap(err, "could not process consolidations")
-	}
+	// TODO: Process consolidations from execution header.
+
 	return st, nil
 }
 
