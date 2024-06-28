@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "trusted_setup.go",
         "validation.go",
+        "kzg.go",
     ],
     embedsrcs = ["trusted_setup.json"],
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg",
