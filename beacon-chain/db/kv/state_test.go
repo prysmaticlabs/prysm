@@ -138,19 +138,20 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 				require.NoError(t, err)
 				require.NoError(t, st.SetSlot(100))
 				p, err := blocks.WrappedExecutionPayloadHeaderElectra(&enginev1.ExecutionPayloadHeaderElectra{
-					ParentHash:             make([]byte, 32),
-					FeeRecipient:           make([]byte, 20),
-					StateRoot:              make([]byte, 32),
-					ReceiptsRoot:           make([]byte, 32),
-					LogsBloom:              make([]byte, 256),
-					PrevRandao:             make([]byte, 32),
-					ExtraData:              []byte("foo"),
-					BaseFeePerGas:          make([]byte, 32),
-					BlockHash:              make([]byte, 32),
-					TransactionsRoot:       make([]byte, 32),
-					WithdrawalsRoot:        make([]byte, 32),
-					DepositRequestsRoot:    make([]byte, 32),
-					WithdrawalRequestsRoot: make([]byte, 32),
+					ParentHash:                make([]byte, 32),
+					FeeRecipient:              make([]byte, 20),
+					StateRoot:                 make([]byte, 32),
+					ReceiptsRoot:              make([]byte, 32),
+					LogsBloom:                 make([]byte, 256),
+					PrevRandao:                make([]byte, 32),
+					ExtraData:                 []byte("foo"),
+					BaseFeePerGas:             make([]byte, 32),
+					BlockHash:                 make([]byte, 32),
+					TransactionsRoot:          make([]byte, 32),
+					WithdrawalsRoot:           make([]byte, 32),
+					DepositRequestsRoot:       make([]byte, 32),
+					WithdrawalRequestsRoot:    make([]byte, 32),
+					ConsolidationRequestsRoot: make([]byte, 32),
 				})
 				require.NoError(t, err)
 				require.NoError(t, st.SetLatestExecutionPayloadHeader(p))

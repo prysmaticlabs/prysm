@@ -531,7 +531,6 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				ExecutionPayloadHeader: ph,
 				BlsToExecutionChanges:  b.blsToExecutionChanges,
 				BlobKzgCommitments:     b.blobKzgCommitments,
-				Consolidations:         b.signedConsolidations,
 			}, nil
 		}
 		var p *enginev1.ExecutionPayloadElectra
@@ -555,7 +554,6 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			ExecutionPayload:      p,
 			BlsToExecutionChanges: b.blsToExecutionChanges,
 			BlobKzgCommitments:    b.blobKzgCommitments,
-			Consolidations:        b.signedConsolidations,
 		}, nil
 
 	default:
@@ -1158,7 +1156,6 @@ func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlock
 		executionPayload:         p,
 		blsToExecutionChanges:    pb.BlsToExecutionChanges,
 		blobKzgCommitments:       pb.BlobKzgCommitments,
-		signedConsolidations:     pb.Consolidations,
 	}
 	return b, nil
 }
@@ -1187,7 +1184,6 @@ func initBlindedBlockBodyFromProtoElectra(pb *eth.BlindedBeaconBlockBodyElectra)
 		executionPayloadHeader:   ph,
 		blsToExecutionChanges:    pb.BlsToExecutionChanges,
 		blobKzgCommitments:       pb.BlobKzgCommitments,
-		signedConsolidations:     pb.Consolidations,
 	}
 	return b, nil
 }

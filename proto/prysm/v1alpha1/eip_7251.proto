@@ -43,23 +43,6 @@ message PendingPartialWithdrawal {
     uint64 withdrawable_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
 }
 
-message Consolidation {
-    // Validator from which the funds will be moved.
-    uint64 source_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
-    // Validator to which the funds will be moved.
-    uint64 target_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
-    // A consolidation is valid at this epoch or later.
-    uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Epoch"];
-}
-
-message SignedConsolidation {
-    // The unsigned consolidation itself.
-    Consolidation message = 1;
-
-    // Validator's 96 byte signature
-    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
-}
-
 message PendingConsolidation {
     // Validator from which the funds will be moved.
     uint64 source_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
