@@ -54,6 +54,10 @@ func ProcessAttestations(
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
 		}
 
+		if a.Version() >= version.Electra {
+			return nil, nil, errors.New("electra attestation not supported")
+		}
+
 		committee, err := helpers.BeaconCommitteeFromState(ctx, state, a.GetData().Slot, a.GetData().CommitteeIndex)
 		if err != nil {
 			return nil, nil, err

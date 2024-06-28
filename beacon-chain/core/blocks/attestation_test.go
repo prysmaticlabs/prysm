@@ -346,7 +346,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		ia, err := attestation.ConvertToIndexed(context.Background(), att, committee)
+		ia, err := attestation.ConvertToIndexed(context.Background(), att, [][]primitives.ValidatorIndex{committee})
 		require.NoError(t, err)
 		assert.DeepEqual(t, wanted, ia, "Convert attestation to indexed attestation didn't result as wanted")
 	}

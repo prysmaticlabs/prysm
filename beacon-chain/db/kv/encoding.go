@@ -68,11 +68,11 @@ func isSSZStorageFormat(obj interface{}) bool {
 		return true
 	case *ethpb.BeaconBlock:
 		return true
-	case *ethpb.Attestation:
+	case *ethpb.Attestation, *ethpb.AttestationElectra:
 		return true
 	case *ethpb.Deposit:
 		return true
-	case *ethpb.AttesterSlashing:
+	case *ethpb.AttesterSlashing, *ethpb.AttesterSlashingElectra:
 		return true
 	case *ethpb.ProposerSlashing:
 		return true

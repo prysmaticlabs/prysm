@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -234,7 +235,11 @@ func (s *Service) monitorRoutine(stateChannel chan *feed.Event, stateSub event.S
 				if !ok {
 					log.Error("Event feed data is not of type *operation.AggregatedAttReceivedData")
 				} else {
-					s.processAggregatedAttestation(s.ctx, data.Attestation)
+					// TODO: extend to Electra
+					a, ok := data.Attestation.(*ethpb.AggregateAttestationAndProof)
+					if ok {
+						s.processAggregatedAttestation(s.ctx, a)
+					}
 				}
 			case operation.ExitReceived:
 				data, ok := e.Data.(*operation.ExitReceivedData)

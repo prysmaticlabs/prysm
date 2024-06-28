@@ -336,7 +336,7 @@ message SignedBeaconBlockHeader {
 }
 
 message IndexedAttestation {
-    repeated uint64 attesting_indices = 1 [(ethereum.eth.ext.ssz_max) = "2048"];
+    repeated uint64 attesting_indices = 1 [(ethereum.eth.ext.ssz_max) = "max_attesting_indices.size"];
 
     AttestationData data = 2;
 
