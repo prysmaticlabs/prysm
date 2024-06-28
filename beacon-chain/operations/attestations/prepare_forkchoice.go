@@ -123,7 +123,6 @@ func (s *Service) seen(att ethpb.Att) (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "could not create attestation ID")
 	}
-	key := versionAndDataRoot{att.Version(), attRoot}
 	incomingBits := att.GetAggregationBits()
 	savedBits, ok := s.forkChoiceProcessedAtts.Get(id)
 	if ok {

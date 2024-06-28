@@ -88,7 +88,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		SelectionProof:  req.SlotSignature,
 		AggregatorIndex: validatorIndex,
 	}
-	return &ethpb.AggregateSelectionResponse{AggregateAndProof: attAndProof}, nil
+	return &ethpb.AggregateSelectionResponse{AggregateAndProof: a}, nil
 }
 
 // SubmitAggregateSelectionProofElectra is called by a validator when its assigned to be an aggregator.

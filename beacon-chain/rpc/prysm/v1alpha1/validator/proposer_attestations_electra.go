@@ -1,16 +1,8 @@
 package validator
 
 import (
-	"math"
-	"slices"
-
-	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/kv"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 )
 
 // computeOnChainAggregate constructs an on chain final aggregate form a list of network aggregates with equal attestation data.
@@ -41,11 +33,11 @@ import (
 //			committee_bits=committee_bits,
 //			signature=signature,
 //		)
-func computeOnChainAggregate(aggregates map[kv.AttestationId][]ethpb.Att) ([]ethpb.Att, error) {
+func computeOnChainAggregate(aggregates map[attestation.Id][]ethpb.Att) ([]ethpb.Att, error) {
 	// Digest is the attestation data root. The incoming map has attestations for the same root
 	// but different committee indices under different keys. We create a new map where the digest is the key
 	// so that all attestations for the same root are under one key.
-	aggsByDigest := make(map[[32]byte][]ethpb.Att, 0)
+	/*aggsByDigest := make(map[[32]byte][]ethpb.Att, 0)
 	for id, aggs := range aggregates {
 		existing, ok := aggsByDigest[id.Digest]
 		if ok {
@@ -101,5 +93,6 @@ func computeOnChainAggregate(aggregates map[kv.AttestationId][]ethpb.Att) ([]eth
 		result = append(result, att)
 	}
 
-	return result, nil
+	return result, nil*/
+	return nil, nil
 }
