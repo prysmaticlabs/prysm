@@ -347,7 +347,7 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	epoch := primitives.Epoch(e)
 
 	if rawEpoch == "" {
-		genesisResponse, err := s.nodeClient.GetGenesis(ctx, &emptypb.Empty{})
+		genesisResponse, err := s.nodeClient.Genesis(ctx, &emptypb.Empty{})
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Failed to get genesis time").Error(), http.StatusInternalServerError)
 			return
@@ -484,7 +484,12 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		log.Warnf("Setting the remote signer base url within the request is not supported. The remote signer url can only be set from the --%s flag.", flags.Web3SignerURLFlag.Name)
 	}
 
-	httputil.WriteJson(w, &RemoteKeysResponse{Data: adder.AddPublicKeys(remoteKeys)})
+	ks, err := adder.AddPublicKeys(remoteKeys)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, &RemoteKeysResponse{Data: ks})
 }
 
 // DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
@@ -533,8 +538,12 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteJson(w, &RemoteKeysResponse{Data: statuses})
 		return
 	}
-
-	httputil.WriteJson(w, RemoteKeysResponse{Data: deleter.DeletePublicKeys(req.Pubkeys)})
+	data, err := deleter.DeletePublicKeys(req.Pubkeys)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, RemoteKeysResponse{Data: data})
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
@@ -842,7 +851,7 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.GetGraffiti")
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.Graffiti")
 	defer span.End()
 
 	if s.validatorService == nil {
@@ -854,7 +863,7 @@ func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	graffiti, err := s.validatorService.GetGraffiti(ctx, bytesutil.ToBytes48(pubkey))
+	graffiti, err := s.validatorService.Graffiti(ctx, bytesutil.ToBytes48(pubkey))
 	if err != nil {
 		if strings.Contains(err.Error(), "unavailable") {
 			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)

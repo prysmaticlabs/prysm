@@ -657,32 +657,6 @@ func CopyBlindedBeaconBlockBodyElectra(body *BlindedBeaconBlockBodyElectra) *Bli
 		ExecutionPayloadHeader: CopyExecutionPayloadHeaderElectra(body.ExecutionPayloadHeader),
 		BlsToExecutionChanges:  CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 		BlobKzgCommitments:     CopyBlobKZGs(body.BlobKzgCommitments),
-		Consolidations:         CopySignedConsolidations(body.Consolidations),
-	}
-}
-
-func CopySignedConsolidations(c []*SignedConsolidation) []*SignedConsolidation {
-	if c == nil {
-		return nil
-	}
-	newC := make([]*SignedConsolidation, len(c))
-	for i, cc := range c {
-		newC[i] = CopySignedConsolidation(cc)
-	}
-	return newC
-}
-
-func CopySignedConsolidation(c *SignedConsolidation) *SignedConsolidation {
-	if c == nil {
-		return nil
-	}
-	return &SignedConsolidation{
-		Message: &Consolidation{
-			SourceIndex: c.Message.SourceIndex,
-			TargetIndex: c.Message.TargetIndex,
-			Epoch:       c.Message.Epoch,
-		},
-		Signature: bytesutil.SafeCopyBytes(c.Signature),
 	}
 }
 
@@ -1019,7 +993,6 @@ func CopyBeaconBlockBodyElectra(body *BeaconBlockBodyElectra) *BeaconBlockBodyEl
 		ExecutionPayload:      CopyExecutionPayloadElectra(body.ExecutionPayload),
 		BlsToExecutionChanges: CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 		BlobKzgCommitments:    CopyBlobKZGs(body.BlobKzgCommitments),
-		Consolidations:        CopySignedConsolidations(body.Consolidations),
 	}
 }
 
@@ -1046,19 +1019,19 @@ func CopyExecutionPayloadElectra(payload *enginev1.ExecutionPayloadElectra) *eng
 		Withdrawals:        CopyWithdrawalSlice(payload.Withdrawals),
 		BlobGasUsed:        payload.BlobGasUsed,
 		ExcessBlobGas:      payload.ExcessBlobGas,
-		DepositReceipts:    CopyDepositReceipts(payload.DepositReceipts),
+		DepositRequests:    CopyDepositRequests(payload.DepositRequests),
 		WithdrawalRequests: CopyWithdrawalRequests(payload.WithdrawalRequests),
 	}
 }
 
-func CopyDepositReceipts(dr []*enginev1.DepositReceipt) []*enginev1.DepositReceipt {
+func CopyDepositRequests(dr []*enginev1.DepositRequest) []*enginev1.DepositRequest {
 	if dr == nil {
 		return nil
 	}
 
-	newDr := make([]*enginev1.DepositReceipt, len(dr))
+	newDr := make([]*enginev1.DepositRequest, len(dr))
 	for i, d := range dr {
-		newDr[i] = &enginev1.DepositReceipt{
+		newDr[i] = &enginev1.DepositRequest{
 			Pubkey:                bytesutil.SafeCopyBytes(d.Pubkey),
 			WithdrawalCredentials: bytesutil.SafeCopyBytes(d.WithdrawalCredentials),
 			Amount:                d.Amount,
@@ -1069,13 +1042,13 @@ func CopyDepositReceipts(dr []*enginev1.DepositReceipt) []*enginev1.DepositRecei
 	return newDr
 }
 
-func CopyWithdrawalRequests(wr []*enginev1.ExecutionLayerWithdrawalRequest) []*enginev1.ExecutionLayerWithdrawalRequest {
+func CopyWithdrawalRequests(wr []*enginev1.WithdrawalRequest) []*enginev1.WithdrawalRequest {
 	if wr == nil {
 		return nil
 	}
-	newWr := make([]*enginev1.ExecutionLayerWithdrawalRequest, len(wr))
+	newWr := make([]*enginev1.WithdrawalRequest, len(wr))
 	for i, w := range wr {
-		newWr[i] = &enginev1.ExecutionLayerWithdrawalRequest{
+		newWr[i] = &enginev1.WithdrawalRequest{
 			SourceAddress:   bytesutil.SafeCopyBytes(w.SourceAddress),
 			ValidatorPubkey: bytesutil.SafeCopyBytes(w.ValidatorPubkey),
 			Amount:          w.Amount,
@@ -1090,25 +1063,26 @@ func CopyExecutionPayloadHeaderElectra(payload *enginev1.ExecutionPayloadHeaderE
 		return nil
 	}
 	return &enginev1.ExecutionPayloadHeaderElectra{
-		ParentHash:             bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:           bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:              bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptsRoot:           bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
-		LogsBloom:              bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:             bytesutil.SafeCopyBytes(payload.PrevRandao),
-		BlockNumber:            payload.BlockNumber,
-		GasLimit:               payload.GasLimit,
-		GasUsed:                payload.GasUsed,
-		Timestamp:              payload.Timestamp,
-		ExtraData:              bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas:          bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:              bytesutil.SafeCopyBytes(payload.BlockHash),
-		TransactionsRoot:       bytesutil.SafeCopyBytes(payload.TransactionsRoot),
-		WithdrawalsRoot:        bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
-		BlobGasUsed:            payload.BlobGasUsed,
-		ExcessBlobGas:          payload.ExcessBlobGas,
-		DepositReceiptsRoot:    bytesutil.SafeCopyBytes(payload.DepositReceiptsRoot),
-		WithdrawalRequestsRoot: bytesutil.SafeCopyBytes(payload.WithdrawalRequestsRoot),
+		ParentHash:                bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:              bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:                 bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:              bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:                 bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:                bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:               payload.BlockNumber,
+		GasLimit:                  payload.GasLimit,
+		GasUsed:                   payload.GasUsed,
+		Timestamp:                 payload.Timestamp,
+		ExtraData:                 bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:             bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:                 bytesutil.SafeCopyBytes(payload.BlockHash),
+		TransactionsRoot:          bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+		WithdrawalsRoot:           bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
+		BlobGasUsed:               payload.BlobGasUsed,
+		ExcessBlobGas:             payload.ExcessBlobGas,
+		DepositRequestsRoot:       bytesutil.SafeCopyBytes(payload.DepositRequestsRoot),
+		WithdrawalRequestsRoot:    bytesutil.SafeCopyBytes(payload.WithdrawalRequestsRoot),
+		ConsolidationRequestsRoot: bytesutil.SafeCopyBytes(payload.ConsolidationRequestsRoot),
 	}
 }
 

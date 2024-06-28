@@ -1559,7 +1559,7 @@ func fixturesStruct() *payloadFixtures {
 		Withdrawals:        []*pb.Withdrawal{},
 		BlobGasUsed:        2,
 		ExcessBlobGas:      3,
-		DepositReceipts:    dr,
+		DepositRequests:    dr,
 		WithdrawalRequests: wr,
 	}
 	hexUint := hexutil.Uint64(1)

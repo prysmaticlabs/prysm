@@ -39,7 +39,7 @@ func TestProposeExit_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		proposeExitTestEndpoint,
 		nil,
 		bytes.NewBuffer(marshalledVoluntaryExit),
@@ -88,7 +88,7 @@ func TestProposeExit_BadRequest(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		proposeExitTestEndpoint,
 		nil,
 		gomock.Any(),

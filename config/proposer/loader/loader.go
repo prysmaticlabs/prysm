@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -128,12 +129,23 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*proposer.Settings, error)
 			return nil, err
 		}
 		loadConfig = dbps.ToConsensus()
+		log.Debugf("DB loaded proposer settings: %s", func() string {
+			b, err := json.Marshal(loadConfig)
+			if err != nil {
+				return err.Error()
+			}
+			return string(b)
+		}())
 	}
 
 	// start to process based on load method
 	for _, method := range psl.loadMethods {
 		switch method {
 		case defaultFlag:
+			if psl.existsInDB && len(psl.loadMethods) == 1 {
+				// only log the below if default flag is the only load method
+				log.Warn("Previously saved proposer settings were loaded from the DB, only default settings will be updated. Please provide new proposer settings or clear DB to reset proposer settings.")
+			}
 			suggestedFeeRecipient := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
 			if !common.IsHexAddress(suggestedFeeRecipient) {
 				return nil, errors.Errorf("--%s is not a valid Ethereum address", flags.SuggestedFeeRecipientFlag.Name)
@@ -157,6 +169,7 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*proposer.Settings, error)
 				return nil, errors.Errorf("proposer settings is empty after unmarshalling from file specified by %s flag", flags.ProposerSettingsFlag.Name)
 			}
 			loadConfig = psl.processProposerSettings(settingFromFile, loadConfig)
+			log.WithField(flags.ProposerSettingsFlag.Name, cliCtx.String(flags.ProposerSettingsFlag.Name)).Info("Proposer settings loaded from file")
 		case urlFlag:
 			var settingFromURL *validatorpb.ProposerSettingsPayload
 			if err := config.UnmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ProposerSettingsURLFlag.Name), &settingFromURL); err != nil {
@@ -166,9 +179,14 @@ func (psl *settingsLoader) Load(cliCtx *cli.Context) (*proposer.Settings, error)
 				return nil, errors.New("proposer settings is empty after unmarshalling from url")
 			}
 			loadConfig = psl.processProposerSettings(settingFromURL, loadConfig)
+			log.WithField(flags.ProposerSettingsURLFlag.Name, cliCtx.String(flags.ProposerSettingsURLFlag.Name)).Infof("Proposer settings loaded from URL")
 		case onlyDB:
 			loadConfig = psl.processProposerSettings(nil, loadConfig)
+			log.Info("Proposer settings loaded from the DB")
 		case none:
+			if psl.existsInDB {
+				log.Info("Proposer settings loaded from the DB")
+			}
 			if psl.options.builderConfig != nil {
 				// if there are no proposer settings provided, create a default where fee recipient is not populated, this will be skipped for validator registration on validators that don't have a fee recipient set.
 				// skip saving to DB if only builder settings are provided until a trigger like keymanager API updates with fee recipient values

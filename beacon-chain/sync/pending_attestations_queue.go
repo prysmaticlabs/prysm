@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -87,12 +88,13 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	return s.sendBatchRootRequest(ctx, pendingRoots, randGen)
 }
 
-func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb.SignedAggregateAttestationAndProof) {
+func (s *Service) processAttestations(ctx context.Context, attestations []ethpb.SignedAggregateAttAndProof) {
 	for _, signedAtt := range attestations {
-		att := signedAtt.Message
+		aggregate := signedAtt.AggregateAttestationAndProof().AggregateVal()
+		data := aggregate.GetData()
 		// The pending attestations can arrive in both aggregated and unaggregated forms,
 		// each from has distinct validation steps.
-		if helpers.IsAggregated(att.Aggregate) {
+		if helpers.IsAggregated(aggregate) {
 			// Save the pending aggregated attestation to the pool if it passes the aggregated
 			// validation steps.
 			valRes, err := s.validateAggregatedAtt(ctx, signedAtt)
@@ -101,11 +103,11 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb
 			}
 			aggValid := pubsub.ValidationAccept == valRes
 			if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
-				if err := s.cfg.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
+				if err := s.cfg.attPool.SaveAggregatedAttestation(aggregate); err != nil {
 					log.WithError(err).Debug("Could not save aggregate attestation")
 					continue
 				}
-				s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
+				s.setAggregatorIndexEpochSeen(data.Target.Epoch, signedAtt.AggregateAttestationAndProof().GetAggregatorIndex())
 
 				// Broadcasting the signed attestation again once a node is able to process it.
 				if err := s.cfg.p2p.Broadcast(ctx, signedAtt); err != nil {
@@ -116,39 +118,39 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb
 			// This is an important validation before retrieving attestation pre state to defend against
 			// attestation's target intentionally reference checkpoint that's long ago.
 			// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-			if !s.cfg.chain.InForkchoice(bytesutil.ToBytes32(att.Aggregate.Data.BeaconBlockRoot)) {
+			if !s.cfg.chain.InForkchoice(bytesutil.ToBytes32(data.BeaconBlockRoot)) {
 				log.WithError(blockchain.ErrNotDescendantOfFinalized).Debug("Could not verify finalized consistency")
 				continue
 			}
-			if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att.Aggregate); err != nil {
+			if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, aggregate); err != nil {
 				log.WithError(err).Debug("Could not verify FFG consistency")
 				continue
 			}
-			preState, err := s.cfg.chain.AttestationTargetState(ctx, att.Aggregate.Data.Target)
+			preState, err := s.cfg.chain.AttestationTargetState(ctx, data.Target)
 			if err != nil {
 				log.WithError(err).Debug("Could not retrieve attestation prestate")
 				continue
 			}
 
-			valid, err := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
+			valid, err := s.validateUnaggregatedAttWithState(ctx, aggregate, preState)
 			if err != nil {
 				log.WithError(err).Debug("Pending unaggregated attestation failed validation")
 				continue
 			}
 			if valid == pubsub.ValidationAccept {
-				if err := s.cfg.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
+				if err := s.cfg.attPool.SaveUnaggregatedAttestation(aggregate); err != nil {
 					log.WithError(err).Debug("Could not save unaggregated attestation")
 					continue
 				}
-				s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
+				s.setSeenCommitteeIndicesSlot(data.Slot, data.CommitteeIndex, aggregate.GetAggregationBits())
 
-				valCount, err := helpers.ActiveValidatorCount(ctx, preState, slots.ToEpoch(att.Aggregate.Data.Slot))
+				valCount, err := helpers.ActiveValidatorCount(ctx, preState, slots.ToEpoch(data.Slot))
 				if err != nil {
 					log.WithError(err).Debug("Could not retrieve active validator count")
 					continue
 				}
 				// Broadcasting the signed attestation again once a node is able to process it.
-				if err := s.cfg.p2p.BroadcastAttestation(ctx, helpers.ComputeSubnetForAttestation(valCount, signedAtt.Message.Aggregate), signedAtt.Message.Aggregate); err != nil {
+				if err := s.cfg.p2p.BroadcastAttestation(ctx, helpers.ComputeSubnetForAttestation(valCount, aggregate), aggregate); err != nil {
 					log.WithError(err).Debug("Could not broadcast")
 				}
 			}
@@ -160,8 +162,8 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb
 // root of the missing block. The value is the list of pending attestations
 // that voted for that block root. The caller of this function is responsible
 // for not sending repeated attestations to the pending queue.
-func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) {
-	root := bytesutil.ToBytes32(att.Message.Aggregate.Data.BeaconBlockRoot)
+func (s *Service) savePendingAtt(att ethpb.SignedAggregateAttAndProof) {
+	root := bytesutil.ToBytes32(att.AggregateAttestationAndProof().AggregateVal().GetData().BeaconBlockRoot)
 
 	s.pendingAttsLock.Lock()
 	defer s.pendingAttsLock.Unlock()
@@ -178,7 +180,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
 		pendingAttCount.Inc()
-		s.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{att}
+		s.blkRootToPendingAtts[root] = []ethpb.SignedAggregateAttAndProof{att}
 		return
 	}
 	// Skip if the attestation from the same aggregator already exists in
@@ -192,20 +194,32 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 	s.blkRootToPendingAtts[root] = append(s.blkRootToPendingAtts[root], att)
 }
 
-func attsAreEqual(a, b *ethpb.SignedAggregateAttestationAndProof) bool {
-	if a.Signature != nil {
-		return b.Signature != nil && a.Message.AggregatorIndex == b.Message.AggregatorIndex
+func attsAreEqual(a, b ethpb.SignedAggregateAttAndProof) bool {
+	if a.GetSignature() != nil {
+		return b.GetSignature() != nil && a.AggregateAttestationAndProof().GetAggregatorIndex() == b.AggregateAttestationAndProof().GetAggregatorIndex()
 	}
-	if b.Signature != nil {
+	if b.GetSignature() != nil {
 		return false
 	}
-	if a.Message.Aggregate.Data.Slot != b.Message.Aggregate.Data.Slot {
+
+	aAggregate := a.AggregateAttestationAndProof().AggregateVal()
+	bAggregate := b.AggregateAttestationAndProof().AggregateVal()
+	aData := aAggregate.GetData()
+	bData := bAggregate.GetData()
+
+	if aData.Slot != bData.Slot {
 		return false
 	}
-	if a.Message.Aggregate.Data.CommitteeIndex != b.Message.Aggregate.Data.CommitteeIndex {
+
+	if a.Version() >= version.Electra {
+		if !bytes.Equal(aAggregate.CommitteeBitsVal().Bytes(), bAggregate.CommitteeBitsVal().Bytes()) {
+			return false
+		}
+	} else if aData.CommitteeIndex != bData.CommitteeIndex {
 		return false
 	}
-	return bytes.Equal(a.Message.Aggregate.AggregationBits, b.Message.Aggregate.AggregationBits)
+
+	return bytes.Equal(aAggregate.GetAggregationBits(), bAggregate.GetAggregationBits())
 }
 
 // This validates the pending attestations in the queue are still valid.
@@ -221,7 +235,7 @@ func (s *Service) validatePendingAtts(ctx context.Context, slot primitives.Slot)
 
 	for bRoot, atts := range s.blkRootToPendingAtts {
 		for i := len(atts) - 1; i >= 0; i-- {
-			if slot >= atts[i].Message.Aggregate.Data.Slot+params.BeaconConfig().SlotsPerEpoch {
+			if slot >= atts[i].AggregateAttestationAndProof().AggregateVal().GetData().Slot+params.BeaconConfig().SlotsPerEpoch {
 				// Remove the pending attestation from the list in place.
 				atts = append(atts[:i], atts[i+1:]...)
 			}

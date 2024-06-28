@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"go.opencensus.io/trace"
 )
 
 type ValidatorClientOpt func(*beaconApiValidatorClient)
@@ -46,13 +47,17 @@ func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...Valida
 	return c
 }
 
-func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
-	return wrapInMetrics[*ethpb.DutiesResponse]("GetDuties", func() (*ethpb.DutiesResponse, error) {
-		return c.getDuties(ctx, in)
+func (c *beaconApiValidatorClient) Duties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.Duties")
+	defer span.End()
+	return wrapInMetrics[*ethpb.DutiesResponse]("Duties", func() (*ethpb.DutiesResponse, error) {
+		return c.duties(ctx, in)
 	})
 }
 
 func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.CheckDoppelGanger")
+	defer span.End()
 	return wrapInMetrics[*ethpb.DoppelGangerResponse]("CheckDoppelGanger", func() (*ethpb.DoppelGangerResponse, error) {
 		return c.checkDoppelGanger(ctx, in)
 	})
@@ -62,72 +67,106 @@ func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.Dom
 	if len(in.Domain) != 4 {
 		return nil, errors.Errorf("invalid domain type: %s", hexutil.Encode(in.Domain))
 	}
+
+	ctx, span := trace.StartSpan(ctx, "beacon-api.DomainData")
+	defer span.End()
+
 	domainType := bytesutil.ToBytes4(in.Domain)
 
 	return wrapInMetrics[*ethpb.DomainResponse]("DomainData", func() (*ethpb.DomainResponse, error) {
-		return c.getDomainData(ctx, in.Epoch, domainType)
+		return c.domainData(ctx, in.Epoch, domainType)
 	})
 }
 
-func (c *beaconApiValidatorClient) GetAttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
-	return wrapInMetrics[*ethpb.AttestationData]("GetAttestationData", func() (*ethpb.AttestationData, error) {
-		return c.getAttestationData(ctx, in.Slot, in.CommitteeIndex)
+func (c *beaconApiValidatorClient) AttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.AttestationData")
+	defer span.End()
+
+	return wrapInMetrics[*ethpb.AttestationData]("AttestationData", func() (*ethpb.AttestationData, error) {
+		return c.attestationData(ctx, in.Slot, in.CommitteeIndex)
 	})
 }
 
-func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	return wrapInMetrics[*ethpb.GenericBeaconBlock]("GetBeaconBlock", func() (*ethpb.GenericBeaconBlock, error) {
-		return c.getBeaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti)
+func (c *beaconApiValidatorClient) BeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.BeaconBlock")
+	defer span.End()
+
+	return wrapInMetrics[*ethpb.GenericBeaconBlock]("BeaconBlock", func() (*ethpb.GenericBeaconBlock, error) {
+		return c.beaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti)
 	})
 }
 
-func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(_ context.Context, _ *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
+func (c *beaconApiValidatorClient) FeeRecipientByPubKey(_ context.Context, _ *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
 	return nil, nil
 }
 
-func (c *beaconApiValidatorClient) GetSyncCommitteeContribution(ctx context.Context, in *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
-	return wrapInMetrics[*ethpb.SyncCommitteeContribution]("GetSyncCommitteeContribution", func() (*ethpb.SyncCommitteeContribution, error) {
-		return c.getSyncCommitteeContribution(ctx, in)
+func (c *beaconApiValidatorClient) SyncCommitteeContribution(ctx context.Context, in *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.SyncCommitteeContribution")
+	defer span.End()
+
+	return wrapInMetrics[*ethpb.SyncCommitteeContribution]("SyncCommitteeContribution", func() (*ethpb.SyncCommitteeContribution, error) {
+		return c.syncCommitteeContribution(ctx, in)
 	})
 }
 
-func (c *beaconApiValidatorClient) GetSyncMessageBlockRoot(ctx context.Context, _ *empty.Empty) (*ethpb.SyncMessageBlockRootResponse, error) {
-	return wrapInMetrics[*ethpb.SyncMessageBlockRootResponse]("GetSyncMessageBlockRoot", func() (*ethpb.SyncMessageBlockRootResponse, error) {
-		return c.getSyncMessageBlockRoot(ctx)
+func (c *beaconApiValidatorClient) SyncMessageBlockRoot(ctx context.Context, _ *empty.Empty) (*ethpb.SyncMessageBlockRootResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.SyncMessageBlockRoot")
+	defer span.End()
+
+	return wrapInMetrics[*ethpb.SyncMessageBlockRootResponse]("SyncMessageBlockRoot", func() (*ethpb.SyncMessageBlockRootResponse, error) {
+		return c.syncMessageBlockRoot(ctx)
 	})
 }
 
-func (c *beaconApiValidatorClient) GetSyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
-	return wrapInMetrics[*ethpb.SyncSubcommitteeIndexResponse]("GetSyncSubcommitteeIndex", func() (*ethpb.SyncSubcommitteeIndexResponse, error) {
-		return c.getSyncSubcommitteeIndex(ctx, in)
+func (c *beaconApiValidatorClient) SyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.SyncSubcommitteeIndex")
+	defer span.End()
+
+	return wrapInMetrics[*ethpb.SyncSubcommitteeIndexResponse]("SyncSubcommitteeIndex", func() (*ethpb.SyncSubcommitteeIndexResponse, error) {
+		return c.syncSubcommitteeIndex(ctx, in)
 	})
 }
 
 func (c *beaconApiValidatorClient) MultipleValidatorStatus(ctx context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.MultipleValidatorStatus")
+	defer span.End()
+
 	return wrapInMetrics[*ethpb.MultipleValidatorStatusResponse]("MultipleValidatorStatus", func() (*ethpb.MultipleValidatorStatusResponse, error) {
 		return c.multipleValidatorStatus(ctx, in)
 	})
 }
 
 func (c *beaconApiValidatorClient) PrepareBeaconProposer(ctx context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.PrepareBeaconProposer")
+	defer span.End()
+
 	return wrapInMetrics[*empty.Empty]("PrepareBeaconProposer", func() (*empty.Empty, error) {
 		return new(empty.Empty), c.prepareBeaconProposer(ctx, in.Recipients)
 	})
 }
 
 func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.ProposeAttestation")
+	defer span.End()
+
 	return wrapInMetrics[*ethpb.AttestResponse]("ProposeAttestation", func() (*ethpb.AttestResponse, error) {
 		return c.proposeAttestation(ctx, in)
 	})
 }
 
 func (c *beaconApiValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.ProposeBeaconBlock")
+	defer span.End()
+
 	return wrapInMetrics[*ethpb.ProposeResponse]("ProposeBeaconBlock", func() (*ethpb.ProposeResponse, error) {
 		return c.proposeBeaconBlock(ctx, in)
 	})
 }
 
 func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.ProposeExit")
+	defer span.End()
+
 	return wrapInMetrics[*ethpb.ProposeExitResponse]("ProposeExit", func() (*ethpb.ProposeExitResponse, error) {
 		return c.proposeExit(ctx, in)
 	})
@@ -138,52 +177,79 @@ func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *e
 }
 
 func (c *beaconApiValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest, index primitives.ValidatorIndex, committeeLength uint64) (*ethpb.AggregateSelectionResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.SubmitAggregateSelectionProof")
+	defer span.End()
+
 	return wrapInMetrics[*ethpb.AggregateSelectionResponse]("SubmitAggregateSelectionProof", func() (*ethpb.AggregateSelectionResponse, error) {
 		return c.submitAggregateSelectionProof(ctx, in, index, committeeLength)
 	})
 }
 
 func (c *beaconApiValidatorClient) SubmitSignedAggregateSelectionProof(ctx context.Context, in *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.SubmitSignedAggregateSelectionProof")
+	defer span.End()
+
 	return wrapInMetrics[*ethpb.SignedAggregateSubmitResponse]("SubmitSignedAggregateSelectionProof", func() (*ethpb.SignedAggregateSubmitResponse, error) {
 		return c.submitSignedAggregateSelectionProof(ctx, in)
 	})
 }
 
 func (c *beaconApiValidatorClient) SubmitSignedContributionAndProof(ctx context.Context, in *ethpb.SignedContributionAndProof) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.SubmitSignedContributionAndProof")
+	defer span.End()
+
 	return wrapInMetrics[*empty.Empty]("SubmitSignedContributionAndProof", func() (*empty.Empty, error) {
 		return new(empty.Empty), c.submitSignedContributionAndProof(ctx, in)
 	})
 }
 
 func (c *beaconApiValidatorClient) SubmitSyncMessage(ctx context.Context, in *ethpb.SyncCommitteeMessage) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.SubmitSyncMessage")
+	defer span.End()
+
 	return wrapInMetrics[*empty.Empty]("SubmitSyncMessage", func() (*empty.Empty, error) {
 		return new(empty.Empty), c.submitSyncMessage(ctx, in)
 	})
 }
 
 func (c *beaconApiValidatorClient) SubmitValidatorRegistrations(ctx context.Context, in *ethpb.SignedValidatorRegistrationsV1) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.SubmitValidatorRegistrations")
+	defer span.End()
+
 	return wrapInMetrics[*empty.Empty]("SubmitValidatorRegistrations", func() (*empty.Empty, error) {
 		return new(empty.Empty), c.submitValidatorRegistrations(ctx, in.Messages)
 	})
 }
 
 func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, duties []*ethpb.DutiesResponse_Duty) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.SubscribeCommitteeSubnets")
+	defer span.End()
+
 	return wrapInMetrics[*empty.Empty]("SubscribeCommitteeSubnets", func() (*empty.Empty, error) {
 		return new(empty.Empty), c.subscribeCommitteeSubnets(ctx, in, duties)
 	})
 }
 
 func (c *beaconApiValidatorClient) ValidatorIndex(ctx context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.ValidatorIndex")
+	defer span.End()
+
 	return wrapInMetrics[*ethpb.ValidatorIndexResponse]("ValidatorIndex", func() (*ethpb.ValidatorIndexResponse, error) {
 		return c.validatorIndex(ctx, in)
 	})
 }
 
 func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.ValidatorStatus")
+	defer span.End()
+
 	return c.validatorStatus(ctx, in)
 }
 
 func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.WaitForActivation")
+	defer span.End()
+
 	return c.waitForActivation(ctx, in)
 }
 
@@ -211,12 +277,22 @@ func (c *beaconApiValidatorClient) EventStreamIsRunning() bool {
 	return c.isEventStreamRunning
 }
 
-func (c *beaconApiValidatorClient) GetAggregatedSelections(ctx context.Context, selections []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
-	return c.getAggregatedSelection(ctx, selections)
+func (c *beaconApiValidatorClient) AggregatedSelections(ctx context.Context, selections []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.AggregatedSelections")
+	defer span.End()
+
+	return wrapInMetrics[[]iface.BeaconCommitteeSelection]("AggregatedSelections", func() ([]iface.BeaconCommitteeSelection, error) {
+		return c.aggregatedSelection(ctx, selections)
+	})
 }
 
-func (c *beaconApiValidatorClient) GetAggregatedSyncSelections(ctx context.Context, selections []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
-	return c.getAggregatedSyncSelections(ctx, selections)
+func (c *beaconApiValidatorClient) AggregatedSyncSelections(ctx context.Context, selections []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.AggregatedSyncSelections")
+	defer span.End()
+
+	return wrapInMetrics[[]iface.SyncCommitteeSelection]("AggregatedSyncSelections", func() ([]iface.SyncCommitteeSelection, error) {
+		return c.aggregatedSyncSelections(ctx, selections)
+	})
 }
 
 func wrapInMetrics[Resp any](action string, f func() (Resp, error)) (Resp, error) {

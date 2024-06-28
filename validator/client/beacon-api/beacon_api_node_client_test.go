@@ -112,8 +112,8 @@ func TestGetGenesis(t *testing.T) {
 			ctx := context.Background()
 
 			genesisProvider := mock.NewMockGenesisProvider(ctrl)
-			genesisProvider.EXPECT().GetGenesis(
-				ctx,
+			genesisProvider.EXPECT().Genesis(
+				gomock.Any(),
 			).Return(
 				testCase.genesisResponse,
 				testCase.genesisError,
@@ -124,7 +124,7 @@ func TestGetGenesis(t *testing.T) {
 
 			if testCase.queriesDepositContract {
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					"/eth/v1/config/deposit_contract",
 					&depositContractJson,
 				).Return(
@@ -139,7 +139,7 @@ func TestGetGenesis(t *testing.T) {
 				genesisProvider: genesisProvider,
 				jsonRestHandler: jsonRestHandler,
 			}
-			response, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
+			response, err := nodeClient.Genesis(ctx, &emptypb.Empty{})
 
 			if testCase.expectedResponse == nil {
 				assert.ErrorContains(t, testCase.expectedError, err)
@@ -203,7 +203,7 @@ func TestGetSyncStatus(t *testing.T) {
 			syncingResponse := structs.SyncStatusResponse{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				syncingEndpoint,
 				&syncingResponse,
 			).Return(
@@ -214,7 +214,7 @@ func TestGetSyncStatus(t *testing.T) {
 			)
 
 			nodeClient := &beaconApiNodeClient{jsonRestHandler: jsonRestHandler}
-			syncStatus, err := nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
+			syncStatus, err := nodeClient.SyncStatus(ctx, &emptypb.Empty{})
 
 			if testCase.expectedResponse == nil {
 				assert.ErrorContains(t, testCase.expectedError, err)
@@ -267,7 +267,7 @@ func TestGetVersion(t *testing.T) {
 			var versionResponse structs.GetVersionResponse
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				versionEndpoint,
 				&versionResponse,
 			).Return(
@@ -278,7 +278,7 @@ func TestGetVersion(t *testing.T) {
 			)
 
 			nodeClient := &beaconApiNodeClient{jsonRestHandler: jsonRestHandler}
-			version, err := nodeClient.GetVersion(ctx, &emptypb.Empty{})
+			version, err := nodeClient.Version(ctx, &emptypb.Empty{})
 
 			if testCase.expectedResponse == nil {
 				assert.ErrorContains(t, testCase.expectedError, err)

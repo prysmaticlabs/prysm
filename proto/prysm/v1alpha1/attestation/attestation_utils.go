@@ -48,12 +48,19 @@ func ConvertToIndexed(ctx context.Context, attestation ethpb.Att, committees ...
 	sort.Slice(attIndices, func(i, j int) bool {
 		return attIndices[i] < attIndices[j]
 	})
-	inAtt := &ethpb.IndexedAttestation{
+
+	if attestation.Version() >= version.Electra {
+		return &ethpb.IndexedAttestationElectra{
+			Data:             attestation.GetData(),
+			Signature:        attestation.GetSignature(),
+			AttestingIndices: attIndices,
+		}, nil
+	}
+	return &ethpb.IndexedAttestation{
 		Data:             attestation.GetData(),
 		Signature:        attestation.GetSignature(),
 		AttestingIndices: attIndices,
-	}
-	return inAtt, err
+	}, nil
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data.

@@ -291,14 +291,12 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-			ctx := context.Background()
-
 			if testCase.getSyncingOutput != nil {
 				syncingResponseJson := structs.SyncStatusResponse{}
 
 				jsonRestHandler.EXPECT().Get(
-					ctx,
-					syncingEnpoint,
+					gomock.Any(),
+					syncingEndpoint,
 					&syncingResponseJson,
 				).Return(
 					nil,
@@ -312,7 +310,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 				stateForkResponseJson := structs.GetStateForkResponse{}
 
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					forkEndpoint,
 					&stateForkResponseJson,
 				).Return(
@@ -327,7 +325,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 				blockHeadersResponseJson := structs.GetBlockHeadersResponse{}
 
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					headersEndpoint,
 					&blockHeadersResponseJson,
 				).Return(
@@ -346,7 +344,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					require.NoError(t, err)
 
 					jsonRestHandler.EXPECT().Post(
-						ctx,
+						gomock.Any(),
 						iface.inputUrl,
 						nil,
 						bytes.NewBuffer(marshalledIndexes),
@@ -363,8 +361,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
-				stateValidatorsProvider.EXPECT().GetStateValidators(
-					ctx,
+				stateValidatorsProvider.EXPECT().StateValidators(
+					gomock.Any(),
 					testCase.getStateValidatorsInterface.input,
 					nil,
 					nil,
@@ -489,7 +487,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			},
 		},
 		{
-			name:                   "getFork on error",
+			name:                   "fork on error",
 			expectedErrorMessage:   "failed to get fork",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
@@ -727,14 +725,12 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-			ctx := context.Background()
-
 			if testCase.getSyncingOutput != nil {
 				syncingResponseJson := structs.SyncStatusResponse{}
 
 				jsonRestHandler.EXPECT().Get(
-					ctx,
-					syncingEnpoint,
+					gomock.Any(),
+					syncingEndpoint,
 					&syncingResponseJson,
 				).Return(
 					testCase.getSyncingError,
@@ -748,7 +744,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 				stateForkResponseJson := structs.GetStateForkResponse{}
 
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					forkEndpoint,
 					&stateForkResponseJson,
 				).Return(
@@ -763,7 +759,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 				blockHeadersResponseJson := structs.GetBlockHeadersResponse{}
 
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					headersEndpoint,
 					&blockHeadersResponseJson,
 				).Return(
@@ -777,8 +773,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
-				stateValidatorsProvider.EXPECT().GetStateValidators(
-					ctx,
+				stateValidatorsProvider.EXPECT().StateValidators(
+					gomock.Any(),
 					testCase.getStateValidatorsInterface.input,
 					nil,
 					nil,
@@ -796,7 +792,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					require.NoError(t, err)
 
 					jsonRestHandler.EXPECT().Post(
-						ctx,
+						gomock.Any(),
 						iface.inputUrl,
 						nil,
 						bytes.NewBuffer(marshalledIndexes),

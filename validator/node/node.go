@@ -18,14 +18,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
-	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/gateway"
-	"github.com/prysmaticlabs/prysm/v5/api/server"
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
@@ -33,8 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer/loader"
-	"github.com/prysmaticlabs/prysm/v5/container/slice"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/prometheus"
@@ -122,8 +118,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 	}
 
-	configureFastSSZHashingAlgorithm()
-
 	// initialize router used for endpoints
 	router := newRouter(cliCtx)
 	// If the --web flag is enabled to administer the validator
@@ -149,14 +143,14 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 func newRouter(cliCtx *cli.Context) *mux.Router {
 	var allowedOrigins []string
-	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	if cliCtx.IsSet(flags.GRPCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.GRPCGatewayCorsDomain.Name), ",")
 	} else {
-		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+		allowedOrigins = strings.Split(flags.GRPCGatewayCorsDomain.Value, ",")
 	}
 	r := mux.NewRouter()
-	r.Use(server.NormalizeQueryValuesHandler)
-	r.Use(server.CorsHandler(allowedOrigins))
+	r.Use(middleware.NormalizeQueryValuesHandler)
+	r.Use(middleware.CorsHandler(allowedOrigins))
 	return r
 }
 
@@ -262,7 +256,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 	if !isInteropNumValidatorsSet {
 		// Custom Check For Web3Signer
 		if isWeb3SignerURLFlagSet {
-			c.wallet = wallet.NewWalletForWeb3Signer()
+			c.wallet = wallet.NewWalletForWeb3Signer(cliCtx)
 		} else {
 			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 				return nil, wallet.ErrNoWalletFound
@@ -305,7 +299,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Router) error {
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		// Custom Check For Web3Signer
-		c.wallet = wallet.NewWalletForWeb3Signer()
+		c.wallet = wallet.NewWalletForWeb3Signer(cliCtx)
 	} else {
 		// Read the wallet password file from the cli context.
 		if err := setWalletPasswordFilePath(cliCtx); err != nil {
@@ -523,9 +517,9 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		Wallet:                  c.wallet,
 		WalletInitializedFeed:   c.walletInitializedFeed,
 		GRPCMaxCallRecvMsgSize:  c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
-		GRPCRetries:             c.cliCtx.Uint(flags.GrpcRetriesFlag.Name),
-		GRPCRetryDelay:          c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name),
-		GRPCHeaders:             strings.Split(c.cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
+		GRPCRetries:             c.cliCtx.Uint(flags.GRPCRetriesFlag.Name),
+		GRPCRetryDelay:          c.cliCtx.Duration(flags.GRPCRetryDelayFlag.Name),
+		GRPCHeaders:             strings.Split(c.cliCtx.String(flags.GRPCHeadersFlag.Name), ","),
 		BeaconNodeGRPCEndpoint:  c.cliCtx.String(flags.BeaconRPCProviderFlag.Name),
 		BeaconNodeCert:          c.cliCtx.String(flags.CertFlag.Name),
 		BeaconApiEndpoint:       c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
@@ -568,29 +562,19 @@ func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 		}
 
 		if publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name); len(publicKeysSlice) > 0 {
-			pks := make([]string, 0)
 			if len(publicKeysSlice) == 1 {
 				pURL, err := url.ParseRequestURI(publicKeysSlice[0])
 				if err == nil && pURL.Scheme != "" && pURL.Host != "" {
 					web3signerConfig.PublicKeysURL = publicKeysSlice[0]
 				} else {
-					pks = strings.Split(publicKeysSlice[0], ",")
+					web3signerConfig.ProvidedPublicKeys = strings.Split(publicKeysSlice[0], ",")
 				}
-			} else if len(publicKeysSlice) > 1 {
-				pks = publicKeysSlice
+			} else {
+				web3signerConfig.ProvidedPublicKeys = publicKeysSlice
 			}
-			if len(pks) > 0 {
-				pks = slice.Unique[string](pks)
-				var validatorKeys [][48]byte
-				for _, key := range pks {
-					decodedKey, decodeErr := hexutil.Decode(key)
-					if decodeErr != nil {
-						return nil, errors.Wrapf(decodeErr, "could not decode public key for web3signer: %s", key)
-					}
-					validatorKeys = append(validatorKeys, bytesutil.ToBytes48(decodedKey))
-				}
-				web3signerConfig.ProvidedPublicKeys = validatorKeys
-			}
+		}
+		if cliCtx.IsSet(flags.Web3SignerKeyFileFlag.Name) {
+			web3signerConfig.KeyFilePath = cliCtx.String(flags.Web3SignerKeyFileFlag.Name)
 		}
 	}
 	return web3signerConfig, nil
@@ -630,9 +614,9 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 		GRPCGatewayHost:        c.cliCtx.String(flags.GRPCGatewayHost.Name),
 		GRPCGatewayPort:        c.cliCtx.Int(flags.GRPCGatewayPort.Name),
 		GRPCMaxCallRecvMsgSize: c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
-		GRPCRetries:            c.cliCtx.Uint(flags.GrpcRetriesFlag.Name),
-		GRPCRetryDelay:         c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name),
-		GRPCHeaders:            strings.Split(c.cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
+		GRPCRetries:            c.cliCtx.Uint(flags.GRPCRetriesFlag.Name),
+		GRPCRetryDelay:         c.cliCtx.Duration(flags.GRPCRetryDelayFlag.Name),
+		GRPCHeaders:            strings.Split(c.cliCtx.String(flags.GRPCHeadersFlag.Name), ","),
 		BeaconNodeGRPCEndpoint: c.cliCtx.String(flags.BeaconRPCProviderFlag.Name),
 		BeaconApiEndpoint:      c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 		BeaconApiTimeout:       time.Second * 30,
@@ -663,10 +647,10 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 	gatewayAddress := net.JoinHostPort(gatewayHost, fmt.Sprintf("%d", gatewayPort))
 	timeout := c.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	var allowedOrigins []string
-	if c.cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(c.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	if c.cliCtx.IsSet(flags.GRPCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(c.cliCtx.String(flags.GRPCGatewayCorsDomain.Name), ",")
 	} else {
-		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+		allowedOrigins = strings.Split(flags.GRPCGatewayCorsDomain.Value, ",")
 	}
 	maxCallSize := c.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
@@ -793,8 +777,4 @@ func clearDB(ctx context.Context, dataDir string, force bool, isDatabaseMinimal 
 	}
 
 	return nil
-}
-
-func configureFastSSZHashingAlgorithm() {
-	fastssz.EnableVectorizedHTR = true
 }

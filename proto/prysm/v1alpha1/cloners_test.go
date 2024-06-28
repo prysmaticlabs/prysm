@@ -631,24 +631,6 @@ func TestCopyBlindedBeaconBlockBodyElectra(t *testing.T) {
 	}
 }
 
-func TestCopySignedConsolidations(t *testing.T) {
-	cs := genSignedConsolidations(10)
-
-	got := v1alpha1.CopySignedConsolidations(cs)
-	if !reflect.DeepEqual(got, cs) {
-		t.Errorf("TestCopySignedConsolidations() = %v, want %v", got, cs)
-	}
-}
-
-func TestCopySignedConsolidation(t *testing.T) {
-	c := genSignedConsolidation()
-
-	got := v1alpha1.CopySignedConsolidation(c)
-	if !reflect.DeepEqual(got, c) {
-		t.Errorf("TestCopySignedConsolidation() = %v, want %v", got, c)
-	}
-}
-
 func TestCopySignedBeaconBlockElectra(t *testing.T) {
 	sbb := genSignedBeaconBlockElectra()
 
@@ -685,12 +667,12 @@ func TestCopyExecutionPayloadElectra(t *testing.T) {
 	}
 }
 
-func TestCopyDepositReceipts(t *testing.T) {
-	drs := genDepositReceipts(10)
+func TestCopyDepositRequests(t *testing.T) {
+	drs := genDepositRequests(10)
 
-	got := v1alpha1.CopyDepositReceipts(drs)
+	got := v1alpha1.CopyDepositRequests(drs)
 	if !reflect.DeepEqual(got, drs) {
-		t.Errorf("TestCopyDepositReceipts() = %v, want %v", got, drs)
+		t.Errorf("TestCopyDepositRequests() = %v, want %v", got, drs)
 	}
 }
 
@@ -1419,54 +1401,31 @@ func genBlindedBeaconBlockBodyElectra() *v1alpha1.BlindedBeaconBlockBodyElectra 
 		ExecutionPayloadHeader: genExecutionPayloadHeaderElectra(),
 		BlsToExecutionChanges:  genBLSToExecutionChanges(10),
 		BlobKzgCommitments:     getKZGCommitments(4),
-		Consolidations:         genSignedConsolidations(5),
 	}
 }
 
 func genExecutionPayloadHeaderElectra() *enginev1.ExecutionPayloadHeaderElectra {
 	return &enginev1.ExecutionPayloadHeaderElectra{
-		ParentHash:             bytes(32),
-		FeeRecipient:           bytes(20),
-		StateRoot:              bytes(32),
-		ReceiptsRoot:           bytes(32),
-		LogsBloom:              bytes(256),
-		PrevRandao:             bytes(32),
-		BlockNumber:            1,
-		GasLimit:               2,
-		GasUsed:                3,
-		Timestamp:              4,
-		ExtraData:              bytes(32),
-		BaseFeePerGas:          bytes(32),
-		BlockHash:              bytes(32),
-		TransactionsRoot:       bytes(32),
-		WithdrawalsRoot:        bytes(32),
-		BlobGasUsed:            5,
-		ExcessBlobGas:          6,
-		DepositReceiptsRoot:    bytes(32),
-		WithdrawalRequestsRoot: bytes(32),
-	}
-}
-
-func genSignedConsolidations(num int) []*v1alpha1.SignedConsolidation {
-	cs := make([]*v1alpha1.SignedConsolidation, num)
-	for i := 0; i < num; i++ {
-		cs[i] = genSignedConsolidation()
-	}
-	return cs
-}
-
-func genSignedConsolidation() *v1alpha1.SignedConsolidation {
-	return &v1alpha1.SignedConsolidation{
-		Message:   genConsolidation(),
-		Signature: bytes(96),
-	}
-}
-
-func genConsolidation() *v1alpha1.Consolidation {
-	return &v1alpha1.Consolidation{
-		SourceIndex: 1,
-		TargetIndex: 2,
-		Epoch:       3,
+		ParentHash:                bytes(32),
+		FeeRecipient:              bytes(20),
+		StateRoot:                 bytes(32),
+		ReceiptsRoot:              bytes(32),
+		LogsBloom:                 bytes(256),
+		PrevRandao:                bytes(32),
+		BlockNumber:               1,
+		GasLimit:                  2,
+		GasUsed:                   3,
+		Timestamp:                 4,
+		ExtraData:                 bytes(32),
+		BaseFeePerGas:             bytes(32),
+		BlockHash:                 bytes(32),
+		TransactionsRoot:          bytes(32),
+		WithdrawalsRoot:           bytes(32),
+		BlobGasUsed:               5,
+		ExcessBlobGas:             6,
+		DepositRequestsRoot:       bytes(32),
+		WithdrawalRequestsRoot:    bytes(32),
+		ConsolidationRequestsRoot: bytes(32),
 	}
 }
 
@@ -1501,7 +1460,6 @@ func genBeaconBlockBodyElectra() *v1alpha1.BeaconBlockBodyElectra {
 		ExecutionPayload:      genExecutionPayloadElectra(),
 		BlsToExecutionChanges: genBLSToExecutionChanges(10),
 		BlobKzgCommitments:    getKZGCommitments(4),
-		Consolidations:        genSignedConsolidations(5),
 	}
 }
 
@@ -1524,21 +1482,21 @@ func genExecutionPayloadElectra() *enginev1.ExecutionPayloadElectra {
 		Withdrawals:        genWithdrawals(10),
 		BlobGasUsed:        5,
 		ExcessBlobGas:      6,
-		DepositReceipts:    genDepositReceipts(10),
+		DepositRequests:    genDepositRequests(10),
 		WithdrawalRequests: genWithdrawalRequests(10),
 	}
 }
 
-func genDepositReceipts(num int) []*enginev1.DepositReceipt {
-	drs := make([]*enginev1.DepositReceipt, num)
+func genDepositRequests(num int) []*enginev1.DepositRequest {
+	drs := make([]*enginev1.DepositRequest, num)
 	for i := 0; i < num; i++ {
-		drs[i] = genDepositReceipt()
+		drs[i] = genDepositRequest()
 	}
 	return drs
 }
 
-func genDepositReceipt() *enginev1.DepositReceipt {
-	return &enginev1.DepositReceipt{
+func genDepositRequest() *enginev1.DepositRequest {
+	return &enginev1.DepositRequest{
 		Pubkey:                bytes(48),
 		WithdrawalCredentials: bytes(32),
 		Amount:                55555,
@@ -1547,16 +1505,16 @@ func genDepositReceipt() *enginev1.DepositReceipt {
 	}
 }
 
-func genWithdrawalRequests(num int) []*enginev1.ExecutionLayerWithdrawalRequest {
-	wrs := make([]*enginev1.ExecutionLayerWithdrawalRequest, num)
+func genWithdrawalRequests(num int) []*enginev1.WithdrawalRequest {
+	wrs := make([]*enginev1.WithdrawalRequest, num)
 	for i := 0; i < num; i++ {
 		wrs[i] = genWithdrawalRequest()
 	}
 	return wrs
 }
 
-func genWithdrawalRequest() *enginev1.ExecutionLayerWithdrawalRequest {
-	return &enginev1.ExecutionLayerWithdrawalRequest{
+func genWithdrawalRequest() *enginev1.WithdrawalRequest {
+	return &enginev1.WithdrawalRequest{
 		SourceAddress:   bytes(20),
 		ValidatorPubkey: bytes(48),
 		Amount:          55555,

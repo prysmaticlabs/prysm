@@ -70,7 +70,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		return
 	}
 
-	g, err := v.GetGraffiti(ctx, pubKey)
+	g, err := v.Graffiti(ctx, pubKey)
 	if err != nil {
 		// Graffiti is not a critical enough to fail block production and cause
 		// validator to miss block reward. When failed, validator should continue
@@ -79,7 +79,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	}
 
 	// Request block from beacon node
-	b, err := v.validatorClient.GetBeaconBlock(ctx, &ethpb.BlockRequest{
+	b, err := v.validatorClient.BeaconBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
 		Graffiti:     g,
@@ -148,6 +148,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 				log.WithError(err).Error("Failed to build generic signed block")
 				return
 			}
+		default:
+			log.Errorf("Unsupported block version %s", version.String(blk.Version()))
 		}
 	} else {
 		genericSignedBlock, err = blk.PbGenericBlock()
@@ -327,6 +329,9 @@ func CreateSignedVoluntaryExit(
 
 // Sign randao reveal with randao domain and private key.
 func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch primitives.Epoch, slot primitives.Slot) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.signRandaoReveal")
+	defer span.End()
+
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
 	if err != nil {
 		return nil, errors.Wrap(err, domainDataErr)
@@ -357,6 +362,9 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 // Sign block with proposer domain and private key.
 // Returns the signature, block signing root, and any error.
 func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch primitives.Epoch, slot primitives.Slot, b interfaces.ReadOnlyBeaconBlock) ([]byte, [32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.signBlock")
+	defer span.End()
+
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, [32]byte{}, errors.Wrap(err, domainDataErr)
@@ -395,6 +403,9 @@ func signVoluntaryExit(
 	exit *ethpb.VoluntaryExit,
 	slot primitives.Slot,
 ) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.signVoluntaryExit")
+	defer span.End()
+
 	req := &ethpb.DomainRequest{
 		Epoch:  exit.Epoch,
 		Domain: params.BeaconConfig().DomainVoluntaryExit[:],
@@ -426,8 +437,11 @@ func signVoluntaryExit(
 	return sig.Marshal(), nil
 }
 
-// GetGraffiti gets the graffiti from cli or file for the validator public key.
-func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+// Graffiti gets the graffiti from cli or file for the validator public key.
+func (v *validator) Graffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.Graffiti")
+	defer span.End()
+
 	if v.proposerSettings != nil {
 		// Check proposer settings for specific key first
 		if v.proposerSettings.ProposeConfig != nil {
@@ -491,6 +505,9 @@ func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 }
 
 func (v *validator) SetGraffiti(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	ctx, span := trace.StartSpan(ctx, "validator.SetGraffiti")
+	defer span.End()
+
 	if graffiti == nil {
 		return nil
 	}
@@ -516,6 +533,9 @@ func (v *validator) SetGraffiti(ctx context.Context, pubkey [fieldparams.BLSPubk
 }
 
 func (v *validator) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
+	ctx, span := trace.StartSpan(ctx, "validator.DeleteGraffiti")
+	defer span.End()
+
 	if v.proposerSettings == nil || v.proposerSettings.ProposeConfig == nil {
 		return errors.New("attempted to delete graffiti without proposer settings, graffiti will default to flag options")
 	}

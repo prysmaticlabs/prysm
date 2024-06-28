@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
-	test_helpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	testhelpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"go.uber.org/mock/gomock"
 )
 
@@ -75,7 +75,7 @@ func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 	// Make sure that what we send in the POST body is the marshalled version of the protobuf block
 	headers := map[string]string{"Eth-Consensus-Version": "bellatrix"}
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/blocks",
 		headers,
 		bytes.NewBuffer(marshalledBlock),
@@ -97,8 +97,8 @@ func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 func generateSignedBellatrixBlock() *ethpb.GenericSignedBeaconBlock_Bellatrix {
 	return &ethpb.GenericSignedBeaconBlock_Bellatrix{
 		Bellatrix: &ethpb.SignedBeaconBlockBellatrix{
-			Block:     test_helpers.GenerateProtoBellatrixBeaconBlock(),
-			Signature: test_helpers.FillByteSlice(96, 127),
+			Block:     testhelpers.GenerateProtoBellatrixBeaconBlock(),
+			Signature: testhelpers.FillByteSlice(96, 127),
 		},
 	}
 }

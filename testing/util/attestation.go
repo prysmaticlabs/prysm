@@ -23,10 +23,30 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// NewAttestation creates an attestation block with minimum marshalable fields.
+// NewAttestation creates a block attestation with minimum marshalable fields.
 func NewAttestation() *ethpb.Attestation {
 	return &ethpb.Attestation{
 		AggregationBits: bitfield.Bitlist{0b1101},
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+			Source: &ethpb.Checkpoint{
+				Root: make([]byte, fieldparams.RootLength),
+			},
+			Target: &ethpb.Checkpoint{
+				Root: make([]byte, fieldparams.RootLength),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+}
+
+// NewAttestationElectra creates a block attestation with minimum marshalable fields.
+func NewAttestationElectra() *ethpb.AttestationElectra {
+	cb := primitives.NewAttestationCommitteeBits()
+	cb.SetBitAt(0, true)
+	return &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b1101},
+		CommitteeBits:   cb,
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 			Source: &ethpb.Checkpoint{
