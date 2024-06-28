@@ -218,16 +218,14 @@ func TestDataColumnSampler1D_SampleDistribution(t *testing.T) {
 
 	sampler.refreshPeerInfo()
 	columns := []uint64{6, 3, 12}
-	dist, err := sampler.distributeSamplesToPeer(columns)
-	require.NoError(t, err)
+	dist := sampler.distributeSamplesToPeer(columns)
 	require.Equal(t, 3, len(dist))
 	require.Equal(t, true, dist[p1.PeerID()][6])
 	require.Equal(t, true, dist[p2.PeerID()][3])
 	require.Equal(t, true, dist[p3.PeerID()][12])
 
 	columns = []uint64{6, 3, 12, 38, 35, 44}
-	dist, err = sampler.distributeSamplesToPeer(columns)
-	require.NoError(t, err)
+	dist = sampler.distributeSamplesToPeer(columns)
 	require.Equal(t, 3, len(dist))
 	require.Equal(t, true, dist[p1.PeerID()][6])
 	require.Equal(t, true, dist[p2.PeerID()][3])
@@ -237,8 +235,7 @@ func TestDataColumnSampler1D_SampleDistribution(t *testing.T) {
 	require.Equal(t, true, dist[p3.PeerID()][44])
 
 	columns = []uint64{6, 38, 70}
-	dist, err = sampler.distributeSamplesToPeer(columns)
-	require.NoError(t, err)
+	dist = sampler.distributeSamplesToPeer(columns)
 	require.Equal(t, 1, len(dist))
 	require.Equal(t, true, dist[p1.PeerID()][6])
 	require.Equal(t, true, dist[p1.PeerID()][38])
@@ -246,8 +243,8 @@ func TestDataColumnSampler1D_SampleDistribution(t *testing.T) {
 
 	// missing peer for column
 	columns = []uint64{11}
-	_, err = sampler.distributeSamplesToPeer(columns)
-	require.ErrorContains(t, "no peers responsible for column 11", err)
+	dist = sampler.distributeSamplesToPeer(columns)
+	require.Equal(t, 0, len(dist))
 }
 
 func TestDataColumnSampler1D_SampleDataColumns(t *testing.T) {
@@ -256,8 +253,7 @@ func TestDataColumnSampler1D_SampleDataColumns(t *testing.T) {
 
 	// Sample all columns.
 	sampleColumns := []uint64{6, 3, 12, 38, 35, 44, 70, 67, 76, 102, 99, 108}
-	retrieved, err := sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
-	require.NoError(t, err)
+	retrieved := sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
 	require.Equal(t, 12, len(retrieved))
 	for _, column := range sampleColumns {
 		require.Equal(t, true, retrieved[column])
@@ -265,8 +261,7 @@ func TestDataColumnSampler1D_SampleDataColumns(t *testing.T) {
 
 	// Sample a subset of columns.
 	sampleColumns = []uint64{6, 3, 12, 38, 35, 44}
-	retrieved, err = sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
-	require.NoError(t, err)
+	retrieved = sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
 	require.Equal(t, 6, len(retrieved))
 	for _, column := range sampleColumns {
 		require.Equal(t, true, retrieved[column])
@@ -274,8 +269,9 @@ func TestDataColumnSampler1D_SampleDataColumns(t *testing.T) {
 
 	// Sample a subset of columns with missing columns.
 	sampleColumns = []uint64{6, 3, 12, 127}
-	_, err = sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
-	require.ErrorContains(t, "no peers responsible for column 127", err)
+	retrieved = sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
+	require.Equal(t, 3, len(retrieved))
+	require.DeepEqual(t, map[uint64]bool{6: true, 3: true, 12: true}, retrieved)
 }
 
 func TestDataColumnSampler1D_IncrementalDAS(t *testing.T) {

@@ -64,8 +64,9 @@ func newDataColumnSampler1D(
 	ctxMap ContextByteVersions,
 	stateNotifier statefeed.Notifier,
 ) *dataColumnSampler1D {
-	columnToPeerMap := make(map[uint64]map[peer.ID]bool, params.BeaconConfig().NumberOfColumns)
-	for i := uint64(0); i < params.BeaconConfig().NumberOfColumns; i++ {
+	numColumns := params.BeaconConfig().NumberOfColumns
+	columnToPeerMap := make(map[uint64]map[peer.ID]bool, numColumns)
+	for i := uint64(0); i < numColumns; i++ {
 		columnToPeerMap[i] = make(map[peer.ID]bool)
 	}
 
@@ -91,7 +92,7 @@ func (d *dataColumnSampler1D) Run(ctx context.Context) {
 	d.custodyColumns = columns
 
 	custodyColumnsCount := uint64(len(columns))
-	if custodyColumnsCount > params.BeaconConfig().NumberOfColumns/2 {
+	if peerdas.CanSelfReconstruct(custodyColumnsCount) {
 		log.WithFields(logrus.Fields{
 			"custodyColumnsCount": custodyColumnsCount,
 			"totalColumns":        params.BeaconConfig().NumberOfColumns,
@@ -106,10 +107,10 @@ func (d *dataColumnSampler1D) Run(ctx context.Context) {
 	async.RunEvery(ctx, PeerRefreshInterval, d.refreshPeerInfo)
 
 	// start the sampling loop.
-	d.samplingLoop(ctx)
+	d.samplingRoutine(ctx)
 }
 
-func (d *dataColumnSampler1D) samplingLoop(ctx context.Context) {
+func (d *dataColumnSampler1D) samplingRoutine(ctx context.Context) {
 	stateCh := make(chan *feed.Event, 1)
 	stateSub := d.stateNotifier.StateFeed().Subscribe(stateCh)
 	defer stateSub.Unsubscribe()
@@ -135,8 +136,9 @@ func (d *dataColumnSampler1D) refreshPeerInfo() {
 	activePeers := d.p2p.Peers().Active()
 	d.prunePeerInfo(activePeers)
 
-	for _, pid := range d.p2p.Peers().Active() {
+	for _, pid := range activePeers {
 		if _, ok := d.columnFromPeer[pid]; ok {
+			// TODO: need to update peer info here after validator custody.
 			continue
 		}
 
@@ -161,7 +163,7 @@ func (d *dataColumnSampler1D) refreshPeerInfo() {
 }
 
 // prunePeerInfo prunes inactive peers from peerFromColumn and columnFromPeer.
-// this should not be called outside of refreshPeerInfo without being locked.
+// This should not be called outside of refreshPeerInfo without being locked.
 func (d *dataColumnSampler1D) prunePeerInfo(activePeers []peer.ID) {
 	active := make(map[peer.ID]bool)
 	for _, pid := range activePeers {
@@ -262,10 +264,7 @@ func (d *dataColumnSampler1D) incrementalDAS(
 		columnsToSampleCount := extendedSampleCount - firstColumnToSample
 
 		// Sample data columns from peers in parallel.
-		retrievedSamples, err := d.sampleDataColumns(ctx, root, columnsToSample)
-		if err != nil {
-			return false, nil, errors.Wrap(err, "error sample data columns from peers")
-		}
+		retrievedSamples := d.sampleDataColumns(ctx, root, columnsToSample)
 
 		missingSamples := make(map[uint64]bool)
 		for _, column := range columnsToSample {
@@ -314,16 +313,14 @@ func (d *dataColumnSampler1D) sampleDataColumns(
 	ctx context.Context,
 	root [fieldparams.RootLength]byte,
 	columns []uint64,
-) (map[uint64]bool, error) {
+) map[uint64]bool {
 	// distribute samples to peer
-	peerToColumns, err := d.distributeSamplesToPeer(columns)
-	if err != nil {
-		log.WithError(err).Error("Failed to distribute samples to peers")
-		return nil, errors.Wrap(err, "failed distributing samples to peer")
-	}
+	peerToColumns := d.distributeSamplesToPeer(columns)
 
-	var mu sync.Mutex
-	var wg sync.WaitGroup
+	var (
+		mu sync.Mutex
+		wg sync.WaitGroup
+	)
 	res := make(map[uint64]bool)
 	sampleFromPeer := func(pid peer.ID, cols map[uint64]bool) {
 		defer wg.Done()
@@ -343,20 +340,21 @@ func (d *dataColumnSampler1D) sampleDataColumns(
 	}
 
 	wg.Wait()
-	return res, nil
+	return res
 }
 
 // distributeSamplesToPeer distributes samples to peers based on the columns they are responsible for.
 // Currently it randomizes peer selection for a column and did not take into account whole peer distribution balance. It could be improved if needed.
 func (d *dataColumnSampler1D) distributeSamplesToPeer(
 	columns []uint64,
-) (map[peer.ID]map[uint64]bool, error) {
+) map[peer.ID]map[uint64]bool {
 	dist := make(map[peer.ID]map[uint64]bool)
 
 	for _, col := range columns {
 		peers := d.peerFromColumn[col]
 		if len(peers) == 0 {
-			return nil, errors.Errorf("no peers responsible for column %d", col)
+			log.WithField("column", col).Warn("No peers responsible for custody of column")
+			continue
 		}
 
 		pid := selectRandomPeer(peers)
@@ -366,7 +364,7 @@ func (d *dataColumnSampler1D) distributeSamplesToPeer(
 		dist[pid][col] = true
 	}
 
-	return dist, nil
+	return dist
 }
 
 func (d *dataColumnSampler1D) sampleDataColumnsFromPeer(
