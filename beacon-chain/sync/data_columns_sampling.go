@@ -4,16 +4,20 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
+	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	"github.com/prysmaticlabs/prysm/v5/async"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
@@ -21,214 +25,235 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
+const PeerRefreshInterval = 1 * time.Minute
+
 type roundSummary struct {
 	RequestedColumns []uint64
 	MissingColumns   map[uint64]bool
 }
 
-// randomizeColumns returns a slice containing all columns in a random order.
-func randomizeColumns(columns map[uint64]bool) []uint64 {
-	// Create a slice from columns.
-	randomized := make([]uint64, 0, len(columns))
-	for column := range columns {
-		randomized = append(randomized, column)
-	}
-
-	// Shuffle the slice.
-	rand.NewGenerator().Shuffle(len(randomized), func(i, j int) {
-		randomized[i], randomized[j] = randomized[j], randomized[i]
-	})
-
-	return randomized
+// DataColumnSampler defines the interface for sampling data columns from peers for requested block root and samples count.
+type DataColumnSampler interface {
+	// Run starts the data column sampling service.
+	Run(ctx context.Context)
 }
 
-// sortedSliceFromMap returns a sorted slices of keys from a map.
-func sortedSliceFromMap(m map[uint64]bool) []uint64 {
-	result := make([]uint64, 0, len(m))
-	for k := range m {
-		result = append(result, k)
-	}
+var _ DataColumnSampler = (*dataColumnSampler1D)(nil)
 
-	sort.Slice(result, func(i, j int) bool {
-		return result[i] < result[j]
-	})
+// dataColumnSampler1D implements the DataColumnSampler interface for PeerDAS 1D.
+type dataColumnSampler1D struct {
+	sync.RWMutex
 
-	return result
+	p2p           p2p.P2P
+	clock         *startup.Clock
+	ctxMap        ContextByteVersions
+	stateNotifier statefeed.Notifier
+
+	// custodyColumns is a set of columns that the node is responsible for custody.
+	custodyColumns map[uint64]bool
+	// columnFromPeer maps a peer to the columns it is responsible for custody.
+	columnFromPeer map[peer.ID]map[uint64]bool
+	// peerFromColumn maps a column to the peer responsible for custody.
+	peerFromColumn map[uint64]map[peer.ID]bool
 }
 
-// custodyColumnsFromPeer returns the columns the peer should custody.
-func (s *Service) custodyColumnsFromPeer(pid peer.ID) (map[uint64]bool, error) {
-	// Retrieve the custody count of the peer.
-	custodySubnetCount := s.cfg.p2p.CustodyCountFromRemotePeer(pid)
-
-	// Extract the node ID from the peer ID.
-	nodeID, err := p2p.ConvertPeerIDToNodeID(pid)
-	if err != nil {
-		return nil, errors.Wrap(err, "extract node ID")
+// newDataColumnSampler1D creates a new 1D data column sampler.
+func newDataColumnSampler1D(
+	p2p p2p.P2P,
+	clock *startup.Clock,
+	ctxMap ContextByteVersions,
+	stateNotifier statefeed.Notifier,
+) *dataColumnSampler1D {
+	numColumns := params.BeaconConfig().NumberOfColumns
+	columnToPeerMap := make(map[uint64]map[peer.ID]bool, numColumns)
+	for i := uint64(0); i < numColumns; i++ {
+		columnToPeerMap[i] = make(map[peer.ID]bool)
 	}
 
-	// Determine which columns the peer should custody.
-	custodyColumns, err := peerdas.CustodyColumns(nodeID, custodySubnetCount)
-	if err != nil {
-		return nil, errors.Wrap(err, "custody columns")
+	return &dataColumnSampler1D{
+		p2p:            p2p,
+		clock:          clock,
+		ctxMap:         ctxMap,
+		stateNotifier:  stateNotifier,
+		columnFromPeer: make(map[peer.ID]map[uint64]bool),
+		peerFromColumn: columnToPeerMap,
 	}
-
-	return custodyColumns, nil
 }
 
-// sampleDataColumnsFromPeer samples data columns from a peer.
-// It filters out columns that were not requested and columns with incorrect root.
-// It returns the retrieved columns.
-func (s *Service) sampleDataColumnsFromPeer(
-	pid peer.ID,
-	requestedColumns map[uint64]bool,
-	root [fieldparams.RootLength]byte,
-) (map[uint64]bool, error) {
-	// Build the data column identifiers.
-	dataColumnIdentifiers := make(types.DataColumnSidecarsByRootReq, 0, len(requestedColumns))
-	for index := range requestedColumns {
-		dataColumnIdentifiers = append(dataColumnIdentifiers, &eth.DataColumnIdentifier{
-			BlockRoot:   root[:],
-			ColumnIndex: index,
-		})
-	}
-
-	// Send the request.
-	roDataColumns, err := SendDataColumnSidecarByRoot(s.ctx, s.cfg.clock, s.cfg.p2p, pid, s.ctxMap, &dataColumnIdentifiers)
+// Run implements DataColumnSampler.
+func (d *dataColumnSampler1D) Run(ctx context.Context) {
+	// verify if we need to run sampling or not, if not, return directly
+	csc := peerdas.CustodySubnetCount()
+	columns, err := peerdas.CustodyColumns(d.p2p.NodeID(), csc)
 	if err != nil {
-		return nil, errors.Wrap(err, "send data column sidecar by root")
+		log.WithError(err).Error("Failed to determine local custody columns")
+		return
 	}
+	d.custodyColumns = columns
 
-	retrievedColumns := make(map[uint64]bool, len(roDataColumns))
-
-	// Remove retrieved items from rootsByDataColumnIndex.
-	for _, roDataColumn := range roDataColumns {
-		retrievedColumn := roDataColumn.ColumnIndex
-
-		actualRoot := roDataColumn.BlockRoot()
-
-		// Filter out columns with incorrect root.
-		if actualRoot != root {
-			// TODO: Should we decrease the peer score here?
-			log.WithFields(logrus.Fields{
-				"peerID":        pid,
-				"requestedRoot": fmt.Sprintf("%#x", root),
-				"actualRoot":    fmt.Sprintf("%#x", actualRoot),
-			}).Warning("Actual root does not match requested root")
-
-			continue
-		}
-
-		// Filter out columns that were not requested.
-		if !requestedColumns[retrievedColumn] {
-			// TODO: Should we decrease the peer score here?
-			columnsToSampleList := sortedSliceFromMap(requestedColumns)
-
-			log.WithFields(logrus.Fields{
-				"peerID":           pid,
-				"requestedColumns": columnsToSampleList,
-				"retrievedColumn":  retrievedColumn,
-			}).Warning("Retrieved column was not requested")
-
-			continue
-		}
-
-		retrievedColumns[retrievedColumn] = true
-	}
-
-	if len(retrievedColumns) == len(requestedColumns) {
-		// This is the happy path.
+	custodyColumnsCount := uint64(len(columns))
+	if peerdas.CanSelfReconstruct(custodyColumnsCount) {
 		log.WithFields(logrus.Fields{
-			"peerID":           pid,
-			"root":             fmt.Sprintf("%#x", root),
-			"requestedColumns": sortedSliceFromMap(requestedColumns),
-		}).Debug("All requested columns were successfully sampled from peer")
-
-		return retrievedColumns, nil
+			"custodyColumnsCount": custodyColumnsCount,
+			"totalColumns":        params.BeaconConfig().NumberOfColumns,
+		}).Debug("The node custodies at least the half the data columns, no need to sample")
+		return
 	}
 
-	// Some columns are missing.
-	log.WithFields(logrus.Fields{
-		"peerID":           pid,
-		"root":             fmt.Sprintf("%#x", root),
-		"requestedColumns": sortedSliceFromMap(requestedColumns),
-		"retrievedColumns": sortedSliceFromMap(retrievedColumns),
-	}).Warning("Some requested columns were not sampled from peer")
+	// initialize peer info first.
+	d.refreshPeerInfo()
 
-	return retrievedColumns, nil
+	// periodically refresh peer info to keep peer <-> column mapping up to date.
+	async.RunEvery(ctx, PeerRefreshInterval, d.refreshPeerInfo)
+
+	// start the sampling loop.
+	d.samplingRoutine(ctx)
 }
 
-// sampleDataColumnsFromPeers samples data columns from active peers.
-// It returns the retrieved columns count.
-// If one peer fails to return a column it should custody, the column is considered as missing.
-func (s *Service) sampleDataColumnsFromPeers(
-	columnsToSample []uint64,
-	root [fieldparams.RootLength]byte,
-) (map[uint64]bool, error) {
-	// Build all remaining columns to sample.
-	remainingColumnsToSample := make(map[uint64]bool, len(columnsToSample))
-	for _, column := range columnsToSample {
-		remainingColumnsToSample[column] = true
-	}
+func (d *dataColumnSampler1D) samplingRoutine(ctx context.Context) {
+	stateCh := make(chan *feed.Event, 1)
+	stateSub := d.stateNotifier.StateFeed().Subscribe(stateCh)
+	defer stateSub.Unsubscribe()
 
-	// Get the active peers from the p2p service.
-	activePids := s.cfg.p2p.Peers().Active()
-
-	retrievedColumns := make(map[uint64]bool, len(columnsToSample))
-
-	// Query all peers until either all columns to request are retrieved or all active peers are queried (whichever comes first).
-	for i := 0; len(remainingColumnsToSample) > 0 && i < len(activePids); i++ {
-		// Get the peer ID.
-		pid := activePids[i]
-
-		// Get the custody columns of the peer.
-		peerCustodyColumns, err := s.custodyColumnsFromPeer(pid)
-		if err != nil {
-			return nil, errors.Wrap(err, "custody columns from peer")
-		}
-
-		// Compute the intersection of the peer custody columns and the remaining columns to request.
-		peerRequestedColumns := make(map[uint64]bool, len(peerCustodyColumns))
-		for column := range remainingColumnsToSample {
-			if peerCustodyColumns[column] {
-				peerRequestedColumns[column] = true
-			}
-		}
-
-		// Remove the newsly requested columns from the remaining columns to request.
-		for column := range peerRequestedColumns {
-			delete(remainingColumnsToSample, column)
-		}
-
-		// Sample data columns from the peer.
-		peerRetrievedColumns, err := s.sampleDataColumnsFromPeer(pid, peerRequestedColumns, root)
-		if err != nil {
-			return nil, errors.Wrap(err, "sample data columns from peer")
-		}
-
-		// Update the retrieved columns.
-		for column := range peerRetrievedColumns {
-			retrievedColumns[column] = true
+	for {
+		select {
+		case evt := <-stateCh:
+			d.handleStateNotification(ctx, evt)
+		case err := <-stateSub.Err():
+			log.WithError(err).Error("DataColumnSampler1D subscription to state feed failed")
+		case <-ctx.Done():
+			log.Debug("Context canceled, exiting data column sampling loop.")
+			return
 		}
 	}
+}
 
-	return retrievedColumns, nil
+// Refresh peer information.
+func (d *dataColumnSampler1D) refreshPeerInfo() {
+	d.Lock()
+	defer d.Unlock()
+
+	activePeers := d.p2p.Peers().Active()
+	d.prunePeerInfo(activePeers)
+
+	for _, pid := range activePeers {
+		if _, ok := d.columnFromPeer[pid]; ok {
+			// TODO: need to update peer info here after validator custody.
+			continue
+		}
+
+		csc := d.p2p.CustodyCountFromRemotePeer(pid)
+		nid, err := p2p.ConvertPeerIDToNodeID(pid)
+		if err != nil {
+			log.WithError(err).WithField("peerID", pid).Error("Failed to convert peer ID to node ID")
+			continue
+		}
+
+		columns, err := peerdas.CustodyColumns(nid, csc)
+		if err != nil {
+			log.WithError(err).WithField("peerID", pid).Error("Failed to determine peer custody columns")
+			continue
+		}
+
+		d.columnFromPeer[pid] = columns
+		for column := range columns {
+			d.peerFromColumn[column][pid] = true
+		}
+	}
+}
+
+// prunePeerInfo prunes inactive peers from peerFromColumn and columnFromPeer.
+// This should not be called outside of refreshPeerInfo without being locked.
+func (d *dataColumnSampler1D) prunePeerInfo(activePeers []peer.ID) {
+	active := make(map[peer.ID]bool)
+	for _, pid := range activePeers {
+		active[pid] = true
+	}
+
+	for pid := range d.columnFromPeer {
+		if !active[pid] {
+			d.prunePeer(pid)
+		}
+	}
+}
+
+// prunePeer removes a peer from stored peer info map, it should be called with lock held.
+func (d *dataColumnSampler1D) prunePeer(pid peer.ID) {
+	delete(d.columnFromPeer, pid)
+	for _, peers := range d.peerFromColumn {
+		delete(peers, pid)
+	}
+}
+
+func (d *dataColumnSampler1D) handleStateNotification(ctx context.Context, event *feed.Event) {
+	if event.Type != statefeed.BlockProcessed {
+		return
+	}
+
+	data, ok := event.Data.(*statefeed.BlockProcessedData)
+	if !ok {
+		log.Error("Event feed data is not of type *statefeed.BlockProcessedData")
+		return
+	}
+
+	if !data.Verified {
+		// We only process blocks that have been verified
+		log.Error("Data is not verified")
+		return
+	}
+
+	if data.SignedBlock.Version() < version.Deneb {
+		log.Debug("Pre Deneb block, skipping data column sampling")
+		return
+	}
+
+	// Get the commitments for this block.
+	commitments, err := data.SignedBlock.Block().Body().BlobKzgCommitments()
+	if err != nil {
+		log.WithError(err).Error("Failed to get blob KZG commitments")
+		return
+	}
+
+	// Skip if there are no commitments.
+	if len(commitments) == 0 {
+		log.Debug("No commitments in block, skipping data column sampling")
+		return
+	}
+
+	// Randomize columns for sample selection.
+	randomizedColumns := randomizeColumns(params.BeaconConfig().NumberOfColumns)
+	ok, _, err = d.incrementalDAS(ctx, data.BlockRoot, randomizedColumns, params.BeaconConfig().SamplesPerSlot)
+	if err != nil {
+		log.WithError(err).Error("Failed to run incremental DAS")
+	}
+
+	if ok {
+		log.WithFields(logrus.Fields{
+			"root":    fmt.Sprintf("%#x", data.BlockRoot),
+			"columns": randomizedColumns,
+		}).Debug("Data column sampling successful")
+	} else {
+		log.WithFields(logrus.Fields{
+			"root":    fmt.Sprintf("%#x", data.BlockRoot),
+			"columns": randomizedColumns,
+		}).Warning("Data column sampling failed")
+	}
 }
 
 // incrementalDAS samples data columns from active peers using incremental DAS.
 // https://ethresear.ch/t/lossydas-lossy-incremental-and-diagonal-sampling-for-data-availability/18963#incrementaldas-dynamically-increase-the-sample-size-10
-func (s *Service) incrementalDAS(
+func (d *dataColumnSampler1D) incrementalDAS(
+	ctx context.Context,
 	root [fieldparams.RootLength]byte,
 	columns []uint64,
 	sampleCount uint64,
 ) (bool, []roundSummary, error) {
-	columnsCount, missingColumnsCount := uint64(len(columns)), uint64(0)
-	firstColumnToSample, extendedSampleCount := uint64(0), peerdas.ExtendedSampleCount(sampleCount, 0)
-
+	allowedFailures := uint64(0)
+	firstColumnToSample, extendedSampleCount := uint64(0), peerdas.ExtendedSampleCount(sampleCount, allowedFailures)
 	roundSummaries := make([]roundSummary, 0, 1) // We optimistically allocate only one round summary.
 
 	for round := 1; ; /*No exit condition */ round++ {
-		if extendedSampleCount > columnsCount {
+		if extendedSampleCount > uint64(len(columns)) {
 			// We already tried to sample all possible columns, this is the unhappy path.
 			log.WithField("root", fmt.Sprintf("%#x", root)).Warning("Some columns are still missing after sampling all possible columns")
 			return false, roundSummaries, nil
@@ -238,14 +263,10 @@ func (s *Service) incrementalDAS(
 		columnsToSample := columns[firstColumnToSample:extendedSampleCount]
 		columnsToSampleCount := extendedSampleCount - firstColumnToSample
 
-		// Sample the data columns from the peers.
-		retrievedSamples, err := s.sampleDataColumnsFromPeers(columnsToSample, root)
-		if err != nil {
-			return false, nil, errors.Wrap(err, "sample data columns from peers")
-		}
+		// Sample data columns from peers in parallel.
+		retrievedSamples := d.sampleDataColumns(ctx, root, columnsToSample)
 
-		// Compute the missing samples.
-		missingSamples := make(map[uint64]bool, max(0, len(columnsToSample)-len(retrievedSamples)))
+		missingSamples := make(map[uint64]bool)
 		for _, column := range columnsToSample {
 			if !retrievedSamples[column] {
 				missingSamples[column] = true
@@ -258,7 +279,6 @@ func (s *Service) incrementalDAS(
 		})
 
 		retrievedSampleCount := uint64(len(retrievedSamples))
-
 		if retrievedSampleCount == columnsToSampleCount {
 			// All columns were correctly sampled, this is the happy path.
 			log.WithFields(logrus.Fields{
@@ -273,132 +293,187 @@ func (s *Service) incrementalDAS(
 			return false, nil, errors.New("retrieved more columns than requested")
 		}
 
-		// Some columns are missing, we need to extend the sample size.
-		missingColumnsCount += columnsToSampleCount - retrievedSampleCount
-
-		firstColumnToSample = extendedSampleCount
+		// missing columns, extend the samples.
+		allowedFailures += columnsToSampleCount - retrievedSampleCount
 		oldExtendedSampleCount := extendedSampleCount
-		extendedSampleCount = peerdas.ExtendedSampleCount(sampleCount, missingColumnsCount)
+		firstColumnToSample = extendedSampleCount
+		extendedSampleCount = peerdas.ExtendedSampleCount(sampleCount, allowedFailures)
 
 		log.WithFields(logrus.Fields{
 			"root":                fmt.Sprintf("%#x", root),
 			"round":               round,
-			"missingColumnsCount": missingColumnsCount,
-			"currentSampleCount":  oldExtendedSampleCount,
-			"nextSampleCount":     extendedSampleCount,
+			"missingColumnsCount": allowedFailures,
+			"currentSampleIndex":  oldExtendedSampleCount,
+			"nextSampleIndex":     extendedSampleCount,
 		}).Debug("Some columns are still missing after sampling this round.")
 	}
 }
 
-// DataColumnSamplingRoutine runs incremental DAS on block when received.
-func (s *Service) DataColumnSamplingRoutine(ctx context.Context) {
-	// Get the custody subnets count.
-	custodySubnetsCount := peerdas.CustodySubnetCount()
+func (d *dataColumnSampler1D) sampleDataColumns(
+	ctx context.Context,
+	root [fieldparams.RootLength]byte,
+	columns []uint64,
+) map[uint64]bool {
+	// distribute samples to peer
+	peerToColumns := d.distributeSamplesToPeer(columns)
 
-	// Create a subscription to the state feed.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
+	var (
+		mu sync.Mutex
+		wg sync.WaitGroup
+	)
+	res := make(map[uint64]bool)
+	sampleFromPeer := func(pid peer.ID, cols map[uint64]bool) {
+		defer wg.Done()
+		retrieved := d.sampleDataColumnsFromPeer(ctx, pid, root, cols)
 
-	// Unsubscribe from the state feed when the function returns.
-	defer stateSub.Unsubscribe()
+		mu.Lock()
+		for col := range retrieved {
+			res[col] = true
+		}
+		mu.Unlock()
+	}
 
-	// Retrieve the number of columns.
-	columnsCount := params.BeaconConfig().NumberOfColumns
+	// sample from peers in parallel
+	for pid, cols := range peerToColumns {
+		wg.Add(1)
+		go sampleFromPeer(pid, cols)
+	}
 
-	// Retrieve all columns we custody.
-	custodyColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), custodySubnetsCount)
+	wg.Wait()
+	return res
+}
+
+// distributeSamplesToPeer distributes samples to peers based on the columns they are responsible for.
+// Currently it randomizes peer selection for a column and did not take into account whole peer distribution balance. It could be improved if needed.
+func (d *dataColumnSampler1D) distributeSamplesToPeer(
+	columns []uint64,
+) map[peer.ID]map[uint64]bool {
+	dist := make(map[peer.ID]map[uint64]bool)
+
+	for _, col := range columns {
+		peers := d.peerFromColumn[col]
+		if len(peers) == 0 {
+			log.WithField("column", col).Warn("No peers responsible for custody of column")
+			continue
+		}
+
+		pid := selectRandomPeer(peers)
+		if _, ok := dist[pid]; !ok {
+			dist[pid] = make(map[uint64]bool)
+		}
+		dist[pid][col] = true
+	}
+
+	return dist
+}
+
+func (d *dataColumnSampler1D) sampleDataColumnsFromPeer(
+	ctx context.Context,
+	pid peer.ID,
+	root [fieldparams.RootLength]byte,
+	columns map[uint64]bool,
+) map[uint64]bool {
+	retrieved := make(map[uint64]bool)
+
+	req := make(types.DataColumnSidecarsByRootReq, 0)
+	for col := range columns {
+		// Skip querying peers for columns we already have.
+		if d.custodyColumns[col] {
+			retrieved[col] = true
+			continue
+		}
+
+		req = append(req, &eth.DataColumnIdentifier{
+			BlockRoot:   root[:],
+			ColumnIndex: col,
+		})
+	}
+
+	// No columns to request.
+	if len(req) == 0 {
+		return retrieved
+	}
+
+	// Send the request to the peer.
+	roDataColumns, err := SendDataColumnSidecarByRoot(ctx, d.clock, d.p2p, pid, d.ctxMap, &req)
 	if err != nil {
-		log.WithError(err).Error("Failed to get custody columns")
-		return
+		log.WithError(err).Error("Failed to send data column sidecar by root")
+		return nil
 	}
 
-	custodyColumnsCount := uint64(len(custodyColumns))
+	for _, roDataColumn := range roDataColumns {
+		actualRoot := roDataColumn.BlockRoot()
+		if actualRoot != root {
+			// TODO: Should we decrease the peer score here?
+			log.WithFields(logrus.Fields{
+				"peerID":        pid,
+				"requestedRoot": fmt.Sprintf("%#x", root),
+				"actualRoot":    fmt.Sprintf("%#x", actualRoot),
+			}).Warning("Actual root does not match requested root")
+			continue
+		}
 
-	// Compute the number of columns to sample.
-	if custodyColumnsCount >= columnsCount/2 {
-		log.WithFields(logrus.Fields{
-			"custodyColumnsCount": custodyColumnsCount,
-			"columnsCount":        columnsCount,
-		}).Debug("The node custodies at least the half the data columns, no need to sample")
-		return
+		retrieved[roDataColumn.ColumnIndex] = true
 	}
 
-	samplesCount := min(params.BeaconConfig().SamplesPerSlot, columnsCount/2-custodyColumnsCount)
-
-	// Compute all the columns we do NOT custody.
-	nonCustodyColums := make(map[uint64]bool, columnsCount-custodyColumnsCount)
-	for i := uint64(0); i < columnsCount; i++ {
-		if !custodyColumns[i] {
-			nonCustodyColums[i] = true
+	missingColumns := make(map[uint64]bool)
+	for col := range columns {
+		if !retrieved[col] {
+			missingColumns[col] = true
+			// TODO: Should we decrease the peer score here?
 		}
 	}
 
-	for {
-		select {
-		case e := <-stateChannel:
-			if e.Type != statefeed.BlockProcessed {
-				continue
-			}
+	log.WithFields(logrus.Fields{
+		"peerID":           pid,
+		"blockRoot":        fmt.Sprintf("%#x", root),
+		"custodiedColumns": d.columnFromPeer[pid],
+		"requestedColumns": sortedListFromMap(columns),
+		"retrievedColumns": sortedListFromMap(retrieved),
+	}).Debug("Peer data column sampling summary")
+	return retrieved
+}
 
-			data, ok := e.Data.(*statefeed.BlockProcessedData)
-			if !ok {
-				log.Error("Event feed data is not of type *statefeed.BlockProcessedData")
-				continue
-			}
-
-			if !data.Verified {
-				// We only process blocks that have been verified
-				log.Error("Data is not verified")
-				continue
-			}
-
-			if data.SignedBlock.Version() < version.Deneb {
-				log.Debug("Pre Deneb block, skipping data column sampling")
-				continue
-			}
-
-			// Get the commitments for this block.
-			commitments, err := data.SignedBlock.Block().Body().BlobKzgCommitments()
-			if err != nil {
-				log.WithError(err).Error("Failed to get blob KZG commitments")
-				continue
-			}
-
-			// Skip if there are no commitments.
-			if len(commitments) == 0 {
-				log.Debug("No commitments in block, skipping data column sampling")
-				continue
-			}
-
-			// Ramdomize all columns.
-			randomizedColumns := randomizeColumns(nonCustodyColums)
-
-			// Sample data columns with incremental DAS.
-			ok, _, err = s.incrementalDAS(data.BlockRoot, randomizedColumns, samplesCount)
-			if err != nil {
-				log.WithError(err).Error("Error during incremental DAS")
-			}
-
-			if ok {
-				log.WithFields(logrus.Fields{
-					"root":        fmt.Sprintf("%#x", data.BlockRoot),
-					"columns":     randomizedColumns,
-					"sampleCount": samplesCount,
-				}).Debug("Data column sampling successful")
-			} else {
-				log.WithFields(logrus.Fields{
-					"root":        fmt.Sprintf("%#x", data.BlockRoot),
-					"columns":     randomizedColumns,
-					"sampleCount": samplesCount,
-				}).Warning("Data column sampling failed")
-			}
-
-		case <-s.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
-			return
-
-		case err := <-stateSub.Err():
-			log.WithError(err).Error("Subscription to state feed failed")
-		}
+// randomizeColumns returns a slice containing all the numbers between 0 and colNum in a random order.
+func randomizeColumns(colNum uint64) []uint64 {
+	// Create a slice from columns.
+	randomized := make([]uint64, 0, colNum)
+	for i := uint64(0); i < colNum; i++ {
+		randomized = append(randomized, i)
 	}
+
+	// Shuffle the slice.
+	rand.NewGenerator().Shuffle(len(randomized), func(i, j int) {
+		randomized[i], randomized[j] = randomized[j], randomized[i]
+	})
+
+	return randomized
+}
+
+// sortedListFromMap returns a sorted list of keys from a map.
+func sortedListFromMap(m map[uint64]bool) []uint64 {
+	result := make([]uint64, 0, len(m))
+	for k := range m {
+		result = append(result, k)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i] < result[j]
+	})
+
+	return result
+}
+
+// selectRandomPeer returns a random peer from the given list of peers.
+func selectRandomPeer(peers map[peer.ID]bool) peer.ID {
+	pick := rand.NewGenerator().Uint64() % uint64(len(peers))
+	for k := range peers {
+		if pick == 0 {
+			return k
+		}
+		pick--
+	}
+
+	// This should never be reached.
+	return peer.ID("")
 }
