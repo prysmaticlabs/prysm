@@ -92,7 +92,7 @@ func ComputeCellsAndKZGProofs(blob *Blob) ([ckzg4844.CellsPerExtBlob]Cell, [ckzg
 	// Convert Cells and Proofs to types defined in this package
 	var cells [ckzg4844.CellsPerExtBlob]Cell
 	for i := range _cells {
-		cells[i] = Cell(cells[i])
+		cells[i] = Cell(_cells[i])
 	}
 
 	var proofs [ckzg4844.CellsPerExtBlob]Proof
@@ -107,21 +107,21 @@ func VerifyCellKZGProof(commitmentBytes Bytes48, cellId uint64, cell Cell, proof
 	return ckzg4844.VerifyCellKZGProof(commitmentBytes, cellId, ckzg4844.Cell(cell), proofBytes)
 }
 
-func VerifyCellKZGProofBatch(commitmentsBytes []Bytes48, rowIndices, columnIndices []uint64, cells []Cell, proofsBytes []Bytes48) (bool, error) {
+func VerifyCellKZGProofBatch(commitmentsBytes []Bytes48, rowIndices, columnIndices []uint64, _cells []Cell, proofsBytes []Bytes48) (bool, error) {
 	// Convert `Cell` type to `ckgz4844.Cell`
-	var ckzgCells []ckzg4844.Cell
-	for i := range cells {
-		ckzgCells[i] = ckzg4844.Cell(cells[i])
+	ckzgCells := make([]ckzg4844.Cell, len(_cells))
+	for i := range _cells {
+		ckzgCells[i] = ckzg4844.Cell(_cells[i])
 	}
 
 	return ckzg4844.VerifyCellKZGProofBatch(commitmentsBytes, rowIndices, columnIndices, ckzgCells, proofsBytes)
 }
 
-func RecoverAllCells(cellIds []uint64, cells []Cell) ([ckzg4844.CellsPerExtBlob]Cell, error) {
+func RecoverAllCells(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsPerExtBlob]Cell, error) {
 	// Convert `Cell` type to `ckgz4844.Cell`
-	var ckzgCells []ckzg4844.Cell
-	for i := range cells {
-		ckzgCells[i] = ckzg4844.Cell(cells[i])
+	ckzgCells := make([]ckzg4844.Cell, len(_cells))
+	for i := range _cells {
+		ckzgCells[i] = ckzg4844.Cell(_cells[i])
 	}
 
 	recoveredCells, err := ckzg4844.RecoverAllCells(cellIds, ckzgCells)
@@ -142,11 +142,11 @@ func RecoverAllCells(cellIds []uint64, cells []Cell) ([ckzg4844.CellsPerExtBlob]
 	return ret, nil
 }
 
-func CellsToBlob(cells [ckzg4844.CellsPerExtBlob]Cell) (Blob, error) {
+func CellsToBlob(_cells [ckzg4844.CellsPerExtBlob]Cell) (Blob, error) {
 	// Convert `Cell` type to `ckgz4844.Cell`
 	var ckzgCells [ckzg4844.CellsPerExtBlob]ckzg4844.Cell
-	for i := range cells {
-		ckzgCells[i] = ckzg4844.Cell(cells[i])
+	for i := range _cells {
+		ckzgCells[i] = ckzg4844.Cell(_cells[i])
 	}
 
 	blob, err := ckzg4844.CellsToBlob(ckzgCells)
