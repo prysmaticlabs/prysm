@@ -8,7 +8,7 @@ import (
 )
 
 // Blob represents a serialized chunk of data.
-type Blob [131072]byte
+type Blob [BytesPerBlob]byte
 
 // Commitment represent a KZG commitment to a Blob.
 type Commitment [48]byte
