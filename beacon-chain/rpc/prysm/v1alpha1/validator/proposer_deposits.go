@@ -110,7 +110,7 @@ func (vs *Server) deposits(
 	var pendingDeps []*ethpb.DepositContainer
 	for _, dep := range allPendingContainers {
 		if beaconState.Version() < version.Electra {
-			// min(MAX_DEPOSITS, eth1_data.deposit_count - state.eth1_deposit_index)
+			// Add deposits up to min(MAX_DEPOSITS, eth1_data.deposit_count - state.eth1_deposit_index)
 			if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 				pendingDeps = append(pendingDeps, dep)
 			}
