@@ -17,7 +17,7 @@ var (
 	ProcessProposerSlashings     = blocks.ProcessProposerSlashings
 )
 
-// Operations
+// ProcessOperations
 //
 // Spec definition:
 //
@@ -44,7 +44,7 @@ var (
 //	    for_ops(body.execution_payload.withdrawal_requests, process_execution_layer_withdrawal_request)
 //	    for_ops(body.execution_payload.deposit_requests, process_deposit_requests)  # [New in Electra:EIP6110]
 //	    for_ops(body.consolidations, process_consolidation)  # [New in Electra:EIP7251]
-func Operations(
+func ProcessOperations(
 	ctx context.Context,
 	st state.BeaconState,
 	block interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
