@@ -32,8 +32,22 @@ func DeterministicGenesisStateElectra(t testing.TB, numValidators uint64) (state
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}
+	if err := setKeysToActive(beaconState); err != nil {
+		t.Fatal(errors.Wrapf(err, "failed to set keys to active"))
+	}
 	resetCache()
 	return beaconState, privKeys
+}
+
+// setKeysToActive is a function to set the validators to active post electra, electra no longer processes deposits based on eth1data
+func setKeysToActive(beaconState state.BeaconState) error {
+	vals := make([]*ethpb.Validator, len(beaconState.Validators()))
+	for i, val := range beaconState.Validators() {
+		val.ActivationEpoch = 0
+		val.EffectiveBalance = params.BeaconConfig().MinActivationBalance
+		vals[i] = val
+	}
+	return beaconState.SetValidators(vals)
 }
 
 // genesisBeaconStateElectra returns the genesis beacon state.

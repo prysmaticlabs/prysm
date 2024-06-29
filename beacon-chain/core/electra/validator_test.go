@@ -6,12 +6,27 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
+
+func TestAddValidatorToRegistry(t *testing.T) {
+	st, err := state_native.InitializeFromProtoElectra(&eth.BeaconStateElectra{})
+	require.NoError(t, err)
+	require.NoError(t, electra.AddValidatorToRegistry(st, make([]byte, fieldparams.BLSPubkeyLength), make([]byte, fieldparams.RootLength), 100))
+	balances := st.Balances()
+	require.Equal(t, 1, len(balances))
+	require.Equal(t, uint64(0), balances[0])
+	pbds, err := st.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pbds))
+	require.Equal(t, uint64(100), pbds[0].Amount)
+	require.Equal(t, primitives.ValidatorIndex(0), pbds[0].Index)
+}
 
 func TestSwitchToCompoundingValidator(t *testing.T) {
 	s, err := state_native.InitializeFromProtoElectra(&eth.BeaconStateElectra{

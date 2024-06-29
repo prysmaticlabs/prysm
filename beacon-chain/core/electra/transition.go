@@ -2,12 +2,15 @@ package electra
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	e "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"go.opencensus.io/trace"
 )
@@ -125,5 +128,35 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
 		return err
 	}
 
+	return nil
+}
+
+// VerifyBlockDepositLength
+//
+// Spec definition:
+//
+//	# [Modified in Electra:EIP6110]
+//	  # Disable former deposit mechanism once all prior deposits are processed
+//	  eth1_deposit_index_limit = min(state.eth1_data.deposit_count, state.deposit_requests_start_index)
+//	  if state.eth1_deposit_index < eth1_deposit_index_limit:
+//	      assert len(body.deposits) == min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
+//	  else:
+//	      assert len(body.deposits) == 0
+func VerifyBlockDepositLength(body interfaces.ReadOnlyBeaconBlockBody, state state.BeaconState) error {
+	eth1Data := state.Eth1Data()
+	requestsStartIndex, err := state.DepositRequestsStartIndex()
+	if err != nil {
+		return errors.Wrap(err, "failed to get requests start index")
+	}
+	eth1DepositIndexLimit := min(eth1Data.DepositCount, requestsStartIndex)
+	if state.Eth1DepositIndex() < eth1DepositIndexLimit {
+		if uint64(len(body.Deposits())) != min(params.BeaconConfig().MaxDeposits, eth1DepositIndexLimit-state.Eth1DepositIndex()) {
+			return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d", min(params.BeaconConfig().MaxDeposits, eth1DepositIndexLimit-state.Eth1DepositIndex()), len(body.Deposits()))
+		}
+	} else {
+		if len(body.Deposits()) != 0 {
+			return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d", 0, len(body.Deposits()))
+		}
+	}
 	return nil
 }
