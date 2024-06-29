@@ -531,16 +531,16 @@ func HasCompoundingWithdrawalCredential(v interfaces.WithWithdrawalCredentials) 
 	if v == nil {
 		return false
 	}
-	return isCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
+	return IsCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
 }
 
-// isCompoundingWithdrawalCredential checks if the credentials are a compounding withdrawal credential.
+// IsCompoundingWithdrawalCredential checks if the credentials are a compounding withdrawal credential.
 //
 // Spec definition:
 //
 //	def is_compounding_withdrawal_credential(withdrawal_credentials: Bytes32) -> bool:
 //	    return withdrawal_credentials[:1] == COMPOUNDING_WITHDRAWAL_PREFIX
-func isCompoundingWithdrawalCredential(creds []byte) bool {
+func IsCompoundingWithdrawalCredential(creds []byte) bool {
 	return bytes.HasPrefix(creds, []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte})
 }
 
