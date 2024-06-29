@@ -18,11 +18,11 @@ import (
 
 func RunDepositRequestsTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", "operations/deposit_receipt/pyspec_tests") // TODO: update this
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", "operations/deposit_request/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			depositRequestFile, err := util.BazelFileBytes(folderPath, "deposit_receipt.ssz_snappy") // TODO: #14112 should update this value
+			depositRequestFile, err := util.BazelFileBytes(folderPath, "deposit_request.ssz_snappy")
 			require.NoError(t, err)
 			depositRequestSSZ, err := snappy.Decode(nil /* dst */, depositRequestFile)
 			require.NoError(t, err, "Failed to decompress")
