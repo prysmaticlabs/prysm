@@ -144,7 +144,7 @@ func TestGetSpec(t *testing.T) {
 	config.PendingConsolidationsLimit = 84
 	config.MaxPartialWithdrawalsPerPayload = 85
 	config.FullExitRequestAmount = 86
-	config.MaxConsolidations = 87
+	config.MaxConsolidationsRequestsPerPayload = 87
 	config.MaxAttesterSlashingsElectra = 88
 	config.MaxAttestationsElectra = 89
 	config.MaxWithdrawalRequestsPerPayload = 90
@@ -514,7 +514,7 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "85", v)
 			case "FULL_EXIT_REQUEST_AMOUNT":
 				assert.Equal(t, "86", v)
-			case "MAX_CONSOLIDATIONS":
+			case "MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD":
 				assert.Equal(t, "87", v)
 			case "DOMAIN_CONSOLIDATION":
 				assert.Equal(t, "0x31313030", v)
