@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -357,10 +358,10 @@ func BeaconProposerIndexAtSlot(ctx context.Context, state state.ReadOnlyBeaconSt
 //	      candidate_index = indices[compute_shuffled_index(i % total, total, seed)]
 //	      random_byte = hash(seed + uint_to_bytes(uint64(i // 32)))[i % 32]
 //	      effective_balance = state.validators[candidate_index].effective_balance
-//	      if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
+//	      if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_ELECTRA * random_byte: #[Modified in Electra:EIP7251]
 //	          return candidate_index
 //	      i += 1
-func ComputeProposerIndex(bState state.ReadOnlyValidators, activeIndices []primitives.ValidatorIndex, seed [32]byte) (primitives.ValidatorIndex, error) {
+func ComputeProposerIndex(bState state.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex, seed [32]byte) (primitives.ValidatorIndex, error) {
 	length := uint64(len(activeIndices))
 	if length == 0 {
 		return 0, errors.New("empty active indices list")
@@ -385,7 +386,12 @@ func ComputeProposerIndex(bState state.ReadOnlyValidators, activeIndices []primi
 		}
 		effectiveBal := v.EffectiveBalance()
 
-		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
+		maxEB := params.BeaconConfig().MaxEffectiveBalance
+		if bState.Version() >= version.Electra {
+			maxEB = params.BeaconConfig().MaxEffectiveBalanceElectra
+		}
+
+		if effectiveBal*maxRandomByte >= maxEB*uint64(randomByte) {
 			return candidateIndex, nil
 		}
 	}
@@ -404,11 +410,11 @@ func ComputeProposerIndex(bState state.ReadOnlyValidators, activeIndices []primi
 //	        validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
 //	        and validator.effective_balance >= MIN_ACTIVATION_BALANCE  # [Modified in Electra:EIP7251]
 //	    )
-func IsEligibleForActivationQueue(validator *ethpb.Validator, currentEpoch primitives.Epoch) bool {
+func IsEligibleForActivationQueue(validator state.ReadOnlyValidator, currentEpoch primitives.Epoch) bool {
 	if currentEpoch >= params.BeaconConfig().ElectraForkEpoch {
-		return isEligibleForActivationQueueElectra(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+		return isEligibleForActivationQueueElectra(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
 	}
-	return isEligibleForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+	return isEligibleForActivationQueue(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
 }
 
 // isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue
@@ -525,16 +531,16 @@ func HasCompoundingWithdrawalCredential(v interfaces.WithWithdrawalCredentials) 
 	if v == nil {
 		return false
 	}
-	return isCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
+	return IsCompoundingWithdrawalCredential(v.GetWithdrawalCredentials())
 }
 
-// isCompoundingWithdrawalCredential checks if the credentials are a compounding withdrawal credential.
+// IsCompoundingWithdrawalCredential checks if the credentials are a compounding withdrawal credential.
 //
 // Spec definition:
 //
 //	def is_compounding_withdrawal_credential(withdrawal_credentials: Bytes32) -> bool:
 //	    return withdrawal_credentials[:1] == COMPOUNDING_WITHDRAWAL_PREFIX
-func isCompoundingWithdrawalCredential(creds []byte) bool {
+func IsCompoundingWithdrawalCredential(creds []byte) bool {
 	return bytes.HasPrefix(creds, []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte})
 }
 

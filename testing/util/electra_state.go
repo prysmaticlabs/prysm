@@ -32,8 +32,22 @@ func DeterministicGenesisStateElectra(t testing.TB, numValidators uint64) (state
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}
+	if err := setKeysToActive(beaconState); err != nil {
+		t.Fatal(errors.Wrapf(err, "failed to set keys to active"))
+	}
 	resetCache()
 	return beaconState, privKeys
+}
+
+// setKeysToActive is a function to set the validators to active post electra, electra no longer processes deposits based on eth1data
+func setKeysToActive(beaconState state.BeaconState) error {
+	vals := make([]*ethpb.Validator, len(beaconState.Validators()))
+	for i, val := range beaconState.Validators() {
+		val.ActivationEpoch = 0
+		val.EffectiveBalance = params.BeaconConfig().MinActivationBalance
+		vals[i] = val
+	}
+	return beaconState.SetValidators(vals)
 }
 
 // genesisBeaconStateElectra returns the genesis beacon state.
@@ -258,19 +272,20 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 	}
 
 	st.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderElectra{
-		ParentHash:             make([]byte, 32),
-		FeeRecipient:           make([]byte, 20),
-		StateRoot:              make([]byte, 32),
-		ReceiptsRoot:           make([]byte, 32),
-		LogsBloom:              make([]byte, 256),
-		PrevRandao:             make([]byte, 32),
-		ExtraData:              make([]byte, 0),
-		BaseFeePerGas:          make([]byte, 32),
-		BlockHash:              make([]byte, 32),
-		TransactionsRoot:       make([]byte, 32),
-		WithdrawalsRoot:        make([]byte, 32),
-		DepositRequestsRoot:    make([]byte, 32),
-		WithdrawalRequestsRoot: make([]byte, 32),
+		ParentHash:                make([]byte, 32),
+		FeeRecipient:              make([]byte, 20),
+		StateRoot:                 make([]byte, 32),
+		ReceiptsRoot:              make([]byte, 32),
+		LogsBloom:                 make([]byte, 256),
+		PrevRandao:                make([]byte, 32),
+		ExtraData:                 make([]byte, 0),
+		BaseFeePerGas:             make([]byte, 32),
+		BlockHash:                 make([]byte, 32),
+		TransactionsRoot:          make([]byte, 32),
+		WithdrawalsRoot:           make([]byte, 32),
+		DepositRequestsRoot:       make([]byte, 32),
+		WithdrawalRequestsRoot:    make([]byte, 32),
+		ConsolidationRequestsRoot: make([]byte, 32),
 	}
 
 	return state_native.InitializeFromProtoElectra(st)

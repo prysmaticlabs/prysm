@@ -145,16 +145,14 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.PendingBalanceDeposit{}
 	case "PendingPartialWithdrawal":
 		obj = &ethpb.PendingPartialWithdrawal{}
-	case "Consolidation":
-		obj = &ethpb.Consolidation{}
-	case "SignedConsolidation":
-		obj = &ethpb.SignedConsolidation{}
 	case "PendingConsolidation":
 		obj = &ethpb.PendingConsolidation{}
-	case "ExecutionLayerWithdrawalRequest": // TODO: update in spectest update
+	case "WithdrawalRequest":
 		obj = &enginev1.WithdrawalRequest{}
-	case "DepositReceipt": // TODO: update in spectest update
+	case "DepositRequest":
 		obj = &enginev1.DepositRequest{}
+	case "ConsolidationRequest":
+		obj = &enginev1.ConsolidationRequest{}
 	default:
 		return nil, errors.New("type not found")
 	}

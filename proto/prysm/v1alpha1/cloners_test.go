@@ -631,24 +631,6 @@ func TestCopyBlindedBeaconBlockBodyElectra(t *testing.T) {
 	}
 }
 
-func TestCopySignedConsolidations(t *testing.T) {
-	cs := genSignedConsolidations(10)
-
-	got := v1alpha1.CopySignedConsolidations(cs)
-	if !reflect.DeepEqual(got, cs) {
-		t.Errorf("TestCopySignedConsolidations() = %v, want %v", got, cs)
-	}
-}
-
-func TestCopySignedConsolidation(t *testing.T) {
-	c := genSignedConsolidation()
-
-	got := v1alpha1.CopySignedConsolidation(c)
-	if !reflect.DeepEqual(got, c) {
-		t.Errorf("TestCopySignedConsolidation() = %v, want %v", got, c)
-	}
-}
-
 func TestCopySignedBeaconBlockElectra(t *testing.T) {
 	sbb := genSignedBeaconBlockElectra()
 
@@ -1419,54 +1401,31 @@ func genBlindedBeaconBlockBodyElectra() *v1alpha1.BlindedBeaconBlockBodyElectra 
 		ExecutionPayloadHeader: genExecutionPayloadHeaderElectra(),
 		BlsToExecutionChanges:  genBLSToExecutionChanges(10),
 		BlobKzgCommitments:     getKZGCommitments(4),
-		Consolidations:         genSignedConsolidations(5),
 	}
 }
 
 func genExecutionPayloadHeaderElectra() *enginev1.ExecutionPayloadHeaderElectra {
 	return &enginev1.ExecutionPayloadHeaderElectra{
-		ParentHash:             bytes(32),
-		FeeRecipient:           bytes(20),
-		StateRoot:              bytes(32),
-		ReceiptsRoot:           bytes(32),
-		LogsBloom:              bytes(256),
-		PrevRandao:             bytes(32),
-		BlockNumber:            1,
-		GasLimit:               2,
-		GasUsed:                3,
-		Timestamp:              4,
-		ExtraData:              bytes(32),
-		BaseFeePerGas:          bytes(32),
-		BlockHash:              bytes(32),
-		TransactionsRoot:       bytes(32),
-		WithdrawalsRoot:        bytes(32),
-		BlobGasUsed:            5,
-		ExcessBlobGas:          6,
-		DepositRequestsRoot:    bytes(32),
-		WithdrawalRequestsRoot: bytes(32),
-	}
-}
-
-func genSignedConsolidations(num int) []*v1alpha1.SignedConsolidation {
-	cs := make([]*v1alpha1.SignedConsolidation, num)
-	for i := 0; i < num; i++ {
-		cs[i] = genSignedConsolidation()
-	}
-	return cs
-}
-
-func genSignedConsolidation() *v1alpha1.SignedConsolidation {
-	return &v1alpha1.SignedConsolidation{
-		Message:   genConsolidation(),
-		Signature: bytes(96),
-	}
-}
-
-func genConsolidation() *v1alpha1.Consolidation {
-	return &v1alpha1.Consolidation{
-		SourceIndex: 1,
-		TargetIndex: 2,
-		Epoch:       3,
+		ParentHash:                bytes(32),
+		FeeRecipient:              bytes(20),
+		StateRoot:                 bytes(32),
+		ReceiptsRoot:              bytes(32),
+		LogsBloom:                 bytes(256),
+		PrevRandao:                bytes(32),
+		BlockNumber:               1,
+		GasLimit:                  2,
+		GasUsed:                   3,
+		Timestamp:                 4,
+		ExtraData:                 bytes(32),
+		BaseFeePerGas:             bytes(32),
+		BlockHash:                 bytes(32),
+		TransactionsRoot:          bytes(32),
+		WithdrawalsRoot:           bytes(32),
+		BlobGasUsed:               5,
+		ExcessBlobGas:             6,
+		DepositRequestsRoot:       bytes(32),
+		WithdrawalRequestsRoot:    bytes(32),
+		ConsolidationRequestsRoot: bytes(32),
 	}
 }
 
@@ -1501,7 +1460,6 @@ func genBeaconBlockBodyElectra() *v1alpha1.BeaconBlockBodyElectra {
 		ExecutionPayload:      genExecutionPayloadElectra(),
 		BlsToExecutionChanges: genBLSToExecutionChanges(10),
 		BlobKzgCommitments:    getKZGCommitments(4),
-		Consolidations:        genSignedConsolidations(5),
 	}
 }
 

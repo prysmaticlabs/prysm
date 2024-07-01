@@ -22,7 +22,7 @@ const (
 // Receive indexed attestations from some source event feed,
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
-func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan ethpb.IndexedAtt) {
+func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan *slashertypes.WrappedIndexedAtt) {
 	defer s.wg.Done()
 
 	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(indexedAttsChan)
@@ -39,7 +39,7 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 				continue
 			}
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
-				IndexedAttestation: att,
+				IndexedAttestation: att.IndexedAtt,
 				DataRoot:           dataRoot,
 			}
 			s.attsQueue.push(attWrapper)
