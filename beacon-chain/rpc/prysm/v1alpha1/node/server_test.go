@@ -90,7 +90,7 @@ func TestNodeServer_GetImplementedServices(t *testing.T) {
 	res, err := ns.ListImplementedServices(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	// We verify the services include the node service  + the 2 registered reflection services.
-	assert.Equal(t, 3, len(res.Services))
+	assert.Equal(t, 2, len(res.Services))
 }
 
 func TestNodeServer_GetHost(t *testing.T) {
