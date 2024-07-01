@@ -31,7 +31,7 @@ var syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 var syncCommsSubnetEnrKey = params.BeaconNetworkConfig().SyncCommsSubnetKey
 
-// The value used with the subnet, inorder
+// The value used with the subnet, in order
 // to create an appropriate key to retrieve
 // the relevant lock. This is used to differentiate
 // sync subnets from attestation subnets. This is deliberately
