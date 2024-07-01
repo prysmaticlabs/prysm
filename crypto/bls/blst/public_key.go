@@ -20,7 +20,7 @@ type PublicKey struct {
 	p *blstPublicKey
 }
 
-// PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
+// PublicKeyFromBytes creates a BLS public key from a LittleEndian byte slice.
 func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	return publicKeyFromBytes(pubKey, true)
 }
