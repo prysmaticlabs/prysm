@@ -14,6 +14,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	beaconChainSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
@@ -117,7 +118,7 @@ func (s *Service) run() {
 		"Finished retrieving last epoch written per validator",
 	)
 
-	indexedAttsChan := make(chan ethpb.IndexedAtt, 1)
+	indexedAttsChan := make(chan *types.WrappedIndexedAtt, 1)
 	beaconBlockHeadersChan := make(chan *ethpb.SignedBeaconBlockHeader, 1)
 
 	s.wg.Add(1)
