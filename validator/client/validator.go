@@ -866,7 +866,7 @@ func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot primitiv
 	)
 
 	for valIdx, pubKey := range validators {
-		res, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+		res, err := v.validatorClient.SyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 			PublicKey: pubKey[:],
 			Slot:      slot,
 		})
