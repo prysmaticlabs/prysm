@@ -6,7 +6,7 @@ Originally from [github.com/x-cray/logrus-prefixed-formatter(https://github.com/
 modified colored output and support for log entry prefixes, e.g. message source followed by a colon. In addition, custom
 color themes are supported.
 
-![Formatter screenshot](http://cl.ly/image/1w0B3F233F3z/formatter-screenshot@2x.png)
+![Formatter screenshot](https://camo.githubusercontent.com/3177c4e5657f79815e562c79c07469374a68b837e0e7fee919675adcd7f499e6/687474703a2f2f692e696d6775722e636f6d2f505937714d77642e706e67)
 
 Just like with the original `logrus.TextFormatter` when a TTY is not attached, the output is compatible with the
 [logfmt](http://godoc.org/github.com/kr/logfmt) format:
