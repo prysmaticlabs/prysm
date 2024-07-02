@@ -28,6 +28,7 @@ load(
     "@io_bazel_rules_go//go:def.bzl",
     "GoLibrary",
     "GoSource",
+    "go_context",
 )
 
 load("@io_bazel_rules_go//go/tools/gopackagesdriver:aspect.bzl", "go_pkg_info_aspect", "GoPkgInfo")
@@ -95,9 +96,12 @@ SSZ_DEPS = ["@com_github_prysmaticlabs_fastssz//:go_default_library"]
 """
 
 def _ssz_methodical_impl(ctx):
+    go_ctx = go_context(ctx)
     all_json_files = {}
     stdlib = ''
     inputs = []
+    inputs += go_ctx.sdk.srcs
+    sample = go_ctx.sdk.srcs[0].path
     # ctx.attr.deps should contain the GoPkgInfo from applying 'go_pkg_info_aspect'
     for dep in ctx.attr.deps:
         pkginfo = dep[OutputGroupInfo]
@@ -117,8 +121,8 @@ def _ssz_methodical_impl(ctx):
             std_ds = pkginfo.go_pkg_driver_stdlib_json_file.to_list()
             if len(std_ds) > 0:
                 stdlib = std_ds[0].path
-        srcs = pkginfo.go_pkg_driver_srcs.to_list()
-        inputs += srcs
+                inputs += std_ds
+        inputs += pkginfo.go_pkg_driver_srcs.to_list()
     # concat the stdlib with all the other json file paths and write to disk
     json_out = [stdlib] + all_json_files.keys()
     all_pkg_list = ctx.actions.declare_file("methodical-pkg-list.json")
@@ -127,18 +131,23 @@ def _ssz_methodical_impl(ctx):
         env = {
             "PACKAGEJSONINVENTORY": all_pkg_list.path,
         },
-        #inputs = ctx.attr.deps,
         inputs =  [all_pkg_list] + inputs,
         outputs = [ctx.outputs.out],
         command = """
+        echo "sample = {sample}" &&
+        echo "{out_base}" &&
+        env &&
         echo {json_list} && 
         cat {json_list} &&
         echo $PACKAGEJSONINVENTORY &&
+        echo "\n" &&
         exit 1
         """.format(
+            sample = sample,
+            out_base = ctx.outputs.out.root.path,
             json_list = all_pkg_list.path,
-            out = ctx.outputs.out.path,
         ),
+        #wc -l bazel-out/darwin_arm64-fastbuild/bin/proto/prysm/v1alpha1/methodical-pkg-list.json &&
     )
 
 ssz_methodical = rule(
@@ -148,5 +157,9 @@ ssz_methodical = rule(
         "out": attr.output(
             doc = "The new Go file to emit the generated mocks into",
         ),
-    }
+        "_go_context_data": attr.label(
+            default = "@io_bazel_rules_go//:go_context_data",
+        ),
+    },
+    toolchains = ["@io_bazel_rules_go//go:toolchain"],
 )
