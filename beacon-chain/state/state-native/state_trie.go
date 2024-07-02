@@ -189,11 +189,12 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 
 		id: types.Enumerator.Inc(),
 
-		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
+		dirtyFields:         make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:        make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves:    make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		rebuildTrie:         make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:       stateutil.NewValMapHandler(st.Validators),
+		validatorIndexCache: newFinalizedValidatorIndexCache(),
 	}
 
 	if features.Get().EnableExperimentalState {
@@ -760,6 +761,8 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
+
+	b.SaveValidatorIndices()
 
 	if features.Get().EnableExperimentalState {
 		b.blockRootsMultiValue = NewMultiValueBlockRoots(st.BlockRoots)
