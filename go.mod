@@ -1,8 +1,8 @@
 module github.com/prysmaticlabs/prysm/v5
 
-go 1.21
+go 1.22
 
-toolchain go1.21.11
+toolchain go1.22.4
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
@@ -271,7 +271,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-playground/validator/v10 v10.13.0
 	github.com/peterh/liner v1.2.0 // indirect
-	github.com/prysmaticlabs/gohashtree v0.0.4-beta
+	github.com/prysmaticlabs/gohashtree v0.0.4-beta.0.20240624100937-73632381301b
 	golang.org/x/sys v0.20.0 // indirect
 	google.golang.org/api v0.44.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
