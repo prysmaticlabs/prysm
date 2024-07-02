@@ -75,7 +75,7 @@ func (vs *Server) ProposeAttestationElectra(ctx context.Context, att *ethpb.Atte
 		return nil, status.Errorf(codes.InvalidArgument, "Committee bits has no bit set")
 	}
 	if len(committeeIndices) > 1 {
-		return nil, status.Errorf(codes.InvalidArgument, "Committee bits has more than one index set")
+		return nil, status.Errorf(codes.InvalidArgument, "Committee bits has more than one bit set")
 	}
 
 	resp, err := vs.proposeAtt(ctx, att, committeeIndices[0])
