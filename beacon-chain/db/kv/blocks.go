@@ -736,7 +736,7 @@ func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot primitives.Slot) ([
 	return [][32]byte{}, nil
 }
 
-// createBlockFiltersFromIndices takes in filter criteria and returns
+// createBlockIndicesFromFilters takes in filter criteria and returns
 // a map with a single key-value pair: "block-parent-root-indices” -> parentRoot (array of bytes).
 //
 // For blocks, these are list of signing roots of block
