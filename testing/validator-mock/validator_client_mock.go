@@ -237,6 +237,21 @@ func (mr *MockValidatorClientMockRecorder) ProposeAttestation(arg0, arg1 any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeAttestation", reflect.TypeOf((*MockValidatorClient)(nil).ProposeAttestation), arg0, arg1)
 }
 
+// ProposeAttestationElectra mocks base method.
+func (m *MockValidatorClient) ProposeAttestationElectra(arg0 context.Context, arg1 *eth.AttestationElectra) (*eth.AttestResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProposeAttestationElectra", arg0, arg1)
+	ret0, _ := ret[0].(*eth.AttestResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProposeAttestationElectra indicates an expected call of ProposeAttestationElectra.
+func (mr *MockValidatorClientMockRecorder) ProposeAttestationElectra(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeAttestationElectra", reflect.TypeOf((*MockValidatorClient)(nil).ProposeAttestationElectra), arg0, arg1)
+}
+
 // ProposeBeaconBlock mocks base method.
 func (m *MockValidatorClient) ProposeBeaconBlock(arg0 context.Context, arg1 *eth.GenericSignedBeaconBlock) (*eth.ProposeResponse, error) {
 	m.ctrl.T.Helper()
@@ -306,6 +321,21 @@ func (mr *MockValidatorClientMockRecorder) SubmitAggregateSelectionProof(arg0, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAggregateSelectionProof", reflect.TypeOf((*MockValidatorClient)(nil).SubmitAggregateSelectionProof), arg0, arg1, arg2, arg3)
 }
 
+// SubmitAggregateSelectionProofElectra mocks base method.
+func (m *MockValidatorClient) SubmitAggregateSelectionProofElectra(arg0 context.Context, arg1 *eth.AggregateSelectionRequest, arg2 primitives.ValidatorIndex, arg3 uint64) (*eth.AggregateSelectionElectraResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubmitAggregateSelectionProofElectra", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*eth.AggregateSelectionElectraResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitAggregateSelectionProofElectra indicates an expected call of SubmitAggregateSelectionProofElectra.
+func (mr *MockValidatorClientMockRecorder) SubmitAggregateSelectionProofElectra(arg0, arg1, arg2, arg3 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAggregateSelectionProofElectra", reflect.TypeOf((*MockValidatorClient)(nil).SubmitAggregateSelectionProofElectra), arg0, arg1, arg2, arg3)
+}
+
 // SubmitSignedAggregateSelectionProof mocks base method.
 func (m *MockValidatorClient) SubmitSignedAggregateSelectionProof(arg0 context.Context, arg1 *eth.SignedAggregateSubmitRequest) (*eth.SignedAggregateSubmitResponse, error) {
 	m.ctrl.T.Helper()
@@ -319,6 +349,21 @@ func (m *MockValidatorClient) SubmitSignedAggregateSelectionProof(arg0 context.C
 func (mr *MockValidatorClientMockRecorder) SubmitSignedAggregateSelectionProof(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSignedAggregateSelectionProof", reflect.TypeOf((*MockValidatorClient)(nil).SubmitSignedAggregateSelectionProof), arg0, arg1)
+}
+
+// SubmitSignedAggregateSelectionProofElectra mocks base method.
+func (m *MockValidatorClient) SubmitSignedAggregateSelectionProofElectra(arg0 context.Context, arg1 *eth.SignedAggregateSubmitElectraRequest) (*eth.SignedAggregateSubmitResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubmitSignedAggregateSelectionProofElectra", arg0, arg1)
+	ret0, _ := ret[0].(*eth.SignedAggregateSubmitResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitSignedAggregateSelectionProofElectra indicates an expected call of SubmitSignedAggregateSelectionProofElectra.
+func (mr *MockValidatorClientMockRecorder) SubmitSignedAggregateSelectionProofElectra(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSignedAggregateSelectionProofElectra", reflect.TypeOf((*MockValidatorClient)(nil).SubmitSignedAggregateSelectionProofElectra), arg0, arg1)
 }
 
 // SubmitSignedContributionAndProof mocks base method.

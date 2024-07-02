@@ -108,7 +108,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Phase 0 (SlashingProtectionMinimal:%v)", isSlashingProtectionMinimal), func(t *testing.T) {
 			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
 			defer finish()
 			hook := logTest.NewGlobal()
@@ -161,6 +161,89 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 					Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
 				},
 				AggregationBits: aggregationBitfield,
+				Signature:       make([]byte, 96),
+			}
+
+			root, err := signing.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
+			require.NoError(t, err)
+
+			sig, err := validator.km.Sign(context.Background(), &validatorpb.SignRequest{
+				PublicKey:   validatorKey.PublicKey().Marshal(),
+				SigningRoot: root[:],
+			})
+			require.NoError(t, err)
+			expectedAttestation.Signature = sig.Marshal()
+			if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
+				t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
+				diff, _ := messagediff.PrettyDiff(expectedAttestation, generatedAttestation)
+				t.Log(diff)
+			}
+			require.LogsDoNotContain(t, hook, "Could not")
+		})
+	}
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		t.Run(fmt.Sprintf("Electra (SlashingProtectionMinimal:%v)", isSlashingProtectionMinimal), func(t *testing.T) {
+			electraForkEpoch := uint64(1)
+			params.SetupTestConfigCleanup(t)
+			cfg := params.BeaconConfig().Copy()
+			cfg.ElectraForkEpoch = primitives.Epoch(electraForkEpoch)
+			params.OverrideBeaconConfig(cfg)
+
+			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
+			defer finish()
+			hook := logTest.NewGlobal()
+			validatorIndex := primitives.ValidatorIndex(7)
+			committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+			var pubKey [fieldparams.BLSPubkeyLength]byte
+			copy(pubKey[:], validatorKey.PublicKey().Marshal())
+			validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
+				{
+					PublicKey:      validatorKey.PublicKey().Marshal(),
+					CommitteeIndex: 5,
+					Committee:      committee,
+					ValidatorIndex: validatorIndex,
+				},
+			}}
+
+			beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
+			targetRoot := bytesutil.ToBytes32([]byte("B"))
+			sourceRoot := bytesutil.ToBytes32([]byte("C"))
+			m.validatorClient.EXPECT().AttestationData(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
+			).Return(&ethpb.AttestationData{
+				BeaconBlockRoot: beaconBlockRoot[:],
+				Target:          &ethpb.Checkpoint{Root: targetRoot[:]},
+				Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
+			}, nil)
+
+			m.validatorClient.EXPECT().DomainData(
+				gomock.Any(), // ctx
+				gomock.Any(), // epoch
+			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+
+			var generatedAttestation *ethpb.AttestationElectra
+			m.validatorClient.EXPECT().ProposeAttestationElectra(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.AttestationElectra{}),
+			).Do(func(_ context.Context, att *ethpb.AttestationElectra) {
+				generatedAttestation = att
+			}).Return(&ethpb.AttestResponse{}, nil /* error */)
+
+			validator.SubmitAttestation(context.Background(), params.BeaconConfig().SlotsPerEpoch.Mul(electraForkEpoch), pubKey)
+
+			aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
+			aggregationBitfield.SetBitAt(4, true)
+			committeeBits := primitives.NewAttestationCommitteeBits()
+			committeeBits.SetBitAt(5, true)
+			expectedAttestation := &ethpb.AttestationElectra{
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: beaconBlockRoot[:],
+					Target:          &ethpb.Checkpoint{Root: targetRoot[:]},
+					Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
+				},
+				AggregationBits: aggregationBitfield,
+				CommitteeBits:   committeeBits,
 				Signature:       make([]byte, 96),
 			}
 

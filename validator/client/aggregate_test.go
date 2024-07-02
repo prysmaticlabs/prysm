@@ -87,7 +87,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Phase 0 (SlashingProtectionMinimal:%v)", isSlashingProtectionMinimal), func(t *testing.T) {
 			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
 			defer finish()
 			var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -131,6 +131,59 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 			).Return(&ethpb.SignedAggregateSubmitResponse{AttestationDataRoot: make([]byte, 32)}, nil)
 
 			validator.SubmitAggregateAndProof(context.Background(), 0, pubKey)
+		})
+	}
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		t.Run(fmt.Sprintf("Electra (SlashingProtectionMinimal:%v)", isSlashingProtectionMinimal), func(t *testing.T) {
+			electraForkEpoch := uint64(1)
+			params.SetupTestConfigCleanup(t)
+			cfg := params.BeaconConfig().Copy()
+			cfg.ElectraForkEpoch = primitives.Epoch(electraForkEpoch)
+			params.OverrideBeaconConfig(cfg)
+
+			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
+			defer finish()
+			var pubKey [fieldparams.BLSPubkeyLength]byte
+			copy(pubKey[:], validatorKey.PublicKey().Marshal())
+			validator.duties = &ethpb.DutiesResponse{
+				CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
+					{
+						PublicKey: validatorKey.PublicKey().Marshal(),
+					},
+				},
+			}
+
+			m.validatorClient.EXPECT().DomainData(
+				gomock.Any(), // ctx
+				gomock.Any(), // epoch
+			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+
+			m.validatorClient.EXPECT().SubmitAggregateSelectionProofElectra(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
+				gomock.Any(),
+				gomock.Any(),
+			).Return(&ethpb.AggregateSelectionElectraResponse{
+				AggregateAndProof: &ethpb.AggregateAttestationAndProofElectra{
+					AggregatorIndex: 0,
+					Aggregate: util.HydrateAttestationElectra(&ethpb.AttestationElectra{
+						AggregationBits: make([]byte, 1),
+					}),
+					SelectionProof: make([]byte, 96),
+				},
+			}, nil)
+
+			m.validatorClient.EXPECT().DomainData(
+				gomock.Any(), // ctx
+				gomock.Any(), // epoch
+			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+
+			m.validatorClient.EXPECT().SubmitSignedAggregateSelectionProofElectra(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.SignedAggregateSubmitElectraRequest{}),
+			).Return(&ethpb.SignedAggregateSubmitResponse{AttestationDataRoot: make([]byte, 32)}, nil)
+
+			validator.SubmitAggregateAndProof(context.Background(), params.BeaconConfig().SlotsPerEpoch.Mul(electraForkEpoch), pubKey)
 		})
 	}
 }
@@ -237,7 +290,7 @@ func TestWaitForSlotTwoThird_DoneContext_ReturnsImmediately(t *testing.T) {
 
 func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Phase 0 (SlashingProtectionMinimal:%v)", isSlashingProtectionMinimal), func(t *testing.T) {
 			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
 			defer finish()
 
@@ -256,6 +309,37 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 				SelectionProof: make([]byte, 96),
 			}
 			sig, err := validator.aggregateAndProofSig(context.Background(), pubKey, agg, 0 /* slot */)
+			require.NoError(t, err)
+			_, err = bls.SignatureFromBytes(sig)
+			require.NoError(t, err)
+		})
+	}
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		t.Run(fmt.Sprintf("Electra (SlashingProtectionMinimal:%v)", isSlashingProtectionMinimal), func(t *testing.T) {
+			electraForkEpoch := uint64(1)
+			params.SetupTestConfigCleanup(t)
+			cfg := params.BeaconConfig().Copy()
+			cfg.ElectraForkEpoch = primitives.Epoch(electraForkEpoch)
+			params.OverrideBeaconConfig(cfg)
+
+			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
+			defer finish()
+
+			var pubKey [fieldparams.BLSPubkeyLength]byte
+			copy(pubKey[:], validatorKey.PublicKey().Marshal())
+			m.validatorClient.EXPECT().DomainData(
+				gomock.Any(), // ctx
+				&ethpb.DomainRequest{Epoch: 0, Domain: params.BeaconConfig().DomainAggregateAndProof[:]},
+			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+
+			agg := &ethpb.AggregateAttestationAndProofElectra{
+				AggregatorIndex: 0,
+				Aggregate: util.HydrateAttestationElectra(&ethpb.AttestationElectra{
+					AggregationBits: bitfield.NewBitlist(1),
+				}),
+				SelectionProof: make([]byte, 96),
+			}
+			sig, err := validator.aggregateAndProofSig(context.Background(), pubKey, agg, params.BeaconConfig().SlotsPerEpoch.Mul(electraForkEpoch) /* slot */)
 			require.NoError(t, err)
 			_, err = bls.SignatureFromBytes(sig)
 			require.NoError(t, err)
