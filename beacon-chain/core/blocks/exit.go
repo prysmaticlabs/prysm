@@ -190,7 +190,7 @@ func verifyExitConditions(st state.ReadOnlyBeaconState, validator state.ReadOnly
 			params.BeaconConfig().ShardCommitteePeriod,
 			validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod,
 		)
-	} 
+	}
 
 	if st.Version() >= version.Electra {
 		// Only exit validator if it has no pending withdrawals in the queue.
