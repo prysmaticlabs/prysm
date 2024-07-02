@@ -21,7 +21,7 @@ import (
 // See https://github.com/prysmaticlabs/prysm/pull/14151.
 // However, not to break the backward compatibility, we need to migrate the existing data.
 // The strategy is quite simple: If, for these bucket keys in the store, we detect
-// a slot (resp. epoch) higher, than the curreet slot (resp. epoch), then we consider that the data
+// a slot (resp. epoch) higher, than the current slot (resp. epoch), then we consider that the data
 // is stored in little-endian. We create a new entry with the same value, but with the slot (resp. epoch)
 // part in the key stored as a big-endian.
 // We start the iterate by the highest key and iterate down until we reach the current slot (resp. epoch).
