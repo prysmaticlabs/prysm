@@ -130,42 +130,44 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		}
 		firstSlotInPeriod := period * slotsPerPeriod
 
-		// Let's not use the first slot in the period, otherwise the attested header will be in previous period
-		firstSlotInPeriod++
-
 		var state state.BeaconState
 		var block interfaces.ReadOnlySignedBeaconBlock
 		for slot := lastSlotInPeriod; slot >= firstSlotInPeriod; slot-- {
 			state, err = s.Stater.StateBySlot(ctx, types.Slot(slot))
 			if err != nil {
-				continue
+				httputil.HandleError(w, "Could not get state: "+err.Error(), http.StatusInternalServerError)
+				return
 			}
 
 			// Get the block
 			latestBlockHeader := state.LatestBlockHeader()
 			latestStateRoot, err := state.HashTreeRoot(ctx)
 			if err != nil {
-				continue
+				httputil.HandleError(w, "Could not get state root: "+err.Error(), http.StatusInternalServerError)
+				return
 			}
 			latestBlockHeader.StateRoot = latestStateRoot[:]
 			blockRoot, err := latestBlockHeader.HashTreeRoot()
 			if err != nil {
-				continue
+				httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
+				return
 			}
 
 			block, err = s.Blocker.Block(ctx, blockRoot[:])
 			if err != nil || block == nil {
-				continue
+				httputil.HandleError(w, "Could not get block: "+err.Error(), http.StatusInternalServerError)
+				return
 			}
 
 			syncAggregate, err := block.Block().Body().SyncAggregate()
 			if err != nil || syncAggregate == nil {
-				continue
+				httputil.HandleError(w, "Could not get sync aggregate: "+err.Error(), http.StatusInternalServerError)
+				return
 			}
 
-			if syncAggregate.SyncCommitteeBits.Count()*3 < config.SyncCommitteeSize*2 {
+			if syncAggregate.SyncCommitteeBits.Count() < 1 {
 				// Not enough votes
-				continue
+				httputil.HandleError(w, "Not enough votes", http.StatusNotFound)
 			}
 
 			break
@@ -173,20 +175,20 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 
 		if block == nil {
 			// No valid block found for the period
-			continue
+			httputil.HandleError(w, "No valid block found for the period", http.StatusNotFound)
 		}
 
 		// Get attested state
 		attestedRoot := block.Block().ParentRoot()
 		attestedBlock, err := s.Blocker.Block(ctx, attestedRoot[:])
 		if err != nil || attestedBlock == nil {
-			continue
+			httputil.HandleError(w, "Could not get attested block: "+err.Error(), http.StatusInternalServerError)
 		}
 
 		attestedSlot := attestedBlock.Block().Slot()
 		attestedState, err := s.Stater.StateBySlot(ctx, attestedSlot)
 		if err != nil {
-			continue
+			httputil.HandleError(w, "Could not get attested state: "+err.Error(), http.StatusInternalServerError)
 		}
 
 		// Get finalized block
