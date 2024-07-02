@@ -503,16 +503,15 @@ func TestChainService_EverythingOptimistic(t *testing.T) {
 
 func TestStartFromSavedState_ValidatorIndexCacheUpdated(t *testing.T) {
 	resetFn := features.InitWithReset(&features.Flags{
-		EnableStartOptimistic:      true,
-		EIP6110ValidatorIndexCache: true,
+		EnableStartOptimistic: true,
 	})
 	defer resetFn()
 
-	genesis := util.NewBeaconBlock()
+	genesis := util.NewBeaconBlockElectra()
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
-	headBlock := util.NewBeaconBlock()
+	headBlock := util.NewBeaconBlockElectra()
 	headBlock.Block.Slot = finalizedSlot
 	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
 	headState, err := util.NewBeaconState()
