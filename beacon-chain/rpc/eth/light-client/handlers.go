@@ -167,7 +167,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 
 			if syncAggregate.SyncCommitteeBits.Count() < 1 {
 				// Not enough votes
-				httputil.HandleError(w, "Not enough votes", http.StatusNotFound)
+				continue
 			}
 
 			break
@@ -176,6 +176,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		if block == nil {
 			// No valid block found for the period
 			httputil.HandleError(w, "No valid block found for the period", http.StatusNotFound)
+			return
 		}
 
 		// Get attested state
@@ -183,12 +184,14 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		attestedBlock, err := s.Blocker.Block(ctx, attestedRoot[:])
 		if err != nil || attestedBlock == nil {
 			httputil.HandleError(w, "Could not get attested block: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		attestedSlot := attestedBlock.Block().Slot()
 		attestedState, err := s.Stater.StateBySlot(ctx, attestedSlot)
 		if err != nil {
 			httputil.HandleError(w, "Could not get attested state: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		// Get finalized block
