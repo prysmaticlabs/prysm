@@ -626,7 +626,7 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 		})
 	}
 
-	beaconAPIClient, err := beacon.NewClient(fmt.Sprintf("http://localhost:%d/eth/v1", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort)) // only uses the first node so no updates to port
+	beaconAPIClient, err := beacon.NewClient(fmt.Sprintf("http://localhost:%d/eth/v1", e2e.TestParams.Ports.PrysmBeaconNodeHTTPPort)) // only uses the first node so no updates to port
 	if err != nil {
 		return err
 	}
