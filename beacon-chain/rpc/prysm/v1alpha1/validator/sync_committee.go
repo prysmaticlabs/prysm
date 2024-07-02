@@ -67,8 +67,8 @@ func (vs *Server) GetSyncCommitteeContribution(
 	if err := vs.optimisticStatus(ctx); err != nil {
 		return nil, err
 	}
-
-	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
+	msgs, unlock, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
+	defer unlock()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
 	}
