@@ -139,6 +139,7 @@ func (s *Service) run() {
 		log.WithError(err).Error("Failed to migrate slasher database")
 		return
 	}
+	// End of section that can be removed once Electra is on mainnet.
 
 	s.wg.Add(1)
 	go s.receiveAttestations(s.ctx, indexedAttsChan)
