@@ -237,3 +237,53 @@ func TestValidateNoArgs_SubcommandFlags(t *testing.T) {
 	err = app.Run([]string{"command", "bar", "subComm2", "--barfoo100", "garbage", "subComm4"})
 	require.ErrorContains(t, "unrecognized argument: garbage", err)
 }
+
+func TestValidateNetworkFlags(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{
+			name:    "No network flags",
+			args:    []string{"command"},
+			wantErr: false,
+		},
+		{
+			name:    "One network flag",
+			args:    []string{"command", "--sepolia"},
+			wantErr: false,
+		},
+		{
+			name:    "Two network flags",
+			args:    []string{"command", "--sepolia", "--holesky"},
+			wantErr: true,
+		},
+		{
+			name:    "All network flags",
+			args:    []string{"command", "--sepolia", "--holesky", "--mainnet"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := &cli.App{
+				Before: ValidateNetworkFlags,
+				Action: func(c *cli.Context) error {
+					return nil
+				},
+				Flags: append([]cli.Flag{
+					&cli.BoolFlag{Name: "sepolia"},
+					&cli.BoolFlag{Name: "holesky"},
+					&cli.BoolFlag{Name: "mainnet"},
+				}),
+			}
+
+			err := app.Run(tt.args)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateNetworkFlags() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
