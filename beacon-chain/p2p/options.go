@@ -18,7 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
-
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 

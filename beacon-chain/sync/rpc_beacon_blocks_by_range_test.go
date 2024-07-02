@@ -12,6 +12,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/pkg/errors"
 	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	db2 "github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	db "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
@@ -857,7 +858,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 				if err != nil && err != io.EOF {
 					t.Fatal(err)
 				}
-				if code != 0 || err == io.EOF {
+				if code != 0 || errors.Is(err, io.EOF) {
 					break
 				}
 				blk := util.NewBeaconBlock()

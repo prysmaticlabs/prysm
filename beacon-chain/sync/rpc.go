@@ -10,6 +10,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
@@ -195,7 +196,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 {
 			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != p2ptypes.ErrWrongForkDigestVersion {
+				if !errors.Is(err, p2ptypes.ErrWrongForkDigestVersion) {
 					log.WithError(err).Debug("Could not handle p2p RPC")
 				}
 				tracing.AnnotateError(span, err)
@@ -220,7 +221,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 			if err := handle(ctx, msg, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != p2ptypes.ErrWrongForkDigestVersion {
+				if !errors.Is(err, p2ptypes.ErrWrongForkDigestVersion) {
 					log.WithError(err).Debug("Could not handle p2p RPC")
 				}
 				tracing.AnnotateError(span, err)
@@ -240,7 +241,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 			if err := handle(ctx, nTyp.Elem().Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != p2ptypes.ErrWrongForkDigestVersion {
+				if !errors.Is(err, p2ptypes.ErrWrongForkDigestVersion) {
 					log.WithError(err).Debug("Could not handle p2p RPC")
 				}
 				tracing.AnnotateError(span, err)

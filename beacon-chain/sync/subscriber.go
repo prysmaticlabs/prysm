@@ -230,7 +230,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 			msg, err := sub.Next(s.ctx)
 			if err != nil {
 				// This should only happen when the context is cancelled or subscription is cancelled.
-				if err != pubsub.ErrSubscriptionCancelled { // Only log a warning on unexpected errors.
+				if !errors.Is(err, pubsub.ErrSubscriptionCancelled) { // Only log a warning on unexpected errors.
 					log.WithError(err).Warn("Subscription next failed")
 				}
 				// Cancel subscription in the event of an error, as we are

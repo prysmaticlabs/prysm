@@ -288,12 +288,12 @@ func (vs *Server) validatorStatus(
 		ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 	}
 	vStatus, idx, err := statusForPubKey(headState, pubKey)
-	if err != nil && err != errPubkeyDoesNotExist {
+	if err != nil && !errors.Is(err, errPubkeyDoesNotExist) {
 		tracing.AnnotateError(span, err)
 		return resp, nonExistentIndex
 	}
 	resp.Status = vStatus
-	if err != errPubkeyDoesNotExist {
+	if !errors.Is(err, errPubkeyDoesNotExist) {
 		val, err := headState.ValidatorAtIndexReadOnly(idx)
 		if err != nil {
 			tracing.AnnotateError(span, err)

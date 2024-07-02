@@ -95,7 +95,7 @@ func (s *Server) ListAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 	start, end, nextPageToken, err := pagination.StartAndEndPage(pageToken, int(ps), len(keys))
 	if err != nil {
-		httputil.HandleError(w, fmt.Errorf("Could not paginate results: %v",
+		httputil.HandleError(w, fmt.Errorf("Could not paginate results: %w",
 			err).Error(), http.StatusInternalServerError)
 		return
 	}
@@ -123,7 +123,7 @@ func (s *Server) BackupAccounts(w http.ResponseWriter, r *http.Request) {
 	var req BackupAccountsRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -232,7 +232,7 @@ func (s *Server) VoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	var req VoluntaryExitRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:

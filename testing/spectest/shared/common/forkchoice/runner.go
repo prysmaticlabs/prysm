@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -415,7 +416,8 @@ func errAssertionForStep(step Step, expect error) func(t *testing.T, err error) 
 	return func(t *testing.T, err error) {
 		if err != nil {
 			require.ErrorIs(t, err, verification.ErrBlobInvalid)
-			me, ok := err.(verification.VerificationMultiError)
+			var me verification.VerificationMultiError
+			ok := errors.As(err, &me)
 			require.Equal(t, true, ok)
 			fails := me.Failures()
 			// we haven't performed any verification, so all the results should be this type

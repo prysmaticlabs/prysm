@@ -31,7 +31,7 @@ func IsCurrentPeriodSyncCommittee(st state.BeaconState, valIdx primitives.Valida
 		return false, err
 	}
 	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(root, valIdx)
-	if err == cache.ErrNonExistingSyncCommitteeKey {
+	if errors.Is(err, cache.ErrNonExistingSyncCommitteeKey) {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
 			return false, err
@@ -68,7 +68,7 @@ func IsNextPeriodSyncCommittee(
 		return false, err
 	}
 	indices, err := syncCommitteeCache.NextPeriodIndexPosition(root, valIdx)
-	if err == cache.ErrNonExistingSyncCommitteeKey {
+	if errors.Is(err, cache.ErrNonExistingSyncCommitteeKey) {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
 			return false, err
@@ -95,7 +95,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 		return nil, err
 	}
 	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(root, valIdx)
-	if err == cache.ErrNonExistingSyncCommitteeKey {
+	if errors.Is(err, cache.ErrNonExistingSyncCommitteeKey) {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
 			return nil, err
@@ -129,7 +129,7 @@ func NextPeriodSyncSubcommitteeIndices(
 		return nil, err
 	}
 	indices, err := syncCommitteeCache.NextPeriodIndexPosition(root, valIdx)
-	if err == cache.ErrNonExistingSyncCommitteeKey {
+	if errors.Is(err, cache.ErrNonExistingSyncCommitteeKey) {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
 			return nil, err

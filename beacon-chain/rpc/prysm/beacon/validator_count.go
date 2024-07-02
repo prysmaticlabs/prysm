@@ -131,15 +131,15 @@ func validatorCountByStatus(validators []*eth.Validator, statuses []validator.St
 	for _, val := range validators {
 		readOnlyVal, err := statenative.NewValidator(val)
 		if err != nil {
-			return nil, fmt.Errorf("could not convert validator: %v", err)
+			return nil, fmt.Errorf("could not convert validator: %w", err)
 		}
 		valStatus, err := helpers.ValidatorStatus(readOnlyVal, epoch)
 		if err != nil {
-			return nil, fmt.Errorf("could not get validator status: %v", err)
+			return nil, fmt.Errorf("could not get validator status: %w", err)
 		}
 		valSubStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
 		if err != nil {
-			return nil, fmt.Errorf("could not get validator sub status: %v", err)
+			return nil, fmt.Errorf("could not get validator sub status: %w", err)
 		}
 
 		for _, status := range statuses {

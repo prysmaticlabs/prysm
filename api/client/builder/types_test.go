@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -1914,7 +1915,8 @@ func TestEmptyResponseBody(t *testing.T) {
 		var b []byte
 		r := &ExecutionPayloadResponse{}
 		err := json.Unmarshal(b, r)
-		_, ok := err.(*json.SyntaxError)
+		var syntaxError *json.SyntaxError
+		ok := errors.As(err, &syntaxError)
 		require.Equal(t, true, ok)
 	})
 	t.Run("empty object", func(t *testing.T) {

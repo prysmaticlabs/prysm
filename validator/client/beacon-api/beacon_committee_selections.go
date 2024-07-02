@@ -5,9 +5,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 )
 
 type aggregatedSelectionResponse struct {

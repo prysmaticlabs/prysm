@@ -211,10 +211,10 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		}).Debug("Invalid status message from peer")
 
 		var respCode byte
-		switch err {
-		case p2ptypes.ErrGeneric:
+		switch {
+		case errors.Is(err, p2ptypes.ErrGeneric):
 			respCode = responseCodeServerError
-		case p2ptypes.ErrWrongForkDigestVersion:
+		case errors.Is(err, p2ptypes.ErrWrongForkDigestVersion):
 			// Respond with our status and disconnect with the peer.
 			s.cfg.p2p.Peers().SetChainState(remotePeer, m)
 			if err := s.respondWithStatus(ctx, stream); err != nil {

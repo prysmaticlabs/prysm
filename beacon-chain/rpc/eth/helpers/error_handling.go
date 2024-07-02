@@ -17,10 +17,12 @@ func PrepareStateFetchGRPCError(err error) error {
 	if errors.Is(err, stategen.ErrNoDataForSlot) {
 		return status.Errorf(codes.NotFound, "lacking historical data needed to fulfill request")
 	}
-	if stateNotFoundErr, ok := err.(*lookup.StateNotFoundError); ok {
+	var stateNotFoundErr *lookup.StateNotFoundError
+	if errors.As(err, &stateNotFoundErr) {
 		return status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
 	}
-	if parseErr, ok := err.(*lookup.StateIdParseError); ok {
+	var parseErr *lookup.StateIdParseError
+	if errors.As(err, &parseErr) {
 		return status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 	}
 	return status.Errorf(codes.Internal, "Invalid state ID: %v", err)
@@ -38,7 +40,8 @@ type SingleIndexedVerificationFailure struct {
 }
 
 func HandleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) error {
-	if invalidBlockIdErr, ok := err.(*lookup.BlockIdParseError); ok {
+	var invalidBlockIdErr *lookup.BlockIdParseError
+	if errors.As(err, &invalidBlockIdErr) {
 		return status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
 	if err != nil {

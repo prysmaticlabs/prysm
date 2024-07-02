@@ -121,7 +121,7 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 	var req structs.SubmitContributionAndProofsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -154,7 +154,7 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	var req structs.SubmitAggregateAndProofsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -175,7 +175,8 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 		}
 		rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(ctx, consensusItem)
 		if rpcError != nil {
-			_, ok := rpcError.Err.(*core.AggregateBroadcastFailedError)
+			var aggregateBroadcastFailedError *core.AggregateBroadcastFailedError
+			ok := errors.As(rpcError.Err, &aggregateBroadcastFailedError)
 			if ok {
 				broadcastFailed = true
 			} else {
@@ -206,7 +207,7 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 	var req structs.SubmitSyncCommitteeSubscriptionsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -316,7 +317,7 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 	var req structs.SubmitBeaconCommitteeSubscriptionsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -519,7 +520,7 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 	var jsonRegistrations []*structs.SignedValidatorRegistration
 	err := json.NewDecoder(r.Body).Decode(&jsonRegistrations)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -552,7 +553,7 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	var jsonFeeRecipients []*structs.FeeRecipient
 	err := json.NewDecoder(r.Body).Decode(&jsonFeeRecipients)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -612,7 +613,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 	var indices []string
 	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -892,7 +893,7 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 	var indices []string
 	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -1017,7 +1018,7 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 	var indices []string
 	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:

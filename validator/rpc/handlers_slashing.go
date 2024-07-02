@@ -62,7 +62,7 @@ func (s *Server) ImportSlashingProtection(w http.ResponseWriter, r *http.Request
 	var req ImportSlashingProtectionRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:

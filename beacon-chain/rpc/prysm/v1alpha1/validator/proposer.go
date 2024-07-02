@@ -89,7 +89,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	// Set proposer index.
 	idx, err := helpers.BeaconProposerIndex(ctx, head)
 	if err != nil {
-		return nil, fmt.Errorf("could not calculate proposer index %v", err)
+		return nil, fmt.Errorf("could not calculate proposer index %w", err)
 	}
 	sBlk.SetProposerIndex(idx)
 
