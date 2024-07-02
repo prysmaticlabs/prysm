@@ -328,6 +328,27 @@ func ValidateNoArgs(ctx *cli.Context) error {
 	return nil
 }
 
+func ValidateNetworkFlags(ctx *cli.Context) error {
+
+	var NetworkFlags = []cli.Flag{
+		&cli.BoolFlag{Name: "sepolia"},
+		&cli.BoolFlag{Name: "holesky"},
+		&cli.BoolFlag{Name: "mainnet"},
+	}
+
+	networkFlagsCount := 0
+	for _, flag := range NetworkFlags {
+		if ctx.IsSet(flag.Names()[0]) {
+			networkFlagsCount++
+		}
+	}
+
+	if networkFlagsCount > 1 {
+		return fmt.Errorf("cannot use more than one network flag at the same time")
+	}
+	return nil
+}
+
 // verifies that the provided command is in the command list.
 func checkCommandList(commands []*cli.Command, name string) *cli.Command {
 	if i := slices.IndexFunc(commands, func(c *cli.Command) bool {
