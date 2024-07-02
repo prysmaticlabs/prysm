@@ -24,6 +24,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
+type ListenerModifier interface {
+	Listener
+	RebootListener() error
+}
+
 // Listener defines the discovery V5 network interface that is used
 // to communicate with other peers.
 type Listener interface {
@@ -46,6 +51,88 @@ type quicProtocol uint16
 
 // quicProtocol is the "quic" key, which holds the QUIC port of the node.
 func (quicProtocol) ENRKey() string { return "quic" }
+
+type listenerWrapper struct {
+	*sync.RWMutex
+	listener        *discover.UDPv5
+	listenerCreator func() (*discover.UDPv5, error)
+}
+
+func NewListener(listenerCreator func() (*discover.UDPv5, error)) (*listenerWrapper, error) {
+	rawListener, err := listenerCreator()
+	if err != nil {
+		return nil, err
+	}
+	return &listenerWrapper{
+		RWMutex:         new(sync.RWMutex),
+		listener:        rawListener,
+		listenerCreator: listenerCreator,
+	}, nil
+}
+
+func (l *listenerWrapper) Self() *enode.Node {
+	l.RWMutex.RLock()
+	defer l.RWMutex.RUnlock()
+	return l.listener.Self()
+}
+
+func (l *listenerWrapper) Close() {
+	l.RWMutex.RLock()
+	defer l.RWMutex.RUnlock()
+	l.listener.Close()
+}
+
+func (l *listenerWrapper) Lookup(id enode.ID) []*enode.Node {
+	l.RWMutex.RLock()
+	defer l.RWMutex.RUnlock()
+	return l.listener.Lookup(id)
+}
+
+func (l *listenerWrapper) Resolve(node *enode.Node) *enode.Node {
+	l.RWMutex.RLock()
+	defer l.RWMutex.RUnlock()
+	return l.listener.Resolve(node)
+}
+
+func (l *listenerWrapper) RandomNodes() enode.Iterator {
+	l.RWMutex.RLock()
+	defer l.RWMutex.RUnlock()
+	return l.listener.RandomNodes()
+}
+
+func (l *listenerWrapper) Ping(node *enode.Node) error {
+	l.RWMutex.RLock()
+	defer l.RWMutex.RUnlock()
+	return l.listener.Ping(node)
+}
+
+func (l *listenerWrapper) RequestENR(node *enode.Node) (*enode.Node, error) {
+	l.RWMutex.RLock()
+	defer l.RWMutex.RUnlock()
+	return l.listener.RequestENR(node)
+}
+
+func (l *listenerWrapper) LocalNode() *enode.LocalNode {
+	l.RWMutex.RLock()
+	defer l.RWMutex.RUnlock()
+	return l.listener.LocalNode()
+}
+
+func (l *listenerWrapper) RebootListener() error {
+	l.RWMutex.Lock()
+	defer l.RWMutex.Unlock()
+
+	// Close current listener
+	l.listener.Close()
+
+	newListener, err := l.listenerCreator()
+	if err != nil {
+		return err
+	}
+
+	l.listener = newListener
+	return nil
+}
 
 // RefreshENR uses an epoch to refresh the enr entry for our node
 // with the tracked committee ids for the epoch, allowing our node
@@ -110,55 +197,71 @@ func (s *Service) RefreshENR() {
 func (s *Service) listenForNewNodes() {
 	iterator := filterNodes(s.ctx, s.dv5Listener.RandomNodes(), s.filterPeer)
 	defer iterator.Close()
+	connectivityTicker := time.NewTicker(1 * time.Minute)
+	thresholdCount := 0
 
 	for {
-		// Exit if service's context is canceled.
-		if s.ctx.Err() != nil {
-			break
-		}
-
-		if s.isPeerAtLimit(false /* inbound */) {
-			// Pause the main loop for a period to stop looking
-			// for new peers.
-			log.Trace("Not looking for peers, at peer limit")
-			time.Sleep(pollingPeriod)
-			continue
-		}
-		wantedCount := s.wantedPeerDials()
-		if wantedCount == 0 {
-			log.Trace("Not looking for peers, at peer limit")
-			time.Sleep(pollingPeriod)
-			continue
-		}
-		// Restrict dials if limit is applied.
-		if flags.MaxDialIsActive() {
-			wantedCount = min(wantedCount, flags.Get().MaxConcurrentDials)
-		}
-		wantedNodes := enode.ReadNodes(iterator, wantedCount)
-		wg := new(sync.WaitGroup)
-		for i := 0; i < len(wantedNodes); i++ {
-			node := wantedNodes[i]
-			peerInfo, _, err := convertToAddrInfo(node)
-			if err != nil {
-				log.WithError(err).Error("Could not convert to peer info")
-				continue
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-connectivityTicker.C:
+			if s.isBelowThreshold() {
+				thresholdCount++
 			}
-
-			if peerInfo == nil {
-				continue
-			}
-
-			// Make sure that peer is not dialed too often, for each connection attempt there's a backoff period.
-			s.Peers().RandomizeBackOff(peerInfo.ID)
-			wg.Add(1)
-			go func(info *peer.AddrInfo) {
-				if err := s.connectWithPeer(s.ctx, *info); err != nil {
-					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+			// Reboot listener if connectivity drops
+			if thresholdCount > 5 {
+				log.Warnf("Rebooting discovery listener, reached threshold. The current outbound connection count is %d", len(s.peers.OutboundConnected()))
+				if err := s.dv5Listener.RebootListener(); err != nil {
+					log.WithError(err).Error("Could not reboot listener")
+					continue
 				}
-				wg.Done()
-			}(peerInfo)
+				iterator = filterNodes(s.ctx, s.dv5Listener.RandomNodes(), s.filterPeer)
+				thresholdCount = 0
+			}
+		default:
+			if s.isPeerAtLimit(false /* inbound */) {
+				// Pause the main loop for a period to stop looking
+				// for new peers.
+				log.Trace("Not looking for peers, at peer limit")
+				time.Sleep(pollingPeriod)
+				continue
+			}
+			wantedCount := s.wantedPeerDials()
+			if wantedCount == 0 {
+				log.Trace("Not looking for peers, at peer limit")
+				time.Sleep(pollingPeriod)
+				continue
+			}
+			// Restrict dials if limit is applied.
+			if flags.MaxDialIsActive() {
+				wantedCount = min(wantedCount, flags.Get().MaxConcurrentDials)
+			}
+			wantedNodes := enode.ReadNodes(iterator, wantedCount)
+			wg := new(sync.WaitGroup)
+			for i := 0; i < len(wantedNodes); i++ {
+				node := wantedNodes[i]
+				peerInfo, _, err := convertToAddrInfo(node)
+				if err != nil {
+					log.WithError(err).Error("Could not convert to peer info")
+					continue
+				}
+
+				if peerInfo == nil {
+					continue
+				}
+
+				// Make sure that peer is not dialed too often, for each connection attempt there's a backoff period.
+				s.Peers().RandomizeBackOff(peerInfo.ID)
+				wg.Add(1)
+				go func(info *peer.AddrInfo) {
+					if err := s.connectWithPeer(s.ctx, *info); err != nil {
+						log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+					}
+					wg.Done()
+				}(peerInfo)
+			}
+			wg.Wait()
 		}
-		wg.Wait()
 	}
 }
 
@@ -299,14 +402,17 @@ func (s *Service) createLocalNode(
 func (s *Service) startDiscoveryV5(
 	addr net.IP,
 	privKey *ecdsa.PrivateKey,
-) (*discover.UDPv5, error) {
-	listener, err := s.createListener(addr, privKey)
+) (*listenerWrapper, error) {
+	createListener := func() (*discover.UDPv5, error) {
+		return s.createListener(addr, privKey)
+	}
+	wrappedListener, err := NewListener(createListener)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create listener")
 	}
-	record := listener.Self()
+	record := wrappedListener.Self()
 	log.WithField("ENR", record.String()).Info("Started discovery v5")
-	return listener, nil
+	return wrappedListener, nil
 }
 
 // filterPeer validates each node that we retrieve from our dht. We
@@ -396,6 +502,19 @@ func (s *Service) isPeerAtLimit(inbound bool) bool {
 	}
 	activePeers := len(s.Peers().Active())
 	return activePeers >= maxPeers || numOfConns >= maxPeers
+}
+
+func (s *Service) isBelowThreshold() bool {
+	maxPeers := int(s.cfg.MaxPeers)
+	inBoundLimit := s.Peers().InboundLimit()
+	// Impossible Condition
+	if maxPeers < inBoundLimit {
+		return false
+	}
+	outboundFloor := maxPeers - inBoundLimit
+	outBoundThreshold := outboundFloor / 2
+	outBoundCount := len(s.Peers().OutboundConnected())
+	return outBoundCount < outBoundThreshold
 }
 
 func (s *Service) wantedPeerDials() int {
