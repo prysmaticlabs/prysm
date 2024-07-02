@@ -2,6 +2,7 @@ package electra
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
@@ -13,7 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -190,12 +193,27 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error 
 //	    available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(state)
 //	    processed_amount = 0
 //	    next_deposit_index = 0
+//	    deposits_to_postpone = []
 //
 //	    for deposit in state.pending_balance_deposits:
-//	        if processed_amount + deposit.amount > available_for_processing:
-//	            break
-//	        increase_balance(state, deposit.index, deposit.amount)
-//	        processed_amount += deposit.amount
+//	        validator = state.validators[deposit.index]
+//	        # Validator is exiting, postpone the deposit until after withdrawable epoch
+//	        if validator.exit_epoch < FAR_FUTURE_EPOCH:
+//	            if get_current_epoch(state) <= validator.withdrawable_epoch:
+//	                deposits_to_postpone.append(deposit)
+//	            # Deposited balance will never become active. Increase balance but do not consume churn
+//	            else:
+//	                increase_balance(state, deposit.index, deposit.amount)
+//	        # Validator is not exiting, attempt to process deposit
+//	        else:
+//	            # Deposit does not fit in the churn, no more deposit processing in this epoch.
+//	            if processed_amount + deposit.amount > available_for_processing:
+//	                break
+//	            # Deposit fits in the churn, process it. Increase balance and consume churn.
+//	            else:
+//	                increase_balance(state, deposit.index, deposit.amount)
+//	                processed_amount += deposit.amount
+//	        # Regardless of how the deposit was handled, we move on in the queue.
 //	        next_deposit_index += 1
 //
 //	    state.pending_balance_deposits = state.pending_balance_deposits[next_deposit_index:]
@@ -204,6 +222,8 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error 
 //	        state.deposit_balance_to_consume = Gwei(0)
 //	    else:
 //	        state.deposit_balance_to_consume = available_for_processing - processed_amount
+//
+//	    state.pending_balance_deposits += deposits_to_postpone
 func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, activeBalance primitives.Gwei) error {
 	_, span := trace.StartSpan(ctx, "electra.ProcessPendingBalanceDeposits")
 	defer span.End()
@@ -216,35 +236,67 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	if err != nil {
 		return err
 	}
-
 	availableForProcessing := depBalToConsume + helpers.ActivationExitChurnLimit(activeBalance)
+	processedAmount := uint64(0)
 	nextDepositIndex := 0
+	var depositsToPostpone []*eth.PendingBalanceDeposit
 
 	deposits, err := st.PendingBalanceDeposits()
 	if err != nil {
 		return err
 	}
 
+	// constants
+	ffe := params.BeaconConfig().FarFutureEpoch
+	curEpoch := slots.ToEpoch(st.Slot())
+
 	for _, balanceDeposit := range deposits {
-		if primitives.Gwei(balanceDeposit.Amount) > availableForProcessing {
-			break
+		v, err := st.ValidatorAtIndexReadOnly(balanceDeposit.Index)
+		if err != nil {
+			return fmt.Errorf("failed to fetch validator at index: %w", err)
 		}
-		if err := helpers.IncreaseBalance(st, balanceDeposit.Index, balanceDeposit.Amount); err != nil {
-			return err
+
+		// If the validator is currently exiting, postpone the deposit until after the withdrawable
+		// epoch.
+		if v.ExitEpoch() < ffe {
+			if curEpoch <= v.WithdrawableEpoch() {
+				depositsToPostpone = append(depositsToPostpone, balanceDeposit)
+			} else {
+				// The deposited balance will never become active. Therefore, we increase the balance but do
+				// not consume the churn.
+				if err := helpers.IncreaseBalance(st, balanceDeposit.Index, balanceDeposit.Amount); err != nil {
+					return err
+				}
+			}
+		} else {
+			if primitives.Gwei(processedAmount + balanceDeposit.Amount) > availableForProcessing {
+				break
+			}
+
+			if err := helpers.IncreaseBalance(st, balanceDeposit.Index, balanceDeposit.Amount); err != nil {
+				return err
+			}
+			processedAmount += balanceDeposit.Amount
 		}
-		availableForProcessing -= primitives.Gwei(balanceDeposit.Amount)
+
 		nextDepositIndex++
 	}
 
-	deposits = deposits[nextDepositIndex:]
+	// Combined operation:
+	// - state.pending_balance_deposits = state.pending_balance_deposits[next_deposit_index:]
+	// - state.pending_balance_deposits += deposits_to_postpone
+	// However, the number of remaining deposits must be maintained to properly update the deposit
+	// balance to consume.
+	numRemainingDeposits := len(deposits[nextDepositIndex:])
+	deposits = append(deposits[nextDepositIndex:], depositsToPostpone...)
 	if err := st.SetPendingBalanceDeposits(deposits); err != nil {
 		return err
 	}
 
-	if len(deposits) == 0 {
+	if numRemainingDeposits == 0 {
 		return st.SetDepositBalanceToConsume(0)
 	} else {
-		return st.SetDepositBalanceToConsume(availableForProcessing)
+		return st.SetDepositBalanceToConsume(availableForProcessing - primitives.Gwei(processedAmount))
 	}
 }
 
