@@ -6,7 +6,6 @@ import (
 	"sort"
 	"time"
 
-	cKzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -48,7 +47,7 @@ func recoverCellsAndProofs(
 		start := time.Now()
 
 		cellsId := make([]uint64, 0, columnsCount)
-		cKzgCells := make([]cKzg4844.Cell, 0, columnsCount)
+		cKzgCells := make([]kzg.Cell, 0, columnsCount)
 
 		for _, sidecar := range dataColumnSideCars {
 			// Build the cell ids.
@@ -59,8 +58,8 @@ func recoverCellsAndProofs(
 			cell := column[blobIndex]
 
 			// Transform the cell as a cKzg cell.
-			var ckzgCell cKzg4844.Cell
-			for i := 0; i < cKzg4844.FieldElementsPerCell; i++ {
+			var ckzgCell kzg.Cell
+			for i := 0; i < kzg.FieldElementsPerCell; i++ {
 				copy(ckzgCell[i][:], cell[32*i:32*(i+1)])
 			}
 
@@ -68,12 +67,12 @@ func recoverCellsAndProofs(
 		}
 
 		// Recover the blob.
-		recoveredCells, err := cKzg4844.RecoverAllCells(cellsId, cKzgCells)
+		recoveredCells, err := kzg.RecoverAllCells(cellsId, cKzgCells)
 		if err != nil {
 			return nil, errors.Wrapf(err, "recover all cells for blob %d", blobIndex)
 		}
 
-		recoveredBlob, err := cKzg4844.CellsToBlob(recoveredCells)
+		recoveredBlob, err := kzg.CellsToBlob(&recoveredCells)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cells to blob for blob %d", blobIndex)
 		}
