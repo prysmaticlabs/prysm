@@ -269,16 +269,18 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 				}
 			}
 		} else {
+			// Validator is not exiting, attempt to process deposit.
 			if primitives.Gwei(processedAmount+balanceDeposit.Amount) > availableForProcessing {
 				break
 			}
-
+			// Deposit fits in churn, process it. Increase balance and consume churn.
 			if err := helpers.IncreaseBalance(st, balanceDeposit.Index, balanceDeposit.Amount); err != nil {
 				return err
 			}
 			processedAmount += balanceDeposit.Amount
 		}
 
+		// Regardless of how the deposit was handled, we move on in the queue.
 		nextDepositIndex++
 	}
 
