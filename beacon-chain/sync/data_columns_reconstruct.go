@@ -61,7 +61,7 @@ func recoverCellsAndProofs(
 		}
 
 		// Recover the blob.
-		recoveredCells, err := kzg.RecoverAllCells(cellsId, cKzgCells)
+		recoveredCells, err := kzg.RecoverAllCells(cellsId, cells)
 		if err != nil {
 			return nil, errors.Wrapf(err, "recover all cells for blob %d", blobIndex)
 		}
