@@ -20,6 +20,8 @@ The process for implementing new features using this package is as follows:
 package features
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -337,4 +339,23 @@ func logDisabled(flag cli.DocGenerationFlag) {
 		name = names[0]
 	}
 	log.WithField(name, flag.GetUsage()).Warn(disabledFeatureFlag)
+}
+
+// ValidateNetworkFlags validates and prevents beacon node
+// to start if more than one flag is provided
+func ValidateNetworkFlags(ctx *cli.Context) error {
+	networkFlagsCount := 0
+	for _, flag := range NetworkFlags {
+		if ctx.IsSet(flag.Names()[0]) {
+			networkFlagsCount++
+			if networkFlagsCount > 1 {
+				flagNames := []string{}
+				for _, flag := range NetworkFlags {
+					flagNames = append(flagNames, "--"+flag.Names()[0])
+				}
+				return fmt.Errorf("cannot use more than one network flag at the same time. Possible network flags are: %s", strings.Join(flagNames, ", "))
+			}
+		}
+	}
+	return nil
 }

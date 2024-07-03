@@ -212,7 +212,7 @@ func before(ctx *cli.Context) error {
 		return errors.Wrap(err, "failed to set max fd limits")
 	}
 
-	if err := cmd.ValidateNetworkFlags(ctx); err != nil {
+	if err := features.ValidateNetworkFlags(ctx); err != nil {
 		return errors.Wrap(err, "provided multiple network flag")
 	}
 
