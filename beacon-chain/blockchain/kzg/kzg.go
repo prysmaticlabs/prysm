@@ -85,14 +85,14 @@ func ComputeCellsAndKZGProofs(blob *Blob) ([ckzg4844.CellsPerExtBlob]Cell, [ckzg
 // VerifyCellKZGProof is unused. TODO: We can check when the batch size for `VerifyCellKZGProofBatch` is 1
 // and call this, though I think its better if the cryptography library handles this.
 func VerifyCellKZGProof(commitmentBytes Bytes48, cellId uint64, cell *Cell, proofBytes Bytes48) (bool, error) {
-	return ckzg4844.VerifyCellKZGProof(commitmentBytes, cellId, ckzg4844.Cell(cellToChunkedCell(*cell)), proofBytes)
+	return ckzg4844.VerifyCellKZGProof(commitmentBytes, cellId, cellToChunkedCell(*cell), proofBytes)
 }
 
 func VerifyCellKZGProofBatch(commitmentsBytes []Bytes48, rowIndices, columnIndices []uint64, _cells []Cell, proofsBytes []Bytes48) (bool, error) {
 	// Convert `Cell` type to `ckzg4844.Cell`
 	ckzgCells := make([]ckzg4844.Cell, len(_cells))
 	for i := range _cells {
-		ckzgCells[i] = ckzg4844.Cell(cellToChunkedCell(_cells[i]))
+		ckzgCells[i] = cellToChunkedCell(_cells[i])
 	}
 
 	return ckzg4844.VerifyCellKZGProofBatch(commitmentsBytes, rowIndices, columnIndices, ckzgCells, proofsBytes)
@@ -102,7 +102,7 @@ func RecoverAllCells(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsPerExtBlob
 	// Convert `Cell` type to `ckzg4844.Cell`
 	ckzgCells := make([]ckzg4844.Cell, len(_cells))
 	for i := range _cells {
-		ckzgCells[i] = ckzg4844.Cell(cellToChunkedCell(_cells[i]))
+		ckzgCells[i] = cellToChunkedCell(_cells[i])
 	}
 
 	recoveredCells, err := ckzg4844.RecoverAllCells(cellIds, ckzgCells)
@@ -147,7 +147,7 @@ func CellsToBlob(_cells *[ckzg4844.CellsPerExtBlob]Cell) (Blob, error) {
 	// Convert `Cell` type to `ckzg4844.Cell`
 	var ckzgCells [ckzg4844.CellsPerExtBlob]ckzg4844.Cell
 	for i := range _cells {
-		ckzgCells[i] = ckzg4844.Cell(cellToChunkedCell(_cells[i]))
+		ckzgCells[i] = cellToChunkedCell(_cells[i])
 	}
 
 	blob, err := ckzg4844.CellsToBlob(ckzgCells)
