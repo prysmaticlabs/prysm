@@ -71,12 +71,12 @@ func ComputeCellsAndKZGProofs(blob *Blob) ([ckzg4844.CellsPerExtBlob]Cell, [ckzg
 	// Convert Cells and Proofs to types defined in this package
 	var cells [ckzg4844.CellsPerExtBlob]Cell
 	for i := range _cells {
-		cells[i] = Cell(cellChunkedToCell(_cells[i]))
+		cells[i] = Cell(cellChunkedToCell(&_cells[i]))
 	}
 
 	var proofs [ckzg4844.CellsPerExtBlob]Proof
-	for i, proof := range _proofs {
-		proofs[i] = Proof(proof)
+	for i := range _proofs {
+		proofs[i] = Proof(_proofs[i])
 	}
 
 	return cells, proofs, nil
@@ -85,14 +85,14 @@ func ComputeCellsAndKZGProofs(blob *Blob) ([ckzg4844.CellsPerExtBlob]Cell, [ckzg
 // VerifyCellKZGProof is unused. TODO: We can check when the batch size for `VerifyCellKZGProofBatch` is 1
 // and call this, though I think its better if the cryptography library handles this.
 func VerifyCellKZGProof(commitmentBytes Bytes48, cellId uint64, cell *Cell, proofBytes Bytes48) (bool, error) {
-	return ckzg4844.VerifyCellKZGProof(commitmentBytes, cellId, cellToChunkedCell(*cell), proofBytes)
+	return ckzg4844.VerifyCellKZGProof(commitmentBytes, cellId, cellToChunkedCell(cell), proofBytes)
 }
 
 func VerifyCellKZGProofBatch(commitmentsBytes []Bytes48, rowIndices, columnIndices []uint64, _cells []Cell, proofsBytes []Bytes48) (bool, error) {
 	// Convert `Cell` type to `ckzg4844.Cell`
 	ckzgCells := make([]ckzg4844.Cell, len(_cells))
 	for i := range _cells {
-		ckzgCells[i] = cellToChunkedCell(_cells[i])
+		ckzgCells[i] = cellToChunkedCell(&_cells[i])
 	}
 
 	return ckzg4844.VerifyCellKZGProofBatch(commitmentsBytes, rowIndices, columnIndices, ckzgCells, proofsBytes)
@@ -102,7 +102,7 @@ func RecoverAllCells(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsPerExtBlob
 	// Convert `Cell` type to `ckzg4844.Cell`
 	ckzgCells := make([]ckzg4844.Cell, len(_cells))
 	for i := range _cells {
-		ckzgCells[i] = cellToChunkedCell(_cells[i])
+		ckzgCells[i] = cellToChunkedCell(&_cells[i])
 	}
 
 	recoveredCells, err := ckzg4844.RecoverAllCells(cellIds, ckzgCells)
@@ -118,7 +118,7 @@ func RecoverAllCells(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsPerExtBlob
 	// Convert `ckzg4844.Cell` type to `Cell`
 	var ret [ckzg4844.CellsPerExtBlob]Cell
 	for i := range recoveredCells {
-		ret[i] = Cell(cellChunkedToCell(recoveredCells[i]))
+		ret[i] = Cell(cellChunkedToCell(&recoveredCells[i]))
 	}
 	return ret, nil
 }
@@ -147,7 +147,7 @@ func CellsToBlob(_cells *[ckzg4844.CellsPerExtBlob]Cell) (Blob, error) {
 	// Convert `Cell` type to `ckzg4844.Cell`
 	var ckzgCells [ckzg4844.CellsPerExtBlob]ckzg4844.Cell
 	for i := range _cells {
-		ckzgCells[i] = cellToChunkedCell(_cells[i])
+		ckzgCells[i] = cellToChunkedCell(&_cells[i])
 	}
 
 	blob, err := ckzg4844.CellsToBlob(ckzgCells)
@@ -161,15 +161,15 @@ func CellsToBlob(_cells *[ckzg4844.CellsPerExtBlob]Cell) (Blob, error) {
 // The correct type for Cell is [BytesPerCell]byte
 // c-kzg currently uses [BytesPerFieldElement]Bytes32
 // so we have these helper methods to convert between the two.
-func cellToChunkedCell(flattened [BytesPerCell]byte) ckzg4844.Cell {
+func cellToChunkedCell(flattened *Cell) ckzg4844.Cell {
 	var cell ckzg4844.Cell
 	for i := 0; i < fieldElementsPerCell; i++ {
 		copy(cell[i][:], flattened[i*32:(i+1)*32])
 	}
 	return cell
 }
-func cellChunkedToCell(cell ckzg4844.Cell) [BytesPerCell]byte {
-	var flattened [BytesPerCell]byte
+func cellChunkedToCell(cell *ckzg4844.Cell) Cell {
+	var flattened Cell
 	for i, fieldElement := range cell {
 		copy(flattened[i*32:(i+1)*32], fieldElement[:])
 	}
