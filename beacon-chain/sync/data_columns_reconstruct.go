@@ -77,7 +77,7 @@ func recoverCellsAndProofs(
 			return nil, errors.Wrapf(err, "cells to blob for blob %d", blobIndex)
 		}
 
-		blobCells, blobProofs, err := cKzg4844.ComputeCellsAndKZGProofs(&recoveredBlob)
+		blobCells, blobProofs, err := kzg.ComputeCellsAndKZGProofs(&recoveredBlob)
 		if err != nil {
 			return nil, errors.Wrapf(err, "compute cells and KZG proofs for blob %d", blobIndex)
 		}
