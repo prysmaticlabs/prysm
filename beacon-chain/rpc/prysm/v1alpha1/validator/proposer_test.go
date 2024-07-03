@@ -569,7 +569,7 @@ func TestServer_GetBeaconBlock_Electra(t *testing.T) {
 	cfg.BellatrixForkEpoch = 2
 	cfg.AltairForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
-	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := util.DeterministicGenesisStateElectra(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
