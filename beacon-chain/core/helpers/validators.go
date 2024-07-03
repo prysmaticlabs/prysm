@@ -554,7 +554,7 @@ func IsCompoundingWithdrawalCredential(creds []byte) bool {
 //	    Check if ``validator`` has a 0x01 or 0x02 prefixed withdrawal credential.
 //	    """
 //	    return has_compounding_withdrawal_credential(validator) or has_eth1_withdrawal_credential(validator)
-func HasExecutionWithdrawalCredentials(v *ethpb.Validator) bool {
+func HasExecutionWithdrawalCredentials(v interfaces.WithWithdrawalCredentials) bool {
 	if v == nil {
 		return false
 	}

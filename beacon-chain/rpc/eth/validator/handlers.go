@@ -173,10 +173,7 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 			httputil.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(
-			ctx,
-			&ethpbalpha.SignedAggregateSubmitRequest{SignedAggregateAndProof: consensusItem},
-		)
+		rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(ctx, consensusItem)
 		if rpcError != nil {
 			_, ok := rpcError.Err.(*core.AggregateBroadcastFailedError)
 			if ok {

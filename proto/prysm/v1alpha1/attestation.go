@@ -80,7 +80,9 @@ func (a *Attestation) Copy() Att {
 
 // CommitteeBitsVal --
 func (a *Attestation) CommitteeBitsVal() bitfield.Bitfield {
-	return nil
+	cb := primitives.NewAttestationCommitteeBits()
+	cb.SetBitAt(uint64(a.Data.CommitteeIndex), true)
+	return cb
 }
 
 // Version --
