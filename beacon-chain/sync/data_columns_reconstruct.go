@@ -66,21 +66,12 @@ func recoverCellsAndProofs(
 			cKzgCells = append(cKzgCells, ckzgCell)
 		}
 
-		// Recover the blob.
-		recoveredCells, err := kzg.RecoverAllCells(cellsId, cKzgCells)
+		// Recover the cells and proofs for the corresponding blob
+		blobCells, blobProofs, err := kzg.RecoverCellsAndKZGProofs(cellsId, cKzgCells)
 		if err != nil {
-			return nil, errors.Wrapf(err, "recover all cells for blob %d", blobIndex)
+			return nil, errors.Wrapf(err, "recover cells and KZG proofs for blob %d", blobIndex)
 		}
 
-		recoveredBlob, err := kzg.CellsToBlob(&recoveredCells)
-		if err != nil {
-			return nil, errors.Wrapf(err, "cells to blob for blob %d", blobIndex)
-		}
-
-		blobCells, blobProofs, err := kzg.ComputeCellsAndKZGProofs(&recoveredBlob)
-		if err != nil {
-			return nil, errors.Wrapf(err, "compute cells and KZG proofs for blob %d", blobIndex)
-		}
 		recoveredCellsAndProofs = append(recoveredCellsAndProofs, kzg.CellsAndProofs{
 			Cells:  blobCells,
 			Proofs: blobProofs,
