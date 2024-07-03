@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
@@ -355,7 +354,7 @@ func ValidateNoArgs(ctx *cli.Context) error {
 func ValidateNetworkFlags(ctx *cli.Context) error {
 
 	networkFlagsCount := 0
-	for _, flag := range features.NetworkFlags {
+	for _, flag := range NetworkFlags {
 		if ctx.IsSet(flag.Names()[0]) {
 			networkFlagsCount++
 		}
