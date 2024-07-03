@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
@@ -278,7 +279,30 @@ var (
 		Usage:   "Target file path for outputting a generated JWT secret to be used for JSON-RPC authentication",
 		Aliases: []string{"o"},
 	}
+	// SepoliaTestnet flag for the multiclient Ethereum consensus testnet.
+	SepoliaTestnet = &cli.BoolFlag{
+		Name:  "sepolia",
+		Usage: "Runs Prysm configured for the Sepolia test network.",
+	}
+	// HoleskyTestnet flag for the multiclient Ethereum consensus testnet.
+	HoleskyTestnet = &cli.BoolFlag{
+		Name:  "holesky",
+		Usage: "Runs Prysm configured for the Holesky test network.",
+	}
+	// Mainnet flag for easier tooling, no-op
+	Mainnet = &cli.BoolFlag{
+		Value: true,
+		Name:  "mainnet",
+		Usage: "Runs on Ethereum main network. This is the default and can be omitted.",
+	}
 )
+
+// NetworkFlags contains a list of network flags.
+var NetworkFlags = []cli.Flag{
+	Mainnet,
+	SepoliaTestnet,
+	HoleskyTestnet,
+}
 
 // LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.
 func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
@@ -330,14 +354,8 @@ func ValidateNoArgs(ctx *cli.Context) error {
 
 func ValidateNetworkFlags(ctx *cli.Context) error {
 
-	var NetworkFlags = []cli.Flag{
-		&cli.BoolFlag{Name: "sepolia"},
-		&cli.BoolFlag{Name: "holesky"},
-		&cli.BoolFlag{Name: "mainnet"},
-	}
-
 	networkFlagsCount := 0
-	for _, flag := range NetworkFlags {
+	for _, flag := range features.NetworkFlags {
 		if ctx.IsSet(flag.Names()[0]) {
 			networkFlagsCount++
 		}
