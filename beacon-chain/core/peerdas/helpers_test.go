@@ -66,8 +66,10 @@ func TestVerifyDataColumnSidecarKZGProofs(t *testing.T) {
 	dbBlock := util.NewBeaconBlockDeneb()
 	require.NoError(t, kzg.Start())
 
-	comms := [][]byte{}
-	blobs := []kzg.Blob{}
+	var (
+		comms [][]byte
+		blobs []kzg.Blob
+	)
 	for i := int64(0); i < 6; i++ {
 		blob := GetRandBlob(i)
 		commitment, _, err := GenerateCommitmentAndProof(blob)
