@@ -80,6 +80,9 @@ func TestMigrate(t *testing.T) {
 		State of the DB before migration:
 		=================================
 
+		LE: Little-endian encoding
+		BE: Big-endian encoding
+
 		Attestations:
 		-------------
 		59000 (LE), 59100 (LE), 59200 (BE), 59300 (LE), 59400 (LE), 59500 (LE), 59600 (LE), 59700 (LE), 59800 (LE), 59900 (LE),
@@ -97,7 +100,12 @@ func TestMigrate(t *testing.T) {
 
 		Attestations:
 		-------------
-		60100*32 (BE), 60200*32 (BE), 60300*32 (BE), 60400*32 (BE), 60500*32 (BE), 60600*32 (BE), 60700*32 (BE), 60800*32 (BE), 60900*32 (BE)
+		59200 (BE), 60100 (BE), 60200 (BE), 60300(BE), 60400 (BE), 60500 (BE), 60600 (BE), 60700 (BE), 60800 (BE), 60900 (BE)
+
+		Proposals:
+		----------
+		59200*32 (BE), 60100*32 (BE), 60200*32 (BE), 60300*32 (BE), 60400*32 (BE), 60500*32 (BE), 60600*32 (BE), 60700*32 (BE), 60800*32 (BE), 60900*32 (BE)
+
 	*/
 
 	beforeLittleEndianEpochs := []primitives.Epoch{
