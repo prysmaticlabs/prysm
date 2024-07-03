@@ -154,14 +154,22 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 			}
 
 			block, err = s.Blocker.Block(ctx, blockRoot[:])
-			if err != nil || block == nil {
+			if err != nil {
 				httputil.HandleError(w, "Could not get block: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if block == nil {
+				httputil.HandleError(w, "Could not get block", http.StatusInternalServerError)
 				return
 			}
 
 			syncAggregate, err := block.Block().Body().SyncAggregate()
-			if err != nil || syncAggregate == nil {
+			if err != nil {
 				httputil.HandleError(w, "Could not get sync aggregate: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if syncAggregate == nil {
+				httputil.HandleError(w, "Could not get sync aggregate", http.StatusInternalServerError)
 				return
 			}
 
@@ -182,8 +190,12 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		// Get attested state
 		attestedRoot := block.Block().ParentRoot()
 		attestedBlock, err := s.Blocker.Block(ctx, attestedRoot[:])
-		if err != nil || attestedBlock == nil {
+		if err != nil {
 			httputil.HandleError(w, "Could not get attested block: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if attestedBlock == nil {
+			httputil.HandleError(w, "Could not get attested block", http.StatusInternalServerError)
 			return
 		}
 
@@ -246,22 +258,26 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 
 	state, err := s.Stater.StateBySlot(ctx, block.Block().Slot())
 	if err != nil {
-		httputil.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Get attested state
 	attestedRoot := block.Block().ParentRoot()
 	attestedBlock, err := s.Blocker.Block(ctx, attestedRoot[:])
-	if err != nil || attestedBlock == nil {
-		httputil.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
+	if err != nil {
+		httputil.HandleError(w, "Could not get attested block: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if attestedBlock == nil {
+		httputil.HandleError(w, "Could not get attested block", http.StatusInternalServerError)
 		return
 	}
 
 	attestedSlot := attestedBlock.Block().Slot()
 	attestedState, err := s.Stater.StateBySlot(ctx, attestedSlot)
 	if err != nil {
-		httputil.HandleError(w, "could not get attested state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get attested state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
