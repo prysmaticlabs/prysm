@@ -148,7 +148,7 @@ func TestPendingBalanceToWithdraw(t *testing.T) {
 	require.Equal(t, uint64(600), ab)
 }
 
-func TestAggregatedKeyFromIndices(t *testing.T) {
+func TestAggregateKeyFromIndices(t *testing.T) {
 	dState, _ := util.DeterministicGenesisState(t, 10)
 	pKey1 := dState.PubkeyAtIndex(3)
 	pKey2 := dState.PubkeyAtIndex(7)
@@ -157,7 +157,7 @@ func TestAggregatedKeyFromIndices(t *testing.T) {
 	aggKey, err := bls.AggregatePublicKeys([][]byte{pKey1[:], pKey2[:], pKey3[:]})
 	require.NoError(t, err)
 
-	retKey, err := dState.AggregatedKeyFromIndices([]uint64{3, 7, 9})
+	retKey, err := dState.AggregateKeyFromIndices([]uint64{3, 7, 9})
 	require.NoError(t, err)
 
 	assert.Equal(t, true, aggKey.Equals(retKey), "unequal aggregated keys")

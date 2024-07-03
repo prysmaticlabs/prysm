@@ -204,7 +204,7 @@ func createAttestationSignatureBatch(
 			return nil, err
 		}
 		indices := ia.GetAttestingIndices()
-		aggP, err := beaconState.AggregatedKeyFromIndices(indices)
+		aggP, err := beaconState.AggregateKeyFromIndices(indices)
 		if err != nil {
 			return nil, err
 		}

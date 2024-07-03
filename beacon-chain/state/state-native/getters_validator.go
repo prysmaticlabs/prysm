@@ -224,9 +224,9 @@ func (b *BeaconState) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.
 	return bytesutil.ToBytes48(v.PublicKey)
 }
 
-// AggregatedKeyFromIndices builds an aggregated public key from the provided
+// AggregateKeyFromIndices builds an aggregated public key from the provided
 // validator indices.
-func (b *BeaconState) AggregatedKeyFromIndices(idxs []uint64) (bls.PublicKey, error) {
+func (b *BeaconState) AggregateKeyFromIndices(idxs []uint64) (bls.PublicKey, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
