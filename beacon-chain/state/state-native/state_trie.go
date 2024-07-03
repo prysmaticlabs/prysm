@@ -762,7 +762,7 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
 
-	b.SaveValidatorIndices()
+	b.SaveValidatorIndices() // initialize the validator index cache for post electra
 
 	if features.Get().EnableExperimentalState {
 		b.blockRootsMultiValue = NewMultiValueBlockRoots(st.BlockRoots)

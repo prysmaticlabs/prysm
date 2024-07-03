@@ -571,30 +571,30 @@ func TestServer_GetBeaconBlock_Electra(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	beaconState, privKeys := util.DeterministicGenesisStateElectra(t, 64)
 
-	stateRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err, "Could not hash genesis state")
+	genesis, err := b.NewGenesisBlockForState(ctx, beaconState)
+	require.NoError(t, err, "Could not create genesis block")
 
-	genesis := b.NewGenesisBlock(stateRoot[:])
-	util.SaveBlock(t, ctx, db, genesis)
-
-	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, db.SaveBlock(ctx, genesis))
+	parentRoot, err := genesis.Block().HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	electraSlot, err := slots.EpochStart(params.BeaconConfig().ElectraForkEpoch)
 	require.NoError(t, err)
-
+	stRoot := genesis.Block().StateRoot()
+	rr := genesis.Block().Body().RandaoReveal()
+	gr := genesis.Block().Body().Graffiti()
 	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 	blk := &ethpb.SignedBeaconBlockElectra{
 		Block: &ethpb.BeaconBlockElectra{
 			Slot:       electraSlot + 1,
 			ParentRoot: parentRoot[:],
-			StateRoot:  genesis.Block.StateRoot,
+			StateRoot:  stRoot[:],
 			Body: &ethpb.BeaconBlockBodyElectra{
-				RandaoReveal:  genesis.Block.Body.RandaoReveal,
-				Graffiti:      genesis.Block.Body.Graffiti,
-				Eth1Data:      genesis.Block.Body.Eth1Data,
+				RandaoReveal:  rr[:],
+				Graffiti:      gr[:],
+				Eth1Data:      genesis.Block().Body().Eth1Data(),
 				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 				ExecutionPayload: &enginev1.ExecutionPayloadElectra{
 					ParentHash:    make([]byte, fieldparams.RootLength),
