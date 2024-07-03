@@ -77,15 +77,15 @@ type Flags struct {
 	// EnablePeerDAS enables running the node with the experimental data availability sampling scheme.
 	EnablePeerDAS bool
 
-	// DataColumnsWithholdCount specifies the likelihood of withholding a data column sidecar when proposing a block (percentage)
-	DataColumnsWithholdCount int
-
 	SaveInvalidBlock bool // SaveInvalidBlock saves invalid block to temp.
 	SaveInvalidBlob  bool // SaveInvalidBlob saves invalid blob to temp.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
+
+	// DataColumnsWithholdCount specifies the likelihood of withholding a data column sidecar when proposing a block (percentage)
+	DataColumnsWithholdCount int
 
 	// AggregateIntervals specifies the time durations at which we aggregate attestations preparing for forkchoice.
 	AggregateIntervals [3]time.Duration
