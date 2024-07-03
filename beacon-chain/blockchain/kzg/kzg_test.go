@@ -4,8 +4,8 @@ import "testing"
 
 func TestCellFlattenedChunked(t *testing.T) {
 	cell := makeCell()
-	chunkedCell := cellToChunkedCell(&cell)
-	flattenedCell := cellChunkedToCell(&chunkedCell)
+	chunkedCell := cellToCKZGCell(&cell)
+	flattenedCell := ckzgCellToCell(&chunkedCell)
 	if cell != flattenedCell {
 		t.Errorf("cell != flattenedCell")
 	}
