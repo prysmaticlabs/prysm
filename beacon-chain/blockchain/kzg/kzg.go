@@ -71,7 +71,7 @@ func ComputeCellsAndKZGProofs(blob *Blob) ([ckzg4844.CellsPerExtBlob]Cell, [ckzg
 	// Convert Cells and Proofs to types defined in this package
 	var cells [ckzg4844.CellsPerExtBlob]Cell
 	for i := range _cells {
-		cells[i] = Cell(cellChunkedToCell(&_cells[i]))
+		cells[i] = cellChunkedToCell(&_cells[i])
 	}
 
 	var proofs [ckzg4844.CellsPerExtBlob]Proof
@@ -118,7 +118,7 @@ func RecoverAllCells(cellIds []uint64, _cells []Cell) ([ckzg4844.CellsPerExtBlob
 	// Convert `ckzg4844.Cell` type to `Cell`
 	var ret [ckzg4844.CellsPerExtBlob]Cell
 	for i := range recoveredCells {
-		ret[i] = Cell(cellChunkedToCell(&recoveredCells[i]))
+		ret[i] = cellChunkedToCell(&recoveredCells[i])
 	}
 	return ret, nil
 }
