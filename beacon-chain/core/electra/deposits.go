@@ -269,7 +269,7 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 				}
 			}
 		} else {
-			if primitives.Gwei(processedAmount + balanceDeposit.Amount) > availableForProcessing {
+			if primitives.Gwei(processedAmount+balanceDeposit.Amount) > availableForProcessing {
 				break
 			}
 
