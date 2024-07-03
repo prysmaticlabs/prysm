@@ -14,8 +14,8 @@ func TestCellFlattenedChunked(t *testing.T) {
 func makeCell() Cell {
 	var cell Cell
 	for i := 0; i < fieldElementsPerCell; i++ {
-		rand32 := deterministicRandomness(i)
-		copy(cell[i][:], rand32[:])
+		rand32 := deterministicRandomness(int64(i))
+		copy(cell[i*32:], rand32[:])
 	}
 	return cell
 }
