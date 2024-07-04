@@ -198,7 +198,7 @@ func RecursiveFileFind(filename, dir string) (bool, string, error) {
 		// no errors or file found
 		return nil
 	})
-	if err != nil && err != errStopWalk {
+	if err != nil && !errors.Is(err, errStopWalk) {
 		return false, "", err
 	}
 	return found, fpath, nil
@@ -231,7 +231,7 @@ func RecursiveDirFind(dirname, dir string) (bool, string, error) {
 		return nil
 	})
 
-	if err != nil && err != errStopWalk {
+	if err != nil && !errors.Is(err, errStopWalk) {
 		return false, "", errors.Wrapf(err, "error walking directory %s", dir)
 	}
 
