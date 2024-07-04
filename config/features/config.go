@@ -349,7 +349,7 @@ func ValidateNetworkFlags(ctx *cli.Context) error {
 		if ctx.IsSet(flag.Names()[0]) {
 			networkFlagsCount++
 			if networkFlagsCount > 1 {
-				flagNames := []string{}
+				var flagNames []string
 				for _, flag := range NetworkFlags {
 					flagNames = append(flagNames, "--"+flag.Names()[0])
 				}
