@@ -173,7 +173,7 @@ func (s *Service) sampleDataColumnsFromPeer(
 	retrievedColumns := make(map[uint64]bool, len(roDataColumns))
 
 	for _, roDataColumn := range roDataColumns {
-		if verified := verifyColumn(roDataColumn, root, pid, requestedColumns); verified {
+		if verifyColumn(roDataColumn, root, pid, requestedColumns) {
 			retrievedColumns[roDataColumn.ColumnIndex] = true
 		}
 	}
@@ -378,62 +378,7 @@ func (s *Service) DataColumnSamplingRoutine(ctx context.Context) {
 	for {
 		select {
 		case e := <-stateChannel:
-			if e.Type != statefeed.BlockProcessed {
-				continue
-			}
-
-			data, ok := e.Data.(*statefeed.BlockProcessedData)
-			if !ok {
-				log.Error("Event feed data is not of type *statefeed.BlockProcessedData")
-				continue
-			}
-
-			if !data.Verified {
-				// We only process blocks that have been verified
-				log.Error("Data is not verified")
-				continue
-			}
-
-			if data.SignedBlock.Version() < version.Deneb {
-				log.Debug("Pre Deneb block, skipping data column sampling")
-				continue
-			}
-
-			// Get the commitments for this block.
-			commitments, err := data.SignedBlock.Block().Body().BlobKzgCommitments()
-			if err != nil {
-				log.WithError(err).Error("Failed to get blob KZG commitments")
-				continue
-			}
-
-			// Skip if there are no commitments.
-			if len(commitments) == 0 {
-				log.Debug("No commitments in block, skipping data column sampling")
-				continue
-			}
-
-			// Ramdomize all columns.
-			randomizedColumns := randomizeColumns(nonCustodyColums)
-
-			// Sample data columns with incremental DAS.
-			ok, _, err = s.incrementalDAS(data.BlockRoot, randomizedColumns, samplesCount)
-			if err != nil {
-				log.WithError(err).Error("Error during incremental DAS")
-			}
-
-			if ok {
-				log.WithFields(logrus.Fields{
-					"root":        fmt.Sprintf("%#x", data.BlockRoot),
-					"columns":     randomizedColumns,
-					"sampleCount": samplesCount,
-				}).Debug("Data column sampling successful")
-			} else {
-				log.WithFields(logrus.Fields{
-					"root":        fmt.Sprintf("%#x", data.BlockRoot),
-					"columns":     randomizedColumns,
-					"sampleCount": samplesCount,
-				}).Warning("Data column sampling failed")
-			}
+			s.processEvent(e, nonCustodyColums, samplesCount)
 
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
@@ -442,5 +387,64 @@ func (s *Service) DataColumnSamplingRoutine(ctx context.Context) {
 		case err := <-stateSub.Err():
 			log.WithError(err).Error("Subscription to state feed failed")
 		}
+	}
+}
+
+func (s *Service) processEvent(e *feed.Event, nonCustodyColums map[uint64]bool, samplesCount uint64) {
+	if e.Type != statefeed.BlockProcessed {
+		return
+	}
+
+	data, ok := e.Data.(*statefeed.BlockProcessedData)
+	if !ok {
+		log.Error("Event feed data is not of type *statefeed.BlockProcessedData")
+		return
+	}
+
+	if !data.Verified {
+		// We only process blocks that have been verified
+		log.Error("Data is not verified")
+		return
+	}
+
+	if data.SignedBlock.Version() < version.Deneb {
+		log.Debug("Pre Deneb block, skipping data column sampling")
+		return
+	}
+
+	// Get the commitments for this block.
+	commitments, err := data.SignedBlock.Block().Body().BlobKzgCommitments()
+	if err != nil {
+		log.WithError(err).Error("Failed to get blob KZG commitments")
+		return
+	}
+
+	// Skip if there are no commitments.
+	if len(commitments) == 0 {
+		log.Debug("No commitments in block, skipping data column sampling")
+		return
+	}
+
+	// Ramdomize all columns.
+	randomizedColumns := randomizeColumns(nonCustodyColums)
+
+	// Sample data columns with incremental DAS.
+	ok, _, err = s.incrementalDAS(data.BlockRoot, randomizedColumns, samplesCount)
+	if err != nil {
+		log.WithError(err).Error("Error during incremental DAS")
+	}
+
+	if ok {
+		log.WithFields(logrus.Fields{
+			"root":        fmt.Sprintf("%#x", data.BlockRoot),
+			"columns":     randomizedColumns,
+			"sampleCount": samplesCount,
+		}).Debug("Data column sampling successful")
+	} else {
+		log.WithFields(logrus.Fields{
+			"root":        fmt.Sprintf("%#x", data.BlockRoot),
+			"columns":     randomizedColumns,
+			"sampleCount": samplesCount,
+		}).Warning("Data column sampling failed")
 	}
 }
