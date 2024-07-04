@@ -161,8 +161,6 @@ ssz_epbs_objs = [
 	"PayloadAttestationData",
 	"PayloadAttestation",
 	"PayloadAttestationMessage",
-	"BuilderBid",
-	"DepositSnapshot",
 	"SignedBlindPayloadEnvelope",
 	"BlindPayloadEnvelope",
 ]
@@ -274,6 +272,8 @@ ssz_gen_marshal(
         "MetaDataV1",
         "SignedValidatorRegistrationV1",
         "ValidatorRegistrationV1",
+        "BuilderBid",
+        "DepositSnapshot",
     ],
 )
 
