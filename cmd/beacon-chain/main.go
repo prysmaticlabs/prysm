@@ -213,7 +213,7 @@ func before(ctx *cli.Context) error {
 	}
 
 	if err := features.ValidateNetworkFlags(ctx); err != nil {
-		return errors.Wrap(err, "provided multiple network flag")
+		return errors.Wrap(err, "provided multiple network flags")
 	}
 
 	return cmd.ValidateNoArgs(ctx)
