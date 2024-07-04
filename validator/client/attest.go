@@ -193,26 +193,18 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		return
 	}
 
+	span.AddAttributes(
+		trace.Int64Attribute("slot", int64(slot)), // lint:ignore uintcast -- This conversion is OK for tracing.
+		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
+		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
+		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
+		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
+		trace.StringAttribute("aggregationBitfield", fmt.Sprintf("%#x", aggregationBitfield)),
+	)
 	if postElectra {
-		span.AddAttributes(
-			trace.Int64Attribute("slot", int64(slot)), // lint:ignore uintcast -- This conversion is OK for tracing.
-			trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
-			trace.StringAttribute("committeeBitfield", fmt.Sprintf("%#x", committeeBits)),
-			trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
-			trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
-			trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
-			trace.StringAttribute("aggregationBitfield", fmt.Sprintf("%#x", aggregationBitfield)),
-		)
+		span.AddAttributes(trace.StringAttribute("committeeBitfield", fmt.Sprintf("%#x", committeeBits)))
 	} else {
-		span.AddAttributes(
-			trace.Int64Attribute("slot", int64(slot)), // lint:ignore uintcast -- This conversion is OK for tracing.
-			trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
-			trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)),
-			trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
-			trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
-			trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
-			trace.StringAttribute("aggregationBitfield", fmt.Sprintf("%#x", aggregationBitfield)),
-		)
+		span.AddAttributes(trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)))
 	}
 
 	if v.emitAccountMetrics {
