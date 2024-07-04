@@ -3,6 +3,7 @@ package lightclient
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -319,12 +320,12 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 
 func isSyncCommitteeUpdate(update *ethpbv2.LightClientUpdate) bool {
 	nextSyncCommitteeBranch := make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
-	return update.NextSyncCommitteeBranch != nextSyncCommitteeBranch
+	return !reflect.DeepEqual(update.NextSyncCommitteeBranch, nextSyncCommitteeBranch)
 }
 
 func isFinalityUpdate(update *ethpbv2.LightClientUpdate) bool {
 	finalityBranch := make([][]byte, finalityBranchNumOfLeaves)
-	return update.FinalityBranch != finalityBranch
+	return !reflect.DeepEqual(update.FinalityBranch, finalityBranch)
 }
 
 func isBetterUpdate(newUpdate, oldUpdate *ethpbv2.LightClientUpdate) bool {
