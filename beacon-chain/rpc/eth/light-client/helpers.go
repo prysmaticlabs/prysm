@@ -20,10 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
-const (
-	finalityBranchNumOfLeaves = 6
-)
-
 // createLightClientBootstrap - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
 // def create_light_client_bootstrap(state: BeaconState) -> LightClientBootstrap:
 //
@@ -324,24 +320,14 @@ func isSyncCommitteeUpdate(update *ethpbv2.LightClientUpdate) bool {
 }
 
 func isFinalityUpdate(update *ethpbv2.LightClientUpdate) bool {
-	finalityBranch := make([][]byte, finalityBranchNumOfLeaves)
+	finalityBranch := make([][]byte, blockchain.FinalityBranchNumOfLeaves)
 	return !reflect.DeepEqual(update.FinalityBranch, finalityBranch)
 }
 
 func isBetterUpdate(newUpdate, oldUpdate *ethpbv2.LightClientUpdate) bool {
 	maxActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Len()
-	newNumActiveParticipants := uint64(0)
-	for i := uint64(0); i < maxActiveParticipants; i++ {
-		if newUpdate.SyncAggregate.SyncCommitteeBits.BitAt(i) {
-			newNumActiveParticipants += 1
-		}
-	}
-	oldNumActiveParticipants := uint64(0)
-	for i := uint64(0); i < oldUpdate.SyncAggregate.SyncCommitteeBits.Len(); i++ {
-		if oldUpdate.SyncAggregate.SyncCommitteeBits.BitAt(i) {
-			oldNumActiveParticipants += 1
-		}
-	}
+	newNumActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Count()
+	oldNumActiveParticipants := oldUpdate.SyncAggregate.SyncCommitteeBits.Count()
 	newHasSupermajority := newNumActiveParticipants*3 >= maxActiveParticipants*2
 	oldHasSupermajority := oldNumActiveParticipants*3 >= maxActiveParticipants*2
 
@@ -353,8 +339,8 @@ func isBetterUpdate(newUpdate, oldUpdate *ethpbv2.LightClientUpdate) bool {
 	}
 
 	// Compare presence of relevant sync committee
-	newHasRelevantSyncCommittee := isSyncCommitteeUpdate(newUpdate) && (slots.ToEpoch(newUpdate.AttestedHeader.Slot) == slots.ToEpoch(newUpdate.SignatureSlot))
-	oldHasRelevantSyncCommittee := isSyncCommitteeUpdate(oldUpdate) && (slots.ToEpoch(oldUpdate.AttestedHeader.Slot) == slots.ToEpoch(oldUpdate.SignatureSlot))
+	newHasRelevantSyncCommittee := isSyncCommitteeUpdate(newUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.SignatureSlot)))
+	oldHasRelevantSyncCommittee := isSyncCommitteeUpdate(oldUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.SignatureSlot)))
 
 	if newHasRelevantSyncCommittee != oldHasRelevantSyncCommittee {
 		return newHasRelevantSyncCommittee
