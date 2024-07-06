@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// GetPayloadResponse represents the result of unmarshaling an execution engine
+// GetPayloadResponse represents the result of unmarshalling an execution engine
 // GetPayloadResponseV(1|2|3|4) value.
 type GetPayloadResponse struct {
 	ExecutionData   interfaces.ExecutionData

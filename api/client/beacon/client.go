@@ -170,7 +170,7 @@ func (c *Client) GetForkSchedule(ctx context.Context) (forks.OrderedSchedule, er
 	}
 	ofs, err := fsr.OrderedForkSchedule()
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("problem unmarshaling %s response", getForkSchedulePath))
+		return nil, errors.Wrap(err, fmt.Sprintf("problem unmarshalling %s response", getForkSchedulePath))
 	}
 	return ofs, nil
 }
@@ -223,7 +223,7 @@ func (c *Client) GetNodeVersion(ctx context.Context) (*NodeVersion, error) {
 	}{}
 	err = json.Unmarshal(b, &d)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error unmarshaling response body: %s", string(b))
+		return nil, errors.Wrapf(err, "error unmarshalling response body: %s", string(b))
 	}
 	return parseNodeVersion(d.Data.Version)
 }

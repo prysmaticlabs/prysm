@@ -82,7 +82,7 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 
 	s, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
-		return nil, errors.Wrap(err, "error unmarshaling finalized state to correct version")
+		return nil, errors.Wrap(err, "error unmarshalling finalized state to correct version")
 	}
 
 	slot := s.LatestBlockHeader().Slot
@@ -263,7 +263,7 @@ func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (prim
 	log.Printf("detected supported config in remote head state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
 	headState, err := vu.UnmarshalBeaconState(headBytes)
 	if err != nil {
-		return 0, errors.Wrap(err, "error unmarshaling state to correct version")
+		return 0, errors.Wrap(err, "error unmarshalling state to correct version")
 	}
 
 	epoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, headState, vu.Config)

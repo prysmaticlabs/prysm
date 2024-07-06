@@ -587,7 +587,7 @@ type ExecPayloadResponseCapella struct {
 	Data    ExecutionPayloadCapella `json:"data"`
 }
 
-// ExecutionPayloadResponse allows for unmarshaling just the Version field of the payload.
+// ExecutionPayloadResponse allows for unmarshalling just the Version field of the payload.
 // This allows it to return different ExecutionPayload types based on the version field.
 type ExecutionPayloadResponse struct {
 	Version string          `json:"version"`

@@ -216,13 +216,13 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 	}
 	v := &VersionResponse{}
 	if err := json.Unmarshal(hb, v); err != nil {
-		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+		return nil, errors.Wrapf(err, "error unmarshalling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
 	}
 	switch strings.ToLower(v.Version) {
 	case strings.ToLower(version.String(version.Deneb)):
 		hr := &ExecHeaderResponseDeneb{}
 		if err := json.Unmarshal(hb, hr); err != nil {
-			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+			return nil, errors.Wrapf(err, "error unmarshalling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
 		}
 		p, err := hr.ToProto()
 		if err != nil {
@@ -232,7 +232,7 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 	case strings.ToLower(version.String(version.Capella)):
 		hr := &ExecHeaderResponseCapella{}
 		if err := json.Unmarshal(hb, hr); err != nil {
-			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+			return nil, errors.Wrapf(err, "error unmarshalling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
 		}
 		p, err := hr.ToProto()
 		if err != nil {
@@ -242,7 +242,7 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 	case strings.ToLower(version.String(version.Bellatrix)):
 		hr := &ExecHeaderResponse{}
 		if err := json.Unmarshal(hb, hr); err != nil {
-			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+			return nil, errors.Wrapf(err, "error unmarshalling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
 		}
 		p, err := hr.ToProto()
 		if err != nil {
@@ -312,10 +312,10 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		return nil, nil, errors.Wrap(err, "error posting the blinded block to the builder api")
 	}
 	// ExecutionPayloadResponse parses just the outer container and the Value key, enabling it to use the .Value
-	// key to determine which underlying data type to use to finish the unmarshaling.
+	// key to determine which underlying data type to use to finish the unmarshalling.
 	ep := &ExecutionPayloadResponse{}
 	if err := json.Unmarshal(rb, ep); err != nil {
-		return nil, nil, errors.Wrap(err, "error unmarshaling the builder ExecutionPayloadResponse")
+		return nil, nil, errors.Wrap(err, "error unmarshalling the builder ExecutionPayloadResponse")
 	}
 	if strings.ToLower(ep.Version) != version.String(sb.Version()) {
 		return nil, nil, errors.Wrapf(errResponseVersionMismatch, "req=%s, recv=%s", strings.ToLower(ep.Version), version.String(sb.Version()))

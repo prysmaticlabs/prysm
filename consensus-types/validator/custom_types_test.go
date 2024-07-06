@@ -30,17 +30,17 @@ func Test_customUint_UnmarshalJSON(t *testing.T) {
 		{
 			name:             "empty",
 			jsonString:       `{"test":""}`,
-			wantUnmarshalErr: "error unmarshaling JSON",
+			wantUnmarshalErr: "error unmarshalling JSON",
 		},
 		{
 			name:             "digits more than uint64",
 			jsonString:       `{"test":"8888888888888888888888888888888888888888888888888888888888888"}`,
-			wantUnmarshalErr: "error unmarshaling JSON",
+			wantUnmarshalErr: "error unmarshalling JSON",
 		},
 		{
 			name:             "not a uint64",
 			jsonString:       `{"test":"one hundred"}`,
-			wantUnmarshalErr: "error unmarshaling JSON",
+			wantUnmarshalErr: "error unmarshalling JSON",
 		},
 	}
 	for _, tt := range tests {

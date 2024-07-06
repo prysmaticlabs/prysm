@@ -38,7 +38,7 @@ var beaconStateCurrentVersion = fieldSpec{
 }
 
 // FromState exploits the fixed-size lower-order bytes in a BeaconState as a heuristic to obtain the value of the
-// state.version field without first unmarshaling the BeaconState. The Version is then internally used to lookup
+// state.version field without first unmarshalling the BeaconState. The Version is then internally used to lookup
 // the correct ConfigVersion.
 func FromState(marshaled []byte) (*VersionedUnmarshaler, error) {
 	cv, err := beaconStateCurrentVersion.bytes4(marshaled)
