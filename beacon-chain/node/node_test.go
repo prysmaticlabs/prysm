@@ -262,9 +262,13 @@ func TestCORS(t *testing.T) {
 	router := newRouter(cliCtx)
 
 	// Ensure a test route exists
-	router.HandleFunc("/some-path", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}).Methods(http.MethodGet)
+	http.HandleFunc("/some-path", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	// Define test cases
 	tests := []struct {

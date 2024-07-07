@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
+	// "github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
@@ -54,11 +54,17 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockV2")
 	defer span.End()
 
-	blockId := mux.Vars(r)["block_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	pathParts := strings.Split(r.URL.Path, "/")
+	blockId := ""
+	if len(pathParts) > 1 {
+		blockId = pathParts[len(pathParts)-1]
+	}
 	if blockId == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
 	}
+
 	blk, err := s.Blocker.Block(ctx, []byte(blockId))
 	if !shared.WriteBlockFetchError(w, blk, err) {
 		return
@@ -84,8 +90,12 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlindedBlock")
 	defer span.End()
-
-	blockId := mux.Vars(r)["block_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID
+	pathParts := strings.Split(r.URL.Path, "/")
+	blockId := ""
+	if len(pathParts) > 1 {
+		blockId = pathParts[len(pathParts)-1]
+	}
 	if blockId == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -193,12 +203,17 @@ func (s *Server) getBlockResponseBodyJson(ctx context.Context, blk interfaces.Re
 func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockAttestations")
 	defer span.End()
-
-	blockId := mux.Vars(r)["block_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID 
+	pathParts := strings.Split(r.URL.Path, "/")
+	blockId := ""
+	if len(pathParts) > 1 {
+		blockId = pathParts[len(pathParts)-1]
+	}
 	if blockId == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
 	}
+
 	blk, err := s.Blocker.Block(ctx, []byte(blockId))
 	if !shared.WriteBlockFetchError(w, blk, err) {
 		return
@@ -922,7 +937,12 @@ func (s *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	var root []byte
-	blockID := mux.Vars(r)["block_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	pathParts := strings.Split(r.URL.Path, "/")
+	blockID := ""
+	if len(pathParts) > 1 {
+		blockID = pathParts[len(pathParts)-1]
+	}
 	if blockID == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1034,7 +1054,12 @@ func (s *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetStateFork")
 	defer span.End()
-	stateId := mux.Vars(r)["state_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	pathParts := strings.Split(r.URL.Path, "/")
+	stateId := ""
+	if len(pathParts) > 1 {
+		stateId = pathParts[len(pathParts)-1]
+	}
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1073,8 +1098,12 @@ func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetCommittees")
 	defer span.End()
-
-	stateId := mux.Vars(r)["state_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	pathParts := strings.Split(r.URL.Path, "/")
+	stateId := ""
+	if len(pathParts) > 1 {
+		stateId = pathParts[len(pathParts)-1]
+	}
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1259,7 +1288,13 @@ func (s *Server) GetBlockHeader(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeader")
 	defer span.End()
 
-	blockID := mux.Vars(r)["block_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	pathParts := strings.Split(r.URL.Path, "/")
+	blockID := ""
+	if len(pathParts) > 1 {
+		blockID = pathParts[len(pathParts)-1]
+	}
+
 	if blockID == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1317,7 +1352,12 @@ func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) 
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetFinalityCheckpoints")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	pathParts := strings.Split(r.URL.Path, "/")
+	stateId := ""
+	if len(pathParts) > 1 {
+		stateId = pathParts[len(pathParts)-1]
+	}
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return

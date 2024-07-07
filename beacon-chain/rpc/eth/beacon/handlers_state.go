@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-
+	"strings"
+	
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
@@ -33,7 +33,13 @@ func (s *Server) GetStateRoot(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetStateRoot")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	pathParts := strings.Split(r.URL.Path, "/")
+	stateId := ""
+	if len(pathParts) > 1 {
+		stateId = pathParts[len(pathParts)-1]
+	}
+
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -86,7 +92,13 @@ func (s *Server) GetRandao(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetRandao")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	pathParts := strings.Split(r.URL.Path, "/")
+	stateId := ""
+	if len(pathParts) > 1 {
+		stateId = pathParts[len(pathParts)-1]
+	}
+
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -152,7 +164,13 @@ func (s *Server) GetSyncCommittees(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetSyncCommittees")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	pathParts := strings.Split(r.URL.Path, "/")
+	stateId := ""
+	if len(pathParts) > 1 {
+		stateId = pathParts[len(pathParts)-1]
+	}
+
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return

@@ -3,7 +3,7 @@ package rpc
 import (
 	"net/http"
 
-	"github.com/gorilla/mux"
+	
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prysmaticlabs/prysm/v5/api"
@@ -30,7 +30,7 @@ import (
 type endpoint struct {
 	template   string
 	name       string
-	middleware []mux.MiddlewareFunc
+	middleware []func(http.Handler) http.Handler
 	handler    http.HandlerFunc
 	methods    []string
 }
@@ -93,7 +93,7 @@ func (s *Service) rewardsEndpoints(blocker lookup.Blocker, stater lookup.Stater,
 		{
 			template: "/eth/v1/beacon/rewards/blocks/{block_id}",
 			name:     namespace + ".BlockRewards",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.BlockRewards,
@@ -102,7 +102,7 @@ func (s *Service) rewardsEndpoints(blocker lookup.Blocker, stater lookup.Stater,
 		{
 			template: "/eth/v1/beacon/rewards/attestations/{epoch}",
 			name:     namespace + ".AttestationRewards",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -112,7 +112,7 @@ func (s *Service) rewardsEndpoints(blocker lookup.Blocker, stater lookup.Stater,
 		{
 			template: "/eth/v1/beacon/rewards/sync_committee/{block_id}",
 			name:     namespace + ".SyncCommitteeRewards",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -134,7 +134,7 @@ func (s *Service) builderEndpoints(stater lookup.Stater) []endpoint {
 		{
 			template: "/eth/v1/builder/states/{state_id}/expected_withdrawals",
 			name:     namespace + ".ExpectedWithdrawals",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.ExpectedWithdrawals,
@@ -153,7 +153,7 @@ func (*Service) blobEndpoints(blocker lookup.Blocker) []endpoint {
 		{
 			template: "/eth/v1/beacon/blob_sidecars/{block_id}",
 			name:     namespace + ".Blobs",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.Blobs,
@@ -194,7 +194,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/aggregate_attestation",
 			name:     namespace + ".GetAggregateAttestation",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetAggregateAttestation,
@@ -203,7 +203,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/contribution_and_proofs",
 			name:     namespace + ".SubmitContributionAndProofs",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -213,7 +213,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/aggregate_and_proofs",
 			name:     namespace + ".SubmitAggregateAndProofs",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -223,7 +223,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/sync_committee_contribution",
 			name:     namespace + ".ProduceSyncCommitteeContribution",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.ProduceSyncCommitteeContribution,
@@ -232,7 +232,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/sync_committee_subscriptions",
 			name:     namespace + ".SubmitSyncCommitteeSubscription",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -242,7 +242,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/beacon_committee_subscriptions",
 			name:     namespace + ".SubmitBeaconCommitteeSubscription",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -252,7 +252,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/attestation_data",
 			name:     namespace + ".GetAttestationData",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetAttestationData,
@@ -261,7 +261,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/register_validator",
 			name:     namespace + ".RegisterValidator",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -271,7 +271,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/duties/attester/{epoch}",
 			name:     namespace + ".GetAttesterDuties",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -281,7 +281,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/duties/proposer/{epoch}",
 			name:     namespace + ".GetProposerDuties",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetProposerDuties,
@@ -290,7 +290,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/duties/sync/{epoch}",
 			name:     namespace + ".GetSyncCommitteeDuties",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -300,7 +300,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/prepare_beacon_proposer",
 			name:     namespace + ".PrepareBeaconProposer",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -310,7 +310,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/liveness/{epoch}",
 			name:     namespace + ".GetLiveness",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -320,7 +320,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v2/validator/blocks/{slot}",
 			name:     namespace + ".ProduceBlockV2",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.ProduceBlockV2,
@@ -329,7 +329,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/blinded_blocks/{slot}",
 			name:     namespace + ".ProduceBlindedBlock",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.ProduceBlindedBlock,
@@ -338,7 +338,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v3/validator/blocks/{slot}",
 			name:     namespace + ".ProduceBlockV3",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.ProduceBlockV3,
@@ -347,7 +347,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/beacon_committee_selections",
 			name:     namespace + ".BeaconCommitteeSelections",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.BeaconCommitteeSelections,
@@ -356,7 +356,7 @@ func (s *Service) validatorEndpoints(
 		{
 			template: "/eth/v1/validator/sync_committee_selections",
 			name:     namespace + ".SyncCommittee Selections",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.SyncCommitteeSelections,
@@ -384,7 +384,7 @@ func (s *Service) nodeEndpoints() []endpoint {
 		{
 			template: "/eth/v1/node/syncing",
 			name:     namespace + ".GetSyncStatus",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetSyncStatus,
@@ -393,7 +393,7 @@ func (s *Service) nodeEndpoints() []endpoint {
 		{
 			template: "/eth/v1/node/identity",
 			name:     namespace + ".GetIdentity",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetIdentity,
@@ -402,7 +402,7 @@ func (s *Service) nodeEndpoints() []endpoint {
 		{
 			template: "/eth/v1/node/peers/{peer_id}",
 			name:     namespace + ".GetPeer",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetPeer,
@@ -411,7 +411,7 @@ func (s *Service) nodeEndpoints() []endpoint {
 		{
 			template: "/eth/v1/node/peers",
 			name:     namespace + ".GetPeers",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetPeers,
@@ -420,7 +420,7 @@ func (s *Service) nodeEndpoints() []endpoint {
 		{
 			template: "/eth/v1/node/peer_count",
 			name:     namespace + ".GetPeerCount",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetPeerCount,
@@ -429,7 +429,7 @@ func (s *Service) nodeEndpoints() []endpoint {
 		{
 			template: "/eth/v1/node/version",
 			name:     namespace + ".GetVersion",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetVersion,
@@ -438,7 +438,7 @@ func (s *Service) nodeEndpoints() []endpoint {
 		{
 			template: "/eth/v1/node/health",
 			name:     namespace + ".GetHealth",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetHealth,
@@ -486,7 +486,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/states/{state_id}/committees",
 			name:     namespace + ".GetCommittees",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetCommittees,
@@ -495,7 +495,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/states/{state_id}/fork",
 			name:     namespace + ".GetStateFork",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetStateFork,
@@ -504,7 +504,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/states/{state_id}/root",
 			name:     namespace + ".GetStateRoot",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetStateRoot,
@@ -513,7 +513,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/states/{state_id}/sync_committees",
 			name:     namespace + ".GetSyncCommittees",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetSyncCommittees,
@@ -522,7 +522,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/states/{state_id}/randao",
 			name:     namespace + ".GetRandao",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetRandao,
@@ -531,7 +531,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/blocks",
 			name:     namespace + ".PublishBlock",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -541,7 +541,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/blinded_blocks",
 			name:     namespace + ".PublishBlindedBlock",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -551,7 +551,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v2/beacon/blocks",
 			name:     namespace + ".PublishBlockV2",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -561,7 +561,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v2/beacon/blinded_blocks",
 			name:     namespace + ".PublishBlindedBlockV2",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -571,7 +571,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v2/beacon/blocks/{block_id}",
 			name:     namespace + ".GetBlockV2",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.GetBlockV2,
@@ -580,7 +580,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/blocks/{block_id}/attestations",
 			name:     namespace + ".GetBlockAttestations",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetBlockAttestations,
@@ -589,7 +589,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/blinded_blocks/{block_id}",
 			name:     namespace + ".GetBlindedBlock",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.GetBlindedBlock,
@@ -598,7 +598,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/blocks/{block_id}/root",
 			name:     namespace + ".GetBlockRoot",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetBlockRoot,
@@ -607,7 +607,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/attestations",
 			name:     namespace + ".ListAttestations",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.ListAttestations,
@@ -616,7 +616,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/attestations",
 			name:     namespace + ".SubmitAttestations",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -626,7 +626,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/voluntary_exits",
 			name:     namespace + ".ListVoluntaryExits",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.ListVoluntaryExits,
@@ -635,7 +635,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/voluntary_exits",
 			name:     namespace + ".SubmitVoluntaryExit",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -645,7 +645,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/sync_committees",
 			name:     namespace + ".SubmitSyncCommitteeSignatures",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -655,7 +655,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/bls_to_execution_changes",
 			name:     namespace + ".ListBLSToExecutionChanges",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.ListBLSToExecutionChanges,
@@ -664,7 +664,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/bls_to_execution_changes",
 			name:     namespace + ".SubmitBLSToExecutionChanges",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -674,7 +674,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/attester_slashings",
 			name:     namespace + ".GetAttesterSlashings",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetAttesterSlashings,
@@ -683,7 +683,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/attester_slashings",
 			name:     namespace + ".SubmitAttesterSlashing",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -693,7 +693,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/proposer_slashings",
 			name:     namespace + ".GetProposerSlashings",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetProposerSlashings,
@@ -702,7 +702,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/pool/proposer_slashings",
 			name:     namespace + ".SubmitProposerSlashing",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -712,7 +712,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/headers",
 			name:     namespace + ".GetBlockHeaders",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetBlockHeaders,
@@ -721,7 +721,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/headers/{block_id}",
 			name:     namespace + ".GetBlockHeader",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetBlockHeader,
@@ -730,7 +730,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/genesis",
 			name:     namespace + ".GetGenesis",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetGenesis,
@@ -739,7 +739,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/states/{state_id}/finality_checkpoints",
 			name:     namespace + ".GetFinalityCheckpoints",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetFinalityCheckpoints,
@@ -748,7 +748,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/states/{state_id}/validators",
 			name:     namespace + ".GetValidators",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -758,7 +758,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
 			name:     namespace + ".GetValidator",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetValidator,
@@ -767,7 +767,7 @@ func (s *Service) beaconEndpoints(
 		{
 			template: "/eth/v1/beacon/states/{state_id}/validator_balances",
 			name:     namespace + ".GetValidatorBalances",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -783,7 +783,7 @@ func (*Service) configEndpoints() []endpoint {
 		{
 			template: "/eth/v1/config/deposit_contract",
 			name:     namespace + ".GetDepositContract",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: config.GetDepositContract,
@@ -792,7 +792,7 @@ func (*Service) configEndpoints() []endpoint {
 		{
 			template: "/eth/v1/config/fork_schedule",
 			name:     namespace + ".GetForkSchedule",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: config.GetForkSchedule,
@@ -801,7 +801,7 @@ func (*Service) configEndpoints() []endpoint {
 		{
 			template: "/eth/v1/config/spec",
 			name:     namespace + ".GetSpec",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: config.GetSpec,
@@ -822,7 +822,7 @@ func (s *Service) lightClientEndpoints(blocker lookup.Blocker, stater lookup.Sta
 		{
 			template: "/eth/v1/beacon/light_client/bootstrap/{block_root}",
 			name:     namespace + ".GetLightClientBootstrap",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.GetLightClientBootstrap,
@@ -831,7 +831,7 @@ func (s *Service) lightClientEndpoints(blocker lookup.Blocker, stater lookup.Sta
 		{
 			template: "/eth/v1/beacon/light_client/updates",
 			name:     namespace + ".GetLightClientUpdatesByRange",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.GetLightClientUpdatesByRange,
@@ -840,7 +840,7 @@ func (s *Service) lightClientEndpoints(blocker lookup.Blocker, stater lookup.Sta
 		{
 			template: "/eth/v1/beacon/light_client/finality_update",
 			name:     namespace + ".GetLightClientFinalityUpdate",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.GetLightClientFinalityUpdate,
@@ -849,7 +849,7 @@ func (s *Service) lightClientEndpoints(blocker lookup.Blocker, stater lookup.Sta
 		{
 			template: "/eth/v1/beacon/light_client/optimistic_update",
 			name:     namespace + ".GetLightClientOptimisticUpdate",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.GetLightClientOptimisticUpdate,
@@ -875,7 +875,7 @@ func (s *Service) debugEndpoints(stater lookup.Stater) []endpoint {
 		{
 			template: "/eth/v2/debug/beacon/states/{state_id}",
 			name:     namespace + ".GetBeaconStateV2",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType, api.OctetStreamMediaType}),
 			},
 			handler: server.GetBeaconStateV2,
@@ -884,7 +884,7 @@ func (s *Service) debugEndpoints(stater lookup.Stater) []endpoint {
 		{
 			template: "/eth/v2/debug/beacon/heads",
 			name:     namespace + ".GetForkChoiceHeadsV2",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetForkChoiceHeadsV2,
@@ -893,7 +893,7 @@ func (s *Service) debugEndpoints(stater lookup.Stater) []endpoint {
 		{
 			template: "/eth/v1/debug/fork_choice",
 			name:     namespace + ".GetForkChoice",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetForkChoice,
@@ -915,7 +915,7 @@ func (s *Service) eventsEndpoints() []endpoint {
 		{
 			template: "/eth/v1/events",
 			name:     namespace + ".StreamEvents",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.EventStreamMediaType}),
 			},
 			handler: server.StreamEvents,
@@ -944,7 +944,7 @@ func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater loo
 		{
 			template: "/prysm/v1/beacon/weak_subjectivity",
 			name:     namespace + ".GetWeakSubjectivity",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetWeakSubjectivity,
@@ -953,7 +953,7 @@ func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater loo
 		{
 			template: "/eth/v1/beacon/states/{state_id}/validator_count",
 			name:     namespace + ".GetValidatorCount",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetValidatorCount,
@@ -962,7 +962,7 @@ func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater loo
 		{
 			template: "/prysm/v1/beacon/states/{state_id}/validator_count",
 			name:     namespace + ".GetValidatorCount",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetValidatorCount,
@@ -989,7 +989,7 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 		{
 			template: "/prysm/node/trusted_peers",
 			name:     namespace + ".ListTrustedPeer",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.ListTrustedPeer,
@@ -998,7 +998,7 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 		{
 			template: "/prysm/v1/node/trusted_peers",
 			name:     namespace + ".ListTrustedPeer",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.ListTrustedPeer,
@@ -1007,7 +1007,7 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 		{
 			template: "/prysm/node/trusted_peers",
 			name:     namespace + ".AddTrustedPeer",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -1017,7 +1017,7 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 		{
 			template: "/prysm/v1/node/trusted_peers",
 			name:     namespace + ".AddTrustedPeer",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -1027,7 +1027,7 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 		{
 			template: "/prysm/node/trusted_peers/{peer_id}",
 			name:     namespace + ".RemoveTrustedPeer",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.RemoveTrustedPeer,
@@ -1036,7 +1036,7 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 		{
 			template: "/prysm/v1/node/trusted_peers/{peer_id}",
 			name:     namespace + ".RemoveTrustedPeer",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.RemoveTrustedPeer,
@@ -1055,7 +1055,7 @@ func (*Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint {
 		{
 			template: "/prysm/validators/performance",
 			name:     namespace + ".GetValidatorPerformance",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -1065,7 +1065,7 @@ func (*Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint {
 		{
 			template: "/prysm/v1/validators/performance",
 			name:     namespace + ".GetValidatorPerformance",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},

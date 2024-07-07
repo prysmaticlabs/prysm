@@ -6,8 +6,7 @@ import (
 	"context"
 	"net"
 	"sync"
-
-	"github.com/gorilla/mux"
+	"net/http"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -134,7 +133,7 @@ type Config struct {
 	ExecutionEngineCaller         execution.EngineCaller
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	BlockBuilder                  builder.BlockBuilder
-	Router                        *mux.Router
+	Router                        *http.ServeMux
 	ClockWaiter                   startup.ClockWaiter
 	BlobStorage                   *filesystem.BlobStorage
 	TrackedValidatorsCache        *cache.TrackedValidatorsCache
@@ -310,7 +309,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		s.cfg.Router.HandleFunc(
 			e.template,
 			e.handlerWithMiddleware(),
-		).Methods(e.methods...)
+		)
 	}
 
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)

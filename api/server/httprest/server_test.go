@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -36,7 +35,7 @@ func TestServer_StartStop(t *testing.T) {
 			_ *http.Request,
 		) {
 		}),
-		WithRouter(mux.NewRouter()),
+		WithRouter(http.NewServeMux()),
 	}
 
 	g, err := New(context.Background(), opts...)
@@ -62,7 +61,7 @@ func TestServer_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 
 	opts := []Option{
 		WithHTTPAddr(address),
-		WithRouter(mux.NewRouter()),
+		WithRouter(http.NewServeMux()),
 	}
 
 	g, err := New(context.Background(), opts...)

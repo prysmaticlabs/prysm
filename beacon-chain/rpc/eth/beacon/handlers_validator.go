@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
+
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
@@ -29,7 +29,13 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidators")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	pathParts := strings.Split(r.URL.Path, "/")
+	stateId := ""
+	if len(pathParts) > 1 {
+		stateId = pathParts[len(pathParts)-1]
+	}
+
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -177,18 +183,24 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidator")
 	defer span.End()
+	//Need review here 
+	pathParts := strings.Split(r.URL.Path, "/")
+	if len(pathParts) < 4 {
+		httputil.HandleError(w, "state_id and validator_id are required in URL params", http.StatusBadRequest)
+		return
+	}
+	stateId := pathParts[2]
+	valId := pathParts[3]
 
-	stateId := mux.Vars(r)["state_id"]
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-	valId := mux.Vars(r)["validator_id"]
 	if valId == "" {
 		httputil.HandleError(w, "validator_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-
+	
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
 		shared.WriteStateFetchError(w, err)
@@ -242,8 +254,14 @@ func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorBalances")
 	defer span.End()
-
-	stateId := mux.Vars(r)["state_id"]
+	
+	pathParts := strings.Split(r.URL.Path, "/")
+	if len(pathParts) < 3 {
+		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+	stateId := pathParts[2]
+	
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return

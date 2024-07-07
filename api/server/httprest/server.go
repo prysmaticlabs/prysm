@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 )
@@ -23,7 +22,7 @@ type httpHandler func(
 type config struct {
 	httpAddr string
 	handler  httpHandler
-	router   *mux.Router
+	router   *http.ServeMux
 	timeout  time.Duration
 }
 

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 )
 
@@ -21,7 +20,7 @@ func NormalizeQueryValuesHandler(next http.Handler) http.Handler {
 }
 
 // CorsHandler sets the cors settings on api endpoints
-func CorsHandler(allowOrigins []string) mux.MiddlewareFunc {
+func CorsHandler(allowOrigins []string) func(http.Handler) http.Handler {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   allowOrigins,
 		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodOptions},
@@ -30,11 +29,13 @@ func CorsHandler(allowOrigins []string) mux.MiddlewareFunc {
 		AllowedHeaders:   []string{"*"},
 	})
 
-	return c.Handler
+	return func(next http.Handler) http.Handler {
+		return c.Handler(next)
+	}
 }
 
 // ContentTypeHandler checks request for the appropriate media types otherwise returning a http.StatusUnsupportedMediaType error
-func ContentTypeHandler(acceptedMediaTypes []string) mux.MiddlewareFunc {
+func ContentTypeHandler(acceptedMediaTypes []string)func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// skip the GET request
@@ -67,7 +68,7 @@ func ContentTypeHandler(acceptedMediaTypes []string) mux.MiddlewareFunc {
 }
 
 // AcceptHeaderHandler checks if the client's response preference is handled
-func AcceptHeaderHandler(serverAcceptedTypes []string) mux.MiddlewareFunc {
+func AcceptHeaderHandler(serverAcceptedTypes []string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			acceptHeader := r.Header.Get("Accept")

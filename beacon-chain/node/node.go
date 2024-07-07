@@ -15,9 +15,9 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-
+	"net/http"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gorilla/mux"
+	
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
@@ -362,12 +362,12 @@ func registerServices(cliCtx *cli.Context, beacon *BeaconNode, synchronizer *sta
 
 	log.Debugln("Registering RPC Service")
 	router := newRouter(cliCtx)
-	if err := beacon.registerRPCService(router); err != nil {
+	if err := beacon.registerRPCService(router.(*http.ServeMux)); err != nil {
 		return errors.Wrap(err, "could not register RPC service")
 	}
 
 	log.Debugln("Registering HTTP Service")
-	if err := beacon.registerHTTPService(router); err != nil {
+	if err := beacon.registerHTTPService(router.(*http.ServeMux)); err != nil {
 		return errors.Wrap(err, "could not register HTTP service")
 	}
 
@@ -397,17 +397,19 @@ func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
 	}
 }
 
-func newRouter(cliCtx *cli.Context) *mux.Router {
+func newRouter(cliCtx *cli.Context)http.Handler {
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
 		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
 	} else {
 		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
-	r := mux.NewRouter()
-	r.Use(middleware.NormalizeQueryValuesHandler)
-	r.Use(middleware.CorsHandler(allowedOrigins))
-	return r
+	r := http.NewServeMux()
+	// r.Use(middleware.NormalizeQueryValuesHandler)
+	handler := middleware.NormalizeQueryValuesHandler(
+		middleware.CorsHandler(allowedOrigins)(r),
+	)
+	return handler
 }
 
 // StateFeed implements statefeed.Notifier.
@@ -916,7 +918,7 @@ func (b *BeaconNode) registerSlasherService() error {
 	return b.services.RegisterService(slasherSrv)
 }
 
-func (b *BeaconNode) registerRPCService(router *mux.Router) error {
+func (b *BeaconNode) registerRPCService(router *http.ServeMux) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -1043,7 +1045,7 @@ func (b *BeaconNode) registerPrometheusService(_ *cli.Context) error {
 	return b.services.RegisterService(service)
 }
 
-func (b *BeaconNode) registerHTTPService(router *mux.Router) error {
+func (b *BeaconNode) registerHTTPService(router *http.ServeMux) error {
 	host := b.cliCtx.String(flags.HTTPServerHost.Name)
 	port := b.cliCtx.Int(flags.HTTPServerPort.Name)
 	address := net.JoinHostPort(host, strconv.Itoa(port))

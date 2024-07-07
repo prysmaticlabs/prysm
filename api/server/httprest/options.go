@@ -3,10 +3,12 @@ package httprest
 import (
 	"time"
 
-	"github.com/gorilla/mux"
+	"net/http"
 )
 
 type Option func(g *Server) error
+
+
 
 func WithMuxHandler(m httpHandler) Option {
 	return func(g *Server) error {
@@ -23,7 +25,7 @@ func WithHTTPAddr(addr string) Option {
 }
 
 // WithRouter --.
-func WithRouter(r *mux.Router) Option {
+func WithRouter(r *http.ServeMux) Option {
 	return func(g *Server) error {
 		g.cfg.router = r
 		return nil
