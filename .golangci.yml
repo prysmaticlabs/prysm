@@ -34,7 +34,6 @@ linters:
     - dogsled
     - dupl
     - durationcheck
-    - errorlint
     - exhaustive
     - exhaustruct
     - forbidigo
