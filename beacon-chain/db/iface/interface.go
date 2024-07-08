@@ -161,6 +161,7 @@ type SlasherDatabase interface {
 	) ([]*ethpb.HighestAttestation, error)
 	DatabasePath() string
 	ClearDB() error
+	Migrate(ctx context.Context, headEpoch, maxPruningEpoch primitives.Epoch, batchSize int) error
 }
 
 // Database interface with full access.
