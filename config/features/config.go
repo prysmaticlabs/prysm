@@ -348,6 +348,8 @@ func ValidateNetworkFlags(ctx *cli.Context) error {
 		if ctx.IsSet(flag.Names()[0]) {
 			networkFlagsCount++
 			if networkFlagsCount > 1 {
+				// using a forLoop so future addition
+				// doesn't require changes in this function
 				var flagNames []string
 				for _, flag := range NetworkFlags {
 					flagNames = append(flagNames, "--"+flag.Names()[0])
