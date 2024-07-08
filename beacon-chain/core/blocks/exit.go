@@ -115,7 +115,6 @@ func VerifyExitAndSignature(
 		return errors.New("nil exit")
 	}
 
-	currentSlot := state.Slot()
 	fork := state.Fork()
 	genesisRoot := state.GenesisValidatorsRoot()
 
@@ -130,7 +129,7 @@ func VerifyExitAndSignature(
 	}
 
 	exit := signed.Exit
-	if err := verifyExitConditions(state, validator, currentSlot, exit); err != nil {
+	if err := verifyExitConditions(state, validator, exit); err != nil {
 		return err
 	}
 	domain, err := signing.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)
@@ -167,8 +166,8 @@ func VerifyExitAndSignature(
 //	 assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
 //	 # Initiate exit
 //	 initiate_validator_exit(state, voluntary_exit.validator_index)
-func verifyExitConditions(st state.ReadOnlyBeaconState, validator state.ReadOnlyValidator, currentSlot primitives.Slot, exit *ethpb.VoluntaryExit) error {
-	currentEpoch := slots.ToEpoch(currentSlot)
+func verifyExitConditions(st state.ReadOnlyBeaconState, validator state.ReadOnlyValidator, exit *ethpb.VoluntaryExit) error {
+	currentEpoch := slots.ToEpoch(st.Slot())
 	// Verify the validator is active.
 	if !helpers.IsActiveValidatorUsingTrie(validator, currentEpoch) {
 		return errors.New("non-active validator cannot exit")
