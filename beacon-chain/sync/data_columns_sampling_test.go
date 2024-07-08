@@ -13,13 +13,11 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
-	kzg "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -30,14 +28,8 @@ import (
 func TestRandomizeColumns(t *testing.T) {
 	const count uint64 = 128
 
-	// Generate columns.
-	columns := make(map[uint64]bool, count)
-	for i := uint64(0); i < count; i++ {
-		columns[i] = true
-	}
-
 	// Randomize columns.
-	randomizedColumns := randomizeColumns(columns)
+	randomizedColumns := randomizeColumns(count)
 
 	// Convert back to a map.
 	randomizedColumnsMap := make(map[uint64]bool, count)
@@ -46,7 +38,7 @@ func TestRandomizeColumns(t *testing.T) {
 	}
 
 	// Check duplicates and missing columns.
-	require.Equal(t, len(columns), len(randomizedColumnsMap))
+	require.Equal(t, len(randomizedColumns), len(randomizedColumnsMap))
 
 	// Check the values.
 	for column := range randomizedColumnsMap {
@@ -64,7 +56,13 @@ func createAndConnectPeer(
 	custodyCount uint64,
 	columnsNotToRespond map[uint64]bool,
 	offset int,
-) {
+) *p2ptest.TestP2P {
+	emptyRoot := [fieldparams.RootLength]byte{}
+	emptySignature := [fieldparams.BLSSignatureLength]byte{}
+	emptyKzgCommitmentInclusionProof := [4][]byte{
+		emptyRoot[:], emptyRoot[:], emptyRoot[:], emptyRoot[:],
+	}
+
 	// Create the private key, depending on the offset.
 	privateKeyBytes := make([]byte, 32)
 	for i := 0; i < 32; i++ {
@@ -110,6 +108,8 @@ func createAndConnectPeer(
 	p2pService.Peers().Add(enr, peer.PeerID(), nil, network.DirOutbound)
 	p2pService.Peers().SetConnectionState(peer.PeerID(), peers.PeerConnected)
 	p2pService.Connect(peer)
+
+	return peer
 }
 
 func deterministicRandomness(seed int64) [32]byte {
@@ -156,19 +156,32 @@ func generateCommitmentAndProof(blob *kzg.Blob) (*kzg.Commitment, *kzg.Proof, er
 	return &commitment, &proof, err
 }
 
-func TestIncrementalDAS(t *testing.T) {
-	const (
-		blobCount                 = 3
-		custodyRequirement uint64 = 1
-	)
+type dataSamplerTest struct {
+	ctx        context.Context
+	root       [fieldparams.RootLength]byte
+	header     *ethpb.BeaconBlockHeader
+	headerRoot [fieldparams.RootLength]byte
+	p2pSvc     *p2ptest.TestP2P
+	peers      []*p2ptest.TestP2P
+	ctxMap     map[[4]byte]int
+	chainSvc   *mock.ChainService
+}
 
-	err := kzg.Start()
-	require.NoError(t, err)
+func setupDefaultDataColumnSamplerTest(t *testing.T) (*dataSamplerTest, *dataColumnSampler1D) {
+	test, sampler := setupDataColumnSamplerTest(t)
+	// Custody columns: [6, 38, 70, 102]
+	p1 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, map[uint64]bool{}, 1)
+	// Custody columns: [3, 35, 67, 99]
+	p2 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, map[uint64]bool{}, 2)
+	// Custody columns: [12, 44, 76, 108]
+	p3 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, map[uint64]bool{}, 3)
+	test.peers = []*p2ptest.TestP2P{p1, p2, p3}
 
-	// Generate random blobs, commitments and inclusion proofs.
-	blobs := make([]kzg.Blob, blobCount)
-	kzgCommitments := make([][]byte, blobCount)
-	kzgProofs := make([][]byte, blobCount)
+	return test, sampler
+}
+
+func setupDataColumnSamplerTest(t *testing.T) (*dataSamplerTest, *dataColumnSampler1D) {
+	const custodyRequirement uint64 = 1
 
 	for i := int64(0); i < blobCount; i++ {
 		blob := getRandBlob(int64(i))
@@ -181,17 +194,133 @@ func TestIncrementalDAS(t *testing.T) {
 		kzgProofs[i] = kzgProof[:]
 	}
 
-	dbBlock := util.NewBeaconBlockDeneb()
-	dbBlock.Block.Body.BlobKzgCommitments = kzgCommitments
-	sBlock, err := blocks.NewSignedBeaconBlock(dbBlock)
+	emptyHeaderRoot, err := emptyHeader.HashTreeRoot()
 	require.NoError(t, err)
 
-	dataColumnSidecars, err := peerdas.DataColumnSidecars(sBlock, blobs)
+	p2pSvc := p2ptest.NewTestP2P(t)
+	chainSvc, clock := defaultMockChain(t)
+
+	test := &dataSamplerTest{
+		ctx:        context.Background(),
+		root:       emptyRoot,
+		header:     emptyHeader,
+		headerRoot: emptyHeaderRoot,
+		p2pSvc:     p2pSvc,
+		peers:      []*p2ptest.TestP2P{},
+		ctxMap:     map[[4]byte]int{{245, 165, 253, 66}: version.Deneb},
+		chainSvc:   chainSvc,
+	}
+	sampler := newDataColumnSampler1D(p2pSvc, clock, test.ctxMap, nil)
+
+	return test, sampler
+}
+
+func TestDataColumnSampler1D_PeerManagement(t *testing.T) {
+	test, sampler := setupDefaultDataColumnSamplerTest(t)
+	p1, p2, p3 := test.peers[0], test.peers[1], test.peers[2]
+
+	sampler.refreshPeerInfo()
+	require.Equal(t, params.BeaconConfig().NumberOfColumns, uint64(len(sampler.peerFromColumn)))
+	require.Equal(t, 3, len(sampler.columnFromPeer))
+	require.Equal(t, true, sampler.peerFromColumn[6][p1.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[38][p1.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[70][p1.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[102][p1.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[3][p2.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[35][p2.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[67][p2.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[99][p2.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[12][p3.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[44][p3.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[76][p3.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[108][p3.PeerID()])
+
+	err := test.p2pSvc.Disconnect(p1.PeerID())
+	test.p2pSvc.Peers().SetConnectionState(p1.PeerID(), peers.PeerDisconnected)
 	require.NoError(t, err)
 
-	blockRoot, err := dataColumnSidecars[0].GetSignedBlockHeader().Header.HashTreeRoot()
-	require.NoError(t, err)
+	// test peer pruning.
+	sampler.refreshPeerInfo()
+	require.Equal(t, params.BeaconConfig().NumberOfColumns, uint64(len(sampler.peerFromColumn)))
+	require.Equal(t, 2, len(sampler.columnFromPeer))
+	require.Equal(t, 0, len(sampler.columnFromPeer[p1.PeerID()]))
+	require.Equal(t, false, sampler.peerFromColumn[6][p1.PeerID()])
+	require.Equal(t, false, sampler.peerFromColumn[38][p1.PeerID()])
+	require.Equal(t, false, sampler.peerFromColumn[70][p1.PeerID()])
+	require.Equal(t, false, sampler.peerFromColumn[102][p1.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[3][p2.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[35][p2.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[67][p2.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[99][p2.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[12][p3.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[44][p3.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[76][p3.PeerID()])
+	require.Equal(t, true, sampler.peerFromColumn[108][p3.PeerID()])
+}
 
+func TestDataColumnSampler1D_SampleDistribution(t *testing.T) {
+	test, sampler := setupDefaultDataColumnSamplerTest(t)
+	p1, p2, p3 := test.peers[0], test.peers[1], test.peers[2]
+
+	sampler.refreshPeerInfo()
+	columns := []uint64{6, 3, 12}
+	dist := sampler.distributeSamplesToPeer(columns)
+	require.Equal(t, 3, len(dist))
+	require.Equal(t, true, dist[p1.PeerID()][6])
+	require.Equal(t, true, dist[p2.PeerID()][3])
+	require.Equal(t, true, dist[p3.PeerID()][12])
+
+	columns = []uint64{6, 3, 12, 38, 35, 44}
+	dist = sampler.distributeSamplesToPeer(columns)
+	require.Equal(t, 3, len(dist))
+	require.Equal(t, true, dist[p1.PeerID()][6])
+	require.Equal(t, true, dist[p2.PeerID()][3])
+	require.Equal(t, true, dist[p3.PeerID()][12])
+	require.Equal(t, true, dist[p1.PeerID()][38])
+	require.Equal(t, true, dist[p2.PeerID()][35])
+	require.Equal(t, true, dist[p3.PeerID()][44])
+
+	columns = []uint64{6, 38, 70}
+	dist = sampler.distributeSamplesToPeer(columns)
+	require.Equal(t, 1, len(dist))
+	require.Equal(t, true, dist[p1.PeerID()][6])
+	require.Equal(t, true, dist[p1.PeerID()][38])
+	require.Equal(t, true, dist[p1.PeerID()][70])
+
+	// missing peer for column
+	columns = []uint64{11}
+	dist = sampler.distributeSamplesToPeer(columns)
+	require.Equal(t, 0, len(dist))
+}
+
+func TestDataColumnSampler1D_SampleDataColumns(t *testing.T) {
+	test, sampler := setupDefaultDataColumnSamplerTest(t)
+	sampler.refreshPeerInfo()
+
+	// Sample all columns.
+	sampleColumns := []uint64{6, 3, 12, 38, 35, 44, 70, 67, 76, 102, 99, 108}
+	retrieved := sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
+	require.Equal(t, 12, len(retrieved))
+	for _, column := range sampleColumns {
+		require.Equal(t, true, retrieved[column])
+	}
+
+	// Sample a subset of columns.
+	sampleColumns = []uint64{6, 3, 12, 38, 35, 44}
+	retrieved = sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
+	require.Equal(t, 6, len(retrieved))
+	for _, column := range sampleColumns {
+		require.Equal(t, true, retrieved[column])
+	}
+
+	// Sample a subset of columns with missing columns.
+	sampleColumns = []uint64{6, 3, 12, 127}
+	retrieved = sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
+	require.Equal(t, 3, len(retrieved))
+	require.DeepEqual(t, map[uint64]bool{6: true, 3: true, 12: true}, retrieved)
+}
+
+func TestDataColumnSampler1D_IncrementalDAS(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		samplesCount             uint64
@@ -250,37 +379,17 @@ func TestIncrementalDAS(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		// Create a context.
-		ctx := context.Background()
+		test, sampler := setupDataColumnSamplerTest(t)
+		p1 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, tc.columnsNotToRespond, 1)
+		p2 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, tc.columnsNotToRespond, 2)
+		p3 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, tc.columnsNotToRespond, 3)
+		test.peers = []*p2ptest.TestP2P{p1, p2, p3}
 
-		// Create the p2p service.
-		p2pService := p2ptest.NewTestP2P(t)
+		sampler.refreshPeerInfo()
 
-		// Create a peer custodying `custodyRequirement` subnets.
-		chainService, clock := defaultMockChain(t)
-
-		// Custody columns: [6, 38, 70, 102]
-		createAndConnectPeer(t, p2pService, chainService, dataColumnSidecars, custodyRequirement, tc.columnsNotToRespond, 1)
-
-		// Custody columns: [3, 35, 67, 99]
-		createAndConnectPeer(t, p2pService, chainService, dataColumnSidecars, custodyRequirement, tc.columnsNotToRespond, 2)
-
-		// Custody columns: [12, 44, 76, 108]
-		createAndConnectPeer(t, p2pService, chainService, dataColumnSidecars, custodyRequirement, tc.columnsNotToRespond, 3)
-
-		service := &Service{
-			cfg: &config{
-				p2p:   p2pService,
-				clock: clock,
-			},
-			ctx:    ctx,
-			ctxMap: map[[4]byte]int{{245, 165, 253, 66}: version.Deneb},
-		}
-
-		actualSuccess, actualRoundSummaries, err := service.incrementalDAS(blockRoot, tc.possibleColumnsToRequest, tc.samplesCount)
-
+		success, summaries, err := sampler.incrementalDAS(test.ctx, test.headerRoot, tc.possibleColumnsToRequest, tc.samplesCount)
 		require.NoError(t, err)
-		require.Equal(t, tc.expectedSuccess, actualSuccess)
-		require.DeepEqual(t, tc.expectedRoundSummaries, actualRoundSummaries)
+		require.Equal(t, tc.expectedSuccess, success)
+		require.DeepEqual(t, tc.expectedRoundSummaries, summaries)
 	}
 }
