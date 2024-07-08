@@ -28,8 +28,14 @@ import (
 func TestRandomizeColumns(t *testing.T) {
 	const count uint64 = 128
 
+	// Generate columns.
+	columns := make(map[uint64]bool, count)
+	for i := uint64(0); i < count; i++ {
+		columns[i] = true
+	}
+
 	// Randomize columns.
-	randomizedColumns := randomizeColumns(count)
+	randomizedColumns := randomizeColumns(columns)
 
 	// Convert back to a map.
 	randomizedColumnsMap := make(map[uint64]bool, count)
@@ -38,7 +44,7 @@ func TestRandomizeColumns(t *testing.T) {
 	}
 
 	// Check duplicates and missing columns.
-	require.Equal(t, len(randomizedColumns), len(randomizedColumnsMap))
+	require.Equal(t, len(columns), len(randomizedColumnsMap))
 
 	// Check the values.
 	for column := range randomizedColumnsMap {

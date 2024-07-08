@@ -51,8 +51,8 @@ type dataColumnSampler1D struct {
 	ctxMap        ContextByteVersions
 	stateNotifier statefeed.Notifier
 
-	// custodyColumns is a set of columns that the node is responsible for custody.
-	custodyColumns map[uint64]bool
+	// missingColumns is a set of columns that are not custodied by the node.
+	missingColumns map[uint64]bool
 	// columnFromPeer maps a peer to the columns it is responsible for custody.
 	columnFromPeer map[peer.ID]map[uint64]bool
 	// peerFromColumn maps a column to the peer responsible for custody.
@@ -162,7 +162,6 @@ func (d *dataColumnSampler1D) Run(ctx context.Context) {
 		log.WithError(err).Error("Failed to determine local custody columns")
 		return
 	}
-	d.custodyColumns = columns
 
 	custodyColumnsCount := uint64(len(columns))
 	if peerdas.CanSelfReconstruct(custodyColumnsCount) {
@@ -171,6 +170,14 @@ func (d *dataColumnSampler1D) Run(ctx context.Context) {
 			"totalColumns":        params.BeaconConfig().NumberOfColumns,
 		}).Debug("The node custodies at least the half the data columns, no need to sample")
 		return
+	}
+
+	// initialize missing columns.
+	d.missingColumns = make(map[uint64]bool)
+	for i := uint64(0); i < params.BeaconConfig().NumberOfColumns; i++ {
+		if exists := columns[i]; !exists {
+			d.missingColumns[i] = true
+		}
 	}
 
 	// initialize peer info first.
@@ -299,8 +306,9 @@ func (d *dataColumnSampler1D) handleStateNotification(ctx context.Context, event
 	}
 
 	// Randomize columns for sample selection.
-	randomizedColumns := randomizeColumns(params.BeaconConfig().NumberOfColumns)
-	ok, _, err = d.incrementalDAS(ctx, data.BlockRoot, randomizedColumns, params.BeaconConfig().SamplesPerSlot)
+	randomizedColumns := randomizeColumns(d.missingColumns)
+	samplesCount := min(params.BeaconConfig().SamplesPerSlot, uint64(len(d.missingColumns))-params.BeaconConfig().NumberOfColumns/2)
+	ok, _, err = d.incrementalDAS(ctx, data.BlockRoot, randomizedColumns, samplesCount)
 	if err != nil {
 		log.WithError(err).Error("Failed to run incremental DAS")
 	}
@@ -320,6 +328,7 @@ func (d *dataColumnSampler1D) handleStateNotification(ctx context.Context, event
 
 // incrementalDAS samples data columns from active peers using incremental DAS.
 // https://ethresear.ch/t/lossydas-lossy-incremental-and-diagonal-sampling-for-data-availability/18963#incrementaldas-dynamically-increase-the-sample-size-10
+// According to https://github.com/ethereum/consensus-specs/issues/3825, we're going to select query samples exclusively from the missing columns.
 func (d *dataColumnSampler1D) incrementalDAS(
 	ctx context.Context,
 	root [fieldparams.RootLength]byte,
@@ -502,11 +511,11 @@ func (d *dataColumnSampler1D) sampleDataColumnsFromPeer(
 }
 
 // randomizeColumns returns a slice containing all the numbers between 0 and colNum in a random order.
-func randomizeColumns(colNum uint64) []uint64 {
+func randomizeColumns(columns map[uint64]bool) []uint64 {
 	// Create a slice from columns.
-	randomized := make([]uint64, 0, colNum)
-	for i := uint64(0); i < colNum; i++ {
-		randomized = append(randomized, i)
+	randomized := make([]uint64, 0, len(columns))
+	for column := range columns {
+		randomized = append(randomized, column)
 	}
 
 	// Shuffle the slice.
