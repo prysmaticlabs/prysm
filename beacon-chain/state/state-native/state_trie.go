@@ -764,7 +764,7 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 		stateFieldLeaves:    make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		rebuildTrie:         make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:       stateutil.NewValMapHandler(st.Validators),
-		validatorIndexCache: newFinalizedValidatorIndexCache(), //only populates when finalizing, otherwise it falls back to validator set
+		validatorIndexCache: newFinalizedValidatorIndexCache(), //only used in post-electra and only populates when finalizing, otherwise it falls back to processing the full validator set
 	}
 
 	if features.Get().EnableExperimentalState {
