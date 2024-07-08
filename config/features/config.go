@@ -72,8 +72,6 @@ type Flags struct {
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 	// BlobSaveFsync requires blob saving to block on fsync to ensure blobs are durably persisted before passing DA.
 	BlobSaveFsync bool
-	// EnablePeerDAS enables running the node with the experimental data availability sampling scheme.
-	EnablePeerDAS bool
 
 	// DataColumnsWithholdCount specifies the likelihood of withholding a data column sidecar when proposing a block (percentage)
 	DataColumnsWithholdCount int
@@ -258,11 +256,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(EnableQUIC.Name) {
 		logEnabled(EnableQUIC)
 		cfg.EnableQUIC = true
-	}
-	cfg.EnablePeerDAS = true
-	if ctx.IsSet(EnablePeerDAS.Name) {
-		logEnabled(EnablePeerDAS)
-		cfg.EnablePeerDAS = true
 	}
 
 	if ctx.IsSet(DataColumnsWithholdCount.Name) {
