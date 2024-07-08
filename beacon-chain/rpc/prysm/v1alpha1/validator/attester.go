@@ -50,7 +50,6 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	}
 
 	go func() {
-		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
 		attCopy := ethpb.CopyAttestation(att)
 		if err := vs.AttPool.SaveUnaggregatedAttestation(attCopy); err != nil {
 			log.WithError(err).Error("Could not save unaggregated attestation")
