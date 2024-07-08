@@ -137,7 +137,7 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 		return pubsub.ValidationReject, errors.New("failed to verify kzg proof of column")
 	}
 
-	// ?????
+	// [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
 	parentState, err := s.cfg.stateGen.StateByRoot(ctx, [32]byte(ds.SignedBlockHeader.Header.ParentRoot))
 	if err != nil {
 		return pubsub.ValidationIgnore, err
@@ -147,7 +147,6 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 		return pubsub.ValidationReject, err
 	}
 
-	// [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
 	parentRoot := ds.SignedBlockHeader.Header.ParentRoot
 	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot, ds.SignedBlockHeader.Header.Slot)
 	if err != nil {
