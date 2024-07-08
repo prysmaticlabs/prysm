@@ -10,7 +10,9 @@ import (
 	testtmpl "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/testing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
@@ -144,4 +146,19 @@ func TestPendingBalanceToWithdraw(t *testing.T) {
 	ab, err := state.PendingBalanceToWithdraw(0)
 	require.NoError(t, err)
 	require.Equal(t, uint64(600), ab)
+}
+
+func TestAggregateKeyFromIndices(t *testing.T) {
+	dState, _ := util.DeterministicGenesisState(t, 10)
+	pKey1 := dState.PubkeyAtIndex(3)
+	pKey2 := dState.PubkeyAtIndex(7)
+	pKey3 := dState.PubkeyAtIndex(9)
+
+	aggKey, err := bls.AggregatePublicKeys([][]byte{pKey1[:], pKey2[:], pKey3[:]})
+	require.NoError(t, err)
+
+	retKey, err := dState.AggregateKeyFromIndices([]uint64{3, 7, 9})
+	require.NoError(t, err)
+
+	assert.Equal(t, true, aggKey.Equals(retKey), "unequal aggregated keys")
 }
