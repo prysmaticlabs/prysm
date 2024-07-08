@@ -267,11 +267,12 @@ func (f *ForkChoice) updateBalances() error {
 	newBalances := f.justifiedBalances
 	zHash := params.BeaconConfig().ZeroHash
 
-	for index, vote := range f.votes {
+	for index := 0; index < len(f.votes); index++ {
 		// Skip if validator has been slashed
 		if f.store.slashedIndices[primitives.ValidatorIndex(index)] {
 			continue
 		}
+		vote := f.votes[index]
 		// Skip if validator has never voted for current root and next root (i.e. if the
 		// votes are zero hash aka genesis block), there's nothing to compute.
 		if vote.currentRoot == zHash && vote.nextRoot == zHash {
