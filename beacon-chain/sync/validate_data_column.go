@@ -163,19 +163,18 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 		return pubsub.ValidationReject, errors.New("incorrect proposer index")
 	}
 
+	// Get the time at slot start.
+	startTime, err := slots.ToTime(uint64(s.cfg.chain.GenesisTime().Unix()), ds.SignedBlockHeader.Header.Slot)
+
 	// Add specific debug log.
-	if logrus.GetLevel() >= logrus.DebugLevel {
-		// Get the time at slot start.
-		startTime, err := slots.ToTime(uint64(s.cfg.chain.GenesisTime().Unix()), ds.SignedBlockHeader.Header.Slot)
-		if err == nil {
-			log.WithFields(logrus.Fields{
-				"sinceSlotStartTime": receivedTime.Sub(startTime),
-				"validationTime":     s.cfg.clock.Now().Sub(receivedTime),
-				"columnIndex":        ds.ColumnIndex,
-			}).Debug("Received data column sidecar")
-		} else {
-			log.WithError(err).Error("Failed to calculate slot time")
-		}
+	if err == nil {
+		log.WithFields(logrus.Fields{
+			"sinceSlotStartTime": receivedTime.Sub(startTime),
+			"validationTime":     s.cfg.clock.Now().Sub(receivedTime),
+			"columnIndex":        ds.ColumnIndex,
+		}).Debug("Received data column sidecar")
+	} else {
+		log.WithError(err).Error("Failed to calculate slot time")
 	}
 
 	// TODO: Transform this whole function so it looks like to the `validateBlob`
