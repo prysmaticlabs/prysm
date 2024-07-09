@@ -2,6 +2,8 @@ package structs
 
 import (
 	"encoding/json"
+
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 type BlockRootResponse struct {
@@ -195,4 +197,33 @@ type DepositSnapshot struct {
 	DepositCount         string   `json:"deposit_count"`
 	ExecutionBlockHash   string   `json:"execution_block_hash"`
 	ExecutionBlockHeight string   `json:"execution_block_height"`
+}
+
+type GetIndividualVotesRequest struct {
+	Epoch      primitives.Epoch            `json:"epoch"`
+	PublicKeys [][]byte                    `json:"public_keys,omitempty"`
+	Indices    []primitives.ValidatorIndex `json:"indices,omitempty"`
+}
+
+type GetIndividualVotesResponse struct {
+	IndividualVotes []*IndividualVote `json:"individual_votes"`
+}
+
+type IndividualVote struct {
+	Epoch                            primitives.Epoch          `json:"epoch"`
+	PublicKeys                       []byte                    `json:"public_keys,omitempty"`
+	ValidatorIndex                   primitives.ValidatorIndex `json:"validator_index"`
+	IsSlashed                        bool                      `json:"is_slashed"`
+	IsWithdrawableInCurrentEpoch     bool                      `json:"is_withdrawable_in_current_epoch"`
+	IsActiveInCurrentEpoch           bool                      `json:"is_active_in_current_epoch"`
+	IsActiveInPreviousEpoch          bool                      `json:"is_active_in_previous_epoch"`
+	IsCurrentEpochAttester           bool                      `json:"is_current_epoch_attester"`
+	IsCurrentEpochTargetAttester     bool                      `json:"is_current_epoch_target_attester"`
+	IsPreviousEpochAttester          bool                      `json:"is_previous_epoch_attester"`
+	IsPreviousEpochTargetAttester    bool                      `json:"is_previous_epoch_target_attester"`
+	IsPreviousEpochHeadAttester      bool                      `json:"is_previous_epoch_head_attester"`
+	CurrentEpochEffectiveBalanceGwei uint64                    `json:"current_epoch_effective_balance_gwei"`
+	InclusionSlot                    primitives.Slot           `json:"inclusion_slot"`
+	InclusionDistance                primitives.Slot           `json:"inclusion_distance"`
+	InactivityScore                  uint64                    `json:"inactivity_score"`
 }

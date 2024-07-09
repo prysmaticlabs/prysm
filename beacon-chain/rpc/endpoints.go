@@ -774,6 +774,16 @@ func (s *Service) beaconEndpoints(
 			handler: server.GetValidatorBalances,
 			methods: []string{http.MethodGet, http.MethodPost},
 		},
+		{
+			template: "/eth/v1/beacon/individual_votes",
+			name:     namespace + ".GetIndividualVotes",
+			middleware: []mux.MiddlewareFunc{
+				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetIndividualVotes,
+			methods: []string{http.MethodGet},
+		},
 	}
 }
 

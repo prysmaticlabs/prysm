@@ -2258,12 +2258,17 @@ func setupValidators(t testing.TB, _ db.Database, count int) ([]*ethpb.Validator
 }
 
 func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
-	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
+	bs := &Server{
+		CoreService: &core.Service{
+			GenesisTimeFetcher: &mock.ChainService{},
+		},
+	}
+
 	req := &ethpb.IndividualVotesRequest{
-		Epoch: slots.ToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
+		Epoch: slots.ToEpoch(bs.CoreService.GenesisTimeFetcher.CurrentSlot()) + 1,
 	}
 	wanted := errNoEpochInfoError
-	_, err := ds.GetIndividualVotes(context.Background(), req)
+	_, err := bs.GetIndividualVotes(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -2292,8 +2297,10 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	bs := &Server{
-		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		CoreService: &core.Service{
+			StateGen:           gen,
+			GenesisTimeFetcher: &mock.ChainService{},
+		},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -2388,8 +2395,10 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	bs := &Server{
-		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		CoreService: &core.Service{
+			StateGen:           gen,
+			GenesisTimeFetcher: &mock.ChainService{},
+		},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -2451,8 +2460,10 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	bs := &Server{
-		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		CoreService: &core.Service{
+			StateGen:           gen,
+			GenesisTimeFetcher: &mock.ChainService{},
+		},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -2537,8 +2548,10 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 	require.NoError(t, gen.SaveState(ctx, gRoot, beaconState))
 	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	bs := &Server{
-		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		CoreService: &core.Service{
+			StateGen:           gen,
+			GenesisTimeFetcher: &mock.ChainService{},
+		},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -2625,8 +2638,10 @@ func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 	require.NoError(t, gen.SaveState(ctx, gRoot, beaconState))
 	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	bs := &Server{
-		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		CoreService: &core.Service{
+			StateGen:           gen,
+			GenesisTimeFetcher: &mock.ChainService{},
+		},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -2713,8 +2728,10 @@ func TestServer_GetIndividualVotes_CapellaEndOfEpoch(t *testing.T) {
 	require.NoError(t, gen.SaveState(ctx, gRoot, beaconState))
 	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	bs := &Server{
-		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		CoreService: &core.Service{
+			StateGen:           gen,
+			GenesisTimeFetcher: &mock.ChainService{},
+		},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
