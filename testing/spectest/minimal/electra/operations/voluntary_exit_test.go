@@ -7,6 +7,5 @@ import (
 )
 
 func TestMinimal_Electra_Operations_VoluntaryExit(t *testing.T) {
-	t.Skip("TODO: Electra")
 	operations.RunVoluntaryExitTest(t, "minimal")
 }
