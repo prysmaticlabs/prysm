@@ -61,16 +61,13 @@ func recoverCellsAndProofs(
 		}
 
 		// Recover the cells and proofs for the corresponding blob
-		blobCells, blobProofs, err := kzg.RecoverCellsAndKZGProofs(cellsId, cKzgCells)
+		cellsAndProofs, err := kzg.RecoverCellsAndKZGProofs(cellsId, cells)
 
 		if err != nil {
 			return nil, errors.Wrapf(err, "recover cells and KZG proofs for blob %d", blobIndex)
 		}
 
-		recoveredCellsAndProofs = append(recoveredCellsAndProofs, kzg.CellsAndProofs{
-			Cells:  blobCells,
-			Proofs: blobProofs,
-		})
+		recoveredCellsAndProofs = append(recoveredCellsAndProofs, cellsAndProofs)
 
 		log.WithFields(logrus.Fields{
 			"elapsed": time.Since(start),
