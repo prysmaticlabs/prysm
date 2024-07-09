@@ -470,18 +470,9 @@ func IsEligibleForActivation(state state.ReadOnlyCheckpoint, validator *ethpb.Va
 	return isEligibleForActivation(validator.ActivationEligibilityEpoch, validator.ActivationEpoch, finalizedEpoch)
 }
 
-// IsEligibleForActivationUsingTrie checks if the validator is eligible for activation.
-func IsEligibleForActivationUsingTrie(state state.ReadOnlyCheckpoint, validator state.ReadOnlyValidator) bool {
-	cpt := state.FinalizedCheckpoint()
-	if cpt == nil {
-		return false
-	}
-	return isEligibleForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
-}
-
-// IsEligibleForActivationUsingCheckpoint checks if the validator is eligible for activation using the provided checkpoint.
-func IsEligibleForActivationUsingCheckpoint(cpt *ethpb.Checkpoint, validator state.ReadOnlyValidator) bool {
-	return isEligibleForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
+// IsEligibleForActivationUsingROVal checks if the validator is eligible for activation using the provided read only validator.
+func IsEligibleForActivationUsingROVal(state state.ReadOnlyCheckpoint, validator state.ReadOnlyValidator) bool {
+	return isEligibleForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), state.FinalizedCheckpointEpoch())
 }
 
 // isEligibleForActivation carries out the logic for IsEligibleForActivation*

@@ -58,7 +58,7 @@ func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) error {
 		}
 
 		// Collect validators eligible for activation and not yet dequeued for activation.
-		if helpers.IsEligibleForActivationUsingTrie(st, val) {
+		if helpers.IsEligibleForActivationUsingROVal(st, val) {
 			eligibleForActivation = append(eligibleForActivation, primitives.ValidatorIndex(idx))
 		}
 
