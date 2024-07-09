@@ -51,7 +51,7 @@ func (quicProtocol) ENRKey() string { return "quic" }
 // with the tracked committee ids for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee ids.
 func (s *Service) RefreshENR() {
-	// return early if discv5 isnt running
+	// return early if discv5 isn't running
 	if s.dv5Listener == nil || !s.isInitialized() {
 		return
 	}

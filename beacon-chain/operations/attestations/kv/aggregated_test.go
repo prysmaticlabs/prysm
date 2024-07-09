@@ -7,10 +7,11 @@ import (
 
 	c "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -69,7 +70,7 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 				}),
 				AggregationBits: bitfield.Bitlist{0b10111},
 			},
-			wantErrString: "could not tree hash attestation: --.BeaconBlockRoot (" + fssz.ErrBytesLength.Error() + ")",
+			wantErrString: "could not create attestation ID",
 		},
 		{
 			name: "already seen",
@@ -92,15 +93,13 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 			count: 1,
 		},
 	}
-	r, err := hashFn(util.HydrateAttestationData(&ethpb.AttestationData{
-		Slot: 100,
-	}))
+	id, err := attestation.NewId(util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100}}), attestation.Data)
 	require.NoError(t, err)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewAttCaches()
-			cache.seenAtt.Set(string(r[:]), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
+			cache.seenAtt.Set(id.String(), []bitfield.Bitlist{{0xff}}, c.DefaultExpiration)
 			assert.Equal(t, 0, len(cache.unAggregatedAtt), "Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 
 			err := cache.SaveAggregatedAttestation(tt.att)
@@ -230,7 +229,7 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 			},
 		}
 		err := cache.DeleteAggregatedAttestation(att)
-		wantErr := "could not tree hash attestation data: --.BeaconBlockRoot (" + fssz.ErrBytesLength.Error() + ")"
+		wantErr := "could not create attestation ID"
 		assert.ErrorContains(t, wantErr, err)
 	})
 
@@ -499,4 +498,50 @@ func TestKV_Aggregated_DuplicateAggregatedAttestations(t *testing.T) {
 	// It should have only returned att2.
 	assert.DeepSSZEqual(t, att2, returned[0], "Did not receive correct aggregated atts")
 	assert.Equal(t, 1, len(returned), "Did not receive correct aggregated atts")
+}
+
+func TestKV_Aggregated_AggregatedAttestationsBySlotIndex(t *testing.T) {
+	cache := NewAttCaches()
+
+	att1 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 1}, AggregationBits: bitfield.Bitlist{0b1011}})
+	att2 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 2}, AggregationBits: bitfield.Bitlist{0b1101}})
+	att3 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 1}, AggregationBits: bitfield.Bitlist{0b1101}})
+	atts := []*ethpb.Attestation{att1, att2, att3}
+
+	for _, att := range atts {
+		require.NoError(t, cache.SaveAggregatedAttestation(att))
+	}
+	ctx := context.Background()
+	returned := cache.AggregatedAttestationsBySlotIndex(ctx, 1, 1)
+	assert.DeepEqual(t, []*ethpb.Attestation{att1}, returned)
+	returned = cache.AggregatedAttestationsBySlotIndex(ctx, 1, 2)
+	assert.DeepEqual(t, []*ethpb.Attestation{att2}, returned)
+	returned = cache.AggregatedAttestationsBySlotIndex(ctx, 2, 1)
+	assert.DeepEqual(t, []*ethpb.Attestation{att3}, returned)
+}
+
+func TestKV_Aggregated_AggregatedAttestationsBySlotIndexElectra(t *testing.T) {
+	cache := NewAttCaches()
+
+	committeeBits := primitives.NewAttestationCommitteeBits()
+	committeeBits.SetBitAt(1, true)
+	att1 := util.HydrateAttestationElectra(&ethpb.AttestationElectra{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1011}, CommitteeBits: committeeBits})
+	committeeBits = primitives.NewAttestationCommitteeBits()
+	committeeBits.SetBitAt(2, true)
+	att2 := util.HydrateAttestationElectra(&ethpb.AttestationElectra{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}, CommitteeBits: committeeBits})
+	committeeBits = primitives.NewAttestationCommitteeBits()
+	committeeBits.SetBitAt(1, true)
+	att3 := util.HydrateAttestationElectra(&ethpb.AttestationElectra{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}, CommitteeBits: committeeBits})
+	atts := []*ethpb.AttestationElectra{att1, att2, att3}
+
+	for _, att := range atts {
+		require.NoError(t, cache.SaveAggregatedAttestation(att))
+	}
+	ctx := context.Background()
+	returned := cache.AggregatedAttestationsBySlotIndexElectra(ctx, 1, 1)
+	assert.DeepEqual(t, []*ethpb.AttestationElectra{att1}, returned)
+	returned = cache.AggregatedAttestationsBySlotIndexElectra(ctx, 1, 2)
+	assert.DeepEqual(t, []*ethpb.AttestationElectra{att2}, returned)
+	returned = cache.AggregatedAttestationsBySlotIndexElectra(ctx, 2, 1)
+	assert.DeepEqual(t, []*ethpb.AttestationElectra{att3}, returned)
 }

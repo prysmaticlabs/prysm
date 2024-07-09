@@ -70,7 +70,7 @@ func TestGetStateValidators_Nominal_POST(t *testing.T) {
 	ctx := context.Background()
 
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validators",
 		nil,
 		bytes.NewBuffer(reqBytes),
@@ -157,7 +157,7 @@ func TestGetStateValidators_Nominal_GET(t *testing.T) {
 
 	// First return an error from POST call.
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validators",
 		nil,
 		bytes.NewBuffer(reqBytes),
@@ -178,7 +178,7 @@ func TestGetStateValidators_Nominal_GET(t *testing.T) {
 	query := buildURL("/eth/v1/beacon/states/head/validators", queryParams)
 
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		query,
 		&stateValidatorsResponseJson,
 	).Return(
@@ -226,7 +226,7 @@ func TestGetStateValidators_GetRestJsonResponseOnError(t *testing.T) {
 
 	// First call POST.
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validators",
 		nil,
 		bytes.NewBuffer(reqBytes),
@@ -247,7 +247,7 @@ func TestGetStateValidators_GetRestJsonResponseOnError(t *testing.T) {
 	query := buildURL("/eth/v1/beacon/states/head/validators", queryParams)
 
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		query,
 		&stateValidatorsResponseJson,
 	).Return(
@@ -280,7 +280,7 @@ func TestGetStateValidators_DataIsNil_POST(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validators",
 		nil, bytes.NewBuffer(reqBytes),
 		&stateValidatorsResponseJson,
@@ -320,7 +320,7 @@ func TestGetStateValidators_DataIsNil_GET(t *testing.T) {
 
 	// First call POST which will return an error.
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validators",
 		nil,
 		bytes.NewBuffer(reqBytes),
@@ -341,7 +341,7 @@ func TestGetStateValidators_DataIsNil_GET(t *testing.T) {
 	query := buildURL("/eth/v1/beacon/states/head/validators", queryParams)
 
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		query,
 		&stateValidatorsResponseJson,
 	).Return(

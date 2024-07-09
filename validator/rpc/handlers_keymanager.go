@@ -95,7 +95,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 	var req ImportKeystoresRequest
 	err = json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -190,7 +190,7 @@ func (s *Server) DeleteKeystores(w http.ResponseWriter, r *http.Request) {
 	var req DeleteKeystoresRequest
 	err = json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -287,11 +287,11 @@ func (s *Server) publicKeysInDB(ctx context.Context) (map[[fieldparams.BLSPubkey
 	pubKeysInDB := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	attestedPublicKeys, err := s.db.AttestedPublicKeys(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attested public keys from DB: %v", err)
+		return nil, fmt.Errorf("could not get attested public keys from DB: %w", err)
 	}
 	proposedPublicKeys, err := s.db.ProposedPublicKeys(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get proposed public keys from DB: %v", err)
+		return nil, fmt.Errorf("could not get proposed public keys from DB: %w", err)
 	}
 	for _, pk := range append(attestedPublicKeys, proposedPublicKeys...) {
 		pubKeysInDB[pk] = true
@@ -451,7 +451,7 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	var req ImportRemoteKeysRequest
 	err = json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -484,7 +484,12 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		log.Warnf("Setting the remote signer base url within the request is not supported. The remote signer url can only be set from the --%s flag.", flags.Web3SignerURLFlag.Name)
 	}
 
-	httputil.WriteJson(w, &RemoteKeysResponse{Data: adder.AddPublicKeys(remoteKeys)})
+	ks, err := adder.AddPublicKeys(remoteKeys)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, &RemoteKeysResponse{Data: ks})
 }
 
 // DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
@@ -513,7 +518,7 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	var req DeleteRemoteKeysRequest
 	err = json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -533,8 +538,12 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteJson(w, &RemoteKeysResponse{Data: statuses})
 		return
 	}
-
-	httputil.WriteJson(w, RemoteKeysResponse{Data: deleter.DeletePublicKeys(req.Pubkeys)})
+	data, err := deleter.DeletePublicKeys(req.Pubkeys)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, RemoteKeysResponse{Data: data})
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
@@ -596,7 +605,7 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 	var req SetFeeRecipientByPubkeyRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -747,7 +756,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 	var req SetGasLimitRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -890,7 +899,7 @@ func (s *Server) SetGraffiti(w http.ResponseWriter, r *http.Request) {
 	}
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:

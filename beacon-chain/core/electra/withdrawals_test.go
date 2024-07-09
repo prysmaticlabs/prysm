@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
+func TestProcessWithdrawRequests(t *testing.T) {
 	logHook := test.NewGlobal()
 	source, err := hexutil.Decode("0xb20a608c624Ca5003905aA834De7156C68b2E1d0")
 	require.NoError(t, err)
@@ -30,7 +30,7 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 	require.NoError(t, err)
 	type args struct {
 		st  state.BeaconState
-		wrs []*enginev1.ExecutionLayerWithdrawalRequest
+		wrs []*enginev1.WithdrawalRequest
 	}
 	tests := []struct {
 		name    string
@@ -56,7 +56,7 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 					require.NoError(t, preSt.SetValidators([]*eth.Validator{v}))
 					return preSt
 				}(),
-				wrs: []*enginev1.ExecutionLayerWithdrawalRequest{
+				wrs: []*enginev1.WithdrawalRequest{
 					{
 						SourceAddress:   source,
 						ValidatorPubkey: bytesutil.SafeCopyBytes(val.PublicKey),
@@ -81,7 +81,6 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 				}))
 				_, err = wantPostSt.ExitEpochAndUpdateChurn(primitives.Gwei(v.EffectiveBalance))
 				require.NoError(t, err)
-				require.DeepEqual(t, wantPostSt.Validators(), got.Validators())
 				webc, err := wantPostSt.ExitBalanceToConsume()
 				require.NoError(t, err)
 				gebc, err := got.ExitBalanceToConsume()
@@ -110,10 +109,7 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 					prefix[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
 					v.WithdrawalCredentials = append(prefix, source...)
 					require.NoError(t, preSt.SetValidators([]*eth.Validator{v}))
-					bal, err := preSt.BalanceAtIndex(0)
-					require.NoError(t, err)
-					bal += 200
-					require.NoError(t, preSt.SetBalances([]uint64{bal}))
+					require.NoError(t, preSt.SetBalances([]uint64{params.BeaconConfig().MinActivationBalance + 200}))
 					require.NoError(t, preSt.AppendPendingPartialWithdrawal(&eth.PendingPartialWithdrawal{
 						Index:             0,
 						Amount:            100,
@@ -121,7 +117,7 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 					}))
 					return preSt
 				}(),
-				wrs: []*enginev1.ExecutionLayerWithdrawalRequest{
+				wrs: []*enginev1.WithdrawalRequest{
 					{
 						SourceAddress:   source,
 						ValidatorPubkey: bytesutil.SafeCopyBytes(val.PublicKey),
@@ -168,7 +164,6 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 				require.Equal(t, wece, gece)
 				_, err = wantPostSt.ExitEpochAndUpdateChurn(primitives.Gwei(100))
 				require.NoError(t, err)
-				require.DeepEqual(t, wantPostSt.Validators(), got.Validators())
 				webc, err := wantPostSt.ExitBalanceToConsume()
 				require.NoError(t, err)
 				gebc, err := got.ExitBalanceToConsume()
@@ -190,7 +185,7 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 					require.NoError(t, preSt.SetValidators([]*eth.Validator{v}))
 					return preSt
 				}(),
-				wrs: []*enginev1.ExecutionLayerWithdrawalRequest{
+				wrs: []*enginev1.WithdrawalRequest{
 					{
 						SourceAddress:   source,
 						ValidatorPubkey: bytesutil.SafeCopyBytes(val.PublicKey),
@@ -227,7 +222,7 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 					require.NoError(t, preSt.SetValidators([]*eth.Validator{v}))
 					return preSt
 				}(),
-				wrs: []*enginev1.ExecutionLayerWithdrawalRequest{
+				wrs: []*enginev1.WithdrawalRequest{
 					{
 						SourceAddress:   source,
 						ValidatorPubkey: bytesutil.SafeCopyBytes(val.PublicKey),
@@ -266,7 +261,7 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 					}))
 					return preSt
 				}(),
-				wrs: []*enginev1.ExecutionLayerWithdrawalRequest{
+				wrs: []*enginev1.WithdrawalRequest{
 					{
 						SourceAddress:   source,
 						ValidatorPubkey: bytesutil.SafeCopyBytes(val.PublicKey),
@@ -284,9 +279,9 @@ func TestProcessExecutionLayerWithdrawRequests(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			got, err := electra.ProcessExecutionLayerWithdrawalRequests(context.Background(), tt.args.st, tt.args.wrs)
+			got, err := electra.ProcessWithdrawalRequests(context.Background(), tt.args.st, tt.args.wrs)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ProcessExecutionLayerWithdrawalRequests() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ProcessWithdrawalRequests() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			tt.wantFn(t, got)

@@ -120,7 +120,6 @@ type BeaconNode struct {
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
 	BlobStorageOptions      []filesystem.BlobStorageOption
-	blobRetentionEpochs     primitives.Epoch
 	verifyInitWaiter        *verification.InitializerWaiter
 	syncChecker             *initialsync.SyncChecker
 }
@@ -277,8 +276,6 @@ func configureBeacon(cliCtx *cli.Context) error {
 	if err := configureExecutionSetting(cliCtx); err != nil {
 		return errors.Wrap(err, "could not configure execution setting")
 	}
-
-	configureFastSSZHashingAlgorithm()
 
 	return nil
 }
@@ -575,7 +572,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	if b.GenesisInitializer != nil {
 		if err := b.GenesisInitializer.Initialize(b.ctx, d); err != nil {
-			if err == db.ErrExistingGenesisState {
+			if errors.Is(err, db.ErrExistingGenesisState) {
 				return errors.Errorf("Genesis state flag specified but a genesis state "+
 					"exists already. Run again with --%s and/or ensure you are using the "+
 					"appropriate testnet flag to load the given genesis state.", cmd.ClearDB.Name)

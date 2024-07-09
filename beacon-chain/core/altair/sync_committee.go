@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -101,7 +102,8 @@ func NextSyncCommittee(ctx context.Context, s state.BeaconState) (*ethpb.SyncCom
 //	    candidate_index = active_validator_indices[shuffled_index]
 //	    random_byte = hash(seed + uint_to_bytes(uint64(i // 32)))[i % 32]
 //	    effective_balance = state.validators[candidate_index].effective_balance
-//	    if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
+//	    # [Modified in Electra:EIP7251]
+//	    if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_ELECTRA * random_byte:
 //	        sync_committee_indices.append(candidate_index)
 //	    i += 1
 //	return sync_committee_indices
@@ -120,6 +122,11 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]primi
 	syncCommitteeSize := cfg.SyncCommitteeSize
 	cIndices := make([]primitives.ValidatorIndex, 0, syncCommitteeSize)
 	hashFunc := hash.CustomSHA256Hasher()
+
+	maxEB := cfg.MaxEffectiveBalanceElectra
+	if s.Version() < version.Electra {
+		maxEB = cfg.MaxEffectiveBalance
+	}
 
 	for i := primitives.ValidatorIndex(0); uint64(len(cIndices)) < params.BeaconConfig().SyncCommitteeSize; i++ {
 		if ctx.Err() != nil {
@@ -140,7 +147,7 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]primi
 		}
 
 		effectiveBal := v.EffectiveBalance()
-		if effectiveBal*maxRandomByte >= cfg.MaxEffectiveBalance*uint64(randomByte) {
+		if effectiveBal*maxRandomByte >= maxEB*uint64(randomByte) {
 			cIndices = append(cIndices, cIndex)
 		}
 	}

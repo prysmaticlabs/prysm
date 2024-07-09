@@ -98,7 +98,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 
 			// Call node syncing endpoint to check if head is optimistic.
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				syncingEndpoint,
 				&structs.SyncStatusResponse{},
 			).SetArg(
@@ -114,7 +114,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 
 			// Call attestation data to get attestation data root to query aggregate attestation.
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				fmt.Sprintf("%s?committee_index=%d&slot=%d", attestationDataEndpoint, committeeIndex, slot),
 				&structs.GetAttestationDataResponse{},
 			).SetArg(
@@ -126,7 +126,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 
 			// Call attestation data to get attestation data root to query aggregate attestation.
 			jsonRestHandler.EXPECT().Get(
-				ctx,
+				gomock.Any(),
 				fmt.Sprintf("%s?attestation_data_root=%s&slot=%d", aggregateAttestationEndpoint, hexutil.Encode(attestationDataRootBytes[:]), slot),
 				&structs.AggregateAttestationResponse{},
 			).SetArg(

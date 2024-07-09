@@ -6,12 +6,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	testhelpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"go.uber.org/mock/gomock"
 )
 
@@ -98,7 +97,7 @@ func TestGetAggregatedSelections(t *testing.T) {
 
 			ctx := context.Background()
 			jsonRestHandler.EXPECT().Post(
-				ctx,
+				gomock.Any(),
 				"/eth/v1/validator/beacon_committee_selections",
 				nil,
 				bytes.NewBuffer(reqBody),

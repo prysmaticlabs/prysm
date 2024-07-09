@@ -3,9 +3,12 @@ package client
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -15,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -39,6 +43,7 @@ import (
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -1258,9 +1263,11 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 				},
 			).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
 
-			aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 0)
+			aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, map[primitives.ValidatorIndex][fieldparams.BLSPubkeyLength]byte{
+				0: bytesutil.ToBytes48(pubKey),
+			})
 			require.NoError(t, err)
-			require.Equal(t, false, aggregator)
+			require.Equal(t, false, aggregator[0])
 
 			c := params.BeaconConfig().Copy()
 			c.TargetAggregatorsPerSyncSubcommittee = math.MaxUint64
@@ -1279,9 +1286,11 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 				},
 			).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []primitives.CommitteeIndex{0}}, nil /*err*/)
 
-			aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 0)
+			aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, map[primitives.ValidatorIndex][fieldparams.BLSPubkeyLength]byte{
+				0: bytesutil.ToBytes48(pubKey),
+			})
 			require.NoError(t, err)
-			require.Equal(t, true, aggregator)
+			require.Equal(t, true, aggregator[0])
 		})
 	}
 }
@@ -1305,9 +1314,11 @@ func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
 				},
 			).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
 
-			aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 0)
+			aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, map[primitives.ValidatorIndex][fieldparams.BLSPubkeyLength]byte{
+				0: bytesutil.ToBytes48(pubKey),
+			})
 			require.NoError(t, err)
-			require.Equal(t, false, aggregator)
+			require.Equal(t, false, aggregator[0])
 
 			c := params.BeaconConfig().Copy()
 			c.TargetAggregatorsPerSyncSubcommittee = math.MaxUint64
@@ -1340,9 +1351,11 @@ func TestIsSyncCommitteeAggregator_Distributed_OK(t *testing.T) {
 				[]iface.SyncCommitteeSelection{selection},
 			).Return([]iface.SyncCommitteeSelection{selection}, nil)
 
-			aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey), 123)
+			aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, map[primitives.ValidatorIndex][fieldparams.BLSPubkeyLength]byte{
+				123: bytesutil.ToBytes48(pubKey),
+			})
 			require.NoError(t, err)
-			require.Equal(t, true, aggregator)
+			require.Equal(t, true, aggregator[123])
 		})
 	}
 }
@@ -1356,19 +1369,19 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 			copy(root[2:], "a")
 			err := db.SaveGenesisValidatorsRoot(ctx, root)
 			require.NoError(t, err)
-			w := wallet.NewWalletForWeb3Signer()
-			decodedKey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
-			require.NoError(t, err)
-			keys := [][48]byte{
-				bytesutil.ToBytes48(decodedKey),
-			}
+			app := cli.App{}
+			set := flag.NewFlagSet("test", 0)
+			newDir := filepath.Join(t.TempDir(), "new")
+			require.NoError(t, os.MkdirAll(newDir, 0700))
+			set.String(flags.WalletDirFlag.Name, newDir, "")
+			w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 			v := validator{
 				db:     db,
 				useWeb: false,
 				wallet: w,
 				web3SignerConfig: &remoteweb3signer.SetupConfig{
 					BaseEndpoint:       "http://localhost:8545",
-					ProvidedPublicKeys: keys,
+					ProvidedPublicKeys: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
 				},
 			}
 			err = v.WaitForKeymanagerInitialization(context.Background())
@@ -2075,7 +2088,7 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 	client.EXPECT().ValidatorIndex(
-		ctx,
+		gomock.Any(),
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubkey2[:],
 		},
@@ -2084,7 +2097,7 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	}, nil)
 
 	client.EXPECT().ValidatorIndex(
-		ctx,
+		gomock.Any(),
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubkey3[:],
 		},
@@ -2210,7 +2223,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	client := validatormock.NewMockValidatorClient(ctrl)
 
 	client.EXPECT().ValidatorIndex(
-		ctx,
+		gomock.Any(),
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubkey2[:],
 		},
@@ -2219,7 +2232,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	}, nil)
 
 	client.EXPECT().ValidatorIndex(
-		ctx,
+		gomock.Any(),
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubkey3[:],
 		},

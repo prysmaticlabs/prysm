@@ -631,7 +631,7 @@ func fullPayloadFromPayloadBody(
 				Withdrawals:        body.Withdrawals,
 				ExcessBlobGas:      ebg,
 				BlobGasUsed:        bgu,
-				DepositReceipts:    dr,
+				DepositRequests:    dr,
 				WithdrawalRequests: wr,
 			}) // We can't get the block value and don't care about the block value for this instance
 	default:
@@ -647,14 +647,15 @@ func handleRPCError(err error) error {
 	if isTimeout(err) {
 		return ErrHTTPTimeout
 	}
-	e, ok := err.(gethRPC.Error)
+	var e gethRPC.Error
+	ok := errors.As(err, &e)
 	if !ok {
 		if strings.Contains(err.Error(), "401 Unauthorized") {
 			log.Error("HTTP authentication to your execution client is not working. Please ensure " +
 				"you are setting a correct value for the --jwt-secret flag in Prysm, or use an IPC connection if on " +
 				"the same machine. Please see our documentation for more information on authenticating connections " +
 				"here https://docs.prylabs.network/docs/execution-node/authentication")
-			return fmt.Errorf("could not authenticate connection to execution client: %v", err)
+			return fmt.Errorf("could not authenticate connection to execution client: %w", err)
 		}
 		return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")
 	}
@@ -689,7 +690,8 @@ func handleRPCError(err error) error {
 	case -32000:
 		errServerErrorCount.Inc()
 		// Only -32000 status codes are data errors in the RPC specification.
-		errWithData, ok := err.(gethRPC.DataError)
+		var errWithData gethRPC.DataError
+		ok := errors.As(err, &errWithData)
 		if !ok {
 			return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")
 		}
@@ -708,7 +710,8 @@ type httpTimeoutError interface {
 }
 
 func isTimeout(e error) bool {
-	t, ok := e.(httpTimeoutError)
+	var t httpTimeoutError
+	ok := errors.As(e, &t)
 	return ok && t.Timeout()
 }
 
@@ -780,8 +783,8 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			BlockHash:          make([]byte, fieldparams.RootLength),
 			Transactions:       make([][]byte, 0),
 			Withdrawals:        make([]*pb.Withdrawal, 0),
-			WithdrawalRequests: make([]*pb.ExecutionLayerWithdrawalRequest, 0),
-			DepositReceipts:    make([]*pb.DepositReceipt, 0),
+			WithdrawalRequests: make([]*pb.WithdrawalRequest, 0),
+			DepositRequests:    make([]*pb.DepositRequest, 0),
 		}, nil
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedVersion, "version=%s", version.String(v))

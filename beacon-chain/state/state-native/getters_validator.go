@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -221,6 +222,36 @@ func (b *BeaconState) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.
 		return [fieldparams.BLSPubkeyLength]byte{}
 	}
 	return bytesutil.ToBytes48(v.PublicKey)
+}
+
+// AggregateKeyFromIndices builds an aggregated public key from the provided
+// validator indices.
+func (b *BeaconState) AggregateKeyFromIndices(idxs []uint64) (bls.PublicKey, error) {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	pubKeys := make([][]byte, len(idxs))
+	for i, idx := range idxs {
+		var v *ethpb.Validator
+		if features.Get().EnableExperimentalState {
+			var err error
+			v, err = b.validatorsMultiValue.At(b, idx)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			if idx >= uint64(len(b.validators)) {
+				return nil, consensus_types.ErrOutOfBounds
+			}
+			v = b.validators[idx]
+		}
+
+		if v == nil {
+			return nil, ErrNilWrappedValidator
+		}
+		pubKeys[i] = v.PublicKey
+	}
+	return bls.AggregatePublicKeys(pubKeys)
 }
 
 // PublicKeys builds a list of all validator public keys, with each key's index aligned to its validator index.

@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
-
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -144,12 +143,13 @@ func TestGetSpec(t *testing.T) {
 	config.PendingConsolidationsLimit = 84
 	config.MaxPartialWithdrawalsPerPayload = 85
 	config.FullExitRequestAmount = 86
-	config.MaxConsolidations = 87
+	config.MaxConsolidationsRequestsPerPayload = 87
 	config.MaxAttesterSlashingsElectra = 88
 	config.MaxAttestationsElectra = 89
 	config.MaxWithdrawalRequestsPerPayload = 90
 	config.MaxCellsInExtendedMatrix = 91
-	config.UnsetDepositReceiptsStartIndex = 92
+	config.UnsetDepositRequestsStartIndex = 92
+	config.MaxDepositRequestsPerPayload = 93
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -192,7 +192,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 154, len(data))
+	assert.Equal(t, 155, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
@@ -513,7 +513,7 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "85", v)
 			case "FULL_EXIT_REQUEST_AMOUNT":
 				assert.Equal(t, "86", v)
-			case "MAX_CONSOLIDATIONS":
+			case "MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD":
 				assert.Equal(t, "87", v)
 			case "DOMAIN_CONSOLIDATION":
 				assert.Equal(t, "0x31313030", v)
@@ -525,8 +525,10 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "90", v)
 			case "MAX_CELLS_IN_EXTENDED_MATRIX":
 				assert.Equal(t, "91", v)
-			case "UNSET_DEPOSIT_RECEIPTS_START_INDEX":
+			case "UNSET_DEPOSIT_REQUESTS_START_INDEX":
 				assert.Equal(t, "92", v)
+			case "MAX_DEPOSIT_REQUESTS_PER_PAYLOAD":
+				assert.Equal(t, "93", v)
 			default:
 				t.Errorf("Incorrect key: %s", k)
 			}

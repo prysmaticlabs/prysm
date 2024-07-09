@@ -71,11 +71,6 @@ type ReadOnlyBeaconBlockBody interface {
 	BlobKzgCommitments() ([][]byte, error)
 }
 
-type ROBlockBodyElectra interface {
-	ReadOnlyBeaconBlockBody
-	Consolidations() []*ethpb.SignedConsolidation
-}
-
 type SignedBeaconBlock interface {
 	ReadOnlySignedBeaconBlock
 	SetExecution(ExecutionData) error
@@ -130,6 +125,7 @@ type ExecutionData interface {
 
 type ExecutionDataElectra interface {
 	ExecutionData
-	DepositReceipts() []*enginev1.DepositReceipt
-	WithdrawalRequests() []*enginev1.ExecutionLayerWithdrawalRequest
+	DepositRequests() []*enginev1.DepositRequest
+	WithdrawalRequests() []*enginev1.WithdrawalRequest
+	ConsolidationRequests() []*enginev1.ConsolidationRequest
 }

@@ -6,16 +6,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"go.uber.org/mock/gomock"
 )
 
@@ -32,7 +31,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().StateValidators(
-		ctx,
+		gomock.Any(),
 		[]string{stringValidatorPubKey},
 		nil,
 		nil,
@@ -65,7 +64,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 	// Expect node version endpoint call.
 	var nodeVersionResponse structs.GetVersionResponse
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
 	).Return(
@@ -97,7 +96,7 @@ func TestValidatorStatus_Error(t *testing.T) {
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().StateValidators(
-		ctx,
+		gomock.Any(),
 		gomock.Any(),
 		nil,
 		nil,
@@ -139,7 +138,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().StateValidators(
-		ctx,
+		gomock.Any(),
 		stringValidatorsPubKey,
 		[]primitives.ValidatorIndex{},
 		nil,
@@ -172,7 +171,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 	// Expect node version endpoint call.
 	var nodeVersionResponse structs.GetVersionResponse
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
 	).Return(
@@ -224,7 +223,7 @@ func TestMultipleValidatorStatus_Error(t *testing.T) {
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().StateValidators(
-		ctx,
+		gomock.Any(),
 		gomock.Any(),
 		[]primitives.ValidatorIndex{},
 		nil,
@@ -276,7 +275,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().StateValidators(
-		ctx,
+		gomock.Any(),
 		stringValidatorsPubKey,
 		validatorsIndex,
 		nil,
@@ -333,7 +332,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 	// Expect node version endpoint call.
 	var nodeVersionResponse structs.GetVersionResponse
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
 	).Return(
@@ -345,7 +344,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 
 	var validatorCountResponse structs.GetValidatorCountResponse
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/beacon/states/head/validator_count?",
 		&validatorCountResponse,
 	).Return(
@@ -456,7 +455,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().StateValidators(
-		ctx,
+		gomock.Any(),
 		[]string{stringValidatorPubKey},
 		nil,
 		nil,
@@ -481,7 +480,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 	// Expect node version endpoint call.
 	var nodeVersionResponse structs.GetVersionResponse
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
 	).Return(
@@ -706,7 +705,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 				ctx := context.Background()
 				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 				stateValidatorsProvider.EXPECT().StateValidators(
-					ctx,
+					gomock.Any(),
 					testCase.inputGetStateValidatorsInterface.inputStringPubKeys,
 					testCase.inputGetStateValidatorsInterface.inputIndexes,
 					testCase.inputGetStateValidatorsInterface.inputStatuses,
@@ -720,7 +719,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 				// Expect node version endpoint call.
 				var nodeVersionResponse structs.GetVersionResponse
 				jsonRestHandler.EXPECT().Get(
-					ctx,
+					gomock.Any(),
 					"/eth/v1/node/version",
 					&nodeVersionResponse,
 				).Return(

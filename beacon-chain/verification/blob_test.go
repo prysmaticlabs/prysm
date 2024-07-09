@@ -507,7 +507,8 @@ func TestRequirementSatisfaction(t *testing.T) {
 
 	_, err := v.VerifiedROBlob()
 	require.ErrorIs(t, err, ErrBlobInvalid)
-	me, ok := err.(VerificationMultiError)
+	var me VerificationMultiError
+	ok := errors.As(err, &me)
 	require.Equal(t, true, ok)
 	fails := me.Failures()
 	// we haven't performed any verification, so all the results should be this type
