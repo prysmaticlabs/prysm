@@ -206,12 +206,12 @@ type GetIndividualVotesRequest struct {
 }
 
 type GetIndividualVotesResponse struct {
-	IndividualVotes []*IndividualVote `json:"individual_votes"`
+	IndividualVotes []IndividualVote `json:"individual_votes"`
 }
 
 type IndividualVote struct {
 	Epoch                            primitives.Epoch          `json:"epoch"`
-	PublicKeys                       []byte                    `json:"public_keys,omitempty"`
+	PublicKey                        []byte                    `json:"public_keys,omitempty"`
 	ValidatorIndex                   primitives.ValidatorIndex `json:"validator_index"`
 	IsSlashed                        bool                      `json:"is_slashed"`
 	IsWithdrawableInCurrentEpoch     bool                      `json:"is_withdrawable_in_current_epoch"`
