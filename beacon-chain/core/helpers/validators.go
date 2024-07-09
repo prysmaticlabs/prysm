@@ -479,6 +479,11 @@ func IsEligibleForActivationUsingTrie(state state.ReadOnlyCheckpoint, validator 
 	return isEligibleForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
 }
 
+// IsEligibleForActivationUsingCheckpoint checks if the validator is eligible for activation using the provided checkpoint.
+func IsEligibleForActivationUsingCheckpoint(cpt *ethpb.Checkpoint, validator state.ReadOnlyValidator) bool {
+	return isEligibleForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
+}
+
 // isEligibleForActivation carries out the logic for IsEligibleForActivation*
 func isEligibleForActivation(activationEligibilityEpoch, activationEpoch, finalizedEpoch primitives.Epoch) bool {
 	return activationEligibilityEpoch <= finalizedEpoch &&

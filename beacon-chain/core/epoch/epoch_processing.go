@@ -82,6 +82,7 @@ func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) (state.Be
 	eligibleForActivation := make([]primitives.ValidatorIndex, 0)
 	eligibleForEjection := make([]primitives.ValidatorIndex, 0)
 
+	fChkpt := st.FinalizedCheckpoint()
 	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		// Collect validators eligible to enter the activation queue.
 		if helpers.IsEligibleForActivationQueue(val, currentEpoch) {
@@ -96,7 +97,7 @@ func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) (state.Be
 		}
 
 		// Collect validators eligible for activation and not yet dequeued for activation.
-		if helpers.IsEligibleForActivationUsingTrie(st, val) {
+		if helpers.IsEligibleForActivationUsingCheckpoint(fChkpt, val) {
 			eligibleForActivation = append(eligibleForActivation, primitives.ValidatorIndex(idx))
 		}
 
