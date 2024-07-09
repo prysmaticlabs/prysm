@@ -47,9 +47,10 @@ proto_library(
 # Go
 ##############################################################################
 
+methodical_objs = [ "Attestation" ]
+
 ssz_phase0_objs = [
     "AggregateAttestationAndProof",
-    "Attestation",
     "AttestationData",
     "AttesterSlashing",
     "BeaconBlock",
@@ -165,6 +166,7 @@ ssz_gen_marshal(
         "//math:go_default_library",
     ],
     objs = ssz_phase0_objs,
+    exclude_objs = methodical_objs + ssz_phase0_objs,
 )
 
 ssz_gen_marshal(
@@ -177,7 +179,7 @@ ssz_gen_marshal(
         "//math:go_default_library",
     ],
     objs = ssz_altair_objs,
-    exclude_objs = ssz_phase0_objs,
+    exclude_objs = methodical_objs + ssz_phase0_objs,
 )
 
 ssz_gen_marshal(
@@ -190,7 +192,7 @@ ssz_gen_marshal(
         "//math:go_default_library",
     ],
     objs = ssz_bellatrix_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs,
+    exclude_objs = methodical_objs + ssz_phase0_objs + ssz_altair_objs,
 )
 
 ssz_gen_marshal(
@@ -203,7 +205,7 @@ ssz_gen_marshal(
         "//math:go_default_library",
     ],
     objs = ssz_capella_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs,
+    exclude_objs = methodical_objs + ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs,
 )
 
 ssz_gen_marshal(
@@ -216,7 +218,7 @@ ssz_gen_marshal(
         "//math:go_default_library",
     ],
     objs = ssz_deneb_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs,
+    exclude_objs = methodical_objs + ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs,
 )
 
 ssz_gen_marshal(
@@ -229,7 +231,7 @@ ssz_gen_marshal(
         "//math:go_default_library",
     ],
     objs = ssz_electra_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs + ssz_deneb_objs,
+    exclude_objs = methodical_objs + ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs + ssz_deneb_objs,
 )
 
 ssz_gen_marshal(
@@ -285,11 +287,13 @@ ssz_methodical(
     name = "methodical_attempt",
     deps = [
         ":go_proto",
-        "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
-        "//math:go_default_library",
-        "@com_github_prysmaticlabs_fastssz//:go_default_library",
+        #"//consensus-types/primitives:go_default_library",
+        #"//proto/engine/v1:go_default_library",
+        #"//math:go_default_library",
+        #"@com_github_prysmaticlabs_fastssz//:go_default_library",
     ],
+    type_names = ["Attestation"],
+    target_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
     out = "derp.go",
 )
 
