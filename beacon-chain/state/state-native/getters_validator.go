@@ -503,14 +503,14 @@ func (b *BeaconState) PendingBalanceToWithdraw(idx primitives.ValidatorIndex) (u
 }
 
 func (b *BeaconState) HasPendingBalanceToWithdraw(idx primitives.ValidatorIndex) (bool, error) {
-  if b.version < version.Electra {
+	if b.version < version.Electra {
 		return false, errNotSupported("HasPendingBalanceToWithdraw", b.version)
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-  // TODO: Consider maintaining this value in the state, if it's a potential bottleneck.
+	// TODO: Consider maintaining this value in the state, if it's a potential bottleneck.
 	// This is n*m complexity, but this method can only be called
 	// MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD per slot. A more optimized storage indexing such as a
 	// lookup map could be used to reduce the complexity marginally.
