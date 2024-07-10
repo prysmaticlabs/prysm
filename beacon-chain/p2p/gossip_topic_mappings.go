@@ -11,17 +11,17 @@ import (
 
 // gossipTopicMappings represent the protocol ID to protobuf message type map for easy
 // lookup.
-var gossipTopicMappings = map[string]proto.Message{
-	BlockSubnetTopicFormat:                    &ethpb.SignedBeaconBlock{},
-	AttestationSubnetTopicFormat:              &ethpb.Attestation{},
-	ExitSubnetTopicFormat:                     &ethpb.SignedVoluntaryExit{},
-	ProposerSlashingSubnetTopicFormat:         &ethpb.ProposerSlashing{},
-	AttesterSlashingSubnetTopicFormat:         &ethpb.AttesterSlashing{},
-	AggregateAndProofSubnetTopicFormat:        &ethpb.SignedAggregateAttestationAndProof{},
-	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
-	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
-	BlsToExecutionChangeSubnetTopicFormat:     &ethpb.SignedBLSToExecutionChange{},
-	BlobSubnetTopicFormat:                     &ethpb.BlobSidecar{},
+var gossipTopicMappings = map[string]func() proto.Message{
+	BlockSubnetTopicFormat:                    func() proto.Message { return &ethpb.SignedBeaconBlock{} },
+	AttestationSubnetTopicFormat:              func() proto.Message { return &ethpb.Attestation{} },
+	ExitSubnetTopicFormat:                     func() proto.Message { return &ethpb.SignedVoluntaryExit{} },
+	ProposerSlashingSubnetTopicFormat:         func() proto.Message { return &ethpb.ProposerSlashing{} },
+	AttesterSlashingSubnetTopicFormat:         func() proto.Message { return &ethpb.AttesterSlashing{} },
+	AggregateAndProofSubnetTopicFormat:        func() proto.Message { return &ethpb.SignedAggregateAttestationAndProof{} },
+	SyncContributionAndProofSubnetTopicFormat: func() proto.Message { return &ethpb.SignedContributionAndProof{} },
+	SyncCommitteeSubnetTopicFormat:            func() proto.Message { return &ethpb.SyncCommitteeMessage{} },
+	BlsToExecutionChangeSubnetTopicFormat:     func() proto.Message { return &ethpb.SignedBLSToExecutionChange{} },
+	BlobSubnetTopicFormat:                     func() proto.Message { return &ethpb.BlobSidecar{} },
 }
 
 // GossipTopicMappings is a function to return the assigned data type
@@ -44,24 +44,24 @@ func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 		if epoch >= params.BeaconConfig().AltairForkEpoch {
 			return &ethpb.SignedBeaconBlockAltair{}
 		}
-		return gossipTopicMappings[topic]
+		return gossipTopicMappings[topic]()
 	case AttestationSubnetTopicFormat:
 		if epoch >= params.BeaconConfig().ElectraForkEpoch {
 			return &ethpb.AttestationElectra{}
 		}
-		return gossipTopicMappings[topic]
+		return gossipTopicMappings[topic]()
 	case AttesterSlashingSubnetTopicFormat:
 		if epoch >= params.BeaconConfig().ElectraForkEpoch {
 			return &ethpb.AttesterSlashingElectra{}
 		}
-		return gossipTopicMappings[topic]
+		return gossipTopicMappings[topic]()
 	case AggregateAndProofSubnetTopicFormat:
 		if epoch >= params.BeaconConfig().ElectraForkEpoch {
 			return &ethpb.SignedAggregateAttestationAndProofElectra{}
 		}
-		return gossipTopicMappings[topic]
+		return gossipTopicMappings[topic]()
 	default:
-		return gossipTopicMappings[topic]
+		return gossipTopicMappings[topic]()
 	}
 }
 
@@ -81,7 +81,7 @@ var GossipTypeMapping = make(map[reflect.Type]string, len(gossipTopicMappings))
 
 func init() {
 	for k, v := range gossipTopicMappings {
-		GossipTypeMapping[reflect.TypeOf(v)] = k
+		GossipTypeMapping[reflect.TypeOf(v())] = k
 	}
 	// Specially handle Altair objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockAltair{})] = BlockSubnetTopicFormat

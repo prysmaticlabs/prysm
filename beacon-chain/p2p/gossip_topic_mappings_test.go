@@ -15,7 +15,7 @@ func TestMappingHasNoDuplicates(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	m := make(map[reflect.Type]bool)
 	for _, v := range gossipTopicMappings {
-		if _, ok := m[reflect.TypeOf(v)]; ok {
+		if _, ok := m[reflect.TypeOf(v())]; ok {
 			t.Errorf("%T is duplicated in the topic mapping", v)
 		}
 		m[reflect.TypeOf(v)] = true

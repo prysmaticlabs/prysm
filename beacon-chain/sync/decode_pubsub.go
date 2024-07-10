@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"google.golang.org/protobuf/proto"
 )
 
 var errNilPubsubMessage = errors.New("nil pubsub message")
@@ -52,10 +51,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	if base == nil {
 		return nil, p2p.ErrMessageNotMapped
 	}
-	m, ok := proto.Clone(base).(ssz.Unmarshaler)
-	if !ok {
-		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
-	}
+	m := base.(ssz.Unmarshaler)
 	// Handle different message types across forks.
 	dt, err := extractValidDataTypeFromTopic(topic, fDigest[:], s.cfg.clock)
 	if err != nil {
