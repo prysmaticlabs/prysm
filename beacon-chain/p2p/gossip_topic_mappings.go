@@ -44,25 +44,33 @@ func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 		if epoch >= params.BeaconConfig().AltairForkEpoch {
 			return &ethpb.SignedBeaconBlockAltair{}
 		}
-		return gossipTopicMappings[topic]()
+		return gossipMessage(topic)
 	case AttestationSubnetTopicFormat:
 		if epoch >= params.BeaconConfig().ElectraForkEpoch {
 			return &ethpb.AttestationElectra{}
 		}
-		return gossipTopicMappings[topic]()
+		return gossipMessage(topic)
 	case AttesterSlashingSubnetTopicFormat:
 		if epoch >= params.BeaconConfig().ElectraForkEpoch {
 			return &ethpb.AttesterSlashingElectra{}
 		}
-		return gossipTopicMappings[topic]()
+		return gossipMessage(topic)
 	case AggregateAndProofSubnetTopicFormat:
 		if epoch >= params.BeaconConfig().ElectraForkEpoch {
 			return &ethpb.SignedAggregateAttestationAndProofElectra{}
 		}
-		return gossipTopicMappings[topic]()
+		return gossipMessage(topic)
 	default:
-		return gossipTopicMappings[topic]()
+		return gossipMessage(topic)
 	}
+}
+
+func gossipMessage(topic string) proto.Message {
+	msgGen, ok := gossipTopicMappings[topic]
+	if !ok {
+		return nil
+	}
+	return msgGen()
 }
 
 // AllTopics returns all topics stored in our
