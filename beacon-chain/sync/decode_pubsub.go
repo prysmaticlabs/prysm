@@ -51,7 +51,10 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	if base == nil {
 		return nil, p2p.ErrMessageNotMapped
 	}
-	m := base.(ssz.Unmarshaler)
+	m, ok := base.(ssz.Unmarshaler)
+	if !ok {
+		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
+	}
 	// Handle different message types across forks.
 	dt, err := extractValidDataTypeFromTopic(topic, fDigest[:], s.cfg.clock)
 	if err != nil {
