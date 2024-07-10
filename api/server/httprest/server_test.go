@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -24,8 +25,9 @@ func TestServer_StartStop(t *testing.T) {
 	ctx := cli.NewContext(&app, set, nil)
 
 	port := ctx.Int(flags.HTTPServerPort.Name)
+	portStr := fmt.Sprintf("%d", port) // Convert port to string
 	host := ctx.String(flags.HTTPServerHost.Name)
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, portStr)
 
 	opts := []Option{
 		WithHTTPAddr(address),
@@ -56,8 +58,9 @@ func TestServer_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 	ctx := cli.NewContext(&app, set, nil)
 
 	port := ctx.Int(flags.HTTPServerPort.Name)
+	portStr := fmt.Sprintf("%d", port) // Convert port to string
 	host := ctx.String(flags.HTTPServerHost.Name)
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, portStr)
 
 	opts := []Option{
 		WithHTTPAddr(address),
