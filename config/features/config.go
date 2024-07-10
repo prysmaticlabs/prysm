@@ -340,8 +340,9 @@ func logDisabled(flag cli.DocGenerationFlag) {
 	log.WithField(name, flag.GetUsage()).Warn(disabledFeatureFlag)
 }
 
-// ValidateNetworkFlags validates and prevents beacon node
-// to start if more than one flag is provided
+// ValidateNetworkFlags validates provided flags and
+// prevents beacon node or validator to start
+// if more than one network flag is provided
 func ValidateNetworkFlags(ctx *cli.Context) error {
 	networkFlagsCount := 0
 	for _, flag := range NetworkFlags {
