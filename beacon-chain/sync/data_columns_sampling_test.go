@@ -13,16 +13,20 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
+	"github.com/sirupsen/logrus"
+
+	kzg "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
-	"github.com/sirupsen/logrus"
 )
 
 func TestRandomizeColumns(t *testing.T) {
@@ -59,16 +63,10 @@ func createAndConnectPeer(
 	p2pService *p2ptest.TestP2P,
 	chainService *mock.ChainService,
 	dataColumnSidecars []*ethpb.DataColumnSidecar,
-	custodyCount uint64,
+	custodySubnetCount uint64,
 	columnsNotToRespond map[uint64]bool,
 	offset int,
 ) *p2ptest.TestP2P {
-	emptyRoot := [fieldparams.RootLength]byte{}
-	emptySignature := [fieldparams.BLSSignatureLength]byte{}
-	emptyKzgCommitmentInclusionProof := [4][]byte{
-		emptyRoot[:], emptyRoot[:], emptyRoot[:], emptyRoot[:],
-	}
-
 	// Create the private key, depending on the offset.
 	privateKeyBytes := make([]byte, 32)
 	for i := 0; i < 32; i++ {
@@ -108,7 +106,7 @@ func createAndConnectPeer(
 
 	// Create the record and set the custody count.
 	enr := &enr.Record{}
-	enr.Set(peerdas.Csc(custodyCount))
+	enr.Set(peerdas.Csc(custodySubnetCount))
 
 	// Add the peer and connect it.
 	p2pService.Peers().Add(enr, peer.PeerID(), nil, network.DirOutbound)
@@ -118,78 +116,46 @@ func createAndConnectPeer(
 	return peer
 }
 
-func deterministicRandomness(seed int64) [32]byte {
-	// Converts an int64 to a byte slice
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, seed)
-	if err != nil {
-		logrus.WithError(err).Error("Failed to write int64 to bytes buffer")
-		return [32]byte{}
-	}
-	bytes := buf.Bytes()
-
-	return sha256.Sum256(bytes)
-}
-
-// Returns a serialized random field element in big-endian
-func getRandFieldElement(seed int64) [32]byte {
-	bytes := deterministicRandomness(seed)
-	var r fr.Element
-	r.SetBytes(bytes[:])
-
-	return GoKZG.SerializeScalar(r)
-}
-
-// Returns a random blob using the passed seed as entropy
-func getRandBlob(seed int64) kzg.Blob {
-	var blob kzg.Blob
-	for i := 0; i < len(blob); i += 32 {
-		fieldElementBytes := getRandFieldElement(seed + int64(i))
-		copy(blob[i:i+32], fieldElementBytes[:])
-	}
-	return blob
-}
-
-func generateCommitmentAndProof(blob *kzg.Blob) (*kzg.Commitment, *kzg.Proof, error) {
-	commitment, err := kzg.BlobToKZGCommitment(blob)
-	if err != nil {
-		return nil, nil, err
-	}
-	proof, err := kzg.ComputeBlobKZGProof(blob, commitment)
-	if err != nil {
-		return nil, nil, err
-	}
-	return &commitment, &proof, err
-}
-
 type dataSamplerTest struct {
-	ctx        context.Context
-	root       [fieldparams.RootLength]byte
-	header     *ethpb.BeaconBlockHeader
-	headerRoot [fieldparams.RootLength]byte
-	p2pSvc     *p2ptest.TestP2P
-	peers      []*p2ptest.TestP2P
-	ctxMap     map[[4]byte]int
-	chainSvc   *mock.ChainService
+	ctx                context.Context
+	p2pSvc             *p2ptest.TestP2P
+	peers              []*p2ptest.TestP2P
+	ctxMap             map[[4]byte]int
+	chainSvc           *mock.ChainService
+	blockRoot          [32]byte
+	blobs              []kzg.Blob
+	kzgCommitments     [][]byte
+	kzgProofs          [][]byte
+	dataColumnSidecars []*ethpb.DataColumnSidecar
 }
 
 func setupDefaultDataColumnSamplerTest(t *testing.T) (*dataSamplerTest, *dataColumnSampler1D) {
-	test, sampler := setupDataColumnSamplerTest(t)
+	const (
+		blobCount          uint64 = 3
+		custodyRequirement uint64 = 1
+	)
+
+	test, sampler := setupDataColumnSamplerTest(t, blobCount, custodyRequirement)
 	// Custody columns: [6, 38, 70, 102]
-	p1 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, map[uint64]bool{}, 1)
+	p1 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, 1, map[uint64]bool{}, 1)
 	// Custody columns: [3, 35, 67, 99]
-	p2 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, map[uint64]bool{}, 2)
+	p2 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, 1, map[uint64]bool{}, 2)
 	// Custody columns: [12, 44, 76, 108]
-	p3 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, map[uint64]bool{}, 3)
+	p3 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, 1, map[uint64]bool{}, 3)
 	test.peers = []*p2ptest.TestP2P{p1, p2, p3}
 
 	return test, sampler
 }
 
-func setupDataColumnSamplerTest(t *testing.T) (*dataSamplerTest, *dataColumnSampler1D) {
-	const custodyRequirement uint64 = 1
+func setupDataColumnSamplerTest(t *testing.T, blobCount, custodyRequirement uint64) (*dataSamplerTest, *dataColumnSampler1D) {
+	require.NoError(t, kzg.Start())
 
-	for i := int64(0); i < blobCount; i++ {
+	// Generate random blobs, commitments and inclusion proofs.
+	blobs := make([]kzg.Blob, blobCount)
+	kzgCommitments := make([][]byte, blobCount)
+	kzgProofs := make([][]byte, blobCount)
+
+	for i := uint64(0); i < blobCount; i++ {
 		blob := getRandBlob(int64(i))
 
 		kzgCommitment, kzgProof, err := generateCommitmentAndProof(&blob)
@@ -200,21 +166,31 @@ func setupDataColumnSamplerTest(t *testing.T) (*dataSamplerTest, *dataColumnSamp
 		kzgProofs[i] = kzgProof[:]
 	}
 
-	emptyHeaderRoot, err := emptyHeader.HashTreeRoot()
+	dbBlock := util.NewBeaconBlockDeneb()
+	dbBlock.Block.Body.BlobKzgCommitments = kzgCommitments
+	sBlock, err := blocks.NewSignedBeaconBlock(dbBlock)
+	require.NoError(t, err)
+
+	dataColumnSidecars, err := peerdas.DataColumnSidecars(sBlock, blobs)
+	require.NoError(t, err)
+
+	blockRoot, err := dataColumnSidecars[0].GetSignedBlockHeader().Header.HashTreeRoot()
 	require.NoError(t, err)
 
 	p2pSvc := p2ptest.NewTestP2P(t)
 	chainSvc, clock := defaultMockChain(t)
 
 	test := &dataSamplerTest{
-		ctx:        context.Background(),
-		root:       emptyRoot,
-		header:     emptyHeader,
-		headerRoot: emptyHeaderRoot,
-		p2pSvc:     p2pSvc,
-		peers:      []*p2ptest.TestP2P{},
-		ctxMap:     map[[4]byte]int{{245, 165, 253, 66}: version.Deneb},
-		chainSvc:   chainSvc,
+		ctx:                context.Background(),
+		p2pSvc:             p2pSvc,
+		peers:              []*p2ptest.TestP2P{},
+		ctxMap:             map[[4]byte]int{{245, 165, 253, 66}: version.Deneb},
+		chainSvc:           chainSvc,
+		blockRoot:          blockRoot,
+		blobs:              blobs,
+		kzgCommitments:     kzgCommitments,
+		kzgProofs:          kzgProofs,
+		dataColumnSidecars: dataColumnSidecars,
 	}
 	sampler := newDataColumnSampler1D(p2pSvc, clock, test.ctxMap, nil)
 
@@ -305,7 +281,7 @@ func TestDataColumnSampler1D_SampleDataColumns(t *testing.T) {
 
 	// Sample all columns.
 	sampleColumns := []uint64{6, 3, 12, 38, 35, 44, 70, 67, 76, 102, 99, 108}
-	retrieved := sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
+	retrieved := sampler.sampleDataColumns(test.ctx, test.blockRoot, sampleColumns)
 	require.Equal(t, 12, len(retrieved))
 	for _, column := range sampleColumns {
 		require.Equal(t, true, retrieved[column])
@@ -313,7 +289,7 @@ func TestDataColumnSampler1D_SampleDataColumns(t *testing.T) {
 
 	// Sample a subset of columns.
 	sampleColumns = []uint64{6, 3, 12, 38, 35, 44}
-	retrieved = sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
+	retrieved = sampler.sampleDataColumns(test.ctx, test.blockRoot, sampleColumns)
 	require.Equal(t, 6, len(retrieved))
 	for _, column := range sampleColumns {
 		require.Equal(t, true, retrieved[column])
@@ -321,7 +297,7 @@ func TestDataColumnSampler1D_SampleDataColumns(t *testing.T) {
 
 	// Sample a subset of columns with missing columns.
 	sampleColumns = []uint64{6, 3, 12, 127}
-	retrieved = sampler.sampleDataColumns(test.ctx, test.headerRoot, sampleColumns)
+	retrieved = sampler.sampleDataColumns(test.ctx, test.blockRoot, sampleColumns)
 	require.Equal(t, 3, len(retrieved))
 	require.DeepEqual(t, map[uint64]bool{6: true, 3: true, 12: true}, retrieved)
 }
@@ -385,17 +361,61 @@ func TestDataColumnSampler1D_IncrementalDAS(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		test, sampler := setupDataColumnSamplerTest(t)
-		p1 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, tc.columnsNotToRespond, 1)
-		p2 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, tc.columnsNotToRespond, 2)
-		p3 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.header, 1, tc.columnsNotToRespond, 3)
+		test, sampler := setupDataColumnSamplerTest(t, 3, 1)
+		p1 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, 1, tc.columnsNotToRespond, 1)
+		p2 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, 1, tc.columnsNotToRespond, 2)
+		p3 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, 1, tc.columnsNotToRespond, 3)
 		test.peers = []*p2ptest.TestP2P{p1, p2, p3}
 
 		sampler.refreshPeerInfo()
 
-		success, summaries, err := sampler.incrementalDAS(test.ctx, test.headerRoot, tc.possibleColumnsToRequest, tc.samplesCount)
+		success, summaries, err := sampler.incrementalDAS(test.ctx, test.blockRoot, tc.possibleColumnsToRequest, tc.samplesCount)
 		require.NoError(t, err)
 		require.Equal(t, tc.expectedSuccess, success)
 		require.DeepEqual(t, tc.expectedRoundSummaries, summaries)
 	}
+}
+
+func deterministicRandomness(seed int64) [32]byte {
+	// Converts an int64 to a byte slice
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, seed)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to write int64 to bytes buffer")
+		return [32]byte{}
+	}
+	bytes := buf.Bytes()
+
+	return sha256.Sum256(bytes)
+}
+
+// Returns a serialized random field element in big-endian
+func getRandFieldElement(seed int64) [32]byte {
+	bytes := deterministicRandomness(seed)
+	var r fr.Element
+	r.SetBytes(bytes[:])
+
+	return GoKZG.SerializeScalar(r)
+}
+
+// Returns a random blob using the passed seed as entropy
+func getRandBlob(seed int64) kzg.Blob {
+	var blob kzg.Blob
+	for i := 0; i < len(blob); i += 32 {
+		fieldElementBytes := getRandFieldElement(seed + int64(i))
+		copy(blob[i:i+32], fieldElementBytes[:])
+	}
+	return blob
+}
+
+func generateCommitmentAndProof(blob *kzg.Blob) (*kzg.Commitment, *kzg.Proof, error) {
+	commitment, err := kzg.BlobToKZGCommitment(blob)
+	if err != nil {
+		return nil, nil, err
+	}
+	proof, err := kzg.ComputeBlobKZGProof(blob, commitment)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &commitment, &proof, err
 }

@@ -51,8 +51,8 @@ type dataColumnSampler1D struct {
 	ctxMap        ContextByteVersions
 	stateNotifier statefeed.Notifier
 
-	// missingColumns is a set of columns that are not custodied by the node.
-	missingColumns map[uint64]bool
+	// nonCustodyColumns is a set of columns that are not custodied by the node.
+	nonCustodyColumns map[uint64]bool
 	// columnFromPeer maps a peer to the columns it is responsible for custody.
 	columnFromPeer map[peer.ID]map[uint64]bool
 	// peerFromColumn maps a column to the peer responsible for custody.
@@ -82,77 +82,6 @@ func newDataColumnSampler1D(
 	}
 }
 
-// verifyColumn verifies the retrieved column against the root, the index,
-// the KZG inclusion and the KZG proof.
-func verifyColumn(
-	roDataColumn blocks.RODataColumn,
-	root [32]byte,
-	pid peer.ID,
-	requestedColumns map[uint64]bool,
-) bool {
-	retrievedColumn := roDataColumn.ColumnIndex
-
-	// Filter out columns with incorrect root.
-	actualRoot := roDataColumn.BlockRoot()
-	if actualRoot != root {
-		log.WithFields(logrus.Fields{
-			"peerID":        pid,
-			"requestedRoot": fmt.Sprintf("%#x", root),
-			"actualRoot":    fmt.Sprintf("%#x", actualRoot),
-		}).Debug("Retrieved root does not match requested root")
-
-		return false
-	}
-
-	// Filter out columns that were not requested.
-	if !requestedColumns[retrievedColumn] {
-		columnsToSampleList := sortedSliceFromMap(requestedColumns)
-
-		log.WithFields(logrus.Fields{
-			"peerID":           pid,
-			"requestedColumns": columnsToSampleList,
-			"retrievedColumn":  retrievedColumn,
-		}).Debug("Retrieved column was not requested")
-
-		return false
-	}
-
-	// Filter out columns which did not pass the KZG inclusion proof verification.
-	if err := blocks.VerifyKZGInclusionProofColumn(roDataColumn.DataColumnSidecar); err != nil {
-		log.WithFields(logrus.Fields{
-			"peerID": pid,
-			"root":   fmt.Sprintf("%#x", root),
-			"index":  retrievedColumn,
-		}).Debug("Failed to verify KZG inclusion proof for retrieved column")
-
-		return false
-	}
-
-	// Filter out columns which did not pass the KZG proof verification.
-	verified, err := peerdas.VerifyDataColumnSidecarKZGProofs(roDataColumn.DataColumnSidecar)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"peerID": pid,
-			"root":   fmt.Sprintf("%#x", root),
-			"index":  retrievedColumn,
-		}).Debug("Error when verifying KZG proof for retrieved column")
-
-		return false
-	}
-
-	if !verified {
-		log.WithFields(logrus.Fields{
-			"peerID": pid,
-			"root":   fmt.Sprintf("%#x", root),
-			"index":  retrievedColumn,
-		}).Debug("Failed to verify KZG proof for retrieved column")
-
-		return false
-	}
-
-	return true
-}
-
 // Run implements DataColumnSampler.
 func (d *dataColumnSampler1D) Run(ctx context.Context) {
 	// verify if we need to run sampling or not, if not, return directly
@@ -172,11 +101,11 @@ func (d *dataColumnSampler1D) Run(ctx context.Context) {
 		return
 	}
 
-	// initialize missing columns.
-	d.missingColumns = make(map[uint64]bool)
+	// initialize non custody columns.
+	d.nonCustodyColumns = make(map[uint64]bool)
 	for i := uint64(0); i < params.BeaconConfig().NumberOfColumns; i++ {
 		if exists := columns[i]; !exists {
-			d.missingColumns[i] = true
+			d.nonCustodyColumns[i] = true
 		}
 	}
 
@@ -306,8 +235,8 @@ func (d *dataColumnSampler1D) handleStateNotification(ctx context.Context, event
 	}
 
 	// Randomize columns for sample selection.
-	randomizedColumns := randomizeColumns(d.missingColumns)
-	samplesCount := min(params.BeaconConfig().SamplesPerSlot, uint64(len(d.missingColumns))-params.BeaconConfig().NumberOfColumns/2)
+	randomizedColumns := randomizeColumns(d.nonCustodyColumns)
+	samplesCount := min(params.BeaconConfig().SamplesPerSlot, uint64(len(d.nonCustodyColumns))-params.BeaconConfig().NumberOfColumns/2)
 	ok, _, err = d.incrementalDAS(ctx, data.BlockRoot, randomizedColumns, samplesCount)
 	if err != nil {
 		log.WithError(err).Error("Failed to run incremental DAS")
@@ -328,7 +257,7 @@ func (d *dataColumnSampler1D) handleStateNotification(ctx context.Context, event
 
 // incrementalDAS samples data columns from active peers using incremental DAS.
 // https://ethresear.ch/t/lossydas-lossy-incremental-and-diagonal-sampling-for-data-availability/18963#incrementaldas-dynamically-increase-the-sample-size-10
-// According to https://github.com/ethereum/consensus-specs/issues/3825, we're going to select query samples exclusively from the missing columns.
+// According to https://github.com/ethereum/consensus-specs/issues/3825, we're going to select query samples exclusively from the non custody columns.
 func (d *dataColumnSampler1D) incrementalDAS(
 	ctx context.Context,
 	root [fieldparams.RootLength]byte,
@@ -458,12 +387,12 @@ func (d *dataColumnSampler1D) sampleDataColumnsFromPeer(
 	ctx context.Context,
 	pid peer.ID,
 	root [fieldparams.RootLength]byte,
-	columns map[uint64]bool,
+	requestedColumns map[uint64]bool,
 ) map[uint64]bool {
-	retrieved := make(map[uint64]bool)
+	retrievedColumns := make(map[uint64]bool)
 
 	req := make(types.DataColumnSidecarsByRootReq, 0)
-	for col := range columns {
+	for col := range requestedColumns {
 		req = append(req, &eth.DataColumnIdentifier{
 			BlockRoot:   root[:],
 			ColumnIndex: col,
@@ -478,36 +407,27 @@ func (d *dataColumnSampler1D) sampleDataColumnsFromPeer(
 	}
 
 	for _, roDataColumn := range roDataColumns {
-		actualRoot := roDataColumn.BlockRoot()
-		if actualRoot != root {
-			// TODO: Should we decrease the peer score here?
-			log.WithFields(logrus.Fields{
-				"peerID":        pid,
-				"requestedRoot": fmt.Sprintf("%#x", root),
-				"actualRoot":    fmt.Sprintf("%#x", actualRoot),
-			}).Warning("Actual root does not match requested root")
-			continue
-		}
-
-		retrieved[roDataColumn.ColumnIndex] = true
-	}
-
-	missingColumns := make(map[uint64]bool)
-	for col := range columns {
-		if !retrieved[col] {
-			missingColumns[col] = true
-			// TODO: Should we decrease the peer score here?
+		if verifyColumn(roDataColumn, root, pid, requestedColumns) {
+			retrievedColumns[roDataColumn.ColumnIndex] = true
 		}
 	}
 
-	log.WithFields(logrus.Fields{
-		"peerID":           pid,
-		"blockRoot":        fmt.Sprintf("%#x", root),
-		"custodiedColumns": d.columnFromPeer[pid],
-		"requestedColumns": sortedListFromMap(columns),
-		"retrievedColumns": sortedListFromMap(retrieved),
-	}).Debug("Peer data column sampling summary")
-	return retrieved
+	if len(retrievedColumns) == len(requestedColumns) {
+		log.WithFields(logrus.Fields{
+			"peerID":           pid,
+			"root":             fmt.Sprintf("%#x", root),
+			"requestedColumns": sortedSliceFromMap(requestedColumns),
+		}).Debug("All requested columns were successfully sampled from peer")
+	} else {
+		log.WithFields(logrus.Fields{
+			"peerID":           pid,
+			"root":             fmt.Sprintf("%#x", root),
+			"requestedColumns": sortedSliceFromMap(requestedColumns),
+			"retrievedColumns": sortedSliceFromMap(retrievedColumns),
+		}).Debug("Some requested columns were not sampled from peer")
+	}
+
+	return retrievedColumns
 }
 
 // randomizeColumns returns a slice containing all the numbers between 0 and colNum in a random order.
@@ -526,8 +446,8 @@ func randomizeColumns(columns map[uint64]bool) []uint64 {
 	return randomized
 }
 
-// sortedListFromMap returns a sorted list of keys from a map.
-func sortedListFromMap(m map[uint64]bool) []uint64 {
+// sortedSliceFromMap returns a sorted list of keys from a map.
+func sortedSliceFromMap(m map[uint64]bool) []uint64 {
 	result := make([]uint64, 0, len(m))
 	for k := range m {
 		result = append(result, k)
@@ -552,4 +472,75 @@ func selectRandomPeer(peers map[peer.ID]bool) peer.ID {
 
 	// This should never be reached.
 	return peer.ID("")
+}
+
+// verifyColumn verifies the retrieved column against the root, the index,
+// the KZG inclusion and the KZG proof.
+func verifyColumn(
+	roDataColumn blocks.RODataColumn,
+	root [32]byte,
+	pid peer.ID,
+	requestedColumns map[uint64]bool,
+) bool {
+	retrievedColumn := roDataColumn.ColumnIndex
+
+	// Filter out columns with incorrect root.
+	actualRoot := roDataColumn.BlockRoot()
+	if actualRoot != root {
+		log.WithFields(logrus.Fields{
+			"peerID":        pid,
+			"requestedRoot": fmt.Sprintf("%#x", root),
+			"actualRoot":    fmt.Sprintf("%#x", actualRoot),
+		}).Debug("Retrieved root does not match requested root")
+
+		return false
+	}
+
+	// Filter out columns that were not requested.
+	if !requestedColumns[retrievedColumn] {
+		columnsToSampleList := sortedSliceFromMap(requestedColumns)
+
+		log.WithFields(logrus.Fields{
+			"peerID":           pid,
+			"requestedColumns": columnsToSampleList,
+			"retrievedColumn":  retrievedColumn,
+		}).Debug("Retrieved column was not requested")
+
+		return false
+	}
+
+	// Filter out columns which did not pass the KZG inclusion proof verification.
+	if err := blocks.VerifyKZGInclusionProofColumn(roDataColumn.DataColumnSidecar); err != nil {
+		log.WithFields(logrus.Fields{
+			"peerID": pid,
+			"root":   fmt.Sprintf("%#x", root),
+			"index":  retrievedColumn,
+		}).Debug("Failed to verify KZG inclusion proof for retrieved column")
+
+		return false
+	}
+
+	// Filter out columns which did not pass the KZG proof verification.
+	verified, err := peerdas.VerifyDataColumnSidecarKZGProofs(roDataColumn.DataColumnSidecar)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"peerID": pid,
+			"root":   fmt.Sprintf("%#x", root),
+			"index":  retrievedColumn,
+		}).Debug("Error when verifying KZG proof for retrieved column")
+
+		return false
+	}
+
+	if !verified {
+		log.WithFields(logrus.Fields{
+			"peerID": pid,
+			"root":   fmt.Sprintf("%#x", root),
+			"index":  retrievedColumn,
+		}).Debug("Failed to verify KZG proof for retrieved column")
+
+		return false
+	}
+
+	return true
 }
