@@ -936,7 +936,7 @@ func (s *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	var root []byte
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	// Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
 	pathParts := strings.Split(r.URL.Path, "/")
 	blockID := ""
 	if len(pathParts) > 1 {
@@ -1097,7 +1097,7 @@ func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetCommittees")
 	defer span.End()
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	// Since net/http doesn't has any .Vars() method, we need to split the URL path to get the state ID"
 	pathParts := strings.Split(r.URL.Path, "/")
 	stateId := ""
 	if len(pathParts) > 1 {
@@ -1287,7 +1287,7 @@ func (s *Server) GetBlockHeader(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeader")
 	defer span.End()
 
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	// Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
 	pathParts := strings.Split(r.URL.Path, "/")
 	blockID := ""
 	if len(pathParts) > 1 {
@@ -1351,7 +1351,6 @@ func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) 
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetFinalityCheckpoints")
 	defer span.End()
 
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
 	pathParts := strings.Split(r.URL.Path, "/")
 	stateId := ""
 	if len(pathParts) > 1 {

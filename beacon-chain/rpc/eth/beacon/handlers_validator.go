@@ -29,7 +29,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidators")
 	defer span.End()
 
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	// Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
 	pathParts := strings.Split(r.URL.Path, "/")
 	stateId := ""
 	if len(pathParts) > 1 {
@@ -183,7 +183,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidator")
 	defer span.End()
-	//Need review here 
+	// Need review here 
 	pathParts := strings.Split(r.URL.Path, "/")
 	if len(pathParts) < 4 {
 		httputil.HandleError(w, "state_id and validator_id are required in URL params", http.StatusBadRequest)

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
@@ -33,7 +33,7 @@ func (s *Server) GetStateRoot(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetStateRoot")
 	defer span.End()
 
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	// Since net/http doesn't has any .Vars() method, we need to split the URL path to get the State ID"
 	pathParts := strings.Split(r.URL.Path, "/")
 	stateId := ""
 	if len(pathParts) > 1 {
@@ -92,7 +92,6 @@ func (s *Server) GetRandao(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetRandao")
 	defer span.End()
 
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
 	pathParts := strings.Split(r.URL.Path, "/")
 	stateId := ""
 	if len(pathParts) > 1 {
@@ -164,7 +163,6 @@ func (s *Server) GetSyncCommittees(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetSyncCommittees")
 	defer span.End()
 
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
 	pathParts := strings.Split(r.URL.Path, "/")
 	stateId := ""
 	if len(pathParts) > 1 {
