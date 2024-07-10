@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	// "github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
@@ -54,7 +53,7 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockV2")
 	defer span.End()
 
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
+	// Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
 	pathParts := strings.Split(r.URL.Path, "/")
 	blockId := ""
 	if len(pathParts) > 1 {
@@ -90,7 +89,7 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlindedBlock")
 	defer span.End()
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID
+	// Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID
 	pathParts := strings.Split(r.URL.Path, "/")
 	blockId := ""
 	if len(pathParts) > 1 {
@@ -203,7 +202,7 @@ func (s *Server) getBlockResponseBodyJson(ctx context.Context, blk interfaces.Re
 func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockAttestations")
 	defer span.End()
-	//Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID 
+	// Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID 
 	pathParts := strings.Split(r.URL.Path, "/")
 	blockId := ""
 	if len(pathParts) > 1 {

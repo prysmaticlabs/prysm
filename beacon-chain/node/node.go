@@ -405,7 +405,6 @@ func newRouter(cliCtx *cli.Context)http.Handler {
 		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 	r := http.NewServeMux()
-	// r.Use(middleware.NormalizeQueryValuesHandler)
 	handler := middleware.NormalizeQueryValuesHandler(
 		middleware.CorsHandler(allowedOrigins)(r),
 	)
