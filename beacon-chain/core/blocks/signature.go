@@ -204,12 +204,7 @@ func createAttestationSignatureBatch(
 			return nil, err
 		}
 		indices := ia.GetAttestingIndices()
-		pubkeys := make([][]byte, len(indices))
-		for i := 0; i < len(indices); i++ {
-			pubkeyAtIdx := beaconState.PubkeyAtIndex(primitives.ValidatorIndex(indices[i]))
-			pubkeys[i] = pubkeyAtIdx[:]
-		}
-		aggP, err := bls.AggregatePublicKeys(pubkeys)
+		aggP, err := beaconState.AggregateKeyFromIndices(indices)
 		if err != nil {
 			return nil, err
 		}
