@@ -446,9 +446,9 @@ func (s *Server) GetIndividualVotes(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
 		return
 	}
-	v := make([]structs.IndividualVote, 0, len(votes.IndividualVotes))
+	v := make([]*structs.IndividualVote, 0, len(votes.IndividualVotes))
 	for _, vote := range votes.IndividualVotes {
-		v = append(v, structs.IndividualVote{
+		v = append(v, &structs.IndividualVote{
 			Epoch:                            vote.Epoch,
 			PublicKey:                        vote.PublicKey,
 			ValidatorIndex:                   vote.ValidatorIndex,

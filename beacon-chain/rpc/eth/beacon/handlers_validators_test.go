@@ -1190,7 +1190,7 @@ func TestGetValidatorBalances(t *testing.T) {
 	})
 }
 
-func individualVotesHelper(t *testing.T, request *structs.GetIndividualVotesRequest, s *Server) (string, structs.GetIndividualVotesResponse) {
+func individualVotesHelper(t *testing.T, request *structs.GetIndividualVotesRequest, s *Server) (string, *structs.GetIndividualVotesResponse) {
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(request)
 	require.NoError(t, err)
@@ -1219,9 +1219,9 @@ func individualVotesHelper(t *testing.T, request *structs.GetIndividualVotesRequ
 		var errorResponse ErrorResponse
 		err = json.Unmarshal(body, &errorResponse)
 		require.NoError(t, err)
-		return errorResponse.Message, structs.GetIndividualVotesResponse{}
+		return errorResponse.Message, &structs.GetIndividualVotesResponse{}
 	}
-	var votes structs.GetIndividualVotesResponse
+	var votes *structs.GetIndividualVotesResponse
 	err = json.Unmarshal(body, &votes)
 	require.NoError(t, err)
 	return "", votes
@@ -1285,8 +1285,8 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	}
 	errStr, resp := individualVotesHelper(t, request, s)
 	require.Equal(t, "", errStr)
-	want := structs.GetIndividualVotesResponse{
-		IndividualVotes: []structs.IndividualVote{
+	want := &structs.GetIndividualVotesResponse{
+		IndividualVotes: []*structs.IndividualVote{
 			{PublicKey: []byte{'a'}, ValidatorIndex: primitives.ValidatorIndex(^uint64(0))},
 		},
 	}
@@ -1299,8 +1299,8 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	}
 	errStr, resp = individualVotesHelper(t, request, s)
 	require.Equal(t, "", errStr)
-	want = structs.GetIndividualVotesResponse{
-		IndividualVotes: []structs.IndividualVote{
+	want = &structs.GetIndividualVotesResponse{
+		IndividualVotes: []*structs.IndividualVote{
 			{ValidatorIndex: 100},
 		},
 	}
@@ -1314,8 +1314,8 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	}
 	errStr, resp = individualVotesHelper(t, request, s)
 	require.Equal(t, "", errStr)
-	want = structs.GetIndividualVotesResponse{
-		IndividualVotes: []structs.IndividualVote{
+	want = &structs.GetIndividualVotesResponse{
+		IndividualVotes: []*structs.IndividualVote{
 			{PublicKey: []byte{'a'}, ValidatorIndex: primitives.ValidatorIndex(^uint64(0))},
 			{PublicKey: []byte{'b'}, ValidatorIndex: primitives.ValidatorIndex(^uint64(0))},
 			{ValidatorIndex: 100},
@@ -1385,8 +1385,8 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	}
 	errStr, resp := individualVotesHelper(t, request, s)
 	require.Equal(t, "", errStr)
-	want := structs.GetIndividualVotesResponse{
-		IndividualVotes: []structs.IndividualVote{
+	want := &structs.GetIndividualVotesResponse{
+		IndividualVotes: []*structs.IndividualVote{
 			{
 				ValidatorIndex:                   0,
 				PublicKey:                        beaconState.Validators()[0].PublicKey,
@@ -1451,8 +1451,8 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 	}
 	errStr, resp := individualVotesHelper(t, request, s)
 	require.Equal(t, "", errStr)
-	want := structs.GetIndividualVotesResponse{
-		IndividualVotes: []structs.IndividualVote{
+	want := &structs.GetIndividualVotesResponse{
+		IndividualVotes: []*structs.IndividualVote{
 			{
 				ValidatorIndex:                   0,
 				PublicKey:                        beaconState.Validators()[0].PublicKey,
@@ -1479,7 +1479,6 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 			},
 		},
 	}
-	log.Info(resp.IndividualVotes)
 	assert.DeepEqual(t, want, resp, "Unexpected response")
 }
 
@@ -1541,8 +1540,8 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 	}
 	errStr, resp := individualVotesHelper(t, request, s)
 	require.Equal(t, "", errStr)
-	want := structs.GetIndividualVotesResponse{
-		IndividualVotes: []structs.IndividualVote{
+	want := &structs.GetIndividualVotesResponse{
+		IndividualVotes: []*structs.IndividualVote{
 			{
 				ValidatorIndex:                   0,
 				PublicKey:                        beaconState.Validators()[0].PublicKey,
@@ -1632,8 +1631,8 @@ func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 	}
 	errStr, resp := individualVotesHelper(t, request, s)
 	require.Equal(t, "", errStr)
-	want := structs.GetIndividualVotesResponse{
-		IndividualVotes: []structs.IndividualVote{
+	want := &structs.GetIndividualVotesResponse{
+		IndividualVotes: []*structs.IndividualVote{
 			{
 				ValidatorIndex:                   0,
 				PublicKey:                        beaconState.Validators()[0].PublicKey,
@@ -1723,8 +1722,8 @@ func TestServer_GetIndividualVotes_CapellaEndOfEpoch(t *testing.T) {
 	}
 	errStr, resp := individualVotesHelper(t, request, s)
 	require.Equal(t, "", errStr)
-	want := structs.GetIndividualVotesResponse{
-		IndividualVotes: []structs.IndividualVote{
+	want := &structs.GetIndividualVotesResponse{
+		IndividualVotes: []*structs.IndividualVote{
 			{
 				ValidatorIndex:                   0,
 				PublicKey:                        beaconState.Validators()[0].PublicKey,

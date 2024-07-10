@@ -206,7 +206,7 @@ type GetIndividualVotesRequest struct {
 }
 
 type GetIndividualVotesResponse struct {
-	IndividualVotes []IndividualVote `json:"individual_votes"`
+	IndividualVotes []*IndividualVote `json:"individual_votes"`
 }
 
 type IndividualVote struct {
