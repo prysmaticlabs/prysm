@@ -11,7 +11,7 @@ var TracingEnabled = false
 
 // StartSpan is a wrapper over the opencensus package method. This is to allow us to skip
 // calling that particular method if tracing has been disabled.
-func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (context.Context, trace.SpanInterface) {
+func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (context.Context, *trace.Span) {
 	if !TracingEnabled {
 		// Return an empty span if tracing has been disabled.
 		return ctx, trace.NewSpan(EmptySpan{})
