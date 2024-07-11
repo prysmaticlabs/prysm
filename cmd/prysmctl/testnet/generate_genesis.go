@@ -174,11 +174,11 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 		)
 	}
 	if err := setGlobalParams(); err != nil {
-		return fmt.Errorf("could not set config params: %v", err)
+		return fmt.Errorf("could not set config params: %w", err)
 	}
 	st, err := generateGenesis(cliCtx.Context)
 	if err != nil {
-		return fmt.Errorf("could not generate genesis state: %v", err)
+		return fmt.Errorf("could not generate genesis state: %w", err)
 	}
 
 	if outputJson != "" {
@@ -218,7 +218,7 @@ func setGlobalParams() error {
 	}
 	cfg, err := params.ByName(generateGenesisStateFlags.ConfigName)
 	if err != nil {
-		return fmt.Errorf("unable to find config using name %s: %v", generateGenesisStateFlags.ConfigName, err)
+		return fmt.Errorf("unable to find config using name %s: %w", generateGenesisStateFlags.ConfigName, err)
 	}
 	return params.SetActive(cfg.Copy())
 }

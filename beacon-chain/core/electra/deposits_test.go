@@ -113,6 +113,80 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				require.Equal(t, 0, len(remaining))
 			},
 		},
+		{
+			name: "exiting validator deposit postponed",
+			state: func() state.BeaconState {
+				st := stateWithActiveBalanceETH(t, 1_000)
+				require.NoError(t, st.SetDepositBalanceToConsume(0))
+				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
+				deps := make([]*eth.PendingBalanceDeposit, 5)
+				for i := 0; i < len(deps); i += 1 {
+					deps[i] = &eth.PendingBalanceDeposit{
+						Amount: uint64(amountAvailForProcessing) / 5,
+						Index:  primitives.ValidatorIndex(i),
+					}
+				}
+				require.NoError(t, st.SetPendingBalanceDeposits(deps))
+				v, err := st.ValidatorAtIndex(0)
+				require.NoError(t, err)
+				v.ExitEpoch = 10
+				v.WithdrawableEpoch = 20
+				require.NoError(t, st.UpdateValidatorAtIndex(0, v))
+				return st
+			}(),
+			check: func(t *testing.T, st state.BeaconState) {
+				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
+				res, err := st.DepositBalanceToConsume()
+				require.NoError(t, err)
+				require.Equal(t, primitives.Gwei(0), res)
+				// Validators 1..4 should have their balance increased
+				for i := primitives.ValidatorIndex(1); i < 4; i++ {
+					b, err := st.BalanceAtIndex(i)
+					require.NoError(t, err)
+					require.Equal(t, params.BeaconConfig().MinActivationBalance+uint64(amountAvailForProcessing)/5, b)
+				}
+
+				// All of the balance deposits should have been processed, except validator index 0 was
+				// added back to the pending deposits queue.
+				remaining, err := st.PendingBalanceDeposits()
+				require.NoError(t, err)
+				require.Equal(t, 1, len(remaining))
+			},
+		},
+		{
+			name: "exited validator balance increased",
+			state: func() state.BeaconState {
+				st := stateWithActiveBalanceETH(t, 1_000)
+				deps := make([]*eth.PendingBalanceDeposit, 1)
+				for i := 0; i < len(deps); i += 1 {
+					deps[i] = &eth.PendingBalanceDeposit{
+						Amount: 1_000_000,
+						Index:  primitives.ValidatorIndex(i),
+					}
+				}
+				require.NoError(t, st.SetPendingBalanceDeposits(deps))
+				v, err := st.ValidatorAtIndex(0)
+				require.NoError(t, err)
+				v.ExitEpoch = 2
+				v.WithdrawableEpoch = 8
+				require.NoError(t, st.UpdateValidatorAtIndex(0, v))
+				require.NoError(t, st.UpdateBalancesAtIndex(0, 100_000))
+				return st
+			}(),
+			check: func(t *testing.T, st state.BeaconState) {
+				res, err := st.DepositBalanceToConsume()
+				require.NoError(t, err)
+				require.Equal(t, primitives.Gwei(0), res)
+				b, err := st.BalanceAtIndex(0)
+				require.NoError(t, err)
+				require.Equal(t, uint64(1_100_000), b)
+
+				// All of the balance deposits should have been processed.
+				remaining, err := st.PendingBalanceDeposits()
+				require.NoError(t, err)
+				require.Equal(t, 0, len(remaining))
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
