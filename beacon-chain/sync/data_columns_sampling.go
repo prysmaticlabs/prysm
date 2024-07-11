@@ -67,9 +67,9 @@ func newDataColumnSampler1D(
 	stateNotifier statefeed.Notifier,
 ) *dataColumnSampler1D {
 	numColumns := params.BeaconConfig().NumberOfColumns
-	columnToPeerMap := make(map[uint64]map[peer.ID]bool, numColumns)
+	peerFromColumn := make(map[uint64]map[peer.ID]bool, numColumns)
 	for i := uint64(0); i < numColumns; i++ {
-		columnToPeerMap[i] = make(map[peer.ID]bool)
+		peerFromColumn[i] = make(map[peer.ID]bool)
 	}
 
 	return &dataColumnSampler1D{
@@ -78,7 +78,7 @@ func newDataColumnSampler1D(
 		ctxMap:         ctxMap,
 		stateNotifier:  stateNotifier,
 		columnFromPeer: make(map[peer.ID]map[uint64]bool),
-		peerFromColumn: columnToPeerMap,
+		peerFromColumn: peerFromColumn,
 	}
 }
 
@@ -168,6 +168,18 @@ func (d *dataColumnSampler1D) refreshPeerInfo() {
 		for column := range columns {
 			d.peerFromColumn[column][pid] = true
 		}
+	}
+
+	log.WithField("columnFromPeer", d.columnFromPeer).Debug("Peer info refreshed")
+
+	columnWithNoPeers := make([]uint64, 0)
+	for column, peers := range d.peerFromColumn {
+		if len(peers) == 0 {
+			columnWithNoPeers = append(columnWithNoPeers, column)
+		}
+	}
+	if len(columnWithNoPeers) > 0 {
+		log.WithField("columnWithNoPeers", columnWithNoPeers).Warn("Some columns have no peers responsible for custody")
 	}
 }
 
