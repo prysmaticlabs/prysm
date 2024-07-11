@@ -463,7 +463,7 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 			SuggestedFeeRecipient: hexutil.Encode(feeRecipient),
 			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
 		}
-	case version.Deneb, version.Electra:
+	case version.Deneb:
 		withdrawals, _, err := headState.ExpectedWithdrawals()
 		if err != nil {
 			return write(w, flusher, "Could not get head state expected withdrawals: "+err.Error())
