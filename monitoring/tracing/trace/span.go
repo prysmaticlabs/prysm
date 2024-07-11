@@ -32,7 +32,7 @@ func NewContext(parent context.Context, s *trace.Span) context.Context {
 // if tracing is disabled.
 func FromContext(ctx context.Context) *trace.Span {
 	if !TracingEnabled {
-		return nil
+		return trace.NewSpan(EmptySpan{})
 	}
 	return trace.FromContext(ctx)
 }
