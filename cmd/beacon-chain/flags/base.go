@@ -31,6 +31,23 @@ var (
 			"Boost is an additional percentage to multiple local block value. Use builder block if: builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)",
 		Value: 10,
 	}
+	// MinBuilderBid sets an absolute value for the builder bid that this
+	// node will accept without reverting to local building
+	MinBuilderBid = &cli.Uint64Flag{
+		Name: "min-builder-bid",
+		Usage: "An absolute value in Gwei that the builder bid has to have in order for this beacon node to use the builder's block. Anything less than this value" +
+			" and the beacon will revert to local building.",
+		Value: 0,
+	}
+	// MinBuilderDiff sets an absolute value for the difference between the
+	// builder's  bid  and the local block value that this node will accept
+	// without reverting to local building
+	MinBuilderDiff = &cli.Uint64Flag{
+		Name: "min-builder-to-local-difference",
+		Usage: "An absolute value in Gwei that the builder bid has to have in order for this beacon node to use the builder's block. Anything less than this value" +
+			" and the beacon will revert to local building.",
+		Value: 0,
+	}
 	// ExecutionEngineEndpoint provides an HTTP access endpoint to connect to an execution client on the execution layer
 	ExecutionEngineEndpoint = &cli.StringFlag{
 		Name:  "execution-endpoint",

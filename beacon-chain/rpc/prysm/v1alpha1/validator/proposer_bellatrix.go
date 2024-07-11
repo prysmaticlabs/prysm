@@ -96,6 +96,24 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		// Compare payload values between local and builder. Default to the local value if it is higher.
 		localValueGwei := primitives.WeiToGwei(local.Bid)
 		builderValueGwei := primitives.WeiToGwei(bid.Value())
+		// Use local block if min bid is not attained
+		if builderValueGwei < primitives.Gwei(params.BeaconConfig().MinBuilderBid) {
+			log.WithFields(logrus.Fields{
+				"localGweiValue":   localValueGwei,
+				"builderGweiValue": builderValueGwei,
+			}).Warn("Proposer: using local execution payload because min bid not attained")
+			return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
+		}
+
+		// Use local block if min difference is not attained
+		if builderValueGwei < localValueGwei+primitives.Gwei(params.BeaconConfig().MinBuilderDiff) {
+			log.WithFields(logrus.Fields{
+				"localGweiValue":   localValueGwei,
+				"builderGweiValue": builderValueGwei,
+			}).Warn("Proposer: using local execution payload because min difference with local value was not attained")
+			return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
+		}
+
 		// Use builder payload if the following in true:
 		// builder_bid_value * builderBoostFactor(default 100) > local_block_value * (local-block-value-boost + 100)
 		boost := primitives.Gwei(params.BeaconConfig().LocalBlockValueBoost)
