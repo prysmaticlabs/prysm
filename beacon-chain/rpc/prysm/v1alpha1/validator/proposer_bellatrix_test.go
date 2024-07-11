@@ -420,7 +420,41 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
 
-		require.LogsContain(t, hook, "builderGweiValue=1 localBoostPercentage=0 localGweiValue=2")
+		require.LogsContain(t, hook, "\"Proposer: using local execution payload because min difference with local value was not attained\" builderGweiValue=1 localGweiValue=2")
+	})
+	t.Run("Builder configured. Builder block does not achieve min bid", func(t *testing.T) {
+		cfg := params.BeaconConfig().Copy()
+		cfg.MinBuilderBid = 5
+		params.OverrideBeaconConfig(cfg)
+
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		require.NoError(t, err)
+		elBid := primitives.Uint64ToWei(2 * 1e9)
+		ed, err := blocks.NewWrappedExecutionData(&v1.ExecutionPayloadCapella{BlockNumber: 3})
+		require.NoError(t, err)
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed, Bid: elBid}}
+		b := blk.Block()
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		_, err = builderBid.Header()
+		require.NoError(t, err)
+		builderKzgCommitments, err := builderBid.BlobKzgCommitments()
+		if builderBid.Version() >= version.Deneb {
+			require.NoError(t, err)
+		}
+		require.DeepEqual(t, [][]uint8{}, builderKzgCommitments)
+		_, bundle, err := setExecutionData(context.Background(), blk, res, builderBid, defaultBuilderBoostFactor)
+		require.NoError(t, err)
+		require.IsNil(t, bundle)
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
+
+		require.LogsContain(t, hook, "\"Proposer: using local execution payload because min bid not attained\" builderGweiValue=1 localGweiValue=2")
+		cfg.MinBuilderBid = 0
+		params.OverrideBeaconConfig(cfg)
 	})
 	t.Run("Builder configured. Local block and local boost has higher value", func(t *testing.T) {
 		cfg := params.BeaconConfig().Copy()
