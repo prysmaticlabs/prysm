@@ -11,10 +11,10 @@ var TracingEnabled = false
 
 // StartSpan is a wrapper over the opencensus package method. This is to allow us to skip
 // calling that particular method if tracing has been disabled.
-func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (context.Context, *trace.Span) {
+func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (context.Context, trace.SpanInterface) {
 	if !TracingEnabled {
 		// Return an empty span if tracing has been disabled.
-		return ctx, nil
+		return ctx, trace.NewSpan(EmptySpan{})
 	}
 	return trace.StartSpan(ctx, name, o...)
 }
@@ -50,4 +50,48 @@ func StringAttribute(key, value string) trace.Attribute {
 // BoolAttribute --
 func BoolAttribute(key string, value bool) trace.Attribute {
 	return trace.BoolAttribute(key, value)
+}
+
+type EmptySpan struct{}
+
+func (e EmptySpan) IsRecordingEvents() bool {
+	return false
+}
+
+func (e EmptySpan) End() {
+}
+
+func (e EmptySpan) SpanContext() trace.SpanContext {
+	return trace.SpanContext{}
+}
+
+func (e EmptySpan) SetName(name string) {
+
+}
+
+func (e EmptySpan) SetStatus(status trace.Status) {
+
+}
+
+func (e EmptySpan) AddAttributes(attributes ...trace.Attribute) {
+}
+
+func (e EmptySpan) Annotate(attributes []trace.Attribute, str string) {
+
+}
+
+func (e EmptySpan) Annotatef(attributes []trace.Attribute, format string, a ...interface{}) {
+}
+
+func (e EmptySpan) AddMessageSendEvent(messageID, uncompressedByteSize, compressedByteSize int64) {
+}
+
+func (e EmptySpan) AddMessageReceiveEvent(messageID, uncompressedByteSize, compressedByteSize int64) {
+}
+
+func (e EmptySpan) AddLink(l trace.Link) {
+}
+
+func (e EmptySpan) String() string {
+	return ""
 }
