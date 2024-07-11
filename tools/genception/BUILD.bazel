@@ -1,5 +1,38 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+
 alias(
     name = "methodicalgen",
-    actual = "@com_github_offchainlabs_methodical_ssz//cmd/ssz",
+    actual = "@com_github_offchainlabs_methodical_ssz//cmd/ssz:ssz",
     visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "bazel.go",
+        "bazel_json_builder.go",
+        "build_context.go",
+        "driver_request.go",
+        "flatpackage.go",
+        "json_packages_driver.go",
+        "main.go",
+        "packageregistry.go",
+        "utils.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/v5/tools/genception",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "genception",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["gopackagesdriver_test.go"],
+    embed = [":go_default_library"],
+    deps = ["@io_bazel_rules_go//go/tools/bazel_testing:go_default_library"],
 )

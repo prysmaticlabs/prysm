@@ -16,7 +16,6 @@ package driver
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -34,8 +33,22 @@ func NewPackageRegistry(pkgs ...*FlatPackage) *PackageRegistry {
 	return pr
 }
 
+func rewritePackage(pkg *FlatPackage) {
+	pkg.ID = pkg.PkgPath
+	for k := range pkg.Imports {
+		/*
+			if strings.HasPrefix(imp, "std/") {
+				pkg.Imports[i] = fmt.Sprintf("std/%s", imp)
+			}
+		*/
+		// rewrite package ID mapping to be the same as the path
+		pkg.Imports[k] = k
+	}
+}
+
 func (pr *PackageRegistry) Add(pkgs ...*FlatPackage) *PackageRegistry {
 	for _, pkg := range pkgs {
+		rewritePackage(pkg)
 		pr.packages[pkg.PkgPath] = pkg
 
 		if pkg.IsStdlib() {
@@ -82,7 +95,7 @@ func (pr *PackageRegistry) walk(acc map[string]*FlatPackage, root string) {
 	pkg := pr.packages[root]
 
 	if pkg == nil {
-		fmt.Fprintf(os.Stderr, "Error: package ID not found %v\n", root)
+		log.WithField("root", root).Error("package ID not found")
 		return
 	}
 
@@ -95,8 +108,18 @@ func (pr *PackageRegistry) walk(acc map[string]*FlatPackage, root string) {
 }
 
 func (pr *PackageRegistry) Query(req *DriverRequest, queries []string) ([]string, []*FlatPackage) {
-	retRoots := make([]string, 0)
-	retPkgs := make([]*FlatPackage, 0)
+	walkedPackages := map[string]*FlatPackage{}
+	retRoots := make([]string, 0, len(queries))
+	for _, rootPkg := range queries {
+		retRoots = append(retRoots, rootPkg)
+		pr.walk(walkedPackages, rootPkg)
+	}
+
+	retPkgs := make([]*FlatPackage, 0, len(walkedPackages))
+	for _, pkg := range walkedPackages {
+		retPkgs = append(retPkgs, pkg)
+	}
+
 	return retRoots, retPkgs
 }
 

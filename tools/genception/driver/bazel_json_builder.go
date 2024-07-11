@@ -130,8 +130,27 @@ type PathResolver struct {
 	execRoot   string
 }
 
+const (
+	prefixExecRoot   = "__BAZEL_EXECROOT__"
+	prefixOutputBase = "__BAZEL_OUTPUT_BASE__"
+	prefixWorkspace  = "__BAZEL_WORKSPACE__"
+)
+
+var prefixes = []string{prefixExecRoot, prefixOutputBase, prefixWorkspace}
+
 func (r PathResolver) Resolve(path string) string {
-	path = strings.Replace(path, "__BAZEL_EXECROOT__", r.execRoot, 1)
-	path = strings.Replace(path, "__BAZEL_OUTPUT_BASE__", r.outputBase, 1)
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(path, prefix) {
+			for _, rpl := range []string{r.execRoot, r.outputBase} {
+				rp := strings.Replace(path, prefix, rpl, 1)
+				_, err := os.Stat(rp)
+				if err == nil {
+					return rp
+				}
+			}
+			return path
+		}
+	}
+	log.WithField("path", path).Warn("unrecognized path prefix when resolving source paths in json import metadata")
 	return path
 }

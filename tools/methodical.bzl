@@ -28,6 +28,7 @@ load("@io_bazel_rules_go//go:def.bzl", "GoLibrary", "GoSource", "go_context")
 load("@io_bazel_rules_go//go/tools/gopackagesdriver:aspect.bzl", "go_pkg_info_aspect", "GoPkgInfo")
 
 _METHODICAL_TOOL = Label("//tools/genception:methodicalgen")
+_GENCEPTION_TOOL = Label("//tools/genception/cmd:cmd")
 _FASTSSZ_DEP = Label("@com_github_prysmaticlabs_fastssz//:go_default_library")
 
 """
@@ -114,6 +115,7 @@ def _ssz_methodical_impl(ctx):
                 # presumably path is full path from exec root
                 all_json_files[jf.path] = ""
         inputs += pkginfo.go_pkg_driver_srcs.to_list()
+        inputs += pkginfo.go_pkg_driver_export_file.to_list()
         # we just ned to get the stdlib once
         #if stdlib == '' and hasattr(pkginfo, "go_pkg_driver_stdlib_json_file"):
         if stdlib == '':
@@ -129,24 +131,35 @@ def _ssz_methodical_impl(ctx):
         #echo "{out_base}" &&
     out_base = ctx.outputs.out.root.path
 
-    args = ["ssz gen"]
-    args.append("--type-names=" + ",".join(ctx.attr.type_names))
-    args.append(ctx.attr.library)
+    args = [
+        "gen",
+        "--type-names=" + ",".join(ctx.attr.type_names),
+        "--output=" + ctx.outputs.out.path,
+    ]
+    if ctx.attr.target_package_name != "":
+        args.append("--override-package-name=" + ctx.attr.target_package_name)
 
+    # Positional arg, needs to be after other --flags.
+    args.append(ctx.attr.target_package)
+
+    codegen_bins = [ctx.file.genception, ctx.file.methodical_tool]
     ctx.actions.run_shell(
         env = {
             "PACKAGE_JSON_INVENTORY": all_pkg_list.path,
             "PACKAGES_BASE": out_base,
             # GOCACHE is required starting in Go 1.12
             "GOCACHE": "./.gocache",
+            "GOPACKAGESDRIVER": ctx.file.genception.path,
+            "GOPACKAGESDRIVER_LOG_PATH": out_base + "/gopackagesdriver.log",
         },
-        inputs =  [all_pkg_list] + inputs,
+
+        inputs =  [all_pkg_list] + inputs + codegen_bins,
         outputs = [ctx.outputs.out],
         command = """
         echo $PACKAGE_JSON_INVENTORY &&
         echo $PACKAGES_BASE &&
         echo $PWD &&
-        {cmd} {args} > {out}
+        {cmd} {args}
         """.format(
             #sample = sample,
             out_base = out_base,
@@ -184,6 +197,18 @@ ssz_methodical = rule(
         "target_package": attr.string(
             doc = "The package path containing the types in type_names.",
             mandatory = True,
+        ),
+        "target_package_name": attr.string(
+            doc = "Override the name of the package the generated file is in (eg 'eth' for proto/prysm/v1alpha1)",
+            mandatory = False,
+        ),
+        "genception": attr.label(
+            doc = "gopackagesdriver tool for package discovery inside bazel sandbox",
+            default = _GENCEPTION_TOOL,
+            allow_single_file = True,
+            executable = True,
+            cfg = "exec",
+            mandatory = False,
         ),
     },
     toolchains = ["@io_bazel_rules_go//go:toolchain"],

@@ -81,7 +81,11 @@ func WalkFlatPackagesFromJSON(jsonFile string, onPkg PackageFunc) error {
 	if err != nil {
 		return fmt.Errorf("unable to open package JSON file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.WithError(err).WithField("file", f.Name()).Error("unable to close file")
+		}
+	}()
 
 	decoder := json.NewDecoder(f)
 	for decoder.More() {
@@ -95,12 +99,11 @@ func WalkFlatPackagesFromJSON(jsonFile string, onPkg PackageFunc) error {
 	return nil
 }
 
-func (fp *FlatPackage) ResolvePaths(prf PathResolverFunc) error {
+func (fp *FlatPackage) ResolvePaths(prf PathResolverFunc) {
 	resolvePathsInPlace(prf, fp.CompiledGoFiles)
 	resolvePathsInPlace(prf, fp.GoFiles)
 	resolvePathsInPlace(prf, fp.OtherFiles)
 	fp.ExportFile = prf(fp.ExportFile)
-	return nil
 }
 
 // FilterFilesForBuildTags filters the source files given the current build

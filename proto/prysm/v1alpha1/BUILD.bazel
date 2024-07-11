@@ -166,7 +166,7 @@ ssz_gen_marshal(
         "//math:go_default_library",
     ],
     objs = ssz_phase0_objs,
-    exclude_objs = methodical_objs + ssz_phase0_objs,
+    exclude_objs = methodical_objs,
 )
 
 ssz_gen_marshal(
@@ -287,14 +287,11 @@ ssz_methodical(
     name = "methodical_attempt",
     deps = [
         ":go_proto",
-        #"//consensus-types/primitives:go_default_library",
-        #"//proto/engine/v1:go_default_library",
-        #"//math:go_default_library",
-        #"@com_github_prysmaticlabs_fastssz//:go_default_library",
     ],
     type_names = ["Attestation"],
     target_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
-    out = "derp.go",
+    target_package_name = "eth",
+    out = "methodical.ssz.go",
 )
 
 go_proto_library(

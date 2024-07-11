@@ -23,7 +23,10 @@ func filterSourceFilesForTags(files []string) []string {
 		dir, filename := filepath.Split(f)
 		ext := filepath.Ext(f)
 
-		match, _ := buildContext.MatchFile(dir, filename)
+		match, err := buildContext.MatchFile(dir, filename)
+		if err != nil {
+			log.WithError(err).WithField("file", f).Warn("error matching file")
+		}
 		// MatchFile filters out anything without a file extension. In the
 		// case of CompiledGoFiles (in particular gco processed files from
 		// the cache), we want them.
