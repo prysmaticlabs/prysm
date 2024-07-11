@@ -27,12 +27,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	prysmnetwork "github.com/prysmaticlabs/prysm/v5/network"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 var _ runtime.Service = (*Service)(nil)

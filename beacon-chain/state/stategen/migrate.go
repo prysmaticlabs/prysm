@@ -7,8 +7,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // MigrateToCold advances the finalized info in between the cold and hot state sections.

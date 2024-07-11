@@ -3,9 +3,9 @@ package kv
 import (
 	"context"
 
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
-	"go.opencensus.io/trace"
 )
 
 // LastValidatedCheckpoint returns the latest fully validated checkpoint in beacon chain.

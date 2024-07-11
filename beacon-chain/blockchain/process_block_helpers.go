@@ -19,11 +19,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // CurrentSlot returns the current slot based on time.

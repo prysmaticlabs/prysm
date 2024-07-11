@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"go.opencensus.io/trace"
 )
 
 func setWithdrawalAddresses(c *cli.Context) error {

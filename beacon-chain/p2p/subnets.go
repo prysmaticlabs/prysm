@@ -20,8 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"go.opencensus.io/trace"
 )
 
 var attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount

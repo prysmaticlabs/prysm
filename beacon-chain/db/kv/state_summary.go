@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
-	"go.opencensus.io/trace"
 )
 
 // SaveStateSummary saves a state summary object to the DB.

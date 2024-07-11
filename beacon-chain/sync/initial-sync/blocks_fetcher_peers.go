@@ -11,10 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // peerLock returns peer lock for a given peer. If lock is not found, it is created.

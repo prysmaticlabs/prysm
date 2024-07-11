@@ -4,8 +4,8 @@ import (
 	"context"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	bolt "go.etcd.io/bbolt"
-	"go.opencensus.io/trace"
 )
 
 // EIPImportBlacklistedPublicKeys returns keys that were marked as blacklisted during EIP-3076 slashing

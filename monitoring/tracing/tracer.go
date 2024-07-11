@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"contrib.go.opencensus.io/exporter/jaeger"
+	prysmTrace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -19,6 +20,7 @@ func Setup(serviceName, processName, endpoint string, sampleFraction float64, en
 		trace.ApplyConfig(trace.Config{DefaultSampler: trace.NeverSample()})
 		return nil
 	}
+	prysmTrace.TracingEnabled = true
 
 	if serviceName == "" {
 		return errors.New("tracing service name cannot be empty")

@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
-	"go.opencensus.io/trace"
 )
 
 // ExecuteStateTransitionNoVerifyAnySig defines the procedure for a state transition function.

@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
-	"go.opencensus.io/trace"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 )
 
 const signatureVerificationInterval = 50 * time.Millisecond

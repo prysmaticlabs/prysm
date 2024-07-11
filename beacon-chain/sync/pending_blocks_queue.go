@@ -21,10 +21,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
-	"go.opencensus.io/trace"
+	goTrace "go.opencensus.io/trace"
 )
 
 var processPendingBlocksPeriod = slots.DivideSlotBy(3 /* times per slot */)
@@ -157,7 +158,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 }
 
 // startInnerSpan starts a new tracing span for an inner loop and returns the new context and span.
-func startInnerSpan(ctx context.Context, slot primitives.Slot) (context.Context, *trace.Span) {
+func startInnerSpan(ctx context.Context, slot primitives.Slot) (context.Context, *goTrace.Span) {
 	ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
 	span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 	return ctx, span
@@ -254,7 +255,7 @@ func (s *Service) getBestPeers() []core.PeerID {
 
 func (s *Service) checkIfBlockIsBad(
 	ctx context.Context,
-	span *trace.Span,
+	span *goTrace.Span,
 	slot primitives.Slot,
 	b interfaces.ReadOnlySignedBeaconBlock,
 	blkRoot [32]byte,
