@@ -7,6 +7,5 @@ import (
 )
 
 func TestMainnet_Electra_Random(t *testing.T) {
-	t.Skip("TODO: Electra")
 	sanity.RunBlockProcessingTest(t, "mainnet", "random/random/pyspec_tests")
 }
