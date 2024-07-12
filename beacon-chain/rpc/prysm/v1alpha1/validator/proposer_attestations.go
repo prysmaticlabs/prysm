@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/kv"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -74,7 +73,6 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 			return nil, errors.Wrap(err, "could not create attestation ID")
 		}
 		attsByDataRoot[id] = append(attsByDataRoot[id], att)
-	}
 	}
 
 	for r, as := range attsByDataRoot {
