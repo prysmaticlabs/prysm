@@ -175,6 +175,9 @@ var Commands = []*cli.Command{
 					if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 						return err
 					}
+					if err := features.ValidateNetworkFlags(cliCtx); err != nil {
+						return err
+					}
 					if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 						return err
 					}

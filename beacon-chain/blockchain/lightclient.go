@@ -69,7 +69,7 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	// assert sum(block.message.body.sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
 	syncAggregate, err := block.Block().Body().SyncAggregate()
 	if err != nil {
-		return nil, fmt.Errorf("could not get sync aggregate %v", err)
+		return nil, fmt.Errorf("could not get sync aggregate %w", err)
 	}
 
 	if syncAggregate.SyncCommitteeBits.Count() < params.BeaconConfig().MinSyncCommitteeParticipants {
@@ -85,18 +85,18 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	header := state.LatestBlockHeader()
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get state root %v", err)
+		return nil, fmt.Errorf("could not get state root %w", err)
 	}
 	header.StateRoot = stateRoot[:]
 
 	headerRoot, err := header.HashTreeRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not get header root %v", err)
+		return nil, fmt.Errorf("could not get header root %w", err)
 	}
 
 	blockRoot, err := block.Block().HashTreeRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not get block root %v", err)
+		return nil, fmt.Errorf("could not get block root %w", err)
 	}
 
 	if headerRoot != blockRoot {
@@ -114,14 +114,14 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	// attested_header.state_root = hash_tree_root(attested_state)
 	attestedStateRoot, err := attestedState.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attested state root %v", err)
+		return nil, fmt.Errorf("could not get attested state root %w", err)
 	}
 	attestedHeader.StateRoot = attestedStateRoot[:]
 
 	// assert hash_tree_root(attested_header) == block.message.parent_root
 	attestedHeaderRoot, err := attestedHeader.HashTreeRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not get attested header root %v", err)
+		return nil, fmt.Errorf("could not get attested header root %w", err)
 	}
 
 	if attestedHeaderRoot != block.Block().ParentRoot() {
@@ -175,13 +175,13 @@ func NewLightClientFinalityUpdateFromBeaconState(
 		if finalizedBlock.Block().Slot() != 0 {
 			tempFinalizedHeader, err := finalizedBlock.Header()
 			if err != nil {
-				return nil, fmt.Errorf("could not get finalized header %v", err)
+				return nil, fmt.Errorf("could not get finalized header %w", err)
 			}
 			finalizedHeader = migration.V1Alpha1SignedHeaderToV1(tempFinalizedHeader).GetMessage()
 
 			finalizedHeaderRoot, err := finalizedHeader.HashTreeRoot()
 			if err != nil {
-				return nil, fmt.Errorf("could not get finalized header root %v", err)
+				return nil, fmt.Errorf("could not get finalized header root %w", err)
 			}
 
 			if finalizedHeaderRoot != bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root) {
@@ -204,7 +204,7 @@ func NewLightClientFinalityUpdateFromBeaconState(
 		var bErr error
 		finalityBranch, bErr = attestedState.FinalizedRootProof(ctx)
 		if bErr != nil {
-			return nil, fmt.Errorf("could not get finalized root proof %v", bErr)
+			return nil, fmt.Errorf("could not get finalized root proof %w", bErr)
 		}
 	} else {
 		finalizedHeader = &ethpbv1.BeaconBlockHeader{

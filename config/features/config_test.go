@@ -46,3 +46,50 @@ func TestConfigureBeaconConfig(t *testing.T) {
 	c := Get()
 	assert.Equal(t, true, c.EnableSlasher)
 }
+
+func TestValidateNetworkFlags(t *testing.T) {
+	// Define the test cases
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{
+			name:    "No network flags",
+			args:    []string{"command"},
+			wantErr: false,
+		},
+		{
+			name:    "One network flag",
+			args:    []string{"command", "--sepolia"},
+			wantErr: false,
+		},
+		{
+			name:    "Two network flags",
+			args:    []string{"command", "--sepolia", "--holesky"},
+			wantErr: true,
+		},
+		{
+			name:    "All network flags",
+			args:    []string{"command", "--sepolia", "--holesky", "--mainnet"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a new CLI app with the ValidateNetworkFlags function as the Before action
+			app := &cli.App{
+				Before: ValidateNetworkFlags,
+				Action: func(c *cli.Context) error {
+					return nil
+				},
+				// Set the network flags for the app
+				Flags: NetworkFlags,
+			}
+			err := app.Run(tt.args)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateNetworkFlags() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

@@ -1,11 +1,12 @@
 package attestation
 
 import (
-	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
@@ -44,19 +45,21 @@ func NewId(att ethpb.Att, source IdSource) (Id, error) {
 		copy(id[1:], h[:])
 		return id, nil
 	case Data:
-		data := att.GetData()
-		if att.Version() >= version.Electra {
-			committeeIndices := att.CommitteeBitsVal().BitIndices()
-			if len(committeeIndices) != 1 {
-				return Id{}, fmt.Errorf("%d committee bits are set instead of 1", len(committeeIndices))
-			}
-			dataCopy := ethpb.CopyAttestationData(att.GetData())
-			dataCopy.CommitteeIndex = primitives.CommitteeIndex(committeeIndices[0])
-			data = dataCopy
-		}
-		h, err := data.HashTreeRoot()
+		dataHash, err := att.GetData().HashTreeRoot()
 		if err != nil {
 			return Id{}, err
+		}
+		h := dataHash
+		if att.Version() >= version.Electra {
+			committeeIndices := att.CommitteeBitsVal().BitIndices()
+			if len(committeeIndices) == 0 {
+				return Id{}, errors.New("no committee bits are set")
+			}
+			stringCommitteeIndices := make([]string, len(committeeIndices))
+			for i, ix := range committeeIndices {
+				stringCommitteeIndices[i] = strconv.Itoa(ix)
+			}
+			h = hash.Hash(append(dataHash[:], []byte(strings.Join(stringCommitteeIndices, ","))...))
 		}
 		copy(id[1:], h[:])
 		return id, nil

@@ -470,13 +470,9 @@ func IsEligibleForActivation(state state.ReadOnlyCheckpoint, validator *ethpb.Va
 	return isEligibleForActivation(validator.ActivationEligibilityEpoch, validator.ActivationEpoch, finalizedEpoch)
 }
 
-// IsEligibleForActivationUsingTrie checks if the validator is eligible for activation.
-func IsEligibleForActivationUsingTrie(state state.ReadOnlyCheckpoint, validator state.ReadOnlyValidator) bool {
-	cpt := state.FinalizedCheckpoint()
-	if cpt == nil {
-		return false
-	}
-	return isEligibleForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
+// IsEligibleForActivationUsingROVal checks if the validator is eligible for activation using the provided read only validator.
+func IsEligibleForActivationUsingROVal(state state.ReadOnlyCheckpoint, validator state.ReadOnlyValidator) bool {
+	return isEligibleForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), state.FinalizedCheckpointEpoch())
 }
 
 // isEligibleForActivation carries out the logic for IsEligibleForActivation*
@@ -588,13 +584,13 @@ func IsSameWithdrawalCredentials(a, b *ethpb.Validator) bool {
 //	        and validator.withdrawable_epoch <= epoch
 //	        and balance > 0
 //	    )
-func IsFullyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch primitives.Epoch) bool {
+func IsFullyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch primitives.Epoch, fork int) bool {
 	if val == nil || balance <= 0 {
 		return false
 	}
 
 	// Electra / EIP-7251 logic
-	if epoch >= params.BeaconConfig().ElectraForkEpoch {
+	if fork >= version.Electra {
 		return HasExecutionWithdrawalCredentials(val) && val.WithdrawableEpoch <= epoch
 	}
 
@@ -604,12 +600,12 @@ func IsFullyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch pr
 // IsPartiallyWithdrawableValidator returns whether the validator is able to perform a
 // partial withdrawal. This function assumes that the caller has a lock on the state.
 // This method conditionally calls the fork appropriate implementation based on the epoch argument.
-func IsPartiallyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch primitives.Epoch) bool {
+func IsPartiallyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch primitives.Epoch, fork int) bool {
 	if val == nil {
 		return false
 	}
 
-	if epoch < params.BeaconConfig().ElectraForkEpoch {
+	if fork < version.Electra {
 		return isPartiallyWithdrawableValidatorCapella(val, balance, epoch)
 	}
 
