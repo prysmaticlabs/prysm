@@ -325,15 +325,21 @@ func (b *BeaconChainConfig) Eth1DataVotesLength() uint64 {
 // PreviousEpochAttestationsLength returns the maximum length of the pending
 // attestation list for the previous epoch, computed from the parameters in
 // BeaconChainConfig.
-func (b *BeaconChainConfig) PreviousEpochAttestationsLength() uint64 {
-	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+func (b *BeaconChainConfig) PreviousEpochAttestationsLength(fork int) uint64 {
+	if fork < version.Electra {
+		return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+	}
+	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestationsElectra))
 }
 
 // CurrentEpochAttestationsLength returns the maximum length of the pending
 // attestation list for the current epoch, computed from the parameters in
 // BeaconChainConfig.
-func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
-	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+func (b *BeaconChainConfig) CurrentEpochAttestationsLength(fork int) uint64 {
+	if fork < version.Electra {
+		return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+	}
+	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestationsElectra))
 }
 
 // TtfbTimeoutDuration returns the time duration of the timeout.

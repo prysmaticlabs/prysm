@@ -93,6 +93,8 @@ func ProcessOperations(
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
 
-	// TODO: Process consolidations from execution header.
+	if err := ProcessConsolidationRequests(ctx, st, exe.ConsolidationRequests()); err != nil {
+		return nil, errors.Wrap(err, "could not process consolidations")
+	}
 	return st, nil
 }

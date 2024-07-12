@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -79,7 +80,7 @@ func BenchmarkAppendPreviousEpochAttestations(b *testing.B) {
 	st, err := InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	require.NoError(b, err)
 
-	max := params.BeaconConfig().PreviousEpochAttestationsLength()
+	max := params.BeaconConfig().PreviousEpochAttestationsLength(version.Phase0)
 	if max < 2 {
 		b.Fatalf("previous epoch attestations length is less than 2: %d", max)
 	}

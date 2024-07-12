@@ -359,7 +359,7 @@ func (bs *Server) AttestationPoolElectra(_ context.Context, req *ethpb.Attestati
 }
 
 func blockAttestations[T ethpb.Att](blocks []interfaces.ReadOnlySignedBeaconBlock) ([]T, error) {
-	blockAtts := make([]ethpb.Att, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	blockAtts := make([]ethpb.Att, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks))) // TODO: Electra
 	for _, blk := range blocks {
 		blockAtts = append(blockAtts, blk.Block().Body().Attestations()...)
 	}
@@ -388,7 +388,7 @@ func blockIndexedAttestations[T ethpb.IndexedAtt](
 	blocks []interfaces.ReadOnlySignedBeaconBlock,
 	stateGen stategen.StateManager,
 ) ([]T, error) {
-	attsArray := make([]ethpb.Att, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	attsArray := make([]ethpb.Att, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks))) // TODO: Electra
 	for _, b := range blocks {
 		attsArray = append(attsArray, b.Block().Body().Attestations()...)
 	}

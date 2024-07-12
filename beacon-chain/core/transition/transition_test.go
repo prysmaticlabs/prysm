@@ -3,8 +3,11 @@ package transition_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
+	"github.com/golang/snappy"
+	"github.com/google/go-cmp/cmp"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -16,6 +19,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -25,6 +29,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 func init() {
@@ -110,6 +116,55 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	mix, err := beaconState.RandaoMixAtIndex(1)
 	require.NoError(t, err)
 	assert.DeepNotEqual(t, oldMix, mix, "Did not expect new and old randao mix to equal")
+}
+
+func TestExecuteStateTransition_SpecTestRandom0TestCauseDebugging(t *testing.T) {
+	var blks []interfaces.ReadOnlySignedBeaconBlock
+	for _, fp := range []string{
+		"testdata/blocks_0.ssz_snappy",
+		"testdata/blocks_1.ssz_snappy",
+	} {
+		b, err := os.ReadFile(fp)
+		require.NoError(t, err)
+		decoded, err := snappy.Decode(nil, b)
+		require.NoError(t, err)
+		block := &ethpb.SignedBeaconBlockElectra{}
+		require.NoError(t, block.UnmarshalSSZ(decoded))
+		wsb, err := consensusblocks.NewSignedBeaconBlock(block)
+		require.NoError(t, err)
+		blks = append(blks, wsb)
+	}
+
+	var states []state.BeaconState
+
+	for _, fp := range []string{
+		"testdata/pre.ssz_snappy",
+		"testdata/post.ssz_snappy",
+	} {
+		base := &ethpb.BeaconStateElectra{}
+		b, err := os.ReadFile(fp)
+		require.NoError(t, err)
+		decoded, err := snappy.Decode(nil, b)
+		require.NoError(t, err)
+		require.NoError(t, base.UnmarshalSSZ(decoded))
+		state, err := state_native.InitializeFromProtoElectra(base)
+		require.NoError(t, err)
+		states = append(states, state)
+	}
+
+	s := states[0]
+	for _, wsb := range blks {
+		st, err := transition.ExecuteStateTransition(context.Background(), s, wsb)
+		if err != nil {
+			break
+		}
+		s = st
+	}
+
+	pre, post := s.ToProtoUnsafe().(proto.Message), states[1].ToProtoUnsafe().(proto.Message)
+	if !proto.Equal(pre, post) {
+		t.Log(cmp.Diff(pre, post, protocmp.Transform()))
+	}
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {

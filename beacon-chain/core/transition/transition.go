@@ -356,11 +356,15 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interf
 		)
 	}
 
-	if uint64(len(body.Attestations())) > params.BeaconConfig().MaxAttestations {
+	maxAtts := params.BeaconConfig().MaxAttestationsElectra
+	if state.Version() < version.Electra {
+		maxAtts = params.BeaconConfig().MaxAttestations
+	}
+	if uint64(len(body.Attestations())) > maxAtts {
 		return nil, fmt.Errorf(
 			"number of attestations (%d) in block body exceeds allowed threshold of %d",
 			len(body.Attestations()),
-			params.BeaconConfig().MaxAttestations,
+			maxAtts,
 		)
 	}
 

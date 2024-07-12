@@ -69,7 +69,7 @@ go_test(
     ],
     data = [
         "//testing/benchmark/benchmark_files:benchmark_data",
-    ],
+    ] + glob(["testdata/**"]),
     embed = [":go_default_library"],
     shard_count = 3,
     deps = [
@@ -84,6 +84,7 @@ go_test(
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
+        "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/hash:go_default_library",
@@ -97,8 +98,11 @@ go_test(
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "//time/slots:go_default_library",
+        "@com_github_golang_snappy//:go_default_library",
+        "@com_github_google_go_cmp//cmp:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//testing/protocmp:go_default_library",
     ],
 )
