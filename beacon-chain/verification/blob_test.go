@@ -403,6 +403,26 @@ func TestSidecarInclusionProven(t *testing.T) {
 	require.NotNil(t, v.results.result(RequireSidecarInclusionProven))
 }
 
+func TestSidecarInclusionProvenElectra(t *testing.T) {
+	// GenerateTestDenebBlockWithSidecar is supposed to generate valid inclusion proofs
+	_, blobs := util.GenerateTestElectraBlockWithSidecar(t, [32]byte{}, 1, 1)
+	b := blobs[0]
+
+	ini := Initializer{}
+	v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
+	require.NoError(t, v.SidecarInclusionProven())
+	require.Equal(t, true, v.results.executed(RequireSidecarInclusionProven))
+	require.NoError(t, v.results.result(RequireSidecarInclusionProven))
+
+	// Invert bits of the first byte of the body root to mess up the proof
+	byte0 := b.SignedBlockHeader.Header.BodyRoot[0]
+	b.SignedBlockHeader.Header.BodyRoot[0] = byte0 ^ 255
+	v = ini.NewBlobVerifier(b, GossipSidecarRequirements)
+	require.ErrorIs(t, v.SidecarInclusionProven(), ErrSidecarInclusionProofInvalid)
+	require.Equal(t, true, v.results.executed(RequireSidecarInclusionProven))
+	require.NotNil(t, v.results.result(RequireSidecarInclusionProven))
+}
+
 func TestSidecarKzgProofVerified(t *testing.T) {
 	// GenerateTestDenebBlockWithSidecar is supposed to generate valid commitments
 	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, 1)
