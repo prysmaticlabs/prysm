@@ -98,9 +98,9 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			// call push proposer setting at the start of each epoch to account for the following edge case:
+			// call push proposer settings often to account for the following edge cases:
 			// proposer is activated at the start of epoch and tries to propose immediately
-
+			// account has changed in the middle of an epoch
 			go func() {
 				if err := v.PushProposerSettings(ctx, km, slot, time.Now().Add(1*time.Minute)); err != nil {
 					log.WithError(err).Warn("Failed to update proposer settings")
