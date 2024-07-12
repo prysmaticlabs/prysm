@@ -130,8 +130,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 			if err != nil {
 				log.WithError(err).Error("Could not get attestation committee")
 				tracing.AnnotateError(span, err)
+				return
 			}
-
 			indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
 			if err != nil {
 				log.WithError(err).Error("Could not convert to indexed attestation")
