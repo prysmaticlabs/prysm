@@ -156,7 +156,12 @@ func topLevelRoots(body interfaces.ReadOnlyBeaconBlockBody) ([][]byte, error) {
 
 	// Attester slashings
 	as := body.AttesterSlashings()
-	root, err = ssz.MerkleizeListSSZ(as, params.BeaconConfig().MaxAttesterSlashings)
+	bodyVersion := body.Version()
+	if bodyVersion < version.Electra {
+		root, err = ssz.MerkleizeListSSZ(as, params.BeaconConfig().MaxAttesterSlashings)
+	} else {
+		root, err = ssz.MerkleizeListSSZ(as, params.BeaconConfig().MaxAttesterSlashingsElectra)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +169,11 @@ func topLevelRoots(body interfaces.ReadOnlyBeaconBlockBody) ([][]byte, error) {
 
 	// Attestations
 	att := body.Attestations()
-	root, err = ssz.MerkleizeListSSZ(att, params.BeaconConfig().MaxAttestations)
+	if bodyVersion < version.Electra {
+		root, err = ssz.MerkleizeListSSZ(att, params.BeaconConfig().MaxAttestations)
+	} else {
+		root, err = ssz.MerkleizeListSSZ(att, params.BeaconConfig().MaxAttestationsElectra)
+	}
 	if err != nil {
 		return nil, err
 	}
