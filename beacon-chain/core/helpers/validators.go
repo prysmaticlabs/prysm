@@ -584,13 +584,13 @@ func IsSameWithdrawalCredentials(a, b *ethpb.Validator) bool {
 //	        and validator.withdrawable_epoch <= epoch
 //	        and balance > 0
 //	    )
-func IsFullyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch primitives.Epoch) bool {
+func IsFullyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch primitives.Epoch, fork int) bool {
 	if val == nil || balance <= 0 {
 		return false
 	}
 
 	// Electra / EIP-7251 logic
-	if epoch >= params.BeaconConfig().ElectraForkEpoch {
+	if fork >= version.Electra {
 		return HasExecutionWithdrawalCredentials(val) && val.WithdrawableEpoch <= epoch
 	}
 
@@ -600,12 +600,12 @@ func IsFullyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch pr
 // IsPartiallyWithdrawableValidator returns whether the validator is able to perform a
 // partial withdrawal. This function assumes that the caller has a lock on the state.
 // This method conditionally calls the fork appropriate implementation based on the epoch argument.
-func IsPartiallyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch primitives.Epoch) bool {
+func IsPartiallyWithdrawableValidator(val *ethpb.Validator, balance uint64, epoch primitives.Epoch, fork int) bool {
 	if val == nil {
 		return false
 	}
 
-	if epoch < params.BeaconConfig().ElectraForkEpoch {
+	if fork < version.Electra {
 		return isPartiallyWithdrawableValidatorCapella(val, balance, epoch)
 	}
 
