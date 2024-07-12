@@ -73,8 +73,8 @@ github.com/MariusVanDerWijden/tx-fuzz v1.3.3-0.20240227085032-f70dd7c85c97/go.mo
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
-github.com/OffchainLabs/methodical-ssz v0.0.0-20240711150643-5017097f88fe h1:5coxXLfuStJqzUfStcG0UGQ/2vYjNU6X1UItlx1BQH4=
-github.com/OffchainLabs/methodical-ssz v0.0.0-20240711150643-5017097f88fe/go.mod h1:Ndc6p2Xsj0fV3Mx4Ufv32RZ4K9SvWhzhOxtMuTXDU1I=
+github.com/OffchainLabs/methodical-ssz v0.0.0-20240712201410-cd5a2975775c h1:56W3xtZyeLcbKjt5staxK/jMdE6ql69rPhbb/XmZPhA=
+github.com/OffchainLabs/methodical-ssz v0.0.0-20240712201410-cd5a2975775c/go.mod h1:Ndc6p2Xsj0fV3Mx4Ufv32RZ4K9SvWhzhOxtMuTXDU1I=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=

@@ -8,7 +8,7 @@ require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20240209103030-ec53fa766bf8
 	github.com/MariusVanDerWijden/tx-fuzz v1.3.3-0.20240227085032-f70dd7c85c97
-	github.com/OffchainLabs/methodical-ssz v0.0.0-20240711150643-5017097f88fe
+	github.com/OffchainLabs/methodical-ssz v0.0.0-20240712201410-cd5a2975775c
 	github.com/aristanetworks/goarista v0.0.0-20200805130819-fd197cf57d96
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2

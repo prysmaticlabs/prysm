@@ -1,3 +1,4 @@
+load("@prysm//tools/go:def.bzl", "go_library")
 load("@bazel_gazelle//:def.bzl", "gazelle")
 load("@com_github_atlassian_bazel_tools//gometalinter:def.bzl", "gometalinter")
 load("@com_github_atlassian_bazel_tools//goimports:def.bzl", "goimports")
@@ -285,4 +286,15 @@ sh_binary(
     name = "prysm_sh",
     srcs = ["prysm.sh"],
     visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = ["derp.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v5",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_prysmaticlabs_fastssz//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
 )

@@ -23,7 +23,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["index_test.go"],
+    srcs = [
+        "index_test.go",
+        "packageregistry_test.go",
+    ],
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = ["//testing/require:go_default_library"],

@@ -36,13 +36,40 @@ func NewPackageRegistry(pkgs ...*FlatPackage) *PackageRegistry {
 func rewritePackage(pkg *FlatPackage) {
 	pkg.ID = pkg.PkgPath
 	for k := range pkg.Imports {
-		/*
-			if strings.HasPrefix(imp, "std/") {
-				pkg.Imports[i] = fmt.Sprintf("std/%s", imp)
-			}
-		*/
 		// rewrite package ID mapping to be the same as the path
 		pkg.Imports[k] = k
+	}
+}
+
+// returns true if a is a superset of b
+func isSuperset(a, b []string) bool {
+	if len(a) < len(b) {
+		return false
+	}
+	bi := 0
+	for i := range a {
+		if a[i] == b[bi] {
+			bi++
+			if bi == len(b) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// Update merges the contents of 2 packages together in the instance where they have the same package path.
+// This can happen when the gopackages aspect traverses to a child label and generates separate json files transitive targets.
+// For example, in //proto/prysm/v1alpha1 we see both `:go_default_library` and `:go_proto` from `//proto/engine/v1`.
+// Without the merge, `:go_proto` can overwrite `:go_default_library`, leaving sources files out of the final graph.
+func (pr *PackageRegistry) Update(pkg *FlatPackage) {
+	existing, ok := pr.packages[pkg.PkgPath]
+	if !ok {
+		pr.packages[pkg.PkgPath] = pkg
+		return
+	}
+	if isSuperset(pkg.GoFiles, existing.GoFiles) {
+		existing.GoFiles = pkg.GoFiles
 	}
 }
 

@@ -47,13 +47,13 @@ proto_library(
 # Go
 ##############################################################################
 
-methodical_objs = [ "Attestation" ]
-
 ssz_phase0_objs = [
     "AggregateAttestationAndProof",
+    "Attestation",
     "AttestationData",
     "AttesterSlashing",
     "BeaconBlock",
+    "BeaconBlockBody",
     "BeaconBlockHeader",
     "BeaconState",
     "Checkpoint",
@@ -66,6 +66,7 @@ ssz_phase0_objs = [
     "ForkData",
     "HistoricalBatch",
     "IndexedAttestation",
+    "PendingAttestation",
     "PowBlock",
     "ProposerSlashing",
     "SignedAggregateAttestationAndProof",
@@ -73,7 +74,6 @@ ssz_phase0_objs = [
     "SignedBeaconBlockHeader",
     "SignedVoluntaryExit",
     "SigningData",
-    "Status",
     "Status",
     "Validator",
     "VoluntaryExit",
@@ -86,7 +86,6 @@ ssz_altair_objs = [
     "ContributionAndProof",
     "SignedBeaconBlockAltair",
     "SignedContributionAndProof",
-    "SyncAggregate",
     "SyncAggregate",
     "SyncAggregatorSelectionData",
     "SyncCommittee",
@@ -116,7 +115,6 @@ ssz_capella_objs = [
     "SignedBLSToExecutionChange",
     "SignedBeaconBlockCapella",
     "SignedBlindedBeaconBlockCapella",
-    "Withdrawal",
 ]
 
 ssz_deneb_objs = [
@@ -140,14 +138,13 @@ ssz_electra_objs = [
     "AttestationElectra",
     "AttesterSlashingElectra",
     "BeaconBlockElectra",
-    "BeaconBlockElectra",
+    "BeaconBlockBodyElectra",
     "BeaconStateElectra",
     "BlindedBeaconBlockBodyElectra",
     "BlindedBeaconBlockElectra",
     "Consolidation",
     "IndexedAttestationElectra",
     "PendingBalanceDeposit",
-    "PendingBalanceDeposits",
     "PendingConsolidation",
     "PendingPartialWithdrawal",
     "SignedAggregateAttestationAndProofElectra",
@@ -156,83 +153,124 @@ ssz_electra_objs = [
     "SignedConsolidation",
 ]
 
-ssz_gen_marshal(
-    name = "ssz_generated_phase0",
-    go_proto = ":go_proto",
+ssz_methodical(
+    name = "methodical_phase0",
+    deps = [":go_proto"],
+    type_names = ssz_phase0_objs,
+    target_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
+    target_package_name = "eth",
     out = "phase0.ssz.go",
-    includes = [
-        "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
-        "//math:go_default_library",
-    ],
-    objs = ssz_phase0_objs,
-    exclude_objs = methodical_objs,
 )
 
-ssz_gen_marshal(
-    name = "ssz_generated_altair",
-    go_proto = ":go_proto",
+ssz_methodical(
+    name = "methodical_altair",
+    deps = [":go_proto"],
+    type_names = ssz_altair_objs,
+    target_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
+    target_package_name = "eth",
     out = "altair.ssz.go",
-    includes = [
-        "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
-        "//math:go_default_library",
-    ],
-    objs = ssz_altair_objs,
-    exclude_objs = methodical_objs + ssz_phase0_objs,
 )
 
-ssz_gen_marshal(
-    name = "ssz_generated_bellatrix",
-    go_proto = ":go_proto",
+ssz_methodical(
+    name = "methodical_bellatrix",
+    deps = [":go_proto"],
+    type_names = ssz_bellatrix_objs,
+    target_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
+    target_package_name = "eth",
     out = "bellatrix.ssz.go",
-    includes = [
-        "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
-        "//math:go_default_library",
-    ],
-    objs = ssz_bellatrix_objs,
-    exclude_objs = methodical_objs + ssz_phase0_objs + ssz_altair_objs,
 )
 
-ssz_gen_marshal(
-    name = "ssz_generated_capella",
-    go_proto = ":go_proto",
+ssz_methodical(
+    name = "methodical_capella",
+    deps = [":go_proto"],
+    type_names = ssz_capella_objs,
+    target_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
+    target_package_name = "eth",
     out = "capella.ssz.go",
-    includes = [
-        "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
-        "//math:go_default_library",
-    ],
-    objs = ssz_capella_objs,
-    exclude_objs = methodical_objs + ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs,
 )
 
-ssz_gen_marshal(
-    name = "ssz_generated_deneb",
-    go_proto = ":go_proto",
+ssz_methodical(
+    name = "methodical_deneb",
+    deps = [":go_proto"],
+    type_names = ssz_deneb_objs,
+    target_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
+    target_package_name = "eth",
     out = "deneb.ssz.go",
-    includes = [
-        "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
-        "//math:go_default_library",
-    ],
-    objs = ssz_deneb_objs,
-    exclude_objs = methodical_objs + ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs,
 )
 
-ssz_gen_marshal(
-    name = "ssz_generated_electra",
-    go_proto = ":go_proto",
+ssz_methodical(
+    name = "methodical_electra",
+    deps = [":go_proto"],
+    type_names = ssz_electra_objs,
+    target_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
+    target_package_name = "eth",
     out = "electra.ssz.go",
-    includes = [
-        "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
-        "//math:go_default_library",
-    ],
-    objs = ssz_electra_objs,
-    exclude_objs = methodical_objs + ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs + ssz_deneb_objs,
 )
+
+#ssz_gen_marshal(
+#    name = "ssz_generated_altair",
+#    go_proto = ":go_proto",
+#    out = "altair.ssz.go",
+#    includes = [
+#        "//consensus-types/primitives:go_default_library",
+#        "//proto/engine/v1:go_default_library",
+#        "//math:go_default_library",
+#    ],
+#    objs = ssz_altair_objs,
+#    exclude_objs = ssz_phase0_objs,
+#)
+
+#ssz_gen_marshal(
+#    name = "ssz_generated_bellatrix",
+#    go_proto = ":go_proto",
+#    out = "bellatrix.ssz.go",
+#    includes = [
+#        "//consensus-types/primitives:go_default_library",
+#        "//proto/engine/v1:go_default_library",
+#        "//math:go_default_library",
+#    ],
+#    objs = ssz_bellatrix_objs,
+#    exclude_objs = ssz_phase0_objs + ssz_altair_objs,
+#)
+
+#ssz_gen_marshal(
+#    name = "ssz_generated_capella",
+#    go_proto = ":go_proto",
+#    out = "capella.ssz.go",
+#    includes = [
+#        "//consensus-types/primitives:go_default_library",
+#        "//proto/engine/v1:go_default_library",
+#        "//math:go_default_library",
+#    ],
+#    objs = ssz_capella_objs,
+#    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs,
+#)
+
+#ssz_gen_marshal(
+#    name = "ssz_generated_deneb",
+#    go_proto = ":go_proto",
+#    out = "deneb.ssz.go",
+#    includes = [
+#        "//consensus-types/primitives:go_default_library",
+#        "//proto/engine/v1:go_default_library",
+#        "//math:go_default_library",
+#    ],
+#    objs = ssz_deneb_objs,
+#    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs,
+#)
+
+#ssz_gen_marshal(
+#    name = "ssz_generated_electra",
+#    go_proto = ":go_proto",
+#    out = "electra.ssz.go",
+#    includes = [
+#        "//consensus-types/primitives:go_default_library",
+#        "//proto/engine/v1:go_default_library",
+#        "//math:go_default_library",
+#    ],
+#    objs = ssz_electra_objs,
+#    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs + ssz_deneb_objs,
+#)
 
 ssz_gen_marshal(
     name = "ssz_generated_non_core",
@@ -283,17 +321,6 @@ go_proto_library(
     ],
 )
 
-ssz_methodical(
-    name = "methodical_attempt",
-    deps = [
-        ":go_proto",
-    ],
-    type_names = ["Attestation"],
-    target_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
-    target_package_name = "eth",
-    out = "methodical.ssz.go",
-)
-
 go_proto_library(
     name = "go_grpc_gateway_library",
     compilers = [
@@ -326,13 +353,17 @@ go_library(
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
         ":ssz_generated_non_core",  # keep
-        ":ssz_generated_phase0",  # keep
-        ":ssz_generated_altair",  # keep
-        ":ssz_generated_bellatrix",  # keep
-        ":ssz_generated_capella",  # keep
-        ":ssz_generated_deneb",  # keep
-        ":ssz_generated_electra",  # keep
-        ":methodical_attempt", # keep
+        #":ssz_generated_altair",  # keep
+        #":ssz_generated_bellatrix",  # keep
+        #":ssz_generated_capella",  # keep
+        #":ssz_generated_deneb",  # keep
+        #":ssz_generated_electra",  # keep
+        ":methodical_phase0", # keep
+        ":methodical_altair", # keep
+        ":methodical_bellatrix", # keep
+        ":methodical_capella", # keep
+        ":methodical_deneb", # keep
+        ":methodical_electra", # keep
     ],
     embed = [
         ":go_grpc_gateway_library",
