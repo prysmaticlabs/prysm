@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
@@ -44,6 +42,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"go.opencensus.io/trace"
 )
 
 // Service represents a service that handles the internal
@@ -506,7 +505,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	}
 	genesisBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	if err != nil || genesisBlk == nil || genesisBlk.IsNil() {
-		return fmt.Errorf("could not load genesis block: %v", err)
+		return fmt.Errorf("could not load genesis block: %w", err)
 	}
 	genesisBlkRoot, err := genesisBlk.Block().HashTreeRoot()
 	if err != nil {

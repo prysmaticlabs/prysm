@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/golang/protobuf/ptypes/empty"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	statenative "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
@@ -58,15 +57,15 @@ func validatorCountByStatus(validators []*ethpb.Validator, statuses []validator.
 	for _, val := range validators {
 		readOnlyVal, err := statenative.NewValidator(val)
 		if err != nil {
-			return nil, fmt.Errorf("could not convert validator: %v", err)
+			return nil, fmt.Errorf("could not convert validator: %w", err)
 		}
 		valStatus, err := helpers.ValidatorStatus(readOnlyVal, epoch)
 		if err != nil {
-			return nil, fmt.Errorf("could not get validator status: %v", err)
+			return nil, fmt.Errorf("could not get validator status: %w", err)
 		}
 		valSubStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
 		if err != nil {
-			return nil, fmt.Errorf("could not get validator sub status: %v", err)
+			return nil, fmt.Errorf("could not get validator sub status: %w", err)
 		}
 
 		for _, status := range statuses {

@@ -323,6 +323,26 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) ProposeAttestation(arg0, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeAttestation", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).ProposeAttestation), varargs...)
 }
 
+// ProposeAttestationElectra mocks base method.
+func (m *MockBeaconNodeValidatorClient) ProposeAttestationElectra(arg0 context.Context, arg1 *eth.AttestationElectra, arg2 ...grpc.CallOption) (*eth.AttestResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ProposeAttestationElectra", varargs...)
+	ret0, _ := ret[0].(*eth.AttestResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProposeAttestationElectra indicates an expected call of ProposeAttestationElectra.
+func (mr *MockBeaconNodeValidatorClientMockRecorder) ProposeAttestationElectra(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeAttestationElectra", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).ProposeAttestationElectra), varargs...)
+}
+
 // ProposeBeaconBlock mocks base method.
 func (m *MockBeaconNodeValidatorClient) ProposeBeaconBlock(arg0 context.Context, arg1 *eth.GenericSignedBeaconBlock, arg2 ...grpc.CallOption) (*eth.ProposeResponse, error) {
 	m.ctrl.T.Helper()

@@ -82,6 +82,7 @@ go_library(
         "//proto/engine/v1:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/attestation:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation/attestations:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation/sync_contribution:go_default_library",

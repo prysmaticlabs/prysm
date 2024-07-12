@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	f "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
@@ -20,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"go.opencensus.io/trace"
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which

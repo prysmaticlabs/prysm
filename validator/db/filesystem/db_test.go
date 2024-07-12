@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
-
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"

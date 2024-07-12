@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
-
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
