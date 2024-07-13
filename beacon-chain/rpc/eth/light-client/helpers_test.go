@@ -259,7 +259,7 @@ func (l *testlc) checkSyncAggregate(update *ethpbv2.LightClientUpdate) {
 	require.DeepSSZEqual(l.t, syncAggregate.SyncCommitteeSignature, update.SyncAggregate.SyncCommitteeSignature, "SyncAggregate signature is not equal")
 }
 
-func TestisBetterUpdate_newHasSupermajority_notEquals_oldHasSupermajority(t *testing.T) {
+func TestIsBetterUpdate_newHasSupermajority_notEquals_oldHasSupermajority(t *testing.T) {
 	l_old := newTestLc(t).setupTest_SyncCommitteeBits_Equals_Zero()
 	l_new := newTestLc(t).setupTest_SyncCommitteeBits_Equals_MoreThanTwoThirds()
 
@@ -275,5 +275,5 @@ func TestisBetterUpdate_newHasSupermajority_notEquals_oldHasSupermajority(t *tes
 	l_new.checkAttestedHeader(newUpdate)
 	l_new.checkSyncAggregate(newUpdate)
 
-	require.Equal(t, true, isBetterUpdate(newUpdate, oldUpdate))
+	require.Equal(t, true, IsBetterUpdate(newUpdate, oldUpdate))
 }

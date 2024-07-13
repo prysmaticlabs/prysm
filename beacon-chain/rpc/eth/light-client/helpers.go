@@ -314,17 +314,17 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 	}
 }
 
-func isSyncCommitteeUpdate(update *ethpbv2.LightClientUpdate) bool {
+func IsSyncCommitteeUpdate(update *ethpbv2.LightClientUpdate) bool {
 	nextSyncCommitteeBranch := make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
 	return !reflect.DeepEqual(update.NextSyncCommitteeBranch, nextSyncCommitteeBranch)
 }
 
-func isFinalityUpdate(update *ethpbv2.LightClientUpdate) bool {
+func IsFinalityUpdate(update *ethpbv2.LightClientUpdate) bool {
 	finalityBranch := make([][]byte, blockchain.FinalityBranchNumOfLeaves)
 	return !reflect.DeepEqual(update.FinalityBranch, finalityBranch)
 }
 
-func isBetterUpdate(newUpdate, oldUpdate *ethpbv2.LightClientUpdate) bool {
+func IsBetterUpdate(newUpdate, oldUpdate *ethpbv2.LightClientUpdate) bool {
 	maxActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Len()
 	newNumActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Count()
 	oldNumActiveParticipants := oldUpdate.SyncAggregate.SyncCommitteeBits.Count()
@@ -339,16 +339,16 @@ func isBetterUpdate(newUpdate, oldUpdate *ethpbv2.LightClientUpdate) bool {
 	}
 
 	// Compare presence of relevant sync committee
-	newHasRelevantSyncCommittee := isSyncCommitteeUpdate(newUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.SignatureSlot)))
-	oldHasRelevantSyncCommittee := isSyncCommitteeUpdate(oldUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.SignatureSlot)))
+	newHasRelevantSyncCommittee := IsSyncCommitteeUpdate(newUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.SignatureSlot)))
+	oldHasRelevantSyncCommittee := IsSyncCommitteeUpdate(oldUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.SignatureSlot)))
 
 	if newHasRelevantSyncCommittee != oldHasRelevantSyncCommittee {
 		return newHasRelevantSyncCommittee
 	}
 
 	// Compare indication of any finality
-	newHasFinality := isFinalityUpdate(newUpdate)
-	oldHasFinality := isFinalityUpdate(oldUpdate)
+	newHasFinality := IsFinalityUpdate(newUpdate)
+	oldHasFinality := IsFinalityUpdate(oldUpdate)
 	if newHasFinality != oldHasFinality {
 		return newHasFinality
 	}
