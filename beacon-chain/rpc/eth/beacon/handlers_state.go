@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
@@ -33,12 +32,8 @@ func (s *Server) GetStateRoot(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetStateRoot")
 	defer span.End()
 
-	// Since net/http doesn't has any .Vars() method, we need to split the URL path to get the State ID"
-	pathParts := strings.Split(r.URL.Path, "/")
-	stateId := ""
-	if len(pathParts) > 1 {
-		stateId = pathParts[len(pathParts)-1]
-	}
+	stateId:=r.PathValue("state_id");
+	
 
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
@@ -92,11 +87,7 @@ func (s *Server) GetRandao(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetRandao")
 	defer span.End()
 
-	pathParts := strings.Split(r.URL.Path, "/")
-	stateId := ""
-	if len(pathParts) > 1 {
-		stateId = pathParts[len(pathParts)-1]
-	}
+	stateId:=r.PathValue("state_id");
 
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
@@ -163,11 +154,7 @@ func (s *Server) GetSyncCommittees(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetSyncCommittees")
 	defer span.End()
 
-	pathParts := strings.Split(r.URL.Path, "/")
-	stateId := ""
-	if len(pathParts) > 1 {
-		stateId = pathParts[len(pathParts)-1]
-	}
+	stateId:=r.PathValue("state_id");
 
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)

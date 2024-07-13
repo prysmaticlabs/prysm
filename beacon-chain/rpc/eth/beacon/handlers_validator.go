@@ -183,19 +183,14 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidator")
 	defer span.End()
-	// Need review here 
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 4 {
-		httputil.HandleError(w, "state_id and validator_id are required in URL params", http.StatusBadRequest)
-		return
-	}
-	stateId := pathParts[2]
-	valId := pathParts[3]
-
+	
+	stateId:=r.PathValue("state_id");
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
+
+	valId:=r.PathValue("validator_id");
 	if valId == "" {
 		httputil.HandleError(w, "validator_id is required in URL params", http.StatusBadRequest)
 		return
