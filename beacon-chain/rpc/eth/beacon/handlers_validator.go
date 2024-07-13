@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
@@ -28,14 +27,8 @@ import (
 func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidators")
 	defer span.End()
-
-	// Since net/http doesn't has any .Vars() method, we need to split the URL path to get the block ID"
-	pathParts := strings.Split(r.URL.Path, "/")
-	stateId := ""
-	if len(pathParts) > 1 {
-		stateId = pathParts[len(pathParts)-1]
-	}
-
+		
+	stateId:=r.PathValue("state_id");
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -250,13 +243,7 @@ func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorBalances")
 	defer span.End()
 	
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) < 3 {
-		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
-		return
-	}
-	stateId := pathParts[2]
-	
+	stateId:=r.PathValue("state_id");
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
