@@ -208,6 +208,8 @@ func validateDataColumnsByRootRequest(colIdents types.DataColumnSidecarsByRootRe
 	return nil
 }
 
+// DataColumnsRPCMinValidSlot returns the minimum slot that a peer can request data columns for.
+// TODO: Add test
 func DataColumnsRPCMinValidSlot(current primitives.Slot) (primitives.Slot, error) {
 	// Avoid overflow if we're running on a config where deneb is set to far future epoch.
 	if params.BeaconConfig().DenebForkEpoch == math.MaxUint64 || !coreTime.PeerDASIsActive(current) {

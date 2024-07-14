@@ -1033,11 +1033,10 @@ func TestCountCommitments(t *testing.T) {
 	// pre-deneb filtered
 	// variety of commitment counts are accurate, from 1 to max
 	type testcase struct {
-		name      string
-		bwb       func(t *testing.T, c testcase) []blocks.BlockWithROBlobs
-		numBlocks int
-		retStart  primitives.Slot
-		resCount  int
+		name     string
+		bwb      func(t *testing.T, c testcase) []blocks.BlockWithROBlobs
+		retStart primitives.Slot
+		resCount int
 	}
 	cases := []testcase{
 		{
