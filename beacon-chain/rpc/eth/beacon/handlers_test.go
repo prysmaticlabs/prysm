@@ -13,9 +13,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
+
 	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"go.uber.org/mock/gomock"
+
+
+
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -27,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	rpctesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
@@ -45,7 +51,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/mock/gomock"
 )
 
 func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (*eth.SignedBeaconBlock, []*eth.BeaconBlockContainer) {

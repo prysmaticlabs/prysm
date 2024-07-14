@@ -193,6 +193,10 @@ func main() {
 				return errors.Wrap(err, "failed to setup debug")
 			}
 
+			if err := features.ValidateNetworkFlags(ctx); err != nil {
+				return errors.Wrap(err, "provided multiple network flags")
+			}
+
 			return cmd.ValidateNoArgs(ctx)
 		},
 		After: func(ctx *cli.Context) error {

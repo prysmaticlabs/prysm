@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -36,7 +37,7 @@ func Run(t *testing.T, config string, fork int) {
 	}
 }
 
-func runTest(t *testing.T, config string, fork int, basePath string) {
+func runTest(t *testing.T, config string, fork int, basePath string) { // nolint:gocognit
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, _ := utils.TestFolders(t, config, version.String(fork), basePath)
 	if len(testFolders) == 0 {
@@ -143,7 +144,12 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 						require.NoError(t, err)
 						attSSZ, err := snappy.Decode(nil /* dst */, attFile)
 						require.NoError(t, err)
-						att := &ethpb.Attestation{}
+						var att ethpb.Att
+						if fork < version.Electra {
+							att = &ethpb.Attestation{}
+						} else {
+							att = &ethpb.AttestationElectra{}
+						}
 						require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
 						builder.Attestation(t, att)
 					}
@@ -415,7 +421,8 @@ func errAssertionForStep(step Step, expect error) func(t *testing.T, err error) 
 	return func(t *testing.T, err error) {
 		if err != nil {
 			require.ErrorIs(t, err, verification.ErrBlobInvalid)
-			me, ok := err.(verification.VerificationMultiError)
+			var me verification.VerificationMultiError
+			ok := errors.As(err, &me)
 			require.Equal(t, true, ok)
 			fails := me.Failures()
 			// we haven't performed any verification, so all the results should be this type

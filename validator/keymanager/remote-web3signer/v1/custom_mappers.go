@@ -121,35 +121,35 @@ func MapBeaconBlockBody(body *ethpb.BeaconBlockBody) (*BeaconBlockBody, error) {
 	for i, slashing := range body.ProposerSlashings {
 		slashing, err := MapProposerSlashing(slashing)
 		if err != nil {
-			return nil, fmt.Errorf("could not map proposer slashing at index %v: %v", i, err)
+			return nil, fmt.Errorf("could not map proposer slashing at index %v: %w", i, err)
 		}
 		block.ProposerSlashings[i] = slashing
 	}
 	for i, slashing := range body.AttesterSlashings {
 		slashing, err := MapAttesterSlashing(slashing)
 		if err != nil {
-			return nil, fmt.Errorf("could not map attester slashing at index %v: %v", i, err)
+			return nil, fmt.Errorf("could not map attester slashing at index %v: %w", i, err)
 		}
 		block.AttesterSlashings[i] = slashing
 	}
 	for i, attestation := range body.Attestations {
 		attestation, err := MapAttestation(attestation)
 		if err != nil {
-			return nil, fmt.Errorf("could not map attestation at index %v: %v", i, err)
+			return nil, fmt.Errorf("could not map attestation at index %v: %w", i, err)
 		}
 		block.Attestations[i] = attestation
 	}
 	for i, Deposit := range body.Deposits {
 		deposit, err := MapDeposit(Deposit)
 		if err != nil {
-			return nil, fmt.Errorf("could not map deposit at index %v: %v", i, err)
+			return nil, fmt.Errorf("could not map deposit at index %v: %w", i, err)
 		}
 		block.Deposits[i] = deposit
 	}
 	for i, signedVoluntaryExit := range body.VoluntaryExits {
 		signedVoluntaryExit, err := MapSignedVoluntaryExit(signedVoluntaryExit)
 		if err != nil {
-			return nil, fmt.Errorf("could not map signed voluntary exit at index %v: %v", i, err)
+			return nil, fmt.Errorf("could not map signed voluntary exit at index %v: %w", i, err)
 		}
 		block.VoluntaryExits[i] = signedVoluntaryExit
 	}
@@ -322,35 +322,35 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 	for i, slashing := range body.ProposerSlashings {
 		proposer, err := MapProposerSlashing(slashing)
 		if err != nil {
-			return nil, fmt.Errorf("could not map proposer slashing at index %v: %v", i, err)
+			return nil, fmt.Errorf("could not map proposer slashing at index %v: %w", i, err)
 		}
 		block.ProposerSlashings[i] = proposer
 	}
 	for i, slashing := range body.AttesterSlashings {
 		attesterSlashing, err := MapAttesterSlashing(slashing)
 		if err != nil {
-			return nil, fmt.Errorf("could not map attester slashing at index %v: %v", i, err)
+			return nil, fmt.Errorf("could not map attester slashing at index %v: %w", i, err)
 		}
 		block.AttesterSlashings[i] = attesterSlashing
 	}
 	for i, attestation := range body.Attestations {
 		attestation, err := MapAttestation(attestation)
 		if err != nil {
-			return nil, fmt.Errorf("could not map attestation at index %v: %v", i, err)
+			return nil, fmt.Errorf("could not map attestation at index %v: %w", i, err)
 		}
 		block.Attestations[i] = attestation
 	}
 	for i, deposit := range body.Deposits {
 		deposit, err := MapDeposit(deposit)
 		if err != nil {
-			return nil, fmt.Errorf("could not map deposit at index %v: %v", i, err)
+			return nil, fmt.Errorf("could not map deposit at index %v: %w", i, err)
 		}
 		block.Deposits[i] = deposit
 	}
 	for i, exit := range body.VoluntaryExits {
 		exit, err := MapSignedVoluntaryExit(exit)
 		if err != nil {
-			return nil, fmt.Errorf("could not map signed voluntary exit at index %v: %v", i, err)
+			return nil, fmt.Errorf("could not map signed voluntary exit at index %v: %w", i, err)
 		}
 		block.VoluntaryExits[i] = exit
 	}

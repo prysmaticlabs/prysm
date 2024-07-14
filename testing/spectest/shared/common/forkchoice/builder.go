@@ -120,7 +120,7 @@ func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 }
 
 // Attestation receives the attestation and updates forkchoice.
-func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
+func (bb *Builder) Attestation(t testing.TB, a ethpb.Att) {
 	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, params.BeaconConfig().MaximumGossipClockDisparityDuration()))
 }
 

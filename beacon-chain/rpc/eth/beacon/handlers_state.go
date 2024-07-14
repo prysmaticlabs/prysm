@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -42,11 +43,9 @@ func (s *Server) GetStateRoot(w http.ResponseWriter, r *http.Request) {
 
 	stateRoot, err := s.Stater.StateRoot(ctx, []byte(stateId))
 	if err != nil {
-		if rootNotFoundErr, ok := err.(*lookup.StateRootNotFoundError); ok {
+		var rootNotFoundErr *lookup.StateRootNotFoundError
+		if errors.As(err, &rootNotFoundErr) {
 			httputil.HandleError(w, "State root not found: "+rootNotFoundErr.Error(), http.StatusNotFound)
-			return
-		} else if parseErr, ok := err.(*lookup.StateIdParseError); ok {
-			httputil.HandleError(w, "Invalid state ID: "+parseErr.Error(), http.StatusBadRequest)
 			return
 		}
 		httputil.HandleError(w, "Could not get state root: "+err.Error(), http.StatusInternalServerError)
@@ -273,7 +272,7 @@ func currentCommitteeIndicesFromState(st state.BeaconState) ([]string, *ethpbalp
 	committee, err := st.CurrentSyncCommittee()
 	if err != nil {
 		return nil, nil, fmt.Errorf(
-			"could not get sync committee: %v", err,
+			"could not get sync committee: %w", err,
 		)
 	}
 
@@ -284,7 +283,7 @@ func nextCommitteeIndicesFromState(st state.BeaconState) ([]string, *ethpbalpha.
 	committee, err := st.NextSyncCommittee()
 	if err != nil {
 		return nil, nil, fmt.Errorf(
-			"could not get sync committee: %v", err,
+			"could not get sync committee: %w", err,
 		)
 	}
 
@@ -298,7 +297,7 @@ func extractSyncSubcommittees(st state.BeaconState, committee *ethpbalpha.SyncCo
 		pubkeys, err := altair.SyncSubCommitteePubkeys(committee, primitives.CommitteeIndex(i))
 		if err != nil {
 			return nil, fmt.Errorf(
-				"failed to get subcommittee pubkeys: %v", err,
+				"failed to get subcommittee pubkeys: %w", err,
 			)
 		}
 		subcommittee := make([]string, len(pubkeys))

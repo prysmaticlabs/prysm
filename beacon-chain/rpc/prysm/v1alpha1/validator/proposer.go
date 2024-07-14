@@ -89,7 +89,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	// Set proposer index.
 	idx, err := helpers.BeaconProposerIndex(ctx, head)
 	if err != nil {
-		return nil, fmt.Errorf("could not calculate proposer index %v", err)
+		return nil, fmt.Errorf("could not calculate proposer index %w", err)
 	}
 	sBlk.SetProposerIndex(idx)
 
@@ -194,7 +194,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		sBlk.SetEth1Data(eth1Data)
 
 		// Set deposit and attestation.
-		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
+		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, sBlk.Block().Slot(), eth1Data) // TODO: split attestations and deposits
 		if err != nil {
 			sBlk.SetDeposits([]*ethpb.Deposit{})
 			if err := sBlk.SetAttestations([]ethpb.Att{}); err != nil {
