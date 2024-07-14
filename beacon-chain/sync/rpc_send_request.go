@@ -267,15 +267,24 @@ func SendDataColumnSidecarByRoot(
 	return roDataColumns, nil
 }
 
-func SendDataColumnsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle, p2pApi p2p.P2P, pid peer.ID, ctxMap ContextByteVersions, req *pb.DataColumnSidecarsByRangeRequest) ([]blocks.RODataColumn, error) {
+func SendDataColumnsByRangeRequest(
+	ctx context.Context,
+	tor blockchain.TemporalOracle,
+	p2pApi p2p.P2P,
+	pid peer.ID,
+	ctxMap ContextByteVersions,
+	req *pb.DataColumnSidecarsByRangeRequest,
+) ([]blocks.RODataColumn, error) {
 	topic, err := p2p.TopicFromMessage(p2p.DataColumnSidecarsByRangeName, slots.ToEpoch(tor.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}
 	log.WithFields(logrus.Fields{
-		"topic":     topic,
-		"startSlot": req.StartSlot,
-		"count":     req.Count,
+		"topic":      topic,
+		"startSlot":  req.StartSlot,
+		"count":      req.Count,
+		"columns":    req.Columns,
+		"totalCount": req.Count * uint64(len(req.Columns)),
 	}).Debug("Sending data column by range request")
 	stream, err := p2pApi.Send(ctx, req, topic, pid)
 	if err != nil {
