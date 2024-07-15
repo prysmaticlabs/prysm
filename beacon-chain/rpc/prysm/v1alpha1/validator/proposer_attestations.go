@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -17,6 +18,7 @@ import (
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -114,6 +116,12 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		return nil, err
 	}
 	atts = sorted.limitToMaxAttestations()
+
+	atts, err = vs.filterAttestationBySignature(ctx, atts, latestState)
+	if err != nil {
+		return nil, err
+	}
+
 	return atts, nil
 }
 
@@ -308,4 +316,110 @@ func (vs *Server) deleteAttsInPool(ctx context.Context, atts []ethpb.Att) error 
 		}
 	}
 	return nil
+}
+
+// filterAttestationBySignature filters attestations based on specific conditions:
+// 1. If the attestation is from the current epoch and the target is the same target, skip signature verification.
+// 2. If the attestation is from the previous epoch and the target root is the same target as previous epoch target, skip signature verification.
+// The rest of the attestations are sent for batch signature verification. If the batch verification fails,
+// each signature is verified individually to filter out invalid attestations from the batch.
+func (vs *Server) filterAttestationBySignature(ctx context.Context, atts proposerAtts, st state.BeaconState) (proposerAtts, error) {
+	headSlot := vs.HeadFetcher.HeadSlot()
+	targetEpoch := slots.ToEpoch(headSlot)
+	headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	targetRoot, err := vs.HeadFetcher.TargetRootForEpoch([32]byte(headRoot), targetEpoch)
+	if err != nil {
+		return nil, err
+	}
+	prevTargetEpoch := primitives.Epoch(0)
+	if targetEpoch > 2 {
+		prevTargetEpoch = targetEpoch.Sub(1)
+	}
+	prevTargetRoot, err := vs.HeadFetcher.TargetRootForEpoch([32]byte(headRoot), prevTargetEpoch)
+	if err != nil {
+		return nil, err
+	}
+
+	currentSlot := vs.TimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(currentSlot)
+
+	var verifiedAtts proposerAtts
+	var unverifiedAtts proposerAtts
+	for _, att := range atts {
+		attEpoch := slots.ToEpoch(att.GetData().Slot)
+		attTargetEpoch := att.GetData().Target.Epoch
+		attTargetRoot := [32]byte(att.GetData().Target.Root)
+		sameTargetCurrentEpoch := currentEpoch == attEpoch && attTargetEpoch == targetEpoch && attTargetRoot == targetRoot
+		SameTargetPreviousEpoch := currentEpoch == attEpoch+1 && attTargetRoot == prevTargetRoot
+		if sameTargetCurrentEpoch || SameTargetPreviousEpoch {
+			verifiedAtts = append(verifiedAtts, att)
+			continue
+		}
+		unverifiedAtts = append(unverifiedAtts, att)
+	}
+
+	if len(unverifiedAtts) == 0 {
+		return verifiedAtts, nil
+	}
+
+	unverifiedAtts = unverifiedAtts.filterBatchSignature(ctx, st)
+
+	return append(verifiedAtts, unverifiedAtts...), nil
+}
+
+// filterBatchSignature verifies the signatures of the attestation set.
+// If batch verification fails, the attestation set is filtered by verifying each signature individually.
+func (a proposerAtts) filterBatchSignature(ctx context.Context, st state.BeaconState) proposerAtts {
+	aSet, err := blocks.AttestationSignatureBatch(ctx, st, a)
+	if err != nil {
+		log.WithError(err).Error("Could not create attestation signature set")
+		return a.filterIndividualSignature(ctx, st)
+	}
+
+	if verified, err := aSet.Verify(); err != nil || !verified {
+		if err != nil {
+			log.WithError(err).Error("Batch verification failed")
+		} else {
+			log.Error("Batch verification failed: signatures not verified")
+		}
+		return a.filterIndividualSignature(ctx, st)
+	}
+	return a
+}
+
+// filterIndividualSignature filters the attestation set by verifying each signature individually.
+func (a proposerAtts) filterIndividualSignature(ctx context.Context, st state.BeaconState) proposerAtts {
+	var validAtts proposerAtts
+	for _, att := range a {
+		aSet, err := blocks.AttestationSignatureBatch(ctx, st, []ethpb.Att{att})
+		if err != nil {
+			log.WithFields(attestationFields(att)).WithError(err).Error("Could not create individual attestation signature set")
+			continue
+		}
+		if verified, err := aSet.Verify(); err != nil || !verified {
+			logEntry := log.WithFields(attestationFields(att))
+			if err != nil {
+				logEntry.WithError(err).Error("Verification of individual attestation failed")
+			} else {
+				logEntry.Error("Verification of individual attestation failed: signature not verified")
+			}
+			continue
+		}
+		validAtts = append(validAtts, att)
+	}
+	return validAtts
+}
+
+func attestationFields(att ethpb.Att) logrus.Fields {
+	return logrus.Fields{
+		"slot":            att.GetData().Slot,
+		"index":           att.GetData().CommitteeIndex,
+		"targetRoot":      fmt.Sprintf("%x", att.GetData().Target.Root),
+		"targetEpoch":     att.GetData().Target.Epoch,
+		"beaconBlockRoot": fmt.Sprintf("%x", att.GetData().BeaconBlockRoot),
+	}
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -468,7 +469,8 @@ func Test_packAttestations(t *testing.T) {
 	}
 	pool := attestations.NewPool()
 	require.NoError(t, pool.SaveAggregatedAttestations([]ethpb.Att{phase0Att, electraAtt}))
-	s := &Server{AttPool: pool}
+	slot := primitives.Slot(1)
+	s := &Server{AttPool: pool, HeadFetcher: &chainMock.ChainService{}, TimeFetcher: &chainMock.ChainService{Slot: &slot}}
 
 	t.Run("Phase 0", func(t *testing.T) {
 		st, _ := util.DeterministicGenesisState(t, 64)
@@ -546,4 +548,18 @@ func Test_limitToMaxAttestations(t *testing.T) {
 		pAtts = atts
 		assert.Equal(t, len(pAtts)-1, len(pAtts.limitToMaxAttestations()))
 	})
+}
+
+func Test_filterBatchSignature(t *testing.T) {
+	st, k := util.DeterministicGenesisState(t, 64)
+	// Generate 1 good signature
+	aGood, err := util.GenerateAttestations(st, k, 1, 0, false)
+	require.NoError(t, err)
+	// Generate 1 bad signature
+	aBad := util.NewAttestation()
+	pa := proposerAtts(aGood)
+	pa = append(pa, aBad)
+	aFiltered := pa.filterBatchSignature(context.Background(), st)
+	assert.Equal(t, 1, len(aFiltered))
+	assert.DeepEqual(t, aGood[0], aFiltered[0])
 }
