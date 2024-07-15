@@ -2,9 +2,6 @@ package kzg
 
 import (
 	"errors"
-
-	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-
 	ckzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 )
@@ -36,8 +33,8 @@ type Bytes32 = ckzg4844.Bytes32
 // CellsAndProofs represents the Cells and Proofs corresponding to
 // a single blob.
 type CellsAndProofs struct {
-	Cells  [fieldparams.NumberOfColumns]Cell
-	Proofs [fieldparams.NumberOfColumns]Proof
+	Cells  []Cell
+	Proofs []Proof
 }
 
 func BlobToKZGCommitment(blob *Blob) (Commitment, error) {
@@ -93,18 +90,15 @@ func RecoverCellsAndKZGProofs(cellIndices []uint64, partialCells []Cell) (CellsA
 
 // Convert cells/proofs to the CellsAndProofs type defined in this package.
 func makeCellsAndProofs(ckzgCells []ckzg4844.Cell, ckzgProofs []ckzg4844.KZGProof) (CellsAndProofs, error) {
-	if len(ckzgCells) != fieldparams.NumberOfColumns {
-		return CellsAndProofs{}, errors.New("recovered cells length is not equal to NumberOfColumns")
-	}
-	if len(ckzgProofs) != fieldparams.NumberOfColumns {
-		return CellsAndProofs{}, errors.New("recovered proofs length is not equal to NumberOfColumns")
+	if len(ckzgCells) != len(ckzgProofs) {
+		return CellsAndProofs{}, errors.New("different number of cells/proofs")
 	}
 
-	var cells [fieldparams.NumberOfColumns]Cell
-	var proofs [fieldparams.NumberOfColumns]Proof
-	for i := 0; i < fieldparams.NumberOfColumns; i++ {
-		cells[i] = Cell(ckzgCells[i])
-		proofs[i] = Proof(ckzgProofs[i])
+	var cells []Cell
+	var proofs []Proof
+	for i := range cells {
+		cells = append(cells, Cell(ckzgCells[i]))
+		proofs = append(proofs, Proof(ckzgProofs[i]))
 	}
 
 	return CellsAndProofs{
