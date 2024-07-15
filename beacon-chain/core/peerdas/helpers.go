@@ -2,9 +2,10 @@ package peerdas
 
 import (
 	"encoding/binary"
-	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"math"
 	"math/big"
+
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"

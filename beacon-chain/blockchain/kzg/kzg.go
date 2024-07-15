@@ -2,6 +2,7 @@ package kzg
 
 import (
 	"errors"
+
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 
 	ckzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
