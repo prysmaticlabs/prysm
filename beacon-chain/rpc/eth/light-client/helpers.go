@@ -355,8 +355,8 @@ func IsBetterUpdate(newUpdate, oldUpdate *ethpbv2.LightClientUpdate) bool {
 
 	// Compare sync committee finality
 	if newHasFinality {
-		newHasSyncCommitteeFinality := slots.ToEpoch(newUpdate.FinalizedHeader.Slot) == slots.ToEpoch(newUpdate.AttestedHeader.Slot)
-		oldHasSyncCommitteeFinality := slots.ToEpoch(oldUpdate.FinalizedHeader.Slot) == slots.ToEpoch(oldUpdate.AttestedHeader.Slot)
+		newHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.FinalizedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Slot))
+		oldHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.FinalizedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Slot))
 
 		if newHasSyncCommitteeFinality != oldHasSyncCommitteeFinality {
 			return newHasSyncCommitteeFinality
