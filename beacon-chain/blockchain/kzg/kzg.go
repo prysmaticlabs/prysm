@@ -2,6 +2,7 @@ package kzg
 
 import (
 	"errors"
+
 	ckzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 )
