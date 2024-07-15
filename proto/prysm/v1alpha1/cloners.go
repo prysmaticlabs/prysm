@@ -539,6 +539,7 @@ func CopyExecutionPayloadHeaderEPBS(payload *enginev1.ExecutionPayloadHeaderEPBS
 		Slot:                   payload.Slot,
 		Value:                  payload.Value,
 		BlobKzgCommitmentsRoot: bytesutil.SafeCopyBytes(payload.BlobKzgCommitmentsRoot),
+		GasLimit:               payload.GasLimit,
 	}
 }
 
