@@ -157,6 +157,9 @@ ssz_electra_objs = [
 ssz_epbs_objs = [
 	"BeaconBlockePBS",
 	"SignedBeaconBlockePBS",
+	"PayloadAttestationData",
+	"PayloadAttestation",
+	"PayloadAttestationMessage",
 ]
 
 ssz_gen_marshal(
@@ -246,7 +249,7 @@ ssz_gen_marshal(
         "//math:go_default_library",
     ],
     objs = ssz_epbs_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs + ssz_deneb_objs + ssz_epbs_objs,
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs + ssz_deneb_objs + ssz_electra_objs,
 )
 
 
@@ -379,6 +382,7 @@ ssz_proto_files(
         "beacon_block.proto",
         "beacon_state.proto",
         "blobs.proto",
+        "payload_attestation.proto",
         "sync_committee.proto",
         "withdrawals.proto",
     ],
