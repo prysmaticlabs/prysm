@@ -730,6 +730,7 @@ func TestRolesAt_OK(t *testing.T) {
 						AttesterSlot:    1,
 						PublicKey:       validatorKey.PublicKey().Marshal(),
 						IsSyncCommittee: true,
+						PtcSlot:         1,
 					},
 				},
 				NextEpochDuties: []*ethpb.DutiesResponse_Duty{
@@ -738,6 +739,7 @@ func TestRolesAt_OK(t *testing.T) {
 						AttesterSlot:    1,
 						PublicKey:       validatorKey.PublicKey().Marshal(),
 						IsSyncCommittee: true,
+						PtcSlot:         1,
 					},
 				},
 			}
@@ -761,6 +763,7 @@ func TestRolesAt_OK(t *testing.T) {
 			assert.Equal(t, iface.RoleAttester, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 			assert.Equal(t, iface.RoleAggregator, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][1])
 			assert.Equal(t, iface.RoleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][2])
+			assert.Equal(t, iface.RolePayloadTimelinessCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][3])
 
 			// Test sync committee role at epoch boundary.
 			v.duties = &ethpb.DutiesResponse{
