@@ -2,6 +2,7 @@ package electra
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
@@ -93,6 +94,8 @@ func ProcessOperations(
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
 
-	// TODO: Process consolidations from execution header.
+	if err := ProcessConsolidationRequests(ctx, st, exe.ConsolidationRequests()); err != nil {
+		return nil, fmt.Errorf("could not process consolidation requests: %w", err)
+	}
 	return st, nil
 }
