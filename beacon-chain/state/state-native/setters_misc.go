@@ -109,7 +109,7 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 
 // SaveValidatorIndices save validator indices of beacon chain to cache
 func (b *BeaconState) SaveValidatorIndices() {
-	if b != nil && b.Version() < version.Electra {
+	if b.Version() < version.Electra {
 		return
 	}
 
