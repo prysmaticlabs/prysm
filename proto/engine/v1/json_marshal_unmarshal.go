@@ -1149,26 +1149,31 @@ func (j *ExecutionPayloadElectraJSON) ElectraPayload() (*ExecutionPayloadElectra
 	if err != nil {
 		return nil, err
 	}
+	cr, err := JsonConsolidationRequestsToProto(j.ConsolidationRequests)
+	if err != nil {
+		return nil, err
+	}
 	return &ExecutionPayloadElectra{
-		ParentHash:         j.ParentHash.Bytes(),
-		FeeRecipient:       j.FeeRecipient.Bytes(),
-		StateRoot:          j.StateRoot.Bytes(),
-		ReceiptsRoot:       j.ReceiptsRoot.Bytes(),
-		LogsBloom:          *j.LogsBloom,
-		PrevRandao:         j.PrevRandao.Bytes(),
-		BlockNumber:        uint64(*j.BlockNumber),
-		GasLimit:           uint64(*j.GasLimit),
-		GasUsed:            uint64(*j.GasUsed),
-		Timestamp:          uint64(*j.Timestamp),
-		ExtraData:          j.ExtraData,
-		BaseFeePerGas:      baseFee,
-		BlockHash:          j.BlockHash.Bytes(),
-		Transactions:       transactions,
-		Withdrawals:        j.Withdrawals,
-		BlobGasUsed:        uint64(*j.BlobGasUsed),
-		ExcessBlobGas:      uint64(*j.ExcessBlobGas),
-		DepositRequests:    dr,
-		WithdrawalRequests: wr,
+		ParentHash:            j.ParentHash.Bytes(),
+		FeeRecipient:          j.FeeRecipient.Bytes(),
+		StateRoot:             j.StateRoot.Bytes(),
+		ReceiptsRoot:          j.ReceiptsRoot.Bytes(),
+		LogsBloom:             *j.LogsBloom,
+		PrevRandao:            j.PrevRandao.Bytes(),
+		BlockNumber:           uint64(*j.BlockNumber),
+		GasLimit:              uint64(*j.GasLimit),
+		GasUsed:               uint64(*j.GasUsed),
+		Timestamp:             uint64(*j.Timestamp),
+		ExtraData:             j.ExtraData,
+		BaseFeePerGas:         baseFee,
+		BlockHash:             j.BlockHash.Bytes(),
+		Transactions:          transactions,
+		Withdrawals:           j.Withdrawals,
+		BlobGasUsed:           uint64(*j.BlobGasUsed),
+		ExcessBlobGas:         uint64(*j.ExcessBlobGas),
+		DepositRequests:       dr,
+		WithdrawalRequests:    wr,
+		ConsolidationRequests: cr,
 	}, nil
 }
 
