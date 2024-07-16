@@ -475,6 +475,74 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	}
 }
 
+func TestGetAttestationData_CommitteeIndexIsZeroPostElectra(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.ElectraForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	block := util.NewBeaconBlock()
+	block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
+	targetBlock := util.NewBeaconBlock()
+	targetBlock.Block.Slot = params.BeaconConfig().SlotsPerEpoch
+	targetRoot, err := targetBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	justifiedBlock := util.NewBeaconBlock()
+	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
+	blockRoot, err := block.Block.HashTreeRoot()
+	require.NoError(t, err)
+	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
+	beaconState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(slot))
+	justifiedCheckpoint := &ethpb.Checkpoint{
+		Epoch: 2,
+		Root:  justifiedRoot[:],
+	}
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpoint))
+	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	attesterServer := &Server{
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		CoreService: &core.Service{
+			HeadFetcher: &mock.ChainService{TargetRoot: targetRoot, Root: blockRoot[:], State: beaconState},
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
+			},
+			FinalizedFetcher:      &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			AttestationCache:      cache.NewAttestationCache(),
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
+		},
+	}
+
+	req := &ethpb.AttestationDataRequest{
+		CommitteeIndex: 123, // set non-zero committee index
+		Slot:           3*params.BeaconConfig().SlotsPerEpoch + 1,
+	}
+	res, err := attesterServer.GetAttestationData(context.Background(), req)
+	require.NoError(t, err)
+
+	expected := &ethpb.AttestationData{
+		Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
+		CommitteeIndex:  0,
+		BeaconBlockRoot: blockRoot[:],
+		Source: &ethpb.Checkpoint{
+			Epoch: 2,
+			Root:  justifiedRoot[:],
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: 3,
+			Root:  targetRoot[:],
+		},
+	}
+
+	assert.DeepEqual(t, expected, res)
+}
+
 func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
