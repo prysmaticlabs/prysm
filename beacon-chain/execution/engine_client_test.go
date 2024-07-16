@@ -1533,6 +1533,20 @@ func fixturesStruct() *payloadFixtures {
 			Index:                 &idx,
 		}
 	}
+	consolidationRequests := make([]pb.ConsolidationRequestV1, 3)
+	for i := range consolidationRequests {
+		address := &common.Address{}
+		address.SetBytes([]byte{0, 0, byte(i)})
+		sPubkey := pb.BlsPubkey{}
+		copy(sPubkey[:], []byte{0, byte(i)})
+		tPubkey := pb.BlsPubkey{}
+		copy(tPubkey[:], []byte{1, byte(i)})
+		consolidationRequests[i] = pb.ConsolidationRequestV1{
+			SourceAddress: address,
+			SourcePubkey:  &sPubkey,
+			TargetPubkey:  tPubkey,
+		}
+	}
 	dr, err := pb.JsonDepositRequestsToProto(depositRequests)
 	if err != nil {
 		panic(err)
@@ -1541,26 +1555,31 @@ func fixturesStruct() *payloadFixtures {
 	if err != nil {
 		panic(err)
 	}
+	cr, err := pb.JsonConsolidationRequestsToProto(consolidationRequests)
+	if err != nil {
+		panic(err)
+	}
 	executionPayloadFixtureElectra := &pb.ExecutionPayloadElectra{
-		ParentHash:         foo[:],
-		FeeRecipient:       bar,
-		StateRoot:          foo[:],
-		ReceiptsRoot:       foo[:],
-		LogsBloom:          baz,
-		PrevRandao:         foo[:],
-		BlockNumber:        1,
-		GasLimit:           1,
-		GasUsed:            1,
-		Timestamp:          1,
-		ExtraData:          foo[:],
-		BaseFeePerGas:      bytesutil.PadTo(baseFeePerGas.Bytes(), fieldparams.RootLength),
-		BlockHash:          foo[:],
-		Transactions:       [][]byte{foo[:]},
-		Withdrawals:        []*pb.Withdrawal{},
-		BlobGasUsed:        2,
-		ExcessBlobGas:      3,
-		DepositRequests:    dr,
-		WithdrawalRequests: wr,
+		ParentHash:            foo[:],
+		FeeRecipient:          bar,
+		StateRoot:             foo[:],
+		ReceiptsRoot:          foo[:],
+		LogsBloom:             baz,
+		PrevRandao:            foo[:],
+		BlockNumber:           1,
+		GasLimit:              1,
+		GasUsed:               1,
+		Timestamp:             1,
+		ExtraData:             foo[:],
+		BaseFeePerGas:         bytesutil.PadTo(baseFeePerGas.Bytes(), fieldparams.RootLength),
+		BlockHash:             foo[:],
+		Transactions:          [][]byte{foo[:]},
+		Withdrawals:           []*pb.Withdrawal{},
+		BlobGasUsed:           2,
+		ExcessBlobGas:         3,
+		DepositRequests:       dr,
+		WithdrawalRequests:    wr,
+		ConsolidationRequests: cr,
 	}
 	hexUint := hexutil.Uint64(1)
 	executionPayloadWithValueFixtureCapella := &pb.GetPayloadV2ResponseJson{
