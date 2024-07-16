@@ -163,6 +163,7 @@ type Service struct {
 	initialSyncComplete              chan struct{}
 	verifierWaiter                   *verification.InitializerWaiter
 	newBlobVerifier                  verification.NewBlobVerifier
+	newColumnProposerVerifier        verification.NewColumnVerifier
 	availableBlocker                 coverage.AvailableBlocker
 	dataColumsnReconstructionLock    sync.Mutex
 	receivedDataColumnsFromRoot      map[[fieldparams.RootLength]byte]map[uint64]bool
@@ -233,6 +234,7 @@ func (s *Service) Start() {
 		return
 	}
 	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
+	s.newColumnProposerVerifier = v.VerifyProposer
 
 	go s.verifierRoutine()
 	go s.registerHandlers()
