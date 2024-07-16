@@ -1544,7 +1544,7 @@ func fixturesStruct() *payloadFixtures {
 		consolidationRequests[i] = pb.ConsolidationRequestV1{
 			SourceAddress: address,
 			SourcePubkey:  &sPubkey,
-			TargetPubkey:  tPubkey,
+			TargetPubkey:  &tPubkey,
 		}
 	}
 	dr, err := pb.JsonDepositRequestsToProto(depositRequests)
