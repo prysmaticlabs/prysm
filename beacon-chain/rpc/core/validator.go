@@ -368,13 +368,18 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: %v", err)}
 	}
 
+	committeeIndex := primitives.CommitteeIndex(0)
+	if slots.ToEpoch(req.Slot) < params.BeaconConfig().ElectraForkEpoch {
+		committeeIndex = req.CommitteeIndex
+	}
+
 	s.AttestationCache.RLock()
 	res := s.AttestationCache.Get()
 	if res != nil && res.Slot == req.Slot {
 		s.AttestationCache.RUnlock()
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
-			CommitteeIndex:  req.CommitteeIndex,
+			CommitteeIndex:  committeeIndex,
 			BeaconBlockRoot: res.HeadRoot,
 			Source: &ethpb.Checkpoint{
 				Epoch: res.Source.Epoch,
@@ -398,7 +403,7 @@ func (s *Service) GetAttestationData(
 	if res != nil && res.Slot == req.Slot {
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
-			CommitteeIndex:  req.CommitteeIndex,
+			CommitteeIndex:  committeeIndex,
 			BeaconBlockRoot: res.HeadRoot,
 			Source: &ethpb.Checkpoint{
 				Epoch: res.Source.Epoch,
@@ -458,7 +463,7 @@ func (s *Service) GetAttestationData(
 
 	return &ethpb.AttestationData{
 		Slot:            req.Slot,
-		CommitteeIndex:  req.CommitteeIndex,
+		CommitteeIndex:  committeeIndex,
 		BeaconBlockRoot: headRoot,
 		Source: &ethpb.Checkpoint{
 			Epoch: justifiedCheckpoint.Epoch,
