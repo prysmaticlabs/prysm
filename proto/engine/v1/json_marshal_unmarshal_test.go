@@ -336,16 +336,6 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 				SourcePubkey:  bytesutil.PadTo([]byte("s-pubKey-1"), 48),
 				TargetPubkey:  bytesutil.PadTo([]byte("t-pubKey-1"), 48),
 			},
-			{
-				SourceAddress: bytesutil.PadTo([]byte("sourceAddress-2"), 20),
-				SourcePubkey:  bytesutil.PadTo([]byte("s-pubKey-2"), 48),
-				TargetPubkey:  bytesutil.PadTo([]byte("t-pubKey-2"), 48),
-			},
-			{
-				SourceAddress: bytesutil.PadTo([]byte("sourceAddress-3"), 20),
-				SourcePubkey:  bytesutil.PadTo([]byte("s-pubKey-3"), 48),
-				TargetPubkey:  bytesutil.PadTo([]byte("t-pubKey-3"), 48),
-			},
 		}
 
 		resp := &enginev1.GetPayloadV4ResponseJson{
