@@ -170,7 +170,7 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	case *pb.ExecutionPayloadElectra:
 		payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadElectra)
 		if !ok {
-			return nil, errors.New("execution data must be a Deneb execution payload")
+			return nil, errors.New("execution data must be a Electra execution payload")
 		}
 		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV4, payloadPb, versionedHashes, parentBlockRoot)
 		if err != nil {
