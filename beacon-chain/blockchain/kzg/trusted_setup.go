@@ -3,7 +3,6 @@ package kzg
 import (
 	_ "embed"
 	"encoding/json"
-
 	GoKZG "github.com/crate-crypto/go-kzg-4844"
 	CKZG "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -18,9 +17,9 @@ var (
 )
 
 type TrustedSetup struct {
-	G1Monomial [65]GoKZG.G1CompressedHexStr                   `json:"g1_monomial"`
+	G1Monomial [GoKZG.ScalarsPerBlob]GoKZG.G1CompressedHexStr `json:"g1_monomial"`
 	G1Lagrange [GoKZG.ScalarsPerBlob]GoKZG.G1CompressedHexStr `json:"g1_lagrange"`
-	G2Monomial [GoKZG.ScalarsPerBlob]GoKZG.G2CompressedHexStr `json:"g2_monomial"`
+	G2Monomial [65]GoKZG.G2CompressedHexStr                   `json:"g2_monomial"`
 }
 
 func Start() error {
