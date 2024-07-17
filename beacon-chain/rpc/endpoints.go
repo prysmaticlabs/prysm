@@ -914,10 +914,11 @@ func (s *Service) debugEndpoints(stater lookup.Stater) []endpoint {
 
 func (s *Service) eventsEndpoints() []endpoint {
 	server := &events.Server{
-		StateNotifier:     s.cfg.StateNotifier,
-		OperationNotifier: s.cfg.OperationNotifier,
-		HeadFetcher:       s.cfg.HeadFetcher,
-		ChainInfoFetcher:  s.cfg.ChainInfoFetcher,
+		StateNotifier:          s.cfg.StateNotifier,
+		OperationNotifier:      s.cfg.OperationNotifier,
+		HeadFetcher:            s.cfg.HeadFetcher,
+		ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
+		TrackedValidatorsCache: s.cfg.TrackedValidatorsCache,
 	}
 
 	const namespace = "events"
