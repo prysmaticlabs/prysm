@@ -97,7 +97,7 @@ func makeCellsAndProofs(ckzgCells []ckzg4844.Cell, ckzgProofs []ckzg4844.KZGProo
 
 	var cells []Cell
 	var proofs []Proof
-	for i := range cells {
+	for i := range ckzgCells {
 		cells = append(cells, Cell(ckzgCells[i]))
 		proofs = append(proofs, Proof(ckzgProofs[i]))
 	}
