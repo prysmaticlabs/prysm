@@ -612,27 +612,32 @@ func fullPayloadFromPayloadBody(
 		if err != nil {
 			return nil, err
 		}
+		cr, err := pb.JsonConsolidationRequestsToProto(body.ConsolidationRequests)
+		if err != nil {
+			return nil, err
+		}
 		return blocks.WrappedExecutionPayloadElectra(
 			&pb.ExecutionPayloadElectra{
-				ParentHash:         header.ParentHash(),
-				FeeRecipient:       header.FeeRecipient(),
-				StateRoot:          header.StateRoot(),
-				ReceiptsRoot:       header.ReceiptsRoot(),
-				LogsBloom:          header.LogsBloom(),
-				PrevRandao:         header.PrevRandao(),
-				BlockNumber:        header.BlockNumber(),
-				GasLimit:           header.GasLimit(),
-				GasUsed:            header.GasUsed(),
-				Timestamp:          header.Timestamp(),
-				ExtraData:          header.ExtraData(),
-				BaseFeePerGas:      header.BaseFeePerGas(),
-				BlockHash:          header.BlockHash(),
-				Transactions:       pb.RecastHexutilByteSlice(body.Transactions),
-				Withdrawals:        body.Withdrawals,
-				ExcessBlobGas:      ebg,
-				BlobGasUsed:        bgu,
-				DepositRequests:    dr,
-				WithdrawalRequests: wr,
+				ParentHash:            header.ParentHash(),
+				FeeRecipient:          header.FeeRecipient(),
+				StateRoot:             header.StateRoot(),
+				ReceiptsRoot:          header.ReceiptsRoot(),
+				LogsBloom:             header.LogsBloom(),
+				PrevRandao:            header.PrevRandao(),
+				BlockNumber:           header.BlockNumber(),
+				GasLimit:              header.GasLimit(),
+				GasUsed:               header.GasUsed(),
+				Timestamp:             header.Timestamp(),
+				ExtraData:             header.ExtraData(),
+				BaseFeePerGas:         header.BaseFeePerGas(),
+				BlockHash:             header.BlockHash(),
+				Transactions:          pb.RecastHexutilByteSlice(body.Transactions),
+				Withdrawals:           body.Withdrawals,
+				ExcessBlobGas:         ebg,
+				BlobGasUsed:           bgu,
+				DepositRequests:       dr,
+				WithdrawalRequests:    wr,
+				ConsolidationRequests: cr,
 			}) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version for payload %d", bVersion)

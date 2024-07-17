@@ -68,6 +68,7 @@ func payloadToBody(t *testing.T, ed interfaces.ExecutionData) *pb.ExecutionPaylo
 	if isElectra {
 		body.DepositRequests = pb.ProtoDepositRequestsToJson(eed.DepositRequests())
 		body.WithdrawalRequests = pb.ProtoWithdrawalRequestsToJson(eed.WithdrawalRequests())
+		body.ConsolidationRequests = pb.ProtoConsolidationRequestsToJson(eed.ConsolidationRequests())
 	}
 	return body
 }

@@ -306,33 +306,35 @@ type GetPayloadV4ResponseJson struct {
 
 // ExecutionPayloadElectraJSON represents the engine API ExecutionPayloadV4 type.
 type ExecutionPayloadElectraJSON struct {
-	ParentHash         *common.Hash          `json:"parentHash"`
-	FeeRecipient       *common.Address       `json:"feeRecipient"`
-	StateRoot          *common.Hash          `json:"stateRoot"`
-	ReceiptsRoot       *common.Hash          `json:"receiptsRoot"`
-	LogsBloom          *hexutil.Bytes        `json:"logsBloom"`
-	PrevRandao         *common.Hash          `json:"prevRandao"`
-	BlockNumber        *hexutil.Uint64       `json:"blockNumber"`
-	GasLimit           *hexutil.Uint64       `json:"gasLimit"`
-	GasUsed            *hexutil.Uint64       `json:"gasUsed"`
-	Timestamp          *hexutil.Uint64       `json:"timestamp"`
-	ExtraData          hexutil.Bytes         `json:"extraData"`
-	BaseFeePerGas      string                `json:"baseFeePerGas"`
-	BlobGasUsed        *hexutil.Uint64       `json:"blobGasUsed"`
-	ExcessBlobGas      *hexutil.Uint64       `json:"excessBlobGas"`
-	BlockHash          *common.Hash          `json:"blockHash"`
-	Transactions       []hexutil.Bytes       `json:"transactions"`
-	Withdrawals        []*Withdrawal         `json:"withdrawals"`
-	WithdrawalRequests []WithdrawalRequestV1 `json:"withdrawalRequests"`
-	DepositRequests    []DepositRequestV1    `json:"depositRequests"`
+	ParentHash            *common.Hash             `json:"parentHash"`
+	FeeRecipient          *common.Address          `json:"feeRecipient"`
+	StateRoot             *common.Hash             `json:"stateRoot"`
+	ReceiptsRoot          *common.Hash             `json:"receiptsRoot"`
+	LogsBloom             *hexutil.Bytes           `json:"logsBloom"`
+	PrevRandao            *common.Hash             `json:"prevRandao"`
+	BlockNumber           *hexutil.Uint64          `json:"blockNumber"`
+	GasLimit              *hexutil.Uint64          `json:"gasLimit"`
+	GasUsed               *hexutil.Uint64          `json:"gasUsed"`
+	Timestamp             *hexutil.Uint64          `json:"timestamp"`
+	ExtraData             hexutil.Bytes            `json:"extraData"`
+	BaseFeePerGas         string                   `json:"baseFeePerGas"`
+	BlobGasUsed           *hexutil.Uint64          `json:"blobGasUsed"`
+	ExcessBlobGas         *hexutil.Uint64          `json:"excessBlobGas"`
+	BlockHash             *common.Hash             `json:"blockHash"`
+	Transactions          []hexutil.Bytes          `json:"transactions"`
+	Withdrawals           []*Withdrawal            `json:"withdrawals"`
+	WithdrawalRequests    []WithdrawalRequestV1    `json:"withdrawalRequests"`
+	DepositRequests       []DepositRequestV1       `json:"depositRequests"`
+	ConsolidationRequests []ConsolidationRequestV1 `json:"consolidationRequests"`
 }
 
 // ExecutionPayloadBody represents the engine API ExecutionPayloadV1 or ExecutionPayloadV2 type.
 type ExecutionPayloadBody struct {
-	Transactions       []hexutil.Bytes       `json:"transactions"`
-	Withdrawals        []*Withdrawal         `json:"withdrawals"`
-	WithdrawalRequests []WithdrawalRequestV1 `json:"withdrawalRequests"`
-	DepositRequests    []DepositRequestV1    `json:"depositRequests"`
+	Transactions          []hexutil.Bytes          `json:"transactions"`
+	Withdrawals           []*Withdrawal            `json:"withdrawals"`
+	WithdrawalRequests    []WithdrawalRequestV1    `json:"withdrawalRequests"`
+	DepositRequests       []DepositRequestV1       `json:"depositRequests"`
+	ConsolidationRequests []ConsolidationRequestV1 `json:"consolidationRequests"`
 }
 
 // Validate returns an error if key fields in GetPayloadV4ResponseJson are nil or invalid.
@@ -464,6 +466,30 @@ func (r DepositRequestV1) Validate() error {
 	}
 	if r.Index == nil {
 		return errors.Wrap(errJsonNilField, "missing required field 'index' for DepositRequestV1")
+	}
+	return nil
+}
+
+// ConsolidationRequestV1 represents an execution engine ConsolidationRequestV1 value
+// https://github.com/ethereum/execution-apis/blob/main/src/engine/prague.md#consolidationrequestv1
+type ConsolidationRequestV1 struct {
+	// sourceAddress: DATA, 20 Bytes
+	SourceAddress *common.Address `json:"sourceAddress"`
+	// sourcePubkey: DATA, 48 Bytes
+	SourcePubkey *BlsPubkey `json:"sourcePubkey"`
+	// targetPubkey: DATA, 48 Bytes
+	TargetPubkey *BlsPubkey `json:"targetPubkey"`
+}
+
+func (r ConsolidationRequestV1) Validate() error {
+	if r.SourceAddress == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'sourceAddress' for ConsolidationRequestV1")
+	}
+	if r.SourcePubkey == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'sourcePubkey' for ConsolidationRequestV1")
+	}
+	if r.TargetPubkey == nil {
+		return errors.Wrap(errJsonNilField, "missing required field 'targetPubkey' for ConsolidationRequestV1")
 	}
 	return nil
 }
@@ -1065,6 +1091,42 @@ func ProtoWithdrawalRequestsToJson(reqs []*WithdrawalRequest) []WithdrawalReques
 	return j
 }
 
+func JsonConsolidationRequestsToProto(j []ConsolidationRequestV1) ([]*ConsolidationRequest, error) {
+	reqs := make([]*ConsolidationRequest, len(j))
+
+	for i := range j {
+		req := j[i]
+		if err := req.Validate(); err != nil {
+			return nil, err
+		}
+		reqs[i] = &ConsolidationRequest{
+			SourceAddress: req.SourceAddress.Bytes(),
+			SourcePubkey:  req.SourcePubkey.Bytes(),
+			TargetPubkey:  req.TargetPubkey.Bytes(),
+		}
+	}
+
+	return reqs, nil
+}
+
+func ProtoConsolidationRequestsToJson(reqs []*ConsolidationRequest) []ConsolidationRequestV1 {
+	j := make([]ConsolidationRequestV1, len(reqs))
+	for i := range reqs {
+		r := reqs[i]
+		spk := BlsPubkey{}
+		copy(spk[:], r.SourcePubkey)
+		tpk := BlsPubkey{}
+		copy(tpk[:], r.TargetPubkey)
+		address := common.BytesToAddress(r.SourceAddress)
+		j[i] = ConsolidationRequestV1{
+			SourceAddress: &address,
+			SourcePubkey:  &spk,
+			TargetPubkey:  &tpk,
+		}
+	}
+	return j
+}
+
 func (j *ExecutionPayloadElectraJSON) ElectraPayload() (*ExecutionPayloadElectra, error) {
 	baseFeeBigEnd, err := hexutil.DecodeBig(j.BaseFeePerGas)
 	if err != nil {
@@ -1087,26 +1149,31 @@ func (j *ExecutionPayloadElectraJSON) ElectraPayload() (*ExecutionPayloadElectra
 	if err != nil {
 		return nil, err
 	}
+	cr, err := JsonConsolidationRequestsToProto(j.ConsolidationRequests)
+	if err != nil {
+		return nil, err
+	}
 	return &ExecutionPayloadElectra{
-		ParentHash:         j.ParentHash.Bytes(),
-		FeeRecipient:       j.FeeRecipient.Bytes(),
-		StateRoot:          j.StateRoot.Bytes(),
-		ReceiptsRoot:       j.ReceiptsRoot.Bytes(),
-		LogsBloom:          *j.LogsBloom,
-		PrevRandao:         j.PrevRandao.Bytes(),
-		BlockNumber:        uint64(*j.BlockNumber),
-		GasLimit:           uint64(*j.GasLimit),
-		GasUsed:            uint64(*j.GasUsed),
-		Timestamp:          uint64(*j.Timestamp),
-		ExtraData:          j.ExtraData,
-		BaseFeePerGas:      baseFee,
-		BlockHash:          j.BlockHash.Bytes(),
-		Transactions:       transactions,
-		Withdrawals:        j.Withdrawals,
-		BlobGasUsed:        uint64(*j.BlobGasUsed),
-		ExcessBlobGas:      uint64(*j.ExcessBlobGas),
-		DepositRequests:    dr,
-		WithdrawalRequests: wr,
+		ParentHash:            j.ParentHash.Bytes(),
+		FeeRecipient:          j.FeeRecipient.Bytes(),
+		StateRoot:             j.StateRoot.Bytes(),
+		ReceiptsRoot:          j.ReceiptsRoot.Bytes(),
+		LogsBloom:             *j.LogsBloom,
+		PrevRandao:            j.PrevRandao.Bytes(),
+		BlockNumber:           uint64(*j.BlockNumber),
+		GasLimit:              uint64(*j.GasLimit),
+		GasUsed:               uint64(*j.GasUsed),
+		Timestamp:             uint64(*j.Timestamp),
+		ExtraData:             j.ExtraData,
+		BaseFeePerGas:         baseFee,
+		BlockHash:             j.BlockHash.Bytes(),
+		Transactions:          transactions,
+		Withdrawals:           j.Withdrawals,
+		BlobGasUsed:           uint64(*j.BlobGasUsed),
+		ExcessBlobGas:         uint64(*j.ExcessBlobGas),
+		DepositRequests:       dr,
+		WithdrawalRequests:    wr,
+		ConsolidationRequests: cr,
 	}, nil
 }
 
