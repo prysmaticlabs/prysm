@@ -48,6 +48,8 @@ type ForkchoiceFetcher interface {
 	ForkChoiceDump(context.Context) (*forkchoice.Dump, error)
 	NewSlot(context.Context, primitives.Slot) error
 	ProposerBoost() [32]byte
+	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
+	CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, primitives.Slot, error)
 }
 
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.
@@ -538,6 +540,13 @@ func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.Slot(root)
+}
+
+// CommonAncestor returns the common ancestor of two blocks
+func (s *Service) CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, primitives.Slot, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.CommonAncestor(ctx, root1, root2)
 }
 
 // inRegularSync queries the initial sync service to

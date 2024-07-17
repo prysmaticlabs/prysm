@@ -563,3 +563,128 @@ func Test_filterBatchSignature(t *testing.T) {
 	assert.Equal(t, 1, len(aFiltered))
 	assert.DeepEqual(t, aGood[0], aFiltered[0])
 }
+
+func Test_isAttestationFromCurrentEpoch(t *testing.T) {
+	slot := primitives.Slot(1)
+	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	a := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{Slot: 1},
+	}
+	require.Equal(t, true, s.isAttestationFromCurrentEpoch(a))
+
+	a.Data.Slot = params.BeaconConfig().SlotsPerEpoch
+	require.Equal(t, false, s.isAttestationFromCurrentEpoch(a))
+}
+
+func Test_isAttestationFromPreviousEpoch(t *testing.T) {
+	slot := params.BeaconConfig().SlotsPerEpoch
+	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	a := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{Slot: 1},
+	}
+	require.Equal(t, true, s.isAttestationFromPreviousEpoch(a))
+
+	a.Data.Slot = params.BeaconConfig().SlotsPerEpoch
+	require.Equal(t, false, s.isAttestationFromPreviousEpoch(a))
+}
+
+func Test_filterCurrentEpochAttestationByTarget(t *testing.T) {
+	slot := primitives.Slot(1)
+	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	targetRoot := [32]byte{'a'}
+	a := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Slot: 1,
+			Target: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  targetRoot[:],
+			},
+		},
+	}
+	got, err := s.filterCurrentEpochAttestationByTarget(a, targetRoot, 1)
+	require.NoError(t, err)
+	require.Equal(t, true, got)
+
+	got, err = s.filterCurrentEpochAttestationByTarget(a, [32]byte{}, 1)
+	require.NoError(t, err)
+	require.Equal(t, false, got)
+
+	got, err = s.filterCurrentEpochAttestationByTarget(a, targetRoot, 2)
+	require.NoError(t, err)
+	require.Equal(t, false, got)
+
+	a.Data.Slot = 100
+	got, err = s.filterCurrentEpochAttestationByTarget(a, targetRoot, 1)
+	require.NoError(t, err)
+	require.Equal(t, false, got)
+}
+
+func Test_filterPreviousEpochAttestationByTarget(t *testing.T) {
+	slot := params.BeaconConfig().SlotsPerEpoch
+	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	targetRoot := [32]byte{'a'}
+	a := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Slot: 1,
+			Target: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  targetRoot[:],
+			},
+		},
+	}
+	got, err := s.filterPreviousEpochAttestationByTarget(a, targetRoot, 1)
+	require.NoError(t, err)
+	require.Equal(t, true, got)
+
+	got, err = s.filterPreviousEpochAttestationByTarget(a, [32]byte{}, 1)
+	require.NoError(t, err)
+	require.Equal(t, false, got)
+
+	got, err = s.filterPreviousEpochAttestationByTarget(a, targetRoot, 2)
+	require.NoError(t, err)
+	require.Equal(t, false, got)
+
+	a.Data.Slot = params.BeaconConfig().SlotsPerEpoch
+	got, err = s.filterPreviousEpochAttestationByTarget(a, targetRoot, 1)
+	require.NoError(t, err)
+	require.Equal(t, false, got)
+}
+
+func Test_filterCurrentEpochAttestationByForkchoice(t *testing.T) {
+	slot := params.BeaconConfig().SlotsPerEpoch
+	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	targetRoot := [32]byte{'a'}
+	a := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: targetRoot[:],
+			Slot:            params.BeaconConfig().SlotsPerEpoch,
+			Target: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  targetRoot[:],
+			},
+		},
+	}
+
+	ctx := context.Background()
+	got, err := s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
+	require.NoError(t, err)
+	require.Equal(t, true, got)
+
+	r := [32]byte{'b'}
+	a.Data.BeaconBlockRoot = r[:]
+	s.ForkchoiceFetcher = &chainMock.ChainService{BlockSlot: 1}
+	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
+	require.NoError(t, err)
+	require.Equal(t, true, got)
+
+	s.ForkchoiceFetcher = &chainMock.ChainService{BlockSlot: 100, CommonAncestorSlot: 1}
+	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
+	require.NoError(t, err)
+	require.Equal(t, true, got)
+
+	slot = params.BeaconConfig().SlotsPerEpoch * 2
+	s = &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
+	require.NoError(t, err)
+	require.Equal(t, false, got)
+}
