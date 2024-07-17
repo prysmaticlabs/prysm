@@ -336,7 +336,7 @@ func (vs *Server) filterAttestationBySignature(ctx context.Context, atts propose
 		return nil, err
 	}
 	prevTargetEpoch := primitives.Epoch(0)
-	if targetEpoch > 2 {
+	if targetEpoch > 1 {
 		prevTargetEpoch = targetEpoch.Sub(1)
 	}
 	prevTargetRoot, err := vs.HeadFetcher.TargetRootForEpoch([32]byte(headRoot), prevTargetEpoch)
