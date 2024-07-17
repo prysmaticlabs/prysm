@@ -3,6 +3,7 @@ package lightclient
 import (
 	"testing"
 
+	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
@@ -15,15 +16,31 @@ func TestIsBetterUpdate(t *testing.T) {
 		expectedResult bool
 	}{
 		{
-			name:           "new has supermajority but old doesn't",
-			oldUpdate:      &ethpbv2.LightClientUpdate{},
-			newUpdate:      &ethpbv2.LightClientUpdate{},
+			name: "new has supermajority but old doesn't",
+			oldUpdate: &ethpbv2.LightClientUpdate{
+				SyncAggregate: &ethpbv1.SyncAggregate{
+					SyncCommitteeBits: []byte{0b01111100, 0b1},
+				},
+			},
+			newUpdate: &ethpbv2.LightClientUpdate{
+				SyncAggregate: &ethpbv1.SyncAggregate{
+					SyncCommitteeBits: []byte{0b11111100, 0b1},
+				},
+			},
 			expectedResult: true,
 		},
 		{
-			name:           "old has supermajority but new doesn't",
-			oldUpdate:      &ethpbv2.LightClientUpdate{},
-			newUpdate:      &ethpbv2.LightClientUpdate{},
+			name: "old has supermajority but new doesn't",
+			oldUpdate: &ethpbv2.LightClientUpdate{
+				SyncAggregate: &ethpbv1.SyncAggregate{
+					SyncCommitteeBits: []byte{0b11111100, 0b1},
+				},
+			},
+			newUpdate: &ethpbv2.LightClientUpdate{
+				SyncAggregate: &ethpbv1.SyncAggregate{
+					SyncCommitteeBits: []byte{0b01111100, 0b1},
+				},
+			},
 			expectedResult: false,
 		},
 		{
