@@ -775,14 +775,14 @@ func (s *Service) beaconEndpoints(
 			methods: []string{http.MethodGet, http.MethodPost},
 		},
 		{
-			template: "/eth/v1/beacon/individual_votes",
+			template: "/prysm/v1/beacon/individual_votes",
 			name:     namespace + ".GetIndividualVotes",
 			middleware: []mux.MiddlewareFunc{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetIndividualVotes,
-			methods: []string{http.MethodGet},
+			methods: []string{http.MethodPost},
 		},
 	}
 }

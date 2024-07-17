@@ -424,24 +424,39 @@ func (s *Server) GetIndividualVotes(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	var req structs.GetIndividualVotesRequest
-	if r.Body != http.NoBody {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			httputil.HandleError(
-				w,
-				fmt.Sprintf("Could not decode request body: %v", err.Error()),
-				http.StatusBadRequest,
-			)
-			return
-		}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case errors.Is(err, io.EOF):
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
 	}
+
+	publicKeyBytes := make([][]byte, len(req.PublicKeys))
+	for i, s := range req.PublicKeys {
+		bss := make([]byte, len(s))
+		for j, hexStr := range s {
+			bs, err := hexutil.Decode(hexStr)
+			if err != nil {
+				httputil.HandleError(w, "could not decode public keys: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			bss[j] = bs[0]
+		}
+		publicKeyBytes[i] = bss
+	}
+
 	votes, rpcError := s.CoreService.IndividualVotes(
 		ctx,
 		&ethpb.IndividualVotesRequest{
 			Epoch:      req.Epoch,
-			PublicKeys: req.PublicKeys,
+			PublicKeys: publicKeyBytes,
 			Indices:    req.Indices,
 		},
 	)
+
 	if rpcError != nil {
 		httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
 		return
@@ -449,9 +464,9 @@ func (s *Server) GetIndividualVotes(w http.ResponseWriter, r *http.Request) {
 	v := make([]*structs.IndividualVote, 0, len(votes.IndividualVotes))
 	for _, vote := range votes.IndividualVotes {
 		v = append(v, &structs.IndividualVote{
-			Epoch:                            vote.Epoch,
-			PublicKey:                        vote.PublicKey,
-			ValidatorIndex:                   vote.ValidatorIndex,
+			Epoch:                            fmt.Sprintf("%d", vote.Epoch),
+			PublicKey:                        hexutil.Encode(vote.PublicKey),
+			ValidatorIndex:                   fmt.Sprintf("%d", vote.ValidatorIndex),
 			IsSlashed:                        vote.IsSlashed,
 			IsWithdrawableInCurrentEpoch:     vote.IsWithdrawableInCurrentEpoch,
 			IsActiveInCurrentEpoch:           vote.IsActiveInCurrentEpoch,
@@ -461,10 +476,10 @@ func (s *Server) GetIndividualVotes(w http.ResponseWriter, r *http.Request) {
 			IsPreviousEpochAttester:          vote.IsPreviousEpochAttester,
 			IsPreviousEpochTargetAttester:    vote.IsPreviousEpochTargetAttester,
 			IsPreviousEpochHeadAttester:      vote.IsPreviousEpochHeadAttester,
-			CurrentEpochEffectiveBalanceGwei: vote.CurrentEpochEffectiveBalanceGwei,
-			InclusionSlot:                    vote.InclusionSlot,
-			InclusionDistance:                vote.InclusionDistance,
-			InactivityScore:                  vote.InactivityScore,
+			CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", vote.CurrentEpochEffectiveBalanceGwei),
+			InclusionSlot:                    fmt.Sprintf("%d", vote.InclusionSlot),
+			InclusionDistance:                fmt.Sprintf("%d", vote.InclusionDistance),
+			InactivityScore:                  fmt.Sprintf("%d", vote.InactivityScore),
 		})
 	}
 	response := &structs.GetIndividualVotesResponse{

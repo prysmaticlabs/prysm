@@ -1277,14 +1277,22 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 
 	// Test non exist public key.
 	request := &structs.GetIndividualVotesRequest{
-		PublicKeys: [][]byte{{'a'}},
+		PublicKeys: [][]string{{"0xaa"}},
 		Epoch:      0,
 	}
 	errStr, resp := individualVotesHelper(t, request, s)
 	require.Equal(t, "", errStr)
 	want := &structs.GetIndividualVotesResponse{
 		IndividualVotes: []*structs.IndividualVote{
-			{PublicKey: []byte{'a'}, ValidatorIndex: primitives.ValidatorIndex(^uint64(0))},
+			{
+				Epoch:                            "0",
+				PublicKey:                        "0xaa",
+				ValidatorIndex:                   fmt.Sprintf("%d", ^uint64(0)),
+				CurrentEpochEffectiveBalanceGwei: "0",
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
+			},
 		},
 	}
 	assert.DeepEqual(t, want, resp, "Unexpected response")
@@ -1298,14 +1306,22 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	require.Equal(t, "", errStr)
 	want = &structs.GetIndividualVotesResponse{
 		IndividualVotes: []*structs.IndividualVote{
-			{ValidatorIndex: 100},
+			{
+				Epoch:                            "0",
+				PublicKey:                        "0x",
+				ValidatorIndex:                   "100",
+				CurrentEpochEffectiveBalanceGwei: "0",
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
+			},
 		},
 	}
 	assert.DeepEqual(t, want, resp, "Unexpected response")
 
 	// Test both.
 	request = &structs.GetIndividualVotesRequest{
-		PublicKeys: [][]byte{{'a'}, {'b'}},
+		PublicKeys: [][]string{{"0xaa"}, {"0xbb"}},
 		Indices:    []primitives.ValidatorIndex{100, 101},
 		Epoch:      0,
 	}
@@ -1313,10 +1329,34 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	require.Equal(t, "", errStr)
 	want = &structs.GetIndividualVotesResponse{
 		IndividualVotes: []*structs.IndividualVote{
-			{PublicKey: []byte{'a'}, ValidatorIndex: primitives.ValidatorIndex(^uint64(0))},
-			{PublicKey: []byte{'b'}, ValidatorIndex: primitives.ValidatorIndex(^uint64(0))},
-			{ValidatorIndex: 100},
-			{ValidatorIndex: 101},
+			{Epoch: "0", PublicKey: "0xaa", ValidatorIndex: fmt.Sprintf("%d", ^uint64(0)), CurrentEpochEffectiveBalanceGwei: "0", InclusionSlot: "0", InclusionDistance: "0", InactivityScore: "0"},
+			{
+				Epoch:                            "0",
+				PublicKey:                        "0xbb",
+				ValidatorIndex:                   fmt.Sprintf("%d", ^uint64(0)),
+				CurrentEpochEffectiveBalanceGwei: "0",
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
+			},
+			{
+				Epoch:                            "0",
+				PublicKey:                        "0x",
+				ValidatorIndex:                   "100",
+				CurrentEpochEffectiveBalanceGwei: "0",
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
+			},
+			{
+				Epoch:                            "0",
+				PublicKey:                        "0x",
+				ValidatorIndex:                   "101",
+				CurrentEpochEffectiveBalanceGwei: "0",
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
+			},
 		},
 	}
 	assert.DeepEqual(t, want, resp, "Unexpected response")
@@ -1382,22 +1422,26 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	want := &structs.GetIndividualVotesResponse{
 		IndividualVotes: []*structs.IndividualVote{
 			{
-				ValidatorIndex:                   0,
-				PublicKey:                        beaconState.Validators()[0].PublicKey,
+				Epoch:                            "0",
+				ValidatorIndex:                   "0",
+				PublicKey:                        hexutil.Encode(beaconState.Validators()[0].PublicKey),
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				InclusionSlot:                    params.BeaconConfig().FarFutureSlot,
-				InclusionDistance:                params.BeaconConfig().FarFutureSlot,
+				CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", params.BeaconConfig().MaxEffectiveBalance),
+				InclusionSlot:                    fmt.Sprintf("%d", params.BeaconConfig().FarFutureSlot),
+				InclusionDistance:                fmt.Sprintf("%d", params.BeaconConfig().FarFutureSlot),
+				InactivityScore:                  "0",
 			},
 			{
-				ValidatorIndex:                   1,
-				PublicKey:                        beaconState.Validators()[1].PublicKey,
+				Epoch:                            "0",
+				ValidatorIndex:                   "1",
+				PublicKey:                        hexutil.Encode(beaconState.Validators()[1].PublicKey),
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				InclusionSlot:                    params.BeaconConfig().FarFutureSlot,
-				InclusionDistance:                params.BeaconConfig().FarFutureSlot,
+				CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", params.BeaconConfig().MaxEffectiveBalance),
+				InclusionSlot:                    fmt.Sprintf("%d", params.BeaconConfig().FarFutureSlot),
+				InclusionDistance:                fmt.Sprintf("%d", params.BeaconConfig().FarFutureSlot),
+				InactivityScore:                  "0",
 			},
 		},
 	}
@@ -1448,8 +1492,9 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 	want := &structs.GetIndividualVotesResponse{
 		IndividualVotes: []*structs.IndividualVote{
 			{
-				ValidatorIndex:                   0,
-				PublicKey:                        beaconState.Validators()[0].PublicKey,
+				Epoch:                            "0",
+				ValidatorIndex:                   "0",
+				PublicKey:                        hexutil.Encode(beaconState.Validators()[0].PublicKey),
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
 				IsCurrentEpochTargetAttester:     true,
@@ -1457,11 +1502,15 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 				IsPreviousEpochAttester:          true,
 				IsPreviousEpochHeadAttester:      true,
 				IsPreviousEpochTargetAttester:    true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
+				CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", params.BeaconConfig().MaxEffectiveBalance),
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
 			},
 			{
-				ValidatorIndex:                   1,
-				PublicKey:                        beaconState.Validators()[1].PublicKey,
+				Epoch:                            "0",
+				ValidatorIndex:                   "1",
+				PublicKey:                        hexutil.Encode(beaconState.Validators()[1].PublicKey),
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
 				IsCurrentEpochTargetAttester:     true,
@@ -1469,7 +1518,10 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 				IsPreviousEpochAttester:          true,
 				IsPreviousEpochHeadAttester:      true,
 				IsPreviousEpochTargetAttester:    true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
+				CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", params.BeaconConfig().MaxEffectiveBalance),
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
 			},
 		},
 	}
@@ -1537,8 +1589,9 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 	want := &structs.GetIndividualVotesResponse{
 		IndividualVotes: []*structs.IndividualVote{
 			{
-				ValidatorIndex:                   0,
-				PublicKey:                        beaconState.Validators()[0].PublicKey,
+				Epoch:                            "1",
+				ValidatorIndex:                   "0",
+				PublicKey:                        hexutil.Encode(beaconState.Validators()[0].PublicKey),
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
 				IsCurrentEpochTargetAttester:     true,
@@ -1546,12 +1599,15 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 				IsPreviousEpochAttester:          true,
 				IsPreviousEpochHeadAttester:      true,
 				IsPreviousEpochTargetAttester:    true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				Epoch:                            1,
+				CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", params.BeaconConfig().MaxEffectiveBalance),
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
 			},
 			{
-				ValidatorIndex:                   1,
-				PublicKey:                        beaconState.Validators()[1].PublicKey,
+				Epoch:                            "1",
+				ValidatorIndex:                   "1",
+				PublicKey:                        hexutil.Encode(beaconState.Validators()[1].PublicKey),
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
 				IsCurrentEpochTargetAttester:     true,
@@ -1559,8 +1615,10 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 				IsPreviousEpochAttester:          true,
 				IsPreviousEpochHeadAttester:      true,
 				IsPreviousEpochTargetAttester:    true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				Epoch:                            1,
+				CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", params.BeaconConfig().MaxEffectiveBalance),
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
 			},
 		},
 	}
@@ -1628,8 +1686,9 @@ func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 	want := &structs.GetIndividualVotesResponse{
 		IndividualVotes: []*structs.IndividualVote{
 			{
-				ValidatorIndex:                   0,
-				PublicKey:                        beaconState.Validators()[0].PublicKey,
+				Epoch:                            "1",
+				ValidatorIndex:                   "0",
+				PublicKey:                        hexutil.Encode(beaconState.Validators()[0].PublicKey),
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
 				IsCurrentEpochTargetAttester:     true,
@@ -1637,12 +1696,15 @@ func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 				IsPreviousEpochAttester:          true,
 				IsPreviousEpochHeadAttester:      true,
 				IsPreviousEpochTargetAttester:    true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				Epoch:                            1,
+				CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", params.BeaconConfig().MaxEffectiveBalance),
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
 			},
 			{
-				ValidatorIndex:                   1,
-				PublicKey:                        beaconState.Validators()[1].PublicKey,
+				Epoch:                            "1",
+				ValidatorIndex:                   "1",
+				PublicKey:                        hexutil.Encode(beaconState.Validators()[1].PublicKey),
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
 				IsCurrentEpochTargetAttester:     true,
@@ -1650,8 +1712,10 @@ func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 				IsPreviousEpochAttester:          true,
 				IsPreviousEpochHeadAttester:      true,
 				IsPreviousEpochTargetAttester:    true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				Epoch:                            1,
+				CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", params.BeaconConfig().MaxEffectiveBalance),
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
 			},
 		},
 	}
@@ -1719,8 +1783,9 @@ func TestServer_GetIndividualVotes_CapellaEndOfEpoch(t *testing.T) {
 	want := &structs.GetIndividualVotesResponse{
 		IndividualVotes: []*structs.IndividualVote{
 			{
-				ValidatorIndex:                   0,
-				PublicKey:                        beaconState.Validators()[0].PublicKey,
+				Epoch:                            "1",
+				ValidatorIndex:                   "0",
+				PublicKey:                        hexutil.Encode(beaconState.Validators()[0].PublicKey),
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
 				IsCurrentEpochTargetAttester:     true,
@@ -1728,12 +1793,15 @@ func TestServer_GetIndividualVotes_CapellaEndOfEpoch(t *testing.T) {
 				IsPreviousEpochAttester:          true,
 				IsPreviousEpochHeadAttester:      true,
 				IsPreviousEpochTargetAttester:    true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				Epoch:                            1,
+				CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", params.BeaconConfig().MaxEffectiveBalance),
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
 			},
 			{
-				ValidatorIndex:                   1,
-				PublicKey:                        beaconState.Validators()[1].PublicKey,
+				Epoch:                            "1",
+				ValidatorIndex:                   "1",
+				PublicKey:                        hexutil.Encode(beaconState.Validators()[1].PublicKey),
 				IsActiveInCurrentEpoch:           true,
 				IsActiveInPreviousEpoch:          true,
 				IsCurrentEpochTargetAttester:     true,
@@ -1741,8 +1809,10 @@ func TestServer_GetIndividualVotes_CapellaEndOfEpoch(t *testing.T) {
 				IsPreviousEpochAttester:          true,
 				IsPreviousEpochHeadAttester:      true,
 				IsPreviousEpochTargetAttester:    true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				Epoch:                            1,
+				CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", params.BeaconConfig().MaxEffectiveBalance),
+				InclusionSlot:                    "0",
+				InclusionDistance:                "0",
+				InactivityScore:                  "0",
 			},
 		},
 	}

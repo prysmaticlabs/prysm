@@ -219,7 +219,7 @@ func (s *Service) IndividualVotes(
 	currentEpoch := slots.ToEpoch(s.GenesisTimeFetcher.CurrentSlot())
 	if req.Epoch > currentEpoch {
 		return nil, &RpcError{
-			Err:    errors.New(fmt.Sprintf("Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d\n", currentEpoch, req.Epoch)),
+			Err:    fmt.Errorf("cannot retrieve information about an epoch in the future, current epoch %d, requesting %d\n", currentEpoch, req.Epoch),
 			Reason: BadRequest,
 		}
 	}
@@ -265,14 +265,14 @@ func (s *Service) IndividualVotes(
 		v, bal, err = precompute.New(ctx, st)
 		if err != nil {
 			return nil, &RpcError{
-				Err:    errors.Wrapf(err, "Could not set up pre compute instance"),
+				Err:    errors.Wrapf(err, "could not set up pre compute instance"),
 				Reason: Internal,
 			}
 		}
 		v, _, err = precompute.ProcessAttestations(ctx, st, v, bal)
 		if err != nil {
 			return nil, &RpcError{
-				Err:    errors.Wrapf(err, "Could not pre compute attestations"),
+				Err:    errors.Wrapf(err, "could not pre compute attestations"),
 				Reason: Internal,
 			}
 		}
@@ -280,20 +280,20 @@ func (s *Service) IndividualVotes(
 		v, bal, err = altair.InitializePrecomputeValidators(ctx, st)
 		if err != nil {
 			return nil, &RpcError{
-				Err:    errors.Wrapf(err, "Could not set up altair pre compute instance"),
+				Err:    errors.Wrapf(err, "could not set up altair pre compute instance"),
 				Reason: Internal,
 			}
 		}
 		v, _, err = altair.ProcessEpochParticipation(ctx, st, bal, v)
 		if err != nil {
 			return nil, &RpcError{
-				Err:    errors.Wrapf(err, "Could not pre compute attestations"),
+				Err:    errors.Wrapf(err, "could not pre compute attestations"),
 				Reason: Internal,
 			}
 		}
 	} else {
 		return nil, &RpcError{
-			Err:    errors.Wrapf(err, "Invalid state type retrieved with a version of %d", st.Version()),
+			Err:    errors.Wrapf(err, "invalid state type retrieved with a version of %d", st.Version()),
 			Reason: Internal,
 		}
 	}
@@ -306,7 +306,7 @@ func (s *Service) IndividualVotes(
 		val, err := st.ValidatorAtIndexReadOnly(index)
 		if err != nil {
 			return nil, &RpcError{
-				Err:    errors.Wrapf(err, "Could not retrieve validator"),
+				Err:    errors.Wrapf(err, "could not retrieve validator"),
 				Reason: Internal,
 			}
 		}
