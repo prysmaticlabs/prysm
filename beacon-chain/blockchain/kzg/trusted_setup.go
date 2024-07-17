@@ -3,6 +3,7 @@ package kzg
 import (
 	_ "embed"
 	"encoding/json"
+
 	GoKZG "github.com/crate-crypto/go-kzg-4844"
 	CKZG "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/ethereum/go-ethereum/common/hexutil"
