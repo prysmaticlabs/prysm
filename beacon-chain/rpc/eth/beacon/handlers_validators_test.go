@@ -1247,9 +1247,6 @@ func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
 }
 
 func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -1327,9 +1324,6 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 
 func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	helpers.ClearCache()
-
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
