@@ -11,7 +11,7 @@ def _ssz_methodical_impl(ctx):
     stdlib = ''
     inputs = []
     #inputs += go_ctx.sdk.srcs
-    inputs += go_ctx.sdk.headers + go_ctx.sdk.srcs + go_ctx.sdk.tools
+    #inputs += go_ctx.sdk.headers + go_ctx.sdk.srcs + go_ctx.sdk.tools
     ssz_sources = go_ctx.library_to_source(go_ctx, ctx.attr, ctx.attr.fastssz_lib[GoLibrary], ctx.coverage_instrumented())
     inputs += ssz_sources.srcs
     #sample = go_ctx.sdk.srcs[0].path
