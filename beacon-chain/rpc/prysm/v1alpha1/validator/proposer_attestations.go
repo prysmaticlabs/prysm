@@ -66,23 +66,42 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		return nil, err
 	}
 
-	attsByDataRoot := make(map[attestation.Id][]ethpb.Att, len(versionAtts))
+	attsById := make(map[attestation.Id][]ethpb.Att, len(versionAtts))
 	for _, att := range versionAtts {
 		id, err := attestation.NewId(att, attestation.Data)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create attestation ID")
 		}
-		attsByDataRoot[id] = append(attsByDataRoot[id], att)
+		attsById[id] = append(attsById[id], att)
 	}
 
-	attsForInclusion := proposerAtts(make([]ethpb.Att, 0))
-	for _, as := range attsByDataRoot {
+	for r, as := range attsById {
 		as, err := attaggregation.Aggregate(as)
 		if err != nil {
 			return nil, err
 		}
-		attsForInclusion = append(attsForInclusion, as...)
+		attsById[r] = as
 	}
+
+	var attsForInclusion proposerAtts
+	if postElectra {
+		// TODO: hack for Electra devnet-1, take only one aggregate per committee
+		topAggregates := make([]ethpb.Att, 0)
+		for _, v := range attsById {
+			topAggregates = append(topAggregates, v[0])
+		}
+
+		attsForInclusion, err = computeOnChainAggregate(topAggregates)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		attsForInclusion = make([]ethpb.Att, 0)
+		for _, as := range attsById {
+			attsForInclusion = append(attsForInclusion, as...)
+		}
+	}
+
 	deduped, err := attsForInclusion.dedup()
 	if err != nil {
 		return nil, err
