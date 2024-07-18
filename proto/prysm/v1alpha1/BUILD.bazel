@@ -152,6 +152,7 @@ ssz_electra_objs = [
     "SignedBeaconBlockElectra",
     "SignedBlindedBeaconBlockElectra",
     "SignedConsolidation",
+    "DataColumnSidecar",
 ]
 
 ssz_gen_marshal(
@@ -250,7 +251,6 @@ ssz_gen_marshal(
         "ValidatorRegistrationV1",
         "BuilderBid",
         "DepositSnapshot",
-        "DataColumnSidecar",
         "DataColumnIdentifier",
     ],
 )
