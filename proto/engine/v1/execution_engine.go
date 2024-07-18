@@ -66,6 +66,9 @@ func (cr *ConsolidationRequest) Copy() *ConsolidationRequest {
 }
 
 func (payload *ExecutionPayloadElectra) Copy() *ExecutionPayloadElectra {
+	if payload == nil {
+		return nil
+	}
 	return &ExecutionPayloadElectra{
 		ParentHash:            bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:          bytesutil.SafeCopyBytes(payload.FeeRecipient),

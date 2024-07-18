@@ -122,6 +122,7 @@ ssz_proto_files(
 go_test(
     name = "go_default_test",
     srcs = [
+        "execution_engine_fuzz_test.go",
         "json_marshal_unmarshal_test.go",
     ],
     deps = [
