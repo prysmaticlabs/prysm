@@ -1465,25 +1465,26 @@ func genBeaconBlockBodyElectra() *v1alpha1.BeaconBlockBodyElectra {
 
 func genExecutionPayloadElectra() *enginev1.ExecutionPayloadElectra {
 	return &enginev1.ExecutionPayloadElectra{
-		ParentHash:         bytes(32),
-		FeeRecipient:       bytes(20),
-		StateRoot:          bytes(32),
-		ReceiptsRoot:       bytes(32),
-		LogsBloom:          bytes(256),
-		PrevRandao:         bytes(32),
-		BlockNumber:        1,
-		GasLimit:           2,
-		GasUsed:            3,
-		Timestamp:          4,
-		ExtraData:          bytes(32),
-		BaseFeePerGas:      bytes(32),
-		BlockHash:          bytes(32),
-		Transactions:       [][]byte{{'a'}, {'b'}, {'c'}},
-		Withdrawals:        genWithdrawals(10),
-		BlobGasUsed:        5,
-		ExcessBlobGas:      6,
-		DepositRequests:    genDepositRequests(10),
-		WithdrawalRequests: genWithdrawalRequests(10),
+		ParentHash:            bytes(32),
+		FeeRecipient:          bytes(20),
+		StateRoot:             bytes(32),
+		ReceiptsRoot:          bytes(32),
+		LogsBloom:             bytes(256),
+		PrevRandao:            bytes(32),
+		BlockNumber:           1,
+		GasLimit:              2,
+		GasUsed:               3,
+		Timestamp:             4,
+		ExtraData:             bytes(32),
+		BaseFeePerGas:         bytes(32),
+		BlockHash:             bytes(32),
+		Transactions:          [][]byte{{'a'}, {'b'}, {'c'}},
+		Withdrawals:           genWithdrawals(10),
+		BlobGasUsed:           5,
+		ExcessBlobGas:         6,
+		DepositRequests:       genDepositRequests(10),
+		WithdrawalRequests:    genWithdrawalRequests(10),
+		ConsolidationRequests: genConsolidationRequests(10),
 	}
 }
 
@@ -1518,6 +1519,22 @@ func genWithdrawalRequest() *enginev1.WithdrawalRequest {
 		SourceAddress:   bytes(20),
 		ValidatorPubkey: bytes(48),
 		Amount:          55555,
+	}
+}
+
+func genConsolidationRequests(num int) []*enginev1.ConsolidationRequest {
+	crs := make([]*enginev1.ConsolidationRequest, num)
+	for i := 0; i < num; i++ {
+		crs[i] = genConsolidationRequest()
+	}
+	return crs
+}
+
+func genConsolidationRequest() *enginev1.ConsolidationRequest {
+	return &enginev1.ConsolidationRequest{
+		SourceAddress: bytes(20),
+		SourcePubkey:  bytes(48),
+		TargetPubkey:  bytes(48),
 	}
 }
 
