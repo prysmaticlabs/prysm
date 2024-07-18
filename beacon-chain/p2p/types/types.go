@@ -278,7 +278,7 @@ func (d DataColumnSidecarsByRootReq) Len() int {
 }
 
 // Less implements sort.Interface. It reports whether the element with index i must sort before the element with index j.
-func (d DataColumnSidecarsByRootReq) Less(i int, j int) bool {
+func (d DataColumnSidecarsByRootReq) Less(i, j int) bool {
 	rootCmp := bytes.Compare(d[i].BlockRoot, d[j].BlockRoot)
 	if rootCmp != 0 {
 		return rootCmp < 0
@@ -288,7 +288,7 @@ func (d DataColumnSidecarsByRootReq) Less(i int, j int) bool {
 }
 
 // Swap implements sort.Interface. It swaps the elements with indexes i and j.
-func (d DataColumnSidecarsByRootReq) Swap(i int, j int) {
+func (d DataColumnSidecarsByRootReq) Swap(i, j int) {
 	d[i], d[j] = d[j], d[i]
 }
 
