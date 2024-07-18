@@ -75,12 +75,12 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		attsById[id] = append(attsById[id], att)
 	}
 
-	for r, as := range attsById {
+	for id, as := range attsById {
 		as, err := attaggregation.Aggregate(as)
 		if err != nil {
 			return nil, err
 		}
-		attsById[r] = as
+		attsById[id] = as
 	}
 
 	var attsForInclusion proposerAtts
