@@ -44,7 +44,7 @@ import (
 )
 
 const (
-	errNoEpochInfoError = "Cannot retrieve information about an epoch in the future"
+	errNoEpochInfoError = "cannot retrieve information about an epoch in the future"
 )
 
 func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {

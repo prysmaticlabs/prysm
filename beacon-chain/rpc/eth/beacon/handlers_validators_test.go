@@ -1237,7 +1237,7 @@ func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
 		Epoch: slots.ToEpoch(s.CoreService.GenesisTimeFetcher.CurrentSlot()) + 1,
 	}
 	errorResp, _ := individualVotesHelper(t, request, s)
-	require.StringContains(t, "Cannot retrieve information about an epoch in the future", errorResp)
+	require.StringContains(t, "cannot retrieve information about an epoch in the future", errorResp)
 }
 
 func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
