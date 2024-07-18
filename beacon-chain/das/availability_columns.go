@@ -39,6 +39,7 @@ func NewLazilyPersistentStoreColumn(store *filesystem.BlobStorage, verifier Colu
 	}
 }
 
+// Persist do nothing at the moment.
 // TODO: Very Ugly, change interface to allow for columns and blobs
 func (s *LazilyPersistentStoreColumn) Persist(_ primitives.Slot, _ ...blocks.ROBlob) error {
 	return nil
