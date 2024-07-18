@@ -21,6 +21,10 @@ func fuzzCloneable[T any, C enginev1.Cloneable[T]](t *testing.T, obj C) {
 			fuzzer.Fuzz(obj) // Populate thing with random values
 			got := obj.Copy()
 			require.DeepEqual(t, obj, got)
+			// check shallow copy working
+			fuzzer.Fuzz(got)
+			require.DeepNotEqual(t, obj, got)
+			// TODO: think of deeper not equal fuzzing
 		}
 	})
 }
