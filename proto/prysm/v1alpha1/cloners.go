@@ -1059,20 +1059,20 @@ func CopyWithdrawalRequests(wr []*enginev1.WithdrawalRequest) []*enginev1.Withdr
 	return newWr
 }
 
-func CopyConsolidationRequests(wr []*enginev1.ConsolidationRequest) []*enginev1.ConsolidationRequest {
-	if wr == nil {
+func CopyConsolidationRequests(cr []*enginev1.ConsolidationRequest) []*enginev1.ConsolidationRequest {
+	if cr == nil {
 		return nil
 	}
-	newWr := make([]*enginev1.ConsolidationRequest, len(wr))
-	for i, w := range wr {
-		newWr[i] = &enginev1.ConsolidationRequest{
+	newCr := make([]*enginev1.ConsolidationRequest, len(cr))
+	for i, w := range cr {
+		newCr[i] = &enginev1.ConsolidationRequest{
 			SourceAddress: bytesutil.SafeCopyBytes(w.SourceAddress),
 			SourcePubkey:  bytesutil.SafeCopyBytes(w.SourcePubkey),
 			TargetPubkey:  bytesutil.SafeCopyBytes(w.TargetPubkey),
 		}
 	}
 
-	return newWr
+	return newCr
 }
 
 func CopyExecutionPayloadHeaderElectra(payload *enginev1.ExecutionPayloadHeaderElectra) *enginev1.ExecutionPayloadHeaderElectra {
