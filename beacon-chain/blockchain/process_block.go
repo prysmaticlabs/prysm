@@ -542,7 +542,7 @@ func missingDataColumns(bs *filesystem.BlobStorage, root [32]byte, expected map[
 // closed, the context hits cancellation/timeout, or notifications have been received for all the missing sidecars.
 func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock) error {
 	if coreTime.PeerDASIsActive(signed.Block().Slot()) {
-		return s.isDataAvailableDataColumns(ctx, root, signed)
+		return s.isDataColumnsAvailable(ctx, root, signed)
 	}
 	if signed.Version() < version.Deneb {
 		return nil
@@ -620,7 +620,7 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	}
 }
 
-func (s *Service) isDataAvailableDataColumns(ctx context.Context, root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock) error {
+func (s *Service) isDataColumnsAvailable(ctx context.Context, root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock) error {
 	if signed.Version() < version.Deneb {
 		return nil
 	}
