@@ -510,7 +510,7 @@ func verifyAndPopulateBlobs(bwb []blocks.BlockWithROBlobs, blobs []blocks.ROBlob
 	return bwb, nil
 }
 
-func verifyAndPopulateColumns(bwb []blocks.BlockWithROBlobs, columns []blocks.RODataColumn, req *p2ppb.DataColumnSidecarsByRangeRequest, bss filesystem.BlobStorageSummarizer) ([]blocks.BlockWithROBlobs, error) {
+func verifyAndPopulateColumns(bwb []blocks.BlockWithROBlobs, columns []blocks.RODataColumn, req *p2ppb.DataColumnSidecarsByRangeRequest) ([]blocks.BlockWithROBlobs, error) {
 	columnsByRoot := make(map[[32]byte][]blocks.RODataColumn)
 	for i := range columns {
 		if columns[i].Slot() < req.StartSlot {
@@ -695,7 +695,7 @@ func (f *blocksFetcher) fetchColumnsFromPeer(ctx context.Context, bwb []blocks.B
 			continue
 		}
 		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(p)
-		robs, err := verifyAndPopulateColumns(bwb, columns, req, f.bs)
+		robs, err := verifyAndPopulateColumns(bwb, columns, req)
 		if err != nil {
 			log.WithField("peer", p).WithError(err).Debug("Invalid DataColumnByRange response")
 			continue
