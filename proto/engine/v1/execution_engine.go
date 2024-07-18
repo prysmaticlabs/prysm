@@ -1,6 +1,5 @@
 package enginev1
 
-import "C"
 import "github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 
 type Cloneable[T any] interface {
