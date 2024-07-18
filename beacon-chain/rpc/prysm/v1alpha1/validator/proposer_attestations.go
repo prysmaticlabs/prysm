@@ -85,7 +85,8 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 
 	var attsForInclusion proposerAtts
 	if postElectra {
-		// TODO: hack for Electra devnet-1, take only one aggregate per committee
+		// TODO: hack for Electra devnet-1, take only one aggregate per ID
+		// (which essentially means one aggregate for an attestation_data+committee combination
 		topAggregates := make([]ethpb.Att, 0)
 		for _, v := range attsById {
 			topAggregates = append(topAggregates, v[0])
