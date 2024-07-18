@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls/blst"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -446,6 +447,9 @@ func Test_packAttestations(t *testing.T) {
 	}
 	cb := primitives.NewAttestationCommitteeBits()
 	cb.SetBitAt(0, true)
+	key, err := blst.RandKey()
+	require.NoError(t, err)
+	sig := key.Sign([]byte{'X'})
 	electraAtt := &ethpb.AttestationElectra{
 		AggregationBits: bitfield.Bitlist{0b11111},
 		CommitteeBits:   cb,
@@ -460,7 +464,7 @@ func Test_packAttestations(t *testing.T) {
 				Root:  make([]byte, 32),
 			},
 		},
-		Signature: make([]byte, 96),
+		Signature: sig.Marshal(),
 	}
 	pool := attestations.NewPool()
 	require.NoError(t, pool.SaveAggregatedAttestations([]ethpb.Att{phase0Att, electraAtt}))
