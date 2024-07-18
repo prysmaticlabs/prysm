@@ -15,14 +15,14 @@ func TestValidatePayload(t *testing.T){
 	tests := []struct {
 		name  string
 		bfunc func(t *testing.T) *ethpb.PayloadAttestationMessage
-		err   error
+		wanterr   error
 	}{
 		{
 			name: "nil PayloadAttestationMessage",
 			bfunc: func(t *testing.T) *ethpb.PayloadAttestationMessage {
 				return nil
 			},
-			err:  errNilPayloadMessage,
+			wanterr:  errNilPayloadMessage,
 		},
 		{
 			name: "nil data",
@@ -31,7 +31,7 @@ func TestValidatePayload(t *testing.T){
 					Data: nil,
 				}
 			},
-			err:  errNilPayloadData,
+			wanterr:  errNilPayloadData,
 		},
 		{
 			name: "nil signature",
@@ -40,32 +40,32 @@ func TestValidatePayload(t *testing.T){
 					Signature: nil,
 				}
 			},
-			err:  errMissingPayloadSignature,
+			wanterr:  errMissingPayloadSignature,
 		},
 		{
 			name: "Correct PayloadAttestationMessage",
 			bfunc: func(t *testing.T) *ethpb.PayloadAttestationMessage {
 				return &ethpb.PayloadAttestationMessage{
-					Signature: make([]byte, 96),
+					Signature: make([]byte, fieldparams.BLSSignatureLength),
 					Data: &ethpb.PayloadAttestationData{
 					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 					},
 				}
 			},
-			err:  nil,
+			wanterr:  nil,
 		},
 	}
 		for _, tt := range tests {
 			t.Run(tt.name+" ReadOnlyPayloadAtt", func(t *testing.T) {
 				m := tt.bfunc(t)
 				err := validatePayload(m)
-				if tt.err != nil {
-					require.ErrorIs(t, err, tt.err)
+				if tt.wanterr != nil {
+					require.ErrorIs(t, err, tt.wanterr)
 				}else {
 					RoMess,err:=NewReadOnly(m)
+					require.NoError(t, err)
 					assert.Equal(t,RoMess.message.Data,m.Data)
 					assert.Equal(t,RoMess.message.Signature,m.Signature)
-					require.NoError(t, err)
 				}
 			})
 		}
@@ -81,7 +81,7 @@ func TestValidatorIndex(t *testing.T){
 	assert.Equal(t,ValIdx,m.ValidatorIndex())
 }
 func TestSignature(t *testing.T){
-	Sig:=[96]byte{1}
+	Sig:=make([]byte,fieldparams.BLSSignatureLength)
 	m:=&ReadOnlyPayloadAtt{
 		message: &ethpb.PayloadAttestationMessage{
 		Signature: Sig[:],
@@ -90,7 +90,7 @@ func TestSignature(t *testing.T){
 	assert.Equal(t,Sig,m.Signature())
 }
 func TestBeaconBlockRoot(t *testing.T){
-	root := [32]byte{1}
+	root := make([]byte,fieldparams.RootLength)
 	m:=&ReadOnlyPayloadAtt{
 		message: &ethpb.PayloadAttestationMessage{
 			Data: &ethpb.PayloadAttestationData{
@@ -113,7 +113,7 @@ func TestSlot(t *testing.T){
 	assert.Equal(t,slot,m.Slot())
 }
 func TestPayloadStatus(t *testing.T){
-
+	
 	for i:=0;i<4;i++ {
 	status:=primitives.PTCStatus(i)
 	m:=&ReadOnlyPayloadAtt{
