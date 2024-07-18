@@ -75,6 +75,7 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     srcs = [
+        "execution_engine.go",
         "json_marshal_unmarshal.go",
         ":ssz_generated_files",  # keep
     ],
