@@ -705,7 +705,7 @@ func CopyExecutionPayloadCapella(payload *enginev1.ExecutionPayloadCapella) *eng
 		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
-		Withdrawals:   enginev1.CopySlice(payload.Withdrawals),
+		Withdrawals:   copySlice(payload.Withdrawals),
 	}
 }
 
@@ -917,7 +917,7 @@ func CopyExecutionPayloadDeneb(payload *enginev1.ExecutionPayloadDeneb) *enginev
 		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
-		Withdrawals:   enginev1.CopySlice(payload.Withdrawals),
+		Withdrawals:   copySlice(payload.Withdrawals),
 		BlobGasUsed:   payload.BlobGasUsed,
 		ExcessBlobGas: payload.ExcessBlobGas,
 	}
@@ -1054,4 +1054,17 @@ func CopyPendingBalanceDeposits(pbd []*PendingBalanceDeposit) []*PendingBalanceD
 		}
 	}
 	return newPbd
+}
+
+type Cloneable[T any] interface {
+	Copy() T
+}
+
+func copySlice[T any, C Cloneable[T]](original []C) []T {
+	// Create a new slice with the same length as the original
+	newSlice := make([]T, len(original))
+	for i := 0; i < len(newSlice); i++ {
+		newSlice[i] = original[i].Copy()
+	}
+	return newSlice
 }

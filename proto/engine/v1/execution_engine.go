@@ -6,8 +6,7 @@ type Cloneable[T any] interface {
 	Copy() T
 }
 
-// CopySlice copies the contents of a slice of pointers to a new slice.
-func CopySlice[T any, C Cloneable[T]](original []C) []T {
+func copySlice[T any, C Cloneable[T]](original []C) []T {
 	// Create a new slice with the same length as the original
 	newSlice := make([]T, len(original))
 	for i := 0; i < len(newSlice); i++ {
@@ -83,11 +82,11 @@ func (payload *ExecutionPayloadElectra) Copy() *ExecutionPayloadElectra {
 		BaseFeePerGas:         bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:             bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:          bytesutil.SafeCopy2dBytes(payload.Transactions),
-		Withdrawals:           CopySlice(payload.Withdrawals),
+		Withdrawals:           copySlice(payload.Withdrawals),
 		BlobGasUsed:           payload.BlobGasUsed,
 		ExcessBlobGas:         payload.ExcessBlobGas,
-		DepositRequests:       CopySlice(payload.DepositRequests),
-		WithdrawalRequests:    CopySlice(payload.WithdrawalRequests),
-		ConsolidationRequests: CopySlice(payload.ConsolidationRequests),
+		DepositRequests:       copySlice(payload.DepositRequests),
+		WithdrawalRequests:    copySlice(payload.WithdrawalRequests),
+		ConsolidationRequests: copySlice(payload.ConsolidationRequests),
 	}
 }
