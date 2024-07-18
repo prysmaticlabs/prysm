@@ -519,19 +519,23 @@ func missingDataColumns(bs *filesystem.BlobStorage, root [32]byte, expected map[
 	if len(expected) == 0 {
 		return nil, nil
 	}
+
 	if len(expected) > int(params.BeaconConfig().NumberOfColumns) {
 		return nil, errMaxDataColumnsExceeded
 	}
+
 	indices, err := bs.ColumnIndices(root)
 	if err != nil {
 		return nil, err
 	}
+
 	missing := make(map[uint64]bool, len(expected))
 	for col := range expected {
 		if !indices[col] {
 			missing[col] = true
 		}
 	}
+
 	return missing, nil
 }
 
@@ -633,14 +637,17 @@ func (s *Service) isDataColumnsAvailable(ctx context.Context, root [32]byte, sig
 	if !params.WithinDAPeriod(slots.ToEpoch(block.Slot()), slots.ToEpoch(s.CurrentSlot())) {
 		return nil
 	}
+
 	body := block.Body()
 	if body == nil {
 		return errors.New("invalid nil beacon block body")
 	}
+
 	kzgCommitments, err := body.BlobKzgCommitments()
 	if err != nil {
-		return errors.Wrap(err, "could not get KZG commitments")
+		return errors.Wrap(err, "blob KZG commitments")
 	}
+
 	// If block has not commitments there is nothing to wait for.
 	if len(kzgCommitments) == 0 {
 		return nil
@@ -648,9 +655,10 @@ func (s *Service) isDataColumnsAvailable(ctx context.Context, root [32]byte, sig
 
 	colMap, err := peerdas.CustodyColumns(s.cfg.P2P.NodeID(), peerdas.CustodySubnetCount())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "custody columns")
 	}
-	// Expected is the number of custodied data columnns a node is expected to have.
+
+	// Expected is the number of custody data columnns a node is expected to have.
 	expected := len(colMap)
 	if expected == 0 {
 		return nil
@@ -660,6 +668,20 @@ func (s *Service) isDataColumnsAvailable(ctx context.Context, root [32]byte, sig
 	rootIndexChan := make(chan filesystem.RootIndexPair)
 	subscription := s.blobStorage.DataColumnFeed.Subscribe(rootIndexChan)
 	defer subscription.Unsubscribe()
+
+	// Get the count of data columns we already have in the store.
+	retrievedDataColumns, err := s.blobStorage.ColumnIndices(root)
+	if err != nil {
+		return errors.Wrap(err, "column indices")
+	}
+
+	retrievedDataColumnsCount := uint64(len(retrievedDataColumns))
+
+	// As soon as we have more than half of the data columns, we can reconstruct the missing ones.
+	// We don't need to wait for the rest of the data columns to declare the block as available.
+	if peerdas.CanSelfReconstruct(retrievedDataColumnsCount) {
+		return nil
+	}
 
 	// Get a map of data column indices that are not currently available.
 	missing, err := missingDataColumns(s.blobStorage, root, colMap)
@@ -691,12 +713,24 @@ func (s *Service) isDataColumnsAvailable(ctx context.Context, root [32]byte, sig
 		})
 		defer nst.Stop()
 	}
+
 	for {
 		select {
 		case rootIndex := <-rootIndexChan:
 			if rootIndex.Root != root {
 				// This is not the root we are looking for.
 				continue
+			}
+
+			// This is a data column we are expecting.
+			if _, ok := missing[rootIndex.Index]; ok {
+				retrievedDataColumnsCount++
+			}
+
+			// As soon as we have more than half of the data columns, we can reconstruct the missing ones.
+			// We don't need to wait for the rest of the data columns to declare the block as available.
+			if peerdas.CanSelfReconstruct(retrievedDataColumnsCount) {
+				return nil
 			}
 
 			// Remove the index from the missing map.
