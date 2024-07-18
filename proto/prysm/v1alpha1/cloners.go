@@ -1002,25 +1002,26 @@ func CopyExecutionPayloadElectra(payload *enginev1.ExecutionPayloadElectra) *eng
 		return nil
 	}
 	return &enginev1.ExecutionPayloadElectra{
-		ParentHash:         bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:       bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:          bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptsRoot:       bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
-		LogsBloom:          bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:         bytesutil.SafeCopyBytes(payload.PrevRandao),
-		BlockNumber:        payload.BlockNumber,
-		GasLimit:           payload.GasLimit,
-		GasUsed:            payload.GasUsed,
-		Timestamp:          payload.Timestamp,
-		ExtraData:          bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas:      bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:          bytesutil.SafeCopyBytes(payload.BlockHash),
-		Transactions:       bytesutil.SafeCopy2dBytes(payload.Transactions),
-		Withdrawals:        CopyWithdrawalSlice(payload.Withdrawals),
-		BlobGasUsed:        payload.BlobGasUsed,
-		ExcessBlobGas:      payload.ExcessBlobGas,
-		DepositRequests:    CopyDepositRequests(payload.DepositRequests),
-		WithdrawalRequests: CopyWithdrawalRequests(payload.WithdrawalRequests),
+		ParentHash:            bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:          bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:             bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:          bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:             bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:            bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:           payload.BlockNumber,
+		GasLimit:              payload.GasLimit,
+		GasUsed:               payload.GasUsed,
+		Timestamp:             payload.Timestamp,
+		ExtraData:             bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:         bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:             bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:          bytesutil.SafeCopy2dBytes(payload.Transactions),
+		Withdrawals:           CopyWithdrawalSlice(payload.Withdrawals),
+		BlobGasUsed:           payload.BlobGasUsed,
+		ExcessBlobGas:         payload.ExcessBlobGas,
+		DepositRequests:       CopyDepositRequests(payload.DepositRequests),
+		WithdrawalRequests:    CopyWithdrawalRequests(payload.WithdrawalRequests),
+		ConsolidationRequests: CopyConsolidationRequests(payload.ConsolidationRequests),
 	}
 }
 
@@ -1056,6 +1057,22 @@ func CopyWithdrawalRequests(wr []*enginev1.WithdrawalRequest) []*enginev1.Withdr
 	}
 
 	return newWr
+}
+
+func CopyConsolidationRequests(cr []*enginev1.ConsolidationRequest) []*enginev1.ConsolidationRequest {
+	if cr == nil {
+		return nil
+	}
+	newCr := make([]*enginev1.ConsolidationRequest, len(cr))
+	for i, w := range cr {
+		newCr[i] = &enginev1.ConsolidationRequest{
+			SourceAddress: bytesutil.SafeCopyBytes(w.SourceAddress),
+			SourcePubkey:  bytesutil.SafeCopyBytes(w.SourcePubkey),
+			TargetPubkey:  bytesutil.SafeCopyBytes(w.TargetPubkey),
+		}
+	}
+
+	return newCr
 }
 
 func CopyExecutionPayloadHeaderElectra(payload *enginev1.ExecutionPayloadHeaderElectra) *enginev1.ExecutionPayloadHeaderElectra {
