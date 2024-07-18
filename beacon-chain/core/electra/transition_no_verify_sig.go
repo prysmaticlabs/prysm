@@ -89,7 +89,7 @@ func ProcessOperations(
 		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
 	}
 
-	st, err = ProcessDepositRequests(ctx, st, exe.DepositRequests()) // TODO: EIP-6110 deposit changes.
+	st, err = ProcessDepositRequests(ctx, st, exe.DepositRequests())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
