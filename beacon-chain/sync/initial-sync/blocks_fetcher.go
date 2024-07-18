@@ -521,7 +521,7 @@ func verifyAndPopulateColumns(bwb []blocks2.BlockWithROBlobs, columns []blocks.R
 		columnsByRoot[br] = append(columnsByRoot[br], columns[i])
 	}
 	for i := range bwb {
-		bwi, err := populateBlockWithColumns(bwb[i], columnsByRoot[bwb[i].Block.Root()], req, bss)
+		bwi, err := populateBlockWithColumns(bwb[i], columnsByRoot[bwb[i].Block.Root()], req)
 		if err != nil {
 			if errors.Is(err, errDidntPopulate) {
 				continue
@@ -563,7 +563,7 @@ func populateBlock(bw blocks2.BlockWithROBlobs, blobs []blocks.ROBlob, req *p2pp
 	return bw, nil
 }
 
-func populateBlockWithColumns(bw blocks2.BlockWithROBlobs, columns []blocks.RODataColumn, req *p2ppb.DataColumnSidecarsByRangeRequest, bss filesystem.BlobStorageSummarizer) (blocks2.BlockWithROBlobs, error) {
+func populateBlockWithColumns(bw blocks2.BlockWithROBlobs, columns []blocks.RODataColumn, req *p2ppb.DataColumnSidecarsByRangeRequest) (blocks2.BlockWithROBlobs, error) {
 	blk := bw.Block
 	if blk.Version() < version.Deneb || blk.Block().Slot() < req.StartSlot {
 		return bw, errDidntPopulate
