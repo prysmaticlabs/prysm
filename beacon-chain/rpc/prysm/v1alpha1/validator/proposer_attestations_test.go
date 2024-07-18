@@ -36,7 +36,7 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11000000}}),
 	})
-	atts, err := atts.sortByProfitability()
+	atts, err := atts.sort()
 	if err != nil {
 		t.Error(err)
 	}
@@ -60,7 +60,7 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 	t.Run("no atts", func(t *testing.T) {
 		atts := getAtts([]testData{})
 		want := getAtts([]testData{})
-		atts, err := atts.sortByProfitability()
+		atts, err := atts.sort()
 		if err != nil {
 			t.Error(err)
 		}
@@ -74,7 +74,7 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 		want := getAtts([]testData{
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
 		})
-		atts, err := atts.sortByProfitability()
+		atts, err := atts.sort()
 		if err != nil {
 			t.Error(err)
 		}
@@ -90,7 +90,7 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
-		atts, err := atts.sortByProfitability()
+		atts, err := atts.sort()
 		if err != nil {
 			t.Error(err)
 		}
@@ -108,7 +108,7 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
-		atts, err := atts.sortByProfitability()
+		atts, err := atts.sort()
 		if err != nil {
 			t.Error(err)
 		}
@@ -129,7 +129,7 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 				{1, bitfield.Bitlist{0b00001100, 0b1}},
 				{1, bitfield.Bitlist{0b11001000, 0b1}},
 			})
-			atts, err := atts.sortByProfitability()
+			atts, err := atts.sort()
 			if err != nil {
 				t.Error(err)
 			}
@@ -154,7 +154,7 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 			{1, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
-		atts, err := atts.sortByProfitability()
+		atts, err := atts.sort()
 		if err != nil {
 			t.Error(err)
 		}
@@ -186,11 +186,68 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 			{1, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
-		atts, err := atts.sortByProfitability()
+		atts, err := atts.sort()
 		if err != nil {
 			t.Error(err)
 		}
 		require.DeepEqual(t, want, atts)
+	})
+}
+
+func TestProposer_sortByProfitability_DifferentCommittees(t *testing.T) {
+	t.Run("one att per committee", func(t *testing.T) {
+		c1_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{CommitteeIndex: 1}})
+		c2_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{CommitteeIndex: 2}})
+		atts := proposerAtts{c1_a1, c2_a1}
+		atts, err := atts.sort()
+		require.NoError(t, err)
+		want := proposerAtts{c1_a1, c2_a1}
+		assert.DeepEqual(t, want, atts)
+	})
+	t.Run("second committee att preferred over first committee att", func(t *testing.T) {
+		c1_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{CommitteeIndex: 1}})
+		c1_a2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10001}, Data: &ethpb.AttestationData{CommitteeIndex: 1}})
+		c2_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{CommitteeIndex: 2}})
+		atts := proposerAtts{c1_a1, c1_a2, c2_a1}
+		atts, err := atts.sort()
+		require.NoError(t, err)
+		// We prefer c2_a1 over c1_a2 because it gives us 3 new votes. c1_a2 gives us 1 new vote.
+		want := proposerAtts{c1_a1, c2_a1, c1_a2}
+		assert.DeepEqual(t, want, atts)
+	})
+	t.Run("multiple atts and multiple committees", func(t *testing.T) {
+		c1_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{CommitteeIndex: 1}})
+		c1_a2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10001}, Data: &ethpb.AttestationData{CommitteeIndex: 1}})
+		c2_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{CommitteeIndex: 2}})
+		c2_a2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{CommitteeIndex: 2}})
+		atts := proposerAtts{c1_a1, c1_a2, c2_a1, c2_a2}
+		atts, err := atts.sort()
+		require.NoError(t, err)
+		// We prefer c2_a1 over c1_a2 because it gives us 3 new votes. c1_a2 gives us 1 new vote.
+		// We prefer c1_a2 over c2_a2 because it gives us 1 new vote for committee 1, whereas c2_a2 gives us 0 new votes for committee 2.
+		want := proposerAtts{c1_a1, c2_a1, c1_a2, c2_a2}
+		assert.DeepEqual(t, want, atts)
+	})
+	t.Run("multiple atts, multiple committees and multiple slots", func(t *testing.T) {
+		s1_c1_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 1}})
+		s1_c1_a2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10001}, Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 1}})
+		s1_c2_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 2}})
+		s1_c2_a2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 2}})
+		s2_c1_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 1}})
+		s2_c1_a2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10001}, Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 1}})
+		s2_c2_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 2}})
+		s2_c2_a2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110}, Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 2}})
+
+		// Arrange in some random order
+		atts := proposerAtts{s1_c1_a1, s2_c1_a2, s1_c2_a2, s2_c2_a2, s1_c2_a1, s2_c2_a1, s1_c1_a2, s2_c1_a1}
+
+		atts, err := atts.sort()
+		require.NoError(t, err)
+		// We prefer s2 over s1 because sorting by slot (descending) is the priority.
+		// We prefer c2_a1 over c1_a2 because it gives us 3 new votes. c1_a2 gives us 1 new vote.
+		// We prefer c1_a2 over c2_a2 because it gives us 1 new vote for committee 1, whereas c2_a2 gives us 0 new votes for committee 2.
+		want := proposerAtts{s2_c1_a1, s2_c2_a1, s2_c1_a2, s2_c2_a2, s1_c1_a1, s1_c2_a1, s1_c1_a2, s1_c2_a2}
+		assert.DeepEqual(t, want, atts)
 	})
 }
 

@@ -112,7 +112,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	if err != nil {
 		return nil, err
 	}
-	sorted, err := deduped.sortByProfitability()
+	sorted, err := deduped.sort()
 	if err != nil {
 		return nil, err
 	}
@@ -143,79 +143,128 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 	return validAtts, invalidAtts
 }
 
-// sortByProfitability orders attestations by highest slot and by highest aggregation bit count.
-func (a proposerAtts) sortByProfitability() (proposerAtts, error) {
+// sort orders attestations by highest slot and by highest aggregation bit count.
+func (a proposerAtts) sort() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
-	return a.sortByProfitabilityUsingMaxCover()
-}
 
-// sortByProfitabilityUsingMaxCover orders attestations by highest slot and by highest aggregation bit count.
-// Duplicate bits are counted only once, using max-cover algorithm.
-func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
-	// Separate attestations by slot, as slot number takes higher precedence when sorting.
-	var slots []primitives.Slot
-	attsBySlot := map[primitives.Slot]proposerAtts{}
-	for _, att := range a {
-		if _, ok := attsBySlot[att.GetData().Slot]; !ok {
-			slots = append(slots, att.GetData().Slot)
-		}
-		attsBySlot[att.GetData().Slot] = append(attsBySlot[att.GetData().Slot], att)
+	type slotAtts struct {
+		candidates map[primitives.CommitteeIndex]proposerAtts
+		selected   map[primitives.CommitteeIndex]proposerAtts
+		leftover   map[primitives.CommitteeIndex]proposerAtts
 	}
 
-	selectAtts := func(atts proposerAtts) (proposerAtts, error) {
-		if len(atts) < 2 {
-			return atts, nil
+	// Separate attestations by slot, as slot number takes higher precedence when sorting.
+	// Also separate by committee index because maxcover will prefer attestations for the same
+	// committee with disjoint bits over attestations for different committees with overlapping
+	// bits, even though same bits for different committees are separate votes.
+	var slots []primitives.Slot
+	attsBySlot := map[primitives.Slot]*slotAtts{}
+	for _, att := range a {
+		slot := att.GetData().Slot
+		ci := att.GetData().CommitteeIndex
+		if _, ok := attsBySlot[slot]; !ok {
+			attsBySlot[slot] = &slotAtts{}
+			attsBySlot[slot].candidates = make(map[primitives.CommitteeIndex]proposerAtts)
+			slots = append(slots, slot)
 		}
-		candidates := make([]*bitfield.Bitlist64, len(atts))
-		for i := 0; i < len(atts); i++ {
-			var err error
-			candidates[i], err = atts[i].GetAggregationBits().ToBitlist64()
+		attsBySlot[slot].candidates[ci] = append(attsBySlot[slot].candidates[ci], att)
+	}
+
+	var err error
+	for _, sa := range attsBySlot {
+		sa.selected = make(map[primitives.CommitteeIndex]proposerAtts)
+		sa.leftover = make(map[primitives.CommitteeIndex]proposerAtts)
+		for ci, committeeAtts := range sa.candidates {
+			sa.selected[ci], sa.leftover[ci], err = committeeAtts.sortByProfitabilityUsingMaxCover()
 			if err != nil {
 				return nil, err
 			}
 		}
-		// Add selected candidates on top, those that are not selected - append at bottom.
-		selectedKeys, _, err := aggregation.MaxCover(candidates, len(candidates), true /* allowOverlaps */)
-		if err == nil {
-			// Pick selected attestations first, leftover attestations will be appended at the end.
-			// Both lists will be sorted by number of bits set.
-			selectedAtts := make(proposerAtts, selectedKeys.Count())
-			leftoverAtts := make(proposerAtts, selectedKeys.Not().Count())
-			for i, key := range selectedKeys.BitIndices() {
-				selectedAtts[i] = atts[key]
-			}
-			for i, key := range selectedKeys.Not().BitIndices() {
-				leftoverAtts[i] = atts[key]
-			}
-			sort.Slice(selectedAtts, func(i, j int) bool {
-				return selectedAtts[i].GetAggregationBits().Count() > selectedAtts[j].GetAggregationBits().Count()
-			})
-			sort.Slice(leftoverAtts, func(i, j int) bool {
-				return leftoverAtts[i].GetAggregationBits().Count() > leftoverAtts[j].GetAggregationBits().Count()
-			})
-			return append(selectedAtts, leftoverAtts...), nil
-		}
-		return atts, nil
 	}
 
-	// Select attestations. Slots are sorted from higher to lower at this point. Within slots attestations
-	// are sorted to maximize profitability (greedily selected, with previous attestations' bits
-	// evaluated before including any new attestation).
 	var sortedAtts proposerAtts
 	sort.Slice(slots, func(i, j int) bool {
 		return slots[i] > slots[j]
 	})
 	for _, slot := range slots {
-		selected, err := selectAtts(attsBySlot[slot])
-		if err != nil {
-			return nil, err
-		}
-		sortedAtts = append(sortedAtts, selected...)
+		sortedAtts = append(sortedAtts, sortSlotAttestations(attsBySlot[slot].selected)...)
+		sortedAtts = append(sortedAtts, sortSlotAttestations(attsBySlot[slot].leftover)...)
 	}
 
 	return sortedAtts, nil
+}
+
+// sortByProfitabilityUsingMaxCover orders attestations by highest slot and by highest aggregation bit count.
+// Duplicate bits are counted only once, using max-cover algorithm.
+func (a proposerAtts) sortByProfitabilityUsingMaxCover() (selected proposerAtts, leftover proposerAtts, err error) {
+	if len(a) < 2 {
+		return a, nil, nil
+	}
+	candidates := make([]*bitfield.Bitlist64, len(a))
+	for i := 0; i < len(a); i++ {
+		var err error
+		candidates[i], err = a[i].GetAggregationBits().ToBitlist64()
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	// Add selected candidates on top, those that are not selected - append at bottom.
+	selectedKeys, _, err := aggregation.MaxCover(candidates, len(candidates), true /* allowOverlaps */)
+	if err != nil {
+		log.WithError(err).Debug("MaxCover aggregation failed")
+		return a, nil, nil
+	}
+
+	// Pick selected attestations first, leftover attestations will be appended at the end.
+	// Both lists will be sorted by number of bits set.
+	selected = make(proposerAtts, selectedKeys.Count())
+	leftover = make(proposerAtts, selectedKeys.Not().Count())
+	for i, key := range selectedKeys.BitIndices() {
+		selected[i] = a[key]
+	}
+	for i, key := range selectedKeys.Not().BitIndices() {
+		leftover[i] = a[key]
+	}
+	sort.Slice(selected, func(i, j int) bool {
+		return selected[i].GetAggregationBits().Count() > selected[j].GetAggregationBits().Count()
+	})
+	sort.Slice(leftover, func(i, j int) bool {
+		return leftover[i].GetAggregationBits().Count() > leftover[j].GetAggregationBits().Count()
+	})
+	return selected, leftover, nil
+}
+
+func sortSlotAttestations(slotAtts map[primitives.CommitteeIndex]proposerAtts) proposerAtts {
+	committeeIndexTracker := make(map[primitives.CommitteeIndex]int)
+	attCount := 0
+	for _, committeeAtts := range slotAtts {
+		attCount += len(committeeAtts)
+	}
+
+	sorted := make([]ethpb.Att, attCount)
+
+	for i := 0; i < attCount; i++ {
+		var maxBits uint64
+		var bestAtt ethpb.Att
+
+		for ci, committeeAtts := range slotAtts {
+			ix := committeeIndexTracker[ci]
+			if ix < len(committeeAtts) {
+				bitCount := committeeAtts[ix].GetAggregationBits().Count()
+				if bitCount > maxBits {
+					maxBits = bitCount
+					bestAtt = committeeAtts[ix]
+				}
+			}
+		}
+		maxBits = 0
+		committeeIndexTracker[bestAtt.GetData().CommitteeIndex]++
+		sorted[i] = bestAtt
+	}
+
+	return sorted
 }
 
 // limitToMaxAttestations limits attestations to maximum attestations per block.
