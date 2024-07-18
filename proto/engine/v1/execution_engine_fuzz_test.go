@@ -9,14 +9,18 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
-func TestCopyExecutionPayloadElectra_1000(t *testing.T) {
-	payload := &enginev1.ExecutionPayloadElectra{}
+func TestCopyExecutionPayload_Fuzz(t *testing.T) {
+	fuzzCloneable(t, &enginev1.ExecutionPayloadElectra{})
+}
+
+func fuzzCloneable[T any, C enginev1.Cloneable[T]](t *testing.T, obj C) {
 	fuzzer := fuzz.NewWithSeed(0)
-	t.Run(fmt.Sprintf("%T", payload), func(t *testing.T) {
-		for i := 0; i < 1000; i++ {
-			fuzzer.Fuzz(payload) // Populate thing with random values
-			got := payload.Copy()
-			require.DeepEqual(t, payload, got)
+	amount := 1000
+	t.Run(fmt.Sprintf("%T", obj), func(t *testing.T) {
+		for i := 0; i < amount; i++ {
+			fuzzer.Fuzz(obj) // Populate thing with random values
+			got := obj.Copy()
+			require.DeepEqual(t, obj, got)
 		}
 	})
 }
