@@ -705,7 +705,7 @@ func CopyExecutionPayloadCapella(payload *enginev1.ExecutionPayloadCapella) *eng
 		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
-		Withdrawals:   CopyWithdrawalSlice(payload.Withdrawals),
+		Withdrawals:   copySlice(payload.Withdrawals),
 	}
 }
 
@@ -797,33 +797,6 @@ func CopyBlindedBeaconBlockBodyBellatrix(body *BlindedBeaconBlockBodyBellatrix) 
 		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
 		ExecutionPayloadHeader: CopyExecutionPayloadHeader(body.ExecutionPayloadHeader),
-	}
-}
-
-// CopyWithdrawalSlice copies the provided slice of withdrawals.
-func CopyWithdrawalSlice(withdrawals []*enginev1.Withdrawal) []*enginev1.Withdrawal {
-	if withdrawals == nil {
-		return nil
-	}
-
-	res := make([]*enginev1.Withdrawal, len(withdrawals))
-	for i := 0; i < len(res); i++ {
-		res[i] = CopyWithdrawal(withdrawals[i])
-	}
-	return res
-}
-
-// CopyWithdrawal copies the provided withdrawal object.
-func CopyWithdrawal(withdrawal *enginev1.Withdrawal) *enginev1.Withdrawal {
-	if withdrawal == nil {
-		return nil
-	}
-
-	return &enginev1.Withdrawal{
-		Index:          withdrawal.Index,
-		ValidatorIndex: withdrawal.ValidatorIndex,
-		Address:        bytesutil.SafeCopyBytes(withdrawal.Address),
-		Amount:         withdrawal.Amount,
 	}
 }
 
@@ -944,7 +917,7 @@ func CopyExecutionPayloadDeneb(payload *enginev1.ExecutionPayloadDeneb) *enginev
 		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
-		Withdrawals:   CopyWithdrawalSlice(payload.Withdrawals),
+		Withdrawals:   copySlice(payload.Withdrawals),
 		BlobGasUsed:   payload.BlobGasUsed,
 		ExcessBlobGas: payload.ExcessBlobGas,
 	}
@@ -990,89 +963,10 @@ func CopyBeaconBlockBodyElectra(body *BeaconBlockBodyElectra) *BeaconBlockBodyEl
 		Deposits:              CopyDeposits(body.Deposits),
 		VoluntaryExits:        CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:         CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayload:      CopyExecutionPayloadElectra(body.ExecutionPayload),
+		ExecutionPayload:      body.ExecutionPayload.Copy(),
 		BlsToExecutionChanges: CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 		BlobKzgCommitments:    CopyBlobKZGs(body.BlobKzgCommitments),
 	}
-}
-
-// CopyExecutionPayloadElectra copies the provided execution payload.
-func CopyExecutionPayloadElectra(payload *enginev1.ExecutionPayloadElectra) *enginev1.ExecutionPayloadElectra {
-	if payload == nil {
-		return nil
-	}
-	return &enginev1.ExecutionPayloadElectra{
-		ParentHash:            bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:          bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:             bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptsRoot:          bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
-		LogsBloom:             bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:            bytesutil.SafeCopyBytes(payload.PrevRandao),
-		BlockNumber:           payload.BlockNumber,
-		GasLimit:              payload.GasLimit,
-		GasUsed:               payload.GasUsed,
-		Timestamp:             payload.Timestamp,
-		ExtraData:             bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas:         bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:             bytesutil.SafeCopyBytes(payload.BlockHash),
-		Transactions:          bytesutil.SafeCopy2dBytes(payload.Transactions),
-		Withdrawals:           CopyWithdrawalSlice(payload.Withdrawals),
-		BlobGasUsed:           payload.BlobGasUsed,
-		ExcessBlobGas:         payload.ExcessBlobGas,
-		DepositRequests:       CopyDepositRequests(payload.DepositRequests),
-		WithdrawalRequests:    CopyWithdrawalRequests(payload.WithdrawalRequests),
-		ConsolidationRequests: CopyConsolidationRequests(payload.ConsolidationRequests),
-	}
-}
-
-func CopyDepositRequests(dr []*enginev1.DepositRequest) []*enginev1.DepositRequest {
-	if dr == nil {
-		return nil
-	}
-
-	newDr := make([]*enginev1.DepositRequest, len(dr))
-	for i, d := range dr {
-		newDr[i] = &enginev1.DepositRequest{
-			Pubkey:                bytesutil.SafeCopyBytes(d.Pubkey),
-			WithdrawalCredentials: bytesutil.SafeCopyBytes(d.WithdrawalCredentials),
-			Amount:                d.Amount,
-			Signature:             bytesutil.SafeCopyBytes(d.Signature),
-			Index:                 d.Index,
-		}
-	}
-	return newDr
-}
-
-func CopyWithdrawalRequests(wr []*enginev1.WithdrawalRequest) []*enginev1.WithdrawalRequest {
-	if wr == nil {
-		return nil
-	}
-	newWr := make([]*enginev1.WithdrawalRequest, len(wr))
-	for i, w := range wr {
-		newWr[i] = &enginev1.WithdrawalRequest{
-			SourceAddress:   bytesutil.SafeCopyBytes(w.SourceAddress),
-			ValidatorPubkey: bytesutil.SafeCopyBytes(w.ValidatorPubkey),
-			Amount:          w.Amount,
-		}
-	}
-
-	return newWr
-}
-
-func CopyConsolidationRequests(cr []*enginev1.ConsolidationRequest) []*enginev1.ConsolidationRequest {
-	if cr == nil {
-		return nil
-	}
-	newCr := make([]*enginev1.ConsolidationRequest, len(cr))
-	for i, w := range cr {
-		newCr[i] = &enginev1.ConsolidationRequest{
-			SourceAddress: bytesutil.SafeCopyBytes(w.SourceAddress),
-			SourcePubkey:  bytesutil.SafeCopyBytes(w.SourcePubkey),
-			TargetPubkey:  bytesutil.SafeCopyBytes(w.TargetPubkey),
-		}
-	}
-
-	return newCr
 }
 
 func CopyExecutionPayloadHeaderElectra(payload *enginev1.ExecutionPayloadHeaderElectra) *enginev1.ExecutionPayloadHeaderElectra {
@@ -1160,4 +1054,17 @@ func CopyPendingBalanceDeposits(pbd []*PendingBalanceDeposit) []*PendingBalanceD
 		}
 	}
 	return newPbd
+}
+
+type cloneable[T any] interface {
+	Copy() T
+}
+
+func copySlice[T any, C cloneable[T]](original []C) []T {
+	// Create a new slice with the same length as the original
+	newSlice := make([]T, len(original))
+	for i := 0; i < len(newSlice); i++ {
+		newSlice[i] = original[i].Copy()
+	}
+	return newSlice
 }

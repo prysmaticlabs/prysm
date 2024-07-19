@@ -527,26 +527,6 @@ func bytes(length int) []byte {
 	return b
 }
 
-func TestCopyWithdrawals(t *testing.T) {
-	ws := genWithdrawals(10)
-
-	got := v1alpha1.CopyWithdrawalSlice(ws)
-	if !reflect.DeepEqual(got, ws) {
-		t.Errorf("TestCopyWithdrawals() = %v, want %v", got, ws)
-	}
-	assert.NotEmpty(t, got, "Copied withdrawals have empty fields")
-}
-
-func TestCopyWithdrawal(t *testing.T) {
-	w := genWithdrawal()
-
-	got := v1alpha1.CopyWithdrawal(w)
-	if !reflect.DeepEqual(got, w) {
-		t.Errorf("TestCopyWithdrawal() = %v, want %v", got, w)
-	}
-	assert.NotEmpty(t, got, "Copied withdrawal has empty fields")
-}
-
 func TestCopyBLSToExecutionChanges(t *testing.T) {
 	changes := genBLSToExecutionChanges(10)
 
@@ -655,33 +635,6 @@ func TestCopyBeaconBlockBodyElectra(t *testing.T) {
 	got := v1alpha1.CopyBeaconBlockBodyElectra(bb)
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("TestCopyBeaconBlockBodyElectra() = %v, want %v", got, bb)
-	}
-}
-
-func TestCopyExecutionPayloadElectra(t *testing.T) {
-	p := genExecutionPayloadElectra()
-
-	got := v1alpha1.CopyExecutionPayloadElectra(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyExecutionPayloadElectra() = %v, want %v", got, p)
-	}
-}
-
-func TestCopyDepositRequests(t *testing.T) {
-	drs := genDepositRequests(10)
-
-	got := v1alpha1.CopyDepositRequests(drs)
-	if !reflect.DeepEqual(got, drs) {
-		t.Errorf("TestCopyDepositRequests() = %v, want %v", got, drs)
-	}
-}
-
-func TestCopyWithdrawalRequests(t *testing.T) {
-	wrs := genWithdrawalRequests(10)
-
-	got := v1alpha1.CopyWithdrawalRequests(wrs)
-	if !reflect.DeepEqual(got, wrs) {
-		t.Errorf("TestCopyWithdrawalRequests() = %v, want %v", got, wrs)
 	}
 }
 
