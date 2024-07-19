@@ -274,6 +274,10 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "0x"+hex.EncodeToString([]byte("ElectraForkVersion")), v)
 			case "ELECTRA_FORK_EPOCH":
 				assert.Equal(t, "107", v)
+			case "EPBS_FORK_VERSION":
+				assert.Equal(t, "0x"+hex.EncodeToString([]byte("EPBSForkVersion")), v)
+			case "EPBS_FORK_EPOCH":
+				assert.Equal(t, "109", v)
 			case "MIN_ANCHOR_POW_BLOCK_DIFFICULTY":
 				assert.Equal(t, "1000", v)
 			case "BLS_WITHDRAWAL_PREFIX":
