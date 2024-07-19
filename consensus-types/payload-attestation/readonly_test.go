@@ -62,32 +62,33 @@ func TestValidatePayload(t *testing.T){
 				if tt.wanterr != nil {
 					require.ErrorIs(t, err, tt.wanterr)
 				}else {
-					RoMess,err:=NewReadOnly(m)
+					roMess,err:=NewReadOnly(m)
 					require.NoError(t, err)
-					assert.Equal(t,RoMess.message.Data,m.Data)
-					assert.Equal(t,RoMess.message.Signature,m.Signature)
+					assert.Equal(t,roMess.message.Data,m.Data)
+					assert.Equal(t,roMess.message.Signature,m.Signature)
 				}
 			})
 		}
 }
 
 func TestValidatorIndex(t *testing.T){
-	ValIdx:=primitives.ValidatorIndex(1)
+	valIdx:=primitives.ValidatorIndex(1)
 	m:=&ReadOnlyPayloadAtt{
 		message: &ethpb.PayloadAttestationMessage{
-		ValidatorIndex: ValIdx,
+		ValidatorIndex: valIdx,
 		},
 	}
-	assert.Equal(t,ValIdx,m.ValidatorIndex())
+	assert.Equal(t,valIdx,m.ValidatorIndex())
 }
+
 func TestSignature(t *testing.T){
-	Sig:=make([]byte,fieldparams.BLSSignatureLength)
+	sig:=make([]byte,fieldparams.BLSSignatureLength)
 	m:=&ReadOnlyPayloadAtt{
 		message: &ethpb.PayloadAttestationMessage{
-		Signature: Sig[:],
+		Signature: sig[:],
 		},
 	}
-	assert.Equal(t,Sig,m.Signature())
+	assert.Equal(t,sig,m.Signature())
 }
 func TestBeaconBlockRoot(t *testing.T){
 	root := make([]byte,fieldparams.RootLength)
@@ -112,8 +113,8 @@ func TestSlot(t *testing.T){
 	}
 	assert.Equal(t,slot,m.Slot())
 }
+
 func TestPayloadStatus(t *testing.T){
-	
 	for i:=0;i<4;i++ {
 	status:=primitives.PTCStatus(i)
 	m:=&ReadOnlyPayloadAtt{
