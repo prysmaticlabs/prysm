@@ -330,6 +330,14 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			},
 		}
 
+		consolidationReq := []*enginev1.ConsolidationRequest{
+			{
+				SourceAddress: bytesutil.PadTo([]byte("sourceAddress-1"), 20),
+				SourcePubkey:  bytesutil.PadTo([]byte("s-pubKey-1"), 48),
+				TargetPubkey:  bytesutil.PadTo([]byte("t-pubKey-1"), 48),
+			},
+		}
+
 		resp := &enginev1.GetPayloadV4ResponseJson{
 			BlobsBundle: &enginev1.BlobBundleJSON{
 				Commitments: []hexutil.Bytes{{'a'}, {'b'}, {'c'}, {'d'}},
@@ -358,10 +366,11 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 					Address:        bytesutil.PadTo([]byte("address"), 20),
 					Amount:         1,
 				}},
-				BlobGasUsed:        &bgu,
-				ExcessBlobGas:      &ebg,
-				WithdrawalRequests: enginev1.ProtoWithdrawalRequestsToJson(withdrawalReq),
-				DepositRequests:    enginev1.ProtoDepositRequestsToJson(depositReq),
+				BlobGasUsed:           &bgu,
+				ExcessBlobGas:         &ebg,
+				WithdrawalRequests:    enginev1.ProtoWithdrawalRequestsToJson(withdrawalReq),
+				DepositRequests:       enginev1.ProtoDepositRequestsToJson(depositReq),
+				ConsolidationRequests: enginev1.ProtoConsolidationRequestsToJson(consolidationReq),
 			},
 		}
 		enc, err := json.Marshal(resp)
@@ -413,6 +422,10 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.Equal(t, len(pb.Payload.DepositRequests), len(depositReq))
 		for i := range pb.Payload.DepositRequests {
 			require.DeepEqual(t, pb.Payload.DepositRequests[i], depositReq[i])
+		}
+		require.Equal(t, len(pb.Payload.ConsolidationRequests), len(consolidationReq))
+		for i := range pb.Payload.ConsolidationRequests {
+			require.DeepEqual(t, pb.Payload.ConsolidationRequests[i], consolidationReq[i])
 		}
 	})
 	t.Run("execution block", func(t *testing.T) {

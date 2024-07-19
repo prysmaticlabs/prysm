@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const errEpoch = "Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d"
+const errEpoch = "cannot retrieve information about an epoch in the future, current epoch %d, requesting %d"
 
 // ListValidatorAssignments retrieves the validator assignments for a given epoch,
 // optional validator indices or public keys may be included to filter validator assignments.
