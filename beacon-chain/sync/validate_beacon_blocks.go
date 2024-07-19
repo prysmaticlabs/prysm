@@ -232,6 +232,11 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
+	if err := s.validateEPBSBeaconBlock(blk.Block()); err != nil {
+		s.setBadBlock(ctx, blockRoot)
+		return err
+	}
+
 	if err := s.validateDenebBeaconBlock(blk.Block()); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
@@ -317,6 +322,24 @@ func (s *Service) validateDenebBeaconBlock(blk interfaces.ReadOnlyBeaconBlock) e
 	if len(commits) > fieldparams.MaxBlobsPerBlock {
 		return errors.Wrapf(errRejectCommitmentLen, "%d > %d", len(commits), fieldparams.MaxBlobsPerBlock)
 	}
+	return nil
+}
+
+// validateEPBSBeaconBlock validates the block for the ePBS fork.
+// spec code:
+//
+// If execution_payload verification of block's execution payload parent by an execution node is complete:
+// [REJECT] The block's execution payload parent (defined by header.parent_block_hash) passes all validation.
+// [REJECT] The block's parent (defined by block.parent_root) passes validation.
+func (s *Service) validateEPBSBeaconBlock(blk interfaces.ReadOnlyBeaconBlock) error {
+	if blk.Version() < version.EPBS {
+		return nil
+	}
+
+	// TODO: If execution_payload verification of block's execution payload parent by an execution node is complete:
+	// [REJECT] The block's execution payload parent (defined by header.parent_block_hash) passes all validation.
+	// [REJECT] The block's parent (defined by block.parent_root) passes validation.
+
 	return nil
 }
 
