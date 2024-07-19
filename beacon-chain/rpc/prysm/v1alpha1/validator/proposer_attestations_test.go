@@ -493,6 +493,20 @@ func Test_packAttestations(t *testing.T) {
 		require.Equal(t, 1, len(atts))
 		assert.DeepEqual(t, electraAtt, atts[0])
 	})
+	t.Run("Electra block with Deneb state", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.ElectraForkEpoch = 1
+		params.OverrideBeaconConfig(cfg)
+
+		st, _ := util.DeterministicGenesisStateDeneb(t, 64)
+		require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+
+		atts, err := s.packAttestations(ctx, st, params.BeaconConfig().SlotsPerEpoch)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(atts))
+		assert.DeepEqual(t, electraAtt, atts[0])
+	})
 }
 
 func Test_limitToMaxAttestations(t *testing.T) {

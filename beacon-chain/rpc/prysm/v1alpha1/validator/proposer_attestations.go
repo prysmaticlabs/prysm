@@ -42,6 +42,8 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	}
 	atts = append(atts, uAtts...)
 
+	// Checking the state's version here will give the wrong result if the last slot of Deneb is missed.
+	// The head state will still be in Deneb while we are trying to build an Electra block.
 	postElectra := slots.ToEpoch(blkSlot) >= params.BeaconConfig().ElectraForkEpoch
 
 	versionAtts := make([]ethpb.Att, 0, len(atts))
