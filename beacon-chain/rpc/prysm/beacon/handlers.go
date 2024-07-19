@@ -94,16 +94,12 @@ func (s *Server) GetIndividualVotes(w http.ResponseWriter, r *http.Request) {
 
 	publicKeyBytes := make([][]byte, len(req.PublicKeys))
 	for i, s := range req.PublicKeys {
-		bss := make([]byte, len(s))
-		for j, hexStr := range s {
-			bs, err := hexutil.Decode(hexStr)
-			if err != nil {
-				httputil.HandleError(w, "could not decode public keys: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			bss[j] = bs[0]
+		bs, err := hexutil.Decode(s)
+		if err != nil {
+			httputil.HandleError(w, "could not decode public keys: "+err.Error(), http.StatusBadRequest)
+			return
 		}
-		publicKeyBytes[i] = bss
+		publicKeyBytes[i] = bs
 	}
 	epoch, err := strconv.ParseUint(req.Epoch, 10, 64)
 	if err != nil {

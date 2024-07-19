@@ -198,9 +198,9 @@ type DepositSnapshot struct {
 }
 
 type GetIndividualVotesRequest struct {
-	Epoch      string     `json:"epoch"`
-	PublicKeys [][]string `json:"public_keys,omitempty"`
-	Indices    []string   `json:"indices,omitempty"`
+	Epoch      string   `json:"epoch"`
+	PublicKeys []string `json:"public_keys,omitempty"`
+	Indices    []string `json:"indices,omitempty"`
 }
 
 type GetIndividualVotesResponse struct {
