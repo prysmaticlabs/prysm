@@ -10,10 +10,10 @@ import (
 )
 
 func TestCopyExecutionPayload_Fuzz(t *testing.T) {
-	fuzzCloneable(t, &enginev1.ExecutionPayloadElectra{})
+	fuzzCopies(t, &enginev1.ExecutionPayloadElectra{})
 }
 
-func fuzzCloneable[T any, C enginev1.Cloneable[T]](t *testing.T, obj C) {
+func fuzzCopies[T any, C enginev1.Copier[T]](t *testing.T, obj C) {
 	fuzzer := fuzz.NewWithSeed(0)
 	amount := 1000
 	t.Run(fmt.Sprintf("%T", obj), func(t *testing.T) {
