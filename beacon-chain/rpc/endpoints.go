@@ -983,6 +983,16 @@ func (s *Service) prysmBeaconEndpoints(
 			handler: server.GetIndividualVotes,
 			methods: []string{http.MethodPost},
 		},
+		{
+			template: "/prysm/v1/beacon/chain_head",
+			name:     namespace + ".GetChainHead",
+			middleware: []mux.MiddlewareFunc{
+				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetChainHead,
+			methods: []string{http.MethodGet},
+		},
 	}
 }
 
