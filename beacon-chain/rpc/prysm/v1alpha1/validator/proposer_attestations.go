@@ -340,7 +340,7 @@ func (vs *Server) isAttestationFromPreviousEpoch(att ethpb.Att) bool {
 }
 
 // filterCurrentEpochAttestationByForkchoice filters attestations from the current epoch based on fork choice conditions.
-// Returns true if any of the following conditions are met:
+// Returns true if all of the following conditions are met:
 // 1. The attestation beacon block root is for a slot in the previous epoch (according to fork choice).
 // 2. The attestation target root is the same as the attestation beacon block root.
 // 3. The common ancestor of the head block and the attestation beacon block root is from the previous epoch.
@@ -351,8 +351,8 @@ func (vs *Server) filterCurrentEpochAttestationByForkchoice(ctx context.Context,
 
 	attTargetRoot := [32]byte(att.GetData().Target.Root)
 	attBlockRoot := [32]byte(att.GetData().BeaconBlockRoot)
-	if attBlockRoot == attTargetRoot {
-		return true, nil
+	if attBlockRoot != attTargetRoot {
+		return false, nil
 	}
 
 	slot, err := vs.ForkchoiceFetcher.RecentBlockSlot(attBlockRoot)
@@ -364,8 +364,8 @@ func (vs *Server) filterCurrentEpochAttestationByForkchoice(ctx context.Context,
 	if prevEpoch >= 1 {
 		prevEpoch = prevEpoch.Sub(1)
 	}
-	if epoch == prevEpoch {
-		return true, nil
+	if epoch != prevEpoch {
+		return false, nil
 	}
 
 	_, slot, err = vs.ForkchoiceFetcher.CommonAncestor(ctx, headRoot, attBlockRoot)

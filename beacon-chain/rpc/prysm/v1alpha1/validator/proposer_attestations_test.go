@@ -656,7 +656,7 @@ func Test_filterCurrentEpochAttestationByForkchoice(t *testing.T) {
 	targetRoot := [32]byte{'a'}
 	a := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			BeaconBlockRoot: targetRoot[:],
+			BeaconBlockRoot: make([]byte, 32),
 			Slot:            params.BeaconConfig().SlotsPerEpoch,
 			Target: &ethpb.Checkpoint{
 				Epoch: 1,
@@ -668,10 +668,9 @@ func Test_filterCurrentEpochAttestationByForkchoice(t *testing.T) {
 	ctx := context.Background()
 	got, err := s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
 	require.NoError(t, err)
-	require.Equal(t, true, got)
+	require.Equal(t, false, got)
 
-	r := [32]byte{'b'}
-	a.Data.BeaconBlockRoot = r[:]
+	a.Data.BeaconBlockRoot = targetRoot[:]
 	s.ForkchoiceFetcher = &chainMock.ChainService{BlockSlot: 1}
 	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
 	require.NoError(t, err)
@@ -680,7 +679,7 @@ func Test_filterCurrentEpochAttestationByForkchoice(t *testing.T) {
 	s.ForkchoiceFetcher = &chainMock.ChainService{BlockSlot: 100, CommonAncestorSlot: 1}
 	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
 	require.NoError(t, err)
-	require.Equal(t, true, got)
+	require.Equal(t, false, got)
 
 	slot = params.BeaconConfig().SlotsPerEpoch * 2
 	s = &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
