@@ -68,7 +68,7 @@ func (s *Service) endpoints(
 	endpoints = append(endpoints, s.configEndpoints()...)
 	endpoints = append(endpoints, s.lightClientEndpoints(blocker, stater)...)
 	endpoints = append(endpoints, s.eventsEndpoints()...)
-	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch, stater)...)
+	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch, stater, coreService)...)
 	endpoints = append(endpoints, s.prysmNodeEndpoints()...)
 	endpoints = append(endpoints, s.prysmValidatorEndpoints(coreService)...)
 	if enableDebug {
@@ -774,16 +774,6 @@ func (s *Service) beaconEndpoints(
 			handler: server.GetValidatorBalances,
 			methods: []string{http.MethodGet, http.MethodPost},
 		},
-		{
-			template: "/prysm/v1/beacon/individual_votes",
-			name:     namespace + ".GetIndividualVotes",
-			middleware: []mux.MiddlewareFunc{
-				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
-				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
-			},
-			handler: server.GetIndividualVotes,
-			methods: []string{http.MethodPost},
-		},
 	}
 }
 
@@ -936,8 +926,11 @@ func (s *Service) eventsEndpoints() []endpoint {
 }
 
 // Prysm custom endpoints
-
-func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater lookup.Stater) []endpoint {
+func (s *Service) prysmBeaconEndpoints(
+	ch *stategen.CanonicalHistory,
+	stater lookup.Stater,
+	coreService *core.Service,
+) []endpoint {
 	server := &beaconprysm.Server{
 		SyncChecker:           s.cfg.SyncService,
 		HeadFetcher:           s.cfg.HeadFetcher,
@@ -948,6 +941,7 @@ func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater loo
 		Stater:                stater,
 		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+		CoreService:           coreService,
 	}
 
 	const namespace = "prysm.beacon"
@@ -978,6 +972,16 @@ func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater loo
 			},
 			handler: server.GetValidatorCount,
 			methods: []string{http.MethodGet},
+		},
+		{
+			template: "/prysm/v1/beacon/individual_votes",
+			name:     namespace + ".GetIndividualVotes",
+			middleware: []mux.MiddlewareFunc{
+				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetIndividualVotes,
+			methods: []string{http.MethodPost},
 		},
 	}
 }

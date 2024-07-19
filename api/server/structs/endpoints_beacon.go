@@ -2,8 +2,6 @@ package structs
 
 import (
 	"encoding/json"
-
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 type BlockRootResponse struct {
@@ -200,9 +198,9 @@ type DepositSnapshot struct {
 }
 
 type GetIndividualVotesRequest struct {
-	Epoch      primitives.Epoch            `json:"epoch"`
-	PublicKeys [][]string                  `json:"public_keys,omitempty"`
-	Indices    []primitives.ValidatorIndex `json:"indices,omitempty"`
+	Epoch      string     `json:"epoch"`
+	PublicKeys [][]string `json:"public_keys,omitempty"`
+	Indices    []string   `json:"indices,omitempty"`
 }
 
 type GetIndividualVotesResponse struct {

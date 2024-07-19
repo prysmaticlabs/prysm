@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -22,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -416,74 +414,4 @@ func valContainerFromReadOnlyVal(
 			WithdrawableEpoch:          strconv.FormatUint(uint64(val.WithdrawableEpoch()), 10),
 		},
 	}
-}
-
-// GetIndividualVotes returns a list of validators individual vote status of a given epoch.
-func (s *Server) GetIndividualVotes(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.GetIndividualVotes")
-	defer span.End()
-
-	var req structs.GetIndividualVotesRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	switch {
-	case errors.Is(err, io.EOF):
-		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	case err != nil:
-		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	publicKeyBytes := make([][]byte, len(req.PublicKeys))
-	for i, s := range req.PublicKeys {
-		bss := make([]byte, len(s))
-		for j, hexStr := range s {
-			bs, err := hexutil.Decode(hexStr)
-			if err != nil {
-				httputil.HandleError(w, "could not decode public keys: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			bss[j] = bs[0]
-		}
-		publicKeyBytes[i] = bss
-	}
-
-	votes, rpcError := s.CoreService.IndividualVotes(
-		ctx,
-		&ethpb.IndividualVotesRequest{
-			Epoch:      req.Epoch,
-			PublicKeys: publicKeyBytes,
-			Indices:    req.Indices,
-		},
-	)
-
-	if rpcError != nil {
-		httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
-		return
-	}
-	v := make([]*structs.IndividualVote, 0, len(votes.IndividualVotes))
-	for _, vote := range votes.IndividualVotes {
-		v = append(v, &structs.IndividualVote{
-			Epoch:                            fmt.Sprintf("%d", vote.Epoch),
-			PublicKey:                        hexutil.Encode(vote.PublicKey),
-			ValidatorIndex:                   fmt.Sprintf("%d", vote.ValidatorIndex),
-			IsSlashed:                        vote.IsSlashed,
-			IsWithdrawableInCurrentEpoch:     vote.IsWithdrawableInCurrentEpoch,
-			IsActiveInCurrentEpoch:           vote.IsActiveInCurrentEpoch,
-			IsActiveInPreviousEpoch:          vote.IsActiveInPreviousEpoch,
-			IsCurrentEpochAttester:           vote.IsCurrentEpochAttester,
-			IsCurrentEpochTargetAttester:     vote.IsCurrentEpochTargetAttester,
-			IsPreviousEpochAttester:          vote.IsPreviousEpochAttester,
-			IsPreviousEpochTargetAttester:    vote.IsPreviousEpochTargetAttester,
-			IsPreviousEpochHeadAttester:      vote.IsPreviousEpochHeadAttester,
-			CurrentEpochEffectiveBalanceGwei: fmt.Sprintf("%d", vote.CurrentEpochEffectiveBalanceGwei),
-			InclusionSlot:                    fmt.Sprintf("%d", vote.InclusionSlot),
-			InclusionDistance:                fmt.Sprintf("%d", vote.InclusionDistance),
-			InactivityScore:                  fmt.Sprintf("%d", vote.InactivityScore),
-		})
-	}
-	response := &structs.GetIndividualVotesResponse{
-		IndividualVotes: v,
-	}
-	httputil.WriteJson(w, response)
 }
