@@ -122,11 +122,12 @@ ssz_proto_files(
 go_test(
     name = "go_default_test",
     srcs = [
+        "export_test.go",
         "execution_engine_fuzz_test.go",
         "json_marshal_unmarshal_test.go",
     ],
+    embed = [":go_default_library"],
     deps = [
-        ":go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
