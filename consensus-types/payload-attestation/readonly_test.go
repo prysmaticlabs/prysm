@@ -90,6 +90,7 @@ func TestSignature(t *testing.T){
 	}
 	assert.Equal(t,sig,m.Signature())
 }
+
 func TestBeaconBlockRoot(t *testing.T){
 	root := make([]byte,fieldparams.RootLength)
 	m:=&ReadOnlyPayloadAtt{
