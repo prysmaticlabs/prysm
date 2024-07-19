@@ -2,11 +2,11 @@ package enginev1
 
 import "github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 
-type Copier[T any] interface {
+type copier[T any] interface {
 	Copy() T
 }
 
-func copySlice[T any, C Copier[T]](original []C) []T {
+func copySlice[T any, C copier[T]](original []C) []T {
 	// Create a new slice with the same length as the original
 	newSlice := make([]T, len(original))
 	for i := 0; i < len(newSlice); i++ {

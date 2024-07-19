@@ -1,19 +1,18 @@
-package enginev1_test
+package enginev1
 
 import (
 	"fmt"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
 func TestCopyExecutionPayload_Fuzz(t *testing.T) {
-	fuzzCopies(t, &enginev1.ExecutionPayloadElectra{})
+	fuzzCopies(t, &ExecutionPayloadElectra{})
 }
 
-func fuzzCopies[T any, C enginev1.Copier[T]](t *testing.T, obj C) {
+func fuzzCopies[T any, C copier[T]](t *testing.T, obj C) {
 	fuzzer := fuzz.NewWithSeed(0)
 	amount := 1000
 	t.Run(fmt.Sprintf("%T", obj), func(t *testing.T) {
