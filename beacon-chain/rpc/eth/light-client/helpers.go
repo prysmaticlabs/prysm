@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/proto/migration"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -314,17 +313,17 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 	}
 }
 
-func IsSyncCommitteeUpdate(update *ethpbv2.LightClientUpdate) bool {
+func IsSyncCommitteeUpdate(update *v2.LightClientUpdate) bool {
 	nextSyncCommitteeBranch := make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
 	return !reflect.DeepEqual(update.NextSyncCommitteeBranch, nextSyncCommitteeBranch)
 }
 
-func IsFinalityUpdate(update *ethpbv2.LightClientUpdate) bool {
+func IsFinalityUpdate(update *v2.LightClientUpdate) bool {
 	finalityBranch := make([][]byte, blockchain.FinalityBranchNumOfLeaves)
 	return !reflect.DeepEqual(update.FinalityBranch, finalityBranch)
 }
 
-func IsBetterUpdate(newUpdate, oldUpdate *ethpbv2.LightClientUpdate) bool {
+func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) bool {
 	maxActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Len()
 	newNumActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Count()
 	oldNumActiveParticipants := oldUpdate.SyncAggregate.SyncCommitteeBits.Count()
