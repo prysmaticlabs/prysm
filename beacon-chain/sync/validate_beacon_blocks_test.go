@@ -1484,14 +1484,33 @@ func Test_getBlockFields(t *testing.T) {
 }
 
 func Test_validateDenebBeaconBlock(t *testing.T) {
-	bb := util.NewBeaconBlockBellatrix()
-	b, err := blocks.NewSignedBeaconBlock(bb)
-	require.NoError(t, err)
-	require.NoError(t, validateDenebBeaconBlock(b.Block()))
+	db := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	stateGen := stategen.New(db, doublylinkedtree.New())
+	presentTime := time.Now().Unix()
+	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		}}
+	r := &Service{
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
+	}
 
-	bd := util.NewBeaconBlockDeneb()
-	bd.Block.Body.BlobKzgCommitments = make([][]byte, 7)
-	bdb, err := blocks.NewSignedBeaconBlock(bd)
+	st, _ := util.DeterministicGenesisStateAltair(t, 1)
+	b := util.NewBeaconBlockDeneb()
+	b.Block.Body.BlobKzgCommitments = make([][]byte, 7)
+	blk, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.ErrorIs(t, validateDenebBeaconBlock(bdb.Block()), errRejectCommitmentLen)
+	require.ErrorContains(t, "block and state are not the same version", r.validateBellatrixBeaconBlock(ctx, st, blk.Block()))
 }

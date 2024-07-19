@@ -94,10 +94,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		}()
 	}
 
-	if err := validateDenebBeaconBlock(blk.Block()); err != nil {
-		return pubsub.ValidationReject, err
-	}
-
 	// Verify the block is the first block received for the proposer for the slot.
 	if s.hasSeenBlockIndexSlot(blk.Block().Slot(), blk.Block().ProposerIndex()) {
 		return pubsub.ValidationIgnore, nil
@@ -236,7 +232,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
-	if err := validateDenebBeaconBlock(blk.Block()); err != nil {
+	if err := s.validateDenebBeaconBlock(blk.Block()); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
@@ -293,7 +289,22 @@ func (s *Service) validatePhase0Block(ctx context.Context, blk interfaces.ReadOn
 	return parentState, nil
 }
 
-func validateDenebBeaconBlock(blk interfaces.ReadOnlyBeaconBlock) error {
+// validateDenebBeaconBlock validates the block for the Deneb fork.
+// spec code:
+//
+// [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
+// -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
+//
+// [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a
+// MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance) -- i.e. aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >=
+// current_slot >= aggregate.data.slot (a client MAY queue future aggregates for processing at the appropriate slot).
+//
+// [IGNORE] aggregate.data.slot is equal to or earlier than the current_slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance) --
+// i.e. aggregate.data.slot <= current_slot (a client MAY queue future aggregates for processing at the appropriate slot).
+//
+// [IGNORE] the epoch of aggregate.data.slot is either the current or previous epoch (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY
+// allowance) -- i.e. compute_epoch_at_slot(aggregate.data.slot) in (get_previous_epoch(state), get_current_epoch(state))
+func (s *Service) validateDenebBeaconBlock(blk interfaces.ReadOnlyBeaconBlock) error {
 	if blk.Version() < version.Deneb {
 		return nil
 	}
