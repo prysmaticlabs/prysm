@@ -878,16 +878,3 @@ func CopyPendingBalanceDeposits(pbd []*PendingBalanceDeposit) []*PendingBalanceD
 	}
 	return newPbd
 }
-
-type cloneable[T any] interface {
-	Copy() T
-}
-
-func copySlice[T any, C cloneable[T]](original []C) []T {
-	// Create a new slice with the same length as the original
-	newSlice := make([]T, len(original))
-	for i := 0; i < len(newSlice); i++ {
-		newSlice[i] = original[i].Copy()
-	}
-	return newSlice
-}
