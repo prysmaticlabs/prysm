@@ -63,11 +63,7 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 	deadline := time.Now().Add(5 * time.Minute)
 	if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
-		if errors.Is(err, ErrBuilderValidatorRegistration) {
-			log.WithError(err).Warn("Push proposer settings error")
-		} else {
-			log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
-		}
+		log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
 	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -101,11 +97,9 @@ func run(ctx context.Context, v iface.Validator) {
 			// call push proposer settings often to account for the following edge cases:
 			// proposer is activated at the start of epoch and tries to propose immediately
 			// account has changed in the middle of an epoch
-			go func() {
-				if err := v.PushProposerSettings(ctx, km, slot, time.Now().Add(1*time.Minute)); err != nil {
-					log.WithError(err).Warn("Failed to update proposer settings")
-				}
-			}()
+			if err := v.PushProposerSettings(ctx, km, slot, time.Now().Add(1*time.Minute)); err != nil {
+				log.WithError(err).Warn("Failed to update proposer settings")
+			}
 
 			// Start fetching domain data for the next epoch.
 			if slots.IsEpochEnd(slot) {
