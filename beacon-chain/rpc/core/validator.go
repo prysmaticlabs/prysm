@@ -211,6 +211,131 @@ func (s *Service) ComputeValidatorPerformance(
 	}, nil
 }
 
+// IndividualVotes retrieves individual voting status of validators.
+func (s *Service) IndividualVotes(
+	ctx context.Context,
+	req *ethpb.IndividualVotesRequest,
+) (*ethpb.IndividualVotesRespond, *RpcError) {
+	currentEpoch := slots.ToEpoch(s.GenesisTimeFetcher.CurrentSlot())
+	if req.Epoch > currentEpoch {
+		return nil, &RpcError{
+			Err:    fmt.Errorf("cannot retrieve information about an epoch in the future, current epoch %d, requesting %d\n", currentEpoch, req.Epoch),
+			Reason: BadRequest,
+		}
+	}
+
+	slot, err := slots.EpochEnd(req.Epoch)
+	if err != nil {
+		return nil, &RpcError{Err: err, Reason: Internal}
+	}
+	st, err := s.ReplayerBuilder.ReplayerForSlot(slot).ReplayBlocks(ctx)
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrapf(err, "failed to replay blocks for state at epoch %d", req.Epoch),
+			Reason: Internal,
+		}
+	}
+	// Track filtered validators to prevent duplication in the response.
+	filtered := map[primitives.ValidatorIndex]bool{}
+	filteredIndices := make([]primitives.ValidatorIndex, 0)
+	votes := make([]*ethpb.IndividualVotesRespond_IndividualVote, 0, len(req.Indices)+len(req.PublicKeys))
+	// Filter out assignments by public keys.
+	for _, pubKey := range req.PublicKeys {
+		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		if !ok {
+			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{PublicKey: pubKey, ValidatorIndex: primitives.ValidatorIndex(^uint64(0))})
+			continue
+		}
+		filtered[index] = true
+		filteredIndices = append(filteredIndices, index)
+	}
+	// Filter out assignments by validator indices.
+	for _, index := range req.Indices {
+		if !filtered[index] {
+			filteredIndices = append(filteredIndices, index)
+		}
+	}
+	sort.Slice(filteredIndices, func(i, j int) bool {
+		return filteredIndices[i] < filteredIndices[j]
+	})
+
+	var v []*precompute.Validator
+	var bal *precompute.Balance
+	if st.Version() == version.Phase0 {
+		v, bal, err = precompute.New(ctx, st)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not set up pre compute instance"),
+				Reason: Internal,
+			}
+		}
+		v, _, err = precompute.ProcessAttestations(ctx, st, v, bal)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not pre compute attestations"),
+				Reason: Internal,
+			}
+		}
+	} else if st.Version() >= version.Altair {
+		v, bal, err = altair.InitializePrecomputeValidators(ctx, st)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not set up altair pre compute instance"),
+				Reason: Internal,
+			}
+		}
+		v, _, err = altair.ProcessEpochParticipation(ctx, st, bal, v)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not pre compute attestations"),
+				Reason: Internal,
+			}
+		}
+	} else {
+		return nil, &RpcError{
+			Err:    errors.Wrapf(err, "invalid state type retrieved with a version of %d", st.Version()),
+			Reason: Internal,
+		}
+	}
+
+	for _, index := range filteredIndices {
+		if uint64(index) >= uint64(len(v)) {
+			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
+			continue
+		}
+		val, err := st.ValidatorAtIndexReadOnly(index)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not retrieve validator"),
+				Reason: Internal,
+			}
+		}
+		pb := val.PublicKey()
+		votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{
+			Epoch:                            req.Epoch,
+			PublicKey:                        pb[:],
+			ValidatorIndex:                   index,
+			IsSlashed:                        v[index].IsSlashed,
+			IsWithdrawableInCurrentEpoch:     v[index].IsWithdrawableCurrentEpoch,
+			IsActiveInCurrentEpoch:           v[index].IsActiveCurrentEpoch,
+			IsActiveInPreviousEpoch:          v[index].IsActivePrevEpoch,
+			IsCurrentEpochAttester:           v[index].IsCurrentEpochAttester,
+			IsCurrentEpochTargetAttester:     v[index].IsCurrentEpochTargetAttester,
+			IsPreviousEpochAttester:          v[index].IsPrevEpochAttester,
+			IsPreviousEpochTargetAttester:    v[index].IsPrevEpochTargetAttester,
+			IsPreviousEpochHeadAttester:      v[index].IsPrevEpochHeadAttester,
+			CurrentEpochEffectiveBalanceGwei: v[index].CurrentEpochEffectiveBalance,
+			InclusionSlot:                    v[index].InclusionSlot,
+			InclusionDistance:                v[index].InclusionDistance,
+			InactivityScore:                  v[index].InactivityScore,
+		})
+	}
+
+	return &ethpb.IndividualVotesRespond{
+		IndividualVotes: votes,
+	}, nil
+}
+
 // SubmitSignedContributionAndProof is called by a sync committee aggregator
 // to submit signed contribution and proof object.
 func (s *Service) SubmitSignedContributionAndProof(
