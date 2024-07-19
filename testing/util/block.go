@@ -1220,6 +1220,19 @@ func HydrateSignedBeaconBlockElectra(b *ethpb.SignedBeaconBlockElectra) *ethpb.S
 	return b
 }
 
+// HydrateSignedBeaconBlockEPBS hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockEPBS(b *ethpb.SignedBeaconBlockEpbs) *ethpb.SignedBeaconBlockEpbs {
+	if b == nil {
+		b = &ethpb.SignedBeaconBlockEpbs{}
+	}
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Block = HydrateBeaconBlockEPBS(b.Block)
+	return b
+}
+
 // HydrateSignedBeaconBlockContentsDeneb hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateSignedBeaconBlockContentsDeneb(b *ethpb.SignedBeaconBlockContentsDeneb) *ethpb.SignedBeaconBlockContentsDeneb {
@@ -1273,6 +1286,22 @@ func HydrateBeaconBlockElectra(b *ethpb.BeaconBlockElectra) *ethpb.BeaconBlockEl
 		b.StateRoot = make([]byte, fieldparams.RootLength)
 	}
 	b.Body = HydrateBeaconBlockBodyElectra(b.Body)
+	return b
+}
+
+// HydrateBeaconBlockEPBS hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockEPBS(b *ethpb.BeaconBlockEpbs) *ethpb.BeaconBlockEpbs {
+	if b == nil {
+		b = &ethpb.BeaconBlockEpbs{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, fieldparams.RootLength)
+	}
+	b.Body = HydrateBeaconBlockBodyEPBS(b.Body)
 	return b
 }
 
@@ -1374,6 +1403,33 @@ func HydrateBeaconBlockBodyElectra(b *ethpb.BeaconBlockBodyElectra) *ethpb.Beaco
 			DepositRequests:       make([]*enginev1.DepositRequest, 0),
 			WithdrawalRequests:    make([]*enginev1.WithdrawalRequest, 0),
 			ConsolidationRequests: make([]*enginev1.ConsolidationRequest, 0),
+		}
+	}
+	return b
+}
+
+// HydrateBeaconBlockBodyEPBS hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockBodyEPBS(b *ethpb.BeaconBlockBodyEpbs) *ethpb.BeaconBlockBodyEpbs {
+	if b == nil {
+		b = &ethpb.BeaconBlockBodyEpbs{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, fieldparams.RootLength)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}
 	return b
