@@ -41,7 +41,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		client := &http.Client{}
 		rawResp, err := client.Post(srv.URL, "application/json", req.Body)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusServiceUnavailable, rawResp.StatusCode)
+		require.Equal(t, http.StatusBadRequest, rawResp.StatusCode)
 	})
 	t.Run("OK", func(t *testing.T) {
 		helpers.ClearCache()
