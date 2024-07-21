@@ -101,6 +101,32 @@ func TestProcessRegistryUpdates(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "Validators are exiting",
+			state: func() state.BeaconState {
+				base := &eth.BeaconStateElectra{
+					Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
+					FinalizedCheckpoint: &eth.Checkpoint{Epoch: finalizedEpoch, Root: make([]byte, fieldparams.RootLength)},
+				}
+				for i := uint64(0); i < 10; i++ {
+					base.Validators = append(base.Validators, &eth.Validator{
+						EffectiveBalance:  params.BeaconConfig().EjectionBalance - 1,
+						ExitEpoch:         10,
+						WithdrawableEpoch: 20,
+					})
+				}
+				st, err := state_native.InitializeFromProtoElectra(base)
+				require.NoError(t, err)
+				return st
+			}(),
+			check: func(t *testing.T, st state.BeaconState) {
+				// All validators should be exited
+				for i, val := range st.Validators() {
+					require.NotEqual(t, params.BeaconConfig().FarFutureEpoch, val.ExitEpoch, "failed to update exit epoch on validator %d", i)
+					require.NotEqual(t, params.BeaconConfig().FarFutureEpoch, val.WithdrawableEpoch, "failed to update withdrawable epoch on validator %d", i)
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {

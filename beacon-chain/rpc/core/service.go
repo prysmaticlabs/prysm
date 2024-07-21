@@ -21,5 +21,6 @@ type Service struct {
 	AttestationCache      *cache.AttestationCache
 	StateGen              stategen.StateManager
 	P2P                   p2p.Broadcaster
+	ReplayerBuilder       stategen.ReplayerBuilder
 	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 }

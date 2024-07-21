@@ -196,3 +196,32 @@ type DepositSnapshot struct {
 	ExecutionBlockHash   string   `json:"execution_block_hash"`
 	ExecutionBlockHeight string   `json:"execution_block_height"`
 }
+
+type GetIndividualVotesRequest struct {
+	Epoch      string   `json:"epoch"`
+	PublicKeys []string `json:"public_keys,omitempty"`
+	Indices    []string `json:"indices,omitempty"`
+}
+
+type GetIndividualVotesResponse struct {
+	IndividualVotes []*IndividualVote `json:"individual_votes"`
+}
+
+type IndividualVote struct {
+	Epoch                            string `json:"epoch"`
+	PublicKey                        string `json:"public_keys,omitempty"`
+	ValidatorIndex                   string `json:"validator_index"`
+	IsSlashed                        bool   `json:"is_slashed"`
+	IsWithdrawableInCurrentEpoch     bool   `json:"is_withdrawable_in_current_epoch"`
+	IsActiveInCurrentEpoch           bool   `json:"is_active_in_current_epoch"`
+	IsActiveInPreviousEpoch          bool   `json:"is_active_in_previous_epoch"`
+	IsCurrentEpochAttester           bool   `json:"is_current_epoch_attester"`
+	IsCurrentEpochTargetAttester     bool   `json:"is_current_epoch_target_attester"`
+	IsPreviousEpochAttester          bool   `json:"is_previous_epoch_attester"`
+	IsPreviousEpochTargetAttester    bool   `json:"is_previous_epoch_target_attester"`
+	IsPreviousEpochHeadAttester      bool   `json:"is_previous_epoch_head_attester"`
+	CurrentEpochEffectiveBalanceGwei string `json:"current_epoch_effective_balance_gwei"`
+	InclusionSlot                    string `json:"inclusion_slot"`
+	InclusionDistance                string `json:"inclusion_distance"`
+	InactivityScore                  string `json:"inactivity_score"`
+}

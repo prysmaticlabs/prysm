@@ -42,6 +42,8 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	}
 	atts = append(atts, uAtts...)
 
+	// Checking the state's version here will give the wrong result if the last slot of Deneb is missed.
+	// The head state will still be in Deneb while we are trying to build an Electra block.
 	postElectra := slots.ToEpoch(blkSlot) >= params.BeaconConfig().ElectraForkEpoch
 
 	versionAtts := make([]ethpb.Att, 0, len(atts))
@@ -66,23 +68,43 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		return nil, err
 	}
 
-	attsByDataRoot := make(map[attestation.Id][]ethpb.Att, len(versionAtts))
+	attsById := make(map[attestation.Id][]ethpb.Att, len(versionAtts))
 	for _, att := range versionAtts {
 		id, err := attestation.NewId(att, attestation.Data)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create attestation ID")
 		}
-		attsByDataRoot[id] = append(attsByDataRoot[id], att)
+		attsById[id] = append(attsById[id], att)
 	}
 
-	attsForInclusion := proposerAtts(make([]ethpb.Att, 0))
-	for _, as := range attsByDataRoot {
+	for id, as := range attsById {
 		as, err := attaggregation.Aggregate(as)
 		if err != nil {
 			return nil, err
 		}
-		attsForInclusion = append(attsForInclusion, as...)
+		attsById[id] = as
 	}
+
+	var attsForInclusion proposerAtts
+	if postElectra {
+		// TODO: hack for Electra devnet-1, take only one aggregate per ID
+		// (which essentially means one aggregate for an attestation_data+committee combination
+		topAggregates := make([]ethpb.Att, 0)
+		for _, v := range attsById {
+			topAggregates = append(topAggregates, v[0])
+		}
+
+		attsForInclusion, err = computeOnChainAggregate(topAggregates)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		attsForInclusion = make([]ethpb.Att, 0)
+		for _, as := range attsById {
+			attsForInclusion = append(attsForInclusion, as...)
+		}
+	}
+
 	deduped, err := attsForInclusion.dedup()
 	if err != nil {
 		return nil, err
