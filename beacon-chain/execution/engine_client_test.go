@@ -374,6 +374,17 @@ func TestClient_HTTP(t *testing.T) {
 		require.DeepEqual(t, proofs, resp.BlobsBundle.Proofs)
 		blobs := [][]byte{bytesutil.PadTo([]byte("a"), fieldparams.BlobLength), bytesutil.PadTo([]byte("b"), fieldparams.BlobLength)}
 		require.DeepEqual(t, blobs, resp.BlobsBundle.Blobs)
+		ede, ok := resp.ExecutionData.(interfaces.ExecutionDataElectra)
+		require.Equal(t, true, ok)
+		require.NotNil(t, ede.WithdrawalRequests())
+		wrequestsNotOverMax := len(ede.WithdrawalRequests()) <= int(params.BeaconConfig().MaxWithdrawalRequestsPerPayload)
+		require.Equal(t, true, wrequestsNotOverMax)
+		require.NotNil(t, ede.DepositRequests())
+		drequestsNotOverMax := len(ede.DepositRequests()) <= int(params.BeaconConfig().MaxDepositRequestsPerPayload)
+		require.Equal(t, true, drequestsNotOverMax)
+		require.NotNil(t, ede.ConsolidationRequests())
+		consolidationsNotOverMax := len(ede.ConsolidationRequests()) <= int(params.BeaconConfig().MaxConsolidationsRequestsPerPayload)
+		require.Equal(t, true, consolidationsNotOverMax)
 	})
 	t.Run(ForkchoiceUpdatedMethod+" VALID status", func(t *testing.T) {
 		forkChoiceState := &pb.ForkchoiceState{
@@ -1533,6 +1544,20 @@ func fixturesStruct() *payloadFixtures {
 			Index:                 &idx,
 		}
 	}
+	consolidationRequests := make([]pb.ConsolidationRequestV1, 1)
+	for i := range consolidationRequests {
+		address := &common.Address{}
+		address.SetBytes([]byte{0, 0, byte(i)})
+		sPubkey := pb.BlsPubkey{}
+		copy(sPubkey[:], []byte{0, byte(i)})
+		tPubkey := pb.BlsPubkey{}
+		copy(tPubkey[:], []byte{0, byte(i)})
+		consolidationRequests[i] = pb.ConsolidationRequestV1{
+			SourceAddress: address,
+			SourcePubkey:  &sPubkey,
+			TargetPubkey:  &tPubkey,
+		}
+	}
 	dr, err := pb.JsonDepositRequestsToProto(depositRequests)
 	if err != nil {
 		panic(err)
@@ -1541,26 +1566,31 @@ func fixturesStruct() *payloadFixtures {
 	if err != nil {
 		panic(err)
 	}
+	cr, err := pb.JsonConsolidationRequestsToProto(consolidationRequests)
+	if err != nil {
+		panic(err)
+	}
 	executionPayloadFixtureElectra := &pb.ExecutionPayloadElectra{
-		ParentHash:         foo[:],
-		FeeRecipient:       bar,
-		StateRoot:          foo[:],
-		ReceiptsRoot:       foo[:],
-		LogsBloom:          baz,
-		PrevRandao:         foo[:],
-		BlockNumber:        1,
-		GasLimit:           1,
-		GasUsed:            1,
-		Timestamp:          1,
-		ExtraData:          foo[:],
-		BaseFeePerGas:      bytesutil.PadTo(baseFeePerGas.Bytes(), fieldparams.RootLength),
-		BlockHash:          foo[:],
-		Transactions:       [][]byte{foo[:]},
-		Withdrawals:        []*pb.Withdrawal{},
-		BlobGasUsed:        2,
-		ExcessBlobGas:      3,
-		DepositRequests:    dr,
-		WithdrawalRequests: wr,
+		ParentHash:            foo[:],
+		FeeRecipient:          bar,
+		StateRoot:             foo[:],
+		ReceiptsRoot:          foo[:],
+		LogsBloom:             baz,
+		PrevRandao:            foo[:],
+		BlockNumber:           1,
+		GasLimit:              1,
+		GasUsed:               1,
+		Timestamp:             1,
+		ExtraData:             foo[:],
+		BaseFeePerGas:         bytesutil.PadTo(baseFeePerGas.Bytes(), fieldparams.RootLength),
+		BlockHash:             foo[:],
+		Transactions:          [][]byte{foo[:]},
+		Withdrawals:           []*pb.Withdrawal{},
+		BlobGasUsed:           2,
+		ExcessBlobGas:         3,
+		DepositRequests:       dr,
+		WithdrawalRequests:    wr,
+		ConsolidationRequests: cr,
 	}
 	hexUint := hexutil.Uint64(1)
 	executionPayloadWithValueFixtureCapella := &pb.GetPayloadV2ResponseJson{
@@ -1614,24 +1644,25 @@ func fixturesStruct() *payloadFixtures {
 	executionPayloadWithValueFixtureElectra := &pb.GetPayloadV4ResponseJson{
 		ShouldOverrideBuilder: true,
 		ExecutionPayload: &pb.ExecutionPayloadElectraJSON{
-			ParentHash:         &common.Hash{'a'},
-			FeeRecipient:       &common.Address{'b'},
-			StateRoot:          &common.Hash{'c'},
-			ReceiptsRoot:       &common.Hash{'d'},
-			LogsBloom:          &hexutil.Bytes{'e'},
-			PrevRandao:         &common.Hash{'f'},
-			BaseFeePerGas:      "0x123",
-			BlockHash:          &common.Hash{'g'},
-			Transactions:       []hexutil.Bytes{{'h'}},
-			Withdrawals:        []*pb.Withdrawal{},
-			BlockNumber:        &hexUint,
-			GasLimit:           &hexUint,
-			GasUsed:            &hexUint,
-			Timestamp:          &hexUint,
-			BlobGasUsed:        &bgu,
-			ExcessBlobGas:      &ebg,
-			DepositRequests:    depositRequests,
-			WithdrawalRequests: withdrawalRequests,
+			ParentHash:            &common.Hash{'a'},
+			FeeRecipient:          &common.Address{'b'},
+			StateRoot:             &common.Hash{'c'},
+			ReceiptsRoot:          &common.Hash{'d'},
+			LogsBloom:             &hexutil.Bytes{'e'},
+			PrevRandao:            &common.Hash{'f'},
+			BaseFeePerGas:         "0x123",
+			BlockHash:             &common.Hash{'g'},
+			Transactions:          []hexutil.Bytes{{'h'}},
+			Withdrawals:           []*pb.Withdrawal{},
+			BlockNumber:           &hexUint,
+			GasLimit:              &hexUint,
+			GasUsed:               &hexUint,
+			Timestamp:             &hexUint,
+			BlobGasUsed:           &bgu,
+			ExcessBlobGas:         &ebg,
+			DepositRequests:       depositRequests,
+			WithdrawalRequests:    withdrawalRequests,
+			ConsolidationRequests: consolidationRequests,
 		},
 		BlockValue: "0x11fffffffff",
 		BlobsBundle: &pb.BlobBundleJSON{

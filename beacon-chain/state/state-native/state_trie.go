@@ -913,10 +913,10 @@ func (b *BeaconState) Copy() state.BeaconState {
 		finalizedCheckpoint:                 b.finalizedCheckpointVal(),
 		currentSyncCommittee:                b.currentSyncCommitteeVal(),
 		nextSyncCommittee:                   b.nextSyncCommitteeVal(),
-		latestExecutionPayloadHeader:        b.latestExecutionPayloadHeaderVal(),
-		latestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapellaVal(),
-		latestExecutionPayloadHeaderDeneb:   b.latestExecutionPayloadHeaderDenebVal(),
-		latestExecutionPayloadHeaderElectra: b.latestExecutionPayloadHeaderElectraVal(),
+		latestExecutionPayloadHeader:        b.latestExecutionPayloadHeader.Copy(),
+		latestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapella.Copy(),
+		latestExecutionPayloadHeaderDeneb:   b.latestExecutionPayloadHeaderDeneb.Copy(),
+		latestExecutionPayloadHeaderElectra: b.latestExecutionPayloadHeaderElectra.Copy(),
 
 		id: types.Enumerator.Inc(),
 

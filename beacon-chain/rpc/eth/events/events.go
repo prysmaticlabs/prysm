@@ -439,14 +439,18 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 	if err != nil {
 		return write(w, flusher, "Could not get head state proposer index: "+err.Error())
 	}
-
+	feeRecipient := params.BeaconConfig().DefaultFeeRecipient.Bytes()
+	tValidator, exists := s.TrackedValidatorsCache.Validator(proposerIndex)
+	if exists {
+		feeRecipient = tValidator.FeeRecipient[:]
+	}
 	var attributes interface{}
 	switch headState.Version() {
 	case version.Bellatrix:
 		attributes = &structs.PayloadAttributesV1{
 			Timestamp:             fmt.Sprintf("%d", t.Unix()),
 			PrevRandao:            hexutil.Encode(prevRando),
-			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+			SuggestedFeeRecipient: hexutil.Encode(feeRecipient),
 		}
 	case version.Capella:
 		withdrawals, _, err := headState.ExpectedWithdrawals()
@@ -456,7 +460,7 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 		attributes = &structs.PayloadAttributesV2{
 			Timestamp:             fmt.Sprintf("%d", t.Unix()),
 			PrevRandao:            hexutil.Encode(prevRando),
-			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+			SuggestedFeeRecipient: hexutil.Encode(feeRecipient),
 			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
 		}
 	case version.Deneb, version.Electra:
@@ -471,7 +475,7 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 		attributes = &structs.PayloadAttributesV3{
 			Timestamp:             fmt.Sprintf("%d", t.Unix()),
 			PrevRandao:            hexutil.Encode(prevRando),
-			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+			SuggestedFeeRecipient: hexutil.Encode(feeRecipient),
 			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
 			ParentBeaconBlockRoot: hexutil.Encode(parentRoot[:]),
 		}
