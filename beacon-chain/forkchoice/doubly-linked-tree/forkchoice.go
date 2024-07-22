@@ -121,6 +121,14 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		if ph != nil {
 			copy(payloadHash[:], ph.BlockHash)
 		}
+	} else if state.Version() >= version.Bellatrix {
+		ph, err := state.LatestExecutionPayloadHeader()
+		if err != nil {
+			return err
+		}
+		if ph != nil {
+			copy(payloadHash[:], ph.BlockHash())
+		}
 	}
 	jc := state.CurrentJustifiedCheckpoint()
 	if jc == nil {
