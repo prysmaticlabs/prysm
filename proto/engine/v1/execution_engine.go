@@ -15,6 +15,7 @@ func copySlice[T any, C copier[T]](original []C) []T {
 	return newSlice
 }
 
+// Copy --
 func (w *Withdrawal) Copy() *Withdrawal {
 	if w == nil {
 		return nil
@@ -28,6 +29,7 @@ func (w *Withdrawal) Copy() *Withdrawal {
 	}
 }
 
+// Copy --
 func (d *DepositRequest) Copy() *DepositRequest {
 	if d == nil {
 		return nil
@@ -41,6 +43,7 @@ func (d *DepositRequest) Copy() *DepositRequest {
 	}
 }
 
+// Copy --
 func (wr *WithdrawalRequest) Copy() *WithdrawalRequest {
 	if wr == nil {
 		return nil
@@ -52,6 +55,7 @@ func (wr *WithdrawalRequest) Copy() *WithdrawalRequest {
 	}
 }
 
+// Copy --
 func (cr *ConsolidationRequest) Copy() *ConsolidationRequest {
 	if cr == nil {
 		return nil
@@ -63,6 +67,7 @@ func (cr *ConsolidationRequest) Copy() *ConsolidationRequest {
 	}
 }
 
+// Copy -- Electra
 func (payload *ExecutionPayloadElectra) Copy() *ExecutionPayloadElectra {
 	if payload == nil {
 		return nil
@@ -88,5 +93,183 @@ func (payload *ExecutionPayloadElectra) Copy() *ExecutionPayloadElectra {
 		DepositRequests:       copySlice(payload.DepositRequests),
 		WithdrawalRequests:    copySlice(payload.WithdrawalRequests),
 		ConsolidationRequests: copySlice(payload.ConsolidationRequests),
+	}
+}
+
+// Copy -- Deneb
+func (payload *ExecutionPayloadDeneb) Copy() *ExecutionPayloadDeneb {
+	if payload == nil {
+		return nil
+	}
+	return &ExecutionPayloadDeneb{
+		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:   payload.BlockNumber,
+		GasLimit:      payload.GasLimit,
+		GasUsed:       payload.GasUsed,
+		Timestamp:     payload.Timestamp,
+		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
+		Withdrawals:   copySlice(payload.Withdrawals),
+		BlobGasUsed:   payload.BlobGasUsed,
+		ExcessBlobGas: payload.ExcessBlobGas,
+	}
+}
+
+// Copy -- Capella
+func (payload *ExecutionPayloadCapella) Copy() *ExecutionPayloadCapella {
+	if payload == nil {
+		return nil
+	}
+
+	return &ExecutionPayloadCapella{
+		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:   payload.BlockNumber,
+		GasLimit:      payload.GasLimit,
+		GasUsed:       payload.GasUsed,
+		Timestamp:     payload.Timestamp,
+		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
+		Withdrawals:   copySlice(payload.Withdrawals),
+	}
+}
+
+// Copy -- Bellatrix
+func (payload *ExecutionPayload) Copy() *ExecutionPayload {
+	if payload == nil {
+		return nil
+	}
+
+	return &ExecutionPayload{
+		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:   payload.BlockNumber,
+		GasLimit:      payload.GasLimit,
+		GasUsed:       payload.GasUsed,
+		Timestamp:     payload.Timestamp,
+		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
+	}
+}
+
+// Copy -- Electra
+func (payload *ExecutionPayloadHeaderElectra) Copy() *ExecutionPayloadHeaderElectra {
+	if payload == nil {
+		return nil
+	}
+
+	return &ExecutionPayloadHeaderElectra{
+		ParentHash:                bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:              bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:                 bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:              bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:                 bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:                bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:               payload.BlockNumber,
+		GasLimit:                  payload.GasLimit,
+		GasUsed:                   payload.GasUsed,
+		Timestamp:                 payload.Timestamp,
+		ExtraData:                 bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:             bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:                 bytesutil.SafeCopyBytes(payload.BlockHash),
+		TransactionsRoot:          bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+		WithdrawalsRoot:           bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
+		BlobGasUsed:               payload.BlobGasUsed,
+		ExcessBlobGas:             payload.ExcessBlobGas,
+		DepositRequestsRoot:       bytesutil.SafeCopyBytes(payload.DepositRequestsRoot),
+		WithdrawalRequestsRoot:    bytesutil.SafeCopyBytes(payload.WithdrawalRequestsRoot),
+		ConsolidationRequestsRoot: bytesutil.SafeCopyBytes(payload.ConsolidationRequestsRoot),
+	}
+}
+
+// Copy -- Deneb
+func (payload *ExecutionPayloadHeaderDeneb) Copy() *ExecutionPayloadHeaderDeneb {
+	if payload == nil {
+		return nil
+	}
+	return &ExecutionPayloadHeaderDeneb{
+		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:      payload.BlockNumber,
+		GasLimit:         payload.GasLimit,
+		GasUsed:          payload.GasUsed,
+		Timestamp:        payload.Timestamp,
+		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
+		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+		WithdrawalsRoot:  bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
+		BlobGasUsed:      payload.BlobGasUsed,
+		ExcessBlobGas:    payload.ExcessBlobGas,
+	}
+}
+
+// Copy -- Capella
+func (payload *ExecutionPayloadHeaderCapella) Copy() *ExecutionPayloadHeaderCapella {
+	if payload == nil {
+		return nil
+	}
+	return &ExecutionPayloadHeaderCapella{
+		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:      payload.BlockNumber,
+		GasLimit:         payload.GasLimit,
+		GasUsed:          payload.GasUsed,
+		Timestamp:        payload.Timestamp,
+		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
+		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+		WithdrawalsRoot:  bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
+	}
+}
+
+// Copy -- Bellatrix
+func (payload *ExecutionPayloadHeader) Copy() *ExecutionPayloadHeader {
+	if payload == nil {
+		return nil
+	}
+	return &ExecutionPayloadHeader{
+		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:      payload.BlockNumber,
+		GasLimit:         payload.GasLimit,
+		GasUsed:          payload.GasUsed,
+		Timestamp:        payload.Timestamp,
+		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
+		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
 	}
 }

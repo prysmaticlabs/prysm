@@ -2,7 +2,6 @@ package eth
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 )
 
 // CopyETH1Data copies the provided eth1data object.
@@ -474,7 +473,7 @@ func CopyBeaconBlockBodyBellatrix(body *BeaconBlockBodyBellatrix) *BeaconBlockBo
 		Deposits:          CopyDeposits(body.Deposits),
 		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayload:  CopyExecutionPayload(body.ExecutionPayload),
+		ExecutionPayload:  body.ExecutionPayload.Copy(),
 	}
 }
 
@@ -518,7 +517,7 @@ func CopyBeaconBlockBodyCapella(body *BeaconBlockBodyCapella) *BeaconBlockBodyCa
 		Deposits:              CopyDeposits(body.Deposits),
 		VoluntaryExits:        CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:         CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayload:      CopyExecutionPayloadCapella(body.ExecutionPayload),
+		ExecutionPayload:      body.ExecutionPayload.Copy(),
 		BlsToExecutionChanges: CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 	}
 }
@@ -563,7 +562,7 @@ func CopyBlindedBeaconBlockBodyCapella(body *BlindedBeaconBlockBodyCapella) *Bli
 		Deposits:               CopyDeposits(body.Deposits),
 		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayloadHeader: CopyExecutionPayloadHeaderCapella(body.ExecutionPayloadHeader),
+		ExecutionPayloadHeader: body.ExecutionPayloadHeader.Copy(),
 		BlsToExecutionChanges:  CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 	}
 }
@@ -608,7 +607,7 @@ func CopyBlindedBeaconBlockBodyDeneb(body *BlindedBeaconBlockBodyDeneb) *Blinded
 		Deposits:               CopyDeposits(body.Deposits),
 		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayloadHeader: CopyExecutionPayloadHeaderDeneb(body.ExecutionPayloadHeader),
+		ExecutionPayloadHeader: body.ExecutionPayloadHeader.Copy(),
 		BlsToExecutionChanges:  CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 		BlobKzgCommitments:     CopyBlobKZGs(body.BlobKzgCommitments),
 	}
@@ -654,105 +653,9 @@ func CopyBlindedBeaconBlockBodyElectra(body *BlindedBeaconBlockBodyElectra) *Bli
 		Deposits:               CopyDeposits(body.Deposits),
 		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayloadHeader: CopyExecutionPayloadHeaderElectra(body.ExecutionPayloadHeader),
+		ExecutionPayloadHeader: body.ExecutionPayloadHeader.Copy(),
 		BlsToExecutionChanges:  CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 		BlobKzgCommitments:     CopyBlobKZGs(body.BlobKzgCommitments),
-	}
-}
-
-// CopyExecutionPayload copies the provided execution payload.
-func CopyExecutionPayload(payload *enginev1.ExecutionPayload) *enginev1.ExecutionPayload {
-	if payload == nil {
-		return nil
-	}
-
-	return &enginev1.ExecutionPayload{
-		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
-		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
-		BlockNumber:   payload.BlockNumber,
-		GasLimit:      payload.GasLimit,
-		GasUsed:       payload.GasUsed,
-		Timestamp:     payload.Timestamp,
-		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
-		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
-	}
-}
-
-// CopyExecutionPayloadCapella copies the provided execution payload.
-func CopyExecutionPayloadCapella(payload *enginev1.ExecutionPayloadCapella) *enginev1.ExecutionPayloadCapella {
-	if payload == nil {
-		return nil
-	}
-
-	return &enginev1.ExecutionPayloadCapella{
-		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
-		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
-		BlockNumber:   payload.BlockNumber,
-		GasLimit:      payload.GasLimit,
-		GasUsed:       payload.GasUsed,
-		Timestamp:     payload.Timestamp,
-		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
-		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
-		Withdrawals:   copySlice(payload.Withdrawals),
-	}
-}
-
-// CopyExecutionPayloadHeader copies the provided execution payload object.
-func CopyExecutionPayloadHeader(payload *enginev1.ExecutionPayloadHeader) *enginev1.ExecutionPayloadHeader {
-	if payload == nil {
-		return nil
-	}
-	return &enginev1.ExecutionPayloadHeader{
-		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
-		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
-		BlockNumber:      payload.BlockNumber,
-		GasLimit:         payload.GasLimit,
-		GasUsed:          payload.GasUsed,
-		Timestamp:        payload.Timestamp,
-		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
-		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
-	}
-}
-
-// CopyExecutionPayloadHeaderCapella copies the provided execution payload object.
-func CopyExecutionPayloadHeaderCapella(payload *enginev1.ExecutionPayloadHeaderCapella) *enginev1.ExecutionPayloadHeaderCapella {
-	if payload == nil {
-		return nil
-	}
-	return &enginev1.ExecutionPayloadHeaderCapella{
-		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
-		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
-		BlockNumber:      payload.BlockNumber,
-		GasLimit:         payload.GasLimit,
-		GasUsed:          payload.GasUsed,
-		Timestamp:        payload.Timestamp,
-		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
-		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
-		WithdrawalsRoot:  bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
 	}
 }
 
@@ -796,7 +699,7 @@ func CopyBlindedBeaconBlockBodyBellatrix(body *BlindedBeaconBlockBodyBellatrix) 
 		Deposits:               CopyDeposits(body.Deposits),
 		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayloadHeader: CopyExecutionPayloadHeader(body.ExecutionPayloadHeader),
+		ExecutionPayloadHeader: body.ExecutionPayloadHeader.Copy(),
 	}
 }
 
@@ -865,61 +768,9 @@ func CopyBeaconBlockBodyDeneb(body *BeaconBlockBodyDeneb) *BeaconBlockBodyDeneb 
 		Deposits:              CopyDeposits(body.Deposits),
 		VoluntaryExits:        CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:         CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayload:      CopyExecutionPayloadDeneb(body.ExecutionPayload),
+		ExecutionPayload:      body.ExecutionPayload.Copy(),
 		BlsToExecutionChanges: CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 		BlobKzgCommitments:    CopyBlobKZGs(body.BlobKzgCommitments),
-	}
-}
-
-// CopyExecutionPayloadHeaderDeneb copies the provided execution payload object.
-func CopyExecutionPayloadHeaderDeneb(payload *enginev1.ExecutionPayloadHeaderDeneb) *enginev1.ExecutionPayloadHeaderDeneb {
-	if payload == nil {
-		return nil
-	}
-	return &enginev1.ExecutionPayloadHeaderDeneb{
-		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
-		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
-		BlockNumber:      payload.BlockNumber,
-		GasLimit:         payload.GasLimit,
-		GasUsed:          payload.GasUsed,
-		Timestamp:        payload.Timestamp,
-		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
-		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
-		WithdrawalsRoot:  bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
-		BlobGasUsed:      payload.BlobGasUsed,
-		ExcessBlobGas:    payload.ExcessBlobGas,
-	}
-}
-
-// CopyExecutionPayloadDeneb copies the provided execution payload.
-func CopyExecutionPayloadDeneb(payload *enginev1.ExecutionPayloadDeneb) *enginev1.ExecutionPayloadDeneb {
-	if payload == nil {
-		return nil
-	}
-	return &enginev1.ExecutionPayloadDeneb{
-		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
-		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
-		BlockNumber:   payload.BlockNumber,
-		GasLimit:      payload.GasLimit,
-		GasUsed:       payload.GasUsed,
-		Timestamp:     payload.Timestamp,
-		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
-		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
-		Withdrawals:   copySlice(payload.Withdrawals),
-		BlobGasUsed:   payload.BlobGasUsed,
-		ExcessBlobGas: payload.ExcessBlobGas,
 	}
 }
 
@@ -966,34 +817,6 @@ func CopyBeaconBlockBodyElectra(body *BeaconBlockBodyElectra) *BeaconBlockBodyEl
 		ExecutionPayload:      body.ExecutionPayload.Copy(),
 		BlsToExecutionChanges: CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 		BlobKzgCommitments:    CopyBlobKZGs(body.BlobKzgCommitments),
-	}
-}
-
-func CopyExecutionPayloadHeaderElectra(payload *enginev1.ExecutionPayloadHeaderElectra) *enginev1.ExecutionPayloadHeaderElectra {
-	if payload == nil {
-		return nil
-	}
-	return &enginev1.ExecutionPayloadHeaderElectra{
-		ParentHash:                bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:              bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:                 bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptsRoot:              bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
-		LogsBloom:                 bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:                bytesutil.SafeCopyBytes(payload.PrevRandao),
-		BlockNumber:               payload.BlockNumber,
-		GasLimit:                  payload.GasLimit,
-		GasUsed:                   payload.GasUsed,
-		Timestamp:                 payload.Timestamp,
-		ExtraData:                 bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas:             bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:                 bytesutil.SafeCopyBytes(payload.BlockHash),
-		TransactionsRoot:          bytesutil.SafeCopyBytes(payload.TransactionsRoot),
-		WithdrawalsRoot:           bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
-		BlobGasUsed:               payload.BlobGasUsed,
-		ExcessBlobGas:             payload.ExcessBlobGas,
-		DepositRequestsRoot:       bytesutil.SafeCopyBytes(payload.DepositRequestsRoot),
-		WithdrawalRequestsRoot:    bytesutil.SafeCopyBytes(payload.WithdrawalRequestsRoot),
-		ConsolidationRequestsRoot: bytesutil.SafeCopyBytes(payload.ConsolidationRequestsRoot),
 	}
 }
 
@@ -1054,17 +877,4 @@ func CopyPendingBalanceDeposits(pbd []*PendingBalanceDeposit) []*PendingBalanceD
 		}
 	}
 	return newPbd
-}
-
-type cloneable[T any] interface {
-	Copy() T
-}
-
-func copySlice[T any, C cloneable[T]](original []C) []T {
-	// Create a new slice with the same length as the original
-	newSlice := make([]T, len(original))
-	for i := 0; i < len(newSlice); i++ {
-		newSlice[i] = original[i].Copy()
-	}
-	return newSlice
 }
