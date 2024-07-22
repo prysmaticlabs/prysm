@@ -23,5 +23,4 @@ type Service struct {
 	P2P                   p2p.Broadcaster
 	ReplayerBuilder       stategen.ReplayerBuilder
 	OptimisticModeFetcher blockchain.OptimisticModeFetcher
-	CanonicalFetcher      blockchain.CanonicalFetcher
 }

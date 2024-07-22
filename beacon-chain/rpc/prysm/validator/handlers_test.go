@@ -212,10 +212,10 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 				Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
 			},
 			FinalizedFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
-			CanonicalFetcher: &mock.ChainService{
-				CanonicalRoots: map[[32]byte]bool{
-					bRoot: true,
-				},
+		},
+		CanonicalFetcher: &mock.ChainService{
+			CanonicalRoots: map[[32]byte]bool{
+				bRoot: true,
 			},
 		},
 	}
