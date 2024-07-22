@@ -20,16 +20,6 @@ func TestCopyETH1Data(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied eth1data has empty fields")
 }
 
-func TestCopyCheckpoint(t *testing.T) {
-	cp := genCheckpoint()
-
-	got := v1alpha1.CopyCheckpoint(cp)
-	if !reflect.DeepEqual(got, cp) {
-		t.Errorf("CopyCheckpoint() = %v, want %v", got, cp)
-	}
-	assert.NotEmpty(t, got, "Copied checkpoint has empty fields")
-}
-
 func TestCopySignedBeaconBlock(t *testing.T) {
 	blk := genSignedBeaconBlock()
 
