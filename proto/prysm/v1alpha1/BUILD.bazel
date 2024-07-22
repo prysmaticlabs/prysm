@@ -371,10 +371,13 @@ ssz_proto_files(
 go_test(
     name = "go_default_test",
     srcs = [
+        "attestation_fuzz_test.go",
         "cloners_test.go",
+        "export_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//testing/assert:go_default_library",
+        "@com_github_google_gofuzz//:go_default_library",
     ],
 )
