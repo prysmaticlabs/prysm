@@ -366,7 +366,7 @@ func TestIsBetterUpdate(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			name: "none of the above conditions are met and new's signature slot is lesser than old's signature slot",
+			name: "none of the above conditions are met and new signature's slot is lesser than old signature's slot",
 			oldUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
