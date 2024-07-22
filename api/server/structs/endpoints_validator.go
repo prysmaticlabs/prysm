@@ -118,3 +118,27 @@ type GetValidatorPerformanceResponse struct {
 	MissingValidators             [][]byte `json:"missing_validators,omitempty"`
 	InactivityScores              []uint64 `json:"inactivity_scores,omitempty"`
 }
+
+type GetValidatorParticipationRequest struct {
+	Epoch   string `json:"epoch"`
+	StateID bool   `json:"state_id"`
+}
+
+type GetValidatorParticipationResponse struct {
+	Epoch         string                  `json:"epoch"`
+	Finalized     bool                    `json:"finalized"`
+	Participation *ValidatorParticipation `json:"participation"`
+}
+
+type ValidatorParticipation struct {
+	GlobalParticipationRate          string `json:"global_participation_rate" deprecated:"true"`
+	VotedEther                       string `json:"voted_ether" deprecated:"true"`
+	EligibleEther                    string `json:"eligible_ether" deprecated:"true"`
+	CurrentEpochActiveGwei           string `json:"current_epoch_active_gwei"`
+	CurrentEpochAttestingGwei        string `json:"current_epoch_attesting_gwei"`
+	CurrentEpochTargetAttestingGwei  string `json:"current_epoch_target_attesting_gwei"`
+	PreviousEpochActiveGwei          string `json:"previous_epoch_active_gwei"`
+	PreviousEpochAttestingGwei       string `json:"previous_epoch_attesting_gwei"`
+	PreviousEpochTargetAttestingGwei string `json:"previous_epoch_target_attesting_gwei"`
+	PreviousEpochHeadAttestingGwei   string `json:"previous_epoch_head_attesting_gwei"`
+}

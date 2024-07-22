@@ -1476,27 +1476,25 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 }
 
 func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T) {
-	beaconDB := dbTest.SetupDB(t)
-
 	ctx := context.Background()
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(0))
 	bs := &Server{
-		BeaconDB: beaconDB,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
+		CoreService: &core.Service{
+			HeadFetcher: &mock.ChainService{
+				State: headState,
+			},
+			GenesisTimeFetcher: &mock.ChainService{},
 		},
-		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(beaconDB, doublylinkedtree.New()),
 	}
 
-	wanted := "Cannot retrieve information about an epoch"
+	wanted := "cannot retrieve information about an epoch"
 	_, err = bs.GetValidatorParticipation(
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
 			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-				Epoch: slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: slots.ToEpoch(bs.CoreService.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -1549,18 +1547,20 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	m := &mock.ChainService{State: headState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		BeaconDB:    beaconDB,
-		HeadFetcher: m,
-		StateGen:    stategen.New(beaconDB, doublylinkedtree.New()),
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
+		BeaconDB: beaconDB,
+		StateGen: stategen.New(beaconDB, doublylinkedtree.New()),
+		CoreService: &core.Service{
+			HeadFetcher: m,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
+			},
+			FinalizedFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 		},
 		CanonicalFetcher: &mock.ChainService{
 			CanonicalRoots: map[[32]byte]bool{
 				bRoot: true,
 			},
 		},
-		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -1628,18 +1628,20 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	m := &mock.ChainService{State: headState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		BeaconDB:    beaconDB,
-		HeadFetcher: m,
-		StateGen:    stategen.New(beaconDB, doublylinkedtree.New()),
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
+		BeaconDB: beaconDB,
+		StateGen: stategen.New(beaconDB, doublylinkedtree.New()),
+		CoreService: &core.Service{
+			HeadFetcher: m,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
+			},
+			FinalizedFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 		},
 		CanonicalFetcher: &mock.ChainService{
 			CanonicalRoots: map[[32]byte]bool{
 				bRoot: true,
 			},
 		},
-		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -1744,13 +1746,15 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 	m := &mock.ChainService{State: genState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		BeaconDB:    beaconDB,
+		BeaconDB: beaconDB,
+		CoreService: &core.Service{
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
+			},
+			FinalizedFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
+		},
 		HeadFetcher: m,
 		StateGen:    stategen.New(beaconDB, doublylinkedtree.New()),
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
-		},
-		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 

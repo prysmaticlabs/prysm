@@ -1060,9 +1060,10 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 	}
 }
 
-func (*Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint {
+func (s *Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint {
 	server := &validatorprysm.Server{
-		CoreService: coreService,
+		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		CoreService:      coreService,
 	}
 
 	const namespace = "prysm.validator"
@@ -1086,6 +1087,16 @@ func (*Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint {
 			},
 			handler: server.GetValidatorPerformance,
 			methods: []string{http.MethodPost},
+		},
+		{
+			template: "/prysm/v1/beacon/validator_participation",
+			name:     namespace + ".GetValidatorParticipation",
+			middleware: []mux.MiddlewareFunc{
+				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetValidatorParticipation,
+			methods: []string{http.MethodGet},
 		},
 	}
 }
