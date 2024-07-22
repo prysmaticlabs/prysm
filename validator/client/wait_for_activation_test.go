@@ -73,7 +73,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, errors.New("failed stream")).Return(clientStream, nil)
-	prysmChainClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().ValidatorCount(
 		gomock.Any(),
 		"head",
 		[]validatorType.Status{validatorType.Active},
@@ -104,7 +104,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	prysmChainClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().ValidatorCount(
 		gomock.Any(),
 		"head",
 		[]validatorType.Status{validatorType.Active},
@@ -143,7 +143,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	prysmChainClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().ValidatorCount(
 		gomock.Any(),
 		"head",
 		[]validatorType.Status{validatorType.Active},
@@ -178,7 +178,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	prysmChainClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().ValidatorCount(
 		gomock.Any(),
 		"head",
 		[]validatorType.Status{validatorType.Active},
@@ -221,7 +221,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	prysmChainClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().ValidatorCount(
 		gomock.Any(),
 		"head",
 		[]validatorType.Status{validatorType.Active},
@@ -278,7 +278,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			time.Sleep(time.Second * 2)
 			return inactiveClientStream, nil
 		})
-		prysmChainClient.EXPECT().GetValidatorCount(
+		prysmChainClient.EXPECT().ValidatorCount(
 			gomock.Any(),
 			"head",
 			[]validatorType.Status{validatorType.Active},
@@ -370,7 +370,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			time.Sleep(time.Second * 2)
 			return inactiveClientStream, nil
 		})
-		prysmChainClient.EXPECT().GetValidatorCount(
+		prysmChainClient.EXPECT().ValidatorCount(
 			gomock.Any(),
 			"head",
 			[]validatorType.Status{validatorType.Active},
@@ -431,7 +431,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(clientStream, nil)
-	prysmChainClient.EXPECT().GetValidatorCount(
+	prysmChainClient.EXPECT().ValidatorCount(
 		gomock.Any(),
 		"head",
 		[]validatorType.Status{validatorType.Active},

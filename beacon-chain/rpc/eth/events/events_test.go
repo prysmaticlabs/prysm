@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -280,10 +282,11 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 	})
 	t.Run("payload attributes", func(t *testing.T) {
 		type testCase struct {
-			name     string
-			getState func() state.BeaconState
-			getBlock func() interfaces.SignedBeaconBlock
-			expected string
+			name                      string
+			getState                  func() state.BeaconState
+			getBlock                  func() interfaces.SignedBeaconBlock
+			expected                  string
+			SetTrackedValidatorsCache func(*cache.TrackedValidatorsCache)
 		}
 		testCases := []testCase{
 			{
@@ -328,6 +331,27 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				},
 				expected: payloadAttributesDenebResult,
 			},
+			{
+				name: "electra",
+				getState: func() state.BeaconState {
+					st, err := util.NewBeaconStateElectra()
+					require.NoError(t, err)
+					return st
+				},
+				getBlock: func() interfaces.SignedBeaconBlock {
+					b, err := blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlockElectra(&eth.SignedBeaconBlockElectra{}))
+					require.NoError(t, err)
+					return b
+				},
+				expected: payloadAttributesElectraResultWithTVC,
+				SetTrackedValidatorsCache: func(c *cache.TrackedValidatorsCache) {
+					c.Set(cache.TrackedValidator{
+						Active:       true,
+						Index:        0,
+						FeeRecipient: primitives.ExecutionAddress(common.HexToAddress("0xd2DBd02e4efe087d7d195de828b9Dd25f19A89C9").Bytes()),
+					})
+				},
+			},
 		}
 		for _, tc := range testCases {
 			st := tc.getState()
@@ -343,11 +367,16 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				Block: b,
 				Slot:  &currentSlot,
 			}
+
 			s := &Server{
-				StateNotifier:     &mockChain.MockStateNotifier{},
-				OperationNotifier: &mockChain.MockOperationNotifier{},
-				HeadFetcher:       mockChainService,
-				ChainInfoFetcher:  mockChainService,
+				StateNotifier:          &mockChain.MockStateNotifier{},
+				OperationNotifier:      &mockChain.MockOperationNotifier{},
+				HeadFetcher:            mockChainService,
+				ChainInfoFetcher:       mockChainService,
+				TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+			}
+			if tc.SetTrackedValidatorsCache != nil {
+				tc.SetTrackedValidatorsCache(s.TrackedValidatorsCache)
 			}
 
 			request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com/eth/v1/events?topics=%s", PayloadAttributesTopic), nil)
@@ -437,5 +466,12 @@ const payloadAttributesDenebResult = `:
 
 event: payload_attributes
 data: {"version":"deneb","data":{"proposer_index":"0","proposal_slot":"1","parent_block_number":"0","parent_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","parent_block_hash":"0x0000000000000000000000000000000000000000000000000000000000000000","payload_attributes":{"timestamp":"12","prev_randao":"0x0000000000000000000000000000000000000000000000000000000000000000","suggested_fee_recipient":"0x0000000000000000000000000000000000000000","withdrawals":[],"parent_beacon_block_root":"0xbef96cb938fd48b2403d3e662664325abb0102ed12737cbb80d717520e50cf4a"}}}
+
+`
+
+const payloadAttributesElectraResultWithTVC = `:
+
+event: payload_attributes
+data: {"version":"electra","data":{"proposer_index":"0","proposal_slot":"1","parent_block_number":"0","parent_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","parent_block_hash":"0x0000000000000000000000000000000000000000000000000000000000000000","payload_attributes":{"timestamp":"12","prev_randao":"0x0000000000000000000000000000000000000000000000000000000000000000","suggested_fee_recipient":"0xd2dbd02e4efe087d7d195de828b9dd25f19a89c9","withdrawals":[],"parent_beacon_block_root":"0x66d641f7eae038f2dd28081b09d2ba279462cc47655c7b7e1fd1159a50c8eb32"}}}
 
 `

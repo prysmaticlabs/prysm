@@ -1443,8 +1443,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_gorilla_websocket",
         importpath = "github.com/gorilla/websocket",
-        sum = "h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/QY=",
-        version = "v1.5.1",
+        sum = "h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=",
+        version = "v1.5.3",
     )
     go_repository(
         name = "com_github_gostaticanalysis_comment",
@@ -2105,8 +2105,8 @@ def prysm_deps():
         ],
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p",
-        sum = "h1:1xS1Bkr9X7GtdvV6ntLnDV9xB1kNjHK1lZ0eaO6gnhc=",
-        version = "v0.35.0",
+        sum = "h1:287oHbuplkrLdAF+syB0n/qDgd50AUBtEODqS0e0HDs=",
+        version = "v0.35.2",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_asn_util",
@@ -2799,8 +2799,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_pion_ice_v2",
         importpath = "github.com/pion/ice/v2",
-        sum = "h1:RYgzhH/u5lH0XO+ABatVKCtRd+4U1GEaCXSMjNr13tI=",
-        version = "v2.3.24",
+        sum = "h1:M5rJA07dqhi3nobJIg+uPtcVjFECTrhcR3n0ns8kDZs=",
+        version = "v2.3.25",
     )
     go_repository(
         name = "com_github_pion_interceptor",
@@ -4929,8 +4929,8 @@ def prysm_deps():
     go_repository(
         name = "org_uber_go_fx",
         importpath = "go.uber.org/fx",
-        sum = "h1:RqBh3cYdzZS0uqwVeEjOX2p73dddLpym315myy/Bpb0=",
-        version = "v1.21.1",
+        sum = "h1:nvvln7mwyT5s1q201YE29V/BFrGor6vMiDNpU/78Mys=",
+        version = "v1.22.1",
     )
     go_repository(
         name = "org_uber_go_goleak",

@@ -12,14 +12,17 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
 )
 
 type proposerAtts []ethpb.Att
 
-func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState) ([]ethpb.Att, error) {
+func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState, blkSlot primitives.Slot) ([]ethpb.Att, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
 	defer span.End()
 
@@ -39,30 +42,69 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	}
 	atts = append(atts, uAtts...)
 
+	// Checking the state's version here will give the wrong result if the last slot of Deneb is missed.
+	// The head state will still be in Deneb while we are trying to build an Electra block.
+	postElectra := slots.ToEpoch(blkSlot) >= params.BeaconConfig().ElectraForkEpoch
+
+	versionAtts := make([]ethpb.Att, 0, len(atts))
+	if postElectra {
+		for _, a := range atts {
+			if a.Version() == version.Electra {
+				versionAtts = append(versionAtts, a)
+			}
+		}
+	} else {
+		for _, a := range atts {
+			if a.Version() == version.Phase0 {
+				versionAtts = append(versionAtts, a)
+			}
+		}
+	}
+
 	// Remove duplicates from both aggregated/unaggregated attestations. This
 	// prevents inefficient aggregates being created.
-	atts, err = proposerAtts(atts).dedup()
+	versionAtts, err = proposerAtts(versionAtts).dedup()
 	if err != nil {
 		return nil, err
 	}
 
-	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(atts))
-	for _, att := range atts {
-		attDataRoot, err := att.GetData().HashTreeRoot()
+	attsById := make(map[attestation.Id][]ethpb.Att, len(versionAtts))
+	for _, att := range versionAtts {
+		id, err := attestation.NewId(att, attestation.Data)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not create attestation ID")
 		}
-		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+		attsById[id] = append(attsById[id], att)
 	}
 
-	attsForInclusion := proposerAtts(make([]ethpb.Att, 0))
-	for _, as := range attsByDataRoot {
+	for id, as := range attsById {
 		as, err := attaggregation.Aggregate(as)
 		if err != nil {
 			return nil, err
 		}
-		attsForInclusion = append(attsForInclusion, as...)
+		attsById[id] = as
 	}
+
+	var attsForInclusion proposerAtts
+	if postElectra {
+		// TODO: hack for Electra devnet-1, take only one aggregate per ID
+		// (which essentially means one aggregate for an attestation_data+committee combination
+		topAggregates := make([]ethpb.Att, 0)
+		for _, v := range attsById {
+			topAggregates = append(topAggregates, v[0])
+		}
+
+		attsForInclusion, err = computeOnChainAggregate(topAggregates)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		attsForInclusion = make([]ethpb.Att, 0)
+		for _, as := range attsById {
+			attsForInclusion = append(attsForInclusion, as...)
+		}
+	}
+
 	deduped, err := attsForInclusion.dedup()
 	if err != nil {
 		return nil, err
@@ -169,8 +211,18 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 
 // limitToMaxAttestations limits attestations to maximum attestations per block.
 func (a proposerAtts) limitToMaxAttestations() proposerAtts {
-	if uint64(len(a)) > params.BeaconConfig().MaxAttestations {
-		return a[:params.BeaconConfig().MaxAttestations]
+	if len(a) == 0 {
+		return a
+	}
+
+	var limit uint64
+	if a[0].Version() == version.Phase0 {
+		limit = params.BeaconConfig().MaxAttestations
+	} else {
+		limit = params.BeaconConfig().MaxAttestationsElectra
+	}
+	if uint64(len(a)) > limit {
+		return a[:limit]
 	}
 	return a
 }
@@ -182,13 +234,13 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
-	attsByDataRoot := make(map[[32]byte][]ethpb.Att, len(a))
+	attsByDataRoot := make(map[attestation.Id][]ethpb.Att, len(a))
 	for _, att := range a {
-		attDataRoot, err := att.GetData().HashTreeRoot()
+		id, err := attestation.NewId(att, attestation.Data)
 		if err != nil {
-			continue
+			return nil, errors.Wrap(err, "failed to create attestation ID")
 		}
-		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+		attsByDataRoot[id] = append(attsByDataRoot[id], att)
 	}
 
 	uniqAtts := make([]ethpb.Att, 0, len(a))

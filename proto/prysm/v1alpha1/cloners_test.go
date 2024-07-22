@@ -309,36 +309,6 @@ func TestCopyPendingAttestationSlice(t *testing.T) {
 	}
 }
 
-func TestCopyPayloadHeader(t *testing.T) {
-	p := genPayloadHeader()
-
-	got := v1alpha1.CopyExecutionPayloadHeader(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("CopyExecutionPayloadHeader() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
-func TestCopyPayloadHeaderCapella(t *testing.T) {
-	p := genPayloadHeaderCapella()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderCapella(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyPayloadHeaderCapella() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
-func TestCopyPayloadHeaderDeneb(t *testing.T) {
-	p := genPayloadHeaderDeneb()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderDeneb(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyPayloadHeaderDeneb() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
 func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 	sbb := genSignedBeaconBlockBellatrix()
 
@@ -527,26 +497,6 @@ func bytes(length int) []byte {
 	return b
 }
 
-func TestCopyWithdrawals(t *testing.T) {
-	ws := genWithdrawals(10)
-
-	got := v1alpha1.CopyWithdrawalSlice(ws)
-	if !reflect.DeepEqual(got, ws) {
-		t.Errorf("TestCopyWithdrawals() = %v, want %v", got, ws)
-	}
-	assert.NotEmpty(t, got, "Copied withdrawals have empty fields")
-}
-
-func TestCopyWithdrawal(t *testing.T) {
-	w := genWithdrawal()
-
-	got := v1alpha1.CopyWithdrawal(w)
-	if !reflect.DeepEqual(got, w) {
-		t.Errorf("TestCopyWithdrawal() = %v, want %v", got, w)
-	}
-	assert.NotEmpty(t, got, "Copied withdrawal has empty fields")
-}
-
 func TestCopyBLSToExecutionChanges(t *testing.T) {
 	changes := genBLSToExecutionChanges(10)
 
@@ -655,42 +605,6 @@ func TestCopyBeaconBlockBodyElectra(t *testing.T) {
 	got := v1alpha1.CopyBeaconBlockBodyElectra(bb)
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("TestCopyBeaconBlockBodyElectra() = %v, want %v", got, bb)
-	}
-}
-
-func TestCopyExecutionPayloadElectra(t *testing.T) {
-	p := genExecutionPayloadElectra()
-
-	got := v1alpha1.CopyExecutionPayloadElectra(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyExecutionPayloadElectra() = %v, want %v", got, p)
-	}
-}
-
-func TestCopyDepositRequests(t *testing.T) {
-	drs := genDepositRequests(10)
-
-	got := v1alpha1.CopyDepositRequests(drs)
-	if !reflect.DeepEqual(got, drs) {
-		t.Errorf("TestCopyDepositRequests() = %v, want %v", got, drs)
-	}
-}
-
-func TestCopyWithdrawalRequests(t *testing.T) {
-	wrs := genWithdrawalRequests(10)
-
-	got := v1alpha1.CopyWithdrawalRequests(wrs)
-	if !reflect.DeepEqual(got, wrs) {
-		t.Errorf("TestCopyWithdrawalRequests() = %v, want %v", got, wrs)
-	}
-}
-
-func TestCopyExecutionPayloadHeaderElectra(t *testing.T) {
-	p := genExecutionPayloadHeaderElectra()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderElectra(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyExecutionPayloadHeaderElectra() = %v, want %v", got, p)
 	}
 }
 
@@ -1465,25 +1379,26 @@ func genBeaconBlockBodyElectra() *v1alpha1.BeaconBlockBodyElectra {
 
 func genExecutionPayloadElectra() *enginev1.ExecutionPayloadElectra {
 	return &enginev1.ExecutionPayloadElectra{
-		ParentHash:         bytes(32),
-		FeeRecipient:       bytes(20),
-		StateRoot:          bytes(32),
-		ReceiptsRoot:       bytes(32),
-		LogsBloom:          bytes(256),
-		PrevRandao:         bytes(32),
-		BlockNumber:        1,
-		GasLimit:           2,
-		GasUsed:            3,
-		Timestamp:          4,
-		ExtraData:          bytes(32),
-		BaseFeePerGas:      bytes(32),
-		BlockHash:          bytes(32),
-		Transactions:       [][]byte{{'a'}, {'b'}, {'c'}},
-		Withdrawals:        genWithdrawals(10),
-		BlobGasUsed:        5,
-		ExcessBlobGas:      6,
-		DepositRequests:    genDepositRequests(10),
-		WithdrawalRequests: genWithdrawalRequests(10),
+		ParentHash:            bytes(32),
+		FeeRecipient:          bytes(20),
+		StateRoot:             bytes(32),
+		ReceiptsRoot:          bytes(32),
+		LogsBloom:             bytes(256),
+		PrevRandao:            bytes(32),
+		BlockNumber:           1,
+		GasLimit:              2,
+		GasUsed:               3,
+		Timestamp:             4,
+		ExtraData:             bytes(32),
+		BaseFeePerGas:         bytes(32),
+		BlockHash:             bytes(32),
+		Transactions:          [][]byte{{'a'}, {'b'}, {'c'}},
+		Withdrawals:           genWithdrawals(10),
+		BlobGasUsed:           5,
+		ExcessBlobGas:         6,
+		DepositRequests:       genDepositRequests(10),
+		WithdrawalRequests:    genWithdrawalRequests(10),
+		ConsolidationRequests: genConsolidationRequests(10),
 	}
 }
 
@@ -1518,6 +1433,22 @@ func genWithdrawalRequest() *enginev1.WithdrawalRequest {
 		SourceAddress:   bytes(20),
 		ValidatorPubkey: bytes(48),
 		Amount:          55555,
+	}
+}
+
+func genConsolidationRequests(num int) []*enginev1.ConsolidationRequest {
+	crs := make([]*enginev1.ConsolidationRequest, num)
+	for i := 0; i < num; i++ {
+		crs[i] = genConsolidationRequest()
+	}
+	return crs
+}
+
+func genConsolidationRequest() *enginev1.ConsolidationRequest {
+	return &enginev1.ConsolidationRequest{
+		SourceAddress: bytes(20),
+		SourcePubkey:  bytes(48),
+		TargetPubkey:  bytes(48),
 	}
 }
 

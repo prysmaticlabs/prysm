@@ -2,6 +2,7 @@ package electra
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -58,7 +59,7 @@ func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) error {
 		}
 
 		// Collect validators eligible for activation and not yet dequeued for activation.
-		if helpers.IsEligibleForActivationUsingTrie(st, val) {
+		if helpers.IsEligibleForActivationUsingROVal(st, val) {
 			eligibleForActivation = append(eligibleForActivation, primitives.ValidatorIndex(idx))
 		}
 
@@ -84,7 +85,7 @@ func ProcessRegistryUpdates(ctx context.Context, st state.BeaconState) error {
 		var err error
 		// exitQueueEpoch and churn arguments are not used in electra.
 		st, _, err = validators.InitiateValidatorExit(ctx, st, idx, 0 /*exitQueueEpoch*/, 0 /*churn*/)
-		if err != nil {
+		if err != nil && !errors.Is(err, validators.ErrValidatorAlreadyExited) {
 			return fmt.Errorf("failed to initiate validator exit at index %d: %w", idx, err)
 		}
 	}
