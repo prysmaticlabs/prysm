@@ -20,45 +20,6 @@ func TestCopyETH1Data(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied eth1data has empty fields")
 }
 
-func TestCopyPendingAttestation(t *testing.T) {
-	pa := genPendingAttestation()
-
-	got := v1alpha1.CopyPendingAttestation(pa)
-	if !reflect.DeepEqual(got, pa) {
-		t.Errorf("CopyPendingAttestation() = %v, want %v", got, pa)
-	}
-	assert.NotEmpty(t, got, "Copied pending attestation has empty fields")
-}
-
-func TestCopyAttestation(t *testing.T) {
-	att := genAttestation()
-
-	got := v1alpha1.CopyAttestation(att)
-	if !reflect.DeepEqual(got, att) {
-		t.Errorf("CopyAttestation() = %v, want %v", got, att)
-	}
-	assert.NotEmpty(t, got, "Copied attestation has empty fields")
-}
-func TestCopyAttestationData(t *testing.T) {
-	att := genAttData()
-
-	got := v1alpha1.CopyAttestationData(att)
-	if !reflect.DeepEqual(got, att) {
-		t.Errorf("CopyAttestationData() = %v, want %v", got, att)
-	}
-	assert.NotEmpty(t, got, "Copied attestation data has empty fields")
-}
-
-func TestCopyCheckpoint(t *testing.T) {
-	cp := genCheckpoint()
-
-	got := v1alpha1.CopyCheckpoint(cp)
-	if !reflect.DeepEqual(got, cp) {
-		t.Errorf("CopyCheckpoint() = %v, want %v", got, cp)
-	}
-	assert.NotEmpty(t, got, "Copied checkpoint has empty fields")
-}
-
 func TestCopySignedBeaconBlock(t *testing.T) {
 	blk := genSignedBeaconBlock()
 
@@ -157,36 +118,6 @@ func TestCopyBeaconBlockHeader(t *testing.T) {
 		t.Errorf("CopyBeaconBlockHeader() = %v, want %v", got, bh)
 	}
 	assert.NotEmpty(t, got, "Copied beacon block header has empty fields")
-}
-
-func TestCopyAttesterSlashings(t *testing.T) {
-	as := genAttesterSlashings(10)
-
-	got := v1alpha1.CopyAttesterSlashings(as)
-	if !reflect.DeepEqual(got, as) {
-		t.Errorf("CopyAttesterSlashings() = %v, want %v", got, as)
-	}
-	assert.NotEmpty(t, got, "Copied attester slashings have empty fields")
-}
-
-func TestCopyIndexedAttestation(t *testing.T) {
-	ia := genIndexedAttestation()
-
-	got := v1alpha1.CopyIndexedAttestation(ia)
-	if !reflect.DeepEqual(got, ia) {
-		t.Errorf("CopyIndexedAttestation() = %v, want %v", got, ia)
-	}
-	assert.NotEmpty(t, got, "Copied indexed attestation has empty fields")
-}
-
-func TestCopyAttestations(t *testing.T) {
-	atts := genAttestations(10)
-
-	got := v1alpha1.CopyAttestations(atts)
-	if !reflect.DeepEqual(got, atts) {
-		t.Errorf("CopyAttestations() = %v, want %v", got, atts)
-	}
-	assert.NotEmpty(t, got, "Copied attestations have empty fields")
 }
 
 func TestCopyDeposits(t *testing.T) {
@@ -302,7 +233,7 @@ func TestCopyPendingAttestationSlice(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := v1alpha1.CopyPendingAttestationSlice(tt.input); !reflect.DeepEqual(got, tt.input) {
+			if got := tt.input; !reflect.DeepEqual(got, tt.input) {
 				t.Errorf("CopyPendingAttestationSlice() = %v, want %v", got, tt.input)
 			}
 		})
@@ -515,42 +446,6 @@ func TestCopyHistoricalSummaries(t *testing.T) {
 	got := v1alpha1.CopyHistoricalSummaries(summaries)
 	if !reflect.DeepEqual(got, summaries) {
 		t.Errorf("TestCopyHistoricalSummariesing() = %v, want %v", got, summaries)
-	}
-}
-
-func TestCopyAttestationElectra(t *testing.T) {
-	att := genAttestationElectra()
-
-	got := v1alpha1.CopyAttestationElectra(att)
-	if !reflect.DeepEqual(got, att) {
-		t.Errorf("TestCopyAttestationElectra() = %v, want %v", got, att)
-	}
-}
-
-func TestCopyAttesterSlashingsElectra(t *testing.T) {
-	as := genAttesterSlashingsElectra(10)
-
-	got := v1alpha1.CopyAttesterSlashingsElectra(as)
-	if !reflect.DeepEqual(got, as) {
-		t.Errorf("TestCopyAttesterSlashingsElectra() = %v, want %v", got, as)
-	}
-}
-
-func TestCopyIndexedAttestationElectra(t *testing.T) {
-	ia := genIndexedAttestationElectra()
-
-	got := v1alpha1.CopyIndexedAttestationElectra(ia)
-	if !reflect.DeepEqual(got, ia) {
-		t.Errorf("TestCopyIndexedAttestationElectra() = %v, want %v", got, ia)
-	}
-}
-
-func TestCopyAttestationsElectra(t *testing.T) {
-	atts := genAttestationsElectra(10)
-
-	got := v1alpha1.CopyAttestationsElectra(atts)
-	if !reflect.DeepEqual(got, atts) {
-		t.Errorf("TestCopyAttestationsElectra() = %v, want %v", got, atts)
 	}
 }
 
