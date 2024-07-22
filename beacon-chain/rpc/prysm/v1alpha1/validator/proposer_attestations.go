@@ -143,7 +143,12 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 	return validAtts, invalidAtts
 }
 
-// sort orders attestations by highest slot and by highest aggregation bit count.
+// sort attestations as follows:
+//
+//   - all attestations selected by max-cover are ordered before leftover attestations
+//   - within selected/leftover, attestations are ordered by slot, with higher slot coming first
+//   - within a slot, all top attestations (one per committee) are ordered before any second-best attestations, second-best before third-best etc.
+//   - within top/second-best/etc. attestations (one per committee), attestations are ordered by bit count, with higher bit count coming first
 func (a proposerAtts) sort() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
@@ -190,13 +195,15 @@ func (a proposerAtts) sort() (proposerAtts, error) {
 	})
 	for _, slot := range slots {
 		sortedAtts = append(sortedAtts, sortSlotAttestations(attsBySlot[slot].selected)...)
+	}
+	for _, slot := range slots {
 		sortedAtts = append(sortedAtts, sortSlotAttestations(attsBySlot[slot].leftover)...)
 	}
 
 	return sortedAtts, nil
 }
 
-// sortByProfitabilityUsingMaxCover orders attestations by highest slot and by highest aggregation bit count.
+// sortByProfitabilityUsingMaxCover orders attestations by highest aggregation bit count.
 // Duplicate bits are counted only once, using max-cover algorithm.
 func (a proposerAtts) sortByProfitabilityUsingMaxCover() (selected proposerAtts, leftover proposerAtts, err error) {
 	if len(a) < 2 {
@@ -236,32 +243,37 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (selected proposerAtts,
 	return selected, leftover, nil
 }
 
+// sortSlotAttestations assumes each proposerAtts value in the map is ordered by profitability.
+// The function takes the first attestation from each value, orders these attestations by bit count
+// and places them at the start of the resulting slice. It then takes the second attestation for each value,
+// orders these attestations by bit cound and appends them to the end.
+// It continues this pattern until all attestations are processed.
 func sortSlotAttestations(slotAtts map[primitives.CommitteeIndex]proposerAtts) proposerAtts {
-	committeeIndexTracker := make(map[primitives.CommitteeIndex]int)
 	attCount := 0
 	for _, committeeAtts := range slotAtts {
 		attCount += len(committeeAtts)
 	}
 
-	sorted := make([]ethpb.Att, attCount)
+	sorted := make([]ethpb.Att, 0, attCount)
 
-	for i := 0; i < attCount; i++ {
-		var maxBits uint64
-		var bestAtt ethpb.Att
+	processedCount := 0
+	index := 0
+	for processedCount < attCount {
+		var atts []ethpb.Att
 
-		for ci, committeeAtts := range slotAtts {
-			ix := committeeIndexTracker[ci]
-			if ix < len(committeeAtts) {
-				bitCount := committeeAtts[ix].GetAggregationBits().Count()
-				if bitCount > maxBits {
-					maxBits = bitCount
-					bestAtt = committeeAtts[ix]
-				}
+		for _, committeeAtts := range slotAtts {
+			if len(committeeAtts) > index {
+				atts = append(atts, committeeAtts[index])
 			}
 		}
-		maxBits = 0
-		committeeIndexTracker[bestAtt.GetData().CommitteeIndex]++
-		sorted[i] = bestAtt
+
+		sort.Slice(atts, func(i, j int) bool {
+			return atts[i].GetAggregationBits().Count() > atts[j].GetAggregationBits().Count()
+		})
+		sorted = append(sorted, atts...)
+
+		processedCount += len(atts)
+		index++
 	}
 
 	return sorted
