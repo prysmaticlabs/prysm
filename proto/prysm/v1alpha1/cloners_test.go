@@ -309,36 +309,6 @@ func TestCopyPendingAttestationSlice(t *testing.T) {
 	}
 }
 
-func TestCopyPayloadHeader(t *testing.T) {
-	p := genPayloadHeader()
-
-	got := v1alpha1.CopyExecutionPayloadHeader(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("CopyExecutionPayloadHeader() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
-func TestCopyPayloadHeaderCapella(t *testing.T) {
-	p := genPayloadHeaderCapella()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderCapella(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyPayloadHeaderCapella() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
-func TestCopyPayloadHeaderDeneb(t *testing.T) {
-	p := genPayloadHeaderDeneb()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderDeneb(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyPayloadHeaderDeneb() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
 func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 	sbb := genSignedBeaconBlockBellatrix()
 
@@ -635,15 +605,6 @@ func TestCopyBeaconBlockBodyElectra(t *testing.T) {
 	got := v1alpha1.CopyBeaconBlockBodyElectra(bb)
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("TestCopyBeaconBlockBodyElectra() = %v, want %v", got, bb)
-	}
-}
-
-func TestCopyExecutionPayloadHeaderElectra(t *testing.T) {
-	p := genExecutionPayloadHeaderElectra()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderElectra(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyExecutionPayloadHeaderElectra() = %v, want %v", got, p)
 	}
 }
 
