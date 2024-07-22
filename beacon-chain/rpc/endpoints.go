@@ -1089,7 +1089,7 @@ func (s *Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint 
 			methods: []string{http.MethodPost},
 		},
 		{
-			template: "/prysm/v1/beacon/validator_participation",
+			template: "/prysm/v1/validators/participation",
 			name:     namespace + ".GetValidatorParticipation",
 			middleware: []mux.MiddlewareFunc{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
