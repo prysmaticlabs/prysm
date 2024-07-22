@@ -145,7 +145,7 @@ func (c *AttCaches) SaveAggregatedAttestation(att ethpb.Att) error {
 	if err != nil {
 		return errors.Wrap(err, "could not create attestation ID")
 	}
-	copiedAtt := att.Copy()
+	copiedAtt := att.Clone()
 
 	c.aggregatedAttLock.Lock()
 	defer c.aggregatedAttLock.Unlock()

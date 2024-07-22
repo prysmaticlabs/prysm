@@ -50,7 +50,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	}
 
 	go func() {
-		attCopy := ethpb.CopyAttestation(att)
+		attCopy := att.Copy()
 		if err := vs.AttPool.SaveUnaggregatedAttestation(attCopy); err != nil {
 			log.WithError(err).Error("Could not save unaggregated attestation")
 			return
@@ -84,7 +84,7 @@ func (vs *Server) ProposeAttestationElectra(ctx context.Context, att *ethpb.Atte
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-		attCopy := ethpb.CopyAttestationElectra(att)
+		attCopy := att.Copy()
 		if err := vs.AttPool.SaveUnaggregatedAttestation(attCopy); err != nil {
 			log.WithError(err).Error("Could not save unaggregated attestation")
 			return

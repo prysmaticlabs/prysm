@@ -4,6 +4,19 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 )
 
+type copier[T any] interface {
+	Copy() T
+}
+
+func copySlice[T any, C copier[T]](original []C) []T {
+	// Create a new slice with the same length as the original
+	newSlice := make([]T, len(original))
+	for i := 0; i < len(newSlice); i++ {
+		newSlice[i] = original[i].Copy()
+	}
+	return newSlice
+}
+
 // CopyETH1Data copies the provided eth1data object.
 func CopyETH1Data(data *Eth1Data) *Eth1Data {
 	if data == nil {
@@ -13,83 +26,6 @@ func CopyETH1Data(data *Eth1Data) *Eth1Data {
 		DepositRoot:  bytesutil.SafeCopyBytes(data.DepositRoot),
 		DepositCount: data.DepositCount,
 		BlockHash:    bytesutil.SafeCopyBytes(data.BlockHash),
-	}
-}
-
-// CopyPendingAttestationSlice copies the provided slice of pending attestation objects.
-func CopyPendingAttestationSlice(input []*PendingAttestation) []*PendingAttestation {
-	if input == nil {
-		return nil
-	}
-
-	res := make([]*PendingAttestation, len(input))
-	for i := 0; i < len(res); i++ {
-		res[i] = CopyPendingAttestation(input[i])
-	}
-	return res
-}
-
-// CopyPendingAttestation copies the provided pending attestation object.
-func CopyPendingAttestation(att *PendingAttestation) *PendingAttestation {
-	if att == nil {
-		return nil
-	}
-	data := CopyAttestationData(att.Data)
-	return &PendingAttestation{
-		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
-		Data:            data,
-		InclusionDelay:  att.InclusionDelay,
-		ProposerIndex:   att.ProposerIndex,
-	}
-}
-
-// CopyAttestation copies the provided attestation object.
-func CopyAttestation(att *Attestation) *Attestation {
-	if att == nil {
-		return nil
-	}
-	return &Attestation{
-		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
-		Data:            CopyAttestationData(att.Data),
-		Signature:       bytesutil.SafeCopyBytes(att.Signature),
-	}
-}
-
-// CopyAttestationElectra copies the provided attestation object.
-func CopyAttestationElectra(att *AttestationElectra) *AttestationElectra {
-	if att == nil {
-		return nil
-	}
-	return &AttestationElectra{
-		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
-		CommitteeBits:   bytesutil.SafeCopyBytes(att.CommitteeBits),
-		Data:            CopyAttestationData(att.Data),
-		Signature:       bytesutil.SafeCopyBytes(att.Signature),
-	}
-}
-
-// CopyAttestationData copies the provided AttestationData object.
-func CopyAttestationData(attData *AttestationData) *AttestationData {
-	if attData == nil {
-		return nil
-	}
-	return &AttestationData{
-		Slot:            attData.Slot,
-		CommitteeIndex:  attData.CommitteeIndex,
-		BeaconBlockRoot: bytesutil.SafeCopyBytes(attData.BeaconBlockRoot),
-		Source:          CopyCheckpoint(attData.Source),
-		Target:          CopyCheckpoint(attData.Target),
-	}
-}
-
-// CopyCheckpoint copies the provided checkpoint.
-func CopyCheckpoint(cp *Checkpoint) *Checkpoint {
-	if cp == nil {
-		return nil
-	}
-	return &Checkpoint{
-		Epoch: cp.Epoch,
-		Root:  bytesutil.SafeCopyBytes(cp.Root),
 	}
 }
 
@@ -128,8 +64,8 @@ func CopyBeaconBlockBody(body *BeaconBlockBody) *BeaconBlockBody {
 		Eth1Data:          CopyETH1Data(body.Eth1Data),
 		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:      CopyAttestations(body.Attestations),
+		AttesterSlashings: copySlice(body.AttesterSlashings),
+		Attestations:      copySlice(body.Attestations),
 		Deposits:          CopyDeposits(body.Deposits),
 		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
 	}
@@ -170,8 +106,8 @@ func CopyBeaconBlockBodyAltair(body *BeaconBlockBodyAltair) *BeaconBlockBodyAlta
 		Eth1Data:          CopyETH1Data(body.Eth1Data),
 		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:      CopyAttestations(body.Attestations),
+		AttesterSlashings: copySlice(body.AttesterSlashings),
+		Attestations:      copySlice(body.Attestations),
 		Deposits:          CopyDeposits(body.Deposits),
 		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
@@ -227,92 +163,6 @@ func CopyBeaconBlockHeader(header *BeaconBlockHeader) *BeaconBlockHeader {
 		StateRoot:     stateRoot,
 		BodyRoot:      bodyRoot,
 	}
-}
-
-// CopyAttesterSlashings copies the provided AttesterSlashings array.
-func CopyAttesterSlashings(slashings []*AttesterSlashing) []*AttesterSlashing {
-	if slashings == nil {
-		return nil
-	}
-	newSlashings := make([]*AttesterSlashing, len(slashings))
-	for i, slashing := range slashings {
-		newSlashings[i] = &AttesterSlashing{
-			Attestation_1: CopyIndexedAttestation(slashing.Attestation_1),
-			Attestation_2: CopyIndexedAttestation(slashing.Attestation_2),
-		}
-	}
-	return newSlashings
-}
-
-// CopyAttesterSlashingsElectra copies the provided AttesterSlashings array.
-func CopyAttesterSlashingsElectra(slashings []*AttesterSlashingElectra) []*AttesterSlashingElectra {
-	if slashings == nil {
-		return nil
-	}
-	newSlashings := make([]*AttesterSlashingElectra, len(slashings))
-	for i, slashing := range slashings {
-		newSlashings[i] = &AttesterSlashingElectra{
-			Attestation_1: CopyIndexedAttestationElectra(slashing.Attestation_1),
-			Attestation_2: CopyIndexedAttestationElectra(slashing.Attestation_2),
-		}
-	}
-	return newSlashings
-}
-
-// CopyIndexedAttestation copies the provided IndexedAttestation.
-func CopyIndexedAttestation(indexedAtt *IndexedAttestation) *IndexedAttestation {
-	var indices []uint64
-	if indexedAtt == nil {
-		return nil
-	} else if indexedAtt.AttestingIndices != nil {
-		indices = make([]uint64, len(indexedAtt.AttestingIndices))
-		copy(indices, indexedAtt.AttestingIndices)
-	}
-	return &IndexedAttestation{
-		AttestingIndices: indices,
-		Data:             CopyAttestationData(indexedAtt.Data),
-		Signature:        bytesutil.SafeCopyBytes(indexedAtt.Signature),
-	}
-}
-
-// CopyIndexedAttestationElectra copies the provided IndexedAttestation.
-func CopyIndexedAttestationElectra(indexedAtt *IndexedAttestationElectra) *IndexedAttestationElectra {
-	var indices []uint64
-	if indexedAtt == nil {
-		return nil
-	} else if indexedAtt.AttestingIndices != nil {
-		indices = make([]uint64, len(indexedAtt.AttestingIndices))
-		copy(indices, indexedAtt.AttestingIndices)
-	}
-	return &IndexedAttestationElectra{
-		AttestingIndices: indices,
-		Data:             CopyAttestationData(indexedAtt.Data),
-		Signature:        bytesutil.SafeCopyBytes(indexedAtt.Signature),
-	}
-}
-
-// CopyAttestations copies the provided Attestation array.
-func CopyAttestations(attestations []*Attestation) []*Attestation {
-	if attestations == nil {
-		return nil
-	}
-	newAttestations := make([]*Attestation, len(attestations))
-	for i, att := range attestations {
-		newAttestations[i] = CopyAttestation(att)
-	}
-	return newAttestations
-}
-
-// CopyAttestations copies the provided AttestationElectra array.
-func CopyAttestationsElectra(attestations []*AttestationElectra) []*AttestationElectra {
-	if attestations == nil {
-		return nil
-	}
-	newAttestations := make([]*AttestationElectra, len(attestations))
-	for i, att := range attestations {
-		newAttestations[i] = CopyAttestationElectra(att)
-	}
-	return newAttestations
 }
 
 // CopyDeposits copies the provided deposit array.
@@ -468,8 +318,8 @@ func CopyBeaconBlockBodyBellatrix(body *BeaconBlockBodyBellatrix) *BeaconBlockBo
 		Eth1Data:          CopyETH1Data(body.Eth1Data),
 		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:      CopyAttestations(body.Attestations),
+		AttesterSlashings: copySlice(body.AttesterSlashings),
+		Attestations:      copySlice(body.Attestations),
 		Deposits:          CopyDeposits(body.Deposits),
 		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
@@ -512,8 +362,8 @@ func CopyBeaconBlockBodyCapella(body *BeaconBlockBodyCapella) *BeaconBlockBodyCa
 		Eth1Data:              CopyETH1Data(body.Eth1Data),
 		Graffiti:              bytesutil.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings:     CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings:     CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:          CopyAttestations(body.Attestations),
+		AttesterSlashings:     copySlice(body.AttesterSlashings),
+		Attestations:          copySlice(body.Attestations),
 		Deposits:              CopyDeposits(body.Deposits),
 		VoluntaryExits:        CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:         CopySyncAggregate(body.SyncAggregate),
@@ -557,8 +407,8 @@ func CopyBlindedBeaconBlockBodyCapella(body *BlindedBeaconBlockBodyCapella) *Bli
 		Eth1Data:               CopyETH1Data(body.Eth1Data),
 		Graffiti:               bytesutil.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings:      CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings:      CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:           CopyAttestations(body.Attestations),
+		AttesterSlashings:      copySlice(body.AttesterSlashings),
+		Attestations:           copySlice(body.Attestations),
 		Deposits:               CopyDeposits(body.Deposits),
 		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
@@ -602,8 +452,8 @@ func CopyBlindedBeaconBlockBodyDeneb(body *BlindedBeaconBlockBodyDeneb) *Blinded
 		Eth1Data:               CopyETH1Data(body.Eth1Data),
 		Graffiti:               bytesutil.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings:      CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings:      CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:           CopyAttestations(body.Attestations),
+		AttesterSlashings:      copySlice(body.AttesterSlashings),
+		Attestations:           copySlice(body.Attestations),
 		Deposits:               CopyDeposits(body.Deposits),
 		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
@@ -648,8 +498,8 @@ func CopyBlindedBeaconBlockBodyElectra(body *BlindedBeaconBlockBodyElectra) *Bli
 		Eth1Data:               CopyETH1Data(body.Eth1Data),
 		Graffiti:               bytesutil.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings:      CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings:      CopyAttesterSlashingsElectra(body.AttesterSlashings),
-		Attestations:           CopyAttestationsElectra(body.Attestations),
+		AttesterSlashings:      copySlice(body.AttesterSlashings),
+		Attestations:           copySlice(body.Attestations),
 		Deposits:               CopyDeposits(body.Deposits),
 		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
@@ -694,8 +544,8 @@ func CopyBlindedBeaconBlockBodyBellatrix(body *BlindedBeaconBlockBodyBellatrix) 
 		Eth1Data:               CopyETH1Data(body.Eth1Data),
 		Graffiti:               bytesutil.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings:      CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings:      CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:           CopyAttestations(body.Attestations),
+		AttesterSlashings:      copySlice(body.AttesterSlashings),
+		Attestations:           copySlice(body.Attestations),
 		Deposits:               CopyDeposits(body.Deposits),
 		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
@@ -763,8 +613,8 @@ func CopyBeaconBlockBodyDeneb(body *BeaconBlockBodyDeneb) *BeaconBlockBodyDeneb 
 		Eth1Data:              CopyETH1Data(body.Eth1Data),
 		Graffiti:              bytesutil.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings:     CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings:     CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:          CopyAttestations(body.Attestations),
+		AttesterSlashings:     copySlice(body.AttesterSlashings),
+		Attestations:          copySlice(body.Attestations),
 		Deposits:              CopyDeposits(body.Deposits),
 		VoluntaryExits:        CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:         CopySyncAggregate(body.SyncAggregate),
@@ -809,8 +659,8 @@ func CopyBeaconBlockBodyElectra(body *BeaconBlockBodyElectra) *BeaconBlockBodyEl
 		Eth1Data:              CopyETH1Data(body.Eth1Data),
 		Graffiti:              bytesutil.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings:     CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings:     CopyAttesterSlashingsElectra(body.AttesterSlashings),
-		Attestations:          CopyAttestationsElectra(body.Attestations),
+		AttesterSlashings:     copySlice(body.AttesterSlashings),
+		Attestations:          copySlice(body.Attestations),
 		Deposits:              CopyDeposits(body.Deposits),
 		VoluntaryExits:        CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:         CopySyncAggregate(body.SyncAggregate),
