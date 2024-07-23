@@ -64,7 +64,7 @@ func (c *AttCaches) UnaggregatedAttestations() ([]ethpb.Att, error) {
 			return nil, err
 		}
 		if !seen {
-			atts = append(atts, att.Copy())
+			atts = append(atts, att.Clone())
 		}
 	}
 	return atts, nil

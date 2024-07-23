@@ -308,7 +308,6 @@ func ProcessDepositRequests(ctx context.Context, beaconState state.BeaconState, 
 	defer span.End()
 
 	if len(requests) == 0 {
-		log.Debug("ProcessDepositRequests: no deposit requests found")
 		return beaconState, nil
 	}
 
