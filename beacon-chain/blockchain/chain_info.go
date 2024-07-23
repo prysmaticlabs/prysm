@@ -50,6 +50,7 @@ type ForkchoiceFetcher interface {
 	ProposerBoost() [32]byte
 	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
 	CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, primitives.Slot, error)
+	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
 }
 
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.

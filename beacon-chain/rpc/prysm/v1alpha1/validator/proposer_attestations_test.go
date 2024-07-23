@@ -568,11 +568,11 @@ func Test_isAttestationFromCurrentEpoch(t *testing.T) {
 	slot := primitives.Slot(1)
 	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
 	a := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{Slot: 1},
+		Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}},
 	}
 	require.Equal(t, true, s.isAttestationFromCurrentEpoch(a))
 
-	a.Data.Slot = params.BeaconConfig().SlotsPerEpoch
+	a.Data.Target.Epoch = 1
 	require.Equal(t, false, s.isAttestationFromCurrentEpoch(a))
 }
 
@@ -580,16 +580,16 @@ func Test_isAttestationFromPreviousEpoch(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
 	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
 	a := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{Slot: 1},
+		Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}},
 	}
 	require.Equal(t, true, s.isAttestationFromPreviousEpoch(a))
 
-	a.Data.Slot = params.BeaconConfig().SlotsPerEpoch
+	a.Data.Target.Epoch = 1
 	require.Equal(t, false, s.isAttestationFromPreviousEpoch(a))
 }
 
 func Test_filterCurrentEpochAttestationByTarget(t *testing.T) {
-	slot := primitives.Slot(1)
+	slot := params.BeaconConfig().SlotsPerEpoch
 	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
 	targetRoot := [32]byte{'a'}
 	a := &ethpb.Attestation{
@@ -613,14 +613,14 @@ func Test_filterCurrentEpochAttestationByTarget(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 
-	a.Data.Slot = 100
+	a.Data.Target.Epoch = 2
 	got, err = s.filterCurrentEpochAttestationByTarget(a, targetRoot, 1)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 }
 
 func Test_filterPreviousEpochAttestationByTarget(t *testing.T) {
-	slot := params.BeaconConfig().SlotsPerEpoch
+	slot := 2 * params.BeaconConfig().SlotsPerEpoch
 	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
 	targetRoot := [32]byte{'a'}
 	a := &ethpb.Attestation{
@@ -632,20 +632,30 @@ func Test_filterPreviousEpochAttestationByTarget(t *testing.T) {
 			},
 		},
 	}
-	got, err := s.filterPreviousEpochAttestationByTarget(a, targetRoot, 1)
+	got, err := s.filterPreviousEpochAttestationByTarget(a, &ethpb.Checkpoint{
+		Epoch: 1,
+		Root:  targetRoot[:],
+	})
 	require.NoError(t, err)
 	require.Equal(t, true, got)
 
-	got, err = s.filterPreviousEpochAttestationByTarget(a, [32]byte{}, 1)
+	got, err = s.filterPreviousEpochAttestationByTarget(a, &ethpb.Checkpoint{
+		Epoch: 1,
+	})
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 
-	got, err = s.filterPreviousEpochAttestationByTarget(a, targetRoot, 2)
+	got, err = s.filterPreviousEpochAttestationByTarget(a, &ethpb.Checkpoint{
+		Epoch: 2,
+		Root:  targetRoot[:],
+	})
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 
-	a.Data.Slot = params.BeaconConfig().SlotsPerEpoch
-	got, err = s.filterPreviousEpochAttestationByTarget(a, targetRoot, 1)
+	got, err = s.filterPreviousEpochAttestationByTarget(a, &ethpb.Checkpoint{
+		Epoch: 3,
+		Root:  targetRoot[:],
+	})
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 }
