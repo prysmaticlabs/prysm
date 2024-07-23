@@ -67,7 +67,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
 	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
 
-	attsByVerAndDataRoot := make(map[attestation.Id][]ethpb.Att, len(atts))
+	attsById := make(map[attestation.Id][]ethpb.Att, len(atts))
 
 	// Consolidate attestations by aggregating them by similar data root.
 	for _, att := range atts {
@@ -83,10 +83,10 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not create attestation ID")
 		}
-		attsByVerAndDataRoot[id] = append(attsByVerAndDataRoot[id], att)
+		attsById[id] = append(attsById[id], att)
 	}
 
-	for _, atts := range attsByVerAndDataRoot {
+	for _, atts := range attsById {
 		if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 func (s *Service) aggregateAndSaveForkChoiceAtts(atts []ethpb.Att) error {
 	clonedAtts := make([]ethpb.Att, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = a.Copy()
+		clonedAtts[i] = a.Clone()
 	}
 	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {

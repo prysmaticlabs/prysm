@@ -162,3 +162,32 @@ func TestAggregateKeyFromIndices(t *testing.T) {
 
 	assert.Equal(t, true, aggKey.Equals(retKey), "unequal aggregated keys")
 }
+
+func TestHasPendingBalanceToWithdraw(t *testing.T) {
+	pb := &ethpb.BeaconStateElectra{
+		PendingPartialWithdrawals: []*ethpb.PendingPartialWithdrawal{
+			{
+				Amount: 100,
+				Index:  1,
+			},
+			{
+				Amount: 200,
+				Index:  2,
+			},
+			{
+				Amount: 300,
+				Index:  3,
+			},
+		},
+	}
+	state, err := statenative.InitializeFromProtoUnsafeElectra(pb)
+	require.NoError(t, err)
+
+	ok, err := state.HasPendingBalanceToWithdraw(1)
+	require.NoError(t, err)
+	require.Equal(t, true, ok)
+
+	ok, err = state.HasPendingBalanceToWithdraw(5)
+	require.NoError(t, err)
+	require.Equal(t, false, ok)
+}

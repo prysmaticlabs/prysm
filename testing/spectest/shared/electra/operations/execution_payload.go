@@ -23,7 +23,6 @@ import (
 )
 
 func RunExecutionPayloadTest(t *testing.T, config string) {
-	t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", "operations/execution_payload/pyspec_tests")
 	if len(testFolders) == 0 {

@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
@@ -110,7 +109,7 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 
 // SaveValidatorIndices save validator indices of beacon chain to cache
 func (b *BeaconState) SaveValidatorIndices() {
-	if !features.Get().EIP6110ValidatorIndexCache {
+	if b.Version() < version.Electra {
 		return
 	}
 

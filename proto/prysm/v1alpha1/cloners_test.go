@@ -10,55 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
 
-func TestCopyETH1Data(t *testing.T) {
-	data := genEth1Data()
-
-	got := v1alpha1.CopyETH1Data(data)
-	if !reflect.DeepEqual(got, data) {
-		t.Errorf("CopyETH1Data() = %v, want %v", got, data)
-	}
-	assert.NotEmpty(t, got, "Copied eth1data has empty fields")
-}
-
-func TestCopyPendingAttestation(t *testing.T) {
-	pa := genPendingAttestation()
-
-	got := v1alpha1.CopyPendingAttestation(pa)
-	if !reflect.DeepEqual(got, pa) {
-		t.Errorf("CopyPendingAttestation() = %v, want %v", got, pa)
-	}
-	assert.NotEmpty(t, got, "Copied pending attestation has empty fields")
-}
-
-func TestCopyAttestation(t *testing.T) {
-	att := genAttestation()
-
-	got := v1alpha1.CopyAttestation(att)
-	if !reflect.DeepEqual(got, att) {
-		t.Errorf("CopyAttestation() = %v, want %v", got, att)
-	}
-	assert.NotEmpty(t, got, "Copied attestation has empty fields")
-}
-func TestCopyAttestationData(t *testing.T) {
-	att := genAttData()
-
-	got := v1alpha1.CopyAttestationData(att)
-	if !reflect.DeepEqual(got, att) {
-		t.Errorf("CopyAttestationData() = %v, want %v", got, att)
-	}
-	assert.NotEmpty(t, got, "Copied attestation data has empty fields")
-}
-
-func TestCopyCheckpoint(t *testing.T) {
-	cp := genCheckpoint()
-
-	got := v1alpha1.CopyCheckpoint(cp)
-	if !reflect.DeepEqual(got, cp) {
-		t.Errorf("CopyCheckpoint() = %v, want %v", got, cp)
-	}
-	assert.NotEmpty(t, got, "Copied checkpoint has empty fields")
-}
-
 func TestCopySignedBeaconBlock(t *testing.T) {
 	blk := genSignedBeaconBlock()
 
@@ -119,126 +70,6 @@ func TestCopyBeaconBlockBodyAltair(t *testing.T) {
 	assert.NotEmpty(t, bb, "Copied beacon block body altair has empty fields")
 }
 
-func TestCopyProposerSlashings(t *testing.T) {
-	ps := genProposerSlashings(10)
-
-	got := v1alpha1.CopyProposerSlashings(ps)
-	if !reflect.DeepEqual(got, ps) {
-		t.Errorf("CopyProposerSlashings() = %v, want %v", got, ps)
-	}
-	assert.NotEmpty(t, got, "Copied proposer slashings have empty fields")
-}
-
-func TestCopyProposerSlashing(t *testing.T) {
-	ps := genProposerSlashing()
-
-	got := v1alpha1.CopyProposerSlashing(ps)
-	if !reflect.DeepEqual(got, ps) {
-		t.Errorf("CopyProposerSlashing() = %v, want %v", got, ps)
-	}
-	assert.NotEmpty(t, got, "Copied proposer slashing has empty fields")
-}
-
-func TestCopySignedBeaconBlockHeader(t *testing.T) {
-	sbh := genSignedBeaconBlockHeader()
-
-	got := v1alpha1.CopySignedBeaconBlockHeader(sbh)
-	if !reflect.DeepEqual(got, sbh) {
-		t.Errorf("CopySignedBeaconBlockHeader() = %v, want %v", got, sbh)
-	}
-	assert.NotEmpty(t, got, "Copied signed beacon block header has empty fields")
-}
-
-func TestCopyBeaconBlockHeader(t *testing.T) {
-	bh := genBeaconBlockHeader()
-
-	got := v1alpha1.CopyBeaconBlockHeader(bh)
-	if !reflect.DeepEqual(got, bh) {
-		t.Errorf("CopyBeaconBlockHeader() = %v, want %v", got, bh)
-	}
-	assert.NotEmpty(t, got, "Copied beacon block header has empty fields")
-}
-
-func TestCopyAttesterSlashings(t *testing.T) {
-	as := genAttesterSlashings(10)
-
-	got := v1alpha1.CopyAttesterSlashings(as)
-	if !reflect.DeepEqual(got, as) {
-		t.Errorf("CopyAttesterSlashings() = %v, want %v", got, as)
-	}
-	assert.NotEmpty(t, got, "Copied attester slashings have empty fields")
-}
-
-func TestCopyIndexedAttestation(t *testing.T) {
-	ia := genIndexedAttestation()
-
-	got := v1alpha1.CopyIndexedAttestation(ia)
-	if !reflect.DeepEqual(got, ia) {
-		t.Errorf("CopyIndexedAttestation() = %v, want %v", got, ia)
-	}
-	assert.NotEmpty(t, got, "Copied indexed attestation has empty fields")
-}
-
-func TestCopyAttestations(t *testing.T) {
-	atts := genAttestations(10)
-
-	got := v1alpha1.CopyAttestations(atts)
-	if !reflect.DeepEqual(got, atts) {
-		t.Errorf("CopyAttestations() = %v, want %v", got, atts)
-	}
-	assert.NotEmpty(t, got, "Copied attestations have empty fields")
-}
-
-func TestCopyDeposits(t *testing.T) {
-	d := genDeposits(10)
-
-	got := v1alpha1.CopyDeposits(d)
-	if !reflect.DeepEqual(got, d) {
-		t.Errorf("CopyDeposits() = %v, want %v", got, d)
-	}
-	assert.NotEmpty(t, got, "Copied deposits have empty fields")
-}
-
-func TestCopyDeposit(t *testing.T) {
-	d := genDeposit()
-
-	got := v1alpha1.CopyDeposit(d)
-	if !reflect.DeepEqual(got, d) {
-		t.Errorf("CopyDeposit() = %v, want %v", got, d)
-	}
-	assert.NotEmpty(t, got, "Copied deposit has empty fields")
-}
-
-func TestCopyDepositData(t *testing.T) {
-	dd := genDepositData()
-
-	got := v1alpha1.CopyDepositData(dd)
-	if !reflect.DeepEqual(got, dd) {
-		t.Errorf("CopyDepositData() = %v, want %v", got, dd)
-	}
-	assert.NotEmpty(t, got, "Copied deposit data has empty fields")
-}
-
-func TestCopySignedVoluntaryExits(t *testing.T) {
-	sv := genSignedVoluntaryExits(10)
-
-	got := v1alpha1.CopySignedVoluntaryExits(sv)
-	if !reflect.DeepEqual(got, sv) {
-		t.Errorf("CopySignedVoluntaryExits() = %v, want %v", got, sv)
-	}
-	assert.NotEmpty(t, got, "Copied signed voluntary exits have empty fields")
-}
-
-func TestCopySignedVoluntaryExit(t *testing.T) {
-	sv := genSignedVoluntaryExit()
-
-	got := v1alpha1.CopySignedVoluntaryExit(sv)
-	if !reflect.DeepEqual(got, sv) {
-		t.Errorf("CopySignedVoluntaryExit() = %v, want %v", got, sv)
-	}
-	assert.NotEmpty(t, got, "Copied signed voluntary exit has empty fields")
-}
-
 func TestCopyValidator(t *testing.T) {
 	v := genValidator()
 
@@ -269,16 +100,6 @@ func TestCopySyncCommitteeContribution(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied sync committee contribution has empty fields")
 }
 
-func TestCopySyncAggregate(t *testing.T) {
-	sa := genSyncAggregate()
-
-	got := v1alpha1.CopySyncAggregate(sa)
-	if !reflect.DeepEqual(got, sa) {
-		t.Errorf("CopySyncAggregate() = %v, want %v", got, sa)
-	}
-	assert.NotEmpty(t, got, "Copied sync aggregate has empty fields")
-}
-
 func TestCopyPendingAttestationSlice(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -302,41 +123,11 @@ func TestCopyPendingAttestationSlice(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := v1alpha1.CopyPendingAttestationSlice(tt.input); !reflect.DeepEqual(got, tt.input) {
+			if got := tt.input; !reflect.DeepEqual(got, tt.input) {
 				t.Errorf("CopyPendingAttestationSlice() = %v, want %v", got, tt.input)
 			}
 		})
 	}
-}
-
-func TestCopyPayloadHeader(t *testing.T) {
-	p := genPayloadHeader()
-
-	got := v1alpha1.CopyExecutionPayloadHeader(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("CopyExecutionPayloadHeader() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
-func TestCopyPayloadHeaderCapella(t *testing.T) {
-	p := genPayloadHeaderCapella()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderCapella(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyPayloadHeaderCapella() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
-func TestCopyPayloadHeaderDeneb(t *testing.T) {
-	p := genPayloadHeaderDeneb()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderDeneb(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyPayloadHeaderDeneb() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
 }
 
 func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
@@ -527,83 +318,6 @@ func bytes(length int) []byte {
 	return b
 }
 
-func TestCopyWithdrawals(t *testing.T) {
-	ws := genWithdrawals(10)
-
-	got := v1alpha1.CopyWithdrawalSlice(ws)
-	if !reflect.DeepEqual(got, ws) {
-		t.Errorf("TestCopyWithdrawals() = %v, want %v", got, ws)
-	}
-	assert.NotEmpty(t, got, "Copied withdrawals have empty fields")
-}
-
-func TestCopyWithdrawal(t *testing.T) {
-	w := genWithdrawal()
-
-	got := v1alpha1.CopyWithdrawal(w)
-	if !reflect.DeepEqual(got, w) {
-		t.Errorf("TestCopyWithdrawal() = %v, want %v", got, w)
-	}
-	assert.NotEmpty(t, got, "Copied withdrawal has empty fields")
-}
-
-func TestCopyBLSToExecutionChanges(t *testing.T) {
-	changes := genBLSToExecutionChanges(10)
-
-	got := v1alpha1.CopyBLSToExecutionChanges(changes)
-	if !reflect.DeepEqual(got, changes) {
-		t.Errorf("TestCopyBLSToExecutionChanges() = %v, want %v", got, changes)
-	}
-}
-
-func TestCopyHistoricalSummaries(t *testing.T) {
-	summaries := []*v1alpha1.HistoricalSummary{
-		{BlockSummaryRoot: []byte("block summary root 0"), StateSummaryRoot: []byte("state summary root 0")},
-		{BlockSummaryRoot: []byte("block summary root 1"), StateSummaryRoot: []byte("state summary root 1")},
-	}
-
-	got := v1alpha1.CopyHistoricalSummaries(summaries)
-	if !reflect.DeepEqual(got, summaries) {
-		t.Errorf("TestCopyHistoricalSummariesing() = %v, want %v", got, summaries)
-	}
-}
-
-func TestCopyAttestationElectra(t *testing.T) {
-	att := genAttestationElectra()
-
-	got := v1alpha1.CopyAttestationElectra(att)
-	if !reflect.DeepEqual(got, att) {
-		t.Errorf("TestCopyAttestationElectra() = %v, want %v", got, att)
-	}
-}
-
-func TestCopyAttesterSlashingsElectra(t *testing.T) {
-	as := genAttesterSlashingsElectra(10)
-
-	got := v1alpha1.CopyAttesterSlashingsElectra(as)
-	if !reflect.DeepEqual(got, as) {
-		t.Errorf("TestCopyAttesterSlashingsElectra() = %v, want %v", got, as)
-	}
-}
-
-func TestCopyIndexedAttestationElectra(t *testing.T) {
-	ia := genIndexedAttestationElectra()
-
-	got := v1alpha1.CopyIndexedAttestationElectra(ia)
-	if !reflect.DeepEqual(got, ia) {
-		t.Errorf("TestCopyIndexedAttestationElectra() = %v, want %v", got, ia)
-	}
-}
-
-func TestCopyAttestationsElectra(t *testing.T) {
-	atts := genAttestationsElectra(10)
-
-	got := v1alpha1.CopyAttestationsElectra(atts)
-	if !reflect.DeepEqual(got, atts) {
-		t.Errorf("TestCopyAttestationsElectra() = %v, want %v", got, atts)
-	}
-}
-
 func TestCopySignedBlindedBeaconBlockElectra(t *testing.T) {
 	sbb := genSignedBlindedBeaconBlockElectra()
 
@@ -655,69 +369,6 @@ func TestCopyBeaconBlockBodyElectra(t *testing.T) {
 	got := v1alpha1.CopyBeaconBlockBodyElectra(bb)
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("TestCopyBeaconBlockBodyElectra() = %v, want %v", got, bb)
-	}
-}
-
-func TestCopyExecutionPayloadElectra(t *testing.T) {
-	p := genExecutionPayloadElectra()
-
-	got := v1alpha1.CopyExecutionPayloadElectra(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyExecutionPayloadElectra() = %v, want %v", got, p)
-	}
-}
-
-func TestCopyDepositRequests(t *testing.T) {
-	drs := genDepositRequests(10)
-
-	got := v1alpha1.CopyDepositRequests(drs)
-	if !reflect.DeepEqual(got, drs) {
-		t.Errorf("TestCopyDepositRequests() = %v, want %v", got, drs)
-	}
-}
-
-func TestCopyWithdrawalRequests(t *testing.T) {
-	wrs := genWithdrawalRequests(10)
-
-	got := v1alpha1.CopyWithdrawalRequests(wrs)
-	if !reflect.DeepEqual(got, wrs) {
-		t.Errorf("TestCopyWithdrawalRequests() = %v, want %v", got, wrs)
-	}
-}
-
-func TestCopyExecutionPayloadHeaderElectra(t *testing.T) {
-	p := genExecutionPayloadHeaderElectra()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderElectra(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyExecutionPayloadHeaderElectra() = %v, want %v", got, p)
-	}
-}
-
-func TestCopyPendingPartialWithdrawals(t *testing.T) {
-	ppws := genPendingPartialWithdrawals(10)
-
-	got := v1alpha1.CopyPendingPartialWithdrawals(ppws)
-	if !reflect.DeepEqual(got, ppws) {
-		t.Errorf("TestCopyPendingPartialWithdrawals() = %v, want %v", got, ppws)
-	}
-}
-
-func TestCopyPendingConsolidations(t *testing.T) {
-	pcs := genPendingConsolidations(10)
-
-	got := v1alpha1.CopyPendingConsolidations(pcs)
-	if !reflect.DeepEqual(got, pcs) {
-		t.Errorf("TestCopyPendingConsolidations() = %v, want %v", got, pcs)
-	}
-}
-
-func TestCopyPendingBalanceDeposits(t *testing.T) {
-	pbds := genPendingBalanceDeposits(10)
-
-	got := v1alpha1.CopyPendingBalanceDeposits(pbds)
-	if !reflect.DeepEqual(got, pbds) {
-		t.Errorf("TestCopyPendingBalanceDeposits() = %v, want %v", got, pbds)
 	}
 }
 
@@ -1465,25 +1116,26 @@ func genBeaconBlockBodyElectra() *v1alpha1.BeaconBlockBodyElectra {
 
 func genExecutionPayloadElectra() *enginev1.ExecutionPayloadElectra {
 	return &enginev1.ExecutionPayloadElectra{
-		ParentHash:         bytes(32),
-		FeeRecipient:       bytes(20),
-		StateRoot:          bytes(32),
-		ReceiptsRoot:       bytes(32),
-		LogsBloom:          bytes(256),
-		PrevRandao:         bytes(32),
-		BlockNumber:        1,
-		GasLimit:           2,
-		GasUsed:            3,
-		Timestamp:          4,
-		ExtraData:          bytes(32),
-		BaseFeePerGas:      bytes(32),
-		BlockHash:          bytes(32),
-		Transactions:       [][]byte{{'a'}, {'b'}, {'c'}},
-		Withdrawals:        genWithdrawals(10),
-		BlobGasUsed:        5,
-		ExcessBlobGas:      6,
-		DepositRequests:    genDepositRequests(10),
-		WithdrawalRequests: genWithdrawalRequests(10),
+		ParentHash:            bytes(32),
+		FeeRecipient:          bytes(20),
+		StateRoot:             bytes(32),
+		ReceiptsRoot:          bytes(32),
+		LogsBloom:             bytes(256),
+		PrevRandao:            bytes(32),
+		BlockNumber:           1,
+		GasLimit:              2,
+		GasUsed:               3,
+		Timestamp:             4,
+		ExtraData:             bytes(32),
+		BaseFeePerGas:         bytes(32),
+		BlockHash:             bytes(32),
+		Transactions:          [][]byte{{'a'}, {'b'}, {'c'}},
+		Withdrawals:           genWithdrawals(10),
+		BlobGasUsed:           5,
+		ExcessBlobGas:         6,
+		DepositRequests:       genDepositRequests(10),
+		WithdrawalRequests:    genWithdrawalRequests(10),
+		ConsolidationRequests: genConsolidationRequests(10),
 	}
 }
 
@@ -1518,6 +1170,22 @@ func genWithdrawalRequest() *enginev1.WithdrawalRequest {
 		SourceAddress:   bytes(20),
 		ValidatorPubkey: bytes(48),
 		Amount:          55555,
+	}
+}
+
+func genConsolidationRequests(num int) []*enginev1.ConsolidationRequest {
+	crs := make([]*enginev1.ConsolidationRequest, num)
+	for i := 0; i < num; i++ {
+		crs[i] = genConsolidationRequest()
+	}
+	return crs
+}
+
+func genConsolidationRequest() *enginev1.ConsolidationRequest {
+	return &enginev1.ConsolidationRequest{
+		SourceAddress: bytes(20),
+		SourcePubkey:  bytes(48),
+		TargetPubkey:  bytes(48),
 	}
 }
 

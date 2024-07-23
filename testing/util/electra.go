@@ -116,6 +116,13 @@ func GenerateTestElectraBlockWithSidecar(t *testing.T, parent [32]byte, slot pri
 			ExcessBlobGas:      0,
 			DepositRequests:    generateTestDepositRequests(uint64(g.slot), 4),
 			WithdrawalRequests: generateTestWithdrawalRequests(uint64(g.slot), 4),
+			ConsolidationRequests: []*enginev1.ConsolidationRequest{
+				{
+					SourceAddress: make([]byte, 20),
+					SourcePubkey:  make([]byte, 48),
+					TargetPubkey:  make([]byte, 48),
+				},
+			},
 		}
 	}
 
