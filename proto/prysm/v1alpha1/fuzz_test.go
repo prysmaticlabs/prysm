@@ -20,7 +20,6 @@ func fuzzCopies[T any, C eth.Copier[T]](t *testing.T, obj C) {
 			// check shallow copy working
 			fuzzer.Fuzz(got)
 			require.DeepNotEqual(t, obj, got)
-			// TODO: think of deeper not equal fuzzing
 		}
 	})
 }
