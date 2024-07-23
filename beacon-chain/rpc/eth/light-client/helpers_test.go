@@ -11,14 +11,14 @@ import (
 )
 
 // When the update has relevant sync committee
-func CreateNonEmptySyncCommitteeBranch() [][]byte {
+func createNonEmptySyncCommitteeBranch() [][]byte {
 	res := make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
 	res[0] = []byte("xyz")
 	return res
 }
 
 // When the update has finality
-func CreateNonEmptyFinalityBranch() [][]byte {
+func createNonEmptyFinalityBranch() [][]byte {
 	res := make([][]byte, blockchain.FinalityBranchNumOfLeaves)
 	res[0] = []byte("xyz")
 	return res
@@ -106,7 +106,7 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000001,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           1000000,
 			},
 			expectedResult: true,
@@ -120,7 +120,7 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000001,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           1000000,
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
@@ -144,7 +144,7 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          make([][]byte, blockchain.FinalityBranchNumOfLeaves),
 			},
@@ -155,9 +155,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 			},
 			expectedResult: true,
 		},
@@ -170,9 +170,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
@@ -181,7 +181,7 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          make([][]byte, blockchain.FinalityBranchNumOfLeaves),
 			},
@@ -196,9 +196,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -210,9 +210,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           999999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 999999,
 				},
@@ -228,9 +228,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           999999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 999999,
 				},
@@ -242,9 +242,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -260,9 +260,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -274,9 +274,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -292,9 +292,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -306,9 +306,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -324,9 +324,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -338,9 +338,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 999999,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -356,9 +356,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 999999,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -370,9 +370,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -388,9 +388,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -402,9 +402,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9998,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -420,9 +420,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9998,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
@@ -434,9 +434,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				AttestedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
 				},
-				NextSyncCommitteeBranch: CreateNonEmptySyncCommitteeBranch(),
+				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          CreateNonEmptyFinalityBranch(),
+				FinalityBranch:          createNonEmptyFinalityBranch(),
 				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
 				},
