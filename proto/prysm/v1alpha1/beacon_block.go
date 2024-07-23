@@ -83,11 +83,19 @@ func (exit *SignedVoluntaryExit) Copy() *SignedVoluntaryExit {
 		return nil
 	}
 	return &SignedVoluntaryExit{
-		Exit: &VoluntaryExit{
-			Epoch:          exit.Exit.Epoch,
-			ValidatorIndex: exit.Exit.ValidatorIndex,
-		},
+		Exit:      exit.Exit.Copy(),
 		Signature: bytesutil.SafeCopyBytes(exit.Signature),
+	}
+}
+
+// Copy --
+func (exit *VoluntaryExit) Copy() *VoluntaryExit {
+	if exit == nil {
+		return nil
+	}
+	return &VoluntaryExit{
+		Epoch:          exit.Epoch,
+		ValidatorIndex: exit.ValidatorIndex,
 	}
 }
 

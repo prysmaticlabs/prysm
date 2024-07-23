@@ -14,6 +14,7 @@ func TestCopyBeaconBlockFields_Fuzz(t *testing.T) {
 	fuzzCopies(t, &eth.Deposit{})
 	fuzzCopies(t, &eth.Deposit_Data{})
 	fuzzCopies(t, &eth.SignedVoluntaryExit{})
+	fuzzCopies(t, &eth.VoluntaryExit{})
 	fuzzCopies(t, &eth.SyncAggregate{})
 	fuzzCopies(t, &eth.SignedBLSToExecutionChange{})
 	fuzzCopies(t, &eth.BLSToExecutionChange{})
