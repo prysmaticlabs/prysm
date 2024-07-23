@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	finalityBranchNumOfLeaves = 6
+	FinalityBranchNumOfLeaves = 6
 )
 
 // CreateLightClientFinalityUpdate - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_finality_update
@@ -215,8 +215,8 @@ func NewLightClientFinalityUpdateFromBeaconState(
 			BodyRoot:      make([]byte, 32),
 		}
 
-		finalityBranch = make([][]byte, finalityBranchNumOfLeaves)
-		for i := 0; i < finalityBranchNumOfLeaves; i++ {
+		finalityBranch = make([][]byte, FinalityBranchNumOfLeaves)
+		for i := 0; i < FinalityBranchNumOfLeaves; i++ {
 			finalityBranch[i] = make([]byte, 32)
 		}
 	}

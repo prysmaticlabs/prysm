@@ -308,7 +308,9 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attestation.go",
+        "beacon_block.go",
         "cloners.go",
+        "eip_7521.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
         ":ssz_generated_non_core",  # keep
@@ -372,8 +374,11 @@ go_test(
     name = "go_default_test",
     srcs = [
         "attestation_fuzz_test.go",
+        "beacon_block_fuzz_test.go",
         "cloners_test.go",
+        "eip_7521_fuzz_test.go",
         "export_test.go",
+        "fuzz_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
