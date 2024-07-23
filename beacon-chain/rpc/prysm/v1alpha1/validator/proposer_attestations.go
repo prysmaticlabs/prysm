@@ -331,7 +331,7 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover_committeeAwarePacking() (
 // sortSlotAttestations assumes each proposerAtts value in the map is ordered by profitability.
 // The function takes the first attestation from each value, orders these attestations by bit count
 // and places them at the start of the resulting slice. It then takes the second attestation for each value,
-// orders these attestations by bit cound and appends them to the end.
+// orders these attestations by bit count and appends them to the end.
 // It continues this pattern until all attestations are processed.
 func sortSlotAttestations(slotAtts map[primitives.CommitteeIndex]proposerAtts) proposerAtts {
 	attCount := 0
