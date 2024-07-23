@@ -19,6 +19,7 @@ func fuzzCopies[T any, C eth.Copier[T]](t *testing.T, obj C) {
 			got := obj.Copy()
 			require.DeepEqual(t, obj, got)
 			// TODO: add deep fuzzing and checks for deep not equals
+			// we should test that modifying the copy doesn't modify the original object
 		}
 	})
 }
