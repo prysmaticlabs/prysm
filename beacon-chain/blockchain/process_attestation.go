@@ -46,7 +46,7 @@ func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time
 	if err := helpers.ValidateSlotTargetEpoch(a.GetData()); err != nil {
 		return err
 	}
-	tgt := ethpb.CopyCheckpoint(a.GetData().Target)
+	tgt := a.GetData().Target.Copy()
 
 	// Note that target root check is ignored here because it was performed in sync's validation pipeline:
 	// validate_aggregate_proof.go and validate_beacon_attestation.go

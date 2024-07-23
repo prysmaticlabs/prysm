@@ -789,7 +789,7 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 		currEpochAtts, err = state.CurrentEpochAttestations()
 		require.NoError(t, err)
 		for i := range currEpochAtts {
-			att := ethpb.CopyPendingAttestation(currEpochAtts[i])
+			att := currEpochAtts[i].Copy()
 			att.AggregationBits = bitfield.NewBitlist(3)
 			currEpochAtts[i] = att
 		}
@@ -803,7 +803,7 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 		prevEpochAtts, err = state.PreviousEpochAttestations()
 		require.NoError(t, err)
 		for i := range prevEpochAtts {
-			att := ethpb.CopyPendingAttestation(prevEpochAtts[i])
+			att := prevEpochAtts[i].Copy()
 			att.AggregationBits = bitfield.NewBitlist(3)
 			prevEpochAtts[i] = att
 		}
