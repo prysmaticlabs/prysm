@@ -186,7 +186,7 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 	if len(newETH1DataVotes) <= 1 {
 		t.Error("Expected new ETH1 data votes to have length > 1")
 	}
-	if !proto.Equal(beaconState.Eth1Data(), ethpb.CopyETH1Data(b.Block.Body.Eth1Data)) {
+	if !proto.Equal(beaconState.Eth1Data(), b.Block.Body.Eth1Data.Copy()) {
 		t.Errorf(
 			"Expected latest eth1 data to have been set to %v, received %v",
 			b.Block.Body.Eth1Data,
