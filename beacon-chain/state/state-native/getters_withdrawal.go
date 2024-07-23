@@ -184,7 +184,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 }
 
 func (b *BeaconState) pendingPartialWithdrawalsVal() []*ethpb.PendingPartialWithdrawal {
-	return ethpb.CopyPendingPartialWithdrawals(b.pendingPartialWithdrawals)
+	return ethpb.CopySlice(b.pendingPartialWithdrawals)
 }
 
 func (b *BeaconState) NumPendingPartialWithdrawals() (uint64, error) {
