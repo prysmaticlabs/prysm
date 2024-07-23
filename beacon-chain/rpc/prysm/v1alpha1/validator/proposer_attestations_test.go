@@ -692,7 +692,7 @@ func Test_filterCurrentEpochAttestationByForkchoice(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, got)
 
-	s.ForkchoiceFetcher = &chainMock.ChainService{BlockSlot: 100, CommonAncestorSlot: 1}
+	s.ForkchoiceFetcher = &chainMock.ChainService{BlockSlot: 100}
 	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, epoch)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
