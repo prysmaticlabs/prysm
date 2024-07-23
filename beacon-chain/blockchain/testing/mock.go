@@ -75,7 +75,6 @@ type ChainService struct {
 	SyncingRoot                 [32]byte
 	Blobs                       []blocks.VerifiedROBlob
 	TargetRoot                  [32]byte
-	CommonAncestorSlot          primitives.Slot
 }
 
 func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
@@ -632,9 +631,4 @@ func (c *ChainService) ReceiveBlob(_ context.Context, b blocks.VerifiedROBlob) e
 // TargetRootForEpoch mocks the same method in the chain service
 func (c *ChainService) TargetRootForEpoch(_ [32]byte, _ primitives.Epoch) ([32]byte, error) {
 	return c.TargetRoot, nil
-}
-
-// CommonAncestor mocks the same method.
-func (c *ChainService) CommonAncestor(_ context.Context, _ [32]byte, _ [32]byte) ([32]byte, primitives.Slot, error) {
-	return [32]byte{}, c.CommonAncestorSlot, nil
 }

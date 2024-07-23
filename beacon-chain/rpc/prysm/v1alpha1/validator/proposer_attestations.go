@@ -333,7 +333,7 @@ func (vs *Server) isAttestationFromPreviousEpoch(att ethpb.Att, currentEpoch pri
 // Returns true if all of the following conditions are met:
 // 1. The attestation beacon block root is for a slot in the previous epoch (according to fork choice).
 // 2. The attestation target root is the same as the attestation beacon block root.
-// 3. The common ancestor of the head block and the attestation beacon block root is from the previous epoch.
+// 3. The attestation beacon block root is canonical according to fork choice.
 func (vs *Server) filterCurrentEpochAttestationByForkchoice(ctx context.Context, att ethpb.Att, currentEpoch primitives.Epoch) (bool, error) {
 	if !vs.isAttestationFromCurrentEpoch(att, currentEpoch) {
 		return false, nil
