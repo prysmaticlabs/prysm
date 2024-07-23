@@ -320,16 +320,12 @@ func (vs *Server) deleteAttsInPool(ctx context.Context, atts []ethpb.Att) error 
 }
 
 // isAttestationFromCurrentEpoch returns true if the attestation is from the current epoch.
-func (vs *Server) isAttestationFromCurrentEpoch(att ethpb.Att) bool {
-	currentSlot := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := slots.ToEpoch(currentSlot)
+func (vs *Server) isAttestationFromCurrentEpoch(att ethpb.Att, currentEpoch primitives.Epoch) bool {
 	return att.GetData().Target.Epoch == currentEpoch
 }
 
 // isAttestationFromPreviousEpoch returns true if the attestation is from the previous epoch.
-func (vs *Server) isAttestationFromPreviousEpoch(att ethpb.Att) bool {
-	currentSlot := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := slots.ToEpoch(currentSlot)
+func (vs *Server) isAttestationFromPreviousEpoch(att ethpb.Att, currentEpoch primitives.Epoch) bool {
 	return att.GetData().Target.Epoch+1 == currentEpoch
 }
 
@@ -338,8 +334,8 @@ func (vs *Server) isAttestationFromPreviousEpoch(att ethpb.Att) bool {
 // 1. The attestation beacon block root is for a slot in the previous epoch (according to fork choice).
 // 2. The attestation target root is the same as the attestation beacon block root.
 // 3. The common ancestor of the head block and the attestation beacon block root is from the previous epoch.
-func (vs *Server) filterCurrentEpochAttestationByForkchoice(ctx context.Context, att ethpb.Att, headRoot [32]byte) (bool, error) {
-	if !vs.isAttestationFromCurrentEpoch(att) {
+func (vs *Server) filterCurrentEpochAttestationByForkchoice(ctx context.Context, att ethpb.Att, currentEpoch primitives.Epoch) (bool, error) {
+	if !vs.isAttestationFromCurrentEpoch(att, currentEpoch) {
 		return false, nil
 	}
 
@@ -354,7 +350,6 @@ func (vs *Server) filterCurrentEpochAttestationByForkchoice(ctx context.Context,
 		return false, err
 	}
 	epoch := slots.ToEpoch(slot)
-	currentEpoch := slots.ToEpoch(vs.TimeFetcher.CurrentSlot())
 	if epoch+1 != currentEpoch {
 		return false, nil
 	}
@@ -366,8 +361,8 @@ func (vs *Server) filterCurrentEpochAttestationByForkchoice(ctx context.Context,
 // The conditions checked are:
 // 1. The attestation's target epoch matches the forkchoice target epoch.
 // 2. The attestation's target root matches the forkchoice target root.
-func (vs *Server) filterCurrentEpochAttestationByTarget(att ethpb.Att, targetRoot [32]byte, targetEpoch primitives.Epoch) (bool, error) {
-	if !vs.isAttestationFromCurrentEpoch(att) {
+func (vs *Server) filterCurrentEpochAttestationByTarget(att ethpb.Att, targetRoot [32]byte, targetEpoch, currentEpoch primitives.Epoch) (bool, error) {
+	if !vs.isAttestationFromCurrentEpoch(att, currentEpoch) {
 		return false, nil
 	}
 
@@ -379,8 +374,8 @@ func (vs *Server) filterCurrentEpochAttestationByTarget(att ethpb.Att, targetRoo
 // The conditions checked are:
 // 1. The attestation's target epoch matches the forkchoice previous target epoch.
 // 2. The attestation's target root matches the forkchoice previous target root.
-func (vs *Server) filterPreviousEpochAttestationByTarget(att ethpb.Att, cp *ethpb.Checkpoint) (bool, error) {
-	if !vs.isAttestationFromPreviousEpoch(att) {
+func (vs *Server) filterPreviousEpochAttestationByTarget(att ethpb.Att, cp *ethpb.Checkpoint, currentEpoch primitives.Epoch) (bool, error) {
+	if !vs.isAttestationFromPreviousEpoch(att, currentEpoch) {
 		return false, nil
 	}
 
@@ -416,10 +411,13 @@ func (vs *Server) filterAttestationBySignature(ctx context.Context, atts propose
 		return nil, err
 	}
 
+	currentSlot := vs.TimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(currentSlot)
+
 	var verifiedAtts proposerAtts
 	var unverifiedAtts proposerAtts
 	for _, att := range atts {
-		ok, err := vs.filterCurrentEpochAttestationByTarget(att, targetRoot, targetEpoch)
+		ok, err := vs.filterCurrentEpochAttestationByTarget(att, targetRoot, targetEpoch, currentEpoch)
 		if err != nil {
 			log.WithFields(attestationFields(att)).WithError(err).Error("Could not filter current epoch attestation by target")
 		}
@@ -428,7 +426,7 @@ func (vs *Server) filterAttestationBySignature(ctx context.Context, atts propose
 			continue
 		}
 
-		ok, err = vs.filterPreviousEpochAttestationByTarget(att, &ethpb.Checkpoint{Root: prevTargetRoot[:], Epoch: prevTargetEpoch})
+		ok, err = vs.filterPreviousEpochAttestationByTarget(att, &ethpb.Checkpoint{Root: prevTargetRoot[:], Epoch: prevTargetEpoch}, currentEpoch)
 		if err != nil {
 			log.WithFields(attestationFields(att)).WithError(err).Error("Could not filter previous epoch attestation by target")
 		}
@@ -437,7 +435,7 @@ func (vs *Server) filterAttestationBySignature(ctx context.Context, atts propose
 			continue
 		}
 
-		ok, err = vs.filterCurrentEpochAttestationByForkchoice(ctx, att, headRoot)
+		ok, err = vs.filterCurrentEpochAttestationByForkchoice(ctx, att, currentEpoch)
 		if err != nil {
 			log.WithFields(attestationFields(att)).WithError(err).Error("Could not filter current epoch attestation by fork choice")
 		}

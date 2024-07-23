@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
 func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
@@ -566,31 +567,34 @@ func Test_filterBatchSignature(t *testing.T) {
 
 func Test_isAttestationFromCurrentEpoch(t *testing.T) {
 	slot := primitives.Slot(1)
-	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	epoch := slots.ToEpoch(slot)
+	s := &Server{}
 	a := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}},
 	}
-	require.Equal(t, true, s.isAttestationFromCurrentEpoch(a))
+	require.Equal(t, true, s.isAttestationFromCurrentEpoch(a, epoch))
 
 	a.Data.Target.Epoch = 1
-	require.Equal(t, false, s.isAttestationFromCurrentEpoch(a))
+	require.Equal(t, false, s.isAttestationFromCurrentEpoch(a, epoch))
 }
 
 func Test_isAttestationFromPreviousEpoch(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
-	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	epoch := slots.ToEpoch(slot)
+	s := &Server{}
 	a := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}},
 	}
-	require.Equal(t, true, s.isAttestationFromPreviousEpoch(a))
+	require.Equal(t, true, s.isAttestationFromPreviousEpoch(a, epoch))
 
 	a.Data.Target.Epoch = 1
-	require.Equal(t, false, s.isAttestationFromPreviousEpoch(a))
+	require.Equal(t, false, s.isAttestationFromPreviousEpoch(a, epoch))
 }
 
 func Test_filterCurrentEpochAttestationByTarget(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
-	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	epoch := slots.ToEpoch(slot)
+	s := &Server{}
 	targetRoot := [32]byte{'a'}
 	a := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -601,27 +605,28 @@ func Test_filterCurrentEpochAttestationByTarget(t *testing.T) {
 			},
 		},
 	}
-	got, err := s.filterCurrentEpochAttestationByTarget(a, targetRoot, 1)
+	got, err := s.filterCurrentEpochAttestationByTarget(a, targetRoot, 1, epoch)
 	require.NoError(t, err)
 	require.Equal(t, true, got)
 
-	got, err = s.filterCurrentEpochAttestationByTarget(a, [32]byte{}, 1)
+	got, err = s.filterCurrentEpochAttestationByTarget(a, [32]byte{}, 1, epoch)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 
-	got, err = s.filterCurrentEpochAttestationByTarget(a, targetRoot, 2)
+	got, err = s.filterCurrentEpochAttestationByTarget(a, targetRoot, 2, epoch)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 
 	a.Data.Target.Epoch = 2
-	got, err = s.filterCurrentEpochAttestationByTarget(a, targetRoot, 1)
+	got, err = s.filterCurrentEpochAttestationByTarget(a, targetRoot, 1, epoch)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 }
 
 func Test_filterPreviousEpochAttestationByTarget(t *testing.T) {
 	slot := 2 * params.BeaconConfig().SlotsPerEpoch
-	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	epoch := slots.ToEpoch(slot)
+	s := &Server{}
 	targetRoot := [32]byte{'a'}
 	a := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -635,34 +640,35 @@ func Test_filterPreviousEpochAttestationByTarget(t *testing.T) {
 	got, err := s.filterPreviousEpochAttestationByTarget(a, &ethpb.Checkpoint{
 		Epoch: 1,
 		Root:  targetRoot[:],
-	})
+	}, epoch)
 	require.NoError(t, err)
 	require.Equal(t, true, got)
 
 	got, err = s.filterPreviousEpochAttestationByTarget(a, &ethpb.Checkpoint{
 		Epoch: 1,
-	})
+	}, epoch)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 
 	got, err = s.filterPreviousEpochAttestationByTarget(a, &ethpb.Checkpoint{
 		Epoch: 2,
 		Root:  targetRoot[:],
-	})
+	}, epoch)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 
 	got, err = s.filterPreviousEpochAttestationByTarget(a, &ethpb.Checkpoint{
 		Epoch: 3,
 		Root:  targetRoot[:],
-	})
+	}, epoch)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 }
 
 func Test_filterCurrentEpochAttestationByForkchoice(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
-	s := &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	epoch := slots.ToEpoch(slot)
+	s := &Server{}
 	targetRoot := [32]byte{'a'}
 	a := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -676,24 +682,24 @@ func Test_filterCurrentEpochAttestationByForkchoice(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	got, err := s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
+	got, err := s.filterCurrentEpochAttestationByForkchoice(ctx, a, epoch)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 
 	a.Data.BeaconBlockRoot = targetRoot[:]
 	s.ForkchoiceFetcher = &chainMock.ChainService{BlockSlot: 1}
-	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
+	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, epoch)
 	require.NoError(t, err)
 	require.Equal(t, true, got)
 
 	s.ForkchoiceFetcher = &chainMock.ChainService{BlockSlot: 100, CommonAncestorSlot: 1}
-	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
+	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, epoch)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 
 	slot = params.BeaconConfig().SlotsPerEpoch * 2
-	s = &Server{TimeFetcher: &chainMock.ChainService{Slot: &slot}}
-	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, [32]byte{})
+	epoch = slots.ToEpoch(slot)
+	got, err = s.filterCurrentEpochAttestationByForkchoice(ctx, a, epoch)
 	require.NoError(t, err)
 	require.Equal(t, false, got)
 }
