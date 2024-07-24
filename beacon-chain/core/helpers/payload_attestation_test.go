@@ -8,14 +8,19 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/epbs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/testing/util/random"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
@@ -246,4 +251,113 @@ func TestGetIndexedPayloadAttestation(t *testing.T) {
 	// Check if the attesting indices are the same.
 	slices.Sort(attesters) // GetIndexedPayloadAttestation sorts attesting indices.
 	require.DeepEqual(t, attesters, indexedPayloadAttestation.AttestingIndices)
+}
+
+func TestIsValidIndexedPayloadAttestation(t *testing.T) {
+	helpers.ClearCache()
+
+	// Create 10 committees. Total 40960 validators.
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize * uint64(params.BeaconConfig().SlotsPerEpoch)
+	validators := make([]*ethpb.Validator, validatorCount)
+	_, secretKeys, err := util.DeterministicDepositsAndKeys(validatorCount)
+	require.NoError(t, err)
+
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey:             secretKeys[i].PublicKey().Marshal(),
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	// Create a beacon state.
+	state, err := state_native.InitializeFromProtoEpbs(&ethpb.BeaconStateEPBS{
+		Validators: validators,
+		Fork: &ethpb.Fork{
+			Epoch:           0,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	require.NoError(t, err)
+
+	// Define test cases.
+	tests := []struct {
+		attestation *epbs.IndexedPayloadAttestation
+	}{
+		{
+			attestation: &epbs.IndexedPayloadAttestation{
+				AttestingIndices: []primitives.ValidatorIndex{1},
+				Data: &eth.PayloadAttestationData{
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
+			},
+		},
+		{
+			attestation: &epbs.IndexedPayloadAttestation{
+				AttestingIndices: []primitives.ValidatorIndex{13, 19},
+				Data: &eth.PayloadAttestationData{
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
+			},
+		},
+		{
+			attestation: &epbs.IndexedPayloadAttestation{
+				AttestingIndices: []primitives.ValidatorIndex{123, 456, 789},
+				Data: &eth.PayloadAttestationData{
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
+			},
+		},
+		{
+			attestation: &epbs.IndexedPayloadAttestation{
+				AttestingIndices: []primitives.ValidatorIndex{38, 46, 54, 62, 70, 78, 86, 194},
+				Data: &eth.PayloadAttestationData{
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
+			},
+		},
+		{
+			attestation: &epbs.IndexedPayloadAttestation{
+				AttestingIndices: []primitives.ValidatorIndex{5},
+				Data: &eth.PayloadAttestationData{
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
+			},
+		},
+	}
+
+	// Run test cases.
+	for _, test := range tests {
+		signatures := make([]bls.Signature, len(test.attestation.AttestingIndices))
+		for i, index := range test.attestation.AttestingIndices {
+			signedBytes, err := signing.ComputeDomainAndSign(
+				state,
+				slots.ToEpoch(test.attestation.Data.Slot),
+				test.attestation.Data,
+				params.BeaconConfig().DomainPTCAttester,
+				secretKeys[index],
+			)
+			require.NoError(t, err)
+
+			signature, err := bls.SignatureFromBytes(signedBytes)
+			require.NoError(t, err)
+
+			signatures[i] = signature
+		}
+
+		aggregatedSignature := bls.AggregateSignatures(signatures)
+		test.attestation.Signature = aggregatedSignature.Marshal()
+
+		isValid, err := helpers.IsValidIndexedPayloadAttestation(state, test.attestation)
+		require.NoError(t, err)
+		require.Equal(t, true, isValid)
+	}
 }
