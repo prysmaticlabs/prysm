@@ -97,3 +97,33 @@ func PtcAllocation(totalActive uint64) (committeesPerSlot, membersPerCommittee u
 	membersPerCommittee = fieldparams.PTCSize / committeesPerSlot
 	return
 }
+
+// GetPayloadAttestingIndices returns the set of attester indices corresponding to the given PayloadAttestation.
+//
+// Spec pseudocode definition:
+//
+//	def get_payload_attesting_indices(state: BeaconState, slot: Slot,
+//		payload_attestation: PayloadAttestation) -> Set[ValidatorIndex]:
+//	"""
+//	Return the set of attesting indices corresponding to ``payload_attestation``.
+//	"""
+//	ptc = get_ptc(state, slot)
+//	return set(index for i, index in enumerate(ptc) if payload_attestation.aggregation_bits[i])
+func GetPayloadAttestingIndices(state state.ReadOnlyBeaconState, slot primitives.Slot, att *eth.PayloadAttestation) (indices []primitives.ValidatorIndex, err error) {
+	if state.Version() < version.EPBS {
+		return nil, errPreEPBSState
+	}
+
+	ptc, err := GetPayloadTimelinessCommittee(context.Background(), state, slot)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, validatorIndex := range ptc {
+		if att.AggregationBits.BitAt(uint64(i)) {
+			indices = append(indices, validatorIndex)
+		}
+	}
+
+	return
+}
