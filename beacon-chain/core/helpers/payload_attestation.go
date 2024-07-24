@@ -2,10 +2,12 @@ package helpers
 
 import (
 	"context"
+	"slices"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/epbs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -126,4 +128,39 @@ func GetPayloadAttestingIndices(state state.ReadOnlyBeaconState, slot primitives
 	}
 
 	return
+}
+
+// GetIndexedPayloadAttestation replaces a PayloadAttestation's AggregationBits with sorted AttestingIndices and returns an IndexedPayloadAttestation.
+//
+// Spec pseudocode definition:
+//
+//	def get_indexed_payload_attestation(state: BeaconState, slot: Slot,
+//		payload_attestation: PayloadAttestation) -> IndexedPayloadAttestation:
+//	"""
+//	Return the indexed payload attestation corresponding to ``payload_attestation``.
+//	"""
+//	attesting_indices = get_payload_attesting_indices(state, slot, payload_attestation)
+//
+//	return IndexedPayloadAttestation(
+//	attesting_indices=sorted(attesting_indices),
+//	data=payload_attestation.data,
+//	signature=payload_attestation.signature,
+//	)
+func GetIndexedPayloadAttestation(state state.ReadOnlyBeaconState, slot primitives.Slot, att *eth.PayloadAttestation) (*epbs.IndexedPayloadAttestation, error) {
+	if state.Version() < version.EPBS {
+		return nil, errPreEPBSState
+	}
+
+	attestingIndices, err := GetPayloadAttestingIndices(state, slot, att)
+	if err != nil {
+		return nil, err
+	}
+
+	slices.Sort(attestingIndices)
+
+	return &epbs.IndexedPayloadAttestation{
+		AttestingIndices: attestingIndices,
+		Data:             att.Data,
+		Signature:        att.Signature,
+	}, nil
 }

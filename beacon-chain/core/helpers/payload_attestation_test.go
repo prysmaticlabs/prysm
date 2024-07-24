@@ -179,3 +179,71 @@ func TestGetPayloadAttestingIndices(t *testing.T) {
 		require.Equal(t, attesters[i], ptc[index])
 	}
 }
+
+func TestGetIndexedPayloadAttestation(t *testing.T) {
+	helpers.ClearCache()
+
+	// Create 10 committees. Total 40960 validators.
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize * uint64(params.BeaconConfig().SlotsPerEpoch)
+	validators := make([]*ethpb.Validator, validatorCount)
+
+	for i := 0; i < len(validators); i++ {
+		publicKey := make([]byte, 48)
+		copy(publicKey, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey:             publicKey,
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	// Create a beacon state.
+	state, err := state_native.InitializeFromProtoEpbs(&ethpb.BeaconStateEPBS{
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	require.NoError(t, err)
+
+	// Get PTC.
+	ptc, err := helpers.GetPayloadTimelinessCommittee(context.Background(), state, state.Slot())
+	require.NoError(t, err)
+	require.Equal(t, fieldparams.PTCSize, len(ptc))
+
+	// Generate random indices. PTC members at the corresponding indices are considered attested.
+	randGen := rand.NewDeterministicGenerator()
+	attesterCount := randGen.Intn(fieldparams.PTCSize) + 1
+	indices := randGen.Perm(fieldparams.PTCSize)[:attesterCount]
+	slices.Sort(indices)
+	require.Equal(t, attesterCount, len(indices))
+
+	// Create a PayloadAttestation with AggregationBits set true at the indices.
+	aggregationBits := bitfield.NewBitvector512()
+	for _, index := range indices {
+		aggregationBits.SetBitAt(uint64(index), true)
+	}
+
+	payloadAttestation := &eth.PayloadAttestation{
+		AggregationBits: aggregationBits,
+		Data: &eth.PayloadAttestationData{
+			BeaconBlockRoot: make([]byte, 32),
+		},
+		Signature: make([]byte, 96),
+	}
+
+	// Get attesting indices.
+	attesters, err := helpers.GetPayloadAttestingIndices(state, state.Slot(), payloadAttestation)
+	require.NoError(t, err)
+	require.Equal(t, len(indices), len(attesters))
+
+	// Get an IndexedPayloadAttestation.
+	indexedPayloadAttestation, err := helpers.GetIndexedPayloadAttestation(state, state.Slot(), payloadAttestation)
+	require.NoError(t, err)
+	require.Equal(t, len(indices), len(indexedPayloadAttestation.AttestingIndices))
+	require.DeepEqual(t, payloadAttestation.Data, indexedPayloadAttestation.Data)
+	require.DeepEqual(t, payloadAttestation.Signature, indexedPayloadAttestation.Signature)
+
+	// Check if the attesting indices are the same.
+	slices.Sort(attesters) // GetIndexedPayloadAttestation sorts attesting indices.
+	require.DeepEqual(t, attesters, indexedPayloadAttestation.AttestingIndices)
+}
