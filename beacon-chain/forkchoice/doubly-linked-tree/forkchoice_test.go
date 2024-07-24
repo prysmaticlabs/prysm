@@ -36,7 +36,7 @@ func prepareForkchoiceState(
 		ParentRoot: parentRoot[:],
 	}
 
-	executionHeader := &enginev1.ExecutionPayloadHeader{
+	executionHeader := &enginev1.ExecutionPayloadHeaderEPBS{
 		BlockHash: payloadHash[:],
 	}
 
@@ -48,7 +48,7 @@ func prepareForkchoiceState(
 		Epoch: finalizedEpoch,
 	}
 
-	base := &ethpb.BeaconStateBellatrix{
+	base := &ethpb.BeaconStateEPBS{
 		Slot:                         slot,
 		RandaoMixes:                  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentJustifiedCheckpoint:   justifiedCheckpoint,
@@ -57,7 +57,7 @@ func prepareForkchoiceState(
 		LatestBlockHeader:            blockHeader,
 	}
 
-	st, err := state_native.InitializeFromProtoBellatrix(base)
+	st, err := state_native.InitializeFromProtoEpbs(base)
 	return st, blockRoot, err
 }
 
