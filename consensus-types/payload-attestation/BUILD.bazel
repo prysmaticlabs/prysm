@@ -7,8 +7,10 @@ go_library(
         "log.go",
         "mock.go",
         "readonly.go",
+        "readonly_test.go"
         "requirement.go",
         "verifier.go",
+        "verifier_test.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attestation",
     visibility = ["//visibility:public"],
