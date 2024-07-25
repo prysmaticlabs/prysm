@@ -2605,8 +2605,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				blockID:=tt.blockID
 				request := httptest.NewRequest(http.MethodGet, url, nil)
-				// Review needed 
-				request.PathValue(blockID["block_id"])
+				request.SetPathValue(blockID["block_id"])
 				writer := httptest.NewRecorder()
 
 				writer.Body = &bytes.Buffer{}
