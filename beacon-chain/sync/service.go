@@ -258,6 +258,7 @@ func (s *Service) Start() {
 
 	// Run data column sampling
 	if params.PeerDASEnabled() {
+		s.waitForChainStart()
 		s.sampler = newDataColumnSampler1D(s.cfg.p2p, s.cfg.clock, s.ctxMap, s.cfg.stateNotifier)
 		go s.sampler.Run(s.ctx)
 	}
