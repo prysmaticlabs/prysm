@@ -13,15 +13,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-
-
-	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"go.uber.org/mock/gomock"
-
-
-
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/api"
@@ -2693,7 +2684,6 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		}
 		t.Run("true", func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, url, nil)
-			// Review needed here 
 			request.SetPathValue("block_id","32")
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}

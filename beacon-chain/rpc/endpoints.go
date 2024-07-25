@@ -3,7 +3,6 @@ package rpc
 import (
 	"net/http"
 
-	
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prysmaticlabs/prysm/v5/api"

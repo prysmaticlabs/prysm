@@ -362,12 +362,12 @@ func registerServices(cliCtx *cli.Context, beacon *BeaconNode, synchronizer *sta
 
 	log.Debugln("Registering RPC Service")
 	router := newRouter(cliCtx)
-	if err := beacon.registerRPCService(router.(*http.ServeMux)); err != nil {
+	if err := beacon.registerRPCService(router); err != nil {
 		return errors.Wrap(err, "could not register RPC service")
 	}
 
 	log.Debugln("Registering HTTP Service")
-	if err := beacon.registerHTTPService(router.(*http.ServeMux)); err != nil {
+	if err := beacon.registerHTTPService(router); err != nil {
 		return errors.Wrap(err, "could not register HTTP service")
 	}
 
@@ -396,8 +396,19 @@ func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
 		}
 	}
 }
+// m is a middleware type
+type m func(http.Handler) http.Handler
 
-func newRouter(cliCtx *cli.Context)http.Handler {
+func middlewareChain(middlewares ...m) m{
+	return func(handler http.Handler) http.Handler{
+		for _, m := range middlewares {
+			handler = m(next)
+		}
+		return handler
+	}
+}
+
+func newRouter(cliCtx *cli.Context) *http.ServeMux {
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
 		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
@@ -405,10 +416,9 @@ func newRouter(cliCtx *cli.Context)http.Handler {
 		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 	r := http.NewServeMux()
-	handler := middleware.NormalizeQueryValuesHandler(
-		middleware.CorsHandler(allowedOrigins)(r),
-	)
-	return handler
+	chain := middlewareChain(middleware.NormalizeQueryValuesHandler, middleware.CorsHandler(allowedOrigins))
+	handler := chain(r)
+	return handler.(*http.ServeMux)
 }
 
 // StateFeed implements statefeed.Notifier.
