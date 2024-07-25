@@ -780,7 +780,7 @@ func (s *Service) ValidatorActiveSetChanges(
 	requestedState, err := s.ReplayerBuilder.ReplayerForSlot(slot).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, &RpcError{
-			Err:    errors.Wrapf(err, "error replaying blocks for state at slot %d: %v", slot),
+			Err:    errors.Wrapf(err, "error replaying blocks for state at slot %d", slot),
 			Reason: Internal,
 		}
 	}
@@ -805,7 +805,7 @@ func (s *Service) ValidatorActiveSetChanges(
 	ejectedIndices, err := validators.EjectedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs, activeValidatorCount)
 	if err != nil {
 		return nil, &RpcError{
-			Err:    errors.Wrap(err, "could not determine ejected validator indices: %v"),
+			Err:    errors.Wrap(err, "could not determine ejected validator indices"),
 			Reason: Internal,
 		}
 	}
