@@ -171,6 +171,7 @@ type Service struct {
 	receivedDataColumnsFromRootLock  sync.RWMutex
 	ctxMap                           ContextByteVersions
 	sampler                          DataColumnSampler
+	waitForChainStartLock            sync.Mutex
 }
 
 // NewService initializes new regular sync service.
@@ -310,6 +311,13 @@ func (s *Service) initCaches() {
 }
 
 func (s *Service) waitForChainStart() {
+	s.waitForChainStartLock.Lock()
+	defer s.waitForChainStartLock.Unlock()
+
+	if s.chainIsStarted() {
+		return
+	}
+
 	clock, err := s.clockWaiter.WaitForClock(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("sync service failed to receive genesis data")
