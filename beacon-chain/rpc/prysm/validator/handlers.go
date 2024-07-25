@@ -3,8 +3,8 @@ package validator
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
@@ -21,7 +21,7 @@ func (s *Server) GetValidatorParticipation(w http.ResponseWriter, r *http.Reques
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetValidatorParticipation")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	stateId := strings.ReplaceAll(r.URL.Query().Get("state_id"), " ", "")
 	var epoch uint64
 	switch stateId {
 	case "head":
