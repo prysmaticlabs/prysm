@@ -118,3 +118,15 @@ type GetValidatorPerformanceResponse struct {
 	MissingValidators             [][]byte `json:"missing_validators,omitempty"`
 	InactivityScores              []uint64 `json:"inactivity_scores,omitempty"`
 }
+
+type ActiveSetChanges struct {
+	Epoch               string   `json:"epoch"`
+	ActivatedPublicKeys []string `json:"activated_public_keys"`
+	ActivatedIndices    []string `json:"activated_indices"`
+	ExitedPublicKeys    []string `json:"exited_public_keys"`
+	ExitedIndices       []string `json:"exited_indices"`
+	SlashedPublicKeys   []string `json:"slashed_public_keys"`
+	SlashedIndices      []string `json:"slashed_indices"`
+	EjectedPublicKeys   []string `json:"ejected_public_keys"`
+	EjectedIndices      []string `json:"ejected_indices"`
+}

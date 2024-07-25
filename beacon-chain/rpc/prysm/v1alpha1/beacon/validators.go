@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
@@ -392,7 +391,7 @@ func (bs *Server) GetValidator(
 func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := slots.ToEpoch(bs.CoreService.GenesisTimeFetcher.CurrentSlot())
 
 	var requestedEpoch primitives.Epoch
 	switch q := req.QueryFilter.(type) {
@@ -403,72 +402,12 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	default:
 		requestedEpoch = currentEpoch
 	}
-	if requestedEpoch > currentEpoch {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			errEpoch,
-			currentEpoch,
-			requestedEpoch,
-		)
-	}
 
-	s, err := slots.EpochStart(requestedEpoch)
+	as, err := bs.CoreService.ValidatorActiveSetChanges(ctx, requestedEpoch)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(core.ErrorReasonToGRPC(err.Reason), "Could not retrieve validator active set changes: %v", err.Err)
 	}
-	requestedState, err := bs.ReplayerBuilder.ReplayerForSlot(s).ReplayBlocks(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", s, err))
-	}
-
-	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, requestedState, coreTime.CurrentEpoch(requestedState))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
-	}
-	vs := requestedState.Validators()
-	activatedIndices := validators.ActivatedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
-	exitedIndices, err := validators.ExitedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs, activeValidatorCount)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
-	}
-	slashedIndices := validators.SlashedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
-	ejectedIndices, err := validators.EjectedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs, activeValidatorCount)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not determine ejected validator indices: %v", err)
-	}
-
-	// Retrieve public keys for the indices.
-	activatedKeys := make([][]byte, len(activatedIndices))
-	exitedKeys := make([][]byte, len(exitedIndices))
-	slashedKeys := make([][]byte, len(slashedIndices))
-	ejectedKeys := make([][]byte, len(ejectedIndices))
-	for i, idx := range activatedIndices {
-		pubkey := requestedState.PubkeyAtIndex(idx)
-		activatedKeys[i] = pubkey[:]
-	}
-	for i, idx := range exitedIndices {
-		pubkey := requestedState.PubkeyAtIndex(idx)
-		exitedKeys[i] = pubkey[:]
-	}
-	for i, idx := range slashedIndices {
-		pubkey := requestedState.PubkeyAtIndex(idx)
-		slashedKeys[i] = pubkey[:]
-	}
-	for i, idx := range ejectedIndices {
-		pubkey := requestedState.PubkeyAtIndex(idx)
-		ejectedKeys[i] = pubkey[:]
-	}
-	return &ethpb.ActiveSetChanges{
-		Epoch:               requestedEpoch,
-		ActivatedPublicKeys: activatedKeys,
-		ActivatedIndices:    activatedIndices,
-		ExitedPublicKeys:    exitedKeys,
-		ExitedIndices:       exitedIndices,
-		SlashedPublicKeys:   slashedKeys,
-		SlashedIndices:      slashedIndices,
-		EjectedPublicKeys:   ejectedKeys,
-		EjectedIndices:      ejectedIndices,
-	}, nil
+	return as, nil
 }
 
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
