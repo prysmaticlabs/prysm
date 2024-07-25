@@ -768,7 +768,7 @@ func (s *Service) ValidatorActiveSetChanges(
 	currentEpoch := slots.ToEpoch(s.GenesisTimeFetcher.CurrentSlot())
 	if requestedEpoch > currentEpoch {
 		return nil, &RpcError{
-			Err:    fmt.Errorf("cannot retrieve information about an epoch in the future, current epoch %d, requesting %d", currentEpoch, requestedEpoch),
+			Err:    errors.Errorf("cannot retrieve information about an epoch in the future, current epoch %d, requesting %d", currentEpoch, requestedEpoch),
 			Reason: BadRequest,
 		}
 	}
@@ -780,7 +780,7 @@ func (s *Service) ValidatorActiveSetChanges(
 	requestedState, err := s.ReplayerBuilder.ReplayerForSlot(slot).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, &RpcError{
-			Err:    fmt.Errorf("error replaying blocks for state at slot %d: %v", slot, err),
+			Err:    errors.Wrapf(err, "error replaying blocks for state at slot %d: %v", slot),
 			Reason: Internal,
 		}
 	}
@@ -788,7 +788,7 @@ func (s *Service) ValidatorActiveSetChanges(
 	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, requestedState, coreTime.CurrentEpoch(requestedState))
 	if err != nil {
 		return nil, &RpcError{
-			Err:    fmt.Errorf("could not get active validator count: %v", err),
+			Err:    errors.Wrap(err, "could not get active validator count"),
 			Reason: Internal,
 		}
 	}
@@ -797,7 +797,7 @@ func (s *Service) ValidatorActiveSetChanges(
 	exitedIndices, err := validators.ExitedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs, activeValidatorCount)
 	if err != nil {
 		return nil, &RpcError{
-			Err:    fmt.Errorf("could not determine exited validator indices: %v", err),
+			Err:    errors.Wrap(err, "could not determine exited validator indices"),
 			Reason: Internal,
 		}
 	}
@@ -805,7 +805,7 @@ func (s *Service) ValidatorActiveSetChanges(
 	ejectedIndices, err := validators.EjectedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs, activeValidatorCount)
 	if err != nil {
 		return nil, &RpcError{
-			Err:    fmt.Errorf("could not determine ejected validator indices: %v", err),
+			Err:    errors.Wrap(err, "could not determine ejected validator indices: %v"),
 			Reason: Internal,
 		}
 	}
