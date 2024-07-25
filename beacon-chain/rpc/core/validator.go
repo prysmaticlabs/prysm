@@ -789,7 +789,7 @@ func (s *Service) ValidatorParticipation(
 	// ReplayerBuilder ensures that a canonical chain is followed to the slot
 	beaconSt, err := s.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayBlocks(ctx)
 	if err != nil {
-		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("error replaying blocks for state at slot %d: %v", endSlot, err)}
+		return nil, &RpcError{Reason: Internal, Err: errors.Wrapf(err, "error replaying blocks for state at slot %d", endSlot)}
 	}
 	var v []*precompute.Validator
 	var b *precompute.Balance
@@ -797,20 +797,20 @@ func (s *Service) ValidatorParticipation(
 	if beaconSt.Version() == version.Phase0 {
 		v, b, err = precompute.New(ctx, beaconSt)
 		if err != nil {
-			return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("could not set up pre compute instance: %v", err)}
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not set up pre compute instance")}
 		}
 		_, b, err = precompute.ProcessAttestations(ctx, beaconSt, v, b)
 		if err != nil {
-			return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("could not pre compute attestations: %v", err)}
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not pre compute attestations")}
 		}
 	} else if beaconSt.Version() >= version.Altair {
 		v, b, err = altair.InitializePrecomputeValidators(ctx, beaconSt)
 		if err != nil {
-			return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("could not set up altair pre compute instance: %v", err)}
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not set up altair pre compute instance")}
 		}
 		_, b, err = altair.ProcessEpochParticipation(ctx, beaconSt, b, v)
 		if err != nil {
-			return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("could not pre compute attestations: %v", err)}
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not pre compute attestations: %v")}
 		}
 	} else {
 		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("invalid state type retrieved with a version of %d", beaconSt.Version())}
