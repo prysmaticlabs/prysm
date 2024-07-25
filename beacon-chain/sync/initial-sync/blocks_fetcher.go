@@ -329,11 +329,9 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 		return response
 	}
 
-	bwb, err := f.fetchBlobsFromPeer(ctx, response.bwb, response.pid, peers)
-	if err != nil {
+	if err := f.fetchBlobsFromPeer(ctx, response.bwb, response.pid, peers); err != nil {
 		response.err = err
 	}
-	response.bwb = bwb
 
 	return response
 }
@@ -491,7 +489,9 @@ func (r *blobRange) RequestDataColumns() *p2ppb.DataColumnSidecarsByRangeRequest
 var errBlobVerification = errors.New("peer unable to serve aligned BlobSidecarsByRange and BeaconBlockSidecarsByRange responses")
 var errMissingBlobsForBlockCommitments = errors.Wrap(errBlobVerification, "blobs unavailable for processing block with kzg commitments")
 
-func verifyAndPopulateBlobs(bwb []blocks.BlockWithROBlobs, blobs []blocks.ROBlob, req *p2ppb.BlobSidecarsByRangeRequest, bss filesystem.BlobStorageSummarizer) ([]blocks.BlockWithROBlobs, error) {
+// verifyAndPopulateBlobs mutate the input `bwb` argument by adding verified blobs.
+// This function mutates the input `bwb` argument.
+func verifyAndPopulateBlobs(bwb []blocks.BlockWithROBlobs, blobs []blocks.ROBlob, req *p2ppb.BlobSidecarsByRangeRequest, bss filesystem.BlobStorageSummarizer) error {
 	blobsByRoot := make(map[[32]byte][]blocks.ROBlob)
 	for i := range blobs {
 		if blobs[i].Slot() < req.StartSlot {
@@ -501,46 +501,53 @@ func verifyAndPopulateBlobs(bwb []blocks.BlockWithROBlobs, blobs []blocks.ROBlob
 		blobsByRoot[br] = append(blobsByRoot[br], blobs[i])
 	}
 	for i := range bwb {
-		bwi, err := populateBlock(bwb[i], blobsByRoot[bwb[i].Block.Root()], req, bss)
+		err := populateBlock(&bwb[i], blobsByRoot[bwb[i].Block.Root()], req, bss)
 		if err != nil {
 			if errors.Is(err, errDidntPopulate) {
 				continue
 			}
-			return bwb, err
+			return err
 		}
-		bwb[i] = bwi
 	}
-	return bwb, nil
+	return nil
 }
 
 var errDidntPopulate = errors.New("skipping population of block")
 
-func populateBlock(bw blocks.BlockWithROBlobs, blobs []blocks.ROBlob, req *p2ppb.BlobSidecarsByRangeRequest, bss filesystem.BlobStorageSummarizer) (blocks.BlockWithROBlobs, error) {
+// populateBlock verifies and populates blobs for a block.
+// This function mutates the input `bw` argument.
+func populateBlock(bw *blocks.BlockWithROBlobs, blobs []blocks.ROBlob, req *p2ppb.BlobSidecarsByRangeRequest, bss filesystem.BlobStorageSummarizer) error {
 	blk := bw.Block
 	if blk.Version() < version.Deneb || blk.Block().Slot() < req.StartSlot {
-		return bw, errDidntPopulate
+		return errDidntPopulate
 	}
+
 	commits, err := blk.Block().Body().BlobKzgCommitments()
 	if err != nil {
-		return bw, errDidntPopulate
+		return errDidntPopulate
 	}
+
 	if len(commits) == 0 {
-		return bw, errDidntPopulate
+		return errDidntPopulate
 	}
+
 	// Drop blobs on the floor if we already have them.
 	if bss != nil && bss.Summary(blk.Root()).AllAvailable(len(commits)) {
-		return bw, errDidntPopulate
+		return errDidntPopulate
 	}
+
 	if len(commits) != len(blobs) {
-		return bw, missingCommitError(blk.Root(), blk.Block().Slot(), commits)
+		return missingCommitError(blk.Root(), blk.Block().Slot(), commits)
 	}
+
 	for ci := range commits {
 		if err := verify.BlobAlignsWithBlock(blobs[ci], blk); err != nil {
-			return bw, err
+			return err
 		}
 	}
+
 	bw.Blobs = blobs
-	return bw, nil
+	return nil
 }
 
 func missingCommitError(root [32]byte, slot primitives.Slot, missing [][]byte) error {
@@ -553,20 +560,21 @@ func missingCommitError(root [32]byte, slot primitives.Slot, missing [][]byte) e
 }
 
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
-func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks.BlockWithROBlobs, pid peer.ID, peers []peer.ID) ([]blocks.BlockWithROBlobs, error) {
+// This function mutates the input `bwb` argument.
+func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks.BlockWithROBlobs, pid peer.ID, peers []peer.ID) error {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsFromPeer")
 	defer span.End()
 	if slots.ToEpoch(f.clock.CurrentSlot()) < params.BeaconConfig().DenebForkEpoch {
-		return bwb, nil
+		return nil
 	}
 	blobWindowStart, err := prysmsync.BlobRPCMinValidSlot(f.clock.CurrentSlot())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// Construct request message based on observed interval of blocks in need of blobs.
 	req := countCommitments(bwb, blobWindowStart).blobRange(f.bs).Request()
 	if req == nil {
-		return bwb, nil
+		return nil
 	}
 	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	// We dial the initial peer first to ensure that we get the desired set of blobs.
@@ -584,14 +592,13 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks.Blo
 			continue
 		}
 		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(p)
-		robs, err := verifyAndPopulateBlobs(bwb, blobs, req, f.bs)
-		if err != nil {
+		if err := verifyAndPopulateBlobs(bwb, blobs, req, f.bs); err != nil {
 			log.WithField("peer", p).WithError(err).Debug("Invalid BeaconBlobsByRange response")
 			continue
 		}
-		return robs, err
+		return err
 	}
-	return nil, errNoPeersAvailable
+	return errNoPeersAvailable
 }
 
 // sortedSliceFromMap returns a sorted slice of keys from a map.

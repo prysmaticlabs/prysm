@@ -1217,7 +1217,7 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 		}
 		require.Equal(t, len(blobs), len(expectedCommits))
 
-		bwb, err := verifyAndPopulateBlobs(bwb, blobs, testReqFromResp(bwb), nil)
+		err := verifyAndPopulateBlobs(bwb, blobs, testReqFromResp(bwb), nil)
 		require.NoError(t, err)
 		for _, bw := range bwb {
 			commits, err := bw.Block.Block().Body().BlobKzgCommitments()
@@ -1238,7 +1238,7 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	})
 	t.Run("missing blobs", func(t *testing.T) {
 		bwb, blobs := testSequenceBlockWithBlob(t, 10)
-		_, err := verifyAndPopulateBlobs(bwb, blobs[1:], testReqFromResp(bwb), nil)
+		err := verifyAndPopulateBlobs(bwb, blobs[1:], testReqFromResp(bwb), nil)
 		require.ErrorIs(t, err, errMissingBlobsForBlockCommitments)
 	})
 	t.Run("no blobs for last block", func(t *testing.T) {
@@ -1250,7 +1250,7 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 		blobs = blobs[0 : len(blobs)-len(cmts)]
 		lastBlk, _ = util.GenerateTestDenebBlockWithSidecar(t, lastBlk.Block().ParentRoot(), lastBlk.Block().Slot(), 0)
 		bwb[lastIdx].Block = lastBlk
-		_, err = verifyAndPopulateBlobs(bwb, blobs, testReqFromResp(bwb), nil)
+		err = verifyAndPopulateBlobs(bwb, blobs, testReqFromResp(bwb), nil)
 		require.NoError(t, err)
 	})
 	t.Run("blobs not copied if all locally available", func(t *testing.T) {
@@ -1264,7 +1264,7 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 			r7: {0, 1, 2, 3, 4, 5},
 		}
 		bss := filesystem.NewMockBlobStorageSummarizer(t, onDisk)
-		bwb, err := verifyAndPopulateBlobs(bwb, blobs, testReqFromResp(bwb), bss)
+		err := verifyAndPopulateBlobs(bwb, blobs, testReqFromResp(bwb), bss)
 		require.NoError(t, err)
 		require.Equal(t, 6, len(bwb[i1].Blobs))
 		require.Equal(t, 0, len(bwb[i7].Blobs))

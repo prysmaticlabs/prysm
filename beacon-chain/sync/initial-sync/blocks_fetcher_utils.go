@@ -284,8 +284,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 				return nil, errors.Wrap(err, "unable to retrieve blobs for blocks found in findForkWithPeer")
 			}
 		} else {
-			bwb, err = f.fetchBlobsFromPeer(ctx, bwb, pid, []peer.ID{pid})
-			if err != nil {
+			if err = f.fetchBlobsFromPeer(ctx, bwb, pid, []peer.ID{pid}); err != nil {
 				return nil, errors.Wrap(err, "unable to retrieve blobs for blocks found in findForkWithPeer")
 			}
 		}
@@ -315,8 +314,7 @@ func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b interfa
 					return nil, errors.Wrap(err, "unable to retrieve columns for blocks found in findAncestor")
 				}
 			} else {
-				bwb, err = f.fetchBlobsFromPeer(ctx, bwb, pid, []peer.ID{pid})
-				if err != nil {
+				if err = f.fetchBlobsFromPeer(ctx, bwb, pid, []peer.ID{pid}); err != nil {
 					return nil, errors.Wrap(err, "unable to retrieve blobs for blocks found in findAncestor")
 				}
 			}
