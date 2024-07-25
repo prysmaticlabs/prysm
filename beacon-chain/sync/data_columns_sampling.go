@@ -170,8 +170,6 @@ func (d *dataColumnSampler1D) refreshPeerInfo() {
 		}
 	}
 
-	log.WithField("columnFromPeer", d.columnFromPeer).Debug("Peer info refreshed")
-
 	columnWithNoPeers := make([]uint64, 0)
 	for column, peers := range d.peerFromColumn {
 		if len(peers) == 0 {
@@ -249,15 +247,20 @@ func (d *dataColumnSampler1D) handleStateNotification(ctx context.Context, event
 	// Randomize columns for sample selection.
 	randomizedColumns := randomizeColumns(d.nonCustodyColumns)
 	samplesCount := min(params.BeaconConfig().SamplesPerSlot, uint64(len(d.nonCustodyColumns))-params.BeaconConfig().NumberOfColumns/2)
-	ok, _, err = d.incrementalDAS(ctx, data.BlockRoot, randomizedColumns, samplesCount)
+	ok, summaries, err := d.incrementalDAS(ctx, data.BlockRoot, randomizedColumns, samplesCount)
 	if err != nil {
 		log.WithError(err).Error("Failed to run incremental DAS")
 	}
 
 	if ok {
+		requestedColumns := summaries[0].RequestedColumns
+		for _, summary := range summaries[1:] {
+			requestedColumns = append(requestedColumns, summary.RequestedColumns...)
+		}
+
 		log.WithFields(logrus.Fields{
 			"root":    fmt.Sprintf("%#x", data.BlockRoot),
-			"columns": randomizedColumns,
+			"columns": requestedColumns,
 		}).Debug("Data column sampling successful")
 	} else {
 		log.WithFields(logrus.Fields{
