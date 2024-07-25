@@ -402,7 +402,7 @@ type m func(http.Handler) http.Handler
 func middlewareChain(middlewares ...m) m{
 	return func(handler http.Handler) http.Handler{
 		for _, m := range middlewares {
-			handler = m(next)
+			handler = m(handler)
 		}
 		return handler
 	}
