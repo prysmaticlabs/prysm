@@ -23,7 +23,7 @@ func (b *BeaconState) eth1DataVal() *ethpb.Eth1Data {
 		return nil
 	}
 
-	return ethpb.CopyETH1Data(b.eth1Data)
+	return b.eth1Data.Copy()
 }
 
 // Eth1DataVotes corresponds to votes from Ethereum on the canonical proof-of-work chain
@@ -49,7 +49,7 @@ func (b *BeaconState) eth1DataVotesVal() []*ethpb.Eth1Data {
 
 	res := make([]*ethpb.Eth1Data, len(b.eth1DataVotes))
 	for i := 0; i < len(res); i++ {
-		res[i] = ethpb.CopyETH1Data(b.eth1DataVotes[i])
+		res[i] = b.eth1DataVotes[i].Copy()
 	}
 	return res
 }

@@ -153,7 +153,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconState(t *testing.T) {
 	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.ParentRoot, "Finalized header parent root is not zero")
 	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.StateRoot, "Finalized header state root is not zero")
 	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.BodyRoot, "Finalized header body root is not zero")
-	require.Equal(t, finalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
+	require.Equal(t, FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
 	for _, leaf := range update.FinalityBranch {
 		require.DeepSSZEqual(t, zeroHash, leaf, "Leaf is not zero")
 	}
