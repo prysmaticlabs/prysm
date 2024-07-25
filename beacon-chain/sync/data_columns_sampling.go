@@ -228,7 +228,7 @@ func (d *dataColumnSampler1D) handleStateNotification(ctx context.Context, event
 		return
 	}
 
-	if coreTime.PeerDASIsActive(data.Slot) {
+	if !coreTime.PeerDASIsActive(data.Slot) {
 		// We do not trigger sampling if peerDAS is not active yet.
 		return
 	}
