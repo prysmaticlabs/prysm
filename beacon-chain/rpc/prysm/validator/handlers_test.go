@@ -183,7 +183,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	atts := []*ethpb.PendingAttestation{{
 		Data:            util.HydrateAttestationData(&ethpb.AttestationData{}),
 		InclusionDelay:  1,
-		AggregationBits: bitfield.NewBitlist((validatorCount / 3) / uint64(params.BeaconConfig().SlotsPerEpoch)),
+		AggregationBits: bitfield.NewBitlist(validatorCount / uint64(params.BeaconConfig().SlotsPerEpoch)),
 	}}
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
@@ -248,7 +248,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, true, vp.Finalized, "Incorrect validator participation respond")
-	assert.DeepEqual(t, *want.Participation, *vp.Participation, "Incorrect validator participation respond")
+	assert.DeepEqual(t, want.Participation, vp.Participation, "Incorrect validator participation respond")
 }
 
 func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing.T) {
