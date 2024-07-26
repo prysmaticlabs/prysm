@@ -77,7 +77,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 // If the peer responds with a sequence number higher than latest one for it we have in our store,
 // then this function sends a METADATA request to the peer, and stores the metadata received.
 // TODO: This function is actually poorly named, since it does more than just sending a ping request.
-func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
+func (s *Service) sendPingRequest(ctx context.Context, peerID peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -96,7 +96,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	}
 
 	// Send the PING request to the peer.
-	stream, err := s.cfg.p2p.Send(ctx, &encodedMetadataSeq, topic, id)
+	stream, err := s.cfg.p2p.Send(ctx, &encodedMetadataSeq, topic, peerID)
 	if err != nil {
 		return errors.Wrap(err, "send ping request")
 	}
@@ -111,11 +111,11 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	}
 
 	// Record the latency of the ping request for that peer.
-	s.cfg.p2p.Host().Peerstore().RecordLatency(id, time.Now().Sub(startTime))
+	s.cfg.p2p.Host().Peerstore().RecordLatency(peerID, time.Now().Sub(startTime))
 
 	// If the peer responded with an error, increment the bad responses scorer.
 	if code != 0 {
-		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(peerID)
 		return errors.New(errMsg)
 	}
 
@@ -126,11 +126,11 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	}
 
 	// Determine if the peer's sequence number returned by the peer is higher than the one we have in our store.
-	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
+	valid, err := s.validateSequenceNum(*msg, peerID)
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
 		if errors.Is(err, p2ptypes.ErrInvalidSequenceNum) {
-			s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+			s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(peerID)
 		}
 
 		return errors.Wrap(err, "validate sequence number")
@@ -142,14 +142,14 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	}
 
 	// We need to send a METADATA request to the peer to get its latest metadata.
-	md, err := s.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
+	md, err := s.sendMetaDataRequest(ctx, peerID)
 	if err != nil {
 		// do not increment bad responses, as its already done in the request method.
 		return errors.Wrap(err, "send metadata request")
 	}
 
 	// Update the metadata for the peer.
-	s.cfg.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+	s.cfg.p2p.Peers().SetMetadata(peerID, md)
 
 	return nil
 }
