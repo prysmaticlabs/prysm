@@ -256,9 +256,8 @@ func TestGetIndexedPayloadAttestation(t *testing.T) {
 func TestIsValidIndexedPayloadAttestation(t *testing.T) {
 	helpers.ClearCache()
 
-	// Create 10 committees. Total 40960 validators.
-	committeeCount := uint64(10)
-	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize * uint64(params.BeaconConfig().SlotsPerEpoch)
+	// Create validators.
+	validatorCount := uint64(350)
 	validators := make([]*ethpb.Validator, validatorCount)
 	_, secretKeys, err := util.DeterministicDepositsAndKeys(validatorCount)
 	require.NoError(t, err)
@@ -307,7 +306,7 @@ func TestIsValidIndexedPayloadAttestation(t *testing.T) {
 		},
 		{
 			attestation: &epbs.IndexedPayloadAttestation{
-				AttestingIndices: []primitives.ValidatorIndex{123, 456, 789},
+				AttestingIndices: []primitives.ValidatorIndex{123, 234, 345},
 				Data: &eth.PayloadAttestationData{
 					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 				},
