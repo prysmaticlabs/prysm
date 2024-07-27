@@ -16,58 +16,84 @@ import (
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.
+// If the peer's sequence number is higher than the one we have in our store for it,
+// we send a METADATA request to the peer to get its latest metadata, and store it.
+// TODO: This function is actually poorly named, since it does more than just reading a ping message.
 func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	SetRPCStreamDeadlines(stream)
 
+	// Convert the message to SSW Uint64 type.
 	m, ok := msg.(*primitives.SSZUint64)
 	if !ok {
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
+
+	// Validate the incoming request regarding rate limiting.
 	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
-		return err
+		return errors.Wrap(err, "validate request")
 	}
+
 	s.rateLimiter.add(stream, 1)
-	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
+
+	// Retrieve the peer ID.
+	peerID := stream.Conn().RemotePeer()
+
+	// Check if the peer sequence number is higher than the one we have in our store.
+	valid, err := s.validateSequenceNum(*m, peerID)
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
 		if errors.Is(err, p2ptypes.ErrInvalidSequenceNum) {
-			s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+			s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(peerID)
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrInvalidSequenceNum.Error(), stream)
 		}
-		return err
+
+		return errors.Wrap(err, "validate sequence number")
 	}
+
+	// We can already prepare a success response to the peer.
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		return err
+		return errors.Wrap(err, "write response")
 	}
-	sq := primitives.SSZUint64(s.cfg.p2p.MetadataSeq())
-	if _, err := s.cfg.p2p.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
+
+	// Retrieve our own sequence number.
+	seqNumber := s.cfg.p2p.MetadataSeq()
+
+	// SSZ encode our sequence number.
+	seqNumberSSZ := primitives.SSZUint64(seqNumber)
+
+	// Send our sequence number back to the peer.
+	if _, err := s.cfg.p2p.Encoding().EncodeWithMaxLength(stream, &seqNumberSSZ); err != nil {
 		return err
 	}
 
 	closeStream(stream, log)
 
 	if valid {
-		// If the sequence number was valid we're done.
+		// If the peer's sequence numberwas valid we're done.
 		return nil
 	}
 
-	// The sequence number was not valid.  Start our own ping back to the peer.
+	// The peer's sequence number was not valid. We ask the peer for its metadata.
 	go func() {
-		// New context so the calling function doesn't cancel on us.
+		// Define a new context so the calling function doesn't cancel on us.
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
-		md, err := s.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
+
+		// Send a METADATA request to the peer.
+		peerMetadata, err := s.sendMetaDataRequest(ctx, peerID)
 		if err != nil {
 			// We cannot compare errors directly as the stream muxer error
 			// type isn't compatible with the error we have, so a direct
 			// equality checks fails.
 			if !strings.Contains(err.Error(), p2ptypes.ErrIODeadline.Error()) {
-				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Could not send metadata request")
+				log.WithField("peer", peerID).WithError(err).Debug("Could not send metadata request")
 			}
+
 			return
 		}
-		// update metadata if there is no error
-		s.cfg.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+
+		// Update peer's metadata.
+		s.cfg.p2p.Peers().SetMetadata(peerID, peerMetadata)
 	}()
 
 	return nil
