@@ -10,8 +10,8 @@ import (
 )
 
 func TestVerifyCurrentSlot(t *testing.T){
-	clock:=&startup.Clock{}
-	verifier:=&PayloadVerifier{
+	clock := &startup.Clock{}
+	verifier := &PayloadVerifier{
 		Resources: Resources{
 			clock: clock,
 		},
@@ -20,8 +20,8 @@ func TestVerifyCurrentSlot(t *testing.T){
 }
 
 func TestVerifyKnownPayloadStatus(t *testing.T){
-	ptcstatus:= primitives.PTCStatus(4)
-	verifier:=&PayloadVerifier{
+	ptcstatus := primitives.PTCStatus(4)
+	verifier := &PayloadVerifier{
 		payloadAtt: ReadOnlyPayloadAtt{
 			message: &ethpb.PayloadAttestationMessage{
 				Data: &ethpb.PayloadAttestationData{

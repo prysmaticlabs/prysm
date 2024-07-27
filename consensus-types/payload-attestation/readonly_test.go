@@ -72,8 +72,8 @@ func TestValidatePayload(t *testing.T){
 }
 
 func TestValidatorIndex(t *testing.T){
-	valIdx:=primitives.ValidatorIndex(1)
-	m:=&ReadOnlyPayloadAtt{
+	valIdx := primitives.ValidatorIndex(1)
+	m := &ReadOnlyPayloadAtt{
 		message: &ethpb.PayloadAttestationMessage{
 		ValidatorIndex: valIdx,
 		},
@@ -82,8 +82,8 @@ func TestValidatorIndex(t *testing.T){
 }
 
 func TestSignature(t *testing.T){
-	sig:=make([]byte,fieldparams.BLSSignatureLength)
-	m:=&ReadOnlyPayloadAtt{
+	sig := make([]byte,fieldparams.BLSSignatureLength)
+	m := &ReadOnlyPayloadAtt{
 		message: &ethpb.PayloadAttestationMessage{
 		Signature: sig[:],
 		},
@@ -93,7 +93,7 @@ func TestSignature(t *testing.T){
 
 func TestBeaconBlockRoot(t *testing.T){
 	root := make([]byte,fieldparams.RootLength)
-	m:=&ReadOnlyPayloadAtt{
+	m := &ReadOnlyPayloadAtt{
 		message: &ethpb.PayloadAttestationMessage{
 			Data: &ethpb.PayloadAttestationData{
 				BeaconBlockRoot: root[:],
@@ -104,8 +104,8 @@ func TestBeaconBlockRoot(t *testing.T){
 }
 
 func TestSlot(t *testing.T){
-	slot:=primitives.Slot(1)
-	m:=&ReadOnlyPayloadAtt{
+	slot := primitives.Slot(1)
+	m := &ReadOnlyPayloadAtt{
 		message: &ethpb.PayloadAttestationMessage{
 			Data: &ethpb.PayloadAttestationData{
 				Slot: slot,
@@ -118,7 +118,7 @@ func TestSlot(t *testing.T){
 func TestPayloadStatus(t *testing.T){
 	for i:=0;i<4;i++ {
 	status:=primitives.PTCStatus(i)
-	m:=&ReadOnlyPayloadAtt{
+	m := &ReadOnlyPayloadAtt{
 		message: &ethpb.PayloadAttestationMessage{
 			Data: &ethpb.PayloadAttestationData{
 				PayloadStatus:status,
