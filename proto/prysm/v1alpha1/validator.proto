@@ -137,6 +137,12 @@ service BeaconNodeValidator {
         };
     }
 
+    rpc GetInclusionList(InclusionListRequest) returns (InclusionList) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha2/validator/inclusion_list"
+        };
+    }
+
     // Sends the newly signed beacon block to beacon node.
     //
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
@@ -592,6 +598,11 @@ message BlockRequest {
     google.protobuf.UInt64Value builder_boost_factor = 5;
 }
 
+message InclusionListRequest {
+    // Slot for which the inclusion list should be retrieved.
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+}
+
 message ProposeResponse {
     // The block root of the successfully proposed beacon block.
     bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -836,4 +847,12 @@ message AggregatedSigAndAggregationBitsRequest {
 message AggregatedSigAndAggregationBitsResponse {
     bytes aggregated_sig = 1;
     bytes bits = 2;
+}
+
+message InclusionList {
+    message InclusionInfo {
+       bytes tx_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+    }
+
+    repeated InclusionInfo inclusion_infos = 1 [(ethereum.eth.ext.ssz_max) = "32"];
 }
