@@ -81,6 +81,10 @@ type Server struct {
 	CoreService            *core.Service
 }
 
+func (vs *Server) EvaluateInclusionList(context.Context, *ethpb.InclusionList) (*emptypb.Empty, error) {
+	return nil, nil
+}
+
 func (vs *Server) GetInclusionList(ctx context.Context, req *ethpb.InclusionListRequest) (*ethpb.InclusionList, error) {
 	return nil, nil
 }
