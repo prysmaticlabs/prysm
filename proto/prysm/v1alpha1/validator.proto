@@ -143,6 +143,13 @@ service BeaconNodeValidator {
         };
     }
 
+    rpc EvaluateInclusionList(InclusionList) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha2/validator/inclusion_list"
+            body: "*"
+        };
+    }
+
     // Sends the newly signed beacon block to beacon node.
     //
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
