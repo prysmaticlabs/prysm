@@ -10,11 +10,13 @@ import (
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-// SchemaVersionV1 specifies the schema version for our rpc protocol ID.
-const SchemaVersionV1 = "/1"
+const (
+	// SchemaVersionV1 specifies the schema version for our rpc protocol ID.
+	SchemaVersionV1 = "/1"
 
-// SchemaVersionV2 specifies the next schema version for our rpc protocol ID.
-const SchemaVersionV2 = "/2"
+	// SchemaVersionV2 specifies the next schema version for our rpc protocol ID.
+	SchemaVersionV2 = "/2"
+)
 
 // Specifies the protocol prefix for all our Req/Resp topics.
 const protocolPrefix = "/eth2/beacon_chain/req"
