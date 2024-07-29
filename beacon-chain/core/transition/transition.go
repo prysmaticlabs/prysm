@@ -248,25 +248,12 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
-		if time.CanProcessEpoch(state) {
-			if state.Version() == version.Phase0 {
-				state, err = ProcessEpochPrecompute(ctx, state)
-				if err != nil {
-					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch with optimizations")
-				}
-			} else if state.Version() <= version.Deneb {
-				if err = altair.ProcessEpoch(ctx, state); err != nil {
-					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
-				}
-			} else {
-				if err = electra.ProcessEpoch(ctx, state); err != nil {
-					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
-				}
-			}
+
+		if err = ProcessEpoch(ctx, state); err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
 		}
+
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "failed to increment state slot")
@@ -284,6 +271,28 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 	}
 
 	return state, nil
+}
+
+// ProcessEpoch is a wrapper on fork specific epoch processing
+func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
+	var err error
+	if time.CanProcessEpoch(state) {
+		if state.Version() == version.Phase0 {
+			state, err = ProcessEpochPrecompute(ctx, state)
+			if err != nil {
+				return errors.Wrap(err, "could not process epoch with optimizations")
+			}
+		} else if state.Version() <= version.Deneb {
+			if err = altair.ProcessEpoch(ctx, state); err != nil {
+				return errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+			}
+		} else {
+			if err = electra.ProcessEpoch(ctx, state); err != nil {
+				return errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+			}
+		}
+	}
+	return nil
 }
 
 // UpgradeState upgrades the state to the next version if possible.

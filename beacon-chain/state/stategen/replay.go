@@ -6,12 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/capella"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/deneb"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/execution"
-	prysmtime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -19,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -201,70 +194,19 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process slot")
 		}
-		if prysmtime.CanProcessEpoch(state) {
-			if state.Version() == version.Phase0 {
-				state, err = transition.ProcessEpochPrecompute(ctx, state)
-				if err != nil {
-					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch with optimizations")
-				}
-			} else if state.Version() > version.Electra {
-				err = altair.ProcessEpoch(ctx, state)
-				if err != nil {
-					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
-				}
-			} else {
-				err = electra.ProcessEpoch(ctx, state)
-				if err != nil {
-					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
-				}
-			}
+		if err = transition.ProcessEpoch(ctx, state); err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
 
-		if prysmtime.CanUpgradeToAltair(state.Slot()) {
-			state, err = altair.UpgradeToAltair(ctx, state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
-		}
-
-		if prysmtime.CanUpgradeToBellatrix(state.Slot()) {
-			state, err = execution.UpgradeToBellatrix(state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
-		}
-
-		if prysmtime.CanUpgradeToCapella(state.Slot()) {
-			state, err = capella.UpgradeToCapella(state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
-		}
-
-		if prysmtime.CanUpgradeToDeneb(state.Slot()) {
-			state, err = deneb.UpgradeToDeneb(state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
-		}
-
-		if prysmtime.CanUpgradeToElectra(state.Slot()) {
-			state, err = electra.UpgradeToElectra(state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
+		state, err = transition.UpgradeState(ctx, state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "failed to upgrade state")
 		}
 	}
 
