@@ -33,7 +33,7 @@ func (s *Server) GetStateRoot(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetStateRoot")
 	defer span.End()
 
-	stateId := r.PathValue("state_id");
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -84,7 +84,7 @@ func (s *Server) GetRandao(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetRandao")
 	defer span.End()
 
-	stateId := r.PathValue("state_id");
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -150,7 +150,7 @@ func (s *Server) GetSyncCommittees(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetSyncCommittees")
 	defer span.End()
 
-	stateId := r.PathValue("state_id");
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -15,9 +16,9 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"net/http"
+
 	"github.com/ethereum/go-ethereum/common"
-	
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
@@ -396,11 +397,12 @@ func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
 		}
 	}
 }
+
 // m is a middleware type
 type m func(http.Handler) http.Handler
 
-func middlewareChain(middlewares ...m) m{
-	return func(handler http.Handler) http.Handler{
+func middlewareChain(middlewares ...m) m {
+	return func(handler http.Handler) http.Handler {
 		for _, m := range middlewares {
 			handler = m(handler)
 		}

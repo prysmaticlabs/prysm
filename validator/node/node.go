@@ -6,6 +6,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -15,7 +16,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	"net/http"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
@@ -137,8 +137,8 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 // m is a middleware type
 type m func(http.Handler) http.Handler
 
-func middlewareChain(middlewares ...m) m{
-	return func(next http.Handler) http.Handler{
+func middlewareChain(middlewares ...m) m {
+	return func(next http.Handler) http.Handler {
 		for i := 0; i < len(middlewares); i++ {
 			next = middlewares[i](next)
 		}
@@ -158,7 +158,6 @@ func newRouter(cliCtx *cli.Context) *http.ServeMux {
 	handler := chain(r)
 	return handler.(*http.ServeMux)
 }
-
 
 // Start every service in the validator client.
 func (c *ValidatorClient) Start() {

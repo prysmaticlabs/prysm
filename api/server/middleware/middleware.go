@@ -35,7 +35,7 @@ func CorsHandler(allowOrigins []string) func(http.Handler) http.Handler {
 }
 
 // ContentTypeHandler checks request for the appropriate media types otherwise returning a http.StatusUnsupportedMediaType error
-func ContentTypeHandler(acceptedMediaTypes []string)func(http.Handler) http.Handler {
+func ContentTypeHandler(acceptedMediaTypes []string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// skip the GET request

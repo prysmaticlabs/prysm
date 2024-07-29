@@ -67,7 +67,6 @@ go_library(
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_fsnotify_fsnotify//:go_default_library",
         "@com_github_golang_jwt_jwt_v4//:go_default_library",
-        "@com_github_gorilla_mux//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//retry:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",

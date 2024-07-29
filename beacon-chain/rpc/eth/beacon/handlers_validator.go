@@ -28,8 +28,8 @@ import (
 func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidators")
 	defer span.End()
-		
-	stateId := r.PathValue("state_id");
+
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -177,19 +177,19 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidator")
 	defer span.End()
-	
-	stateId := r.PathValue("state_id");
+
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
 
-	valId := r.PathValue("validator_id");
+	valId := r.PathValue("validator_id")
 	if valId == "" {
 		httputil.HandleError(w, "validator_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-	
+
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
 		shared.WriteStateFetchError(w, err)
@@ -243,8 +243,8 @@ func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorBalances")
 	defer span.End()
-	
-	stateId := r.PathValue("state_id");
+
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return

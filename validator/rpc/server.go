@@ -150,7 +150,7 @@ func (s *Server) InitializeRoutesWithWebHandler() error {
 	if err := s.InitializeRoutes(); err != nil {
 		return err
 	}
-	s.router.HandleFunc("/",func(w http.ResponseWriter, r *http.Request) {
+	s.router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api") {
 			r.URL.Path = strings.Replace(r.URL.Path, "/api", "", 1) // used to redirect apis to standard rest APIs
 			s.router.ServeHTTP(w, r)

@@ -55,7 +55,7 @@ func TestGetStateRoot(t *testing.T) {
 	}
 
 	request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/root", nil)
-	request.SetPathValue("state_id","head")
+	request.SetPathValue("state_id", "head")
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
@@ -79,7 +79,7 @@ func TestGetStateRoot(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/root", nil)
-		request.SetPathValue("state_id","head")
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -110,7 +110,7 @@ func TestGetStateRoot(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/root", nil)
-		request.SetPathValue("state_id","head")
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -157,7 +157,7 @@ func TestGetRandao(t *testing.T) {
 
 	t.Run("no epoch requested", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/randao", nil)
-		request.SetPathValue("state_id","head")
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -169,7 +169,7 @@ func TestGetRandao(t *testing.T) {
 	})
 	t.Run("current epoch requested", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com//eth/v1/beacon/states/{state_id}/randao?epoch=%d", epochCurrent), nil)
-		request.SetPathValue("state_id","head")
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -181,7 +181,7 @@ func TestGetRandao(t *testing.T) {
 	})
 	t.Run("old epoch requested", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com//eth/v1/beacon/states/{state_id}/randao?epoch=%d", epochOld), nil)
-		request.SetPathValue("state_id","head")
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -197,7 +197,7 @@ func TestGetRandao(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/randao", nil)
-		request.SetPathValue("state_id","head")
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -210,7 +210,7 @@ func TestGetRandao(t *testing.T) {
 	t.Run("epoch too old", func(t *testing.T) {
 		epochTooOld := primitives.Epoch(100000 - st.RandaoMixesLength())
 		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com//eth/v1/beacon/states/{state_id}/randao?epoch=%d", epochTooOld), nil)
-		request.SetPathValue("state_id","head")
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -224,7 +224,7 @@ func TestGetRandao(t *testing.T) {
 	t.Run("epoch in the future", func(t *testing.T) {
 		futureEpoch := primitives.Epoch(100000 + 1)
 		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com//eth/v1/beacon/states/{state_id}/randao?epoch=%d", futureEpoch), nil)
-		request.SetPathValue("state_id","head")
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -256,7 +256,7 @@ func TestGetRandao(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/randao", nil)
-		request.SetPathValue("state_id","head")
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -293,7 +293,7 @@ func TestGetRandao(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/randao", nil)
-		request.SetPathValue("state_id","head")
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -452,7 +452,7 @@ func TestGetSyncCommittees(t *testing.T) {
 	}
 
 	request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/sync_committees", nil)
-	request.SetPathValue("state_id",hexutil.Encode(stRoot[:]))
+	request.SetPathValue("state_id", hexutil.Encode(stRoot[:]))
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
@@ -502,7 +502,7 @@ func TestGetSyncCommittees(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/sync_committees", nil)
-		request.SetPathValue("state_id",hexutil.Encode(stRoot[:]))
+		request.SetPathValue("state_id", hexutil.Encode(stRoot[:]))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -546,7 +546,7 @@ func TestGetSyncCommittees(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/sync_committees", nil)
-		request.SetPathValue("state_id",hexutil.Encode(stRoot[:]))
+		request.SetPathValue("state_id", hexutil.Encode(stRoot[:]))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -612,7 +612,7 @@ func TestGetSyncCommittees_Future(t *testing.T) {
 
 	epoch := 2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com//eth/v1/beacon/states/{state_id}/sync_committees?epoch=%d", epoch), nil)
-	request.SetPathValue("state_id","head")
+	request.SetPathValue("state_id", "head")
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 	s.GetSyncCommittees(writer, request)
@@ -624,7 +624,7 @@ func TestGetSyncCommittees_Future(t *testing.T) {
 
 	epoch = 2*params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1
 	request = httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com//eth/v1/beacon/states/{state_id}/sync_committees?epoch=%d", epoch), nil)
-	request.SetPathValue("state_id","head")
+	request.SetPathValue("state_id", "head")
 	writer = httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 	s.GetSyncCommittees(writer, request)

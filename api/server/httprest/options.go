@@ -8,8 +8,6 @@ import (
 
 type Option func(g *Server) error
 
-
-
 func WithMuxHandler(m httpHandler) Option {
 	return func(g *Server) error {
 		g.cfg.handler = m

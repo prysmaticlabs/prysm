@@ -5,8 +5,9 @@ package rpc
 import (
 	"context"
 	"net"
-	"sync"
 	"net/http"
+	"sync"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
