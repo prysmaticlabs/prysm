@@ -315,3 +315,7 @@ message ConsolidationRequest {
 	// Funds will be moved to this public key.
 	bytes target_pubkey = 3 [(ethereum.eth.ext.ssz_size) = "48"];
 }
+
+message InclusionList {
+	repeated bytes transactions = 1 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
+}

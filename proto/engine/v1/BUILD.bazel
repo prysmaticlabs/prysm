@@ -50,6 +50,7 @@ ssz_gen_marshal(
         "WithdrawalRequest",
         "DepositRequest",
         "ConsolidationRequest",
+        "InclusionList"
     ],
 )
 

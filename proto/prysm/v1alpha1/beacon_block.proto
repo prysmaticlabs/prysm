@@ -823,6 +823,8 @@ message BeaconBlockBodyElectra {
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
     repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
+
+    ethereum.engine.v1.InclusionList inclusion_list = 13 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
 }
 
 message SignedBlindedBeaconBlockElectra {

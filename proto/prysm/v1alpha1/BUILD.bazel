@@ -151,8 +151,7 @@ ssz_electra_objs = [
     "SignedAggregateAttestationAndProofElectra",
     "SignedBeaconBlockElectra",
     "SignedBlindedBeaconBlockElectra",
-    "SignedConsolidation",
-    "InclusionList"
+    "SignedConsolidation"
 ]
 
 ssz_gen_marshal(
