@@ -208,8 +208,14 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			} else {
+			} else if state.Version() > version.Electra {
 				err = altair.ProcessEpoch(ctx, state)
+				if err != nil {
+					tracing.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch")
+				}
+			} else {
+				err = electra.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch")
