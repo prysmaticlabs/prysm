@@ -81,37 +81,57 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	return nil
 }
 
-func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata.Metadata, error) {
+// sendMetaDataRequest sends a METADATA request to the peer and return the response.
+func (s *Service) sendMetaDataRequest(ctx context.Context, peerID peer.ID) (metadata.Metadata, error) {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, slots.ToEpoch(s.cfg.clock.CurrentSlot()))
+	// Compute the current epoch.
+	currentSlot := s.cfg.clock.CurrentSlot()
+	currentEpoch := slots.ToEpoch(currentSlot)
+
+	// Compute the topic for the metadata request regarding the current epoch.
+	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, currentEpoch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "topic from message")
 	}
-	stream, err := s.cfg.p2p.Send(ctx, new(interface{}), topic, id)
+
+	// Send the METADATA request to the peer.
+	message := new(interface{})
+	stream, err := s.cfg.p2p.Send(ctx, message, topic, peerID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "send metadata request")
 	}
+
 	defer closeStream(stream, log)
+
+	// Read the METADATA response from the peer.
 	code, errMsg, err := ReadStatusCode(stream, s.cfg.p2p.Encoding())
 	if err != nil {
-		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
-		return nil, err
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(peerID)
+		return nil, errors.Wrap(err, "read status code")
 	}
+
 	if code != 0 {
-		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(peerID)
 		return nil, errors.New(errMsg)
 	}
+
+	// Get the genesis validators root.
 	valRoot := s.cfg.clock.GenesisValidatorsRoot()
-	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.clock.CurrentSlot()), valRoot[:])
+
+	// Get the fork digest from the current epoch and the genesis validators root.
+	rpcCtx, err := forks.ForkDigestFromEpoch(currentEpoch, valRoot[:])
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "fork digest from epoch")
 	}
+
+	// Instantiate zero value of the metadata.
 	msg, err := extractDataTypeFromTypeMap(types.MetaDataMap, rpcCtx[:], s.cfg.clock)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "extract data type from type map")
 	}
+
 	// Defensive check to ensure valid objects are being sent.
 	topicVersion := ""
 	switch msg.Version() {
@@ -120,12 +140,17 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	case version.Altair:
 		topicVersion = p2p.SchemaVersionV2
 	}
+
+	// Validate the version of the topic.
 	if err := validateVersion(topicVersion, stream); err != nil {
 		return nil, err
 	}
+
+	// Decode the metadata from the peer.
 	if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, err
 	}
+
 	return msg, nil
 }
