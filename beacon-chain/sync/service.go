@@ -304,10 +304,6 @@ func (s *Service) initCaches() {
 }
 
 func (s *Service) waitForChainStart() {
-	if s.chainIsStarted() {
-		return
-	}
-
 	clock, err := s.clockWaiter.WaitForClock(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("sync service failed to receive genesis data")
