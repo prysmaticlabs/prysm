@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	// "github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -147,35 +147,18 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 //	        next_index = state.next_withdrawal_validator_index + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
 //	        next_validator_index = ValidatorIndex(next_index % len(state.validators))
 //	        state.next_withdrawal_validator_index = next_validator_index
-func ProcessWithdrawals(st state.BeaconState, executionData interfaces.ExecutionData) (state.BeaconState, error) {
+func ProcessWithdrawals(st state.BeaconState) (state.BeaconState, error) {
+	if !st.IsParentBlockFull(){
+		return st, nil
+	}
+
 	expectedWithdrawals, partialWithdrawalsCount, err := st.ExpectedWithdrawals()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals")
 	}
 
 	var wdRoot [32]byte
-	if executionData.IsBlinded() {
-		r, err := executionData.WithdrawalsRoot()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
-		wdRoot = bytesutil.ToBytes32(r)
-	} else {
-		wds, err := executionData.Withdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals")
-		}
-
-		if len(wds) != len(expectedWithdrawals) {
-			return nil, fmt.Errorf("execution payload header has %d withdrawals when %d were expected", len(wds), len(expectedWithdrawals))
-		}
-
-		wdRoot, err = ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
-	}
-
+	wdRoot = [32]byte(st.LastWithdrawalsRoot())
 	expectedRoot, err := ssz.WithdrawalSliceRoot(expectedWithdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals root")
@@ -196,26 +179,32 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 			return nil, fmt.Errorf("unable to dequeue partial withdrawals from state: %w", err)
 		}
 	}
+	
+	if st.Version() >= version.EPBS {
+		if err := st.DequeuePartialWithdrawals(partialWithdrawalsCount); err != nil {
+			return nil, fmt.Errorf("unable to dequeue partial withdrawals from state: %w", err)
+		}
+	}
 
 	if len(expectedWithdrawals) > 0 {
 		if err := st.SetNextWithdrawalIndex(expectedWithdrawals[len(expectedWithdrawals)-1].Index + 1); err != nil {
 			return nil, errors.Wrap(err, "could not set next withdrawal index")
 		}
 	}
+
 	var nextValidatorIndex primitives.ValidatorIndex
-	if uint64(len(expectedWithdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
+	if uint64(len(expectedWithdrawals)) == params.BeaconConfig().MaxWithdrawalsPerPayload {
+		nextValidatorIndex = primitives.ValidatorIndex((int(expectedWithdrawals[0].GetValidatorIndex()) + 1) % st.NumValidators())
+		st.SetNextWithdrawalValidatorIndex(nextValidatorIndex)
+	} else {
 		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 		}
 		nextValidatorIndex += primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
 		nextValidatorIndex = nextValidatorIndex % primitives.ValidatorIndex(st.NumValidators())
-	} else {
-		nextValidatorIndex = expectedWithdrawals[len(expectedWithdrawals)-1].ValidatorIndex + 1
-		if nextValidatorIndex == primitives.ValidatorIndex(st.NumValidators()) {
-			nextValidatorIndex = 0
-		}
-	}
+	} 
+
 	if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
 		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
 	}

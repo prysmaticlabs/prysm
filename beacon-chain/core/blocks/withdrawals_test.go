@@ -9,10 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls/common"
@@ -642,11 +640,7 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			}
 			st, err := prepareValidators(spb, test.Args)
 			require.NoError(t, err)
-			wdRoot, err := ssz.WithdrawalSliceRoot(test.Args.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
-			require.NoError(t, err)
-			p, err := consensusblocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{WithdrawalsRoot: wdRoot[:]})
-			require.NoError(t, err)
-			post, err := blocks.ProcessWithdrawals(st, p)
+			post, err := blocks.ProcessWithdrawals(st)
 			if test.Control.ExpectedError {
 				require.NotNil(t, err)
 			} else {
@@ -1096,7 +1090,6 @@ func TestProcessWithdrawals(t *testing.T) {
 					slot, err := slots.EpochStart(currentEpoch)
 					require.NoError(t, err)
 					var st state.BeaconState
-					var p interfaces.ExecutionData
 					switch fork {
 					case version.Capella:
 						spb := &ethpb.BeaconStateCapella{
@@ -1105,8 +1098,6 @@ func TestProcessWithdrawals(t *testing.T) {
 							NextWithdrawalIndex:          test.Args.NextWithdrawalIndex,
 						}
 						st, err = state_native.InitializeFromProtoUnsafeCapella(spb)
-						require.NoError(t, err)
-						p, err = consensusblocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{Withdrawals: test.Args.Withdrawals})
 						require.NoError(t, err)
 					case version.Electra:
 						spb := &ethpb.BeaconStateElectra{
@@ -1117,14 +1108,21 @@ func TestProcessWithdrawals(t *testing.T) {
 						}
 						st, err = state_native.InitializeFromProtoUnsafeElectra(spb)
 						require.NoError(t, err)
-						p, err = consensusblocks.WrappedExecutionPayloadElectra(&enginev1.ExecutionPayloadElectra{Withdrawals: test.Args.Withdrawals})
+					case version.EPBS:
+						spb := &ethpb.BeaconStateEPBS{
+							Slot:                         slot,
+							NextWithdrawalValidatorIndex: test.Args.NextWithdrawalValidatorIndex,
+							NextWithdrawalIndex:          test.Args.NextWithdrawalIndex,
+							PendingPartialWithdrawals:    test.Args.PendingPartialWithdrawals,
+						}
+						st, err = state_native.InitializeFromProtoUnsafeEpbs(spb)
 						require.NoError(t, err)
 					default:
 						t.Fatalf("Add a beacon state setup for version %s", version.String(fork))
 					}
 					err = prepareValidators(st, test.Args)
 					require.NoError(t, err)
-					post, err := blocks.ProcessWithdrawals(st, p)
+					post, err := blocks.ProcessWithdrawals(st)
 					if test.Control.ExpectedError {
 						require.NotNil(t, err)
 					} else {

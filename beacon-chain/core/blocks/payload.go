@@ -203,7 +203,7 @@ func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) err
 func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (state.BeaconState, error) {
 	var err error
 	if st.Version() >= version.Capella {
-		st, err = ProcessWithdrawals(st, payload)
+		st, err = ProcessWithdrawals(st)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process withdrawals")
 		}
@@ -267,7 +267,7 @@ func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData
 func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData) (state.BeaconState, error) {
 	var err error
 	if st.Version() >= version.Capella {
-		st, err = ProcessWithdrawals(st, header)
+		st, err = ProcessWithdrawals(st)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process withdrawals")
 		}
