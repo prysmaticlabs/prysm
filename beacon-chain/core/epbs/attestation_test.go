@@ -86,3 +86,8 @@ func TestValidatorFlag_Remove_ExceedsLength(t *testing.T) {
 	_, err := epbs.RemoveValidatorFlag(0, 8)
 	require.ErrorContains(t, "flag position 8 exceeds length", err)
 }
+
+func TestValidatorFlag_Remove_NotSet(t *testing.T) {
+	_, err := epbs.RemoveValidatorFlag(0, 1)
+	require.NoError(t, err)
+}
