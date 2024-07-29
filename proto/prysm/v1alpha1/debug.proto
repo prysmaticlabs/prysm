@@ -98,20 +98,20 @@ message DebugPeerResponses {
 message DebugPeerResponse {
     // Peer related metadata that is useful for debugging.
     message PeerInfo {
-        // Metadata of the peer, containing their bitfield
-        // and sequence number.
+        // Metadata of the peer.
         MetaDataV0 metadataV0 = 1;
         MetaDataV1 metadataV1 = 2;
+        MetaDataV2 metadataV2 = 3;
         // List of protocols the peer supports.
-        repeated string protocols = 3;
+        repeated string protocols = 4;
         // Number of times peer has been penalised.
-        uint64 fault_count = 4;
+        uint64 fault_count = 5;
         // Protocol Version peer is running.
-        string protocol_version = 5;
+        string protocol_version = 6;
         // Agent Version peer is running.
-        string agent_version = 6;
+        string agent_version = 7;
         // Latency of responses from peer(in ms).
-        uint64 peer_latency = 7;
+        uint64 peer_latency = 8;
     }
     // Listening addresses know of the peer.
     repeated string listening_addresses = 1;
