@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -178,7 +177,6 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 	if state == nil || state.IsNil() {
 		return nil, errUnknownState
 	}
-
 	if state.Slot() > slot {
 		err := fmt.Errorf("expected state.slot %d <= slot %d", state.Slot(), slot)
 		return nil, err
@@ -188,29 +186,7 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 		return state, nil
 	}
 
-	var err error
-	for state.Slot() < slot {
-		state, err = transition.ProcessSlot(ctx, state)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process slot")
-		}
-		if err = transition.ProcessEpoch(ctx, state); err != nil {
-			tracing.AnnotateError(span, err)
-			return nil, err
-		}
-		if err := state.SetSlot(state.Slot() + 1); err != nil {
-			tracing.AnnotateError(span, err)
-			return nil, errors.Wrap(err, "failed to increment state slot")
-		}
-
-		state, err = transition.UpgradeState(ctx, state)
-		if err != nil {
-			tracing.AnnotateError(span, err)
-			return nil, errors.Wrap(err, "failed to upgrade state")
-		}
-	}
-
-	return state, nil
+	return transition.ProcessSlotsCore(ctx, span, state, slot, nil)
 }
 
 // Given the start slot and the end slot, this returns the finalized beacon blocks in between.
