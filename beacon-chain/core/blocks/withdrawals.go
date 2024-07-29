@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+
 	// "github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -157,8 +158,7 @@ func ProcessWithdrawals(st state.BeaconState) (state.BeaconState, error) {
 		return nil, errors.Wrap(err, "could not get expected withdrawals")
 	}
 
-	var wdRoot [32]byte
-	wdRoot = [32]byte(st.LastWithdrawalsRoot())
+	var wdRoot = [32]byte(st.LastWithdrawalsRoot())
 	expectedRoot, err := ssz.WithdrawalSliceRoot(expectedWithdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals root")
@@ -195,7 +195,9 @@ func ProcessWithdrawals(st state.BeaconState) (state.BeaconState, error) {
 	var nextValidatorIndex primitives.ValidatorIndex
 	if uint64(len(expectedWithdrawals)) == params.BeaconConfig().MaxWithdrawalsPerPayload {
 		nextValidatorIndex = primitives.ValidatorIndex((int(expectedWithdrawals[0].GetValidatorIndex()) + 1) % st.NumValidators())
-		st.SetNextWithdrawalValidatorIndex(nextValidatorIndex)
+		err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex);if err != nil {
+			return nil, errors.Wrap(err, "could not set next withdrawal validator index")
+		}
 	} else {
 		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
 		if err != nil {
