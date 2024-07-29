@@ -16,6 +16,9 @@ const (
 
 	// SchemaVersionV2 specifies the next schema version for our rpc protocol ID.
 	SchemaVersionV2 = "/2"
+
+	// SchemaVersionV3 specifies the next schema version for our rpc protocol ID.
+	SchemaVersionV3 = "/3"
 )
 
 // Specifies the protocol prefix for all our Req/Resp topics.
