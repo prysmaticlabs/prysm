@@ -162,6 +162,21 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) GetFeeRecipientByPubKey(arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFeeRecipientByPubKey", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetFeeRecipientByPubKey), arg0, arg1)
 }
 
+// GetInclusionList mocks base method.
+func (m *MockBeaconNodeValidatorServer) GetInclusionList(arg0 context.Context, arg1 *eth.InclusionListRequest) (*eth.InclusionList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInclusionList", arg0, arg1)
+	ret0, _ := ret[0].(*eth.InclusionList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInclusionList indicates an expected call of GetInclusionList.
+func (mr *MockBeaconNodeValidatorServerMockRecorder) GetInclusionList(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInclusionList", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetInclusionList), arg0, arg1)
+}
+
 // GetSyncCommitteeContribution mocks base method.
 func (m *MockBeaconNodeValidatorServer) GetSyncCommitteeContribution(arg0 context.Context, arg1 *eth.SyncCommitteeContributionRequest) (*eth.SyncCommitteeContribution, error) {
 	m.ctrl.T.Helper()
