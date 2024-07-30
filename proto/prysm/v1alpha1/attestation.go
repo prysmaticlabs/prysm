@@ -16,6 +16,7 @@ type Att interface {
 	ssz.Unmarshaler
 	ssz.HashRoot
 	Version() int
+	IsNil() bool
 	Clone() Att
 	GetAggregationBits() bitfield.Bitlist
 	GetData() *AttestationData
@@ -100,6 +101,15 @@ func (a *Attestation) Version() int {
 	return version.Phase0
 }
 
+// IsNil --
+func (a *Attestation) IsNil() bool {
+	return a == nil ||
+		a.Data == nil ||
+		a.Data.Source == nil ||
+		a.Data.Target == nil ||
+		a.AggregationBits == nil
+}
+
 // Clone --
 func (a *Attestation) Clone() Att {
 	return a.Copy()
@@ -132,6 +142,15 @@ func (a *Attestation) SetSignature(sig []byte) {
 // Version --
 func (a *PendingAttestation) Version() int {
 	return version.Phase0
+}
+
+// IsNil --
+func (a *PendingAttestation) IsNil() bool {
+	return a == nil ||
+		a.Data == nil ||
+		a.Data.Source == nil ||
+		a.Data.Target == nil ||
+		a.AggregationBits == nil
 }
 
 // Clone --
@@ -168,6 +187,16 @@ func (a *PendingAttestation) SetSignature(_ []byte) {}
 // Version --
 func (a *AttestationElectra) Version() int {
 	return version.Electra
+}
+
+// IsNil --
+func (a *AttestationElectra) IsNil() bool {
+	return a == nil ||
+		a.Data == nil ||
+		a.Data.Source == nil ||
+		a.Data.Target == nil ||
+		a.AggregationBits == nil ||
+		a.CommitteeBits == nil
 }
 
 // Clone --

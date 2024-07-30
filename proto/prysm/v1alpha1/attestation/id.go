@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -26,8 +25,8 @@ type Id [33]byte
 
 // NewId --
 func NewId(att ethpb.Att, source IdSource) (Id, error) {
-	if err := helpers.ValidateNilAttestation(att); err != nil {
-		return Id{}, err
+	if att.IsNil() {
+		return Id{}, errors.New("nil attestation")
 	}
 	if att.Version() < 0 || att.Version() > 255 {
 		return Id{}, errors.New("attestation version must be between 0 and 255")
