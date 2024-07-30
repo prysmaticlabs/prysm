@@ -21,6 +21,7 @@ type Att interface {
 	GetData() *AttestationData
 	CommitteeBitsVal() bitfield.Bitfield
 	GetSignature() []byte
+	SetSignature(sig []byte)
 }
 
 // IndexedAtt defines common functionality for all indexed attestation types.
@@ -123,6 +124,11 @@ func (a *Attestation) CommitteeBitsVal() bitfield.Bitfield {
 	return cb
 }
 
+// SetSignature --
+func (a *Attestation) SetSignature(sig []byte) {
+	a.Signature = sig
+}
+
 // Version --
 func (a *PendingAttestation) Version() int {
 	return version.Phase0
@@ -156,6 +162,9 @@ func (a *PendingAttestation) GetSignature() []byte {
 	return nil
 }
 
+// SetSignature --
+func (a *PendingAttestation) SetSignature(_ []byte) {}
+
 // Version --
 func (a *AttestationElectra) Version() int {
 	return version.Electra
@@ -182,6 +191,11 @@ func (att *AttestationElectra) Copy() *AttestationElectra {
 // CommitteeBitsVal --
 func (a *AttestationElectra) CommitteeBitsVal() bitfield.Bitfield {
 	return a.CommitteeBits
+}
+
+// SetSignature --
+func (a *AttestationElectra) SetSignature(sig []byte) {
+	a.Signature = sig
 }
 
 // Version --

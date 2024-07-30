@@ -114,6 +114,7 @@ type Config struct {
 	GenesisFetcher                blockchain.GenesisFetcher
 	MockEth1Votes                 bool
 	EnableDebugRPCEndpoints       bool
+	AttestationCache              *cache.AttestationCache
 	AttestationsPool              attestations.Pool
 	ExitPool                      voluntaryexits.PoolManager
 	SlashingsPool                 slashings.PoolManager

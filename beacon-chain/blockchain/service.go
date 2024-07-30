@@ -77,6 +77,7 @@ type config struct {
 	DepositCache            cache.DepositCache
 	PayloadIDCache          *cache.PayloadIDCache
 	TrackedValidatorsCache  *cache.TrackedValidatorsCache
+	AttCache                *cache.AttestationCache
 	AttPool                 attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingPool            slashings.PoolManager

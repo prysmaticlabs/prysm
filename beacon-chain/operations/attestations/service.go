@@ -9,6 +9,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 )
@@ -27,12 +28,13 @@ type Service struct {
 
 // Config options for the service.
 type Config struct {
+	Cache               *cache.AttestationCache
 	Pool                Pool
 	pruneInterval       time.Duration
 	InitialSyncComplete chan struct{}
 }
 
-// NewService instantiates a new attestation pool service instance that will
+// NewService instantiates a new attestation service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	cache := lruwrpr.New(forkChoiceProcessedAttsSize)
