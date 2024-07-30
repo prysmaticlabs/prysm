@@ -147,66 +147,67 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 //	        next_validator_index = ValidatorIndex(next_index % len(state.validators))
 //	        state.next_withdrawal_validator_index = next_validator_index
 func ProcessWithdrawals(st state.BeaconState) (state.BeaconState, error) {
-	if !st.IsParentBlockFull(){
-		return st, nil
+	if !st.IsParentBlockFull() {
+			return st, nil
 	}
 
 	expectedWithdrawals, partialWithdrawalsCount, err := st.ExpectedWithdrawals()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get expected withdrawals")
+			return nil, errors.Wrap(err, "could not get expected withdrawals")
 	}
 
 	var wdRoot = [32]byte(st.LastWithdrawalsRoot())
 	expectedRoot, err := ssz.WithdrawalSliceRoot(expectedWithdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get expected withdrawals root")
+			return nil, errors.Wrap(err, "could not get expected withdrawals root")
 	}
 	if expectedRoot != wdRoot {
-		return nil, fmt.Errorf("expected withdrawals root %#x, got %#x", expectedRoot, wdRoot)
+			return nil, fmt.Errorf("expected withdrawals root %#x, got %#x", expectedRoot, wdRoot)
 	}
 
 	for _, withdrawal := range expectedWithdrawals {
-		err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not decrease balance")
-		}
+			err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
+			if err != nil {
+					return nil, errors.Wrap(err, "could not decrease balance")
+			}
 	}
 
 	if st.Version() >= version.Electra {
-		if err := st.DequeuePartialWithdrawals(partialWithdrawalsCount); err != nil {
-			return nil, fmt.Errorf("unable to dequeue partial withdrawals from state: %w", err)
-		}
+			if err := st.DequeuePartialWithdrawals(partialWithdrawalsCount); err != nil {
+					return nil, fmt.Errorf("unable to dequeue partial withdrawals from state: %w", err)
+			}
 	}
-	
+
 	if st.Version() >= version.EPBS {
-		if err := st.DequeuePartialWithdrawals(partialWithdrawalsCount); err != nil {
-			return nil, fmt.Errorf("unable to dequeue partial withdrawals from state: %w", err)
-		}
+			if err := st.DequeuePartialWithdrawals(partialWithdrawalsCount); err != nil {
+					return nil, fmt.Errorf("unable to dequeue partial withdrawals from state: %w", err)
+			}
 	}
 
 	if len(expectedWithdrawals) > 0 {
-		if err := st.SetNextWithdrawalIndex(expectedWithdrawals[len(expectedWithdrawals)-1].Index + 1); err != nil {
-			return nil, errors.Wrap(err, "could not set next withdrawal index")
-		}
+			if err := st.SetNextWithdrawalIndex(expectedWithdrawals[len(expectedWithdrawals)-1].Index + 1); err != nil {
+					return nil, errors.Wrap(err, "could not set next withdrawal index")
+			}
 	}
 
 	var nextValidatorIndex primitives.ValidatorIndex
 	if uint64(len(expectedWithdrawals)) == params.BeaconConfig().MaxWithdrawalsPerPayload {
-		nextValidatorIndex = primitives.ValidatorIndex((int(expectedWithdrawals[0].GetValidatorIndex()) + 1) % st.NumValidators())
-		err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex);if err != nil {
-			return nil, errors.Wrap(err, "could not set next withdrawal validator index")
-		}
+			nextValidatorIndex = primitives.ValidatorIndex((int(expectedWithdrawals[0].GetValidatorIndex()) + 1) % st.NumValidators())      
+			err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex)
+			if err != nil {
+					return nil, errors.Wrap(err, "could not set next withdrawal validator index")
+			}
 	} else {
-		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
-		}
-		nextValidatorIndex += primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
-		nextValidatorIndex = nextValidatorIndex % primitives.ValidatorIndex(st.NumValidators())
-	} 
+			nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
+			if err != nil {
+					return nil, errors.Wrap(err, "could not get next withdrawal validator index")
+			}
+			nextValidatorIndex += primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
+			nextValidatorIndex = nextValidatorIndex % primitives.ValidatorIndex(st.NumValidators())
+	}
 
 	if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
-		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
+			return nil, errors.Wrap(err, "could not set next withdrawal validator index")
 	}
 	return st, nil
 }
