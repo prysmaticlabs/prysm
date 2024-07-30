@@ -354,6 +354,8 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			return nil, err
 		}
 	}
+
+	log.Debugf("upgraded state to %s", version.String(state.Version()))
 	return state, nil
 }
 
