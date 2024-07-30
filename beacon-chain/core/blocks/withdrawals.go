@@ -148,6 +148,11 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 //	        next_validator_index = ValidatorIndex(next_index % len(state.validators))
 //	        state.next_withdrawal_validator_index = next_validator_index
 func ProcessWithdrawals(st state.BeaconState, executionData interfaces.ExecutionData) (state.BeaconState, error) {
+	IsParentBlockFull, err := st.IsParentBlockFull()
+	if err != nil || !IsParentBlockFull {
+		return nil, errors.Wrap(err, "parent block is not full")
+	}
+
 	expectedWithdrawals, partialWithdrawalsCount, err := st.ExpectedWithdrawals()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals")
@@ -160,6 +165,12 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 			return nil, errors.Wrap(err, "could not get withdrawals root")
 		}
 		wdRoot = bytesutil.ToBytes32(r)
+	} else if executionData == nil {
+		r, err := st.LastWithdrawalsRoot()
+		wdRoot = bytesutil.ToBytes32(r)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get withdrawals root")
+		}
 	} else {
 		wds, err := executionData.Withdrawals()
 		if err != nil {
@@ -203,23 +214,26 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 		}
 	}
 	var nextValidatorIndex primitives.ValidatorIndex
-	if uint64(len(expectedWithdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
+	if uint64(len(expectedWithdrawals)) == params.BeaconConfig().MaxWithdrawalsPerPayload {
+		nextValidatorIndex = primitives.ValidatorIndex((int(expectedWithdrawals[0].GetValidatorIndex()) + 1) % st.NumValidators())
+		err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not set next withdrawal validator index")
+		}
+	} else {
 		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 		}
 		nextValidatorIndex += primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
 		nextValidatorIndex = nextValidatorIndex % primitives.ValidatorIndex(st.NumValidators())
-	} else {
-		nextValidatorIndex = expectedWithdrawals[len(expectedWithdrawals)-1].ValidatorIndex + 1
-		if nextValidatorIndex == primitives.ValidatorIndex(st.NumValidators()) {
-			nextValidatorIndex = 0
-		}
 	}
+
 	if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
 		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
 	}
 	return st, nil
+
 }
 
 // BLSChangesSignatureBatch extracts the relevant signatures from the provided execution change

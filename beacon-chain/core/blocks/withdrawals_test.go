@@ -1080,7 +1080,7 @@ func TestProcessWithdrawals(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Args.Name, func(t *testing.T) {
-			for _, fork := range []int{version.Capella, version.Electra} {
+			for _, fork := range []int{version.Capella, version.Electra, version.EPBS} {
 				t.Run(version.String(fork), func(t *testing.T) {
 					saved := params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep
 					params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = maxSweep
@@ -1119,6 +1119,16 @@ func TestProcessWithdrawals(t *testing.T) {
 						require.NoError(t, err)
 						p, err = consensusblocks.WrappedExecutionPayloadElectra(&enginev1.ExecutionPayloadElectra{Withdrawals: test.Args.Withdrawals})
 						require.NoError(t, err)
+					case version.EPBS:
+						spb := &ethpb.BeaconStateEPBS{
+							Slot:                         slot,
+							NextWithdrawalValidatorIndex: test.Args.NextWithdrawalValidatorIndex,
+							NextWithdrawalIndex:          test.Args.NextWithdrawalIndex,
+							PendingPartialWithdrawals:    test.Args.PendingPartialWithdrawals,
+						}
+						st, err = state_native.InitializeFromProtoUnsafeEpbs(spb)
+						require.NoError(t, err)
+						p = nil
 					default:
 						t.Fatalf("Add a beacon state setup for version %s", version.String(fork))
 					}
