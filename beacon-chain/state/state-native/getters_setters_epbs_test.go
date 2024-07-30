@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util/random"
 )
 
-func Test_LatestExecutionPayloadHeader(t *testing.T) {
+func Test_LatestExecutionPayloadHeaderEPBS(t *testing.T) {
 	s := &BeaconState{version: version.EPBS}
 	_, err := s.LatestExecutionPayloadHeader()
 	require.ErrorContains(t, "unsupported version (epbs) for latest execution payload header", err)
@@ -23,13 +23,13 @@ func Test_SetLatestExecutionPayloadHeader(t *testing.T) {
 	require.ErrorContains(t, "SetLatestExecutionPayloadHeader is not supported for epbs", s.SetLatestExecutionPayloadHeader(nil))
 }
 
-func Test_SetExecutionPayloadHeader(t *testing.T) {
+func Test_SetLatestExecutionPayloadHeaderEPBS(t *testing.T) {
 	s := &BeaconState{version: version.EPBS, dirtyFields: make(map[types.FieldIndex]bool)}
 	header := random.ExecutionPayloadHeader(t)
-	require.NoError(t, s.SetExecutionPayloadHeader(header))
+	require.NoError(t, s.SetLatestExecutionPayloadHeaderEPBS(header))
 	require.Equal(t, true, s.dirtyFields[types.ExecutionPayloadHeader])
 
-	got, err := s.ExecutionPayloadHeader()
+	got, err := s.LatestExecutionPayloadHeaderEPBS()
 	require.NoError(t, err)
 	require.DeepEqual(t, got, header)
 }
@@ -80,9 +80,11 @@ func Test_UnsupportedStateVersionEpbs(t *testing.T) {
 	require.ErrorContains(t, "LatestFullSlot is not supported for electra", err)
 	_, err = s.LastWithdrawalsRoot()
 	require.ErrorContains(t, "LastWithdrawalsRoot is not supported for electra", err)
+	_, err = s.LatestExecutionPayloadHeaderEPBS()
+	require.ErrorContains(t, "LatestExecutionPayloadHeaderEPBS is not supported for electra", err)
 
 	require.ErrorContains(t, "LastWithdrawalsRoot is not supported for electra", s.SetLastWithdrawalsRoot(nil))
 	require.ErrorContains(t, "SetLatestBlockHash is not supported for electra", s.SetLatestBlockHash(nil))
 	require.ErrorContains(t, "SetLatestFullSlot is not supported for electra", s.SetLatestFullSlot(0))
-	require.ErrorContains(t, "SetExecutionPayloadHeader is not supported for electra", s.SetExecutionPayloadHeader(nil))
+	require.ErrorContains(t, "SetLatestExecutionPayloadHeaderEPBS is not supported for electra", s.SetLatestExecutionPayloadHeaderEPBS(nil))
 }

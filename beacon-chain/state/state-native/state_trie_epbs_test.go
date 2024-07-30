@@ -27,7 +27,7 @@ func Test_InitializeFromProtoEpbs(t *testing.T) {
 	gotLatestFullSlot, err := s.LatestFullSlot()
 	require.NoError(t, err)
 	require.Equal(t, latestFullSlot, gotLatestFullSlot)
-	gotHeader, err := s.ExecutionPayloadHeader()
+	gotHeader, err := s.LatestExecutionPayloadHeaderEPBS()
 	require.NoError(t, err)
 	require.DeepEqual(t, header, gotHeader)
 	gotLastWithdrawalsRoot, err := s.LastWithdrawalsRoot()
@@ -42,22 +42,22 @@ func Test_CopyEpbs(t *testing.T) {
 
 	// Test shallow copy.
 	sNoCopy := s
-	require.DeepEqual(t, s.executionPayloadHeader, sNoCopy.executionPayloadHeader)
+	require.DeepEqual(t, s.latestExecutionPayloadHeaderEPBS, sNoCopy.latestExecutionPayloadHeaderEPBS)
 
 	// Modify a field to check if it reflects in the shallow copy.
-	s.executionPayloadHeader.Slot = 100
-	require.Equal(t, s.executionPayloadHeader, sNoCopy.executionPayloadHeader)
+	s.latestExecutionPayloadHeaderEPBS.Slot = 100
+	require.Equal(t, s.latestExecutionPayloadHeaderEPBS, sNoCopy.latestExecutionPayloadHeaderEPBS)
 
 	// Copy the state
 	sCopy := s.Copy()
 	require.NoError(t, err)
-	header, err := sCopy.ExecutionPayloadHeader()
+	header, err := sCopy.LatestExecutionPayloadHeaderEPBS()
 	require.NoError(t, err)
-	require.DeepEqual(t, s.executionPayloadHeader, header)
+	require.DeepEqual(t, s.latestExecutionPayloadHeaderEPBS, header)
 
 	// Modify the original to check if the copied state is independent.
-	s.executionPayloadHeader.Slot = 200
-	require.DeepNotEqual(t, s.executionPayloadHeader, header)
+	s.latestExecutionPayloadHeaderEPBS.Slot = 200
+	require.DeepNotEqual(t, s.latestExecutionPayloadHeaderEPBS, header)
 }
 
 func Test_HashTreeRootEpbs(t *testing.T) {

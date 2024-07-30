@@ -7,14 +7,14 @@ import (
 
 type ReadOnlyEpbsFields interface {
 	IsParentBlockFull() (bool, error)
-	ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeaderEPBS, error)
+	LatestExecutionPayloadHeaderEPBS() (*enginev1.ExecutionPayloadHeaderEPBS, error)
 	LatestBlockHash() ([]byte, error)
 	LatestFullSlot() (primitives.Slot, error)
 	LastWithdrawalsRoot() ([]byte, error)
 }
 
 type WriteOnlyEpbsFields interface {
-	SetExecutionPayloadHeader(val *enginev1.ExecutionPayloadHeaderEPBS) error
+	SetLatestExecutionPayloadHeaderEPBS(val *enginev1.ExecutionPayloadHeaderEPBS) error
 	SetLatestBlockHash(val []byte) error
 	SetLatestFullSlot(val primitives.Slot) error
 	SetLastWithdrawalsRoot(val []byte) error

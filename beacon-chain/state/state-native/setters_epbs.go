@@ -8,16 +8,16 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
-// SetExecutionPayloadHeader sets the execution payload header for the beacon state.
-func (b *BeaconState) SetExecutionPayloadHeader(h *enginev1.ExecutionPayloadHeaderEPBS) error {
+// SetLatestExecutionPayloadHeaderEPBS sets the latest execution payload header for the epbs beacon state.
+func (b *BeaconState) SetLatestExecutionPayloadHeaderEPBS(h *enginev1.ExecutionPayloadHeaderEPBS) error {
 	if b.version < version.EPBS {
-		return errNotSupported("SetExecutionPayloadHeader", b.version)
+		return errNotSupported("SetLatestExecutionPayloadHeaderEPBS", b.version)
 	}
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.executionPayloadHeader = h
+	b.latestExecutionPayloadHeaderEPBS = h
 	b.markFieldAsDirty(types.ExecutionPayloadHeader)
 
 	return nil
