@@ -106,7 +106,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 func (s *Service) aggregateAndSaveForkChoiceAtts(atts []ethpb.Att) error {
 	clonedAtts := make([]ethpb.Att, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = a.Copy()
+		clonedAtts[i] = a.Clone()
 	}
 	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {

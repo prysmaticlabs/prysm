@@ -10,59 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 )
 
-func TestCopyETH1Data(t *testing.T) {
-	data := genEth1Data()
-
-	got := v1alpha1.CopyETH1Data(data)
-	if !reflect.DeepEqual(got, data) {
-		t.Errorf("CopyETH1Data() = %v, want %v", got, data)
-	}
-	assert.NotEmpty(t, got, "Copied eth1data has empty fields")
-}
-
-func TestCopyPendingAttestation(t *testing.T) {
-	pa := genPendingAttestation()
-
-	got := v1alpha1.CopyPendingAttestation(pa)
-	if !reflect.DeepEqual(got, pa) {
-		t.Errorf("CopyPendingAttestation() = %v, want %v", got, pa)
-	}
-	assert.NotEmpty(t, got, "Copied pending attestation has empty fields")
-}
-
-func TestCopyAttestation(t *testing.T) {
-	att := genAttestation()
-
-	got := v1alpha1.CopyAttestation(att)
-	if !reflect.DeepEqual(got, att) {
-		t.Errorf("CopyAttestation() = %v, want %v", got, att)
-	}
-	assert.NotEmpty(t, got, "Copied attestation has empty fields")
-}
-func TestCopyAttestationData(t *testing.T) {
-	att := genAttData()
-
-	got := v1alpha1.CopyAttestationData(att)
-	if !reflect.DeepEqual(got, att) {
-		t.Errorf("CopyAttestationData() = %v, want %v", got, att)
-	}
-	assert.NotEmpty(t, got, "Copied attestation data has empty fields")
-}
-
-func TestCopyCheckpoint(t *testing.T) {
-	cp := genCheckpoint()
-
-	got := v1alpha1.CopyCheckpoint(cp)
-	if !reflect.DeepEqual(got, cp) {
-		t.Errorf("CopyCheckpoint() = %v, want %v", got, cp)
-	}
-	assert.NotEmpty(t, got, "Copied checkpoint has empty fields")
-}
-
 func TestCopySignedBeaconBlock(t *testing.T) {
 	blk := genSignedBeaconBlock()
 
-	got := v1alpha1.CopySignedBeaconBlock(blk)
+	got := blk.Copy()
 	if !reflect.DeepEqual(got, blk) {
 		t.Errorf("CopySignedBeaconBlock() = %v, want %v", got, blk)
 	}
@@ -72,7 +23,7 @@ func TestCopySignedBeaconBlock(t *testing.T) {
 func TestCopyBeaconBlock(t *testing.T) {
 	blk := genBeaconBlock()
 
-	got := v1alpha1.CopyBeaconBlock(blk)
+	got := blk.Copy()
 	if !reflect.DeepEqual(got, blk) {
 		t.Errorf("CopyBeaconBlock() = %v, want %v", got, blk)
 	}
@@ -82,7 +33,7 @@ func TestCopyBeaconBlock(t *testing.T) {
 func TestCopyBeaconBlockBody(t *testing.T) {
 	body := genBeaconBlockBody()
 
-	got := v1alpha1.CopyBeaconBlockBody(body)
+	got := body.Copy()
 	if !reflect.DeepEqual(got, body) {
 		t.Errorf("CopyBeaconBlockBody() = %v, want %v", got, body)
 	}
@@ -92,7 +43,7 @@ func TestCopyBeaconBlockBody(t *testing.T) {
 func TestCopySignedBeaconBlockAltair(t *testing.T) {
 	sbb := genSignedBeaconBlockAltair()
 
-	got := v1alpha1.CopySignedBeaconBlockAltair(sbb)
+	got := sbb.Copy()
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("CopySignedBeaconBlockAltair() = %v, want %v", got, sbb)
 	}
@@ -102,7 +53,7 @@ func TestCopySignedBeaconBlockAltair(t *testing.T) {
 func TestCopyBeaconBlockAltair(t *testing.T) {
 	b := genBeaconBlockAltair()
 
-	got := v1alpha1.CopyBeaconBlockAltair(b)
+	got := b.Copy()
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("CopyBeaconBlockAltair() = %v, want %v", got, b)
 	}
@@ -112,131 +63,11 @@ func TestCopyBeaconBlockAltair(t *testing.T) {
 func TestCopyBeaconBlockBodyAltair(t *testing.T) {
 	bb := genBeaconBlockBodyAltair()
 
-	got := v1alpha1.CopyBeaconBlockBodyAltair(bb)
+	got := bb.Copy()
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("CopyBeaconBlockBodyAltair() = %v, want %v", got, bb)
 	}
 	assert.NotEmpty(t, bb, "Copied beacon block body altair has empty fields")
-}
-
-func TestCopyProposerSlashings(t *testing.T) {
-	ps := genProposerSlashings(10)
-
-	got := v1alpha1.CopyProposerSlashings(ps)
-	if !reflect.DeepEqual(got, ps) {
-		t.Errorf("CopyProposerSlashings() = %v, want %v", got, ps)
-	}
-	assert.NotEmpty(t, got, "Copied proposer slashings have empty fields")
-}
-
-func TestCopyProposerSlashing(t *testing.T) {
-	ps := genProposerSlashing()
-
-	got := v1alpha1.CopyProposerSlashing(ps)
-	if !reflect.DeepEqual(got, ps) {
-		t.Errorf("CopyProposerSlashing() = %v, want %v", got, ps)
-	}
-	assert.NotEmpty(t, got, "Copied proposer slashing has empty fields")
-}
-
-func TestCopySignedBeaconBlockHeader(t *testing.T) {
-	sbh := genSignedBeaconBlockHeader()
-
-	got := v1alpha1.CopySignedBeaconBlockHeader(sbh)
-	if !reflect.DeepEqual(got, sbh) {
-		t.Errorf("CopySignedBeaconBlockHeader() = %v, want %v", got, sbh)
-	}
-	assert.NotEmpty(t, got, "Copied signed beacon block header has empty fields")
-}
-
-func TestCopyBeaconBlockHeader(t *testing.T) {
-	bh := genBeaconBlockHeader()
-
-	got := v1alpha1.CopyBeaconBlockHeader(bh)
-	if !reflect.DeepEqual(got, bh) {
-		t.Errorf("CopyBeaconBlockHeader() = %v, want %v", got, bh)
-	}
-	assert.NotEmpty(t, got, "Copied beacon block header has empty fields")
-}
-
-func TestCopyAttesterSlashings(t *testing.T) {
-	as := genAttesterSlashings(10)
-
-	got := v1alpha1.CopyAttesterSlashings(as)
-	if !reflect.DeepEqual(got, as) {
-		t.Errorf("CopyAttesterSlashings() = %v, want %v", got, as)
-	}
-	assert.NotEmpty(t, got, "Copied attester slashings have empty fields")
-}
-
-func TestCopyIndexedAttestation(t *testing.T) {
-	ia := genIndexedAttestation()
-
-	got := v1alpha1.CopyIndexedAttestation(ia)
-	if !reflect.DeepEqual(got, ia) {
-		t.Errorf("CopyIndexedAttestation() = %v, want %v", got, ia)
-	}
-	assert.NotEmpty(t, got, "Copied indexed attestation has empty fields")
-}
-
-func TestCopyAttestations(t *testing.T) {
-	atts := genAttestations(10)
-
-	got := v1alpha1.CopyAttestations(atts)
-	if !reflect.DeepEqual(got, atts) {
-		t.Errorf("CopyAttestations() = %v, want %v", got, atts)
-	}
-	assert.NotEmpty(t, got, "Copied attestations have empty fields")
-}
-
-func TestCopyDeposits(t *testing.T) {
-	d := genDeposits(10)
-
-	got := v1alpha1.CopyDeposits(d)
-	if !reflect.DeepEqual(got, d) {
-		t.Errorf("CopyDeposits() = %v, want %v", got, d)
-	}
-	assert.NotEmpty(t, got, "Copied deposits have empty fields")
-}
-
-func TestCopyDeposit(t *testing.T) {
-	d := genDeposit()
-
-	got := v1alpha1.CopyDeposit(d)
-	if !reflect.DeepEqual(got, d) {
-		t.Errorf("CopyDeposit() = %v, want %v", got, d)
-	}
-	assert.NotEmpty(t, got, "Copied deposit has empty fields")
-}
-
-func TestCopyDepositData(t *testing.T) {
-	dd := genDepositData()
-
-	got := v1alpha1.CopyDepositData(dd)
-	if !reflect.DeepEqual(got, dd) {
-		t.Errorf("CopyDepositData() = %v, want %v", got, dd)
-	}
-	assert.NotEmpty(t, got, "Copied deposit data has empty fields")
-}
-
-func TestCopySignedVoluntaryExits(t *testing.T) {
-	sv := genSignedVoluntaryExits(10)
-
-	got := v1alpha1.CopySignedVoluntaryExits(sv)
-	if !reflect.DeepEqual(got, sv) {
-		t.Errorf("CopySignedVoluntaryExits() = %v, want %v", got, sv)
-	}
-	assert.NotEmpty(t, got, "Copied signed voluntary exits have empty fields")
-}
-
-func TestCopySignedVoluntaryExit(t *testing.T) {
-	sv := genSignedVoluntaryExit()
-
-	got := v1alpha1.CopySignedVoluntaryExit(sv)
-	if !reflect.DeepEqual(got, sv) {
-		t.Errorf("CopySignedVoluntaryExit() = %v, want %v", got, sv)
-	}
-	assert.NotEmpty(t, got, "Copied signed voluntary exit has empty fields")
 }
 
 func TestCopyValidator(t *testing.T) {
@@ -269,16 +100,6 @@ func TestCopySyncCommitteeContribution(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied sync committee contribution has empty fields")
 }
 
-func TestCopySyncAggregate(t *testing.T) {
-	sa := genSyncAggregate()
-
-	got := v1alpha1.CopySyncAggregate(sa)
-	if !reflect.DeepEqual(got, sa) {
-		t.Errorf("CopySyncAggregate() = %v, want %v", got, sa)
-	}
-	assert.NotEmpty(t, got, "Copied sync aggregate has empty fields")
-}
-
 func TestCopyPendingAttestationSlice(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -302,47 +123,17 @@ func TestCopyPendingAttestationSlice(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := v1alpha1.CopyPendingAttestationSlice(tt.input); !reflect.DeepEqual(got, tt.input) {
+			if got := tt.input; !reflect.DeepEqual(got, tt.input) {
 				t.Errorf("CopyPendingAttestationSlice() = %v, want %v", got, tt.input)
 			}
 		})
 	}
 }
 
-func TestCopyPayloadHeader(t *testing.T) {
-	p := genPayloadHeader()
-
-	got := v1alpha1.CopyExecutionPayloadHeader(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("CopyExecutionPayloadHeader() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
-func TestCopyPayloadHeaderCapella(t *testing.T) {
-	p := genPayloadHeaderCapella()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderCapella(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyPayloadHeaderCapella() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
-func TestCopyPayloadHeaderDeneb(t *testing.T) {
-	p := genPayloadHeaderDeneb()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderDeneb(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyPayloadHeaderDeneb() = %v, want %v", got, p)
-	}
-	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
-}
-
 func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 	sbb := genSignedBeaconBlockBellatrix()
 
-	got := v1alpha1.CopySignedBeaconBlockBellatrix(sbb)
+	got := sbb.Copy()
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("CopySignedBeaconBlockBellatrix() = %v, want %v", got, sbb)
 	}
@@ -352,7 +143,7 @@ func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 func TestCopyBeaconBlockBellatrix(t *testing.T) {
 	b := genBeaconBlockBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockBellatrix(b)
+	got := b.Copy()
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("CopyBeaconBlockBellatrix() = %v, want %v", got, b)
 	}
@@ -362,7 +153,7 @@ func TestCopyBeaconBlockBellatrix(t *testing.T) {
 func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
 	bb := genBeaconBlockBodyBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
+	got := bb.Copy()
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("CopyBeaconBlockBodyBellatrix() = %v, want %v", got, bb)
 	}
@@ -372,7 +163,7 @@ func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
 func TestCopySignedBlindedBeaconBlockBellatrix(t *testing.T) {
 	sbb := genSignedBeaconBlockBellatrix()
 
-	got := v1alpha1.CopySignedBeaconBlockBellatrix(sbb)
+	got := sbb.Copy()
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("CopySignedBeaconBlockBellatrix() = %v, want %v", got, sbb)
 	}
@@ -382,7 +173,7 @@ func TestCopySignedBlindedBeaconBlockBellatrix(t *testing.T) {
 func TestCopyBlindedBeaconBlockBellatrix(t *testing.T) {
 	b := genBeaconBlockBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockBellatrix(b)
+	got := b.Copy()
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("CopyBeaconBlockBellatrix() = %v, want %v", got, b)
 	}
@@ -392,7 +183,7 @@ func TestCopyBlindedBeaconBlockBellatrix(t *testing.T) {
 func TestCopyBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 	bb := genBeaconBlockBodyBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
+	got := bb.Copy()
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("CopyBeaconBlockBodyBellatrix() = %v, want %v", got, bb)
 	}
@@ -402,7 +193,7 @@ func TestCopyBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 func TestCopySignedBeaconBlockCapella(t *testing.T) {
 	sbb := genSignedBeaconBlockCapella()
 
-	got := v1alpha1.CopySignedBeaconBlockCapella(sbb)
+	got := sbb.Copy()
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("CopySignedBeaconBlockCapella() = %v, want %v", got, sbb)
 	}
@@ -412,7 +203,7 @@ func TestCopySignedBeaconBlockCapella(t *testing.T) {
 func TestCopyBeaconBlockCapella(t *testing.T) {
 	b := genBeaconBlockCapella()
 
-	got := v1alpha1.CopyBeaconBlockCapella(b)
+	got := b.Copy()
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("CopyBeaconBlockCapella() = %v, want %v", got, b)
 	}
@@ -422,7 +213,7 @@ func TestCopyBeaconBlockCapella(t *testing.T) {
 func TestCopyBeaconBlockBodyCapella(t *testing.T) {
 	bb := genBeaconBlockBodyCapella()
 
-	got := v1alpha1.CopyBeaconBlockBodyCapella(bb)
+	got := bb.Copy()
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("CopyBeaconBlockBodyCapella() = %v, want %v", got, bb)
 	}
@@ -432,7 +223,7 @@ func TestCopyBeaconBlockBodyCapella(t *testing.T) {
 func TestCopySignedBlindedBeaconBlockCapella(t *testing.T) {
 	sbb := genSignedBlindedBeaconBlockCapella()
 
-	got := v1alpha1.CopySignedBlindedBeaconBlockCapella(sbb)
+	got := sbb.Copy()
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("CopySignedBlindedBeaconBlockCapella() = %v, want %v", got, sbb)
 	}
@@ -442,7 +233,7 @@ func TestCopySignedBlindedBeaconBlockCapella(t *testing.T) {
 func TestCopyBlindedBeaconBlockCapella(t *testing.T) {
 	b := genBlindedBeaconBlockCapella()
 
-	got := v1alpha1.CopyBlindedBeaconBlockCapella(b)
+	got := b.Copy()
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("CopyBlindedBeaconBlockCapella() = %v, want %v", got, b)
 	}
@@ -452,7 +243,7 @@ func TestCopyBlindedBeaconBlockCapella(t *testing.T) {
 func TestCopyBlindedBeaconBlockBodyCapella(t *testing.T) {
 	bb := genBlindedBeaconBlockBodyCapella()
 
-	got := v1alpha1.CopyBlindedBeaconBlockBodyCapella(bb)
+	got := bb.Copy()
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("CopyBlindedBeaconBlockBodyCapella() = %v, want %v", got, bb)
 	}
@@ -462,7 +253,7 @@ func TestCopyBlindedBeaconBlockBodyCapella(t *testing.T) {
 func TestCopySignedBeaconBlockDeneb(t *testing.T) {
 	sbb := genSignedBeaconBlockDeneb()
 
-	got := v1alpha1.CopySignedBeaconBlockDeneb(sbb)
+	got := sbb.Copy()
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("CopySignedBeaconBlockDeneb() = %v, want %v", got, sbb)
 	}
@@ -472,7 +263,7 @@ func TestCopySignedBeaconBlockDeneb(t *testing.T) {
 func TestCopyBeaconBlockDeneb(t *testing.T) {
 	b := genBeaconBlockDeneb()
 
-	got := v1alpha1.CopyBeaconBlockDeneb(b)
+	got := b.Copy()
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("CopyBeaconBlockDeneb() = %v, want %v", got, b)
 	}
@@ -482,7 +273,7 @@ func TestCopyBeaconBlockDeneb(t *testing.T) {
 func TestCopyBeaconBlockBodyDeneb(t *testing.T) {
 	bb := genBeaconBlockBodyDeneb()
 
-	got := v1alpha1.CopyBeaconBlockBodyDeneb(bb)
+	got := bb.Copy()
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("CopyBeaconBlockBodyDeneb() = %v, want %v", got, bb)
 	}
@@ -492,7 +283,7 @@ func TestCopyBeaconBlockBodyDeneb(t *testing.T) {
 func TestCopySignedBlindedBeaconBlockDeneb(t *testing.T) {
 	sbb := genSignedBlindedBeaconBlockDeneb()
 
-	got := v1alpha1.CopySignedBlindedBeaconBlockDeneb(sbb)
+	got := sbb.Copy()
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("CopySignedBlindedBeaconBlockDeneb() = %v, want %v", got, sbb)
 	}
@@ -502,7 +293,7 @@ func TestCopySignedBlindedBeaconBlockDeneb(t *testing.T) {
 func TestCopyBlindedBeaconBlockDeneb(t *testing.T) {
 	b := genBlindedBeaconBlockDeneb()
 
-	got := v1alpha1.CopyBlindedBeaconBlockDeneb(b)
+	got := b.Copy()
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("CopyBlindedBeaconBlockDeneb() = %v, want %v", got, b)
 	}
@@ -512,7 +303,7 @@ func TestCopyBlindedBeaconBlockDeneb(t *testing.T) {
 func TestCopyBlindedBeaconBlockBodyDeneb(t *testing.T) {
 	bb := genBlindedBeaconBlockBodyDeneb()
 
-	got := v1alpha1.CopyBlindedBeaconBlockBodyDeneb(bb)
+	got := bb.Copy()
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("CopyBlindedBeaconBlockBodyDeneb() = %v, want %v", got, bb)
 	}
@@ -527,67 +318,10 @@ func bytes(length int) []byte {
 	return b
 }
 
-func TestCopyBLSToExecutionChanges(t *testing.T) {
-	changes := genBLSToExecutionChanges(10)
-
-	got := v1alpha1.CopyBLSToExecutionChanges(changes)
-	if !reflect.DeepEqual(got, changes) {
-		t.Errorf("TestCopyBLSToExecutionChanges() = %v, want %v", got, changes)
-	}
-}
-
-func TestCopyHistoricalSummaries(t *testing.T) {
-	summaries := []*v1alpha1.HistoricalSummary{
-		{BlockSummaryRoot: []byte("block summary root 0"), StateSummaryRoot: []byte("state summary root 0")},
-		{BlockSummaryRoot: []byte("block summary root 1"), StateSummaryRoot: []byte("state summary root 1")},
-	}
-
-	got := v1alpha1.CopyHistoricalSummaries(summaries)
-	if !reflect.DeepEqual(got, summaries) {
-		t.Errorf("TestCopyHistoricalSummariesing() = %v, want %v", got, summaries)
-	}
-}
-
-func TestCopyAttestationElectra(t *testing.T) {
-	att := genAttestationElectra()
-
-	got := v1alpha1.CopyAttestationElectra(att)
-	if !reflect.DeepEqual(got, att) {
-		t.Errorf("TestCopyAttestationElectra() = %v, want %v", got, att)
-	}
-}
-
-func TestCopyAttesterSlashingsElectra(t *testing.T) {
-	as := genAttesterSlashingsElectra(10)
-
-	got := v1alpha1.CopyAttesterSlashingsElectra(as)
-	if !reflect.DeepEqual(got, as) {
-		t.Errorf("TestCopyAttesterSlashingsElectra() = %v, want %v", got, as)
-	}
-}
-
-func TestCopyIndexedAttestationElectra(t *testing.T) {
-	ia := genIndexedAttestationElectra()
-
-	got := v1alpha1.CopyIndexedAttestationElectra(ia)
-	if !reflect.DeepEqual(got, ia) {
-		t.Errorf("TestCopyIndexedAttestationElectra() = %v, want %v", got, ia)
-	}
-}
-
-func TestCopyAttestationsElectra(t *testing.T) {
-	atts := genAttestationsElectra(10)
-
-	got := v1alpha1.CopyAttestationsElectra(atts)
-	if !reflect.DeepEqual(got, atts) {
-		t.Errorf("TestCopyAttestationsElectra() = %v, want %v", got, atts)
-	}
-}
-
 func TestCopySignedBlindedBeaconBlockElectra(t *testing.T) {
 	sbb := genSignedBlindedBeaconBlockElectra()
 
-	got := v1alpha1.CopySignedBlindedBeaconBlockElectra(sbb)
+	got := sbb.Copy()
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("TestCopySignedBlindedBeaconBlockElectra() = %v, want %v", got, sbb)
 	}
@@ -596,7 +330,7 @@ func TestCopySignedBlindedBeaconBlockElectra(t *testing.T) {
 func TestCopyBlindedBeaconBlockElectra(t *testing.T) {
 	b := genBlindedBeaconBlockElectra()
 
-	got := v1alpha1.CopyBlindedBeaconBlockElectra(b)
+	got := b.Copy()
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("TestCopyBlindedBeaconBlockElectra() = %v, want %v", got, b)
 	}
@@ -605,7 +339,7 @@ func TestCopyBlindedBeaconBlockElectra(t *testing.T) {
 func TestCopyBlindedBeaconBlockBodyElectra(t *testing.T) {
 	bb := genBlindedBeaconBlockBodyElectra()
 
-	got := v1alpha1.CopyBlindedBeaconBlockBodyElectra(bb)
+	got := bb.Copy()
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("TestCopyBlindedBeaconBlockBodyElectra() = %v, want %v", got, bb)
 	}
@@ -614,7 +348,7 @@ func TestCopyBlindedBeaconBlockBodyElectra(t *testing.T) {
 func TestCopySignedBeaconBlockElectra(t *testing.T) {
 	sbb := genSignedBeaconBlockElectra()
 
-	got := v1alpha1.CopySignedBeaconBlockElectra(sbb)
+	got := sbb.Copy()
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("TestCopySignedBeaconBlockElectra() = %v, want %v", got, sbb)
 	}
@@ -623,7 +357,7 @@ func TestCopySignedBeaconBlockElectra(t *testing.T) {
 func TestCopyBeaconBlockElectra(t *testing.T) {
 	b := genBeaconBlockElectra()
 
-	got := v1alpha1.CopyBeaconBlockElectra(b)
+	got := b.Copy()
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("TestCopyBeaconBlockElectra() = %v, want %v", got, b)
 	}
@@ -632,45 +366,9 @@ func TestCopyBeaconBlockElectra(t *testing.T) {
 func TestCopyBeaconBlockBodyElectra(t *testing.T) {
 	bb := genBeaconBlockBodyElectra()
 
-	got := v1alpha1.CopyBeaconBlockBodyElectra(bb)
+	got := bb.Copy()
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("TestCopyBeaconBlockBodyElectra() = %v, want %v", got, bb)
-	}
-}
-
-func TestCopyExecutionPayloadHeaderElectra(t *testing.T) {
-	p := genExecutionPayloadHeaderElectra()
-
-	got := v1alpha1.CopyExecutionPayloadHeaderElectra(p)
-	if !reflect.DeepEqual(got, p) {
-		t.Errorf("TestCopyExecutionPayloadHeaderElectra() = %v, want %v", got, p)
-	}
-}
-
-func TestCopyPendingPartialWithdrawals(t *testing.T) {
-	ppws := genPendingPartialWithdrawals(10)
-
-	got := v1alpha1.CopyPendingPartialWithdrawals(ppws)
-	if !reflect.DeepEqual(got, ppws) {
-		t.Errorf("TestCopyPendingPartialWithdrawals() = %v, want %v", got, ppws)
-	}
-}
-
-func TestCopyPendingConsolidations(t *testing.T) {
-	pcs := genPendingConsolidations(10)
-
-	got := v1alpha1.CopyPendingConsolidations(pcs)
-	if !reflect.DeepEqual(got, pcs) {
-		t.Errorf("TestCopyPendingConsolidations() = %v, want %v", got, pcs)
-	}
-}
-
-func TestCopyPendingBalanceDeposits(t *testing.T) {
-	pbds := genPendingBalanceDeposits(10)
-
-	got := v1alpha1.CopyPendingBalanceDeposits(pbds)
-	if !reflect.DeepEqual(got, pbds) {
-		t.Errorf("TestCopyPendingBalanceDeposits() = %v, want %v", got, pbds)
 	}
 }
 

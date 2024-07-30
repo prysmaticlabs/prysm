@@ -59,5 +59,5 @@ func (b *BeaconState) pendingConsolidationsVal() []*ethpb.PendingConsolidation {
 		return nil
 	}
 
-	return ethpb.CopyPendingConsolidations(b.pendingConsolidations)
+	return ethpb.CopySlice(b.pendingConsolidations)
 }

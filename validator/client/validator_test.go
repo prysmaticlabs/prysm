@@ -1477,6 +1477,7 @@ func TestValidator_PushSettings(t *testing.T) {
 			feeRecipientMap      map[primitives.ValidatorIndex]string
 			mockExpectedRequests []ExpectedValidatorRegistration
 			err                  string
+			logDelay             time.Duration
 			logMessages          []string
 			doesntContainLogs    bool
 		}{
@@ -1993,7 +1994,8 @@ func TestValidator_PushSettings(t *testing.T) {
 					).Return(&empty.Empty{}, errors.New("request failed"))
 					return &v
 				},
-				err: "could not submit signed registrations to beacon node",
+				logMessages: []string{"request failed"},
+				logDelay:    1 * time.Second,
 			},
 		}
 		for _, tt := range tests {
@@ -2030,6 +2032,9 @@ func TestValidator_PushSettings(t *testing.T) {
 					assert.ErrorContains(t, tt.err, err)
 				}
 				if len(tt.logMessages) > 0 {
+					if tt.logDelay > 0 {
+						time.Sleep(tt.logDelay)
+					}
 					for _, message := range tt.logMessages {
 						if tt.doesntContainLogs {
 							assert.LogsDoNotContain(t, hook, message)

@@ -1,7 +1,9 @@
 package validator
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -17,6 +19,7 @@ import (
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -114,6 +117,12 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		return nil, err
 	}
 	atts = sorted.limitToMaxAttestations()
+
+	atts, err = vs.filterAttestationBySignature(ctx, atts, latestState)
+	if err != nil {
+		return nil, err
+	}
+
 	return atts, nil
 }
 
@@ -308,4 +317,194 @@ func (vs *Server) deleteAttsInPool(ctx context.Context, atts []ethpb.Att) error 
 		}
 	}
 	return nil
+}
+
+// isAttestationFromCurrentEpoch returns true if the attestation is from the current epoch.
+func (vs *Server) isAttestationFromCurrentEpoch(att ethpb.Att, currentEpoch primitives.Epoch) bool {
+	return att.GetData().Target.Epoch == currentEpoch
+}
+
+// isAttestationFromPreviousEpoch returns true if the attestation is from the previous epoch.
+func (vs *Server) isAttestationFromPreviousEpoch(att ethpb.Att, currentEpoch primitives.Epoch) bool {
+	return att.GetData().Target.Epoch+1 == currentEpoch
+}
+
+// filterCurrentEpochAttestationByForkchoice filters attestations from the current epoch based on fork choice conditions.
+// Returns true if all of the following conditions are met:
+// 1. The attestation beacon block root is for a slot in the previous epoch (according to fork choice).
+// 2. The attestation target root is the same as the attestation beacon block root.
+// 3. The attestation beacon block root is canonical according to fork choice.
+func (vs *Server) filterCurrentEpochAttestationByForkchoice(ctx context.Context, att ethpb.Att, currentEpoch primitives.Epoch) (bool, error) {
+	if !vs.isAttestationFromCurrentEpoch(att, currentEpoch) {
+		return false, nil
+	}
+
+	attTargetRoot := [32]byte(att.GetData().Target.Root)
+	attBlockRoot := [32]byte(att.GetData().BeaconBlockRoot)
+	if attBlockRoot != attTargetRoot {
+		return false, nil
+	}
+
+	slot, err := vs.ForkchoiceFetcher.RecentBlockSlot(attBlockRoot)
+	if err != nil {
+		return false, err
+	}
+	epoch := slots.ToEpoch(slot)
+	if epoch+1 != currentEpoch {
+		return false, nil
+	}
+
+	return vs.ForkchoiceFetcher.IsCanonical(ctx, attBlockRoot)
+}
+
+// filterCurrentEpochAttestationByTarget returns true if an attestation from the current epoch matches the fork choice target view.
+// The conditions checked are:
+// 1. The attestation's target epoch matches the forkchoice target epoch.
+// 2. The attestation's target root matches the forkchoice target root.
+func (vs *Server) filterCurrentEpochAttestationByTarget(att ethpb.Att, targetRoot [32]byte, targetEpoch, currentEpoch primitives.Epoch) (bool, error) {
+	if !vs.isAttestationFromCurrentEpoch(att, currentEpoch) {
+		return false, nil
+	}
+
+	attTargetRoot := [32]byte(att.GetData().Target.Root)
+	return att.GetData().Target.Epoch == targetEpoch && attTargetRoot == targetRoot, nil
+}
+
+// filterPreviousEpochAttestationByTarget returns true if an attestation from the previous epoch matches the fork choice previous target view.
+// The conditions checked are:
+// 1. The attestation's target epoch matches the forkchoice previous target epoch.
+// 2. The attestation's target root matches the forkchoice previous target root.
+func (vs *Server) filterPreviousEpochAttestationByTarget(att ethpb.Att, cp *ethpb.Checkpoint, currentEpoch primitives.Epoch) (bool, error) {
+	if !vs.isAttestationFromPreviousEpoch(att, currentEpoch) {
+		return false, nil
+	}
+
+	return att.GetData().Target.Epoch == cp.Epoch && bytes.Equal(att.GetData().Target.Root, cp.Root), nil
+}
+
+// filterAttestationBySignature filters attestations based on specific conditions and performs batch signature verification.
+// The conditions checked are:
+// 1. The attestation matches the current target view defined in `filterCurrentEpochAttestationByTarget`.
+// 2. The attestation matches the previous target view defined in `filterPreviousEpochAttestationByTarget`.
+// 3. The attestation matches certain fork choice conditions defined in `filterCurrentEpochAttestationByForkchoice`.
+// The remaining attestations are sent for batch signature verification. If the batch verification fails, each signature is verified individually.
+func (vs *Server) filterAttestationBySignature(ctx context.Context, atts proposerAtts, st state.BeaconState) (proposerAtts, error) {
+	headSlot := vs.HeadFetcher.HeadSlot()
+	targetEpoch := slots.ToEpoch(headSlot)
+	r, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	headRoot := [32]byte(r)
+
+	targetRoot, err := vs.HeadFetcher.TargetRootForEpoch(headRoot, targetEpoch)
+	if err != nil {
+		return nil, err
+	}
+
+	prevTargetEpoch := primitives.Epoch(0)
+	if targetEpoch >= 1 {
+		prevTargetEpoch = targetEpoch.Sub(1)
+	}
+	prevTargetRoot, err := vs.HeadFetcher.TargetRootForEpoch(headRoot, prevTargetEpoch)
+	if err != nil {
+		return nil, err
+	}
+
+	currentSlot := vs.TimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(currentSlot)
+
+	var verifiedAtts proposerAtts
+	var unverifiedAtts proposerAtts
+	for _, att := range atts {
+		ok, err := vs.filterCurrentEpochAttestationByTarget(att, targetRoot, targetEpoch, currentEpoch)
+		if err != nil {
+			log.WithFields(attestationFields(att)).WithError(err).Error("Could not filter current epoch attestation by target")
+		}
+		if ok {
+			verifiedAtts = append(verifiedAtts, att)
+			continue
+		}
+
+		ok, err = vs.filterPreviousEpochAttestationByTarget(att, &ethpb.Checkpoint{Root: prevTargetRoot[:], Epoch: prevTargetEpoch}, currentEpoch)
+		if err != nil {
+			log.WithFields(attestationFields(att)).WithError(err).Error("Could not filter previous epoch attestation by target")
+		}
+		if ok {
+			verifiedAtts = append(verifiedAtts, att)
+			continue
+		}
+
+		ok, err = vs.filterCurrentEpochAttestationByForkchoice(ctx, att, currentEpoch)
+		if err != nil {
+			log.WithFields(attestationFields(att)).WithError(err).Error("Could not filter current epoch attestation by fork choice")
+		}
+		if ok {
+			verifiedAtts = append(verifiedAtts, att)
+			continue
+		}
+
+		unverifiedAtts = append(unverifiedAtts, att)
+	}
+
+	if len(unverifiedAtts) == 0 {
+		return verifiedAtts, nil
+	}
+
+	unverifiedAtts = unverifiedAtts.filterBatchSignature(ctx, st)
+
+	return append(verifiedAtts, unverifiedAtts...), nil
+}
+
+// filterBatchSignature verifies the signatures of the attestation set.
+// If batch verification fails, the attestation set is filtered by verifying each signature individually.
+func (a proposerAtts) filterBatchSignature(ctx context.Context, st state.BeaconState) proposerAtts {
+	aSet, err := blocks.AttestationSignatureBatch(ctx, st, a)
+	if err != nil {
+		log.WithError(err).Error("Could not create attestation signature set")
+		return a.filterIndividualSignature(ctx, st)
+	}
+
+	if verified, err := aSet.Verify(); err != nil || !verified {
+		if err != nil {
+			log.WithError(err).Error("Batch verification failed")
+		} else {
+			log.Error("Batch verification failed: signatures not verified")
+		}
+		return a.filterIndividualSignature(ctx, st)
+	}
+	return a
+}
+
+// filterIndividualSignature filters the attestation set by verifying each signature individually.
+func (a proposerAtts) filterIndividualSignature(ctx context.Context, st state.BeaconState) proposerAtts {
+	var validAtts proposerAtts
+	for _, att := range a {
+		aSet, err := blocks.AttestationSignatureBatch(ctx, st, []ethpb.Att{att})
+		if err != nil {
+			log.WithFields(attestationFields(att)).WithError(err).Error("Could not create individual attestation signature set")
+			continue
+		}
+		if verified, err := aSet.Verify(); err != nil || !verified {
+			logEntry := log.WithFields(attestationFields(att))
+			if err != nil {
+				logEntry.WithError(err).Error("Verification of individual attestation failed")
+			} else {
+				logEntry.Error("Verification of individual attestation failed: signature not verified")
+			}
+			continue
+		}
+		validAtts = append(validAtts, att)
+	}
+	return validAtts
+}
+
+func attestationFields(att ethpb.Att) logrus.Fields {
+	return logrus.Fields{
+		"slot":            att.GetData().Slot,
+		"index":           att.GetData().CommitteeIndex,
+		"targetRoot":      fmt.Sprintf("%x", att.GetData().Target.Root),
+		"targetEpoch":     att.GetData().Target.Epoch,
+		"beaconBlockRoot": fmt.Sprintf("%x", att.GetData().BeaconBlockRoot),
+	}
 }
