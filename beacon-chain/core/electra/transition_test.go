@@ -1,11 +1,15 @@
 package electra_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -46,4 +50,69 @@ func TestVerifyOperationLengths_Electra(t *testing.T) {
 		err = electra.VerifyBlockDepositLength(sb.Block().Body(), s)
 		require.ErrorContains(t, "incorrect outstanding deposits in block body", err)
 	})
+}
+
+func TestProcessEpoch_CanProcessElectra(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateElectra(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, st.SetSlot(10*params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, st.SetDepositBalanceToConsume(100))
+	amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
+	deps := make([]*ethpb.PendingBalanceDeposit, 20)
+	for i := 0; i < len(deps); i += 1 {
+		deps[i] = &ethpb.PendingBalanceDeposit{
+			Amount: uint64(amountAvailForProcessing) / 10,
+			Index:  primitives.ValidatorIndex(i),
+		}
+	}
+	require.NoError(t, st.SetPendingBalanceDeposits(deps))
+	require.NoError(t, st.SetPendingConsolidations([]*ethpb.PendingConsolidation{
+		{
+			SourceIndex: 2,
+			TargetIndex: 3,
+		},
+		{
+			SourceIndex: 0,
+			TargetIndex: 1,
+		},
+	}))
+	err := electra.ProcessEpoch(context.Background(), st)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), st.Slashings()[2], "Unexpected slashed balance")
+
+	b := st.Balances()
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(b)))
+	require.Equal(t, uint64(44799839993), b[0])
+
+	s, err := st.InactivityScores()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(s)))
+
+	p, err := st.PreviousEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	p, err = st.CurrentEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	sc, err := st.CurrentSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+
+	sc, err = st.NextSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+
+	res, err := st.DepositBalanceToConsume()
+	require.NoError(t, err)
+	require.Equal(t, primitives.Gwei(100), res)
+
+	// Half of the balance deposits should have been processed.
+	remaining, err := st.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 10, len(remaining))
+
+	num, err := st.NumPendingConsolidations()
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), num)
 }
