@@ -29,6 +29,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+type customProcessingFn func(context.Context, state.BeaconState) error
+
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Note: This method differs from the spec pseudocode as it uses a batch signature verification.
@@ -174,23 +176,23 @@ func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, target
 }
 
 // ProcessSlots includes core slot processing as well as a cache
-func ProcessSlots(ctx context.Context, beaconState state.BeaconState, slot primitives.Slot) (state.BeaconState, error) {
+func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
-	if beaconState == nil || beaconState.IsNil() {
+	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
 	}
-	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(beaconState.Slot()))) // lint:ignore uintcast -- This is OK for tracing.
+	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot()))) // lint:ignore uintcast -- This is OK for tracing.
 
 	// The block must have a higher slot than parent state.
-	if beaconState.Slot() >= slot {
-		err := fmt.Errorf("expected state.slot %d < slot %d", beaconState.Slot(), slot)
+	if state.Slot() >= slot {
+		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot(), slot)
 		tracing.AnnotateError(span, err)
 		return nil, err
 	}
 
-	highestSlot := beaconState.Slot()
-	key, err := cacheKey(ctx, beaconState)
+	highestSlot := state.Slot()
+	key, err := cacheKey(ctx, state)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +205,7 @@ func ProcessSlots(ctx context.Context, beaconState state.BeaconState, slot primi
 
 	if cachedState != nil && !cachedState.IsNil() && cachedState.Slot() < slot {
 		highestSlot = cachedState.Slot()
-		beaconState = cachedState
+		state = cachedState
 	}
 	if err := SkipSlotCache.MarkInProgress(key); errors.Is(err, cache.ErrAlreadyInProgress) {
 		cachedState, err = SkipSlotCache.Get(ctx, key)
@@ -212,7 +214,7 @@ func ProcessSlots(ctx context.Context, beaconState state.BeaconState, slot primi
 		}
 		if cachedState != nil && !cachedState.IsNil() && cachedState.Slot() < slot {
 			highestSlot = cachedState.Slot()
-			beaconState = cachedState
+			state = cachedState
 		}
 	} else if err != nil {
 		return nil, err
@@ -220,25 +222,28 @@ func ProcessSlots(ctx context.Context, beaconState state.BeaconState, slot primi
 	defer func() {
 		SkipSlotCache.MarkNotInProgress(key)
 	}()
-	customErrFn := func(ctx context.Context, st state.BeaconState) error {
+	state, err = ProcessSlotsCore(ctx, span, state, slot, cacheBestBeaconStateOnErrFn(highestSlot, key))
+	if err != nil {
+		return nil, err
+	}
+	if highestSlot < state.Slot() {
+		SkipSlotCache.Put(ctx, key, state)
+	}
+
+	return state, nil
+}
+
+func cacheBestBeaconStateOnErrFn(highestSlot primitives.Slot, key [32]byte) customProcessingFn {
+	return func(ctx context.Context, state state.BeaconState) error {
 		if ctx.Err() != nil {
 			// Cache last best value.
-			if highestSlot < beaconState.Slot() {
-				SkipSlotCache.Put(ctx, key, beaconState)
+			if highestSlot < state.Slot() {
+				SkipSlotCache.Put(ctx, key, state)
 			}
 			return ctx.Err()
 		}
 		return nil
 	}
-	beaconState, err = ProcessSlotsCore(ctx, span, beaconState, slot, customErrFn)
-	if err != nil {
-		return nil, err
-	}
-	if highestSlot < beaconState.Slot() {
-		SkipSlotCache.Put(ctx, key, beaconState)
-	}
-
-	return beaconState, nil
 }
 
 // ProcessSlotsCore process through skip slots and apply epoch transition when it's needed
@@ -253,11 +258,11 @@ func ProcessSlots(ctx context.Context, beaconState state.BeaconState, slot primi
 //	      if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 //	          process_epoch(state)
 //	      state.slot = Slot(state.slot + 1)
-func ProcessSlotsCore(ctx context.Context, span *trace.Span, state state.BeaconState, slot primitives.Slot, customProcessingFn func(context.Context, state.BeaconState) error) (state.BeaconState, error) {
+func ProcessSlotsCore(ctx context.Context, span *trace.Span, state state.BeaconState, slot primitives.Slot, fn customProcessingFn) (state.BeaconState, error) {
 	var err error
 	for state.Slot() < slot {
-		if customProcessingFn != nil {
-			if err = customProcessingFn(ctx, state); err != nil {
+		if fn != nil {
+			if err = fn(ctx, state); err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err
 			}
