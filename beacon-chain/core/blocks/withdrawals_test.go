@@ -1074,7 +1074,7 @@ func TestProcessWithdrawals(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Args.Name, func(t *testing.T) {
-			for _, fork := range []int{version.Capella, version.Electra} {
+			for _, fork := range []int{version.Capella, version.Electra , version.EPBS} {
 				t.Run(version.String(fork), func(t *testing.T) {
 					saved := params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep
 					params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = maxSweep

@@ -148,7 +148,7 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 //	        state.next_withdrawal_validator_index = next_validator_index
 func ProcessWithdrawals(st state.BeaconState) (state.BeaconState, error) {
 	if st.Version() >= version.EPBS {
-		return nil, fmt.Errorf("Wrong version for withdrawals processing: %d", st.Version())
+		return nil, fmt.Errorf("wrong version for withdrawals processing: %d", st.Version())
 	}
 
 	if !st.IsParentBlockFull() {
