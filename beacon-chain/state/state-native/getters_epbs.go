@@ -7,11 +7,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
-// ExecutionPayloadHeader retrieves a copy of the execution payload header.
+// LatestExecutionPayloadHeaderEPBS retrieves a copy of the execution payload header from epbs state.
 // It returns an error if the operation is not supported for the beacon state's version.
-func (b *BeaconState) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeaderEPBS, error) {
+func (b *BeaconState) LatestExecutionPayloadHeaderEPBS() (*enginev1.ExecutionPayloadHeaderEPBS, error) {
 	if b.version < version.EPBS {
-		return nil, errNotSupported("ExecutionPayloadHeader", b.version)
+		return nil, errNotSupported("LatestExecutionPayloadHeaderEPBS", b.version)
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
@@ -31,7 +31,7 @@ func (b *BeaconState) IsParentBlockFull() (bool, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	headerBlockHash := bytesutil.ToBytes32(b.executionPayloadHeader.BlockHash)
+	headerBlockHash := bytesutil.ToBytes32(b.latestExecutionPayloadHeaderEPBS.BlockHash)
 	return headerBlockHash == b.latestBlockHash, nil
 }
 
