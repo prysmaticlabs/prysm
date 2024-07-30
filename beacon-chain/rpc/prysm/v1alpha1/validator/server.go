@@ -81,14 +81,6 @@ type Server struct {
 	CoreService            *core.Service
 }
 
-func (vs *Server) EvaluateInclusionList(context.Context, *ethpb.InclusionList) (*emptypb.Empty, error) {
-	return nil, nil
-}
-
-func (vs *Server) GetInclusionList(ctx context.Context, req *ethpb.InclusionListRequest) (*ethpb.InclusionList, error) {
-	return nil, nil
-}
-
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
