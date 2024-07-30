@@ -268,7 +268,8 @@ func ProcessSlotsCore(ctx context.Context, span *trace.Span, state state.BeaconS
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 
-		if err = ProcessEpoch(ctx, state); err != nil {
+		state, err = ProcessEpoch(ctx, state)
+		if err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
@@ -288,25 +289,25 @@ func ProcessSlotsCore(ctx context.Context, span *trace.Span, state state.BeaconS
 }
 
 // ProcessEpoch is a wrapper on fork specific epoch processing
-func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
+func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	var err error
 	if time.CanProcessEpoch(state) {
 		if state.Version() == version.Phase0 {
 			state, err = ProcessEpochPrecompute(ctx, state)
 			if err != nil {
-				return errors.Wrap(err, "could not process epoch with optimizations")
+				return nil, errors.Wrap(err, "could not process epoch with optimizations")
 			}
 		} else if state.Version() <= version.Deneb {
 			if err = altair.ProcessEpoch(ctx, state); err != nil {
-				return errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+				return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
 			}
 		} else {
 			if err = electra.ProcessEpoch(ctx, state); err != nil {
-				return errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+				return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
 			}
 		}
 	}
-	return nil
+	return state, err
 }
 
 // UpgradeState upgrades the state to the next version if possible.
