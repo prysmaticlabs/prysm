@@ -21,13 +21,17 @@ func Test_InitializeFromProtoEpbs(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert that initial values match those in the new state.
-	gotLatestBlockHash := s.LatestBlockHash()
+	gotLatestBlockHash, err := s.LatestBlockHash()
+	require.NoError(t, err)
 	require.DeepEqual(t, latestBlockHash, gotLatestBlockHash)
-	gotLatestFullSlot := s.LatestFullSlot()
+	gotLatestFullSlot, err := s.LatestFullSlot()
+	require.NoError(t, err)
 	require.Equal(t, latestFullSlot, gotLatestFullSlot)
-	gotHeader := s.ExecutionPayloadHeader()
+	gotHeader, err := s.ExecutionPayloadHeader()
+	require.NoError(t, err)
 	require.DeepEqual(t, header, gotHeader)
-	gotLastWithdrawalsRoot := s.LastWithdrawalsRoot()
+	gotLastWithdrawalsRoot, err := s.LastWithdrawalsRoot()
+	require.NoError(t, err)
 	require.DeepEqual(t, lastWithdrawalsRoot, gotLastWithdrawalsRoot)
 }
 
@@ -47,7 +51,8 @@ func Test_CopyEpbs(t *testing.T) {
 	// Copy the state
 	sCopy := s.Copy()
 	require.NoError(t, err)
-	header := sCopy.ExecutionPayloadHeader()
+	header, err := sCopy.ExecutionPayloadHeader()
+	require.NoError(t, err)
 	require.DeepEqual(t, s.executionPayloadHeader, header)
 
 	// Modify the original to check if the copied state is independent.

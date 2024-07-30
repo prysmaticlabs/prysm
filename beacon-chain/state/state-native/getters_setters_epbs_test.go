@@ -26,10 +26,11 @@ func Test_SetLatestExecutionPayloadHeader(t *testing.T) {
 func Test_SetExecutionPayloadHeader(t *testing.T) {
 	s := &BeaconState{version: version.EPBS, dirtyFields: make(map[types.FieldIndex]bool)}
 	header := random.ExecutionPayloadHeader(t)
-	s.SetExecutionPayloadHeader(header)
+	require.NoError(t, s.SetExecutionPayloadHeader(header))
 	require.Equal(t, true, s.dirtyFields[types.ExecutionPayloadHeader])
 
-	got := s.ExecutionPayloadHeader()
+	got, err := s.ExecutionPayloadHeader()
+	require.NoError(t, err)
 	require.DeepEqual(t, got, header)
 }
 
@@ -38,19 +39,21 @@ func Test_SetLatestBlockHash(t *testing.T) {
 	b := make([]byte, fieldparams.RootLength)
 	_, err := rand.Read(b)
 	require.NoError(t, err)
-	s.SetLatestBlockHash(b)
+	require.NoError(t, s.SetLatestBlockHash(b))
 	require.Equal(t, true, s.dirtyFields[types.LatestBlockHash])
 
-	got := s.LatestBlockHash()
+	got, err := s.LatestBlockHash()
+	require.NoError(t, err)
 	require.DeepEqual(t, got, b)
 }
 
 func Test_SetLatestFullSlot(t *testing.T) {
 	s := &BeaconState{version: version.EPBS, dirtyFields: make(map[types.FieldIndex]bool)}
-	s.SetLatestFullSlot(3)
+	require.NoError(t, s.SetLatestFullSlot(primitives.Slot(3)))
 	require.Equal(t, true, s.dirtyFields[types.LatestFullSlot])
 
-	got := s.LatestFullSlot()
+	got, err := s.LatestFullSlot()
+	require.NoError(t, err)
 	require.Equal(t, primitives.Slot(3), got)
 }
 
@@ -59,9 +62,27 @@ func Test_SetLastWithdrawalsRoot(t *testing.T) {
 	b := make([]byte, fieldparams.RootLength)
 	_, err := rand.Read(b)
 	require.NoError(t, err)
-	s.SetLastWithdrawalsRoot(b)
+	require.NoError(t, s.SetLastWithdrawalsRoot(b))
 	require.Equal(t, true, s.dirtyFields[types.LastWithdrawalsRoot])
 
-	got := s.LastWithdrawalsRoot()
+	got, err := s.LastWithdrawalsRoot()
+	require.NoError(t, err)
 	require.DeepEqual(t, got, b)
+}
+
+func Test_UnsupportedStateVersionEpbs(t *testing.T) {
+	s := &BeaconState{version: version.Electra}
+	_, err := s.IsParentBlockFull()
+	require.ErrorContains(t, "IsParentBlockFull is not supported for electra", err)
+	_, err = s.LatestBlockHash()
+	require.ErrorContains(t, "LatestBlockHash is not supported for electra", err)
+	_, err = s.LatestFullSlot()
+	require.ErrorContains(t, "LatestFullSlot is not supported for electra", err)
+	_, err = s.LastWithdrawalsRoot()
+	require.ErrorContains(t, "LastWithdrawalsRoot is not supported for electra", err)
+
+	require.ErrorContains(t, "LastWithdrawalsRoot is not supported for electra", s.SetLastWithdrawalsRoot(nil))
+	require.ErrorContains(t, "SetLatestBlockHash is not supported for electra", s.SetLatestBlockHash(nil))
+	require.ErrorContains(t, "SetLatestFullSlot is not supported for electra", s.SetLatestFullSlot(0))
+	require.ErrorContains(t, "SetExecutionPayloadHeader is not supported for electra", s.SetExecutionPayloadHeader(nil))
 }
