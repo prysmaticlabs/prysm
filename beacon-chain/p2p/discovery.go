@@ -55,62 +55,96 @@ func (quicProtocol) ENRKey() string { return quickProtocolEnrKey }
 // This routine checks for our attestation, sync committee and data column subnets and updates them if they have
 // been rotated.
 func (s *Service) RefreshPersistentSubnets() {
-	// return early if discv5 isnt running
+	// Return early if discv5 service isn't running.
 	if s.dv5Listener == nil || !s.isInitialized() {
 		return
 	}
-	currEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.genesisTime.Unix())))
-	if err := initializePersistentSubnets(s.dv5Listener.LocalNode().ID(), currEpoch); err != nil {
+
+	// Get the current epoch.
+	currentSlot := slots.CurrentSlot(uint64(s.genesisTime.Unix()))
+	currentEpoch := slots.ToEpoch(currentSlot)
+
+	// Get our node ID.
+	nodeID := s.dv5Listener.LocalNode().ID()
+
+	// Get our node record.
+	record := s.dv5Listener.Self().Record()
+
+	// Get the version of our metadata.
+	metadataVersion := s.Metadata().Version()
+
+	// Initialize persistent subnets.
+	if err := initializePersistentSubnets(nodeID, currentEpoch); err != nil {
 		log.WithError(err).Error("Could not initialize persistent subnets")
 		return
 	}
-	if err := initializePersistentColumnSubnets(s.dv5Listener.LocalNode().ID()); err != nil {
+
+	// Initialize persistent column subnets.
+	if err := initializePersistentColumnSubnets(nodeID); err != nil {
 		log.WithError(err).Error("Could not initialize persistent column subnets")
 		return
 	}
 
+	// Get the current attestation subnet bitfield.
 	bitV := bitfield.NewBitvector64()
-	committees := cache.SubnetIDs.GetAllSubnets()
-	for _, idx := range committees {
+	attestationCommittees := cache.SubnetIDs.GetAllSubnets()
+	for _, idx := range attestationCommittees {
 		bitV.SetBitAt(idx, true)
 	}
-	currentBitV, err := attBitvector(s.dv5Listener.Self().Record())
+
+	// Get the attestation subnet bitfield we store in our record.
+	inRecordBitV, err := attBitvector(record)
 	if err != nil {
 		log.WithError(err).Error("Could not retrieve att bitfield")
 		return
 	}
 
+	// Is our attestation bitvector record up to date?
+	isOurBitVRecordUpToDate := bytes.Equal(bitV, inRecordBitV)
+
 	// Compare current epoch with our fork epochs
 	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
-	switch {
-	case currEpoch < altairForkEpoch:
+
+	if currentEpoch < altairForkEpoch {
 		// Phase 0 behaviour.
-		if bytes.Equal(bitV, currentBitV) {
-			// return early if bitfield hasn't changed
+		if isOurBitVRecordUpToDate {
+			// Return early if bitfield hasn't changed.
 			return
 		}
+
+		// Some data changed. Update the record and the metadata.
 		s.updateSubnetRecordWithMetadata(bitV)
-	default:
-		// Retrieve sync subnets from application level
-		// cache.
-		bitS := bitfield.Bitvector4{byte(0x00)}
-		committees = cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
-		for _, idx := range committees {
-			bitS.SetBitAt(idx, true)
-		}
-		currentBitS, err := syncBitvector(s.dv5Listener.Self().Record())
-		if err != nil {
-			log.WithError(err).Error("Could not retrieve sync bitfield")
-			return
-		}
-		if bytes.Equal(bitV, currentBitV) && bytes.Equal(bitS, currentBitS) &&
-			s.Metadata().Version() == version.Altair {
-			// return early if bitfields haven't changed
-			return
-		}
-		s.updateSubnetRecordWithMetadataV2(bitV, bitS)
+
+		// Ping all peers.
+		s.pingPeers()
+		return
 	}
-	// ping all peers to inform them of new metadata
+
+	// Get the current sync subnet bitfield.
+	bitS := bitfield.Bitvector4{byte(0x00)}
+	syncCommittees := cache.SyncSubnetIDs.GetAllSubnets(currentEpoch)
+	for _, idx := range syncCommittees {
+		bitS.SetBitAt(idx, true)
+	}
+
+	// Get the sync subnet bitfield we store in our record.
+	currentBitS, err := syncBitvector(record)
+	if err != nil {
+		log.WithError(err).Error("Could not retrieve sync bitfield")
+		return
+	}
+
+	isOurBitSRecordUpToDate := bytes.Equal(bitS, currentBitS)
+
+	if metadataVersion == version.Altair && isOurBitVRecordUpToDate && isOurBitSRecordUpToDate {
+		// Nothing to do, return early.
+		return
+	}
+
+	// Some data changed. Update the record and the metadata.
+	s.updateSubnetRecordWithMetadataV2(bitV, bitS)
+
+	// Ping all peers.
 	s.pingPeers()
 }
 
