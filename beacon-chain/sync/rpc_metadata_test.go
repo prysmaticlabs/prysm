@@ -8,6 +8,7 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
@@ -88,16 +89,20 @@ func createService(peer p2p.P2P, chain *mock.ChainService) *Service {
 
 func TestMetadataRPCHandler_SendMetadataRequest(t *testing.T) {
 	const (
-		requestTimeout = 1 * time.Second
-		seqNumber      = 2
+		requestTimeout     = 1 * time.Second
+		seqNumber          = 2
+		custodySubnetCount = 4
 	)
+
 	attnets := []byte{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'}
-	syncnets := []byte{0x0}
+	syncnets := []byte{0x4}
 
 	// Configure the test beacon chain.
 	params.SetupTestConfigCleanup(t)
 	beaconChainConfig := params.BeaconConfig().Copy()
 	beaconChainConfig.AltairForkEpoch = 5
+	beaconChainConfig.DenebForkEpoch = 10
+	beaconChainConfig.Eip7594ForkEpoch = 10
 	params.OverrideBeaconConfig(beaconChainConfig)
 	params.BeaconConfig().InitializeForkSchedule()
 
@@ -105,28 +110,153 @@ func TestMetadataRPCHandler_SendMetadataRequest(t *testing.T) {
 	secondsPerEpoch := oneEpoch()
 
 	testCases := []struct {
-		name               string
-		topic              string
-		epochsSinceGenesis int
-		expected           metadata.Metadata
+		name                                             string
+		topic                                            string
+		epochsSinceGenesisPeer1, epochsSinceGenesisPeer2 int
+		metadataPeer2, expected                          metadata.Metadata
 	}{
 		{
-			name:               "Phase0",
-			topic:              p2p.RPCMetaDataTopicV1,
-			epochsSinceGenesis: 0,
+			name:                    "Phase0-Phase0",
+			topic:                   p2p.RPCMetaDataTopicV1,
+			epochsSinceGenesisPeer1: 0,
+			epochsSinceGenesisPeer2: 0,
+			metadataPeer2: wrapper.WrappedMetadataV0(&pb.MetaDataV0{
+				SeqNumber: seqNumber,
+				Attnets:   attnets,
+			}),
 			expected: wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 				SeqNumber: seqNumber,
 				Attnets:   attnets,
 			}),
 		},
 		{
-			name:               "Altair",
-			topic:              p2p.RPCMetaDataTopicV2,
-			epochsSinceGenesis: 5,
+			name:                    "Phase0-Altair",
+			topic:                   p2p.RPCMetaDataTopicV1,
+			epochsSinceGenesisPeer1: 0,
+			epochsSinceGenesisPeer2: 5,
+			metadataPeer2: wrapper.WrappedMetadataV1(&pb.MetaDataV1{
+				SeqNumber: seqNumber,
+				Attnets:   attnets,
+				Syncnets:  syncnets,
+			}),
+			expected: wrapper.WrappedMetadataV0(&pb.MetaDataV0{
+				SeqNumber: seqNumber,
+				Attnets:   attnets,
+			}),
+		},
+		{
+			name:                    "Phase0-PeerDAS",
+			topic:                   p2p.RPCMetaDataTopicV1,
+			epochsSinceGenesisPeer1: 0,
+			epochsSinceGenesisPeer2: 10,
+			metadataPeer2: wrapper.WrappedMetadataV2(&pb.MetaDataV2{
+				SeqNumber:          seqNumber,
+				Attnets:            attnets,
+				Syncnets:           syncnets,
+				CustodySubnetCount: custodySubnetCount,
+			}),
+			expected: wrapper.WrappedMetadataV0(&pb.MetaDataV0{
+				SeqNumber: seqNumber,
+				Attnets:   attnets,
+			}),
+		},
+		{
+			name:                    "Altair-Phase0",
+			topic:                   p2p.RPCMetaDataTopicV2,
+			epochsSinceGenesisPeer1: 5,
+			epochsSinceGenesisPeer2: 0,
+			metadataPeer2: wrapper.WrappedMetadataV0(&pb.MetaDataV0{
+				SeqNumber: seqNumber,
+				Attnets:   attnets,
+			}),
+			expected: wrapper.WrappedMetadataV1(&pb.MetaDataV1{
+				SeqNumber: seqNumber,
+				Attnets:   attnets,
+				Syncnets:  bitfield.Bitvector4{byte(0x00)},
+			}),
+		},
+		{
+			name:                    "Altair-Altair",
+			topic:                   p2p.RPCMetaDataTopicV2,
+			epochsSinceGenesisPeer1: 5,
+			epochsSinceGenesisPeer2: 5,
+			metadataPeer2: wrapper.WrappedMetadataV1(&pb.MetaDataV1{
+				SeqNumber: seqNumber,
+				Attnets:   attnets,
+				Syncnets:  syncnets,
+			}),
 			expected: wrapper.WrappedMetadataV1(&pb.MetaDataV1{
 				SeqNumber: seqNumber,
 				Attnets:   attnets,
 				Syncnets:  syncnets,
+			}),
+		},
+		{
+			name:                    "Altair-PeerDAS",
+			topic:                   p2p.RPCMetaDataTopicV2,
+			epochsSinceGenesisPeer1: 5,
+			epochsSinceGenesisPeer2: 10,
+			metadataPeer2: wrapper.WrappedMetadataV2(&pb.MetaDataV2{
+				SeqNumber:          seqNumber,
+				Attnets:            attnets,
+				Syncnets:           syncnets,
+				CustodySubnetCount: custodySubnetCount,
+			}),
+			expected: wrapper.WrappedMetadataV1(&pb.MetaDataV1{
+				SeqNumber: seqNumber,
+				Attnets:   attnets,
+				Syncnets:  syncnets,
+			}),
+		},
+		{
+			name:                    "PeerDAS-Phase0",
+			topic:                   p2p.RPCMetaDataTopicV3,
+			epochsSinceGenesisPeer1: 10,
+			epochsSinceGenesisPeer2: 0,
+			metadataPeer2: wrapper.WrappedMetadataV0(&pb.MetaDataV0{
+				SeqNumber: seqNumber,
+				Attnets:   attnets,
+			}),
+			expected: wrapper.WrappedMetadataV2(&pb.MetaDataV2{
+				SeqNumber:          seqNumber,
+				Attnets:            attnets,
+				Syncnets:           bitfield.Bitvector4{byte(0x00)},
+				CustodySubnetCount: 0,
+			}),
+		},
+		{
+			name:                    "PeerDAS-Altail",
+			topic:                   p2p.RPCMetaDataTopicV3,
+			epochsSinceGenesisPeer1: 10,
+			epochsSinceGenesisPeer2: 5,
+			metadataPeer2: wrapper.WrappedMetadataV1(&pb.MetaDataV1{
+				SeqNumber: seqNumber,
+				Attnets:   attnets,
+				Syncnets:  syncnets,
+			}),
+			expected: wrapper.WrappedMetadataV2(&pb.MetaDataV2{
+				SeqNumber:          seqNumber,
+				Attnets:            attnets,
+				Syncnets:           syncnets,
+				CustodySubnetCount: 0,
+			}),
+		},
+		{
+			name:                    "PeerDAS-PeerDAS",
+			topic:                   p2p.RPCMetaDataTopicV3,
+			epochsSinceGenesisPeer1: 10,
+			epochsSinceGenesisPeer2: 10,
+			metadataPeer2: wrapper.WrappedMetadataV2(&pb.MetaDataV2{
+				SeqNumber:          seqNumber,
+				Attnets:            attnets,
+				Syncnets:           syncnets,
+				CustodySubnetCount: custodySubnetCount,
+			}),
+			expected: wrapper.WrappedMetadataV2(&pb.MetaDataV2{
+				SeqNumber:          seqNumber,
+				Attnets:            attnets,
+				Syncnets:           syncnets,
+				CustodySubnetCount: custodySubnetCount,
 			}),
 		},
 	}
@@ -145,14 +275,19 @@ func TestMetadataRPCHandler_SendMetadataRequest(t *testing.T) {
 		assert.Equal(t, 1, peersCount, "Expected peers to be connected")
 
 		// Setup sync services.
-		genesis := time.Now().Add(-time.Duration(tc.epochsSinceGenesis) * secondsPerEpoch * time.Second)
-		chain := &mock.ChainService{Genesis: genesis, ValidatorsRoot: [32]byte{}}
-		servicePeer1, servicePeer2 := createService(peer1, chain), createService(peer2, chain)
+		genesisPeer1 := time.Now().Add(-time.Duration(tc.epochsSinceGenesisPeer1) * secondsPerEpoch)
+		genesisPeer2 := time.Now().Add(-time.Duration(tc.epochsSinceGenesisPeer2) * secondsPerEpoch)
+
+		chainPeer1 := &mock.ChainService{Genesis: genesisPeer1, ValidatorsRoot: [32]byte{}}
+		chainPeer2 := &mock.ChainService{Genesis: genesisPeer2, ValidatorsRoot: [32]byte{}}
+
+		servicePeer1 := createService(peer1, chainPeer1)
+		servicePeer2 := createService(peer2, chainPeer2)
 
 		// Define the behavior of peer2 when receiving a METADATA request.
 		protocolSuffix := servicePeer2.cfg.p2p.Encoding().ProtocolSuffix()
 		protocolID := protocol.ID(tc.topic + protocolSuffix)
-		peer2.LocalMetadata = tc.expected
+		peer2.LocalMetadata = tc.metadataPeer2
 
 		wg.Add(1)
 		peer2.BHost.SetStreamHandler(protocolID, func(stream network.Stream) {
@@ -162,7 +297,7 @@ func TestMetadataRPCHandler_SendMetadataRequest(t *testing.T) {
 		})
 
 		// Send a METADATA request from peer1 to peer2.
-		_, err := servicePeer1.sendMetaDataRequest(ctx, peer2.BHost.ID())
+		actual, err := servicePeer1.sendMetaDataRequest(ctx, peer2.BHost.ID())
 		assert.NoError(t, err)
 
 		// Wait until the METADATA request is received by peer2 or timeout.
@@ -170,7 +305,7 @@ func TestMetadataRPCHandler_SendMetadataRequest(t *testing.T) {
 		require.Equal(t, false, timeOutReached, "Did not receive METADATA request within timeout")
 
 		// Compare the received METADATA object with the expected METADATA object.
-		require.DeepSSZEqual(t, tc.expected, peer2.LocalMetadata, "Metadata unequal")
+		require.DeepSSZEqual(t, tc.expected.InnerObject(), actual.InnerObject(), "Metadata unequal")
 
 		// Ensure the peers are still connected.
 		peersCount = len(peer1.BHost.Network().Peers())

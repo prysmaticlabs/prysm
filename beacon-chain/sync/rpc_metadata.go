@@ -21,62 +21,115 @@ import (
 func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2pcore.Stream) error {
 	SetRPCStreamDeadlines(stream)
 
+	// Validate the incoming request regarding rate limiting.
 	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
-		return err
+		return errors.Wrap(err, "validate request")
 	}
+
 	s.rateLimiter.add(stream, 1)
 
-	if s.cfg.p2p.Metadata() == nil || s.cfg.p2p.Metadata().IsNil() {
+	// Retrieve our metadata.
+	metadata := s.cfg.p2p.Metadata()
+
+	// Handle the case our metadata is nil.
+	if metadata == nil || metadata.IsNil() {
 		nilErr := errors.New("nil metadata stored for host")
+
 		resp, err := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
 		if err != nil {
 			log.WithError(err).Debug("Could not generate a response error")
-		} else if _, err := stream.Write(resp); err != nil {
+			return nilErr
+		}
+
+		if _, err := stream.Write(resp); err != nil {
 			log.WithError(err).Debug("Could not write to stream")
 		}
+
 		return nilErr
 	}
+
+	// Get the stream version from the protocol.
 	_, _, streamVersion, err := p2p.TopicDeconstructor(string(stream.Protocol()))
 	if err != nil {
+		wrappedErr := errors.Wrap(err, "topic deconstructor")
+
 		resp, genErr := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
 		if genErr != nil {
 			log.WithError(genErr).Debug("Could not generate a response error")
-		} else if _, wErr := stream.Write(resp); wErr != nil {
+			return wrappedErr
+		}
+
+		if _, wErr := stream.Write(resp); wErr != nil {
 			log.WithError(wErr).Debug("Could not write to stream")
 		}
-		return err
+		return wrappedErr
 	}
-	currMd := s.cfg.p2p.Metadata()
+
+	// Handle the case where the stream version is not recognized.
+	metadataVersion := metadata.Version()
 	switch streamVersion {
 	case p2p.SchemaVersionV1:
-		// We have a v1 metadata object saved locally, so we
-		// convert it back to a v0 metadata object.
-		if currMd.Version() != version.Phase0 {
-			currMd = wrapper.WrappedMetadataV0(
+		switch metadataVersion {
+		case version.Altair:
+			fallthrough
+		case version.Deneb:
+			metadata = wrapper.WrappedMetadataV0(
 				&pb.MetaDataV0{
-					Attnets:   currMd.AttnetsBitfield(),
-					SeqNumber: currMd.SequenceNumber(),
+					Attnets:   metadata.AttnetsBitfield(),
+					SeqNumber: metadata.SequenceNumber(),
 				})
 		}
+
 	case p2p.SchemaVersionV2:
-		// We have a v0 metadata object saved locally, so we
-		// convert it to a v1 metadata object.
-		if currMd.Version() != version.Altair {
-			currMd = wrapper.WrappedMetadataV1(
+		switch metadataVersion {
+		case version.Phase0:
+			metadata = wrapper.WrappedMetadataV1(
 				&pb.MetaDataV1{
-					Attnets:   currMd.AttnetsBitfield(),
-					SeqNumber: currMd.SequenceNumber(),
+					Attnets:   metadata.AttnetsBitfield(),
+					SeqNumber: metadata.SequenceNumber(),
 					Syncnets:  bitfield.Bitvector4{byte(0x00)},
 				})
+		case version.Deneb:
+			metadata = wrapper.WrappedMetadataV1(
+				&pb.MetaDataV1{
+					Attnets:   metadata.AttnetsBitfield(),
+					SeqNumber: metadata.SequenceNumber(),
+					Syncnets:  metadata.SyncnetsBitfield(),
+				})
+		}
+
+	case p2p.SchemaVersionV3:
+		switch metadataVersion {
+		case version.Phase0:
+			metadata = wrapper.WrappedMetadataV2(
+				&pb.MetaDataV2{
+					Attnets:            metadata.AttnetsBitfield(),
+					SeqNumber:          metadata.SequenceNumber(),
+					Syncnets:           bitfield.Bitvector4{byte(0x00)},
+					CustodySubnetCount: 0,
+				})
+		case version.Altair:
+			metadata = wrapper.WrappedMetadataV2(
+				&pb.MetaDataV2{
+					Attnets:            metadata.AttnetsBitfield(),
+					SeqNumber:          metadata.SequenceNumber(),
+					Syncnets:           metadata.SyncnetsBitfield(),
+					CustodySubnetCount: 0,
+				})
 		}
 	}
+
+	// Write the METADATA response into the stream.
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		return err
+		return errors.Wrap(err, "write metadata response")
 	}
-	_, err = s.cfg.p2p.Encoding().EncodeWithMaxLength(stream, currMd)
+
+	// Encode the metadata and write it to the stream.
+	_, err = s.cfg.p2p.Encoding().EncodeWithMaxLength(stream, metadata)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "encode metadata")
 	}
+
 	closeStream(stream, log)
 	return nil
 }
@@ -139,6 +192,8 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, peerID peer.ID) (meta
 		topicVersion = p2p.SchemaVersionV1
 	case version.Altair:
 		topicVersion = p2p.SchemaVersionV2
+	case version.Deneb:
+		topicVersion = p2p.SchemaVersionV3
 	}
 
 	// Validate the version of the topic.

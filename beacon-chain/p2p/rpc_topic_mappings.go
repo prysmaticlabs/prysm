@@ -90,6 +90,9 @@ const (
 	RPCBlocksByRootTopicV2 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV2
 	// RPCMetaDataTopicV2 defines the v2 topic for the metadata rpc method.
 	RPCMetaDataTopicV2 = protocolPrefix + MetadataMessageName + SchemaVersionV2
+
+	// V3 RPC Topics
+	RPCMetaDataTopicV3 = protocolPrefix + MetadataMessageName + SchemaVersionV3
 )
 
 // RPC errors for topic parsing.
@@ -151,9 +154,15 @@ var altairMapping = map[string]bool{
 	MetadataMessageName:            true,
 }
 
+// Maps all the RPC messages which are to updated with peerDAS fork epoch.
+var peerDASMapping = map[string]bool{
+	MetadataMessageName: true,
+}
+
 var versionMapping = map[string]bool{
 	SchemaVersionV1: true,
 	SchemaVersionV2: true,
+	SchemaVersionV3: true,
 }
 
 // OmitContextBytesV1 keeps track of which RPC methods do not write context bytes in their v1 incarnations.
@@ -281,13 +290,25 @@ func (r RPCTopic) Version() string {
 // TopicFromMessage constructs the rpc topic from the provided message
 // type and epoch.
 func TopicFromMessage(msg string, epoch primitives.Epoch) (string, error) {
+	// Check if the topic is known.
 	if !messageMapping[msg] {
 		return "", errors.Errorf("%s: %s", invalidRPCMessageType, msg)
 	}
+
+	// Base version is version 1.
 	version := SchemaVersionV1
+
+	// Check if the message is to be updated in altair.
 	isAltair := epoch >= params.BeaconConfig().AltairForkEpoch
 	if isAltair && altairMapping[msg] {
 		version = SchemaVersionV2
 	}
+
+	// Check if the message is to be updated in peerDAS.
+	isPeerDAS := epoch >= params.BeaconConfig().Eip7594ForkEpoch
+	if isPeerDAS && peerDASMapping[msg] {
+		version = SchemaVersionV3
+	}
+
 	return protocolPrefix + msg + version, nil
 }
