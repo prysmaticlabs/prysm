@@ -49,16 +49,12 @@ func RunExecutionPayloadTest(t *testing.T, config string, fork string, sszToBloc
 				require.NoError(t, err)
 			}
 
-			payload, err := body.Execution()
-			require.NoError(t, err)
-			require.NoError(t, err)
-
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "execution.yaml")
 			require.NoError(t, err)
 			config := &ExecutionConfig{}
 			require.NoError(t, utils.UnmarshalYaml(file, config), "Failed to Unmarshal")
 
-			gotState, err := blocks.ProcessPayload(preBeaconState, payload)
+			gotState, err := blocks.ProcessPayload(preBeaconState, body)
 			if postSSZExists {
 				require.NoError(t, err)
 				comparePostState(t, postSSZFilepath, sszToState, preBeaconState, gotState)
