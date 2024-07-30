@@ -233,7 +233,6 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
 	}
 	return st, nil
-
 }
 
 // BLSChangesSignatureBatch extracts the relevant signatures from the provided execution change
