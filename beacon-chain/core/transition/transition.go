@@ -297,18 +297,18 @@ func ProcessSlotsCore(ctx context.Context, span *trace.Span, state state.BeaconS
 func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	var err error
 	if time.CanProcessEpoch(state) {
-		if state.Version() == version.Phase0 {
-			state, err = ProcessEpochPrecompute(ctx, state)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not process epoch with optimizations")
+		if state.Version() == version.Electra {
+			if err = electra.ProcessEpoch(ctx, state); err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
 			}
-		} else if state.Version() <= version.Deneb {
+		} else if state.Version() >= version.Altair {
 			if err = altair.ProcessEpoch(ctx, state); err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
 			}
 		} else {
-			if err = electra.ProcessEpoch(ctx, state); err != nil {
-				return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+			state, err = ProcessEpochPrecompute(ctx, state)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process epoch with optimizations")
 			}
 		}
 	}
