@@ -6,18 +6,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	blockchainTesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/voluntaryexits"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -377,4 +382,112 @@ func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
 		require.Equal(t, false, pool.ValidatorExists(idx))
 	})
+}
+
+func Test_sendNewFinalizedEvent(t *testing.T) {
+	s, _ := minimalTestService(t)
+	notifier := &blockchainTesting.MockStateNotifier{RecordEvents: true}
+	s.cfg.StateNotifier = notifier
+	finalizedSt, err := util.NewBeaconState()
+	require.NoError(t, err)
+	finalizedStRoot, err := finalizedSt.HashTreeRoot(s.ctx)
+	require.NoError(t, err)
+	b := util.NewBeaconBlock()
+	b.Block.StateRoot = finalizedStRoot[:]
+	sbb, err := blocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+	sbbRoot, err := sbb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, s.cfg.BeaconDB.SaveBlock(s.ctx, sbb))
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Epoch: 123,
+		Root:  sbbRoot[:],
+	}))
+
+	s.sendNewFinalizedEvent(s.ctx, st)
+
+	require.Equal(t, 1, len(notifier.ReceivedEvents()))
+	e := notifier.ReceivedEvents()[0]
+	assert.Equal(t, statefeed.FinalizedCheckpoint, int(e.Type))
+	fc, ok := e.Data.(*ethpbv1.EventFinalizedCheckpoint)
+	require.Equal(t, true, ok, "event has wrong data type")
+	assert.Equal(t, primitives.Epoch(123), fc.Epoch)
+	assert.DeepEqual(t, sbbRoot[:], fc.Block)
+	assert.DeepEqual(t, finalizedStRoot[:], fc.State)
+	assert.Equal(t, false, fc.ExecutionOptimistic)
+}
+
+func Test_executePostFinalizationTasks(t *testing.T) {
+	logHook := logTest.NewGlobal()
+
+	headState, err := util.NewBeaconStateElectra()
+	require.NoError(t, err)
+	finalizedStRoot, err := headState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
+	genesis := util.NewBeaconBlock()
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*122 + 1
+	headBlock := util.NewBeaconBlock()
+	headBlock.Block.Slot = finalizedSlot
+	headBlock.Block.StateRoot = finalizedStRoot[:]
+	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
+	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	hexKey := "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
+	key, err := hexutil.Decode(hexKey)
+	require.NoError(t, err)
+	require.NoError(t, headState.SetValidators([]*ethpb.Validator{
+		{
+			PublicKey:             key,
+			WithdrawalCredentials: make([]byte, fieldparams.RootLength),
+		},
+	}))
+	require.NoError(t, headState.SetSlot(finalizedSlot))
+	require.NoError(t, headState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Epoch: 123,
+		Root:  headRoot[:],
+	}))
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
+
+	s, tr := minimalTestService(t, WithFinalizedStateAtStartUp(headState))
+	ctx, beaconDB, stateGen := tr.ctx, tr.db, tr.sg
+
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
+	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
+	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
+	util.SaveBlock(t, ctx, beaconDB, headBlock)
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
+
+	require.NoError(t, err)
+	require.NoError(t, stateGen.SaveState(ctx, headRoot, headState))
+	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
+
+	notifier := &blockchainTesting.MockStateNotifier{RecordEvents: true}
+	s.cfg.StateNotifier = notifier
+	s.executePostFinalizationTasks(s.ctx, headState)
+
+	time.Sleep(1 * time.Second) // sleep for a second because event is in a separate go routine
+	require.Equal(t, 1, len(notifier.ReceivedEvents()))
+	e := notifier.ReceivedEvents()[0]
+	assert.Equal(t, statefeed.FinalizedCheckpoint, int(e.Type))
+	fc, ok := e.Data.(*ethpbv1.EventFinalizedCheckpoint)
+	require.Equal(t, true, ok, "event has wrong data type")
+	assert.Equal(t, primitives.Epoch(123), fc.Epoch)
+	assert.DeepEqual(t, headRoot[:], fc.Block)
+	assert.DeepEqual(t, finalizedStRoot[:], fc.State)
+	assert.Equal(t, false, fc.ExecutionOptimistic)
+
+	// check the cache
+	index, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
+	require.Equal(t, true, ok)
+	require.Equal(t, primitives.ValidatorIndex(0), index) // first index
+
+	// check deposit
+	require.LogsContain(t, logHook, "Finalized deposit insertion completed at index")
 }

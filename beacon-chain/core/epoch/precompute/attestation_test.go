@@ -211,7 +211,7 @@ func TestProcessAttestations(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
-	indices, err := attestation.AttestingIndices(att1.AggregationBits, committee)
+	indices, err := attestation.AttestingIndices(att1, committee)
 	require.NoError(t, err)
 	for _, i := range indices {
 		if !pVals[i].IsPrevEpochAttester {
@@ -220,7 +220,7 @@ func TestProcessAttestations(t *testing.T) {
 	}
 	committee, err = helpers.BeaconCommitteeFromState(context.Background(), beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	require.NoError(t, err)
-	indices, err = attestation.AttestingIndices(att2.AggregationBits, committee)
+	indices, err = attestation.AttestingIndices(att2, committee)
 	require.NoError(t, err)
 	for _, i := range indices {
 		assert.Equal(t, true, pVals[i].IsPrevEpochAttester, "Not a prev epoch attester")

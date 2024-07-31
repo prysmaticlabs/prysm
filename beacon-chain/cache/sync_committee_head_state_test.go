@@ -1,8 +1,9 @@
-package cache
+package cache_test
 
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -125,7 +126,7 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewSyncCommitteeHeadState()
+			c := cache.NewSyncCommitteeHeadState()
 			if tt.put != nil {
 				err := c.Put(tt.put.slot, tt.put.state)
 				if (err != nil) != tt.wantPutErr {

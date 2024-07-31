@@ -50,7 +50,7 @@ func ensurePeerConnections(ctx context.Context, h host.Host, peers *peers.Status
 		c := h.Network().ConnsToPeer(p.ID)
 		if len(c) == 0 {
 			if err := connectWithTimeout(ctx, h, p); err != nil {
-				log.WithField("peer", p.ID).WithField("addrs", p.Addrs).WithError(err).Errorf("Failed to reconnect to peer")
+				log.WithField("peer", p.ID).WithField("addrs", p.Addrs).WithError(err).Errorf("failed to reconnect to peer")
 				continue
 			}
 		}

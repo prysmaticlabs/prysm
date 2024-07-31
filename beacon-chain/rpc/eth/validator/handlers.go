@@ -31,7 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -52,7 +52,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var match *ethpbalpha.Attestation
+	var match ethpbalpha.Att
 	var err error
 
 	match, err = matchingAtt(s.AttestationsPool.AggregatedAttestations(), primitives.Slot(slot), attDataRoot)
@@ -79,29 +79,29 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 
 	response := &structs.AggregateAttestationResponse{
 		Data: &structs.Attestation{
-			AggregationBits: hexutil.Encode(match.AggregationBits),
+			AggregationBits: hexutil.Encode(match.GetAggregationBits()),
 			Data: &structs.AttestationData{
-				Slot:            strconv.FormatUint(uint64(match.Data.Slot), 10),
-				CommitteeIndex:  strconv.FormatUint(uint64(match.Data.CommitteeIndex), 10),
-				BeaconBlockRoot: hexutil.Encode(match.Data.BeaconBlockRoot),
+				Slot:            strconv.FormatUint(uint64(match.GetData().Slot), 10),
+				CommitteeIndex:  strconv.FormatUint(uint64(match.GetData().CommitteeIndex), 10),
+				BeaconBlockRoot: hexutil.Encode(match.GetData().BeaconBlockRoot),
 				Source: &structs.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(match.Data.Source.Epoch), 10),
-					Root:  hexutil.Encode(match.Data.Source.Root),
+					Epoch: strconv.FormatUint(uint64(match.GetData().Source.Epoch), 10),
+					Root:  hexutil.Encode(match.GetData().Source.Root),
 				},
 				Target: &structs.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(match.Data.Target.Epoch), 10),
-					Root:  hexutil.Encode(match.Data.Target.Root),
+					Epoch: strconv.FormatUint(uint64(match.GetData().Target.Epoch), 10),
+					Root:  hexutil.Encode(match.GetData().Target.Root),
 				},
 			},
-			Signature: hexutil.Encode(match.Signature),
+			Signature: hexutil.Encode(match.GetSignature()),
 		}}
 	httputil.WriteJson(w, response)
 }
 
-func matchingAtt(atts []*ethpbalpha.Attestation, slot primitives.Slot, attDataRoot []byte) (*ethpbalpha.Attestation, error) {
+func matchingAtt(atts []ethpbalpha.Att, slot primitives.Slot, attDataRoot []byte) (ethpbalpha.Att, error) {
 	for _, att := range atts {
-		if att.Data.Slot == slot {
-			root, err := att.Data.HashTreeRoot()
+		if att.GetData().Slot == slot {
+			root, err := att.GetData().HashTreeRoot()
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get attestation data root")
 			}
@@ -121,7 +121,7 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 	var req structs.SubmitContributionAndProofsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -154,7 +154,7 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	var req structs.SubmitAggregateAndProofsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -173,12 +173,10 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 			httputil.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(
-			ctx,
-			&ethpbalpha.SignedAggregateSubmitRequest{SignedAggregateAndProof: consensusItem},
-		)
+		rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(ctx, consensusItem)
 		if rpcError != nil {
-			_, ok := rpcError.Err.(*core.AggregateBroadcastFailedError)
+			var aggregateBroadcastFailedError *core.AggregateBroadcastFailedError
+			ok := errors.As(rpcError.Err, &aggregateBroadcastFailedError)
 			if ok {
 				broadcastFailed = true
 			} else {
@@ -209,7 +207,7 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 	var req structs.SubmitSyncCommitteeSubscriptionsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -319,7 +317,7 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 	var req structs.SubmitBeaconCommitteeSubscriptionsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -522,7 +520,7 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 	var jsonRegistrations []*structs.SignedValidatorRegistration
 	err := json.NewDecoder(r.Body).Decode(&jsonRegistrations)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -555,7 +553,7 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	var jsonFeeRecipients []*structs.FeeRecipient
 	err := json.NewDecoder(r.Body).Decode(&jsonFeeRecipients)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -592,7 +590,7 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	if len(validatorIndices) == 0 {
 		return
 	}
-	log.WithFields(log.Fields{
+	log.WithFields(logrus.Fields{
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses")
 }
@@ -615,7 +613,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 	var indices []string
 	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -664,7 +662,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, st, requestedEpoch)
+	assignments, err := helpers.CommitteeAssignments(ctx, st, requestedEpoch, requestedValIndices)
 	if err != nil {
 		httputil.HandleError(w, "Could not compute committee assignments: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -684,7 +682,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 			httputil.HandleError(w, fmt.Sprintf("Invalid validator index %d", index), http.StatusBadRequest)
 			return
 		}
-		committee := committeeAssignments[index]
+		committee := assignments[index]
 		if committee == nil {
 			continue
 		}
@@ -708,10 +706,20 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	dependentRoot, err := attestationDependentRoot(st, requestedEpoch)
-	if err != nil {
-		httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
-		return
+	var dependentRoot []byte
+	if requestedEpoch <= 1 {
+		r, err := s.BeaconDB.GenesisBlockRoot(ctx)
+		if err != nil {
+			httputil.HandleError(w, "Could not get genesis block root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dependentRoot = r[:]
+	} else {
+		dependentRoot, err = attestationDependentRoot(st, requestedEpoch)
+		if err != nil {
+			httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
@@ -793,11 +801,11 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var proposals map[primitives.ValidatorIndex][]primitives.Slot
+	var assignments map[primitives.ValidatorIndex][]primitives.Slot
 	if nextEpochLookahead {
-		_, proposals, err = helpers.CommitteeAssignments(ctx, st, nextEpoch)
+		assignments, err = helpers.ProposerAssignments(ctx, st, nextEpoch)
 	} else {
-		_, proposals, err = helpers.CommitteeAssignments(ctx, st, requestedEpoch)
+		assignments, err = helpers.ProposerAssignments(ctx, st, requestedEpoch)
 	}
 	if err != nil {
 		httputil.HandleError(w, "Could not compute committee assignments: "+err.Error(), http.StatusInternalServerError)
@@ -805,7 +813,7 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 	}
 
 	duties := make([]*structs.ProposerDuty, 0)
-	for index, proposalSlots := range proposals {
+	for index, proposalSlots := range assignments {
 		val, err := st.ValidatorAtIndexReadOnly(index)
 		if err != nil {
 			httputil.HandleError(w, fmt.Sprintf("Could not get validator at index %d: %v", index, err), http.StatusInternalServerError)
@@ -822,10 +830,20 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dependentRoot, err := proposalDependentRoot(st, requestedEpoch)
-	if err != nil {
-		httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
-		return
+	var dependentRoot []byte
+	if requestedEpoch == 0 {
+		r, err := s.BeaconDB.GenesisBlockRoot(ctx)
+		if err != nil {
+			httputil.HandleError(w, "Could not get genesis block root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dependentRoot = r[:]
+	} else {
+		dependentRoot, err = proposalDependentRoot(st, requestedEpoch)
+		if err != nil {
+			httputil.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
@@ -875,7 +893,7 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 	var indices []string
 	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
@@ -1000,7 +1018,7 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 	var indices []string
 	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
-	case err == io.EOF:
+	case errors.Is(err, io.EOF):
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:

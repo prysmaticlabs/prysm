@@ -6,12 +6,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	f "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -21,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"go.opencensus.io/trace"
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which
@@ -50,6 +48,8 @@ type ForkchoiceFetcher interface {
 	ForkChoiceDump(context.Context) (*forkchoice.Dump, error)
 	NewSlot(context.Context, primitives.Slot) error
 	ProposerBoost() [32]byte
+	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
+	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
 }
 
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.
@@ -399,14 +399,6 @@ func (s *Service) InForkchoice(root [32]byte) bool {
 	return s.cfg.ForkChoiceStore.HasNode(root)
 }
 
-// IsViableForCheckpoint returns whether the given checkpoint is a checkpoint in any
-// chain known to forkchoice
-func (s *Service) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
-	s.cfg.ForkChoiceStore.RLock()
-	defer s.cfg.ForkChoiceStore.RUnlock()
-	return s.cfg.ForkChoiceStore.IsViableForCheckpoint(cp)
-}
-
 // IsOptimisticForRoot takes the root as argument instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
@@ -516,13 +508,6 @@ func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slo
 	}
 
 	return ar[:], nil
-}
-
-// SetOptimisticToInvalid wraps the corresponding method in forkchoice
-func (s *Service) SetOptimisticToInvalid(ctx context.Context, root, parent, lvh [32]byte) ([][32]byte, error) {
-	s.cfg.ForkChoiceStore.Lock()
-	defer s.cfg.ForkChoiceStore.Unlock()
-	return s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parent, lvh)
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.

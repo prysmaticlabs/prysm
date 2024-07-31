@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
@@ -198,12 +198,12 @@ func TestClient_GetHeader(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, true, bytes.Equal(expectedTxRoot, withdrawalsRoot))
 		require.Equal(t, uint64(1), bidHeader.GasUsed())
-		value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+		// this matches the value in the testExampleHeaderResponse
+		bidStr := "652312848583266388373324160190187140051835877600158453279131187530910662656"
+		value, err := stringToUint256(bidStr)
 		require.NoError(t, err)
-		require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", bid.Value()))
-		bidValue := bytesutil.ReverseByteOrder(bid.Value())
-		require.DeepEqual(t, bidValue, value.Bytes())
-		require.DeepEqual(t, big.NewInt(0).SetBytes(bidValue), value.Int)
+		require.Equal(t, 0, value.Int.Cmp(primitives.WeiToBigInt(bid.Value())))
+		require.Equal(t, bidStr, primitives.WeiToBigInt(bid.Value()).String())
 	})
 	t.Run("capella", func(t *testing.T) {
 		hc := &http.Client{
@@ -230,12 +230,11 @@ func TestClient_GetHeader(t *testing.T) {
 		withdrawalsRoot, err := bidHeader.WithdrawalsRoot()
 		require.NoError(t, err)
 		require.Equal(t, true, bytes.Equal(expectedWithdrawalsRoot, withdrawalsRoot))
-		value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+		bidStr := "652312848583266388373324160190187140051835877600158453279131187530910662656"
+		value, err := stringToUint256(bidStr)
 		require.NoError(t, err)
-		require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", bid.Value()))
-		bidValue := bytesutil.ReverseByteOrder(bid.Value())
-		require.DeepEqual(t, bidValue, value.Bytes())
-		require.DeepEqual(t, big.NewInt(0).SetBytes(bidValue), value.Int)
+		require.Equal(t, 0, value.Int.Cmp(primitives.WeiToBigInt(bid.Value())))
+		require.Equal(t, bidStr, primitives.WeiToBigInt(bid.Value()).String())
 	})
 	t.Run("deneb", func(t *testing.T) {
 		hc := &http.Client{
@@ -262,12 +261,13 @@ func TestClient_GetHeader(t *testing.T) {
 		withdrawalsRoot, err := bidHeader.WithdrawalsRoot()
 		require.NoError(t, err)
 		require.Equal(t, true, bytes.Equal(expectedWithdrawalsRoot, withdrawalsRoot))
-		value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+
+		bidStr := "652312848583266388373324160190187140051835877600158453279131187530910662656"
+		value, err := stringToUint256(bidStr)
 		require.NoError(t, err)
-		require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", bid.Value()))
-		bidValue := bytesutil.ReverseByteOrder(bid.Value())
-		require.DeepEqual(t, bidValue, value.Bytes())
-		require.DeepEqual(t, big.NewInt(0).SetBytes(bidValue), value.Int)
+		require.Equal(t, 0, value.Int.Cmp(primitives.WeiToBigInt(bid.Value())))
+		require.Equal(t, bidStr, primitives.WeiToBigInt(bid.Value()).String())
+
 		kcgCommitments, err := bid.BlobKzgCommitments()
 		require.NoError(t, err)
 		require.Equal(t, len(kcgCommitments) > 0, true)
@@ -432,7 +432,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		sbbb, err := blocks.NewSignedBeaconBlock(testSignedBlindedBeaconBlockBellatrix(t))
 		require.NoError(t, err)
 		_, _, err = c.SubmitBlindedBlock(ctx, sbbb)
-		require.ErrorContains(t, "not a bellatrix payload", err)
+		require.ErrorIs(t, err, errResponseVersionMismatch)
 	})
 	t.Run("not blinded", func(t *testing.T) {
 		sbb, err := blocks.NewSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: &eth.BeaconBlockBellatrix{Body: &eth.BeaconBlockBodyBellatrix{ExecutionPayload: &v1.ExecutionPayload{}}}})

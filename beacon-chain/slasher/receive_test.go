@@ -29,7 +29,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 		},
 		attsQueue: newAttestationsQueue(),
 	}
-	indexedAttsChan := make(chan *ethpb.IndexedAttestation)
+	indexedAttsChan := make(chan *slashertypes.WrappedIndexedAtt)
 	defer close(indexedAttsChan)
 
 	s.wg.Add(1)
@@ -40,13 +40,15 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	secondIndices := []uint64{4, 5, 6}
 	att1 := createAttestationWrapperEmptySig(t, 1, 2, firstIndices, nil)
 	att2 := createAttestationWrapperEmptySig(t, 1, 2, secondIndices, nil)
-	indexedAttsChan <- att1.IndexedAttestation
-	indexedAttsChan <- att2.IndexedAttestation
+	wrappedAtt1 := &slashertypes.WrappedIndexedAtt{IndexedAtt: att1.IndexedAttestation}
+	wrappedAtt2 := &slashertypes.WrappedIndexedAtt{IndexedAtt: att2.IndexedAttestation}
+	indexedAttsChan <- wrappedAtt1
+	indexedAttsChan <- wrappedAtt2
 	cancel()
 	s.wg.Wait()
 	wanted := []*slashertypes.IndexedAttestationWrapper{
-		att1,
-		att2,
+		{IndexedAttestation: att1.IndexedAttestation, DataRoot: att1.DataRoot},
+		{IndexedAttestation: att2.IndexedAttestation, DataRoot: att2.DataRoot},
 	}
 	require.DeepEqual(t, wanted, s.attsQueue.dequeue())
 }
@@ -212,7 +214,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 		},
 		attsQueue: newAttestationsQueue(),
 	}
-	indexedAttsChan := make(chan *ethpb.IndexedAttestation)
+	indexedAttsChan := make(chan *slashertypes.WrappedIndexedAtt)
 	defer close(indexedAttsChan)
 
 	s.wg.Add(1)
@@ -223,18 +225,21 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	secondIndices := []uint64{4, 5, 6}
 	// Add a valid attestation.
 	validAtt := createAttestationWrapperEmptySig(t, 1, 2, firstIndices, nil)
-	indexedAttsChan <- validAtt.IndexedAttestation
+	wrappedValidAtt := &slashertypes.WrappedIndexedAtt{IndexedAtt: validAtt.IndexedAttestation}
+	indexedAttsChan <- wrappedValidAtt
 	// Send an invalid, bad attestation which will not
 	// pass integrity checks at it has invalid attestation data.
-	indexedAttsChan <- &ethpb.IndexedAttestation{
-		AttestingIndices: secondIndices,
+	indexedAttsChan <- &slashertypes.WrappedIndexedAtt{
+		IndexedAtt: &ethpb.IndexedAttestation{
+			AttestingIndices: secondIndices,
+		},
 	}
 	cancel()
 	s.wg.Wait()
 	// Expect only a single, valid attestation was added to the queue.
 	require.Equal(t, 1, s.attsQueue.size())
 	wanted := []*slashertypes.IndexedAttestationWrapper{
-		validAtt,
+		{IndexedAttestation: validAtt.IndexedAttestation, DataRoot: validAtt.DataRoot},
 	}
 	require.DeepEqual(t, wanted, s.attsQueue.dequeue())
 }

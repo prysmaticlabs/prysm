@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const errEpoch = "Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d"
+const errEpoch = "cannot retrieve information about an epoch in the future, current epoch %d, requesting %d"
 
 // ListValidatorAssignments retrieves the validator assignments for a given epoch,
 // optional validator indices or public keys may be included to filter validator assignments.
@@ -105,9 +105,14 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	// Initialize all committee related data.
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, requestedState, requestedEpoch)
+	assignments, err := helpers.CommitteeAssignments(ctx, requestedState, requestedEpoch, filteredIndices[start:end])
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
+	}
+
+	proposalSlots, err := helpers.ProposerAssignments(ctx, requestedState, requestedEpoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute proposer slots: %v", err)
 	}
 
 	for _, index := range filteredIndices[start:end] {
@@ -115,13 +120,13 @@ func (bs *Server) ListValidatorAssignments(
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
 				index, requestedState.NumValidators())
 		}
-		comAssignment := committeeAssignments[index]
+		a := assignments[index]
 		pubkey := requestedState.PubkeyAtIndex(index)
 		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
-			BeaconCommittees: comAssignment.Committee,
-			CommitteeIndex:   comAssignment.CommitteeIndex,
-			AttesterSlot:     comAssignment.AttesterSlot,
-			ProposerSlots:    proposerIndexToSlots[index],
+			BeaconCommittees: a.Committee,
+			CommitteeIndex:   a.CommitteeIndex,
+			AttesterSlot:     a.AttesterSlot,
+			ProposerSlots:    proposalSlots[index],
 			PublicKey:        pubkey[:],
 			ValidatorIndex:   index,
 		}

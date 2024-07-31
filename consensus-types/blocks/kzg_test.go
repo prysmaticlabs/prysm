@@ -244,7 +244,8 @@ func Test_VerifyKZGInclusionProof(t *testing.T) {
 		StateRoot:  make([]byte, 32),
 	}
 	signedHeader := &ethpb.SignedBeaconBlockHeader{
-		Header: header,
+		Header:    header,
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
 	}
 	sidecar := &ethpb.BlobSidecar{
 		Index:                    uint64(index),

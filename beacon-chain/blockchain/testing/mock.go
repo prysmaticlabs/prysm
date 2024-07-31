@@ -414,8 +414,8 @@ func (*ChainService) HeadGenesisValidatorsRoot() [32]byte {
 }
 
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
-func (*ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
-	if !bytes.Equal(a.Data.BeaconBlockRoot, a.Data.Target.Root) {
+func (*ChainService) VerifyLmdFfgConsistency(_ context.Context, a ethpb.Att) error {
+	if !bytes.Equal(a.GetData().BeaconBlockRoot, a.GetData().Target.Root) {
 		return errors.New("LMD and FFG miss matched")
 	}
 	return nil
@@ -495,7 +495,7 @@ func (s *ChainService) UpdateHead(ctx context.Context, slot primitives.Slot) {
 }
 
 // ReceiveAttesterSlashing mocks the same method in the chain service.
-func (*ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {}
+func (*ChainService) ReceiveAttesterSlashing(context.Context, ethpb.AttSlashing) {}
 
 // IsFinalized mocks the same method in the chain service.
 func (s *ChainService) IsFinalized(_ context.Context, blockRoot [32]byte) bool {

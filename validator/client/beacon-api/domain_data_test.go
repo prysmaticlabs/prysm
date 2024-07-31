@@ -35,15 +35,15 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Make sure that GetGenesis() is called exactly once
+	// Make sure that Genesis() is called exactly once
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
-	genesisProvider.EXPECT().GetGenesis(ctx).Return(
+	genesisProvider.EXPECT().Genesis(gomock.Any()).Return(
 		&structs.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
-	resp, err := validatorClient.getDomainData(ctx, epoch, domainType)
+	resp, err := validatorClient.domainData(ctx, epoch, domainType)
 	assert.NoError(t, err)
 	require.NotNil(t, resp)
 
@@ -64,12 +64,12 @@ func TestGetDomainData_GenesisError(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Make sure that GetGenesis() is called exactly once
+	// Make sure that Genesis() is called exactly once
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
-	genesisProvider.EXPECT().GetGenesis(ctx).Return(nil, errors.New("foo error")).Times(1)
+	genesisProvider.EXPECT().Genesis(gomock.Any()).Return(nil, errors.New("foo error")).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
-	_, err := validatorClient.getDomainData(ctx, epoch, domainType)
+	_, err := validatorClient.domainData(ctx, epoch, domainType)
 	assert.ErrorContains(t, "failed to get genesis info", err)
 	assert.ErrorContains(t, "foo error", err)
 }
@@ -83,14 +83,14 @@ func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Make sure that GetGenesis() is called exactly once
+	// Make sure that Genesis() is called exactly once
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
-	genesisProvider.EXPECT().GetGenesis(ctx).Return(
+	genesisProvider.EXPECT().Genesis(gomock.Any()).Return(
 		&structs.Genesis{GenesisValidatorsRoot: "foo"},
 		nil,
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
-	_, err := validatorClient.getDomainData(ctx, epoch, domainType)
+	_, err := validatorClient.domainData(ctx, epoch, domainType)
 	assert.ErrorContains(t, "invalid genesis validators root: foo", err)
 }

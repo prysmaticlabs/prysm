@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 )
@@ -83,15 +85,37 @@ func (f FieldIndex) String() string {
 	case LatestExecutionPayloadHeader:
 		return "latestExecutionPayloadHeader"
 	case LatestExecutionPayloadHeaderCapella:
-		return "LatestExecutionPayloadHeaderCapella"
+		return "latestExecutionPayloadHeaderCapella"
+	case LatestExecutionPayloadHeaderDeneb:
+		return "latestExecutionPayloadHeaderDeneb"
+	case LatestExecutionPayloadHeaderElectra:
+		return "latestExecutionPayloadHeaderElectra"
 	case NextWithdrawalIndex:
-		return "NextWithdrawalIndex"
+		return "nextWithdrawalIndex"
 	case NextWithdrawalValidatorIndex:
-		return "NextWithdrawalValidatorIndex"
+		return "nextWithdrawalValidatorIndex"
 	case HistoricalSummaries:
-		return "HistoricalSummaries"
+		return "historicalSummaries"
+	case DepositRequestsStartIndex:
+		return "depositRequestsStartIndex"
+	case DepositBalanceToConsume:
+		return "depositBalanceToConsume"
+	case ExitBalanceToConsume:
+		return "exitBalanceToConsume"
+	case EarliestExitEpoch:
+		return "earliestExitEpoch"
+	case ConsolidationBalanceToConsume:
+		return "consolidationBalanceToConsume"
+	case EarliestConsolidationEpoch:
+		return "earliestConsolidationEpoch"
+	case PendingBalanceDeposits:
+		return "pendingBalanceDeposits"
+	case PendingPartialWithdrawals:
+		return "pendingPartialWithdrawals"
+	case PendingConsolidations:
+		return "pendingConsolidations"
 	default:
-		return ""
+		return fmt.Sprintf("unknown field index number: %d", f)
 	}
 }
 
@@ -147,7 +171,7 @@ func (f FieldIndex) RealPosition() int {
 		return 22
 	case NextSyncCommittee:
 		return 23
-	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella, LatestExecutionPayloadHeaderDeneb:
+	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella, LatestExecutionPayloadHeaderDeneb, LatestExecutionPayloadHeaderElectra:
 		return 24
 	case NextWithdrawalIndex:
 		return 25
@@ -155,6 +179,24 @@ func (f FieldIndex) RealPosition() int {
 		return 26
 	case HistoricalSummaries:
 		return 27
+	case DepositRequestsStartIndex:
+		return 28
+	case DepositBalanceToConsume:
+		return 29
+	case ExitBalanceToConsume:
+		return 30
+	case EarliestExitEpoch:
+		return 31
+	case ConsolidationBalanceToConsume:
+		return 32
+	case EarliestConsolidationEpoch:
+		return 33
+	case PendingBalanceDeposits:
+		return 34
+	case PendingPartialWithdrawals:
+		return 35
+	case PendingConsolidations:
+		return 36
 	default:
 		return -1
 	}
@@ -207,9 +249,19 @@ const (
 	LatestExecutionPayloadHeader
 	LatestExecutionPayloadHeaderCapella
 	LatestExecutionPayloadHeaderDeneb
+	LatestExecutionPayloadHeaderElectra
 	NextWithdrawalIndex
 	NextWithdrawalValidatorIndex
 	HistoricalSummaries
+	DepositRequestsStartIndex     // Electra: EIP-6110
+	DepositBalanceToConsume       // Electra: EIP-7251
+	ExitBalanceToConsume          // Electra: EIP-7251
+	EarliestExitEpoch             // Electra: EIP-7251
+	ConsolidationBalanceToConsume // Electra: EIP-7251
+	EarliestConsolidationEpoch    // Electra: EIP-7251
+	PendingBalanceDeposits        // Electra: EIP-7251
+	PendingPartialWithdrawals     // Electra: EIP-7251
+	PendingConsolidations         // Electra: EIP-7251
 )
 
 // Enumerator keeps track of the number of states created since the node's start.

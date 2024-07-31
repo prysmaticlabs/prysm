@@ -42,8 +42,18 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableEIP4881 = &cli.BoolFlag{
+		Name:   "disable-eip-4881",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedVerboseSigVerification = &cli.BoolFlag{
 		Name:   "enable-verbose-sig-verification",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableDebugRPCEndpoints = &cli.BoolFlag{
+		Name:   "enable-debug-rpc-endpoints",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -58,7 +68,9 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableOptionalEngineMethods,
 	deprecatedDisableAggregateParallel,
 	deprecatedEnableEIP4881,
+	deprecatedDisableEIP4881,
 	deprecatedVerboseSigVerification,
+	deprecatedEnableDebugRPCEndpoints,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components

@@ -2,12 +2,14 @@ package state_native
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -19,6 +21,14 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	defer b.lock.RUnlock()
 
 	return b.validatorsVal()
+}
+
+// ValidatorsReadOnly participating in consensus on the beacon chain.
+func (b *BeaconState) ValidatorsReadOnly() []state.ReadOnlyValidator {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.validatorsReadOnlyVal()
 }
 
 func (b *BeaconState) validatorsVal() []*ethpb.Validator {
@@ -42,6 +52,35 @@ func (b *BeaconState) validatorsVal() []*ethpb.Validator {
 			continue
 		}
 		res[i] = ethpb.CopyValidator(val)
+	}
+	return res
+}
+
+func (b *BeaconState) validatorsReadOnlyVal() []state.ReadOnlyValidator {
+	var v []*ethpb.Validator
+	if features.Get().EnableExperimentalState {
+		if b.validatorsMultiValue == nil {
+			return nil
+		}
+		v = b.validatorsMultiValue.Value(b)
+	} else {
+		if b.validators == nil {
+			return nil
+		}
+		v = b.validators
+	}
+
+	res := make([]state.ReadOnlyValidator, len(v))
+	var err error
+	for i := 0; i < len(res); i++ {
+		val := v[i]
+		if val == nil {
+			continue
+		}
+		res[i], err = NewValidator(val)
+		if err != nil {
+			continue
+		}
 	}
 	return res
 }
@@ -141,6 +180,10 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]by
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	if b.Version() >= version.Electra {
+		return b.getValidatorIndex(key)
+	}
+
 	var numOfVals int
 	if features.Get().EnableExperimentalState {
 		numOfVals = b.validatorsMultiValue.Len(b)
@@ -179,6 +222,36 @@ func (b *BeaconState) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.
 		return [fieldparams.BLSPubkeyLength]byte{}
 	}
 	return bytesutil.ToBytes48(v.PublicKey)
+}
+
+// AggregateKeyFromIndices builds an aggregated public key from the provided
+// validator indices.
+func (b *BeaconState) AggregateKeyFromIndices(idxs []uint64) (bls.PublicKey, error) {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	pubKeys := make([][]byte, len(idxs))
+	for i, idx := range idxs {
+		var v *ethpb.Validator
+		if features.Get().EnableExperimentalState {
+			var err error
+			v, err = b.validatorsMultiValue.At(b, idx)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			if idx >= uint64(len(b.validators)) {
+				return nil, consensus_types.ErrOutOfBounds
+			}
+			v = b.validators[idx]
+		}
+
+		if v == nil {
+			return nil, ErrNilWrappedValidator
+		}
+		pubKeys[i] = v.PublicKey
+	}
+	return bls.AggregatePublicKeys(pubKeys)
 }
 
 // PublicKeys builds a list of all validator public keys, with each key's index aligned to its validator index.
@@ -371,4 +444,81 @@ func (b *BeaconState) inactivityScoresVal() []uint64 {
 	res := make([]uint64, len(b.inactivityScores))
 	copy(res, b.inactivityScores)
 	return res
+}
+
+// ActiveBalanceAtIndex returns the active balance for the given validator.
+//
+// Spec definition:
+//
+//	def get_active_balance(state: BeaconState, validator_index: ValidatorIndex) -> Gwei:
+//	    max_effective_balance = get_validator_max_effective_balance(state.validators[validator_index])
+//	    return min(state.balances[validator_index], max_effective_balance)
+func (b *BeaconState) ActiveBalanceAtIndex(i primitives.ValidatorIndex) (uint64, error) {
+	if b.version < version.Electra {
+		return 0, errNotSupported("ActiveBalanceAtIndex", b.version)
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	v, err := b.validatorAtIndex(i)
+	if err != nil {
+		return 0, err
+	}
+
+	bal, err := b.balanceAtIndex(i)
+	if err != nil {
+		return 0, err
+	}
+
+	return min(bal, helpers.ValidatorMaxEffectiveBalance(v)), nil
+}
+
+// PendingBalanceToWithdraw returns the sum of all pending withdrawals for the given validator.
+//
+// Spec definition:
+//
+//	def get_pending_balance_to_withdraw(state: BeaconState, validator_index: ValidatorIndex) -> Gwei:
+//	    return sum(
+//	        withdrawal.amount for withdrawal in state.pending_partial_withdrawals if withdrawal.index == validator_index)
+func (b *BeaconState) PendingBalanceToWithdraw(idx primitives.ValidatorIndex) (uint64, error) {
+	if b.version < version.Electra {
+		return 0, errNotSupported("PendingBalanceToWithdraw", b.version)
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	// TODO: Consider maintaining this value in the state, if it's a potential bottleneck.
+	// This is n*m complexity, but this method can only be called
+	// MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD per slot. A more optimized storage indexing such as a
+	// lookup map could be used to reduce the complexity marginally.
+	var sum uint64
+	for _, w := range b.pendingPartialWithdrawals {
+		if w.Index == idx {
+			sum += w.Amount
+		}
+	}
+	return sum, nil
+}
+
+func (b *BeaconState) HasPendingBalanceToWithdraw(idx primitives.ValidatorIndex) (bool, error) {
+	if b.version < version.Electra {
+		return false, errNotSupported("HasPendingBalanceToWithdraw", b.version)
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	// TODO: Consider maintaining this value in the state, if it's a potential bottleneck.
+	// This is n*m complexity, but this method can only be called
+	// MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD per slot. A more optimized storage indexing such as a
+	// lookup map could be used to reduce the complexity marginally.
+	for _, w := range b.pendingPartialWithdrawals {
+		if w.Index == idx {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

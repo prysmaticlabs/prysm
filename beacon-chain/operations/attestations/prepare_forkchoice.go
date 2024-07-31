@@ -3,14 +3,14 @@ package attestations
 import (
 	"bytes"
 	"context"
-	"errors"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
@@ -67,7 +67,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
 	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
 
-	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+	attsById := make(map[attestation.Id][]ethpb.Att, len(atts))
 
 	// Consolidate attestations by aggregating them by similar data root.
 	for _, att := range atts {
@@ -79,14 +79,14 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 			continue
 		}
 
-		attDataRoot, err := att.Data.HashTreeRoot()
+		id, err := attestation.NewId(att, attestation.Data)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not create attestation ID")
 		}
-		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+		attsById[id] = append(attsById[id], att)
 	}
 
-	for _, atts := range attsByDataRoot {
+	for _, atts := range attsById {
 		if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
 			return err
 		}
@@ -103,10 +103,10 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 
 // This aggregates a list of attestations using the aggregation algorithm defined in AggregateAttestations
 // and saves the attestations for fork choice.
-func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) error {
-	clonedAtts := make([]*ethpb.Attestation, len(atts))
+func (s *Service) aggregateAndSaveForkChoiceAtts(atts []ethpb.Att) error {
+	clonedAtts := make([]ethpb.Att, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = ethpb.CopyAttestation(a)
+		clonedAtts[i] = a.Clone()
 	}
 	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {
@@ -118,13 +118,13 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
-func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
-	attRoot, err := hash.Proto(att.Data)
+func (s *Service) seen(att ethpb.Att) (bool, error) {
+	id, err := attestation.NewId(att, attestation.Data)
 	if err != nil {
-		return false, err
+		return false, errors.Wrap(err, "could not create attestation ID")
 	}
-	incomingBits := att.AggregationBits
-	savedBits, ok := s.forkChoiceProcessedRoots.Get(attRoot)
+	incomingBits := att.GetAggregationBits()
+	savedBits, ok := s.forkChoiceProcessedAtts.Get(id)
 	if ok {
 		savedBitlist, ok := savedBits.(bitfield.Bitlist)
 		if !ok {
@@ -149,6 +149,6 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 		}
 	}
 
-	s.forkChoiceProcessedRoots.Add(attRoot, incomingBits)
+	s.forkChoiceProcessedAtts.Add(id, incomingBits)
 	return false, nil
 }

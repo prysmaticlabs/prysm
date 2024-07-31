@@ -271,22 +271,22 @@ func Test_logSlashingEvent(t *testing.T) {
 		{
 			name: "Surrounding vote",
 			slashing: &ethpb.AttesterSlashing{
-				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
+				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
 			},
 		},
 		{
 			name: "Surrounded vote",
 			slashing: &ethpb.AttesterSlashing{
-				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
+				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
 			},
 		},
 		{
 			name: "Double vote",
 			slashing: &ethpb.AttesterSlashing{
-				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_1: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
+				Attestation_2: createAttestationWrapperEmptySig(t, 0, 0, nil, nil).IndexedAttestation.(*ethpb.IndexedAttestation),
 			},
 		},
 	}

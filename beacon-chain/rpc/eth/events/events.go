@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
@@ -173,7 +174,11 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
 		}
-		att := structs.AttFromConsensus(attData.Attestation)
+		a, ok := attData.Attestation.(*eth.Attestation)
+		if !ok {
+			return write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
+		}
+		att := structs.AttFromConsensus(a)
 		return send(w, flusher, AttestationTopic, att)
 	case operation.ExitReceived:
 		if _, ok := requestedTopics[VoluntaryExitTopic]; !ok {
@@ -229,7 +234,11 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, AttesterSlashingTopic)
 		}
-		return send(w, flusher, AttesterSlashingTopic, structs.AttesterSlashingFromConsensus(attesterSlashingData.AttesterSlashing))
+		slashing, ok := attesterSlashingData.AttesterSlashing.(*eth.AttesterSlashing)
+		if ok {
+			return send(w, flusher, AttesterSlashingTopic, structs.AttesterSlashingFromConsensus(slashing))
+		}
+		// TODO: extend to Electra
 	case operation.ProposerSlashingReceived:
 		if _, ok := requestedTopics[ProposerSlashingTopic]; !ok {
 			return nil
@@ -430,28 +439,32 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 	if err != nil {
 		return write(w, flusher, "Could not get head state proposer index: "+err.Error())
 	}
-
+	feeRecipient := params.BeaconConfig().DefaultFeeRecipient.Bytes()
+	tValidator, exists := s.TrackedValidatorsCache.Validator(proposerIndex)
+	if exists {
+		feeRecipient = tValidator.FeeRecipient[:]
+	}
 	var attributes interface{}
 	switch headState.Version() {
 	case version.Bellatrix:
 		attributes = &structs.PayloadAttributesV1{
 			Timestamp:             fmt.Sprintf("%d", t.Unix()),
 			PrevRandao:            hexutil.Encode(prevRando),
-			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+			SuggestedFeeRecipient: hexutil.Encode(feeRecipient),
 		}
 	case version.Capella:
-		withdrawals, err := headState.ExpectedWithdrawals()
+		withdrawals, _, err := headState.ExpectedWithdrawals()
 		if err != nil {
 			return write(w, flusher, "Could not get head state expected withdrawals: "+err.Error())
 		}
 		attributes = &structs.PayloadAttributesV2{
 			Timestamp:             fmt.Sprintf("%d", t.Unix()),
 			PrevRandao:            hexutil.Encode(prevRando),
-			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+			SuggestedFeeRecipient: hexutil.Encode(feeRecipient),
 			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
 		}
-	case version.Deneb:
-		withdrawals, err := headState.ExpectedWithdrawals()
+	case version.Deneb, version.Electra:
+		withdrawals, _, err := headState.ExpectedWithdrawals()
 		if err != nil {
 			return write(w, flusher, "Could not get head state expected withdrawals: "+err.Error())
 		}
@@ -462,7 +475,7 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 		attributes = &structs.PayloadAttributesV3{
 			Timestamp:             fmt.Sprintf("%d", t.Unix()),
 			PrevRandao:            hexutil.Encode(prevRando),
-			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+			SuggestedFeeRecipient: hexutil.Encode(feeRecipient),
 			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
 			ParentBeaconBlockRoot: hexutil.Encode(parentRoot[:]),
 		}

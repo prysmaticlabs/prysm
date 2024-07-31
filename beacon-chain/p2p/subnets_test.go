@@ -66,7 +66,7 @@ func TestStartDiscV5_FindPeersWithSubnet(t *testing.T) {
 	genesisTime := time.Now()
 
 	bootNodeService := &Service{
-		cfg:                   &Config{TCPPort: 2000, UDPPort: 3000},
+		cfg:                   &Config{UDPPort: 2000, TCPPort: 3000, QUICPort: 3000},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
@@ -81,7 +81,7 @@ func TestStartDiscV5_FindPeersWithSubnet(t *testing.T) {
 	bootNodeENR := bootListener.Self().String()
 
 	// Create 3 nodes, each subscribed to a different subnet.
-	// Each node is connected to the boostrap node.
+	// Each node is connected to the bootstrap node.
 	services := make([]*Service, 0, 3)
 
 	for i := 1; i <= 3; i++ {
@@ -89,8 +89,9 @@ func TestStartDiscV5_FindPeersWithSubnet(t *testing.T) {
 		service, err := NewService(ctx, &Config{
 			Discv5BootStrapAddrs: []string{bootNodeENR},
 			MaxPeers:             30,
-			TCPPort:              uint(2000 + i),
-			UDPPort:              uint(3000 + i),
+			UDPPort:              uint(2000 + i),
+			TCPPort:              uint(3000 + i),
+			QUICPort:             uint(3000 + i),
 		})
 
 		require.NoError(t, err)
@@ -133,8 +134,9 @@ func TestStartDiscV5_FindPeersWithSubnet(t *testing.T) {
 	cfg := &Config{
 		Discv5BootStrapAddrs: []string{bootNodeENR},
 		MaxPeers:             30,
-		TCPPort:              2010,
-		UDPPort:              3010,
+		UDPPort:              2010,
+		TCPPort:              3010,
+		QUICPort:             3010,
 	}
 
 	service, err := NewService(ctx, cfg)

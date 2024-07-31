@@ -30,7 +30,7 @@ var (
 
 var (
 	port            = flag.Int("port", 9090, "Port to serve /metrics")
-	web3URL         = flag.String("web3-provider", "https://goerli.prylabs.net", "Web3 URL to access information about ETH1")
+	web3URL         = flag.String("web3-provider", "https://holesky.prylabs.net", "Web3 URL to access information about ETH1")
 	prefix          = flag.String("prefix", "", "Metrics prefix.")
 	addressFilePath = flag.String("addresses", "", "File path to addresses text file.")
 )

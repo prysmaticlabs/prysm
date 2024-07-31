@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -56,7 +57,7 @@ func startChainService(t testing.TB,
 	})
 	require.NoError(t, err)
 
-	depositCache, err := depositcache.New()
+	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
 	fc := doublylinkedtree.New()
@@ -92,8 +93,8 @@ type engineMock struct {
 	payloadStatus   error
 }
 
-func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
-	return nil, nil, false, nil
+func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (*blocks.GetPayloadResponse, error) {
+	return nil, nil
 }
 func (m *engineMock) GetPayloadV2(context.Context, [8]byte) (*pb.ExecutionPayloadCapella, error) {
 	return nil, nil

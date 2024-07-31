@@ -211,6 +211,131 @@ func (s *Service) ComputeValidatorPerformance(
 	}, nil
 }
 
+// IndividualVotes retrieves individual voting status of validators.
+func (s *Service) IndividualVotes(
+	ctx context.Context,
+	req *ethpb.IndividualVotesRequest,
+) (*ethpb.IndividualVotesRespond, *RpcError) {
+	currentEpoch := slots.ToEpoch(s.GenesisTimeFetcher.CurrentSlot())
+	if req.Epoch > currentEpoch {
+		return nil, &RpcError{
+			Err:    fmt.Errorf("cannot retrieve information about an epoch in the future, current epoch %d, requesting %d\n", currentEpoch, req.Epoch),
+			Reason: BadRequest,
+		}
+	}
+
+	slot, err := slots.EpochEnd(req.Epoch)
+	if err != nil {
+		return nil, &RpcError{Err: err, Reason: Internal}
+	}
+	st, err := s.ReplayerBuilder.ReplayerForSlot(slot).ReplayBlocks(ctx)
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrapf(err, "failed to replay blocks for state at epoch %d", req.Epoch),
+			Reason: Internal,
+		}
+	}
+	// Track filtered validators to prevent duplication in the response.
+	filtered := map[primitives.ValidatorIndex]bool{}
+	filteredIndices := make([]primitives.ValidatorIndex, 0)
+	votes := make([]*ethpb.IndividualVotesRespond_IndividualVote, 0, len(req.Indices)+len(req.PublicKeys))
+	// Filter out assignments by public keys.
+	for _, pubKey := range req.PublicKeys {
+		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		if !ok {
+			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{PublicKey: pubKey, ValidatorIndex: primitives.ValidatorIndex(^uint64(0))})
+			continue
+		}
+		filtered[index] = true
+		filteredIndices = append(filteredIndices, index)
+	}
+	// Filter out assignments by validator indices.
+	for _, index := range req.Indices {
+		if !filtered[index] {
+			filteredIndices = append(filteredIndices, index)
+		}
+	}
+	sort.Slice(filteredIndices, func(i, j int) bool {
+		return filteredIndices[i] < filteredIndices[j]
+	})
+
+	var v []*precompute.Validator
+	var bal *precompute.Balance
+	if st.Version() == version.Phase0 {
+		v, bal, err = precompute.New(ctx, st)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not set up pre compute instance"),
+				Reason: Internal,
+			}
+		}
+		v, _, err = precompute.ProcessAttestations(ctx, st, v, bal)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not pre compute attestations"),
+				Reason: Internal,
+			}
+		}
+	} else if st.Version() >= version.Altair {
+		v, bal, err = altair.InitializePrecomputeValidators(ctx, st)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not set up altair pre compute instance"),
+				Reason: Internal,
+			}
+		}
+		v, _, err = altair.ProcessEpochParticipation(ctx, st, bal, v)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not pre compute attestations"),
+				Reason: Internal,
+			}
+		}
+	} else {
+		return nil, &RpcError{
+			Err:    errors.Wrapf(err, "invalid state type retrieved with a version of %d", st.Version()),
+			Reason: Internal,
+		}
+	}
+
+	for _, index := range filteredIndices {
+		if uint64(index) >= uint64(len(v)) {
+			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
+			continue
+		}
+		val, err := st.ValidatorAtIndexReadOnly(index)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not retrieve validator"),
+				Reason: Internal,
+			}
+		}
+		pb := val.PublicKey()
+		votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{
+			Epoch:                            req.Epoch,
+			PublicKey:                        pb[:],
+			ValidatorIndex:                   index,
+			IsSlashed:                        v[index].IsSlashed,
+			IsWithdrawableInCurrentEpoch:     v[index].IsWithdrawableCurrentEpoch,
+			IsActiveInCurrentEpoch:           v[index].IsActiveCurrentEpoch,
+			IsActiveInPreviousEpoch:          v[index].IsActivePrevEpoch,
+			IsCurrentEpochAttester:           v[index].IsCurrentEpochAttester,
+			IsCurrentEpochTargetAttester:     v[index].IsCurrentEpochTargetAttester,
+			IsPreviousEpochAttester:          v[index].IsPrevEpochAttester,
+			IsPreviousEpochTargetAttester:    v[index].IsPrevEpochTargetAttester,
+			IsPreviousEpochHeadAttester:      v[index].IsPrevEpochHeadAttester,
+			CurrentEpochEffectiveBalanceGwei: v[index].CurrentEpochEffectiveBalance,
+			InclusionSlot:                    v[index].InclusionSlot,
+			InclusionDistance:                v[index].InclusionDistance,
+			InactivityScore:                  v[index].InactivityScore,
+		})
+	}
+
+	return &ethpb.IndividualVotesRespond{
+		IndividualVotes: votes,
+	}, nil
+}
+
 // SubmitSignedContributionAndProof is called by a sync committee aggregator
 // to submit signed contribution and proof object.
 func (s *Service) SubmitSignedContributionAndProof(
@@ -250,37 +375,64 @@ func (s *Service) SubmitSignedContributionAndProof(
 // SubmitSignedAggregateSelectionProof verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
 func (s *Service) SubmitSignedAggregateSelectionProof(
 	ctx context.Context,
-	req *ethpb.SignedAggregateSubmitRequest,
+	agg ethpb.SignedAggregateAttAndProof,
 ) *RpcError {
 	ctx, span := trace.StartSpan(ctx, "coreService.SubmitSignedAggregateSelectionProof")
 	defer span.End()
 
-	if req.SignedAggregateAndProof == nil || req.SignedAggregateAndProof.Message == nil ||
-		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
+	if agg == nil {
+		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
+	}
+	attAndProof := agg.AggregateAttestationAndProof()
+	if attAndProof == nil {
+		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
+	}
+	att := attAndProof.AggregateVal()
+	if att == nil {
+		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
+	}
+	data := att.GetData()
+	if data == nil {
 		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
 	}
 	emptySig := make([]byte, fieldparams.BLSSignatureLength)
-	if bytes.Equal(req.SignedAggregateAndProof.Signature, emptySig) ||
-		bytes.Equal(req.SignedAggregateAndProof.Message.SelectionProof, emptySig) {
+	if bytes.Equal(agg.GetSignature(), emptySig) || bytes.Equal(attAndProof.GetSelectionProof(), emptySig) {
 		return &RpcError{Err: errors.New("signed signatures can't be zero hashes"), Reason: BadRequest}
 	}
 
 	// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
-	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
-		s.GenesisTimeFetcher.GenesisTime(), params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
+	if err := helpers.ValidateAttestationTime(
+		data.Slot,
+		s.GenesisTimeFetcher.GenesisTime(),
+		params.BeaconConfig().MaximumGossipClockDisparityDuration(),
+	); err != nil {
 		return &RpcError{Err: errors.New("attestation slot is no longer valid from current time"), Reason: BadRequest}
 	}
 
-	if err := s.Broadcaster.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
+	if err := s.Broadcaster.Broadcast(ctx, agg); err != nil {
 		return &RpcError{Err: &AggregateBroadcastFailedError{err: err}, Reason: Internal}
 	}
 
-	log.WithFields(logrus.Fields{
-		"slot":            req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
-		"committeeIndex":  req.SignedAggregateAndProof.Message.Aggregate.Data.CommitteeIndex,
-		"validatorIndex":  req.SignedAggregateAndProof.Message.AggregatorIndex,
-		"aggregatedCount": req.SignedAggregateAndProof.Message.Aggregate.AggregationBits.Count(),
-	}).Debug("Broadcasting aggregated attestation and proof")
+	if logrus.GetLevel() >= logrus.DebugLevel {
+		var fields logrus.Fields
+		if agg.Version() >= version.Electra {
+			fields = logrus.Fields{
+				"slot":             data.Slot,
+				"committeeCount":   att.CommitteeBitsVal().Count(),
+				"committeeIndices": att.CommitteeBitsVal().BitIndices(),
+				"validatorIndex":   attAndProof.GetAggregatorIndex(),
+				"aggregatedCount":  att.GetAggregationBits().Count(),
+			}
+		} else {
+			fields = logrus.Fields{
+				"slot":            data.Slot,
+				"committeeIndex":  data.CommitteeIndex,
+				"validatorIndex":  attAndProof.GetAggregatorIndex(),
+				"aggregatedCount": att.GetAggregationBits().Count(),
+			}
+		}
+		log.WithFields(fields).Debug("Broadcasting aggregated attestation and proof")
+	}
 
 	return nil
 }
@@ -341,13 +493,18 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: %v", err)}
 	}
 
+	committeeIndex := primitives.CommitteeIndex(0)
+	if slots.ToEpoch(req.Slot) < params.BeaconConfig().ElectraForkEpoch {
+		committeeIndex = req.CommitteeIndex
+	}
+
 	s.AttestationCache.RLock()
 	res := s.AttestationCache.Get()
 	if res != nil && res.Slot == req.Slot {
 		s.AttestationCache.RUnlock()
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
-			CommitteeIndex:  req.CommitteeIndex,
+			CommitteeIndex:  committeeIndex,
 			BeaconBlockRoot: res.HeadRoot,
 			Source: &ethpb.Checkpoint{
 				Epoch: res.Source.Epoch,
@@ -371,7 +528,7 @@ func (s *Service) GetAttestationData(
 	if res != nil && res.Slot == req.Slot {
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
-			CommitteeIndex:  req.CommitteeIndex,
+			CommitteeIndex:  committeeIndex,
 			BeaconBlockRoot: res.HeadRoot,
 			Source: &ethpb.Checkpoint{
 				Epoch: res.Source.Epoch,
@@ -431,7 +588,7 @@ func (s *Service) GetAttestationData(
 
 	return &ethpb.AttestationData{
 		Slot:            req.Slot,
-		CommitteeIndex:  req.CommitteeIndex,
+		CommitteeIndex:  committeeIndex,
 		BeaconBlockRoot: headRoot,
 		Source: &ethpb.Checkpoint{
 			Epoch: justifiedCheckpoint.Epoch,

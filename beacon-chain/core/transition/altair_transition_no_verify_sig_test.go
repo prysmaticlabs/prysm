@@ -70,7 +70,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	}
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
-	h := ethpb.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
+	h := beaconState.LatestBlockHeader().Copy()
 	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	h.StateRoot = prevStateRoot[:]
@@ -157,7 +157,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	}
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
-	h := ethpb.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
+	h := beaconState.LatestBlockHeader().Copy()
 	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	h.StateRoot = prevStateRoot[:]
@@ -226,7 +226,7 @@ func TestProcessEpoch_BadBalanceAltair(t *testing.T) {
 	epochParticipation[0] = participation
 	assert.NoError(t, s.SetCurrentParticipationBits(epochParticipation))
 	assert.NoError(t, s.SetPreviousParticipationBits(epochParticipation))
-	_, err = altair.ProcessEpoch(context.Background(), s)
+	err = altair.ProcessEpoch(context.Background(), s)
 	assert.ErrorContains(t, "addition overflows", err)
 }
 

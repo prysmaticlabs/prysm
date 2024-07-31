@@ -29,7 +29,7 @@ func (s *Service) pruneAttsPool() {
 func (s *Service) pruneExpiredAtts() {
 	aggregatedAtts := s.cfg.Pool.AggregatedAttestations()
 	for _, att := range aggregatedAtts {
-		if s.expired(att.Data.Slot) {
+		if s.expired(att.GetData().Slot) {
 			if err := s.cfg.Pool.DeleteAggregatedAttestation(att); err != nil {
 				log.WithError(err).Error("Could not delete expired aggregated attestation")
 			}
@@ -46,7 +46,7 @@ func (s *Service) pruneExpiredAtts() {
 		return
 	}
 	for _, att := range unAggregatedAtts {
-		if s.expired(att.Data.Slot) {
+		if s.expired(att.GetData().Slot) {
 			if err := s.cfg.Pool.DeleteUnaggregatedAttestation(att); err != nil {
 				log.WithError(err).Error("Could not delete expired unaggregated attestation")
 			}
@@ -56,7 +56,7 @@ func (s *Service) pruneExpiredAtts() {
 
 	blockAtts := s.cfg.Pool.BlockAttestations()
 	for _, att := range blockAtts {
-		if s.expired(att.Data.Slot) {
+		if s.expired(att.GetData().Slot) {
 			if err := s.cfg.Pool.DeleteBlockAttestation(att); err != nil {
 				log.WithError(err).Error("Could not delete expired block attestation")
 			}

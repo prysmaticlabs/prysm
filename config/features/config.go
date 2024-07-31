@@ -20,14 +20,15 @@ The process for implementing new features using this package is as follows:
 package features
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -42,6 +43,7 @@ type Flags struct {
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnableLightClient                   bool // EnableLightClient enables light client APIs.
+	EnableQUIC                          bool // EnableQUIC specifies whether to enable QUIC transport for libp2p.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
@@ -67,7 +69,6 @@ type Flags struct {
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
-	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 	// BlobSaveFsync requires blob saving to block on fsync to ensure blobs are durably persisted before passing DA.
@@ -123,14 +124,7 @@ func InitWithReset(c *Flags) func() {
 
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context) error {
-	if ctx.Bool(PraterTestnet.Name) {
-		log.Info("Running on the Prater Testnet")
-		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
-			return err
-		}
-		applyPraterFeatureFlags(ctx)
-		params.UsePraterNetworkConfig()
-	} else if ctx.Bool(SepoliaTestnet.Name) {
+	if ctx.Bool(SepoliaTestnet.Name) {
 		log.Info("Running on the Sepolia Beacon Chain Testnet")
 		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
 			return err
@@ -155,10 +149,6 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 	}
 	return nil
-}
-
-// Insert feature flags within the function to be enabled for Prater testnet.
-func applyPraterFeatureFlags(ctx *cli.Context) {
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
@@ -252,11 +242,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
 	}
-	cfg.EnableEIP4881 = true
-	if ctx.IsSet(DisableEIP4881.Name) {
-		logEnabled(DisableEIP4881)
-		cfg.EnableEIP4881 = false
-	}
 	if ctx.IsSet(EnableLightClient.Name) {
 		logEnabled(EnableLightClient)
 		cfg.EnableLightClient = true
@@ -264,6 +249,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(BlobSaveFsync.Name) {
 		logEnabled(BlobSaveFsync)
 		cfg.BlobSaveFsync = true
+	}
+	if ctx.IsSet(EnableQUIC.Name) {
+		logEnabled(EnableQUIC)
+		cfg.EnableQUIC = true
 	}
 
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
@@ -343,4 +332,26 @@ func logDisabled(flag cli.DocGenerationFlag) {
 		name = names[0]
 	}
 	log.WithField(name, flag.GetUsage()).Warn(disabledFeatureFlag)
+}
+
+// ValidateNetworkFlags validates provided flags and
+// prevents beacon node or validator to start
+// if more than one network flag is provided
+func ValidateNetworkFlags(ctx *cli.Context) error {
+	networkFlagsCount := 0
+	for _, flag := range NetworkFlags {
+		if ctx.IsSet(flag.Names()[0]) {
+			networkFlagsCount++
+			if networkFlagsCount > 1 {
+				// using a forLoop so future addition
+				// doesn't require changes in this function
+				var flagNames []string
+				for _, flag := range NetworkFlags {
+					flagNames = append(flagNames, "--"+flag.Names()[0])
+				}
+				return fmt.Errorf("cannot use more than one network flag at the same time. Possible network flags are: %s", strings.Join(flagNames, ", "))
+			}
+		}
+	}
+	return nil
 }

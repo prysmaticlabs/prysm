@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
-
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 )
 
@@ -59,7 +58,7 @@ func TestDB_ConvertDatabase(t *testing.T) {
 					signingRootBytes = signingRoot[:]
 				}
 
-				// Create database directoriy path.
+				// Create database directory path.
 				datadir := t.TempDir()
 
 				// Run source DB preparation.

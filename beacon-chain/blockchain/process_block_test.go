@@ -824,7 +824,10 @@ func TestRemoveBlockAttestationsInPool(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, r))
 
-	atts := b.Block.Body.Attestations
+	atts := make([]ethpb.Att, len(b.Block.Body.Attestations))
+	for i, a := range b.Block.Body.Attestations {
+		atts[i] = a
+	}
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -1960,68 +1963,130 @@ func TestNoViableHead_Reboot(t *testing.T) {
 }
 
 func TestOnBlock_HandleBlockAttestations(t *testing.T) {
-	service, tr := minimalTestService(t)
-	ctx := tr.ctx
+	t.Run("pre-Electra", func(t *testing.T) {
+		service, tr := minimalTestService(t)
+		ctx := tr.ctx
 
-	st, keys := util.DeterministicGenesisState(t, 64)
-	stateRoot, err := st.HashTreeRoot(ctx)
-	require.NoError(t, err, "Could not hash genesis state")
+		st, keys := util.DeterministicGenesisState(t, 64)
+		stateRoot, err := st.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
 
-	require.NoError(t, service.saveGenesisData(ctx, st))
+		require.NoError(t, service.saveGenesisData(ctx, st))
 
-	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := consensusblocks.NewSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
-	parentRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
-	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+		genesis := blocks.NewGenesisBlock(stateRoot[:])
+		wsb, err := consensusblocks.NewSignedBeaconBlock(genesis)
+		require.NoError(t, err)
+		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
+		parentRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err, "Could not get signing root")
+		require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+		require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
-	st, err = service.HeadState(ctx)
-	require.NoError(t, err)
-	b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 1)
-	require.NoError(t, err)
-	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
-	require.NoError(t, err)
-	root, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	preState, err := service.getBlockPreState(ctx, wsb.Block())
-	require.NoError(t, err)
-	postState, err := service.validateStateTransition(ctx, preState, wsb)
-	require.NoError(t, err)
-	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false}))
+		st, err = service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 1)
+		require.NoError(t, err)
+		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		require.NoError(t, err)
+		postState, err := service.validateStateTransition(ctx, preState, wsb)
+		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
+		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false}))
 
-	st, err = service.HeadState(ctx)
-	require.NoError(t, err)
-	b, err = util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 2)
-	require.NoError(t, err)
-	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
-	require.NoError(t, err)
+		st, err = service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err = util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 2)
+		require.NoError(t, err)
+		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
 
-	// prepare another block that is not inserted
-	st3, err := transition.ExecuteStateTransition(ctx, st, wsb)
-	require.NoError(t, err)
-	b3, err := util.GenerateFullBlock(st3, keys, util.DefaultBlockGenConfig(), 3)
-	require.NoError(t, err)
-	wsb3, err := consensusblocks.NewSignedBeaconBlock(b3)
-	require.NoError(t, err)
+		// prepare another block that is not inserted
+		st3, err := transition.ExecuteStateTransition(ctx, st, wsb)
+		require.NoError(t, err)
+		b3, err := util.GenerateFullBlock(st3, keys, util.DefaultBlockGenConfig(), 3)
+		require.NoError(t, err)
+		wsb3, err := consensusblocks.NewSignedBeaconBlock(b3)
+		require.NoError(t, err)
 
-	require.Equal(t, 1, len(wsb.Block().Body().Attestations()))
-	a := wsb.Block().Body().Attestations()[0]
-	r := bytesutil.ToBytes32(a.Data.BeaconBlockRoot)
-	require.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(r))
+		require.Equal(t, 1, len(wsb.Block().Body().Attestations()))
+		a := wsb.Block().Body().Attestations()[0]
+		r := bytesutil.ToBytes32(a.GetData().BeaconBlockRoot)
+		require.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(r))
 
-	require.Equal(t, 1, len(wsb.Block().Body().Attestations()))
-	a3 := wsb3.Block().Body().Attestations()[0]
-	r3 := bytesutil.ToBytes32(a3.Data.BeaconBlockRoot)
-	require.Equal(t, false, service.cfg.ForkChoiceStore.HasNode(r3))
+		require.Equal(t, 1, len(wsb.Block().Body().Attestations()))
+		a3 := wsb3.Block().Body().Attestations()[0]
+		r3 := bytesutil.ToBytes32(a3.GetData().BeaconBlockRoot)
+		require.Equal(t, false, service.cfg.ForkChoiceStore.HasNode(r3))
 
-	require.NoError(t, service.handleBlockAttestations(ctx, wsb.Block(), st)) // fine to use the same committee as st
-	require.Equal(t, 0, service.cfg.AttPool.ForkchoiceAttestationCount())
-	require.NoError(t, service.handleBlockAttestations(ctx, wsb3.Block(), st3)) // fine to use the same committee as st
-	require.Equal(t, 1, len(service.cfg.AttPool.BlockAttestations()))
+		require.NoError(t, service.handleBlockAttestations(ctx, wsb.Block(), st)) // fine to use the same committee as st
+		require.Equal(t, 0, service.cfg.AttPool.ForkchoiceAttestationCount())
+		require.NoError(t, service.handleBlockAttestations(ctx, wsb3.Block(), st3)) // fine to use the same committee as st
+		require.Equal(t, 1, len(service.cfg.AttPool.BlockAttestations()))
+	})
+	t.Run("post-Electra", func(t *testing.T) {
+		service, tr := minimalTestService(t)
+		ctx := tr.ctx
+
+		st, keys := util.DeterministicGenesisStateElectra(t, 64)
+		require.NoError(t, service.saveGenesisData(ctx, st))
+
+		genesis, err := blocks.NewGenesisBlockForState(ctx, st)
+		require.NoError(t, err)
+		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, genesis), "Could not save genesis block")
+		parentRoot, err := genesis.Block().HashTreeRoot()
+		require.NoError(t, err, "Could not get signing root")
+		require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+		require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		st, err = service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockElectra(st, keys, util.DefaultBlockGenConfig(), 1)
+		require.NoError(t, err)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		require.NoError(t, err)
+		postState, err := service.validateStateTransition(ctx, preState, wsb)
+		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
+		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false}))
+
+		st, err = service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err = util.GenerateFullBlockElectra(st, keys, util.DefaultBlockGenConfig(), 2)
+		require.NoError(t, err)
+		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+
+		// prepare another block that is not inserted
+		st3, err := transition.ExecuteStateTransition(ctx, st, wsb)
+		require.NoError(t, err)
+		b3, err := util.GenerateFullBlockElectra(st3, keys, util.DefaultBlockGenConfig(), 3)
+		require.NoError(t, err)
+		wsb3, err := consensusblocks.NewSignedBeaconBlock(b3)
+		require.NoError(t, err)
+
+		require.Equal(t, 1, len(wsb.Block().Body().Attestations()))
+		a := wsb.Block().Body().Attestations()[0]
+		r := bytesutil.ToBytes32(a.GetData().BeaconBlockRoot)
+		require.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(r))
+
+		require.Equal(t, 1, len(wsb.Block().Body().Attestations()))
+		a3 := wsb3.Block().Body().Attestations()[0]
+		r3 := bytesutil.ToBytes32(a3.GetData().BeaconBlockRoot)
+		require.Equal(t, false, service.cfg.ForkChoiceStore.HasNode(r3))
+
+		require.NoError(t, service.handleBlockAttestations(ctx, wsb.Block(), st)) // fine to use the same committee as st
+		require.Equal(t, 0, service.cfg.AttPool.ForkchoiceAttestationCount())
+		require.NoError(t, service.handleBlockAttestations(ctx, wsb3.Block(), st3)) // fine to use the same committee as st
+		require.Equal(t, 1, len(service.cfg.AttPool.BlockAttestations()))
+	})
 }
 
 func TestFillMissingBlockPayloadId_DiffSlotExitEarly(t *testing.T) {

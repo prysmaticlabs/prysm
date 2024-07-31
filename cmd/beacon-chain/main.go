@@ -64,7 +64,7 @@ var appFlags = []cli.Flag{
 	flags.InteropNumValidatorsFlag,
 	flags.InteropGenesisTimeFlag,
 	flags.SlotsPerArchivedPoint,
-	flags.EnableDebugRPCEndpoints,
+	flags.DisableDebugRPCEndpoints,
 	flags.SubscribeToAllSubnets,
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
@@ -72,6 +72,7 @@ var appFlags = []cli.Flag{
 	flags.WeakSubjectivityCheckpoint,
 	flags.Eth1HeaderReqLimit,
 	flags.MinPeersPerSubnet,
+	flags.MaxConcurrentDials,
 	flags.SuggestedFeeRecipient,
 	flags.TerminalTotalDifficultyOverride,
 	flags.TerminalBlockHashOverride,
@@ -90,6 +91,7 @@ var appFlags = []cli.Flag{
 	cmd.StaticPeers,
 	cmd.RelayNode,
 	cmd.P2PUDPPort,
+	cmd.P2PQUICPort,
 	cmd.P2PTCPPort,
 	cmd.P2PIP,
 	cmd.P2PHost,
@@ -208,6 +210,10 @@ func before(ctx *cli.Context) error {
 
 	if err := fdlimits.SetMaxFdLimits(); err != nil {
 		return errors.Wrap(err, "failed to set max fd limits")
+	}
+
+	if err := features.ValidateNetworkFlags(ctx); err != nil {
+		return errors.Wrap(err, "provided multiple network flags")
 	}
 
 	return cmd.ValidateNoArgs(ctx)

@@ -174,10 +174,10 @@ var (
 		Usage: "The factor by which blob batch limit may increase on burst.",
 		Value: 2,
 	}
-	// EnableDebugRPCEndpoints as /v1/beacon/state.
-	EnableDebugRPCEndpoints = &cli.BoolFlag{
-		Name:  "enable-debug-rpc-endpoints",
-		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state.",
+	// DisableDebugRPCEndpoints disables the debug Beacon API namespace.
+	DisableDebugRPCEndpoints = &cli.BoolFlag{
+		Name:  "disable-debug-rpc-endpoints",
+		Usage: "Disables the debug Beacon API namespace.",
 	}
 	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation/sync subnets or not.
 	SubscribeToAllSubnets = &cli.BoolFlag{
@@ -226,6 +226,12 @@ var (
 		Name:  "minimum-peers-per-subnet",
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
+	}
+	// MaxConcurrentDials defines a flag to set the maximum number of peers that a node will attempt to dial with from discovery.
+	MaxConcurrentDials = &cli.Uint64Flag{
+		Name: "max-concurrent-dials",
+		Usage: "Sets the maximum number of peers that a node will attempt to dial with from discovery. By default we will dials as " +
+			"many peers as possible.",
 	}
 	// SuggestedFeeRecipient specifies the fee recipient for the transaction fees.
 	SuggestedFeeRecipient = &cli.StringFlag{

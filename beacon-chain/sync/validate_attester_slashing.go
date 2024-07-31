@@ -40,7 +40,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject, err
 	}
-	slashing, ok := m.(*ethpb.AttesterSlashing)
+	slashing, ok := m.(ethpb.AttSlashing)
 	if !ok {
 		return pubsub.ValidationReject, errWrongMessage
 	}

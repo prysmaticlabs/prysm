@@ -13,8 +13,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"go.uber.org/mock/gomock"
-
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -26,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	mockp2p "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	rpctesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
@@ -44,7 +43,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/mock/gomock"
 )
 
 func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (*eth.SignedBeaconBlock, []*eth.BeaconBlockContainer) {
@@ -84,6 +85,24 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 }
 
 func TestGetBlockV2(t *testing.T) {
+	t.Run("Unsycned Block", func(t *testing.T) {
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: nil}
+		mockChainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{},
+		}
+		s := &Server{
+			FinalizationFetcher: mockChainService,
+			Blocker:             mockBlockFetcher,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
+		request = mux.SetURLVars(request, map[string]string{"block_id": "123552314"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlockV2(writer, request)
+		require.Equal(t, http.StatusNotFound, writer.Code)
+	})
 	t.Run("phase0", func(t *testing.T) {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = 123
@@ -2472,7 +2491,9 @@ func TestValidateEquivocation(t *testing.T) {
 		require.NoError(t, err)
 		blk.SetSlot(st.Slot())
 
-		assert.ErrorContains(t, "already exists", server.validateEquivocation(blk.Block()))
+		err = server.validateEquivocation(blk.Block())
+		assert.ErrorContains(t, "already exists", err)
+		require.ErrorIs(t, err, errEquivocatedBlock)
 	})
 }
 
@@ -3629,4 +3650,28 @@ func TestGetDepositSnapshot(t *testing.T) {
 		assert.Equal(t, uint64(mockTrie.NumOfItems()), resp.DepositCount)
 		assert.Equal(t, finalized, len(resp.Finalized))
 	})
+}
+
+func TestServer_broadcastBlobSidecars(t *testing.T) {
+	hook := logTest.NewGlobal()
+	blockToPropose := util.NewBeaconBlockContentsDeneb()
+	blockToPropose.Blobs = [][]byte{{0x01}, {0x02}, {0x03}}
+	blockToPropose.KzgProofs = [][]byte{{0x01}, {0x02}, {0x03}}
+	blockToPropose.Block.Block.Body.BlobKzgCommitments = [][]byte{bytesutil.PadTo([]byte("kc"), 48), bytesutil.PadTo([]byte("kc1"), 48), bytesutil.PadTo([]byte("kc2"), 48)}
+	d := &eth.GenericSignedBeaconBlock_Deneb{Deneb: blockToPropose}
+	b := &eth.GenericSignedBeaconBlock{Block: d}
+
+	server := &Server{
+		Broadcaster:         &mockp2p.MockBroadcaster{},
+		FinalizationFetcher: &chainMock.ChainService{NotFinalized: true},
+	}
+
+	blk, err := blocks.NewSignedBeaconBlock(b.Block)
+	require.NoError(t, err)
+	require.NoError(t, server.broadcastSeenBlockSidecars(context.Background(), blk, b.GetDeneb().Blobs, b.GetDeneb().KzgProofs))
+	require.LogsDoNotContain(t, hook, "Broadcasted blob sidecar for already seen block")
+
+	server.FinalizationFetcher = &chainMock.ChainService{NotFinalized: false}
+	require.NoError(t, server.broadcastSeenBlockSidecars(context.Background(), blk, b.GetDeneb().Blobs, b.GetDeneb().KzgProofs))
+	require.LogsContain(t, hook, "Broadcasted blob sidecar for already seen block")
 }

@@ -121,17 +121,20 @@ func (s *Service) processSlashings(blk interfaces.ReadOnlyBeaconBlock) {
 	for _, slashing := range blk.Body().AttesterSlashings() {
 		for _, idx := range blocks.SlashableAttesterIndices(slashing) {
 			if s.trackedIndex(primitives.ValidatorIndex(idx)) {
+				data1 := slashing.FirstAttestation().GetData()
+				data2 := slashing.SecondAttestation().GetData()
+
 				log.WithFields(logrus.Fields{
 					"attesterIndex":      idx,
 					"blockInclusionSlot": blk.Slot(),
-					"attestationSlot1":   slashing.Attestation_1.Data.Slot,
-					"beaconBlockRoot1":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_1.Data.BeaconBlockRoot)),
-					"sourceEpoch1":       slashing.Attestation_1.Data.Source.Epoch,
-					"targetEpoch1":       slashing.Attestation_1.Data.Target.Epoch,
-					"attestationSlot2":   slashing.Attestation_2.Data.Slot,
-					"beaconBlockRoot2":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_2.Data.BeaconBlockRoot)),
-					"sourceEpoch2":       slashing.Attestation_2.Data.Source.Epoch,
-					"targetEpoch2":       slashing.Attestation_2.Data.Target.Epoch,
+					"attestationSlot1":   data1.Slot,
+					"beaconBlockRoot1":   fmt.Sprintf("%#x", bytesutil.Trunc(data1.BeaconBlockRoot)),
+					"sourceEpoch1":       data1.Source.Epoch,
+					"targetEpoch1":       data1.Target.Epoch,
+					"attestationSlot2":   data2.Slot,
+					"beaconBlockRoot2":   fmt.Sprintf("%#x", bytesutil.Trunc(data2.BeaconBlockRoot)),
+					"sourceEpoch2":       data2.Source.Epoch,
+					"targetEpoch2":       data2.Target.Epoch,
 				}).Info("Attester slashing was included")
 			}
 		}

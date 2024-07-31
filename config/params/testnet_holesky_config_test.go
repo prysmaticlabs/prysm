@@ -20,7 +20,7 @@ func TestHoleskyConfigMatchesUpstreamYaml(t *testing.T) {
 	}
 	fPath, err := bazel.Runfile("external/holesky_testnet")
 	require.NoError(t, err)
-	configFP := path.Join(fPath, "custom_config_data", "config.yaml")
+	configFP := path.Join(fPath, "metadata", "config.yaml")
 	pcfg, err := params.UnmarshalConfigFile(configFP, nil)
 	require.NoError(t, err)
 	fields := fieldsFromYamls(t, append(presetFPs, configFP))

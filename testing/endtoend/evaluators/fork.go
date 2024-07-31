@@ -75,7 +75,7 @@ func altairForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) err
 	if err != nil {
 		return err
 	}
-	if ctx.Err() == context.Canceled {
+	if errors.Is(ctx.Err(), context.Canceled) {
 		return errors.New("context canceled prematurely")
 	}
 	res, err := stream.Recv()
@@ -117,7 +117,7 @@ func bellatrixForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) 
 	if err != nil {
 		return err
 	}
-	if ctx.Err() == context.Canceled {
+	if errors.Is(ctx.Err(), context.Canceled) {
 		return errors.New("context canceled prematurely")
 	}
 	res, err := stream.Recv()
@@ -162,7 +162,7 @@ func capellaForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) er
 	if err != nil {
 		return err
 	}
-	if ctx.Err() == context.Canceled {
+	if errors.Is(ctx.Err(), context.Canceled) {
 		return errors.New("context canceled prematurely")
 	}
 	res, err := stream.Recv()
@@ -205,7 +205,7 @@ func denebForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) erro
 	if err != nil {
 		return err
 	}
-	if ctx.Err() == context.Canceled {
+	if errors.Is(ctx.Err(), context.Canceled) {
 		return errors.New("context canceled prematurely")
 	}
 	res, err := stream.Recv()

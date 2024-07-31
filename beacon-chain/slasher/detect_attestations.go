@@ -18,8 +18,8 @@ import (
 // found attester slashings to the caller.
 func (s *Service) checkSlashableAttestations(
 	ctx context.Context, currentEpoch primitives.Epoch, atts []*slashertypes.IndexedAttestationWrapper,
-) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
-	slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// Double votes
 	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, atts)
@@ -56,13 +56,13 @@ func (s *Service) checkSurroundVotes(
 	ctx context.Context,
 	attWrappers []*slashertypes.IndexedAttestationWrapper,
 	currentEpoch primitives.Epoch,
-) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
 	// With 256 validators and 16 epochs per chunk, there is 4096 `uint16` elements per chunk.
 	// 4096 `uint16` elements = 8192 bytes = 8KB
 	// 25_600 chunks * 8KB = 200MB
 	const maxChunkBeforeFlush = 25_600
 
-	slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// Group attestation wrappers by validator chunk index.
 	attWrappersByValidatorChunkIndex := s.groupByValidatorChunkIndex(attWrappers)
@@ -153,7 +153,7 @@ func (s *Service) checkSurroundVotes(
 // Check for double votes in our database given a list of incoming attestations.
 func (s *Service) checkDoubleVotes(
 	ctx context.Context, incomingAttWrappers []*slashertypes.IndexedAttestationWrapper,
-) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotesOnDisk")
 	defer span.End()
 
@@ -162,15 +162,15 @@ func (s *Service) checkDoubleVotes(
 		epoch          primitives.Epoch
 	}
 
-	slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	// Check each incoming attestation for double votes against other incoming attestations.
 	existingAttWrappers := make(map[attestationInfo]*slashertypes.IndexedAttestationWrapper)
 
 	for _, incomingAttWrapper := range incomingAttWrappers {
-		targetEpoch := incomingAttWrapper.IndexedAttestation.Data.Target.Epoch
+		targetEpoch := incomingAttWrapper.IndexedAttestation.GetData().Target.Epoch
 
-		for _, validatorIndex := range incomingAttWrapper.IndexedAttestation.AttestingIndices {
+		for _, validatorIndex := range incomingAttWrapper.IndexedAttestation.GetAttestingIndices() {
 			info := attestationInfo{
 				validatorIndex: validatorIndex,
 				epoch:          targetEpoch,
@@ -193,17 +193,33 @@ func (s *Service) checkDoubleVotes(
 			// This is a double vote.
 			doubleVotesTotal.Inc()
 
+			existing, ok := existingAttWrapper.IndexedAttestation.(*ethpb.IndexedAttestation)
+			if !ok {
+				return nil, fmt.Errorf(
+					"existing attestation has wrong type (expected %T, got %T)",
+					&ethpb.IndexedAttestation{},
+					existingAttWrapper.IndexedAttestation,
+				)
+			}
+			incoming, ok := incomingAttWrapper.IndexedAttestation.(*ethpb.IndexedAttestation)
+			if !ok {
+				return nil, fmt.Errorf(
+					"incoming attestation has wrong type (expected %T, got %T)",
+					&ethpb.IndexedAttestation{},
+					incomingAttWrapper.IndexedAttestation,
+				)
+			}
+
 			slashing := &ethpb.AttesterSlashing{
-				Attestation_1: existingAttWrapper.IndexedAttestation,
-				Attestation_2: incomingAttWrapper.IndexedAttestation,
+				Attestation_1: existing,
+				Attestation_2: incoming,
 			}
 
 			// Ensure the attestation with the lower data root is the first attestation.
-			// It will be useful for comparing with other double votes.
 			if bytes.Compare(existingAttWrapper.DataRoot[:], incomingAttWrapper.DataRoot[:]) > 0 {
 				slashing = &ethpb.AttesterSlashing{
-					Attestation_1: incomingAttWrapper.IndexedAttestation,
-					Attestation_2: existingAttWrapper.IndexedAttestation,
+					Attestation_1: incoming,
+					Attestation_2: existing,
 				}
 			}
 
@@ -229,16 +245,33 @@ func (s *Service) checkDoubleVotes(
 		wrapper_1 := doubleVote.Wrapper_1
 		wrapper_2 := doubleVote.Wrapper_2
 
+		att_1, ok := wrapper_1.IndexedAttestation.(*ethpb.IndexedAttestation)
+		if !ok {
+			return nil, fmt.Errorf(
+				"first attestation has wrong type (expected %T, got %T)",
+				&ethpb.IndexedAttestation{},
+				wrapper_1.IndexedAttestation,
+			)
+		}
+		att_2, ok := wrapper_2.IndexedAttestation.(*ethpb.IndexedAttestation)
+		if !ok {
+			return nil, fmt.Errorf(
+				"second attestation has wrong type (expected %T, got %T)",
+				&ethpb.IndexedAttestation{},
+				wrapper_2.IndexedAttestation,
+			)
+		}
+
 		slashing := &ethpb.AttesterSlashing{
-			Attestation_1: wrapper_1.IndexedAttestation,
-			Attestation_2: wrapper_2.IndexedAttestation,
+			Attestation_1: att_1,
+			Attestation_2: att_2,
 		}
 
 		// Ensure the attestation with the lower data root is the first attestation.
 		if bytes.Compare(wrapper_1.DataRoot[:], wrapper_2.DataRoot[:]) > 0 {
 			slashing = &ethpb.AttesterSlashing{
-				Attestation_1: wrapper_2.IndexedAttestation,
-				Attestation_2: wrapper_1.IndexedAttestation,
+				Attestation_1: att_2,
+				Attestation_2: att_1,
 			}
 		}
 
@@ -428,17 +461,17 @@ func (s *Service) updateSpans(
 	kind slashertypes.ChunkKind,
 	validatorChunkIndex uint64,
 	currentEpoch primitives.Epoch,
-) (map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing, error) {
+) (map[[fieldparams.RootLength]byte]ethpb.AttSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.updateSpans")
 	defer span.End()
 
 	// Apply the attestations to the related chunks and find any
 	// slashings along the way.
-	slashings := map[[fieldparams.RootLength]byte]*ethpb.AttesterSlashing{}
+	slashings := map[[fieldparams.RootLength]byte]ethpb.AttSlashing{}
 
 	for _, attWrappers := range attWrapperByChunkIdx {
 		for _, attWrapper := range attWrappers {
-			for _, validatorIdx := range attWrapper.IndexedAttestation.AttestingIndices {
+			for _, validatorIdx := range attWrapper.IndexedAttestation.GetAttestingIndices() {
 				validatorIndex := primitives.ValidatorIndex(validatorIdx)
 				computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
 
@@ -493,14 +526,14 @@ func (s *Service) applyAttestationForValidator(
 	validatorChunkIndex uint64,
 	validatorIndex primitives.ValidatorIndex,
 	currentEpoch primitives.Epoch,
-) (*ethpb.AttesterSlashing, error) {
+) (ethpb.AttSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
 	defer span.End()
 
 	var err error
 
-	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
-	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
+	sourceEpoch := attestation.IndexedAttestation.GetData().Source.Epoch
+	targetEpoch := attestation.IndexedAttestation.GetData().Target.Epoch
 
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
 	chunkIndex := s.params.chunkIndex(sourceEpoch)

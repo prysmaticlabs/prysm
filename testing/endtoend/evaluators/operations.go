@@ -245,7 +245,7 @@ func activatesDepositedValidators(ec *e2etypes.EvaluationContext, conns ...*grpc
 		}
 	}
 
-	// Make sure every post-genesis deposit has been proecssed, resulting in a validator.
+	// Make sure every post-genesis deposit has been processed, resulting in a validator.
 	if len(expected) > 0 {
 		return fmt.Errorf("missing %d validators for post-genesis deposits", len(expected))
 	}
@@ -365,7 +365,7 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 	}
 	var execIndices []int
 	err = st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
-		if val.WithdrawalCredentials()[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte {
+		if val.GetWithdrawalCredentials()[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte {
 			execIndices = append(execIndices, idx)
 		}
 		return nil

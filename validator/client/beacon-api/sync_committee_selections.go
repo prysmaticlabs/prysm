@@ -13,7 +13,7 @@ type aggregatedSyncSelectionResponse struct {
 	Data []iface.SyncCommitteeSelection `json:"data"`
 }
 
-func (c *beaconApiValidatorClient) getAggregatedSyncSelections(ctx context.Context, selections []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
+func (c *beaconApiValidatorClient) aggregatedSyncSelections(ctx context.Context, selections []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
 	body, err := json.Marshal(selections)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal selections")

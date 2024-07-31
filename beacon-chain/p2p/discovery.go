@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -15,6 +16,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -39,11 +42,16 @@ const (
 	udp6
 )
 
+type quicProtocol uint16
+
+// quicProtocol is the "quic" key, which holds the QUIC port of the node.
+func (quicProtocol) ENRKey() string { return "quic" }
+
 // RefreshENR uses an epoch to refresh the enr entry for our node
 // with the tracked committee ids for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee ids.
 func (s *Service) RefreshENR() {
-	// return early if discv5 isnt running
+	// return early if discv5 isn't running
 	if s.dv5Listener == nil || !s.isInitialized() {
 		return
 	}
@@ -100,14 +108,15 @@ func (s *Service) RefreshENR() {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	iterator := s.dv5Listener.RandomNodes()
-	iterator = enode.Filter(iterator, s.filterPeer)
+	iterator := filterNodes(s.ctx, s.dv5Listener.RandomNodes(), s.filterPeer)
 	defer iterator.Close()
+
 	for {
-		// Exit if service's context is canceled
+		// Exit if service's context is canceled.
 		if s.ctx.Err() != nil {
 			break
 		}
+
 		if s.isPeerAtLimit(false /* inbound */) {
 			// Pause the main loop for a period to stop looking
 			// for new peers.
@@ -115,23 +124,41 @@ func (s *Service) listenForNewNodes() {
 			time.Sleep(pollingPeriod)
 			continue
 		}
-		exists := iterator.Next()
-		if !exists {
-			break
-		}
-		node := iterator.Node()
-		peerInfo, _, err := convertToAddrInfo(node)
-		if err != nil {
-			log.WithError(err).Error("Could not convert to peer info")
+		wantedCount := s.wantedPeerDials()
+		if wantedCount == 0 {
+			log.Trace("Not looking for peers, at peer limit")
+			time.Sleep(pollingPeriod)
 			continue
 		}
-		// Make sure that peer is not dialed too often, for each connection attempt there's a backoff period.
-		s.Peers().RandomizeBackOff(peerInfo.ID)
-		go func(info *peer.AddrInfo) {
-			if err := s.connectWithPeer(s.ctx, *info); err != nil {
-				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+		// Restrict dials if limit is applied.
+		if flags.MaxDialIsActive() {
+			wantedCount = min(wantedCount, flags.Get().MaxConcurrentDials)
+		}
+		wantedNodes := enode.ReadNodes(iterator, wantedCount)
+		wg := new(sync.WaitGroup)
+		for i := 0; i < len(wantedNodes); i++ {
+			node := wantedNodes[i]
+			peerInfo, _, err := convertToAddrInfo(node)
+			if err != nil {
+				log.WithError(err).Error("Could not convert to peer info")
+				continue
 			}
-		}(peerInfo)
+
+			if peerInfo == nil {
+				continue
+			}
+
+			// Make sure that peer is not dialed too often, for each connection attempt there's a backoff period.
+			s.Peers().RandomizeBackOff(peerInfo.ID)
+			wg.Add(1)
+			go func(info *peer.AddrInfo) {
+				if err := s.connectWithPeer(s.ctx, *info); err != nil {
+					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+				}
+				wg.Done()
+			}(peerInfo)
+		}
+		wg.Wait()
 	}
 }
 
@@ -167,8 +194,7 @@ func (s *Service) createListener(
 
 	// Listen to all network interfaces
 	// for both ip protocols.
-	networkVersion := "udp"
-	conn, err := net.ListenUDP(networkVersion, udpAddr)
+	conn, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not listen to UDP")
 	}
@@ -178,6 +204,7 @@ func (s *Service) createListener(
 		ipAddr,
 		int(s.cfg.UDPPort),
 		int(s.cfg.TCPPort),
+		int(s.cfg.QUICPort),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create local node")
@@ -209,7 +236,7 @@ func (s *Service) createListener(
 func (s *Service) createLocalNode(
 	privKey *ecdsa.PrivateKey,
 	ipAddr net.IP,
-	udpPort, tcpPort int,
+	udpPort, tcpPort, quicPort int,
 ) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
@@ -218,11 +245,19 @@ func (s *Service) createLocalNode(
 	localNode := enode.NewLocalNode(db, privKey)
 
 	ipEntry := enr.IP(ipAddr)
-	udpEntry := enr.UDP(udpPort)
-	tcpEntry := enr.TCP(tcpPort)
 	localNode.Set(ipEntry)
+
+	udpEntry := enr.UDP(udpPort)
 	localNode.Set(udpEntry)
+
+	tcpEntry := enr.TCP(tcpPort)
 	localNode.Set(tcpEntry)
+
+	if features.Get().EnableQUIC {
+		quicEntry := quicProtocol(quicPort)
+		localNode.Set(quicEntry)
+	}
+
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
 
@@ -277,7 +312,7 @@ func (s *Service) startDiscoveryV5(
 // filterPeer validates each node that we retrieve from our dht. We
 // try to ascertain that the peer can be a valid protocol peer.
 // Validity Conditions:
-//  1. Peer has a valid IP and TCP port set in their enr.
+//  1. Peer has a valid IP and a (QUIC and/or TCP) port set in their enr.
 //  2. Peer hasn't been marked as 'bad'.
 //  3. Peer is not currently active or connected.
 //  4. Peer is ready to receive incoming connections.
@@ -294,17 +329,13 @@ func (s *Service) filterPeer(node *enode.Node) bool {
 		return false
 	}
 
-	// Ignore nodes with their TCP ports not set.
-	if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
-		if !enr.IsNotFound(err) {
-			log.WithError(err).Debug("Could not retrieve tcp port")
-		}
+	peerData, multiAddrs, err := convertToAddrInfo(node)
+	if err != nil {
+		log.WithError(err).Debug("Could not convert to peer data")
 		return false
 	}
 
-	peerData, multiAddr, err := convertToAddrInfo(node)
-	if err != nil {
-		log.WithError(err).Debug("Could not convert to peer data")
+	if peerData == nil || len(multiAddrs) == 0 {
 		return false
 	}
 
@@ -337,6 +368,9 @@ func (s *Service) filterPeer(node *enode.Node) bool {
 		}
 	}
 
+	// If the peer has 2 multiaddrs, favor the QUIC address, which is in first position.
+	multiAddr := multiAddrs[0]
+
 	// Add peer to peer handler.
 	s.peers.Add(nodeENR, peerData.ID, multiAddr, network.DirUnknown)
 
@@ -364,6 +398,17 @@ func (s *Service) isPeerAtLimit(inbound bool) bool {
 	return activePeers >= maxPeers || numOfConns >= maxPeers
 }
 
+func (s *Service) wantedPeerDials() int {
+	maxPeers := int(s.cfg.MaxPeers)
+
+	activePeers := len(s.Peers().Active())
+	wantedCount := 0
+	if maxPeers > activePeers {
+		wantedCount = maxPeers - activePeers
+	}
+	return wantedCount
+}
+
 // PeersFromStringAddrs converts peer raw ENRs into multiaddrs for p2p.
 func PeersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 	var allAddrs []ma.Multiaddr
@@ -380,11 +425,11 @@ func PeersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "Could not get enode from string")
 		}
-		addr, err := convertToSingleMultiAddr(enodeAddr)
+		nodeAddrs, err := retrieveMultiAddrsFromNode(enodeAddr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Could not get multiaddr")
 		}
-		allAddrs = append(allAddrs, addr)
+		allAddrs = append(allAddrs, nodeAddrs...)
 	}
 	return allAddrs, nil
 }
@@ -419,45 +464,139 @@ func parseGenericAddrs(addrs []string) (enodeString, multiAddrString []string) {
 }
 
 func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
-	var multiAddrs []ma.Multiaddr
+	// Expect each node to have a TCP and a QUIC address.
+	multiAddrs := make([]ma.Multiaddr, 0, 2*len(nodes))
+
 	for _, node := range nodes {
-		// ignore nodes with no ip address stored
+		// Skip nodes with no ip address stored.
 		if node.IP() == nil {
 			continue
 		}
-		multiAddr, err := convertToSingleMultiAddr(node)
+
+		// Get up to two multiaddrs (TCP and QUIC) for each node.
+		nodeMultiAddrs, err := retrieveMultiAddrsFromNode(node)
 		if err != nil {
-			log.WithError(err).Error("Could not convert to multiAddr")
+			log.WithError(err).Errorf("Could not convert to multiAddr node %s", node)
 			continue
 		}
-		multiAddrs = append(multiAddrs, multiAddr)
+
+		multiAddrs = append(multiAddrs, nodeMultiAddrs...)
 	}
+
 	return multiAddrs
 }
 
-func convertToAddrInfo(node *enode.Node) (*peer.AddrInfo, ma.Multiaddr, error) {
-	multiAddr, err := convertToSingleMultiAddr(node)
+func convertToAddrInfo(node *enode.Node) (*peer.AddrInfo, []ma.Multiaddr, error) {
+	multiAddrs, err := retrieveMultiAddrsFromNode(node)
 	if err != nil {
 		return nil, nil, err
 	}
-	info, err := peer.AddrInfoFromP2pAddr(multiAddr)
-	if err != nil {
-		return nil, nil, err
+
+	if len(multiAddrs) == 0 {
+		return nil, nil, nil
 	}
-	return info, multiAddr, nil
+
+	infos, err := peer.AddrInfosFromP2pAddrs(multiAddrs...)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "could not convert to peer info: %v", multiAddrs)
+	}
+
+	if len(infos) != 1 {
+		return nil, nil, errors.Errorf("infos contains %v elements, expected exactly 1", len(infos))
+	}
+
+	return &infos[0], multiAddrs, nil
 }
 
-func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
+// retrieveMultiAddrsFromNode converts an enode.Node to a list of multiaddrs.
+// If the node has a both a QUIC and a TCP port set in their ENR, then
+// the multiaddr corresponding to the QUIC port is added first, followed
+// by the multiaddr corresponding to the TCP port.
+func retrieveMultiAddrsFromNode(node *enode.Node) ([]ma.Multiaddr, error) {
+	multiaddrs := make([]ma.Multiaddr, 0, 2)
+
+	// Retrieve the node public key.
 	pubkey := node.Pubkey()
 	assertedKey, err := ecdsaprysm.ConvertToInterfacePubkey(pubkey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get pubkey")
 	}
+
+	// Compute the node ID from the public key.
 	id, err := peer.IDFromPublicKey(assertedKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")
 	}
-	return multiAddressBuilderWithID(node.IP().String(), "tcp", uint(node.TCP()), id)
+
+	if features.Get().EnableQUIC {
+		// If the QUIC entry is present in the ENR, build the corresponding multiaddress.
+		port, ok, err := getPort(node, quic)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get QUIC port")
+		}
+
+		if ok {
+			addr, err := multiAddressBuilderWithID(node.IP(), quic, port, id)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not build QUIC address")
+			}
+
+			multiaddrs = append(multiaddrs, addr)
+		}
+	}
+
+	// If the TCP entry is present in the ENR, build the corresponding multiaddress.
+	port, ok, err := getPort(node, tcp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get TCP port")
+	}
+
+	if ok {
+		addr, err := multiAddressBuilderWithID(node.IP(), tcp, port, id)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not build TCP address")
+		}
+
+		multiaddrs = append(multiaddrs, addr)
+	}
+
+	return multiaddrs, nil
+}
+
+// getPort retrieves the port for a given node and protocol, as well as a boolean
+// indicating whether the port was found, and an error
+func getPort(node *enode.Node, protocol internetProtocol) (uint, bool, error) {
+	var (
+		port uint
+		err  error
+	)
+
+	switch protocol {
+	case tcp:
+		var entry enr.TCP
+		err = node.Load(&entry)
+		port = uint(entry)
+	case udp:
+		var entry enr.UDP
+		err = node.Load(&entry)
+		port = uint(entry)
+	case quic:
+		var entry quicProtocol
+		err = node.Load(&entry)
+		port = uint(entry)
+	default:
+		return 0, false, errors.Errorf("invalid protocol: %v", protocol)
+	}
+
+	if enr.IsNotFound(err) {
+		return port, false, nil
+	}
+
+	if err != nil {
+		return 0, false, errors.Wrap(err, "could not get port")
+	}
+
+	return port, true, nil
 }
 
 func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
@@ -475,14 +614,14 @@ func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 	var ip4 enr.IPv4
 	var ip6 enr.IPv6
 	if node.Load(&ip4) == nil {
-		address, ipErr := multiAddressBuilderWithID(net.IP(ip4).String(), "udp", uint(node.UDP()), id)
+		address, ipErr := multiAddressBuilderWithID(net.IP(ip4), udp, uint(node.UDP()), id)
 		if ipErr != nil {
 			return nil, errors.Wrap(ipErr, "could not build IPv4 address")
 		}
 		addresses = append(addresses, address)
 	}
 	if node.Load(&ip6) == nil {
-		address, ipErr := multiAddressBuilderWithID(net.IP(ip6).String(), "udp", uint(node.UDP()), id)
+		address, ipErr := multiAddressBuilderWithID(net.IP(ip6), udp, uint(node.UDP()), id)
 		if ipErr != nil {
 			return nil, errors.Wrap(ipErr, "could not build IPv6 address")
 		}

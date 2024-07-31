@@ -56,16 +56,16 @@ func (c *blobsBundleCache) prune(minSlot primitives.Slot) {
 	}
 }
 
-// buildBlobSidecars given a block, builds the blob sidecars for the block.
-func buildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgProofs [][]byte) ([]*ethpb.BlobSidecar, error) {
+// BuildBlobSidecars given a block, builds the blob sidecars for the block.
+func BuildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgProofs [][]byte) ([]*ethpb.BlobSidecar, error) {
 	if blk.Version() < version.Deneb {
 		return nil, nil // No blobs before deneb.
 	}
-	denebBlk, err := blk.PbDenebBlock()
+	commits, err := blk.Block().Body().BlobKzgCommitments()
 	if err != nil {
 		return nil, err
 	}
-	cLen := len(denebBlk.Block.Body.BlobKzgCommitments)
+	cLen := len(commits)
 	if cLen != len(blobs) || cLen != len(kzgProofs) {
 		return nil, errors.New("blob KZG commitments don't match number of blobs or KZG proofs")
 	}
@@ -83,7 +83,7 @@ func buildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgProo
 		blobSidecars[i] = &ethpb.BlobSidecar{
 			Index:                    uint64(i),
 			Blob:                     blobs[i],
-			KzgCommitment:            denebBlk.Block.Body.BlobKzgCommitments[i],
+			KzgCommitment:            commits[i],
 			KzgProof:                 kzgProofs[i],
 			SignedBlockHeader:        header,
 			CommitmentInclusionProof: proof,

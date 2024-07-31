@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
@@ -55,7 +56,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
-func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error {
+func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att ethpb.Att) error {
 	if att == nil {
 		return errors.New("attempted to broadcast nil attestation")
 	}
@@ -95,7 +96,7 @@ func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint
 	return nil
 }
 
-func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation, forkDigest [4]byte) {
+func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint64, att ethpb.Att, forkDigest [4]byte) {
 	_, span := trace.StartSpan(ctx, "p2p.internalBroadcastAttestation")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
@@ -111,8 +112,8 @@ func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint6
 
 	span.AddAttributes(
 		trace.BoolAttribute("hasPeer", hasPeer),
-		trace.Int64Attribute("slot", int64(att.Data.Slot)), // lint:ignore uintcast -- It's safe to do this for tracing.
-		trace.Int64Attribute("subnet", int64(subnet)),      // lint:ignore uintcast -- It's safe to do this for tracing.
+		trace.Int64Attribute("slot", int64(att.GetData().Slot)), // lint:ignore uintcast -- It's safe to do this for tracing.
+		trace.Int64Attribute("subnet", int64(subnet)),           // lint:ignore uintcast -- It's safe to do this for tracing.
 	)
 
 	if !hasPeer {
@@ -137,11 +138,11 @@ func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint6
 	// In the event our attestation is outdated and beyond the
 	// acceptable threshold, we exit early and do not broadcast it.
 	currSlot := slots.CurrentSlot(uint64(s.genesisTime.Unix()))
-	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < currSlot {
+	if err := helpers.ValidateAttestationTime(att.GetData().Slot, s.genesisTime, params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
 		log.WithFields(logrus.Fields{
-			"attestationSlot": att.Data.Slot,
+			"attestationSlot": att.GetData().Slot,
 			"currentSlot":     currSlot,
-		}).Warning("Attestation is too old to broadcast, discarding it")
+		}).WithError(err).Debug("Attestation is too old to broadcast, discarding it")
 		return
 	}
 

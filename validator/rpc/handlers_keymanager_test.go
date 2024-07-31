@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
@@ -40,6 +44,7 @@ import (
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/v5/validator/testing"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -289,7 +294,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 				})
 			}
 			require.NoError(t, err)
-			s.valDB = validatorDB
+			s.db = validatorDB
 
 			// Have to close it after import is done otherwise it complains db is not open.
 			defer func() {
@@ -342,13 +347,18 @@ func TestServer_ImportKeystores(t *testing.T) {
 
 func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	require.NoError(t, os.MkdirAll(newDir, 0700))
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "http://example.com/public_keys",
+		ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
 	}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -413,7 +423,7 @@ func TestServer_DeleteKeystores(t *testing.T) {
 			})
 		}
 		require.NoError(t, err)
-		srv.valDB = validatorDB
+		srv.db = validatorDB
 
 		// Have to close it after import is done otherwise it complains db is not open.
 		defer func() {
@@ -589,7 +599,7 @@ func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
 			require.NoError(t, err)
 			err = validatorDB.SaveGenesisValidatorsRoot(ctx, make([]byte, fieldparams.RootLength))
 			require.NoError(t, err)
-			srv.valDB = validatorDB
+			srv.db = validatorDB
 
 			// Have to close it after import is done otherwise it complains db is not open.
 			defer func() {
@@ -620,14 +630,19 @@ func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
 
 func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	require.NoError(t, os.MkdirAll(newDir, 0700))
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false,
 		Web3SignerConfig: &remoteweb3signer.SetupConfig{
 			BaseEndpoint:          "http://example.com",
 			GenesisValidatorsRoot: root,
-			PublicKeysURL:         "http://example.com/public_keys",
+			ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
 		}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -738,7 +753,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		Return(&eth.DomainResponse{SignatureDomain: make([]byte, common.HashLength)}, nil /*err*/)
 
 	mockNodeClient.EXPECT().
-		GetGenesis(gomock.Any(), gomock.Any()).
+		Genesis(gomock.Any(), gomock.Any()).
 		Times(3).
 		Return(&eth.Genesis{GenesisTime: genesisTime}, nil)
 
@@ -746,7 +761,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		validatorService:          vs,
 		beaconNodeValidatorClient: beaconClient,
 		wallet:                    w,
-		beaconNodeClient:          mockNodeClient,
+		nodeClient:                mockNodeClient,
 		walletInitialized:         w != nil,
 	}
 
@@ -841,7 +856,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			resp := &SetVoluntaryExitResponse{}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
 			if tt.w.epoch == 0 {
-				genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
+				genesisResponse, err := s.nodeClient.Genesis(ctx, &emptypb.Empty{})
 				require.NoError(t, err)
 				tt.w.epoch, err = client.CurrentEpoch(genesisResponse.GenesisTime)
 				require.NoError(t, err)
@@ -1091,18 +1106,18 @@ func TestServer_SetGasLimit(t *testing.T) {
 				validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
 				vs, err := client.NewValidatorService(ctx, &client.Config{
 					Validator: m,
-					ValDB:     validatorDB,
+					DB:        validatorDB,
 				})
 				require.NoError(t, err)
 
 				s := &Server{
 					validatorService:          vs,
 					beaconNodeValidatorClient: beaconClient,
-					valDB:                     validatorDB,
+					db:                        validatorDB,
 				}
 
 				if tt.beaconReturn != nil {
-					beaconClient.EXPECT().GetFeeRecipientByPubKey(
+					beaconClient.EXPECT().FeeRecipientByPubKey(
 						gomock.Any(),
 						gomock.Any(),
 					).Return(tt.beaconReturn.resp, tt.beaconReturn.error)
@@ -1280,12 +1295,12 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 				validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
 				vs, err := client.NewValidatorService(ctx, &client.Config{
 					Validator: m,
-					ValDB:     validatorDB,
+					DB:        validatorDB,
 				})
 				require.NoError(t, err)
 				s := &Server{
 					validatorService: vs,
-					valDB:            validatorDB,
+					db:               validatorDB,
 				}
 				// Set up global default value for builder gas limit.
 				params.BeaconConfig().DefaultBuilderGasLimit = uint64(globalDefaultGasLimit)
@@ -1312,16 +1327,17 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 
 func TestServer_ListRemoteKeys(t *testing.T) {
 	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
-	bytevalue, err := hexutil.Decode("0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
-	require.NoError(t, err)
-	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
 	config := &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    pubkeys,
+		ProvidedPublicKeys:    []string{"0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"},
 	}
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
 	require.NoError(t, err)
@@ -1357,7 +1373,11 @@ func TestServer_ListRemoteKeys(t *testing.T) {
 
 func TestServer_ImportRemoteKeys(t *testing.T) {
 	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	config := &remoteweb3signer.SetupConfig{
@@ -1414,17 +1434,18 @@ func TestServer_ImportRemoteKeys(t *testing.T) {
 
 func TestServer_DeleteRemoteKeys(t *testing.T) {
 	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	newDir := filepath.Join(t.TempDir(), "new")
+	set.String(flags.WalletDirFlag.Name, newDir, "")
+	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	pkey := "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
-	bytevalue, err := hexutil.Decode(pkey)
-	require.NoError(t, err)
-	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
 	config := &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    pubkeys,
+		ProvidedPublicKeys:    []string{pkey},
 	}
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
 	require.NoError(t, err)
@@ -1744,13 +1765,13 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 				// save a default here
 				vs, err := client.NewValidatorService(ctx, &client.Config{
 					Validator: m,
-					ValDB:     validatorDB,
+					DB:        validatorDB,
 				})
 				require.NoError(t, err)
 				s := &Server{
 					validatorService:          vs,
 					beaconNodeValidatorClient: beaconClient,
-					valDB:                     validatorDB,
+					db:                        validatorDB,
 				}
 				request := &SetFeeRecipientByPubkeyRequest{
 					Ethaddress: tt.args,
@@ -1854,12 +1875,12 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 				validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
 				vs, err := client.NewValidatorService(ctx, &client.Config{
 					Validator: m,
-					ValDB:     validatorDB,
+					DB:        validatorDB,
 				})
 				require.NoError(t, err)
 				s := &Server{
 					validatorService: vs,
-					valDB:            validatorDB,
+					db:               validatorDB,
 				}
 				req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
 				req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})

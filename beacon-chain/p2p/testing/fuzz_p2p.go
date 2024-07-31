@@ -134,7 +134,7 @@ func (_ *FakeP2P) Broadcast(_ context.Context, _ proto.Message) error {
 }
 
 // BroadcastAttestation -- fake.
-func (_ *FakeP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
+func (_ *FakeP2P) BroadcastAttestation(_ context.Context, _ uint64, _ ethpb.Att) error {
 	return nil
 }
 

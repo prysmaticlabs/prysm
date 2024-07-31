@@ -63,7 +63,7 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 	validatorIndices := []primitives.ValidatorIndex{2, 9}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
 		nil,
 		bytes.NewBuffer(validatorIndicesBytes),
@@ -76,7 +76,7 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	attesterDuties, err := dutiesProvider.GetAttesterDuties(ctx, epoch, validatorIndices)
+	attesterDuties, err := dutiesProvider.AttesterDuties(ctx, epoch, validatorIndices)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedAttesterDuties.Data, attesterDuties)
 }
@@ -91,7 +91,7 @@ func TestGetAttesterDuties_HttpError(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -101,7 +101,7 @@ func TestGetAttesterDuties_HttpError(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetAttesterDuties(ctx, epoch, nil)
+	_, err := dutiesProvider.AttesterDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "foo error", err)
 }
 
@@ -115,7 +115,7 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -130,7 +130,7 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetAttesterDuties(ctx, epoch, nil)
+	_, err := dutiesProvider.AttesterDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "attester duty at index `0` is nil", err)
 }
 
@@ -159,7 +159,7 @@ func TestGetProposerDuties_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
 		&structs.GetProposerDutiesResponse{},
 	).Return(
@@ -170,7 +170,7 @@ func TestGetProposerDuties_Valid(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	proposerDuties, err := dutiesProvider.GetProposerDuties(ctx, epoch)
+	proposerDuties, err := dutiesProvider.ProposerDuties(ctx, epoch)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedProposerDuties.Data, proposerDuties)
 }
@@ -185,7 +185,7 @@ func TestGetProposerDuties_HttpError(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
@@ -193,7 +193,7 @@ func TestGetProposerDuties_HttpError(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetProposerDuties(ctx, epoch)
+	_, err := dutiesProvider.ProposerDuties(ctx, epoch)
 	assert.ErrorContains(t, "foo error", err)
 }
 
@@ -207,7 +207,7 @@ func TestGetProposerDuties_NilData(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
@@ -220,7 +220,7 @@ func TestGetProposerDuties_NilData(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetProposerDuties(ctx, epoch)
+	_, err := dutiesProvider.ProposerDuties(ctx, epoch)
 	assert.ErrorContains(t, "proposer duties data is nil", err)
 }
 
@@ -234,7 +234,7 @@ func TestGetProposerDuties_NilProposerDuty(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
@@ -247,7 +247,7 @@ func TestGetProposerDuties_NilProposerDuty(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetProposerDuties(ctx, epoch)
+	_, err := dutiesProvider.ProposerDuties(ctx, epoch)
 	assert.ErrorContains(t, "proposer duty at index `0` is nil", err)
 }
 
@@ -287,7 +287,7 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 	validatorIndices := []primitives.ValidatorIndex{2, 6}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
 		nil,
 		bytes.NewBuffer(validatorIndicesBytes),
@@ -300,7 +300,7 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	syncDuties, err := dutiesProvider.GetSyncDuties(ctx, epoch, validatorIndices)
+	syncDuties, err := dutiesProvider.SyncDuties(ctx, epoch, validatorIndices)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedSyncDuties.Data, syncDuties)
 }
@@ -315,7 +315,7 @@ func TestGetSyncDuties_HttpError(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -325,7 +325,7 @@ func TestGetSyncDuties_HttpError(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetSyncDuties(ctx, epoch, nil)
+	_, err := dutiesProvider.SyncDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "foo error", err)
 }
 
@@ -339,7 +339,7 @@ func TestGetSyncDuties_NilData(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -354,7 +354,7 @@ func TestGetSyncDuties_NilData(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetSyncDuties(ctx, epoch, nil)
+	_, err := dutiesProvider.SyncDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "sync duties data is nil", err)
 }
 
@@ -368,7 +368,7 @@ func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -383,7 +383,7 @@ func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetSyncDuties(ctx, epoch, nil)
+	_, err := dutiesProvider.SyncDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "sync duty at index `0` is nil", err)
 }
 
@@ -418,7 +418,7 @@ func TestGetCommittees_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		&structs.GetCommitteesResponse{},
 	).Return(
@@ -429,7 +429,7 @@ func TestGetCommittees_Valid(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	committees, err := dutiesProvider.GetCommittees(ctx, epoch)
+	committees, err := dutiesProvider.Committees(ctx, epoch)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedCommittees.Data, committees)
 }
@@ -444,7 +444,7 @@ func TestGetCommittees_HttpError(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
@@ -452,7 +452,7 @@ func TestGetCommittees_HttpError(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetCommittees(ctx, epoch)
+	_, err := dutiesProvider.Committees(ctx, epoch)
 	assert.ErrorContains(t, "foo error", err)
 }
 
@@ -466,7 +466,7 @@ func TestGetCommittees_NilData(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
@@ -479,7 +479,7 @@ func TestGetCommittees_NilData(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetCommittees(ctx, epoch)
+	_, err := dutiesProvider.Committees(ctx, epoch)
 	assert.ErrorContains(t, "state committees data is nil", err)
 }
 
@@ -493,7 +493,7 @@ func TestGetCommittees_NilCommittee(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
-		ctx,
+		gomock.Any(),
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
@@ -506,7 +506,7 @@ func TestGetCommittees_NilCommittee(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetCommittees(ctx, epoch)
+	_, err := dutiesProvider.Committees(ctx, epoch)
 	assert.ErrorContains(t, "committee at index `0` is nil", err)
 }
 
@@ -682,7 +682,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 			}
 
 			dutiesProvider := mock.NewMockdutiesProvider(ctrl)
-			dutiesProvider.EXPECT().GetAttesterDuties(
+			dutiesProvider.EXPECT().AttesterDuties(
 				ctx,
 				epoch,
 				gomock.Any(),
@@ -691,7 +691,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 				testCase.fetchAttesterDutiesError,
 			).AnyTimes()
 
-			dutiesProvider.EXPECT().GetProposerDuties(
+			dutiesProvider.EXPECT().ProposerDuties(
 				ctx,
 				epoch,
 			).Return(
@@ -699,7 +699,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 				testCase.fetchProposerDutiesError,
 			).AnyTimes()
 
-			dutiesProvider.EXPECT().GetSyncDuties(
+			dutiesProvider.EXPECT().SyncDuties(
 				ctx,
 				epoch,
 				gomock.Any(),
@@ -708,7 +708,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 				testCase.fetchSyncDutiesError,
 			).AnyTimes()
 
-			dutiesProvider.EXPECT().GetCommittees(
+			dutiesProvider.EXPECT().Committees(
 				ctx,
 				epoch,
 			).Return(
@@ -726,7 +726,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 			}
 
 			validatorClient := &beaconApiValidatorClient{dutiesProvider: dutiesProvider}
-			_, err := validatorClient.getDutiesForEpoch(
+			_, err := validatorClient.dutiesForEpoch(
 				ctx,
 				epoch,
 				vals,
@@ -767,7 +767,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 			ctx := context.Background()
 
 			dutiesProvider := mock.NewMockdutiesProvider(ctrl)
-			dutiesProvider.EXPECT().GetCommittees(
+			dutiesProvider.EXPECT().Committees(
 				ctx,
 				epoch,
 			).Return(
@@ -775,7 +775,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 				nil,
 			).Times(1)
 
-			dutiesProvider.EXPECT().GetAttesterDuties(
+			dutiesProvider.EXPECT().AttesterDuties(
 				ctx,
 				epoch,
 				validatorIndices,
@@ -784,7 +784,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 				nil,
 			).Times(1)
 
-			dutiesProvider.EXPECT().GetProposerDuties(
+			dutiesProvider.EXPECT().ProposerDuties(
 				ctx,
 				epoch,
 			).Return(
@@ -793,7 +793,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 			).Times(1)
 
 			if testCase.fetchSyncDuties {
-				dutiesProvider.EXPECT().GetSyncDuties(
+				dutiesProvider.EXPECT().SyncDuties(
 					ctx,
 					epoch,
 					validatorIndices,
@@ -951,7 +951,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 					status: ethpb.ValidatorStatus_ACTIVE,
 				}
 			}
-			duties, err := validatorClient.getDutiesForEpoch(
+			duties, err := validatorClient.dutiesForEpoch(
 				ctx,
 				epoch,
 				vals,
@@ -1004,7 +1004,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			ctx := context.Background()
 
 			dutiesProvider := mock.NewMockdutiesProvider(ctrl)
-			dutiesProvider.EXPECT().GetCommittees(
+			dutiesProvider.EXPECT().Committees(
 				ctx,
 				testCase.epoch,
 			).Return(
@@ -1012,7 +1012,7 @@ func TestGetDuties_Valid(t *testing.T) {
 				nil,
 			).Times(2)
 
-			dutiesProvider.EXPECT().GetAttesterDuties(
+			dutiesProvider.EXPECT().AttesterDuties(
 				ctx,
 				testCase.epoch,
 				validatorIndices,
@@ -1021,7 +1021,7 @@ func TestGetDuties_Valid(t *testing.T) {
 				nil,
 			).Times(2)
 
-			dutiesProvider.EXPECT().GetProposerDuties(
+			dutiesProvider.EXPECT().ProposerDuties(
 				ctx,
 				testCase.epoch,
 			).Return(
@@ -1031,7 +1031,7 @@ func TestGetDuties_Valid(t *testing.T) {
 
 			fetchSyncDuties := testCase.epoch >= params.BeaconConfig().AltairForkEpoch
 			if fetchSyncDuties {
-				dutiesProvider.EXPECT().GetSyncDuties(
+				dutiesProvider.EXPECT().SyncDuties(
 					ctx,
 					testCase.epoch,
 					validatorIndices,
@@ -1041,7 +1041,7 @@ func TestGetDuties_Valid(t *testing.T) {
 				).Times(2)
 			}
 
-			dutiesProvider.EXPECT().GetCommittees(
+			dutiesProvider.EXPECT().Committees(
 				ctx,
 				testCase.epoch+1,
 			).Return(
@@ -1049,7 +1049,7 @@ func TestGetDuties_Valid(t *testing.T) {
 				nil,
 			).Times(2)
 
-			dutiesProvider.EXPECT().GetAttesterDuties(
+			dutiesProvider.EXPECT().AttesterDuties(
 				ctx,
 				testCase.epoch+1,
 				validatorIndices,
@@ -1058,7 +1058,7 @@ func TestGetDuties_Valid(t *testing.T) {
 				nil,
 			).Times(2)
 
-			dutiesProvider.EXPECT().GetProposerDuties(
+			dutiesProvider.EXPECT().ProposerDuties(
 				ctx,
 				testCase.epoch+1,
 			).Return(
@@ -1067,7 +1067,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			).Times(2)
 
 			if fetchSyncDuties {
-				dutiesProvider.EXPECT().GetSyncDuties(
+				dutiesProvider.EXPECT().SyncDuties(
 					ctx,
 					testCase.epoch+1,
 					validatorIndices,
@@ -1078,8 +1078,8 @@ func TestGetDuties_Valid(t *testing.T) {
 			}
 
 			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-			stateValidatorsProvider.EXPECT().GetStateValidators(
-				ctx,
+			stateValidatorsProvider.EXPECT().StateValidators(
+				gomock.Any(),
 				gomock.Any(),
 				gomock.Any(),
 				gomock.Any(),
@@ -1187,13 +1187,13 @@ func TestGetDuties_Valid(t *testing.T) {
 				nil,
 			).MinTimes(1)
 
-			// Make sure that our values are equal to what would be returned by calling getDutiesForEpoch individually
+			// Make sure that our values are equal to what would be returned by calling dutiesForEpoch individually
 			validatorClient := &beaconApiValidatorClient{
 				dutiesProvider:          dutiesProvider,
 				stateValidatorsProvider: stateValidatorsProvider,
 			}
 
-			expectedCurrentEpochDuties, err := validatorClient.getDutiesForEpoch(
+			expectedCurrentEpochDuties, err := validatorClient.dutiesForEpoch(
 				ctx,
 				testCase.epoch,
 				vals,
@@ -1201,7 +1201,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			expectedNextEpochDuties, err := validatorClient.getDutiesForEpoch(
+			expectedNextEpochDuties, err := validatorClient.dutiesForEpoch(
 				ctx,
 				testCase.epoch+1,
 				vals,
@@ -1214,7 +1214,7 @@ func TestGetDuties_Valid(t *testing.T) {
 				NextEpochDuties:    expectedNextEpochDuties,
 			}
 
-			duties, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
+			duties, err := validatorClient.duties(ctx, &ethpb.DutiesRequest{
 				Epoch:      testCase.epoch,
 				PublicKeys: append(pubkeys, []byte("0xunknown")),
 			})
@@ -1232,8 +1232,8 @@ func TestGetDuties_GetStateValidatorsFailed(t *testing.T) {
 	ctx := context.Background()
 
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-	stateValidatorsProvider.EXPECT().GetStateValidators(
-		ctx,
+	stateValidatorsProvider.EXPECT().StateValidators(
+		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
@@ -1246,7 +1246,7 @@ func TestGetDuties_GetStateValidatorsFailed(t *testing.T) {
 		stateValidatorsProvider: stateValidatorsProvider,
 	}
 
-	_, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
+	_, err := validatorClient.duties(ctx, &ethpb.DutiesRequest{
 		Epoch:      1,
 		PublicKeys: [][]byte{},
 	})
@@ -1262,8 +1262,8 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 	pubkey := []byte{1, 2, 3}
 
 	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
-	stateValidatorsProvider.EXPECT().GetStateValidators(
-		ctx,
+	stateValidatorsProvider.EXPECT().StateValidators(
+		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
@@ -1281,7 +1281,7 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := mock.NewMockdutiesProvider(ctrl)
-	dutiesProvider.EXPECT().GetAttesterDuties(
+	dutiesProvider.EXPECT().AttesterDuties(
 		ctx,
 		primitives.Epoch(1),
 		gomock.Any(),
@@ -1289,16 +1289,16 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 		nil,
 		errors.New("foo error"),
 	).Times(1)
-	dutiesProvider.EXPECT().GetAttesterDuties(
+	dutiesProvider.EXPECT().AttesterDuties(
 		ctx,
 		primitives.Epoch(2),
 		gomock.Any(),
 	).Times(1)
-	dutiesProvider.EXPECT().GetProposerDuties(
+	dutiesProvider.EXPECT().ProposerDuties(
 		ctx,
 		gomock.Any(),
 	).Times(2)
-	dutiesProvider.EXPECT().GetCommittees(
+	dutiesProvider.EXPECT().Committees(
 		ctx,
 		gomock.Any(),
 	).Times(2)
@@ -1308,7 +1308,7 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 		dutiesProvider:          dutiesProvider,
 	}
 
-	_, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
+	_, err := validatorClient.duties(ctx, &ethpb.DutiesRequest{
 		Epoch:      1,
 		PublicKeys: [][]byte{pubkey},
 	})
@@ -1456,7 +1456,7 @@ func generateValidSyncDuties(pubkeys [][]byte, validatorIndices []primitives.Val
 	}
 }
 
-// We will use a reverse function to easily make sure that the current epoch and next epoch data returned by getDutiesForEpoch
+// We will use a reverse function to easily make sure that the current epoch and next epoch data returned by dutiesForEpoch
 // are not the same
 func reverseSlice[T interface{}](slice []T) []T {
 	reversedSlice := make([]T, len(slice))

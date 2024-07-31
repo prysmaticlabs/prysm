@@ -14,15 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
-	"go.opencensus.io/trace"
-
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"go.opencensus.io/trace"
 )
 
 var attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount
@@ -31,7 +30,7 @@ var syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 var syncCommsSubnetEnrKey = params.BeaconNetworkConfig().SyncCommsSubnetKey
 
-// The value used with the subnet, inorder
+// The value used with the subnet, in order
 // to create an appropriate key to retrieve
 // the relevant lock. This is used to differentiate
 // sync subnets from attestation subnets. This is deliberately
@@ -87,12 +86,22 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 			return false, errors.Errorf("unable to find requisite number of peers for topic %s - "+
 				"only %d out of %d peers were able to be found", topic, currNum, threshold)
 		}
-		nodes := enode.ReadNodes(iterator, int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch))
+		nodeCount := int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch)
+		// Restrict dials if limit is applied.
+		if flags.MaxDialIsActive() {
+			nodeCount = min(nodeCount, flags.Get().MaxConcurrentDials)
+		}
+		nodes := enode.ReadNodes(iterator, nodeCount)
 		for _, node := range nodes {
 			info, _, err := convertToAddrInfo(node)
 			if err != nil {
 				continue
 			}
+
+			if info == nil {
+				continue
+			}
+
 			wg.Add(1)
 			go func() {
 				if err := s.connectWithPeer(ctx, *info); err != nil {

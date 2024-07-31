@@ -49,7 +49,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			clock:               startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			attestationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 		},
-		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		blkRootToPendingAtts:             make(map[[32]byte][]ethpb.SignedAggregateAttAndProof),
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 		signatureChan:                    make(chan *signatureVerifier, verifierLimit),
 	}
@@ -290,7 +290,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 				m.Message.Topic = nil
 			}
 
-			res, err := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m)
+			res, err := s.validateCommitteeIndexBeaconAttestation(ctx, "", m)
 			received := res == pubsub.ValidationAccept
 			if received != tt.want {
 				t.Fatalf("Did not received wanted validation. Got %v, wanted %v", !tt.want, tt.want)

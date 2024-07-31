@@ -29,6 +29,8 @@ type Wallet struct {
 	UnlockAccounts    bool
 	lock              sync.RWMutex
 	HasWriteFileError bool
+	WalletDir         string
+	Kind              keymanager.Kind
 }
 
 // AccountNames --
@@ -45,6 +47,16 @@ func (w *Wallet) AccountNames() ([]string, error) {
 // AccountsDir --
 func (w *Wallet) AccountsDir() string {
 	return w.InnerAccountsDir
+}
+
+// Dir for the wallet.
+func (w *Wallet) Dir() string {
+	return w.WalletDir
+}
+
+// KeymanagerKind --
+func (w *Wallet) KeymanagerKind() keymanager.Kind {
+	return w.Kind
 }
 
 // Exists --
@@ -217,8 +229,8 @@ func (m *Validator) SetProposerSettings(_ context.Context, settings *proposer.Se
 	return nil
 }
 
-// GetGraffiti for mocking
-func (m *Validator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+// Graffiti for mocking
+func (m *Validator) Graffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	return []byte(m.graffiti), nil
 }
 
@@ -247,5 +259,13 @@ func (*Validator) EventStreamIsRunning() bool {
 }
 
 func (*Validator) HealthTracker() *beacon.NodeHealthTracker {
+	panic("implement me")
+}
+
+func (*Validator) Host() string {
+	panic("implement me")
+}
+
+func (*Validator) ChangeHost() {
 	panic("implement me")
 }

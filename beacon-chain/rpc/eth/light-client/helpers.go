@@ -3,6 +3,7 @@ package lightclient
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -310,4 +311,65 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 		SyncAggregate:           syncAggregateToJSON(input.SyncAggregate),
 		SignatureSlot:           strconv.FormatUint(uint64(input.SignatureSlot), 10),
 	}
+}
+
+func IsSyncCommitteeUpdate(update *v2.LightClientUpdate) bool {
+	nextSyncCommitteeBranch := make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
+	return !reflect.DeepEqual(update.NextSyncCommitteeBranch, nextSyncCommitteeBranch)
+}
+
+func IsFinalityUpdate(update *v2.LightClientUpdate) bool {
+	finalityBranch := make([][]byte, blockchain.FinalityBranchNumOfLeaves)
+	return !reflect.DeepEqual(update.FinalityBranch, finalityBranch)
+}
+
+func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) bool {
+	maxActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Len()
+	newNumActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Count()
+	oldNumActiveParticipants := oldUpdate.SyncAggregate.SyncCommitteeBits.Count()
+	newHasSupermajority := newNumActiveParticipants*3 >= maxActiveParticipants*2
+	oldHasSupermajority := oldNumActiveParticipants*3 >= maxActiveParticipants*2
+
+	if newHasSupermajority != oldHasSupermajority {
+		return newHasSupermajority
+	}
+	if !newHasSupermajority && newNumActiveParticipants != oldNumActiveParticipants {
+		return newNumActiveParticipants > oldNumActiveParticipants
+	}
+
+	// Compare presence of relevant sync committee
+	newHasRelevantSyncCommittee := IsSyncCommitteeUpdate(newUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.SignatureSlot)))
+	oldHasRelevantSyncCommittee := IsSyncCommitteeUpdate(oldUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.SignatureSlot)))
+
+	if newHasRelevantSyncCommittee != oldHasRelevantSyncCommittee {
+		return newHasRelevantSyncCommittee
+	}
+
+	// Compare indication of any finality
+	newHasFinality := IsFinalityUpdate(newUpdate)
+	oldHasFinality := IsFinalityUpdate(oldUpdate)
+	if newHasFinality != oldHasFinality {
+		return newHasFinality
+	}
+
+	// Compare sync committee finality
+	if newHasFinality {
+		newHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.FinalizedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Slot))
+		oldHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.FinalizedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Slot))
+
+		if newHasSyncCommitteeFinality != oldHasSyncCommitteeFinality {
+			return newHasSyncCommitteeFinality
+		}
+	}
+
+	// Tiebreaker 1: Sync committee participation beyond supermajority
+	if newNumActiveParticipants != oldNumActiveParticipants {
+		return newNumActiveParticipants > oldNumActiveParticipants
+	}
+
+	// Tiebreaker 2: Prefer older data (fewer changes to best)
+	if newUpdate.AttestedHeader.Slot != oldUpdate.AttestedHeader.Slot {
+		return newUpdate.AttestedHeader.Slot < oldUpdate.AttestedHeader.Slot
+	}
+	return newUpdate.SignatureSlot < oldUpdate.SignatureSlot
 }
