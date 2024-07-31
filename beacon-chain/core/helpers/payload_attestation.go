@@ -114,12 +114,12 @@ func PtcAllocation(totalActive uint64) (committeesPerSlot, membersPerCommittee u
 //	"""
 //	ptc = get_ptc(state, slot)
 //	return set(index for i, index in enumerate(ptc) if payload_attestation.aggregation_bits[i])
-func GetPayloadAttestingIndices(state state.ReadOnlyBeaconState, slot primitives.Slot, att *eth.PayloadAttestation) (indices []primitives.ValidatorIndex, err error) {
+func GetPayloadAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot, att *eth.PayloadAttestation) (indices []primitives.ValidatorIndex, err error) {
 	if state.Version() < version.EPBS {
 		return nil, errPreEPBSState
 	}
 
-	ptc, err := GetPayloadTimelinessCommittee(context.Background(), state, slot)
+	ptc, err := GetPayloadTimelinessCommittee(ctx, state, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +149,12 @@ func GetPayloadAttestingIndices(state state.ReadOnlyBeaconState, slot primitives
 //	data=payload_attestation.data,
 //	signature=payload_attestation.signature,
 //	)
-func GetIndexedPayloadAttestation(state state.ReadOnlyBeaconState, slot primitives.Slot, att *eth.PayloadAttestation) (*epbs.IndexedPayloadAttestation, error) {
+func GetIndexedPayloadAttestation(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot, att *eth.PayloadAttestation) (*epbs.IndexedPayloadAttestation, error) {
 	if state.Version() < version.EPBS {
 		return nil, errPreEPBSState
 	}
 
-	attestingIndices, err := GetPayloadAttestingIndices(state, slot, att)
+	attestingIndices, err := GetPayloadAttestingIndices(ctx, state, slot, att)
 	if err != nil {
 		return nil, err
 	}

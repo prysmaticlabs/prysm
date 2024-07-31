@@ -175,7 +175,7 @@ func TestGetPayloadAttestingIndices(t *testing.T) {
 	}
 
 	// Get attesting indices.
-	attesters, err := helpers.GetPayloadAttestingIndices(state, state.Slot(), payloadAttestation)
+	attesters, err := helpers.GetPayloadAttestingIndices(context.Background(), state, state.Slot(), payloadAttestation)
 	require.NoError(t, err)
 	require.Equal(t, len(indices), len(attesters))
 
@@ -237,12 +237,13 @@ func TestGetIndexedPayloadAttestation(t *testing.T) {
 	}
 
 	// Get attesting indices.
-	attesters, err := helpers.GetPayloadAttestingIndices(state, state.Slot(), payloadAttestation)
+	ctx := context.Background()
+	attesters, err := helpers.GetPayloadAttestingIndices(ctx, state, state.Slot(), payloadAttestation)
 	require.NoError(t, err)
 	require.Equal(t, len(indices), len(attesters))
 
 	// Get an IndexedPayloadAttestation.
-	indexedPayloadAttestation, err := helpers.GetIndexedPayloadAttestation(state, state.Slot(), payloadAttestation)
+	indexedPayloadAttestation, err := helpers.GetIndexedPayloadAttestation(ctx, state, state.Slot(), payloadAttestation)
 	require.NoError(t, err)
 	require.Equal(t, len(indices), len(indexedPayloadAttestation.AttestingIndices))
 	require.DeepEqual(t, payloadAttestation.Data, indexedPayloadAttestation.Data)
