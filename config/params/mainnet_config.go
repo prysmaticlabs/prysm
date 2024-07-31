@@ -110,11 +110,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:               2048,
 
 	// Fork choice algorithm constants.
-	ProposerScoreBoost:              20,
+	ProposerScoreBoost:              40,
+	ProposerScoreBoostEPBS:          20,
 	ReorgWeightThreshold:            20,
 	ReorgParentWeightThreshold:      160,
 	ReorgMaxEpochsSinceFinalization: 2,
-	IntervalsPerSlot:                4,
+	IntervalsPerSlot:                3,
+	IntervalsPerSlotEPBS:            4,
 	PayloadWithholdBoost:            40,
 	PayloadRevealBoost:              40,
 
