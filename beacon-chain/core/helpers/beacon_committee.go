@@ -82,6 +82,47 @@ func AttestationCommittees(ctx context.Context, st state.ReadOnlyBeaconState, at
 	return committees, nil
 }
 
+// BeaconCommittees returns the list of all beacon committees for a given state at a given slot.
+func BeaconCommittees(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot) ([][]primitives.ValidatorIndex, error) {
+	epoch := slots.ToEpoch(slot)
+	activeCount, err := ActiveValidatorCount(ctx, state, epoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute active validator count")
+	}
+	committeesPerSlot := SlotCommitteeCount(activeCount)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get seed")
+	}
+
+	committees := make([][]primitives.ValidatorIndex, committeesPerSlot)
+	var activeIndices []primitives.ValidatorIndex
+
+	for idx := primitives.CommitteeIndex(0); idx < primitives.CommitteeIndex(len(committees)); idx++ {
+		committee, err := committeeCache.Committee(ctx, slot, seed, idx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if committee != nil {
+			committees[idx] = committee
+			continue
+		}
+
+		if len(activeIndices) == 0 {
+			activeIndices, err = ActiveValidatorIndices(ctx, state, epoch)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get active indices")
+			}
+		}
+		committee, err = BeaconCommittee(ctx, activeIndices, seed, slot, idx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute beacon committee")
+		}
+		committees[idx] = committee
+	}
+	return committees, nil
+}
+
 // BeaconCommitteeFromState returns the crosslink committee of a given slot and committee index. This
 // is a spec implementation where state is used as an argument. In case of state retrieval
 // becomes expensive, consider using BeaconCommittee below.
