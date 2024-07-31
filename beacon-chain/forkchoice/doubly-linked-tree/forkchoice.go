@@ -679,15 +679,15 @@ func (f *ForkChoice) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) (
 
 // isParentNodeFull checks if the parent block of the given block is "full",
 // meaning it has a complete execution payload.
-func (s *Store) isParentNodeFull(block *blocks.BeaconBlock) bool {
-	parentRoot := bytesutil.ToBytes32(block.ParentRoot())
-	parent, ok := s.blocks[parentRoot]
-	if !ok {
-		return false // Parent block not found, assume it's not full
-	}
+// func (s *Store) isParentNodeFull(block *ethpb.BeaconBlockEpbs) bool {
+// 	parentRoot := bytesutil.ToBytes32(block.ParentRoot())
+// 	parent, ok := s.block[parentRoot]
+// 	if !ok {
+// 		return false // Parent block not found, assume it's not full
+// 	}
 
-	parentBlockHash := block.Body().ExecutionPayloadHeader().ParentHash()
-	messageBlockHash := parent.Body().ExecutionPayloadHeader().BlockHash()
+// 	parentBlockHash := block.Body().ExecutionPayloadHeader().ParentHash()
+// 	messageBlockHash := parent.Body().ExecutionPayloadHeader().BlockHash()
 
-	return bytesutil.ToBytes32(parentBlockHash) == bytesutil.ToBytes32(messageBlockHash)
-}
+// 	return bytesutil.ToBytes32(parentBlockHash) == bytesutil.ToBytes32(messageBlockHash)
+// }

@@ -74,8 +74,9 @@ type BeaconChainConfig struct {
 	ReorgParentWeightThreshold      uint64           `yaml:"REORG_PARENT_WEIGHT_THRESHOLD" spec:"true"`       // ReorgParentWeightThreshold defines a value that is a % of the committee weight to consider a parent block strong and subject its child to being orphaned.
 	ReorgMaxEpochsSinceFinalization primitives.Epoch `yaml:"REORG_MAX_EPOCHS_SINCE_FINALIZATION" spec:"true"` // This defines a limit to consider safe to orphan a block if the network is finalizing
 	IntervalsPerSlot                uint64           `yaml:"INTERVALS_PER_SLOT" spec:"true"`                  // IntervalsPerSlot defines the number of fork choice intervals in a slot defined in the fork choice spec.
-	PayloadWithholdBoost            uint64           `yaml:"PAYLOAD_WITHHOLD_BOOST" spec:"true"`
-	PayloadRevealBoost              uint64           `yaml:"PAYLOAD_REVEAL_BOOST" spec:"true"`
+	PayloadWithholdBoost            uint64           `yaml:"PAYLOAD_WITHHOLD_BOOST" spec:"true"`              // PayloadWithholdBoost define a value that is the score boost given when a payload is withheld by the builder
+	PayloadRevealBoost              uint64           `yaml:"PAYLOAD_REVEAL_BOOST" spec:"true"`                // PayloadRevealBoost a value that is the score boost given when a payload is revealed by the builder
+
 	// Ethereum PoW parameters.
 	DepositChainID         uint64 `yaml:"DEPOSIT_CHAIN_ID" spec:"true"`         // DepositChainID of the eth1 network. This used for replay protection.
 	DepositNetworkID       uint64 `yaml:"DEPOSIT_NETWORK_ID" spec:"true"`       // DepositNetworkID of the eth1 network. This used for replay protection.
