@@ -110,11 +110,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:               2048,
 
 	// Fork choice algorithm constants.
-	ProposerScoreBoost:              40,
+	ProposerScoreBoost:              20,
 	ReorgWeightThreshold:            20,
 	ReorgParentWeightThreshold:      160,
 	ReorgMaxEpochsSinceFinalization: 2,
-	IntervalsPerSlot:                3,
+	IntervalsPerSlot:                4,
+	PayloadWithholdBoost:            40,
+	PayloadRevealBoost:              40,
 
 	// Ethereum PoW parameters.
 	DepositChainID:         1, // Chain ID of eth1 mainnet.
