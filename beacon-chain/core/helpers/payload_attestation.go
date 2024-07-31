@@ -212,9 +212,14 @@ func IsValidIndexedPayloadAttestation(state state.ReadOnlyBeaconState, att *epbs
 
 	// Verify aggregate signature.
 	publicKeys := make([]bls.PublicKey, len(indices))
-	validators := state.Validators()
 	for i, index := range indices {
-		publicKey, err := bls.PublicKeyFromBytes(validators[index].PublicKey)
+		validator, err := state.ValidatorAtIndexReadOnly(index)
+		if err != nil {
+			return false, err
+		}
+
+		publicKeyBytes := validator.PublicKey()
+		publicKey, err := bls.PublicKeyFromBytes(publicKeyBytes[:])
 		if err != nil {
 			return false, err
 		}
