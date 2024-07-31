@@ -1125,6 +1125,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	if err != nil {
 		return err
 	}
+
 	proposerReqs, err := v.buildPrepProposerReqs(filteredKeys)
 	if err != nil {
 		return err
@@ -1139,16 +1140,21 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 			"proposerSettingsRequestCount": len(proposerReqs),
 		}).Debugln("Request count did not match included validator count. Only keys that have been activated will be included in the request.")
 	}
+
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
 		Recipients: proposerReqs,
 	}); err != nil {
 		return err
 	}
-
 	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
-	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorsRegBatchSize); err != nil {
-		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
+	if len(signedRegReqs) > 0 {
+		go func() {
+			if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorsRegBatchSize); err != nil {
+				log.WithError(errors.Wrap(ErrBuilderValidatorRegistration, err.Error())).Warn("failed to register validator on builder")
+			}
+		}()
 	}
+
 	return nil
 }
 
