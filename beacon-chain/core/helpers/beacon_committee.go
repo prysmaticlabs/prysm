@@ -82,7 +82,7 @@ func AttestationCommittees(ctx context.Context, st state.ReadOnlyBeaconState, at
 	return committees, nil
 }
 
-// BeaconCommittees returns the list of all beacon committees for agiven state at a given slot.
+// BeaconCommittees returns the list of all beacon committees for a given state at a given slot.
 func BeaconCommittees(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot) ([][]primitives.ValidatorIndex, error) {
 	epoch := slots.ToEpoch(slot)
 	activeCount, err := ActiveValidatorCount(ctx, state, epoch)
