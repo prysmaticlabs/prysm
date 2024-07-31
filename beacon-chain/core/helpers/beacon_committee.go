@@ -294,36 +294,22 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 	if err := verifyAssignmentEpoch(epoch, state); err != nil {
 		return nil, err
 	}
-
-	// Retrieve active validator count for the specified epoch.
-	activeValidatorCount, err := ActiveValidatorCount(ctx, state, epoch)
-	if err != nil {
-		return nil, err
-	}
-
-	// Determine the number of committees per slot based on the number of active validator indices.
-	numCommitteesPerSlot := SlotCommitteeCount(activeValidatorCount)
-
 	startSlot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, err
 	}
-
-	assignments := make(map[primitives.ValidatorIndex]*CommitteeAssignment)
 	vals := make(map[primitives.ValidatorIndex]struct{})
 	for _, v := range validators {
 		vals[v] = struct{}{}
 	}
-
+	assignments := make(map[primitives.ValidatorIndex]*CommitteeAssignment)
 	// Compute committee assignments for each slot in the epoch.
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		// Compute committees for the current slot.
-		for j := uint64(0); j < numCommitteesPerSlot; j++ {
-			committee, err := BeaconCommitteeFromState(ctx, state, slot, primitives.CommitteeIndex(j))
-			if err != nil {
-				return nil, err
-			}
-
+		committees, err := BeaconCommittees(ctx, state, slot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute beacon committees")
+		}
+		for j, committee := range committees {
 			for _, vIndex := range committee {
 				if _, ok := vals[vIndex]; !ok { // Skip if the validator is not in the provided validators slice.
 					continue
@@ -337,7 +323,6 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 			}
 		}
 	}
-
 	return assignments, nil
 }
 
