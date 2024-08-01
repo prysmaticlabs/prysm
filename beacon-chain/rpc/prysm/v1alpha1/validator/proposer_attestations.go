@@ -207,8 +207,9 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 
 // sort attestations as follows:
 //
-//   - all attestations selected by max-cover are ordered before leftover attestations
-//   - within selected/leftover, attestations are ordered by slot, with higher slot coming first
+//   - all attestations selected by max-cover are taken, leftover attestations are discarded
+//     (with current parameters all bits of a leftover attestation are already covered by selected attestations)
+//   - selected attestations are ordered by slot, with higher slot coming first
 //   - within a slot, all top attestations (one per committee) are ordered before any second-best attestations, second-best before third-best etc.
 //   - within top/second-best/etc. attestations (one per committee), attestations are ordered by bit count, with higher bit count coming first
 func (a proposerAtts) sort() (proposerAtts, error) {
