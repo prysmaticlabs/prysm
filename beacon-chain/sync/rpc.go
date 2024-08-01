@@ -219,7 +219,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		// since metadata requests do not have any data in the payload, we
 		// do not decode anything.
-		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 {
+		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 || baseTopic == p2p.RPCMetaDataTopicV3 {
 			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if !errors.Is(err, p2ptypes.ErrWrongForkDigestVersion) {

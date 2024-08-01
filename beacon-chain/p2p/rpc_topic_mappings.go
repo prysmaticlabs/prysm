@@ -117,6 +117,7 @@ var RPCTopicMappings = map[string]interface{}{
 	// RPC Metadata Message
 	RPCMetaDataTopicV1: new(interface{}),
 	RPCMetaDataTopicV2: new(interface{}),
+	RPCMetaDataTopicV3: new(interface{}),
 	// BlobSidecarsByRange v1 Message
 	RPCBlobSidecarsByRangeTopicV1: new(pb.BlobSidecarsByRangeRequest),
 	// BlobSidecarsByRoot v1 Message
