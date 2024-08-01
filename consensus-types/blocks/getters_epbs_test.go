@@ -63,11 +63,14 @@ func Test_EpbsBlock_Copy(t *testing.T) {
 	require.NoError(t, err)
 	copiedEpbsBlock, err := epbsBlock.Copy()
 	require.NoError(t, err)
-	copiedBody, ok := copiedEpbsBlock.Body().(interfaces.ROBlockBodyEpbs)
+	copiedBody, ok := copiedEpbsBlock.Body().(interfaces.ReadOnlyBeaconBlockBody)
 	require.Equal(t, true, ok)
-	require.DeepEqual(t, copiedBody.SignedExecutionPayloadHeader(), signedHeader)
+	copiedHeader, err := copiedBody.SignedExecutionPayloadHeader()
+	require.NoError(t, err)
+	require.DeepEqual(t, copiedHeader, signedHeader)
 
-	copiedPayloadAtts := copiedBody.PayloadAttestations()
+	copiedPayloadAtts, err := copiedBody.PayloadAttestations()
+	require.NoError(t, err)
 	require.DeepEqual(t, copiedPayloadAtts, payloadAttestations)
 }
 
