@@ -105,7 +105,7 @@ func (s *Service) RefreshPersistentSubnets() {
 	// Is our attestation bitvector record up to date?
 	isBitVUpToDate := bytes.Equal(bitV, inRecordBitV) && bytes.Equal(bitV, inMetadataBitV)
 
-	// Compare current epoch with our fork epochs
+	// Compare current epoch with Altair fork epoch
 	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
 
 	if currentEpoch < altairForkEpoch {
@@ -120,6 +120,7 @@ func (s *Service) RefreshPersistentSubnets() {
 
 		// Ping all peers.
 		s.pingPeers()
+
 		return
 	}
 
@@ -131,7 +132,7 @@ func (s *Service) RefreshPersistentSubnets() {
 	}
 
 	// Get the sync subnet bitfield we store in our record.
-	currentBitS, err := syncBitvector(record)
+	inRecordBitS, err := syncBitvector(record)
 	if err != nil {
 		log.WithError(err).Error("Could not retrieve sync bitfield")
 		return
@@ -140,15 +141,49 @@ func (s *Service) RefreshPersistentSubnets() {
 	// Get the sync subnet bitfield in our metadata.
 	currentBitSInMetadata := s.Metadata().SyncnetsBitfield()
 
-	isBitSUpToDate := bytes.Equal(bitS, currentBitS) && bytes.Equal(bitS, currentBitSInMetadata)
+	isBitSUpToDate := bytes.Equal(bitS, inRecordBitS) && bytes.Equal(bitS, currentBitSInMetadata)
 
-	if metadataVersion == version.Altair && isBitVUpToDate && isBitSUpToDate {
+	// Compare current epoch with EIP-7594 fork epoch.
+	eip7594ForkEpoch := params.BeaconConfig().Eip7594ForkEpoch
+
+	if currentEpoch < eip7594ForkEpoch {
+		// Altair behaviour.
+		if metadataVersion == version.Altair && isBitVUpToDate && isBitSUpToDate {
+			// Nothing to do, return early.
+			return
+		}
+
+		// Some data have changed, update our record and metadata.
+		s.updateSubnetRecordWithMetadataV2(bitV, bitS)
+
+		// Ping all peers to inform them of new metadata
+		s.pingPeers()
+
+		return
+	}
+
+	// Get the current custody subnet count.
+	custodySubnetCount := peerdas.CustodySubnetCount()
+
+	// Get the custody subnet count we store in our record.
+	inRecordCustodySubnetCount, err := peerdas.CustodyCountFromRecord(record)
+	if err != nil {
+		log.WithError(err).Error("Could not retrieve custody subnet count")
+		return
+	}
+
+	// Get the custody subnet count in our metadata.
+	inMetadataCustodySubnetCount := s.Metadata().CustodySubnetCount()
+
+	isCustodySubnetCountUpToDate := (custodySubnetCount == inRecordCustodySubnetCount && custodySubnetCount == inMetadataCustodySubnetCount)
+
+	if metadataVersion == version.Deneb && isBitVUpToDate && isBitSUpToDate && isCustodySubnetCountUpToDate {
 		// Nothing to do, return early.
 		return
 	}
 
 	// Some data changed. Update the record and the metadata.
-	s.updateSubnetRecordWithMetadataV2(bitV, bitS)
+	s.updateSubnetRecordWithMetadataV3(bitV, bitS, custodySubnetCount)
 
 	// Ping all peers.
 	s.pingPeers()

@@ -473,6 +473,7 @@ type check struct {
 	metadataSequenceNumber uint64
 	attestationSubnets     []uint64
 	syncSubnets            []uint64
+	custodySubnetCount     *uint64
 }
 
 func checkPingCountCacheMetadataRecord(
@@ -537,15 +538,41 @@ func checkPingCountCacheMetadataRecord(
 
 		actualBitSMetadata := service.metaData.SyncnetsBitfield()
 		require.DeepSSZEqual(t, expectedBitS, actualBitSMetadata)
+	}
 
+	if expected.custodySubnetCount != nil {
+		// Check custody subnet count in ENR.
+		var actualCustodySubnetCount uint64
+		err := service.dv5Listener.LocalNode().Node().Record().Load(enr.WithEntry(peerdas.CustodySubnetCountEnrKey, &actualCustodySubnetCount))
+		require.NoError(t, err)
+		require.Equal(t, *expected.custodySubnetCount, actualCustodySubnetCount)
+
+		// Check custody subnet count in metadata.
+		actualCustodySubnetCountMetadata := service.metaData.CustodySubnetCount()
+		require.Equal(t, *expected.custodySubnetCount, actualCustodySubnetCountMetadata)
 	}
 }
 
 func TestRefreshPersistentSubnets(t *testing.T) {
-	const altairForkEpoch = 5
+	params.SetupTestConfigCleanup(t)
+
+	// Clean up caches after usage.
+	defer cache.SubnetIDs.EmptyAllCaches()
+	defer cache.SyncSubnetIDs.EmptyAllCaches()
+
+	const (
+		altairForkEpoch  = 5
+		eip7594ForkEpoch = 10
+	)
+
+	custodySubnetCount := uint64(1)
 
 	// Set up epochs.
-	params.BeaconConfig().AltairForkEpoch = altairForkEpoch
+	defaultCfg := params.BeaconConfig()
+	cfg := defaultCfg.Copy()
+	cfg.AltairForkEpoch = altairForkEpoch
+	cfg.Eip7594ForkEpoch = eip7594ForkEpoch
+	params.OverrideBeaconConfig(cfg)
 
 	// Compute the number of seconds per epoch.
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
@@ -610,6 +637,39 @@ func TestRefreshPersistentSubnets(t *testing.T) {
 					metadataSequenceNumber: 2,
 					attestationSubnets:     []uint64{40, 41},
 					syncSubnets:            []uint64{1, 2},
+				},
+			},
+		},
+		{
+			name:              "PeerDAS",
+			epochSinceGenesis: eip7594ForkEpoch,
+			checks: []check{
+				{
+					pingCount:              0,
+					metadataSequenceNumber: 0,
+					attestationSubnets:     []uint64{},
+					syncSubnets:            nil,
+				},
+				{
+					pingCount:              1,
+					metadataSequenceNumber: 1,
+					attestationSubnets:     []uint64{40, 41},
+					syncSubnets:            nil,
+					custodySubnetCount:     &custodySubnetCount,
+				},
+				{
+					pingCount:              2,
+					metadataSequenceNumber: 2,
+					attestationSubnets:     []uint64{40, 41},
+					syncSubnets:            []uint64{1, 2},
+					custodySubnetCount:     &custodySubnetCount,
+				},
+				{
+					pingCount:              2,
+					metadataSequenceNumber: 2,
+					attestationSubnets:     []uint64{40, 41},
+					syncSubnets:            []uint64{1, 2},
+					custodySubnetCount:     &custodySubnetCount,
 				},
 			},
 		},
@@ -693,4 +753,7 @@ func TestRefreshPersistentSubnets(t *testing.T) {
 			cache.SyncSubnetIDs.EmptyAllCaches()
 		})
 	}
+
+	// Reset the config.
+	params.OverrideBeaconConfig(defaultCfg)
 }
