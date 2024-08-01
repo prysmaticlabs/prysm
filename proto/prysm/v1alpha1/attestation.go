@@ -17,6 +17,7 @@ type Att interface {
 	ssz.HashRoot
 	Version() int
 	IsNil() bool
+	IsAggregated() bool
 	Clone() Att
 	GetAggregationBits() bitfield.Bitlist
 	GetData() *AttestationData
@@ -110,6 +111,11 @@ func (a *Attestation) IsNil() bool {
 		a.AggregationBits == nil
 }
 
+// IsAggregated --
+func (a *Attestation) IsAggregated() bool {
+	return a.AggregationBits.Count() > 1
+}
+
 // Clone --
 func (a *Attestation) Clone() Att {
 	return a.Copy()
@@ -151,6 +157,11 @@ func (a *PendingAttestation) IsNil() bool {
 		a.Data.Source == nil ||
 		a.Data.Target == nil ||
 		a.AggregationBits == nil
+}
+
+// IsAggregated --
+func (a *PendingAttestation) IsAggregated() bool {
+	return a.AggregationBits.Count() > 1
 }
 
 // Clone --
@@ -197,6 +208,11 @@ func (a *AttestationElectra) IsNil() bool {
 		a.Data.Target == nil ||
 		a.AggregationBits == nil ||
 		a.CommitteeBits == nil
+}
+
+// IsAggregated --
+func (a *AttestationElectra) IsAggregated() bool {
+	return a.AggregationBits.Count() > 1
 }
 
 // Clone --

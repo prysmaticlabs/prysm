@@ -110,12 +110,14 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-	seen, err := s.cfg.attPool.HasAggregatedAttestation(aggregate)
+	// It is also possible that some aggregate in the pool already covers all bits
+	// of this aggregate, in which case we can ignore it too.
+	isRedundant, err := s.cfg.attestationCache.AggregateIsRedundant(aggregate)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
 	}
-	if seen {
+	if isRedundant {
 		return pubsub.ValidationIgnore, nil
 	}
 	if !s.validateBlockInAttestation(ctx, m) {

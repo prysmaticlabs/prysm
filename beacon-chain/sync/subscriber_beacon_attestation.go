@@ -27,15 +27,14 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 	}
 	s.setSeenCommitteeIndicesSlot(data.Slot, data.CommitteeIndex, a.GetAggregationBits())
 
-	exists, err := s.cfg.attPool.HasAggregatedAttestation(a)
+	seen, err := s.cfg.attestationCache.Seen(a)
 	if err != nil {
-		return errors.Wrap(err, "could not determine if attestation pool has this attestation")
-	}
-	if exists {
+		log.WithError(err).Error("Could not determine if attestation was seen")
+	} else if seen {
 		return nil
 	}
 
-	return s.cfg.attPool.SaveUnaggregatedAttestation(a)
+	return s.cfg.attestationCache.Add(a)
 }
 
 func (*Service) persistentSubnetIndices() []uint64 {

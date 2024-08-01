@@ -50,7 +50,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	// Rewind back one epoch worth of time.
 	s.genesisTime = uint64(prysmTime.Now().Unix()) - uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 
-	go s.pruneAttsPool()
+	go s.prune()
 
 	done := make(chan struct{}, 1)
 	async.RunEvery(ctx, 500*time.Millisecond, func() {
@@ -105,7 +105,7 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	// Rewind back one epoch worth of time.
 	s.genesisTime = uint64(prysmTime.Now().Unix()) - uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 
-	s.pruneExpiredAtts()
+	s.pruneExpired()
 	// All the attestations on slot 0 should be pruned.
 	for _, attestation := range s.cfg.Pool.AggregatedAttestations() {
 		if attestation.GetData().Slot == 0 {

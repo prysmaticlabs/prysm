@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
@@ -17,7 +16,7 @@ func (c *AttCaches) SaveUnaggregatedAttestation(att ethpb.Att) error {
 	if att == nil {
 		return nil
 	}
-	if helpers.IsAggregated(att) {
+	if att.IsAggregated() {
 		return errors.New("attestation is aggregated")
 	}
 
@@ -133,7 +132,7 @@ func (c *AttCaches) DeleteUnaggregatedAttestation(att ethpb.Att) error {
 	if att == nil {
 		return nil
 	}
-	if helpers.IsAggregated(att) {
+	if att.IsAggregated() {
 		return errors.New("attestation is aggregated")
 	}
 
@@ -161,7 +160,7 @@ func (c *AttCaches) DeleteSeenUnaggregatedAttestations() (int, error) {
 
 	count := 0
 	for r, att := range c.unAggregatedAtt {
-		if att == nil || helpers.IsAggregated(att) {
+		if att == nil || att.IsAggregated() {
 			continue
 		}
 		if seen, err := c.hasSeenBit(att); err == nil && seen {

@@ -49,10 +49,11 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 		return nil, err
 	}
 
+	// TODO: does it make sense to have a gourutine here when
+	// saving is super fast? (only bottleneck could be other atts being saved)
 	go func() {
-		attCopy := att.Copy()
-		if err := vs.AttPool.SaveUnaggregatedAttestation(attCopy); err != nil {
-			log.WithError(err).Error("Could not save unaggregated attestation")
+		if err = vs.AttestationCache.Add(att); err != nil {
+			log.WithError(err).Error("Could not save attestation")
 			return
 		}
 	}()
@@ -82,11 +83,11 @@ func (vs *Server) ProposeAttestationElectra(ctx context.Context, att *ethpb.Atte
 		return nil, err
 	}
 
+	// TODO: does it make sense to have a gourutine here when
+	// saving is super fast? (only bottleneck could be other atts being saved)
 	go func() {
-		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-		attCopy := att.Copy()
-		if err := vs.AttPool.SaveUnaggregatedAttestation(attCopy); err != nil {
-			log.WithError(err).Error("Could not save unaggregated attestation")
+		if err = vs.AttestationCache.Add(att); err != nil {
+			log.WithError(err).Error("Could not save attestation")
 			return
 		}
 	}()

@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
@@ -72,7 +71,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			s.initCaches()
 			// Set up attestation pool.
 			for _, att := range pooledAttestations {
-				if helpers.IsAggregated(att) {
+				if att.IsAggregated() {
 					assert.NoError(t, s.cfg.attPool.SaveAggregatedAttestation(att))
 				} else {
 					assert.NoError(t, s.cfg.attPool.SaveUnaggregatedAttestation(att))

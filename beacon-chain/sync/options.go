@@ -46,7 +46,7 @@ func WithDatabase(db db.NoHeadAccessDatabase) Option {
 
 func WithAttestationCache(c *cache.AttestationCache) Option {
 	return func(s *Service) error {
-		s.cfg.attCache = c
+		s.cfg.attestationCache = c
 		return nil
 	}
 }

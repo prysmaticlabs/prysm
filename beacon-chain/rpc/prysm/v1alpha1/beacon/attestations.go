@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/v5/api/pagination"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -305,7 +305,7 @@ func (bs *Server) ListIndexedAttestationsElectra(
 // attestations are processed and when they are no longer valid.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
 func (bs *Server) AttestationPool(_ context.Context, req *ethpb.AttestationPoolRequest) (*ethpb.AttestationPoolResponse, error) {
-	atts, err := attestationsFromPool[*ethpb.Attestation](req.PageSize, bs.AttestationsPool)
+	atts, err := attestationsFromCache[*ethpb.Attestation](req.PageSize, bs.AttestationCache)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +332,7 @@ func (bs *Server) AttestationPool(_ context.Context, req *ethpb.AttestationPoolR
 }
 
 func (bs *Server) AttestationPoolElectra(_ context.Context, req *ethpb.AttestationPoolRequest) (*ethpb.AttestationPoolElectraResponse, error) {
-	atts, err := attestationsFromPool[*ethpb.AttestationElectra](req.PageSize, bs.AttestationsPool)
+	atts, err := attestationsFromCache[*ethpb.AttestationElectra](req.PageSize, bs.AttestationCache)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +444,7 @@ func blockIndexedAttestations[T ethpb.IndexedAtt](
 	return indexed, nil
 }
 
-func attestationsFromPool[T ethpb.Att](pageSize int32, pool attestations.Pool) ([]T, error) {
+func attestationsFromCache[T ethpb.Att](pageSize int32, c *cache.AttestationCache) ([]T, error) {
 	if int(pageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -453,9 +453,9 @@ func attestationsFromPool[T ethpb.Att](pageSize int32, pool attestations.Pool) (
 			cmd.Get().MaxRPCPageSize,
 		)
 	}
-	poolAtts := pool.AggregatedAttestations()
-	atts := make([]T, 0, len(poolAtts))
-	for _, att := range poolAtts {
+	cacheAtts := c.GetAll()
+	atts := make([]T, 0, len(cacheAtts))
+	for _, att := range cacheAtts {
 		a, ok := att.(T)
 		if !ok {
 			var expected T

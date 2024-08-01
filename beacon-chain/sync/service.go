@@ -81,7 +81,7 @@ type config struct {
 	attestationNotifier           operation.Notifier
 	p2p                           p2p.P2P
 	beaconDB                      db.NoHeadAccessDatabase
-	attCache                      *cache.AttestationCache
+	attestationCache              *cache.AttestationCache
 	attPool                       attestations.Pool
 	exitPool                      voluntaryexits.PoolManager
 	slashingPool                  slashings.PoolManager

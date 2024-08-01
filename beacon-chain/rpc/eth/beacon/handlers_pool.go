@@ -47,13 +47,7 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	attestations := s.AttestationsPool.AggregatedAttestations()
-	unaggAtts, err := s.AttestationsPool.UnaggregatedAttestations()
-	if err != nil {
-		httputil.HandleError(w, "Could not get unaggregated attestations: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	attestations = append(attestations, unaggAtts...)
+	attestations := s.AttestationCache.GetAll()
 	isEmptyReq := rawSlot == "" && rawCommitteeIndex == ""
 	if isEmptyReq {
 		allAtts := make([]*structs.Attestation, len(attestations))
@@ -132,7 +126,7 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 		// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 		// of a received unaggregated attestation.
 		// Note we can't send for aggregated att because we don't have selection proof.
-		if !corehelpers.IsAggregated(att) {
+		if !att.IsAggregated() {
 			s.OperationNotifier.OperationFeed().Send(&feed.Event{
 				Type: operation.UnaggregatedAttReceived,
 				Data: &operation.UnAggregatedAttReceivedData{
@@ -159,14 +153,8 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 			log.WithError(err).Errorf("could not broadcast attestation at index %d", i)
 		}
 
-		if corehelpers.IsAggregated(att) {
-			if err = s.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save aggregated attestation")
-			}
-		} else {
-			if err = s.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save unaggregated attestation")
-			}
+		if err = s.AttestationCache.Add(att); err != nil {
+			log.WithError(err).Error("could not save attestation")
 		}
 	}
 	if len(failedBroadcasts) > 0 {

@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -66,13 +67,9 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	atts := vs.AttPool.AggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex)
-	// Filter out the best aggregated attestation (ie. the one with the most aggregated bits).
+	atts := cache.GetBySlotAndCommitteeIndex[*ethpb.Attestation](vs.AttestationCache, req.Slot, req.CommitteeIndex)
 	if len(atts) == 0 {
-		atts = vs.AttPool.UnaggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex)
-		if len(atts) == 0 {
-			return nil, status.Errorf(codes.NotFound, "Could not find attestation for slot and committee in pool")
-		}
+		return nil, status.Errorf(codes.NotFound, "Could not find attestation for slot and committee in pool")
 	}
 
 	var indexInCommittee uint64
@@ -145,12 +142,9 @@ func (vs *Server) SubmitAggregateSelectionProofElectra(
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	atts := vs.AttPool.AggregatedAttestationsBySlotIndexElectra(ctx, req.Slot, req.CommitteeIndex)
+	atts := cache.GetBySlotAndCommitteeIndex[*ethpb.AttestationElectra](vs.AttestationCache, req.Slot, req.CommitteeIndex)
 	if len(atts) == 0 {
-		atts = vs.AttPool.UnaggregatedAttestationsBySlotIndexElectra(ctx, req.Slot, req.CommitteeIndex)
-		if len(atts) == 0 {
-			return nil, status.Errorf(codes.NotFound, "No attestations found in pool")
-		}
+		return nil, status.Errorf(codes.NotFound, "No attestations found in pool")
 	}
 
 	var indexInCommittee uint64

@@ -404,14 +404,8 @@ func (s *Service) saveOrphanedOperations(ctx context.Context, orphanedRoot [32]b
 			if a.GetData().Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
 				continue
 			}
-			if helpers.IsAggregated(a) {
-				if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
-					return err
-				}
-			} else {
-				if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
-					return err
-				}
+			if err := s.cfg.AttestationCache.Add(a); err != nil {
+				return err
 			}
 			saveOrphanedAttCount.Inc()
 		}

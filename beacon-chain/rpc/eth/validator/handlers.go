@@ -55,22 +55,10 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	var match ethpbalpha.Att
 	var err error
 
-	match, err = matchingAtt(s.AttestationsPool.AggregatedAttestations(), primitives.Slot(slot), attDataRoot)
+	match, err = matchingAtt(s.AttestationCache.GetAll(), primitives.Slot(slot), attDataRoot)
 	if err != nil {
 		httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
 		return
-	}
-	if match == nil {
-		atts, err := s.AttestationsPool.UnaggregatedAttestations()
-		if err != nil {
-			httputil.HandleError(w, "Could not get unaggregated attestations: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		match, err = matchingAtt(atts, primitives.Slot(slot), attDataRoot)
-		if err != nil {
-			httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 	}
 	if match == nil {
 		httputil.HandleError(w, "No matching attestation found", http.StatusNotFound)

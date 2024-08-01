@@ -60,7 +60,7 @@ func (s *Service) Start() {
 		return
 	}
 	go s.prepareForkChoiceAtts()
-	go s.pruneAttsPool()
+	go s.pruneExpired()
 }
 
 // waitForSync waits until the beacon node is synced to the latest head.
