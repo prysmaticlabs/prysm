@@ -2,6 +2,7 @@ package verification
 
 import (
 	"context"
+	goError "errors"
 
 	"github.com/pkg/errors"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
@@ -336,5 +337,5 @@ func blobToSignatureData(b blocks.ROBlob) SignatureData {
 }
 
 func blobErrBuilder(baseErr error) error {
-	return errors.Wrap(ErrBlobInvalid, baseErr.Error())
+	return goError.Join(ErrBlobInvalid, baseErr)
 }
