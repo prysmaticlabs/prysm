@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -111,18 +110,7 @@ func logBlockSyncStatus(block interfaces.ReadOnlyBeaconBlock, blockRoot [32]byte
 }
 
 // logs payload related data every slot.
-func logPayload(block interfaces.ReadOnlyBeaconBlock) error {
-	isExecutionBlk, err := blocks.IsExecutionBlock(block.Body())
-	if err != nil {
-		return errors.Wrap(err, "could not determine if block is execution block")
-	}
-	if !isExecutionBlk {
-		return nil
-	}
-	payload, err := block.Body().Execution()
-	if err != nil {
-		return err
-	}
+func logPayload(ver int, payload interfaces.ExecutionData) error {
 	if payload.GasLimit() == 0 {
 		return errors.New("gas limit should not be 0")
 	}
@@ -133,17 +121,12 @@ func logPayload(block interfaces.ReadOnlyBeaconBlock) error {
 		"blockNumber": payload.BlockNumber(),
 		"gasUtilized": fmt.Sprintf("%.2f", gasUtilized),
 	}
-	if block.Version() >= version.Capella {
+	if ver >= version.Capella {
 		withdrawals, err := payload.Withdrawals()
 		if err != nil {
 			return errors.Wrap(err, "could not get withdrawals")
 		}
 		fields["withdrawals"] = len(withdrawals)
-		changes, err := block.Body().BLSToExecutionChanges()
-		if err != nil {
-			return errors.Wrap(err, "could not get BLSToExecutionChanges")
-		}
-		fields["blsToExecutionChanges"] = len(changes)
 	}
 	log.WithFields(fields).Debug("Synced new payload")
 	return nil

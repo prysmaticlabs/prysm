@@ -206,8 +206,14 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		log.WithError(err).Error("Unable to log block sync status")
 	}
 	// Log payload data
-	if err := logPayload(blockCopy.Block()); err != nil {
-		log.WithError(err).Error("Unable to log debug block payload data")
+	ver := blockCopy.Version()
+	if ver >= version.Bellatrix {
+		payload, err := blockCopy.Block().Body().Execution()
+		if err != nil {
+			log.WithError(err).Error("unable to get execution payload")
+		} else if err := logPayload(ver, payload); err != nil {
+			log.WithError(err).Error("Unable to log debug block payload data")
+		}
 	}
 	// Log state transition data.
 	if err := logStateTransitionData(blockCopy.Block()); err != nil {
