@@ -99,15 +99,18 @@ func (s *Service) RefreshPersistentSubnets() {
 		return
 	}
 
+	// Get the attestation subnet bitfield in our metadata.
+	inMetadataBitV := s.Metadata().AttnetsBitfield()
+
 	// Is our attestation bitvector record up to date?
-	isOurBitVRecordUpToDate := bytes.Equal(bitV, inRecordBitV)
+	isBitVUpToDate := bytes.Equal(bitV, inRecordBitV) && bytes.Equal(bitV, inMetadataBitV)
 
 	// Compare current epoch with our fork epochs
 	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
 
 	if currentEpoch < altairForkEpoch {
 		// Phase 0 behaviour.
-		if isOurBitVRecordUpToDate {
+		if isBitVUpToDate {
 			// Return early if bitfield hasn't changed.
 			return
 		}
@@ -134,9 +137,12 @@ func (s *Service) RefreshPersistentSubnets() {
 		return
 	}
 
-	isOurBitSRecordUpToDate := bytes.Equal(bitS, currentBitS)
+	// Get the sync subnet bitfield in our metadata.
+	currentBitSInMetadata := s.Metadata().SyncnetsBitfield()
 
-	if metadataVersion == version.Altair && isOurBitVRecordUpToDate && isOurBitSRecordUpToDate {
+	isBitSUpToDate := bytes.Equal(bitS, currentBitS) && bytes.Equal(bitS, currentBitSInMetadata)
+
+	if metadataVersion == version.Altair && isBitVUpToDate && isBitSUpToDate {
 		// Nothing to do, return early.
 		return
 	}
