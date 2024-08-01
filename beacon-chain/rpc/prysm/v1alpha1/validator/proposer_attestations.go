@@ -112,18 +112,17 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	if err != nil {
 		return nil, err
 	}
-	sorted, err := deduped.sortByProfitability()
+	filtered, err := vs.filterAttestationBySignature(ctx, deduped, latestState)
 	if err != nil {
 		return nil, err
 	}
-	atts = sorted.limitToMaxAttestations()
-
-	atts, err = vs.filterAttestationBySignature(ctx, atts, latestState)
+	sorted, err := filtered.sortByProfitability()
 	if err != nil {
 		return nil, err
 	}
+	limited := sorted.limitToMaxAttestations()
 
-	return atts, nil
+	return limited, nil
 }
 
 // filter separates attestation list into two groups: valid and invalid attestations.
