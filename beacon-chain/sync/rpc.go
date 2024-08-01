@@ -121,6 +121,10 @@ func (s *Service) registerRPCHandlersPeerDAS() {
 		p2p.RPCDataColumnSidecarsByRangeTopicV1,
 		s.dataColumnSidecarsByRangeRPCHandler,
 	)
+	s.registerRPC(
+		p2p.RPCMetaDataTopicV3,
+		s.metaDataHandler,
+	)
 }
 
 // Remove all v1 Stream handlers that are no longer supported
