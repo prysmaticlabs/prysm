@@ -186,9 +186,9 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	}
 
 	t.Run("no atts", func(t *testing.T) {
-		flgs := features.Get()
-		flgs.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(flgs)
+		feat := features.Get()
+		feat.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
 		defer reset()
 
 		atts := getAtts([]testData{})
@@ -201,9 +201,9 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("single att", func(t *testing.T) {
-		flgs := features.Get()
-		flgs.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(flgs)
+		feat := features.Get()
+		feat.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
 		defer reset()
 
 		atts := getAtts([]testData{
@@ -220,9 +220,9 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("single att per slot", func(t *testing.T) {
-		flgs := features.Get()
-		flgs.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(flgs)
+		feat := features.Get()
+		feat.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
 		defer reset()
 
 		atts := getAtts([]testData{
@@ -241,9 +241,9 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("two atts on one of the slots", func(t *testing.T) {
-		flgs := features.Get()
-		flgs.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(flgs)
+		feat := features.Get()
+		feat.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
 		defer reset()
 
 		atts := getAtts([]testData{
@@ -263,9 +263,9 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("compare to native sort", func(t *testing.T) {
-		flgs := features.Get()
-		flgs.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(flgs)
+		feat := features.Get()
+		feat.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
 		defer reset()
 
 		// The max-cover based approach will select 0b00001100 instead, despite lower bit count
@@ -289,9 +289,9 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("multiple slots", func(t *testing.T) {
-		flgs := features.Get()
-		flgs.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(flgs)
+		feat := features.Get()
+		feat.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
 		defer reset()
 
 		atts := getAtts([]testData{
@@ -316,9 +316,9 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("follows max-cover", func(t *testing.T) {
-		flgs := features.Get()
-		flgs.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(flgs)
+		feat := features.Get()
+		feat.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
 		defer reset()
 
 		// Items at slot 4 must be first split into two lists by max-cover, with
@@ -350,6 +350,11 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 
 func TestProposer_sort_DifferentCommittees(t *testing.T) {
 	t.Run("one att per committee", func(t *testing.T) {
+		feat := features.Get()
+		feat.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
+		defer reset()
+
 		c1_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11111000, 0b1}, Data: &ethpb.AttestationData{CommitteeIndex: 1}})
 		c2_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11100000, 0b1}, Data: &ethpb.AttestationData{CommitteeIndex: 2}})
 		atts := proposerAtts{c1_a1, c2_a1}
@@ -359,6 +364,11 @@ func TestProposer_sort_DifferentCommittees(t *testing.T) {
 		assert.DeepEqual(t, want, atts)
 	})
 	t.Run("multiple atts per committee", func(t *testing.T) {
+		feat := features.Get()
+		feat.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
+		defer reset()
+
 		c1_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11111100, 0b1}, Data: &ethpb.AttestationData{CommitteeIndex: 1}})
 		c1_a2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000010, 0b1}, Data: &ethpb.AttestationData{CommitteeIndex: 1}})
 		c2_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110000, 0b1}, Data: &ethpb.AttestationData{CommitteeIndex: 2}})
@@ -367,11 +377,15 @@ func TestProposer_sort_DifferentCommittees(t *testing.T) {
 		atts, err := atts.sort()
 		require.NoError(t, err)
 
-		// selected: c1_a1, c1_a2, c2_a1
-		want := proposerAtts{c1_a1, c2_a1, c1_a2, c2_a2}
+		want := proposerAtts{c1_a1, c2_a1, c1_a2}
 		assert.DeepEqual(t, want, atts)
 	})
 	t.Run("multiple atts per committee, multiple slots", func(t *testing.T) {
+		feat := features.Get()
+		feat.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
+		defer reset()
+
 		s2_c1_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11111100, 0b1}, Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 1}})
 		s2_c1_a2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000010, 0b1}, Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 1}})
 		s2_c2_a1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110000, 0b1}, Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 2}})
@@ -387,8 +401,7 @@ func TestProposer_sort_DifferentCommittees(t *testing.T) {
 		atts, err := atts.sort()
 		require.NoError(t, err)
 
-		// selected: s2_c1_a1, s2_c1_a2, s2_c2_a1, s1_c1_a1, s1_c1_a2, s1_c2_a1
-		want := proposerAtts{s2_c1_a1, s2_c2_a1, s2_c1_a2, s1_c1_a1, s1_c2_a1, s1_c1_a2, s2_c2_a2, s1_c2_a2}
+		want := proposerAtts{s2_c1_a1, s2_c2_a1, s2_c1_a2, s1_c1_a1, s1_c2_a1, s1_c1_a2}
 		assert.DeepEqual(t, want, atts)
 	})
 }
