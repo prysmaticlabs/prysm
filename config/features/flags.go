@@ -168,7 +168,7 @@ var (
 	}
 	EnableCommitteeAwarePacking = &cli.BoolFlag{
 		Name:  "enable-committee-aware-packing",
-		Usage: "", // TODO
+		Usage: "Changes the attestation packing algorithm to one that is aware of attesting committees.",
 	}
 )
 
