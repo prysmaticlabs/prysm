@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls/blst"
@@ -18,157 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
-
-func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
-	type testData struct {
-		slot primitives.Slot
-		bits bitfield.Bitlist
-	}
-	getAtts := func(data []testData) proposerAtts {
-		var atts proposerAtts
-		for _, att := range data {
-			atts = append(atts, util.HydrateAttestation(&ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: att.slot}, AggregationBits: att.bits}))
-		}
-		return atts
-	}
-
-	t.Run("no atts", func(t *testing.T) {
-		atts := getAtts([]testData{})
-		want := getAtts([]testData{})
-		atts, err := atts.sortByProfitability()
-		if err != nil {
-			t.Error(err)
-		}
-		require.DeepEqual(t, want, atts)
-	})
-
-	t.Run("single att", func(t *testing.T) {
-		atts := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-		})
-		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-		})
-		atts, err := atts.sortByProfitability()
-		if err != nil {
-			t.Error(err)
-		}
-		require.DeepEqual(t, want, atts)
-	})
-
-	t.Run("single att per slot", func(t *testing.T) {
-		atts := getAtts([]testData{
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-		})
-		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-		})
-		atts, err := atts.sortByProfitability()
-		if err != nil {
-			t.Error(err)
-		}
-		require.DeepEqual(t, want, atts)
-	})
-
-	t.Run("two atts on one of the slots", func(t *testing.T) {
-		atts := getAtts([]testData{
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-			{4, bitfield.Bitlist{0b11110000, 0b1}},
-		})
-		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11110000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-		})
-		atts, err := atts.sortByProfitability()
-		if err != nil {
-			t.Error(err)
-		}
-		require.DeepEqual(t, want, atts)
-	})
-
-	t.Run("compare to native sort", func(t *testing.T) {
-		// The max-cover based approach will select 0b00001100 instead, despite lower bit count
-		// (since it has two new/unknown bits).
-		t.Run("max-cover", func(t *testing.T) {
-			atts := getAtts([]testData{
-				{1, bitfield.Bitlist{0b11000011, 0b1}},
-				{1, bitfield.Bitlist{0b11001000, 0b1}},
-				{1, bitfield.Bitlist{0b00001100, 0b1}},
-			})
-			want := getAtts([]testData{
-				{1, bitfield.Bitlist{0b11000011, 0b1}},
-				{1, bitfield.Bitlist{0b00001100, 0b1}},
-				{1, bitfield.Bitlist{0b11001000, 0b1}},
-			})
-			atts, err := atts.sortByProfitability()
-			if err != nil {
-				t.Error(err)
-			}
-			require.DeepEqual(t, want, atts)
-		})
-	})
-
-	t.Run("multiple slots", func(t *testing.T) {
-		atts := getAtts([]testData{
-			{2, bitfield.Bitlist{0b11100000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-			{4, bitfield.Bitlist{0b11110000, 0b1}},
-			{1, bitfield.Bitlist{0b11100000, 0b1}},
-			{3, bitfield.Bitlist{0b11000000, 0b1}},
-		})
-		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11110000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-			{3, bitfield.Bitlist{0b11000000, 0b1}},
-			{2, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-		})
-		atts, err := atts.sortByProfitability()
-		if err != nil {
-			t.Error(err)
-		}
-		require.DeepEqual(t, want, atts)
-	})
-
-	t.Run("follows max-cover", func(t *testing.T) {
-		// Items at slot 4, must be first split into two lists by max-cover, with
-		// 0b10000011 scoring higher (as it provides more info in addition to already selected
-		// attestations) than 0b11100001 (despite naive bit count suggesting otherwise). Then,
-		// both selected and non-selected attestations must be additionally sorted by bit count.
-		atts := getAtts([]testData{
-			{4, bitfield.Bitlist{0b00000001, 0b1}},
-			{4, bitfield.Bitlist{0b11100001, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-			{2, bitfield.Bitlist{0b11100000, 0b1}},
-			{4, bitfield.Bitlist{0b10000011, 0b1}},
-			{4, bitfield.Bitlist{0b11111000, 0b1}},
-			{1, bitfield.Bitlist{0b11100000, 0b1}},
-			{3, bitfield.Bitlist{0b11000000, 0b1}},
-		})
-		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11111000, 0b1}},
-			{4, bitfield.Bitlist{0b10000011, 0b1}},
-			{4, bitfield.Bitlist{0b11100001, 0b1}},
-			{4, bitfield.Bitlist{0b00000001, 0b1}},
-			{3, bitfield.Bitlist{0b11000000, 0b1}},
-			{2, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-		})
-		atts, err := atts.sortByProfitability()
-		if err != nil {
-			t.Error(err)
-		}
-		require.DeepEqual(t, want, atts)
-	})
-}
 
 func TestProposer_ProposerAtts_sort(t *testing.T) {
 	type testData struct {
@@ -232,8 +82,8 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 		})
 		want := getAtts([]testData{
 			{4, bitfield.Bitlist{0b11110000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		atts, err := atts.sort()
 		if err != nil {
@@ -275,10 +125,10 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 		})
 		want := getAtts([]testData{
 			{4, bitfield.Bitlist{0b11110000, 0b1}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
 			{3, bitfield.Bitlist{0b11000000, 0b1}},
 			{2, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11100000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		atts, err := atts.sort()
@@ -289,6 +139,188 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 	})
 
 	t.Run("follows max-cover", func(t *testing.T) {
+		// Items at slot 4, must be first split into two lists by max-cover, with
+		// 0b10000011 scoring higher (as it provides more info in addition to already selected
+		// attestations) than 0b11100001 (despite naive bit count suggesting otherwise). Then,
+		// both selected and non-selected attestations must be additionally sorted by bit count.
+		atts := getAtts([]testData{
+			{4, bitfield.Bitlist{0b00000001, 0b1}},
+			{4, bitfield.Bitlist{0b11100001, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{2, bitfield.Bitlist{0b11100000, 0b1}},
+			{4, bitfield.Bitlist{0b10000011, 0b1}},
+			{4, bitfield.Bitlist{0b11111000, 0b1}},
+			{1, bitfield.Bitlist{0b11100000, 0b1}},
+			{3, bitfield.Bitlist{0b11000000, 0b1}},
+		})
+		want := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11111000, 0b1}},
+			{4, bitfield.Bitlist{0b10000011, 0b1}},
+			{4, bitfield.Bitlist{0b11100001, 0b1}},
+			{4, bitfield.Bitlist{0b00000001, 0b1}},
+			{3, bitfield.Bitlist{0b11000000, 0b1}},
+			{2, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+		})
+		atts, err := atts.sort()
+		if err != nil {
+			t.Error(err)
+		}
+		require.DeepEqual(t, want, atts)
+	})
+}
+
+func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
+	type testData struct {
+		slot primitives.Slot
+		bits bitfield.Bitlist
+	}
+	getAtts := func(data []testData) proposerAtts {
+		var atts proposerAtts
+		for _, att := range data {
+			atts = append(atts, util.HydrateAttestation(&ethpb.Attestation{
+				Data: &ethpb.AttestationData{Slot: att.slot}, AggregationBits: att.bits}))
+		}
+		return atts
+	}
+
+	t.Run("no atts", func(t *testing.T) {
+		flgs := features.Get()
+		flgs.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(flgs)
+		defer reset()
+
+		atts := getAtts([]testData{})
+		want := getAtts([]testData{})
+		atts, err := atts.sort()
+		if err != nil {
+			t.Error(err)
+		}
+		require.DeepEqual(t, want, atts)
+	})
+
+	t.Run("single att", func(t *testing.T) {
+		flgs := features.Get()
+		flgs.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(flgs)
+		defer reset()
+
+		atts := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+		})
+		want := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+		})
+		atts, err := atts.sort()
+		if err != nil {
+			t.Error(err)
+		}
+		require.DeepEqual(t, want, atts)
+	})
+
+	t.Run("single att per slot", func(t *testing.T) {
+		flgs := features.Get()
+		flgs.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(flgs)
+		defer reset()
+
+		atts := getAtts([]testData{
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+		})
+		want := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+		})
+		atts, err := atts.sort()
+		if err != nil {
+			t.Error(err)
+		}
+		require.DeepEqual(t, want, atts)
+	})
+
+	t.Run("two atts on one of the slots", func(t *testing.T) {
+		flgs := features.Get()
+		flgs.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(flgs)
+		defer reset()
+
+		atts := getAtts([]testData{
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{4, bitfield.Bitlist{0b11110000, 0b1}},
+		})
+		want := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11110000, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+		})
+		atts, err := atts.sort()
+		if err != nil {
+			t.Error(err)
+		}
+		require.DeepEqual(t, want, atts)
+	})
+
+	t.Run("compare to native sort", func(t *testing.T) {
+		flgs := features.Get()
+		flgs.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(flgs)
+		defer reset()
+
+		// The max-cover based approach will select 0b00001100 instead, despite lower bit count
+		// (since it has two new/unknown bits).
+		t.Run("max-cover", func(t *testing.T) {
+			atts := getAtts([]testData{
+				{1, bitfield.Bitlist{0b11000011, 0b1}},
+				{1, bitfield.Bitlist{0b11001000, 0b1}},
+				{1, bitfield.Bitlist{0b00001100, 0b1}},
+			})
+			want := getAtts([]testData{
+				{1, bitfield.Bitlist{0b11000011, 0b1}},
+				{1, bitfield.Bitlist{0b00001100, 0b1}},
+			})
+			atts, err := atts.sort()
+			if err != nil {
+				t.Error(err)
+			}
+			require.DeepEqual(t, want, atts)
+		})
+	})
+
+	t.Run("multiple slots", func(t *testing.T) {
+		flgs := features.Get()
+		flgs.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(flgs)
+		defer reset()
+
+		atts := getAtts([]testData{
+			{2, bitfield.Bitlist{0b11100000, 0b1}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{4, bitfield.Bitlist{0b11110000, 0b1}},
+			{1, bitfield.Bitlist{0b11100000, 0b1}},
+			{3, bitfield.Bitlist{0b11000000, 0b1}},
+		})
+		want := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11110000, 0b1}},
+			{3, bitfield.Bitlist{0b11000000, 0b1}},
+			{2, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11100000, 0b1}},
+		})
+		atts, err := atts.sort()
+		if err != nil {
+			t.Error(err)
+		}
+		require.DeepEqual(t, want, atts)
+	})
+
+	t.Run("follows max-cover", func(t *testing.T) {
+		flgs := features.Get()
+		flgs.EnableCommitteeAwarePacking = true
+		reset := features.InitWithReset(flgs)
+		defer reset()
+
 		// Items at slot 4 must be first split into two lists by max-cover, with
 		// 0b10000011 being selected and 0b11100001 being leftover (despite naive bit count suggesting otherwise).
 		atts := getAtts([]testData{
@@ -307,9 +339,6 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 			{3, bitfield.Bitlist{0b11000000, 0b1}},
 			{2, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11100000, 0b1}},
-			{4, bitfield.Bitlist{0b11100001, 0b1}},
-			{4, bitfield.Bitlist{0b00000001, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		atts, err := atts.sort()
 		if err != nil {
