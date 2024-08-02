@@ -39,4 +39,12 @@ const (
 	MaxDepositRequestsPerPayload          = 8192          // Maximum number of deposit requests in an execution payload.
 	MaxWithdrawalRequestsPerPayload       = 16            // Maximum number of execution layer withdrawal requests in an execution payload.
 	MaxConsolidationRequestsPerPayload    = 1             // Maximum number of consolidation requests in an execution payload.
+	MaxProposerSlashings                  = 16            // Maximum number of proposer slashings in a block.
+	MaxAttesterSlashings                  = 2             // Maximum number of attester slashings in a block.
+	MaxAttesterSlashingsElectra           = 1             // Maximum number of attester slashings in a block.
+	MaxAttestations                       = 128           // Maximum number of attestations in a block.
+	MaxAttestationsElectra                = 8             // Maximum number of attestations in a block.
+	MaxDeposits                           = 16            // Maximum number of deposits in a block.
+	MaxVoluntaryExits                     = 16            // Maximum number of voluntary exits in a block.
+	MaxValidatorsPerWithdrawalsSweep      = 16            // Maximum number of validators that can be processed in a single withdrawals sweep.
 )
