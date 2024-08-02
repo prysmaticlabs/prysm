@@ -72,7 +72,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		switch metadataVersion {
 		case version.Altair:
 			fallthrough
-		case version.Deneb:
+		case version.Altair, version.Deneb:
 			metadata = wrapper.WrappedMetadataV0(
 				&pb.MetaDataV0{
 					Attnets:   metadata.AttnetsBitfield(),
