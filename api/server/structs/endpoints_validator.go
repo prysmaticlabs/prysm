@@ -119,11 +119,6 @@ type GetValidatorPerformanceResponse struct {
 	InactivityScores              []uint64 `json:"inactivity_scores,omitempty"`
 }
 
-type GetValidatorParticipationRequest struct {
-	Epoch   string `json:"epoch"`
-	StateID bool   `json:"state_id"`
-}
-
 type GetValidatorParticipationResponse struct {
 	Epoch         string                  `json:"epoch"`
 	Finalized     bool                    `json:"finalized"`
