@@ -42,7 +42,7 @@ func (e BlockIdParseError) Error() string {
 // Blocker is responsible for retrieving blocks.
 type Blocker interface {
 	Block(ctx context.Context, id []byte) (interfaces.ReadOnlySignedBeaconBlock, error)
-	Blobs(ctx context.Context, id string, indices []uint64) ([]*blocks.VerifiedROBlob, *core.RpcError)
+	Blobs(ctx context.Context, id string, indices map[uint64]bool) ([]*blocks.VerifiedROBlob, *core.RpcError)
 }
 
 // BeaconDbBlocker is an implementation of Blocker. It retrieves blocks from the beacon chain database.
@@ -147,7 +147,7 @@ func (p *BeaconDbBlocker) Block(ctx context.Context, id []byte) (interfaces.Read
 //   - block exists, has commitments, inside retention period (greater of protocol- or user-specified) serve then w/ 200 unless we hit an error reading them.
 //     we are technically not supposed to import a block to forkchoice unless we have the blobs, so the nuance here is if we can't find the file and we are inside the protocol-defined retention period, then it's actually a 500.
 //   - block exists, has commitments, outside retention period (greater of protocol- or user-specified) - ie just like block exists, no commitment
-func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64) ([]*blocks.VerifiedROBlob, *core.RpcError) {
+func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices map[uint64]bool) ([]*blocks.VerifiedROBlob, *core.RpcError) {
 	var root []byte
 	switch id {
 	case "genesis":
@@ -235,6 +235,10 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64
 		return make([]*blocks.VerifiedROBlob, 0), nil
 	}
 	if len(indices) == 0 {
+		if indices == nil {
+			indices = make(map[uint64]bool)
+		}
+
 		m, err := p.BlobStorage.Indices(bytesutil.ToBytes32(root))
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -244,13 +248,13 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64
 		}
 		for k, v := range m {
 			if v {
-				indices = append(indices, uint64(k))
+				indices[uint64(k)] = true
 			}
 		}
 	}
 	// returns empty slice if there are no indices
-	blobs := make([]*blocks.VerifiedROBlob, len(indices))
-	for i, index := range indices {
+	blobs := make([]*blocks.VerifiedROBlob, 0, len(indices))
+	for index := range indices {
 		vblob, err := p.BlobStorage.Get(bytesutil.ToBytes32(root), index)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -259,7 +263,7 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64
 			}).Error(errors.Wrapf(err, "could not retrieve blob for block root %#x at index %d", root, index))
 			return nil, &core.RpcError{Err: fmt.Errorf("could not retrieve blob for block root %#x at index %d", root, index), Reason: core.Internal}
 		}
-		blobs[i] = &vblob
+		blobs = append(blobs, &vblob)
 	}
 	return blobs, nil
 }

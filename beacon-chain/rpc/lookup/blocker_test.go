@@ -277,7 +277,7 @@ func TestGetBlob(t *testing.T) {
 			BeaconDB:    db,
 			BlobStorage: bs,
 		}
-		verifiedBlobs, rpcErr := blocker.Blobs(ctx, "123", []uint64{2})
+		verifiedBlobs, rpcErr := blocker.Blobs(ctx, "123", map[uint64]bool{2: true})
 		assert.Equal(t, rpcErr == nil, true)
 		require.Equal(t, 1, len(verifiedBlobs))
 		sidecar := verifiedBlobs[0].BlobSidecar
