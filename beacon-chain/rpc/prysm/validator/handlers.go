@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"go.opencensus.io/trace"
@@ -33,7 +32,7 @@ func (s *Server) GetValidatorParticipation(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	stEpoch := slots.ToEpoch(st.Slot())
-	vp, rpcError := s.CoreService.ValidatorParticipation(ctx, primitives.Epoch(stEpoch))
+	vp, rpcError := s.CoreService.ValidatorParticipation(ctx, stEpoch)
 	if rpcError != nil {
 		httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
 		return
