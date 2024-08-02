@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
@@ -20,6 +21,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	mockstategen "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen/mock"
@@ -42,11 +44,18 @@ func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
 	s.CoreService.ReplayerBuilder = stategen.NewCanonicalHistory(h, cc, cs)
 }
 
-func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T) {
+func TestServer_GetValidatorParticipation_NoState(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(0))
+
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 4)
+
 	s := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: st,
+		},
 		CoreService: &core.Service{
 			HeadFetcher: &mock.ChainService{
 				State: headState,
@@ -55,14 +64,14 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 		},
 	}
 
-	url := "http://example.com?epoch=" + fmt.Sprintf("%d", slots.ToEpoch(s.CoreService.GenesisTimeFetcher.CurrentSlot())+1)
+	url := "http://example.com" + fmt.Sprintf("%d", slots.ToEpoch(s.CoreService.GenesisTimeFetcher.CurrentSlot())+1)
 	request := httptest.NewRequest(http.MethodGet, url, nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
 	s.GetValidatorParticipation(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
-	require.StringContains(t, "cannot retrieve information about an epoch", writer.Body.String())
+	require.StringContains(t, "state_id is required in URL params", writer.Body.String())
 }
 
 func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
@@ -110,7 +119,14 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 
 	m := &mock.ChainService{State: headState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 4)
+
 	s := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: st,
+		},
 		BeaconDB: beaconDB,
 		CoreService: &core.Service{
 			HeadFetcher: m,
@@ -128,8 +144,9 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	}
 	addDefaultReplayerBuilder(s, beaconDB)
 
-	url := "http://example.com?epoch=1"
+	url := "http://example.com"
 	request := httptest.NewRequest(http.MethodGet, url, nil)
+	request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
@@ -203,8 +220,14 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 
 	m := &mock.ChainService{State: headState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 4)
 	s := &Server{
 		BeaconDB: beaconDB,
+		Stater: &testutil.MockStater{
+			BeaconState: st,
+		},
 		CoreService: &core.Service{
 			HeadFetcher: m,
 			StateGen:    stategen.New(beaconDB, doublylinkedtree.New()),
@@ -221,8 +244,9 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	}
 	addDefaultReplayerBuilder(s, beaconDB)
 
-	url := "http://example.com?epoch=1"
+	url := "http://example.com"
 	request := httptest.NewRequest(http.MethodGet, url, nil)
+	request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
@@ -259,6 +283,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing
 	t.Run("altair", func(t *testing.T) {
 		validatorCount := uint64(32)
 		genState, _ := util.DeterministicGenesisStateAltair(t, validatorCount)
+
 		c, err := altair.NextSyncCommittee(context.Background(), genState)
 		require.NoError(t, err)
 		require.NoError(t, genState.SetCurrentSyncCommittee(c))
@@ -271,7 +296,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing
 		require.NoError(t, genState.SetPreviousParticipationBits(bits))
 		gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockAltair())
 		assert.NoError(t, err)
-		runGetValidatorParticipationCurrentAndPrevEpoch(t, genState, gb)
+		runGetValidatorParticipationCurrentEpoch(t, genState, gb)
 	})
 
 	t.Run("bellatrix", func(t *testing.T) {
@@ -289,7 +314,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing
 		require.NoError(t, genState.SetPreviousParticipationBits(bits))
 		gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 		assert.NoError(t, err)
-		runGetValidatorParticipationCurrentAndPrevEpoch(t, genState, gb)
+		runGetValidatorParticipationCurrentEpoch(t, genState, gb)
 	})
 
 	t.Run("capella", func(t *testing.T) {
@@ -307,11 +332,11 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing
 		require.NoError(t, genState.SetPreviousParticipationBits(bits))
 		gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		assert.NoError(t, err)
-		runGetValidatorParticipationCurrentAndPrevEpoch(t, genState, gb)
+		runGetValidatorParticipationCurrentEpoch(t, genState, gb)
 	})
 }
 
-func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState state.BeaconState, gb interfaces.SignedBeaconBlock) {
+func runGetValidatorParticipationCurrentEpoch(t *testing.T, genState state.BeaconState, gb interfaces.SignedBeaconBlock) {
 	helpers.ClearCache()
 	beaconDB := dbTest.SetupDB(t)
 
@@ -332,8 +357,12 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 
 	m := &mock.ChainService{State: genState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+
 	s := &Server{
 		BeaconDB: beaconDB,
+		Stater: &testutil.MockStater{
+			BeaconState: genState,
+		},
 		CoreService: &core.Service{
 			HeadFetcher: m,
 			StateGen:    stategen.New(beaconDB, doublylinkedtree.New()),
@@ -345,8 +374,9 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 	}
 	addDefaultReplayerBuilder(s, beaconDB)
 
-	url := "http://example.com?epoch=0"
+	url := "http://example.com"
 	request := httptest.NewRequest(http.MethodGet, url, nil)
+	request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
@@ -371,37 +401,6 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 	var vp *structs.GetValidatorParticipationResponse
 	err = json.NewDecoder(writer.Body).Decode(&vp)
 	require.NoError(t, err)
-
-	assert.DeepEqual(t, true, vp.Finalized, "Incorrect validator participation respond")
-	assert.DeepEqual(t, *want.Participation, *vp.Participation, "Incorrect validator participation respond")
-
-	url = "http://example.com?epoch=1"
-	request = httptest.NewRequest(http.MethodGet, url, nil)
-	writer = httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
-
-	s.GetValidatorParticipation(writer, request)
-	assert.Equal(t, http.StatusOK, writer.Code)
-
-	want = &structs.GetValidatorParticipationResponse{
-		Participation: &structs.ValidatorParticipation{
-			GlobalParticipationRate:          "1.000000",
-			VotedEther:                       fmt.Sprintf("%d", validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-			EligibleEther:                    fmt.Sprintf("%d", validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-			CurrentEpochActiveGwei:           fmt.Sprintf("%d", validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-			CurrentEpochAttestingGwei:        fmt.Sprintf("%d", params.BeaconConfig().EffectiveBalanceIncrement), // Empty because after one epoch, current participation rotates to previous
-			CurrentEpochTargetAttestingGwei:  fmt.Sprintf("%d", params.BeaconConfig().EffectiveBalanceIncrement),
-			PreviousEpochActiveGwei:          fmt.Sprintf("%d", validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-			PreviousEpochAttestingGwei:       fmt.Sprintf("%d", validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-			PreviousEpochTargetAttestingGwei: fmt.Sprintf("%d", validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-			PreviousEpochHeadAttestingGwei:   fmt.Sprintf("%d", validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-		},
-	}
-
-	err = json.NewDecoder(writer.Body).Decode(&vp)
-	if err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
 
 	assert.DeepEqual(t, true, vp.Finalized, "Incorrect validator participation respond")
 	assert.DeepEqual(t, *want.Participation, *vp.Participation, "Incorrect validator participation respond")

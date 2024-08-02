@@ -70,7 +70,7 @@ func (s *Service) endpoints(
 	endpoints = append(endpoints, s.eventsEndpoints()...)
 	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch, stater, coreService)...)
 	endpoints = append(endpoints, s.prysmNodeEndpoints()...)
-	endpoints = append(endpoints, s.prysmValidatorEndpoints(coreService)...)
+	endpoints = append(endpoints, s.prysmValidatorEndpoints(stater, coreService)...)
 	if enableDebug {
 		endpoints = append(endpoints, s.debugEndpoints(stater)...)
 	}
@@ -1060,9 +1060,10 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 	}
 }
 
-func (s *Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint {
+func (s *Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *core.Service) []endpoint {
 	server := &validatorprysm.Server{
 		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		Stater:           stater,
 		CoreService:      coreService,
 	}
 
@@ -1092,7 +1093,6 @@ func (s *Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint 
 			template: "/prysm/v1/validators/participation",
 			name:     namespace + ".GetValidatorParticipation",
 			middleware: []mux.MiddlewareFunc{
-				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetValidatorParticipation,

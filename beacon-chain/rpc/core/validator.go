@@ -813,7 +813,7 @@ func (s *Service) ValidatorParticipation(
 			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not pre compute attestations: %v")}
 		}
 	} else {
-		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("invalid state type retrieved with a version of %d", beaconSt.Version())}
+		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("invalid state type retrieved with a version of %s", version.String(beaconSt.Version()))}
 	}
 
 	cp := s.FinalizedFetcher.FinalizedCheckpt()
