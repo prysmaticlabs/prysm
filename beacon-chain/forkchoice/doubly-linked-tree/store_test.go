@@ -133,7 +133,7 @@ func TestStore_Insert(t *testing.T) {
 	fc := &forkchoicetypes.Checkpoint{Epoch: 0}
 	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload, justifiedCheckpoint: jc, finalizedCheckpoint: fc, highestReceivedNode: &Node{}}
 	payloadHash := [32]byte{'a'}
-	_, err := s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), payloadHash, 1, 1)
+	_, err := s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), payloadHash, payloadHash, 1, 1)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(s.nodeByRoot), "Did not insert block")
 	assert.Equal(t, (*Node)(nil), treeRootNode.parent, "Incorrect parent")
@@ -327,7 +327,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 
 	// Make sure it doesn't underflow
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	_, err := s.insert(context.Background(), 1, [32]byte{'a'}, b, b, 1, 1)
+	_, err := s.insert(context.Background(), 1, [32]byte{'a'}, b, b, b, 1, 1)
 	require.NoError(t, err)
 	count, err := f.ReceivedBlocksLastEpoch()
 	require.NoError(t, err)
@@ -337,7 +337,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 
 	// 64
 	// Received block last epoch is 1
-	_, err = s.insert(context.Background(), 64, [32]byte{'A'}, b, b, 1, 1)
+	_, err = s.insert(context.Background(), 64, [32]byte{'A'}, b, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration((-64*int64(params.BeaconConfig().SecondsPerSlot))-1) * time.Second).Unix())
 	count, err = f.ReceivedBlocksLastEpoch()
@@ -348,7 +348,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 
 	// 64 65
 	// Received block last epoch is 2
-	_, err = s.insert(context.Background(), 65, [32]byte{'B'}, b, b, 1, 1)
+	_, err = s.insert(context.Background(), 65, [32]byte{'B'}, b, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-66*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
 	count, err = f.ReceivedBlocksLastEpoch()
@@ -359,7 +359,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 
 	// 64 65 66
 	// Received block last epoch is 3
-	_, err = s.insert(context.Background(), 66, [32]byte{'C'}, b, b, 1, 1)
+	_, err = s.insert(context.Background(), 66, [32]byte{'C'}, b, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-66*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
 	count, err = f.ReceivedBlocksLastEpoch()
@@ -370,7 +370,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	// 64 65 66
 	//       98
 	// Received block last epoch is 1
-	_, err = s.insert(context.Background(), 98, [32]byte{'D'}, b, b, 1, 1)
+	_, err = s.insert(context.Background(), 98, [32]byte{'D'}, b, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-98*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
 	count, err = f.ReceivedBlocksLastEpoch()
@@ -382,7 +382,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	//       98
 	//              132
 	// Received block last epoch is 1
-	_, err = s.insert(context.Background(), 132, [32]byte{'E'}, b, b, 1, 1)
+	_, err = s.insert(context.Background(), 132, [32]byte{'E'}, b, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
 	count, err = f.ReceivedBlocksLastEpoch()
@@ -395,7 +395,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	//              132
 	//       99
 	// Received block last epoch is still 1. 99 is outside the window
-	_, err = s.insert(context.Background(), 99, [32]byte{'F'}, b, b, 1, 1)
+	_, err = s.insert(context.Background(), 99, [32]byte{'F'}, b, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
 	count, err = f.ReceivedBlocksLastEpoch()
@@ -408,7 +408,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	//              132
 	//       99 100
 	// Received block last epoch is still 1. 100 is at the same position as 132
-	_, err = s.insert(context.Background(), 100, [32]byte{'G'}, b, b, 1, 1)
+	_, err = s.insert(context.Background(), 100, [32]byte{'G'}, b, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
 	count, err = f.ReceivedBlocksLastEpoch()
@@ -421,7 +421,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	//              132
 	//       99 100 101
 	// Received block last epoch is 2. 101 is within the window
-	_, err = s.insert(context.Background(), 101, [32]byte{'H'}, b, b, 1, 1)
+	_, err = s.insert(context.Background(), 101, [32]byte{'H'}, b, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
 	count, err = f.ReceivedBlocksLastEpoch()
