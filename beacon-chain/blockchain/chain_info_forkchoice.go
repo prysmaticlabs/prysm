@@ -99,3 +99,10 @@ func (s *Service) FinalizedBlockHash() [32]byte {
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.FinalizedPayloadBlockHash()
 }
+
+// ParentRoot wraps a call to the corresponding method in forkchoice
+func (s *Service) ParentRoot(root [32]byte) ([32]byte, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.ParentRoot(root)
+}
