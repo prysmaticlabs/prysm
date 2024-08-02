@@ -20,17 +20,17 @@ func (s *Service) ChainHead(ctx context.Context) (*ethpb.ChainHead, *RpcError) {
 			Reason: Internal,
 		}
 	}
+	if err := consensusblocks.BeaconBlockIsNil(headBlock); err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrapf(err, "head block of chain was nil"),
+			Reason: NotFound,
+		}
+	}
 	optimisticStatus, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return nil, &RpcError{
 			Err:    errors.Wrapf(err, "could not get optimistic status"),
 			Reason: Internal,
-		}
-	}
-	if err := consensusblocks.BeaconBlockIsNil(headBlock); err != nil {
-		return nil, &RpcError{
-			Err:    errors.Wrapf(err, "head block of chain was nil"),
-			Reason: NotFound,
 		}
 	}
 	headBlockRoot, err := headBlock.Block().HashTreeRoot()

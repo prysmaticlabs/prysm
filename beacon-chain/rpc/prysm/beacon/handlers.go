@@ -169,7 +169,7 @@ func (s *Server) GetChainHead(w http.ResponseWriter, r *http.Request) {
 	response := &structs.ChainHead{
 		HeadSlot:                   fmt.Sprintf("%d", ch.HeadSlot),
 		HeadEpoch:                  fmt.Sprintf("%d", ch.HeadEpoch),
-		HeadBlockRoot:              fmt.Sprintf("%#x", ch.HeadBlockRoot),
+		HeadBlockRoot:              hexutil.Encode(ch.HeadBlockRoot),
 		FinalizedSlot:              fmt.Sprintf("%d", ch.FinalizedSlot),
 		FinalizedEpoch:             fmt.Sprintf("%d", ch.FinalizedEpoch),
 		FinalizedBlockRoot:         hexutil.Encode(ch.FinalizedBlockRoot),

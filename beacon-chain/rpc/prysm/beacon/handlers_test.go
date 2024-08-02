@@ -854,7 +854,6 @@ func TestServer_GetChainHead(t *testing.T) {
 
 	s.GetChainHead(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	// require.StringContains(t, "could not get genesis block", writer.Body.String())
 
 	var ch *structs.ChainHead
 	err = json.NewDecoder(writer.Body).Decode(&ch)
