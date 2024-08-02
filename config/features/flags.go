@@ -48,6 +48,10 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients.",
 	}
+	safeHeadFCU = &cli.BoolFlag{
+		Name:  "safe-head-fcu",
+		Usage: "Enables safe head block instead of justified block in FCU updates.",
+	}
 	disablePeerScorer = &cli.BoolFlag{
 		Name:  "disable-peer-scorer",
 		Usage: "(Danger): Disables P2P peer scorer. Do NOT use this in production!",
@@ -209,6 +213,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	HoleskyTestnet,
 	SepoliaTestnet,
 	Mainnet,
+	safeHeadFCU,
 	disablePeerScorer,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,

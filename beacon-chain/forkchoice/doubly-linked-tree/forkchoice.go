@@ -2,6 +2,7 @@ package doublylinkedtree
 
 import (
 	"context"
+	goErrors "errors"
 	"fmt"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	forkchoice2 "github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	prysmMath "github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -30,6 +32,7 @@ func New() *ForkChoice {
 		unrealizedFinalizedCheckpoint: &forkchoicetypes.Checkpoint{},
 		prevJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
 		finalizedCheckpoint:           &forkchoicetypes.Checkpoint{},
+		safeHeadRoot:                  [32]byte{},
 		proposerBoostRoot:             [32]byte{},
 		nodeByRoot:                    make(map[[fieldparams.RootLength]byte]*Node),
 		nodeByPayload:                 make(map[[fieldparams.RootLength]byte]*Node),
@@ -65,17 +68,97 @@ func (f *ForkChoice) Head(
 		return [32]byte{}, errors.Wrap(err, "could not apply proposer boost score")
 	}
 
-	if err := f.store.treeRootNode.applyWeightChanges(ctx); err != nil {
+	if err := f.store.treeRootNode.applyWeightChanges(ctx, f.store.proposerBoostRoot, f.store.previousProposerBoostScore); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not apply weight changes")
 	}
 
 	jc := f.JustifiedCheckpoint()
 	fc := f.FinalizedCheckpoint()
-	currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(f.store.genesisTime), 0))
-	if err := f.store.treeRootNode.updateBestDescendant(ctx, jc.Epoch, fc.Epoch, currentEpoch); err != nil {
+	currentSlot := slots.CurrentSlot(f.store.genesisTime)
+	secondsSinceSlotStart, err := slots.SecondsSinceSlotStart(currentSlot, f.store.genesisTime, uint64(time.Now().Unix()))
+	if err != nil {
+		log.WithError(err).Error("could not compute seconds since slot start")
+		secondsSinceSlotStart = 0
+	}
+	if err := f.store.treeRootNode.updateBestDescendant(ctx, jc.Epoch, fc.Epoch, currentSlot, secondsSinceSlotStart, f.store.committeeWeight); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
-	return f.store.head(ctx)
+	safeHeadUpdateErr := f.UpdateSafeHead(ctx)
+	head, err := f.store.head(ctx)
+	return head, goErrors.Join(err, safeHeadUpdateErr)
+}
+
+// UpdateSafeHead updates the safe head in the fork choice store.
+func (f *ForkChoice) UpdateSafeHead(
+	ctx context.Context,
+) error {
+	oldSafeHeadRoot := f.store.safeHeadRoot
+	newSafeHeadRoot, err := f.store.safeHead(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "could not update safe head")
+	}
+
+	// The safe head root has changed.
+	if oldSafeHeadRoot != newSafeHeadRoot {
+		newSafeHeadNode, ok := f.store.nodeByRoot[newSafeHeadRoot]
+		if !ok || newSafeHeadNode == nil {
+			return ErrNilNode
+		}
+		newSafeHeadSlot := newSafeHeadNode.slot
+		currentSlot := slots.CurrentSlot(f.store.genesisTime)
+		secondsSinceSlotStart, err := slots.SecondsSinceSlotStart(currentSlot, f.store.genesisTime, uint64(time.Now().Unix()))
+		if err != nil {
+			log.WithError(err).Error("could not compute seconds since slot start")
+		}
+		log.WithFields(logrus.Fields{
+			"currentSlot":        fmt.Sprintf("%d", currentSlot),
+			"sinceSlotStartTime": fmt.Sprintf("%d", secondsSinceSlotStart),
+			"newSafeHeadSlot":    fmt.Sprintf("%d", newSafeHeadSlot),
+			"newSafeHeadRoot":    fmt.Sprintf("%#x", newSafeHeadRoot),
+			"oldSafeHeadRoot":    fmt.Sprintf("%#x", oldSafeHeadRoot),
+		}).Info("Safe head has changed")
+
+		// Update metrics.
+		safeHeadChangesCount.Inc()
+		safeHeadSlotNumber.Set(float64(newSafeHeadSlot))
+
+		// Check if the safe head reorged.
+		commonRoot, forkSlot, err := f.CommonAncestor(ctx, oldSafeHeadRoot, newSafeHeadRoot)
+		if err != nil {
+			log.WithError(err).Error("Could not find common ancestor root")
+			commonRoot = params.BeaconConfig().ZeroHash
+		}
+
+		if oldSafeHeadRoot != [32]byte{} && commonRoot != oldSafeHeadRoot {
+			// The safe head has reorged.
+			// Calculate reorg metrics.
+			oldSafeHeadNode, ok := f.store.nodeByRoot[oldSafeHeadRoot]
+			if !ok || oldSafeHeadNode == nil {
+				return ErrNilNode
+			}
+			oldSafeHeadSlot := oldSafeHeadNode.slot
+			dis := oldSafeHeadSlot + newSafeHeadSlot - 2*forkSlot
+			dep := prysmMath.Max(uint64(oldSafeHeadSlot-forkSlot), uint64(newSafeHeadSlot-forkSlot))
+			log.WithFields(logrus.Fields{
+				"currentSlot":        fmt.Sprintf("%d", currentSlot),
+				"sinceSlotStartTime": fmt.Sprintf("%d", secondsSinceSlotStart),
+				"newSafeHeadSlot":    fmt.Sprintf("%d", newSafeHeadSlot),
+				"newSafeHeadRoot":    fmt.Sprintf("%#x", newSafeHeadRoot),
+				"oldSafeHeadSlot":    fmt.Sprintf("%d", oldSafeHeadSlot),
+				"oldSafeHeadRoot":    fmt.Sprintf("%#x", oldSafeHeadRoot),
+				"commonAncestorRoot": fmt.Sprintf("%#x", commonRoot),
+				"distance":           dis,
+				"depth":              dep,
+			}).Debug("Safe head reorg occurred")
+			// Update reorg metrics.
+			safeHeadReorgDistance.Observe(float64(dis))
+			safeHeadReorgDepth.Observe(float64(dep))
+			safeHeadReorgCount.Inc()
+		}
+		// Update safe head
+		f.store.safeHeadRoot = newSafeHeadRoot
+	}
+	return nil
 }
 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
@@ -554,6 +637,17 @@ func (f *ForkChoice) UnrealizedJustifiedPayloadBlockHash() [32]byte {
 	return node.payloadHash
 }
 
+// SafeHeadPayloadBlockHash returns the hash of the payload at the safe head
+func (f *ForkChoice) SafeHeadPayloadBlockHash() [32]byte {
+	safeHeadRoot := f.store.safeHeadRoot
+	node, ok := f.store.nodeByRoot[safeHeadRoot]
+	if !ok || node == nil {
+		// This should not happen
+		return [32]byte{}
+	}
+	return node.payloadHash
+}
+
 // ForkChoiceDump returns a full dump of forkchoice.
 func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*forkchoice2.Dump, error) {
 	jc := &ethpb.Checkpoint{
@@ -587,6 +681,7 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*forkchoice2.Dump, err
 	resp := &forkchoice2.Dump{
 		JustifiedCheckpoint:           jc,
 		UnrealizedJustifiedCheckpoint: ujc,
+		SafeHeadRoot:                  f.store.safeHeadRoot[:],
 		FinalizedCheckpoint:           fc,
 		UnrealizedFinalizedCheckpoint: ufc,
 		ProposerBoostRoot:             f.store.proposerBoostRoot[:],
