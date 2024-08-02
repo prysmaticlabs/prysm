@@ -12,10 +12,13 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	mockstategen "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen/mock"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -33,12 +36,15 @@ func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
 	s.CoreService.ReplayerBuilder = stategen.NewCanonicalHistory(h, cc, cs)
 }
 
-func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
+func TestServer_GetValidatorActiveSetChanges_NoState(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, st.SetSlot(0))
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 4)
+
 	s := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: st,
+		},
 		CoreService: &core.Service{
 			BeaconDB:           beaconDB,
 			GenesisTimeFetcher: &mock.ChainService{},
@@ -48,14 +54,15 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 		},
 	}
 
-	url := "http://example.com?epoch=0" + fmt.Sprintf("%d", slots.ToEpoch(s.CoreService.GenesisTimeFetcher.CurrentSlot())+1)
+	url := "http://example.com" + fmt.Sprintf("%d", slots.ToEpoch(s.CoreService.GenesisTimeFetcher.CurrentSlot())+1)
 	request := httptest.NewRequest(http.MethodGet, url, nil)
+	request = mux.SetURLVars(request, map[string]string{"state_id": ""})
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
 	s.GetValidatorActiveSetChanges(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
-	require.StringContains(t, "cannot retrieve information about an epoch in the future", writer.Body.String())
+	require.StringContains(t, "state_id is required in URL params", writer.Body.String())
 }
 
 func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
@@ -109,7 +116,12 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 4)
 	s := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: st,
+		},
 		CoreService: &core.Service{
 			FinalizedFetcher: &mock.ChainService{
 				FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
@@ -119,8 +131,9 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	}
 	addDefaultReplayerBuilder(s, beaconDB)
 
-	url := "http://example.com?state_id=genesis"
+	url := "http://example.com"
 	request := httptest.NewRequest(http.MethodGet, url, nil)
+	request = mux.SetURLVars(request, map[string]string{"state_id": "genesis"})
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 

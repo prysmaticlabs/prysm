@@ -70,7 +70,7 @@ func (s *Service) endpoints(
 	endpoints = append(endpoints, s.eventsEndpoints()...)
 	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch, stater, coreService)...)
 	endpoints = append(endpoints, s.prysmNodeEndpoints()...)
-	endpoints = append(endpoints, s.prysmValidatorEndpoints(coreService)...)
+	endpoints = append(endpoints, s.prysmValidatorEndpoints(stater, coreService)...)
 	if enableDebug {
 		endpoints = append(endpoints, s.debugEndpoints(stater)...)
 	}
@@ -1060,8 +1060,9 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 	}
 }
 
-func (*Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint {
+func (*Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *core.Service) []endpoint {
 	server := &validatorprysm.Server{
+		Stater:      stater,
 		CoreService: coreService,
 	}
 

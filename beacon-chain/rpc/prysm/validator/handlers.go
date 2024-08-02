@@ -3,9 +3,9 @@ package validator
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
@@ -23,34 +23,22 @@ func (s *Server) GetValidatorActiveSetChanges(w http.ResponseWriter, r *http.Req
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetValidatorActiveSetChanges")
 	defer span.End()
 
-	stateId := strings.ReplaceAll(r.URL.Query().Get("state_id"), " ", "")
-	var epoch uint64
-	switch stateId {
-	case "head":
-		e, err := s.CoreService.ChainInfoFetcher.ReceivedBlocksLastEpoch()
-		if err != nil {
-			httputil.HandleError(w, "Could not retrieve head root: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		epoch = e
-	case "finalized":
-		finalized := s.CoreService.ChainInfoFetcher.FinalizedCheckpt()
-		epoch = uint64(finalized.Epoch)
-	case "genesis":
-		epoch = 0
-	default:
-		_, e, ok := shared.UintFromQuery(w, r, "epoch", true)
-		if !ok {
-			currentSlot := s.CoreService.GenesisTimeFetcher.CurrentSlot()
-			currentEpoch := slots.ToEpoch(currentSlot)
-			epoch = uint64(currentEpoch)
-		} else {
-			epoch = e
-		}
+	stateId := mux.Vars(r)["state_id"]
+	if stateId == "" {
+		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
 	}
-	as, err := s.CoreService.ValidatorActiveSetChanges(ctx, primitives.Epoch(epoch))
+
+	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		httputil.HandleError(w, err.Err.Error(), core.ErrorReasonToHTTP(err.Reason))
+		shared.WriteStateFetchError(w, err)
+		return
+	}
+	stEpoch := slots.ToEpoch(st.Slot())
+
+	as, rpcError := s.CoreService.ValidatorActiveSetChanges(ctx, stEpoch)
+	if rpcError != nil {
+		httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
 		return
 	}
 
