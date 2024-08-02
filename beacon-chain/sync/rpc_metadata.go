@@ -70,8 +70,6 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	switch streamVersion {
 	case p2p.SchemaVersionV1:
 		switch metadataVersion {
-		case version.Altair:
-			fallthrough
 		case version.Altair, version.Deneb:
 			metadata = wrapper.WrappedMetadataV0(
 				&pb.MetaDataV0{
