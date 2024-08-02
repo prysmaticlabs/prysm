@@ -1165,16 +1165,6 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	}
 }
 
-// PayloadAttestations returns the payload attestations in the block.
-func (b *BeaconBlockBody) PayloadAttestations() []*eth.PayloadAttestation {
-	return b.payloadAttestations
-}
-
-// SignedExecutionPayloadHeader returns the signed execution payload header in the block.
-func (b *BeaconBlockBody) SignedExecutionPayloadHeader() *enginev1.SignedExecutionPayloadHeader {
-	return b.signedExecutionPayloadHeader
-}
-
 // Version returns the version of the beacon block body
 func (b *BeaconBlockBody) Version() int {
 	return b.version
