@@ -115,8 +115,27 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return errNilBlockHeader
 	}
 	parentRoot := bytesutil.ToBytes32(bh.ParentRoot)
-	var payloadHash [32]byte
-	if state.Version() >= version.Bellatrix {
+	var payloadHash, parentHash [32]byte
+	if state.Version() >= version.EPBS {
+		slot, err := state.LatestFullSlot()
+		if err != nil {
+			return err
+		}
+		if slot == state.Slot() {
+			latestHeader, err := state.LatestExecutionPayloadHeaderEPBS()
+			if err != nil {
+				return err
+			}
+			copy(payloadHash[:], latestHeader.BlockHash)
+			copy(parentHash[:], latestHeader.ParentBlockHash)
+		} else {
+			latestHash, err := state.LatestBlockHash()
+			if err != nil {
+				return err
+			}
+			copy(parentHash[:], latestHash)
+		}
+	} else if state.Version() >= version.Bellatrix {
 		ph, err := state.LatestExecutionPayloadHeader()
 		if err != nil {
 			return err
@@ -135,7 +154,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, parentHash, justifiedEpoch, finalizedEpoch)
 	if err != nil {
 		return err
 	}
@@ -490,8 +509,12 @@ func (f *ForkChoice) InsertChain(ctx context.Context, chain []*forkchoicetypes.B
 		if err != nil {
 			return err
 		}
+		parentHash, err := blocks.GetBlockParentHash(b)
+		if err != nil {
+			return err
+		}
 		if _, err := f.store.insert(ctx,
-			b.Slot(), r, parentRoot, payloadHash,
+			b.Slot(), r, parentRoot, payloadHash, parentHash,
 			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
 			return err
 		}
