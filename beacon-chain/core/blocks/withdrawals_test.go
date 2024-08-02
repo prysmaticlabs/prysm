@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -678,6 +679,7 @@ func TestProcessWithdrawals(t *testing.T) {
 		PendingPartialWithdrawalIndices []primitives.ValidatorIndex
 		Withdrawals                     []*enginev1.Withdrawal
 		PendingPartialWithdrawals       []*ethpb.PendingPartialWithdrawal // Electra
+		LatestExecutionPayloadHeader    *enginev1.ExecutionPayloadHeaderEPBS //EPBS
 	}
 	type control struct {
 		NextWithdrawalValidatorIndex primitives.ValidatorIndex
@@ -1028,6 +1030,23 @@ func TestProcessWithdrawals(t *testing.T) {
 				ExpectedError: true,
 			},
 		},
+		{
+			Args: args{
+				Name:                            "failure Parent Node is not full",
+				NextWithdrawalIndex:          22,
+				NextWithdrawalValidatorIndex: 4,
+				FullWithdrawalIndices:        []primitives.ValidatorIndex{7, 19, 28, 1},
+				Withdrawals: []*enginev1.Withdrawal{
+					fullWithdrawal(7, 22), fullWithdrawal(19, 23), fullWithdrawal(28, 25),
+				},
+				LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderEPBS{
+					BlockHash: bytesutil.Bytes32(2),
+				},
+			},
+			Control: control{
+				ExpectedError: true,
+			},
+		},	
 	}
 
 	checkPostState := func(t *testing.T, expected control, st state.BeaconState) {
@@ -1080,7 +1099,7 @@ func TestProcessWithdrawals(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Args.Name, func(t *testing.T) {
-			for _, fork := range []int{version.Capella, version.Electra} {
+			for _, fork := range []int{version.Capella, version.Electra, version.EPBS} {
 				t.Run(version.String(fork), func(t *testing.T) {
 					saved := params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep
 					params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = maxSweep
@@ -1119,7 +1138,17 @@ func TestProcessWithdrawals(t *testing.T) {
 						require.NoError(t, err)
 						p, err = consensusblocks.WrappedExecutionPayloadElectra(&enginev1.ExecutionPayloadElectra{Withdrawals: test.Args.Withdrawals})
 						require.NoError(t, err)
-					default:
+					case version.EPBS:
+						spb := &ethpb.BeaconStateEPBS{
+							Slot:                         slot,
+							NextWithdrawalValidatorIndex: test.Args.NextWithdrawalValidatorIndex,
+							NextWithdrawalIndex:          test.Args.NextWithdrawalIndex,
+							PendingPartialWithdrawals:    test.Args.PendingPartialWithdrawals,
+							LatestExecutionPayloadHeader: test.Args.LatestExecutionPayloadHeader,
+						}
+						st, err = state_native.InitializeFromProtoUnsafeEpbs(spb)
+						require.NoError(t, err)
+						p = nil
 						t.Fatalf("Add a beacon state setup for version %s", version.String(fork))
 					}
 					err = prepareValidators(st, test.Args)

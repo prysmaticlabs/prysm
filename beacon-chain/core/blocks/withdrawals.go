@@ -148,40 +148,58 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 //	        next_validator_index = ValidatorIndex(next_index % len(state.validators))
 //	        state.next_withdrawal_validator_index = next_validator_index
 func ProcessWithdrawals(st state.BeaconState, executionData interfaces.ExecutionData) (state.BeaconState, error) {
+	if st.Version() >= version.EPBS {
+		IsParentBlockFull, err := st.IsParentBlockFull()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if parent block is full")
+		}
+
+		if !IsParentBlockFull {
+			return nil, nil
+		}
+	}
+
 	expectedWithdrawals, partialWithdrawalsCount, err := st.ExpectedWithdrawals()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals")
-	}
-
-	var wdRoot [32]byte
-	if executionData.IsBlinded() {
-		r, err := executionData.WithdrawalsRoot()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
-		wdRoot = bytesutil.ToBytes32(r)
-	} else {
-		wds, err := executionData.Withdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals")
-		}
-
-		if len(wds) != len(expectedWithdrawals) {
-			return nil, fmt.Errorf("execution payload header has %d withdrawals when %d were expected", len(wds), len(expectedWithdrawals))
-		}
-
-		wdRoot, err = ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
 	}
 
 	expectedRoot, err := ssz.WithdrawalSliceRoot(expectedWithdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals root")
 	}
-	if expectedRoot != wdRoot {
-		return nil, fmt.Errorf("expected withdrawals root %#x, got %#x", expectedRoot, wdRoot)
+
+	if st.Version() >= version.EPBS {
+		err = st.SetLastWithdrawalsRoot(expectedRoot[:])
+		if err != nil {
+			return nil, errors.Wrap(err, "could not set withdrawals root")
+		}
+	} else {
+		var wdRoot [32]byte
+		if executionData.IsBlinded() {
+			r, err := executionData.WithdrawalsRoot()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get withdrawals root")
+			}
+			wdRoot = bytesutil.ToBytes32(r)
+		} else {
+			wds, err := executionData.Withdrawals()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get withdrawals")
+			}
+
+			if len(wds) != len(expectedWithdrawals) {
+				return nil, fmt.Errorf("execution payload header has %d withdrawals when %d were expected", len(wds), len(expectedWithdrawals))
+			}
+
+			wdRoot, err = ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get withdrawals root")
+			}
+		}
+		if expectedRoot != wdRoot {
+			return nil, fmt.Errorf("expected withdrawals root %#x, got %#x", expectedRoot, wdRoot)
+		}
 	}
 
 	for _, withdrawal := range expectedWithdrawals {
@@ -216,6 +234,7 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 			nextValidatorIndex = 0
 		}
 	}
+
 	if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
 		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
 	}
