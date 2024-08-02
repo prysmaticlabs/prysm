@@ -1091,7 +1091,6 @@ func (*Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint {
 			template: "/prysm/v1/validators/active_set_changes",
 			name:     namespace + ".GetValidatorActiveSetChanges",
 			middleware: []mux.MiddlewareFunc{
-				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetValidatorActiveSetChanges,
