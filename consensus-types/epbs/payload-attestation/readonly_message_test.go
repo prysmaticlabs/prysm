@@ -83,21 +83,21 @@ func TestValidatorIndex(t *testing.T) {
 }
 
 func TestSignature(t *testing.T) {
-	sig := make([]byte, fieldparams.BLSSignatureLength)
+	sig := [96]byte{}
 	m := &ROMessage{
 		m: &ethpb.PayloadAttestationMessage{
-			Signature: sig,
+			Signature: sig[:],
 		},
 	}
 	require.Equal(t, sig, m.Signature())
 }
 
 func TestBeaconBlockRoot(t *testing.T) {
-	root := make([]byte, fieldparams.RootLength)
+	root := [32]byte{}
 	m := &ROMessage{
 		m: &ethpb.PayloadAttestationMessage{
 			Data: &ethpb.PayloadAttestationData{
-				BeaconBlockRoot: root,
+				BeaconBlockRoot: root[:],
 			},
 		},
 	}
@@ -117,13 +117,13 @@ func TestSlot(t *testing.T) {
 }
 
 func TestPayloadStatus(t *testing.T) {
-	for i := 0; i < 4; i++ {
-		status := primitives.PTCStatus(i)
+	for status := primitives.PAYLOAD_ABSENT; status < primitives.PAYLOAD_INVALID_STATUS; status++ {
 		m := &ROMessage{
 			m: &ethpb.PayloadAttestationMessage{
 				Data: &ethpb.PayloadAttestationData{
 					PayloadStatus: status,
 				},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
 			},
 		}
 		require.NoError(t, validatePayloadAtt(m.m))

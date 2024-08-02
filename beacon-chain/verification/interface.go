@@ -5,7 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attestation"
+	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/epbs/payload-attestation"
 )
 
 // BlobVerifier defines the methods implemented by the ROBlobVerifier.
@@ -28,12 +28,12 @@ type BlobVerifier interface {
 	SatisfyRequirement(Requirement)
 }
 
-// PayloadAttestationVerifier defines the methods implemented by the ROPayloadAttestation.
+// PayloadAttestationMsgVerifier defines the methods implemented by the ROPayloadAttestation.
 // It is similar to BlobVerifier, but for payload attestation messages.
-type PayloadAttestationVerifier interface {
+type PayloadAttestationMsgVerifier interface {
 	VerifyCurrentSlot() error
 	VerifyPayloadStatus() error
-	VeryBlockRootSeen(func([32]byte) bool) error
+	VerifyBlockRootSeen(func([32]byte) bool) error
 	VerifyBlockRootValid(func([32]byte) bool) error
 	VerifyValidatorInPTC(context.Context, state.BeaconState) error
 	VerifySignature(state.BeaconState) error

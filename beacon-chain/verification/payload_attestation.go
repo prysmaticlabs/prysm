@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attestation"
+	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/epbs/payload-attestation"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -53,10 +53,10 @@ var (
 	ErrInvalidPayloadAttMessage     = errors.New("invalid payload attestation message")
 )
 
-var _ PayloadAttestationVerifier = &PayloadAttVerifier{}
+var _ PayloadAttestationMsgVerifier = &PayloadAttMsgVerifier{}
 
-// PayloadAttVerifier is a read-only verifier for payload attestation messages.
-type PayloadAttVerifier struct {
+// PayloadAttMsgVerifier is a read-only verifier for payload attestation messages.
+type PayloadAttMsgVerifier struct {
 	*sharedResources
 	results *results
 	pa      payloadattestation.ROMessage
@@ -65,7 +65,7 @@ type PayloadAttVerifier struct {
 // VerifyCurrentSlot verifies if the current slot matches the expected slot.
 // Represents the following spec verification:
 // [IGNORE] data.slot is the current slot.
-func (v *PayloadAttVerifier) VerifyCurrentSlot() (err error) {
+func (v *PayloadAttMsgVerifier) VerifyCurrentSlot() (err error) {
 	defer v.record(RequireCurrentSlot, &err)
 
 	if v.pa.Slot() != v.clock.CurrentSlot() {
@@ -79,7 +79,7 @@ func (v *PayloadAttVerifier) VerifyCurrentSlot() (err error) {
 // VerifyPayloadStatus verifies if the payload status is known.
 // Represents the following spec verification:
 // [REJECT] data.payload_status < PAYLOAD_INVALID_STATUS.
-func (v *PayloadAttVerifier) VerifyPayloadStatus() (err error) {
+func (v *PayloadAttMsgVerifier) VerifyPayloadStatus() (err error) {
 	defer v.record(RequireKnownPayloadStatus, &err)
 
 	if v.pa.PayloadStatus() >= primitives.PAYLOAD_INVALID_STATUS {
@@ -90,10 +90,10 @@ func (v *PayloadAttVerifier) VerifyPayloadStatus() (err error) {
 	return nil
 }
 
-// VeryBlockRootSeen verifies if the block root has been seen before.
+// VerifyBlockRootSeen verifies if the block root has been seen before.
 // Represents the following spec verification:
 // [IGNORE] The attestation's data.beacon_block_root has been seen (via both gossip and non-gossip sources).
-func (v *PayloadAttVerifier) VeryBlockRootSeen(parentSeen func([32]byte) bool) (err error) {
+func (v *PayloadAttMsgVerifier) VerifyBlockRootSeen(parentSeen func([32]byte) bool) (err error) {
 	defer v.record(RequireBlockRootSeen, &err)
 
 	if parentSeen != nil && parentSeen(v.pa.BeaconBlockRoot()) {
@@ -111,7 +111,7 @@ func (v *PayloadAttVerifier) VeryBlockRootSeen(parentSeen func([32]byte) bool) (
 // VerifyBlockRootValid verifies if the block root is valid.
 // Represents the following spec verification:
 // [REJECT] The beacon block with root data.beacon_block_root passes validation.
-func (v *PayloadAttVerifier) VerifyBlockRootValid(badBlock func([32]byte) bool) (err error) {
+func (v *PayloadAttMsgVerifier) VerifyBlockRootValid(badBlock func([32]byte) bool) (err error) {
 	defer v.record(RequireBlockRootValid, &err)
 
 	if badBlock != nil && badBlock(v.pa.BeaconBlockRoot()) {
@@ -125,7 +125,7 @@ func (v *PayloadAttVerifier) VerifyBlockRootValid(badBlock func([32]byte) bool) 
 // VerifyValidatorInPTC verifies if the validator is present.
 // Represents the following spec verification:
 // [REJECT] The validator index is within the payload committee in get_ptc(state, data.slot). For the current's slot head state.
-func (v *PayloadAttVerifier) VerifyValidatorInPTC(ctx context.Context, st state.BeaconState) (err error) {
+func (v *PayloadAttMsgVerifier) VerifyValidatorInPTC(ctx context.Context, st state.BeaconState) (err error) {
 	defer v.record(RequireValidatorInPTC, &err)
 
 	ptc, err := helpers.GetPayloadTimelinessCommittee(ctx, st, v.pa.Slot())
@@ -145,7 +145,7 @@ func (v *PayloadAttVerifier) VerifyValidatorInPTC(ctx context.Context, st state.
 // VerifySignature verifies the signature of the payload attestation message.
 // Represents the following spec verification:
 // [REJECT] The signature of payload_attestation_message.signature is valid with respect to the validator index.
-func (v *PayloadAttVerifier) VerifySignature(st state.BeaconState) (err error) {
+func (v *PayloadAttMsgVerifier) VerifySignature(st state.BeaconState) (err error) {
 	defer v.record(RequireSignatureValid, &err)
 
 	err = validatePayloadAttestationMessageSignature(st, v.pa)
@@ -162,7 +162,7 @@ func (v *PayloadAttVerifier) VerifySignature(st state.BeaconState) (err error) {
 }
 
 // VerifiedPayloadAttestation returns a verified payload attestation message by checking all requirements.
-func (v *PayloadAttVerifier) VerifiedPayloadAttestation() (payloadattestation.VerifiedROMessage, error) {
+func (v *PayloadAttMsgVerifier) VerifiedPayloadAttestation() (payloadattestation.VerifiedROMessage, error) {
 	if v.results.allSatisfied() {
 		return payloadattestation.NewVerifiedROMessage(v.pa), nil
 	}
@@ -170,7 +170,7 @@ func (v *PayloadAttVerifier) VerifiedPayloadAttestation() (payloadattestation.Ve
 }
 
 // SatisfyRequirement allows the caller to manually mark a requirement as satisfied.
-func (v *PayloadAttVerifier) SatisfyRequirement(req Requirement) {
+func (v *PayloadAttMsgVerifier) SatisfyRequirement(req Requirement) {
 	v.record(req, nil)
 }
 
@@ -210,7 +210,7 @@ func validatePayloadAttestationMessageSignature(st state.BeaconState, payloadAtt
 }
 
 // record records the result of a requirement verification.
-func (v *PayloadAttVerifier) record(req Requirement, err *error) {
+func (v *PayloadAttMsgVerifier) record(req Requirement, err *error) {
 	if err == nil || *err == nil {
 		v.results.record(req, nil)
 		return

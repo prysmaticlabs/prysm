@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attestation"
+	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/epbs/payload-attestation"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -36,7 +36,7 @@ func TestVerifyCurrentSlot(t *testing.T) {
 		}, init)
 		require.ErrorIs(t, pa.VerifyCurrentSlot(), ErrIncorrectPayloadAttSlot)
 		require.Equal(t, true, pa.results.executed(RequireCurrentSlot))
-		require.NotNil(t, pa.results.result(RequireCurrentSlot))
+		require.Equal(t, ErrIncorrectPayloadAttSlot, pa.results.result(RequireCurrentSlot))
 	})
 
 	t.Run("current slot", func(t *testing.T) {
@@ -64,7 +64,7 @@ func TestVerifyKnownPayloadStatus(t *testing.T) {
 		}, init)
 		require.ErrorIs(t, pa.VerifyPayloadStatus(), ErrIncorrectPayloadAttStatus)
 		require.Equal(t, true, pa.results.executed(RequireKnownPayloadStatus))
-		require.NotNil(t, pa.results.result(RequireKnownPayloadStatus))
+		require.Equal(t, ErrIncorrectPayloadAttStatus, pa.results.result(RequireKnownPayloadStatus))
 	})
 
 	t.Run("known status", func(t *testing.T) {
@@ -95,7 +95,7 @@ func TestVerifyBlockRootSeen(t *testing.T) {
 			},
 			Signature: make([]byte, 96),
 		}, init)
-		require.NoError(t, pa.VeryBlockRootSeen(nil))
+		require.NoError(t, pa.VerifyBlockRootSeen(nil))
 		require.Equal(t, true, pa.results.executed(RequireBlockRootSeen))
 		require.NoError(t, pa.results.result(RequireBlockRootSeen))
 	})
@@ -106,9 +106,9 @@ func TestVerifyBlockRootSeen(t *testing.T) {
 			Data:      &ethpb.PayloadAttestationData{},
 			Signature: make([]byte, 96),
 		}, init)
-		require.ErrorIs(t, pa.VeryBlockRootSeen(nil), ErrPayloadAttBlockRootNotSeen)
+		require.ErrorIs(t, pa.VerifyBlockRootSeen(nil), ErrPayloadAttBlockRootNotSeen)
 		require.Equal(t, true, pa.results.executed(RequireBlockRootSeen))
-		require.NotNil(t, pa.results.result(RequireBlockRootSeen))
+		require.Equal(t, ErrPayloadAttBlockRootNotSeen, pa.results.result(RequireBlockRootSeen))
 	})
 
 	t.Run("bad parent true", func(t *testing.T) {
@@ -119,7 +119,7 @@ func TestVerifyBlockRootSeen(t *testing.T) {
 			},
 			Signature: make([]byte, 96),
 		}, init)
-		require.NoError(t, pa.VeryBlockRootSeen(badParentCb(t, blockRoot, true)))
+		require.NoError(t, pa.VerifyBlockRootSeen(badParentCb(t, blockRoot, true)))
 		require.Equal(t, true, pa.results.executed(RequireBlockRootSeen))
 		require.NoError(t, pa.results.result(RequireBlockRootSeen))
 	})
@@ -132,9 +132,9 @@ func TestVerifyBlockRootSeen(t *testing.T) {
 			},
 			Signature: make([]byte, 96),
 		}, init)
-		require.ErrorIs(t, pa.VeryBlockRootSeen(badParentCb(t, [32]byte{2}, false)), ErrPayloadAttBlockRootNotSeen)
+		require.ErrorIs(t, pa.VerifyBlockRootSeen(badParentCb(t, [32]byte{2}, false)), ErrPayloadAttBlockRootNotSeen)
 		require.Equal(t, true, pa.results.executed(RequireBlockRootSeen))
-		require.NotNil(t, pa.results.result(RequireBlockRootSeen))
+		require.Equal(t, ErrPayloadAttBlockRootNotSeen, pa.results.result(RequireBlockRootSeen))
 	})
 }
 
@@ -164,7 +164,7 @@ func TestVerifyBlockRootValid(t *testing.T) {
 		}, init)
 		require.ErrorIs(t, pa.VerifyBlockRootValid(badParentCb(t, blockRoot, true)), ErrPayloadAttBlockRootInvalid)
 		require.Equal(t, true, pa.results.executed(RequireBlockRootValid))
-		require.NotNil(t, pa.results.result(RequireBlockRootValid))
+		require.Equal(t, ErrPayloadAttBlockRootInvalid, pa.results.result(RequireBlockRootValid))
 	})
 }
 
@@ -218,7 +218,7 @@ func TestGetPayloadTimelinessCommittee(t *testing.T) {
 		}, init)
 		require.ErrorIs(t, pa.VerifyValidatorInPTC(ctx, st), ErrIncorrectPayloadAttValidator)
 		require.Equal(t, true, pa.results.executed(RequireValidatorInPTC))
-		require.NotNil(t, pa.results.result(RequireValidatorInPTC))
+		require.Equal(t, ErrIncorrectPayloadAttValidator, pa.results.result(RequireValidatorInPTC))
 	})
 }
 
@@ -286,7 +286,7 @@ func TestPayloadAttestationVerifySignature(t *testing.T) {
 		}, init)
 		require.ErrorIs(t, pa.VerifySignature(st), signing.ErrSigFailedToVerify)
 		require.Equal(t, true, pa.results.executed(RequireSignatureValid))
-		require.NotNil(t, pa.results.result(RequireSignatureValid))
+		require.Equal(t, signing.ErrSigFailedToVerify, pa.results.result(RequireSignatureValid))
 	})
 }
 
@@ -314,8 +314,8 @@ func TestVerifiedPayloadAttestation(t *testing.T) {
 	})
 }
 
-func newPayloadAttestation(t *testing.T, m *ethpb.PayloadAttestationMessage, init Initializer) *PayloadAttVerifier {
+func newPayloadAttestation(t *testing.T, m *ethpb.PayloadAttestationMessage, init Initializer) *PayloadAttMsgVerifier {
 	ro, err := payloadattestation.NewReadOnly(m)
 	require.NoError(t, err)
-	return init.NewPayloadAttestationVerifier(ro, GossipPayloadAttestationMessageRequirements)
+	return init.NewPayloadAttestationMsgVerifier(ro, GossipPayloadAttestationMessageRequirements)
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attestation"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -55,16 +54,6 @@ func (ini *Initializer) NewBlobVerifier(b blocks.ROBlob, reqs []Requirement) *RO
 		blob:                 b,
 		results:              newResults(reqs...),
 		verifyBlobCommitment: kzg.Verify,
-	}
-}
-
-// NewPayloadAttestationVerifier creates a PayloadAttestationVerifier for a single payload attestation message,
-// with the given set of requirements.
-func (ini *Initializer) NewPayloadAttestationVerifier(pa payloadattestation.ROMessage, reqs []Requirement) *PayloadAttVerifier {
-	return &PayloadAttVerifier{
-		sharedResources: ini.shared,
-		results:         newResults(reqs...),
-		pa:              pa,
 	}
 }
 

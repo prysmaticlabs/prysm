@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
-	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attestation"
+	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/epbs/payload-attestation"
 )
 
 type MockPayloadAttestation struct {
@@ -18,7 +18,7 @@ type MockPayloadAttestation struct {
 	ErrUnsatisfiedRequirement       error
 }
 
-var _ PayloadAttestationVerifier = &MockPayloadAttestation{}
+var _ PayloadAttestationMsgVerifier = &MockPayloadAttestation{}
 
 func (m *MockPayloadAttestation) VerifyCurrentSlot() error {
 	return m.ErrIncorrectPayloadAttSlot
@@ -32,7 +32,7 @@ func (m *MockPayloadAttestation) VerifyValidatorInPTC(ctx context.Context, st st
 	return m.ErrIncorrectPayloadAttValidator
 }
 
-func (m *MockPayloadAttestation) VeryBlockRootSeen(func([32]byte) bool) error {
+func (m *MockPayloadAttestation) VerifyBlockRootSeen(func([32]byte) bool) error {
 	return m.ErrPayloadAttBlockRootNotSeen
 }
 

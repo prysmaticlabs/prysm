@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["readonly_message.go"],
-    importpath = "github.com/prysmaticlabs/prysm/v5/consensus-types/payload-attestation",
+    importpath = "github.com/prysmaticlabs/prysm/v5/consensus-types/epbs/payload-attestation",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/signing:go_default_library",
@@ -22,7 +22,6 @@ go_test(
         "//config/fieldparams:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
     ],
 )
