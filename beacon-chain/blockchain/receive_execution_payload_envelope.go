@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -40,9 +42,7 @@ func (s *Service) ReceiveExecutionPayloadEnvelope(ctx context.Context, envelope 
 	eg, _ := errgroup.WithContext(ctx)
 	var postState state.BeaconState
 	eg.Go(func() error {
-		var err error
-		postState, err = validatePayloadStateTransition(ctx, preState, envelope)
-		if err != nil {
+		if err := validatePayloadStateTransition(ctx, preState, envelope); err != nil {
 			return errors.Wrap(err, "failed to validate consensus state transition function")
 		}
 		return nil
@@ -72,91 +72,133 @@ func (s *Service) ReceiveExecutionPayloadEnvelope(ctx context.Context, envelope 
 	return nil
 }
 
-func validatePayloadStateTransition(
+func validateAgainstHeader(
 	ctx context.Context,
 	preState state.BeaconState,
+	blockHeader *ethpb.BeaconBlockHeader,
 	envelope interfaces.ROExecutionPayloadEnvelope,
-) (state.BeaconState, error) {
-	blockHeader := preState.LatestBlockHeader()
-	if blockHeader == nil {
-		return nil, errors.New("invalid nil latest block header")
-	}
+) error {
 	if blockHeader.StateRoot == nil || [32]byte(blockHeader.StateRoot) == [32]byte{} {
 		prevStateRoot, err := preState.HashTreeRoot(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not compute previous state root")
+			return errors.Wrap(err, "could not compute previous state root")
 		}
 		blockHeader.StateRoot = prevStateRoot[:]
 		if err := preState.SetLatestBlockHeader(blockHeader); err != nil {
-			return nil, errors.Wrap(err, "could not set latest block header")
+			return errors.Wrap(err, "could not set latest block header")
 		}
 	}
 	blockHeaderRoot, err := blockHeader.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	beaconBlockRoot, err := envelope.BeaconBlockRoot()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if blockHeaderRoot != beaconBlockRoot {
-		return nil, errors.New("beacon block root does not match previous header")
+		return errors.New("beacon block root does not match previous header")
 	}
-	committedHeader, err := preState.LatestExecutionPayloadHeaderEPBS()
-	if err != nil {
-		return nil, err
-	}
+	return nil
+}
+
+func validateAgainstCommittedBid(
+	preState state.BeaconState,
+	committedHeader *enginev1.ExecutionPayloadHeaderEPBS,
+	envelope interfaces.ROExecutionPayloadEnvelope,
+) error {
 	builderIndex, err := envelope.BuilderIndex()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if committedHeader.BuilderIndex != builderIndex {
-		return nil, errors.New("builder index does not match committed header")
+		return errors.New("builder index does not match committed header")
 	}
 	kzgRoot, err := envelope.BlobKzgCommitmentsRoot()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if [32]byte(committedHeader.BlobKzgCommitmentsRoot) != kzgRoot {
-		return nil, errors.New("blob KZG commitments root does not match committed header")
+		return errors.New("blob KZG commitments root does not match committed header")
 	}
+	return nil
+}
+
+func processPayloadStateTransition(
+	ctx context.Context,
+	preState state.BeaconState,
+	envelope interfaces.ROExecutionPayloadEnvelope,
+) error {
 	payload, err := envelope.Execution()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	exe, ok := payload.(interfaces.ExecutionDataElectra)
 	if !ok {
-		return nil, errors.New("could not cast execution data to electra execution data")
+		return errors.New("could not cast execution data to electra execution data")
 	}
 	preState, err = electra.ProcessDepositRequests(ctx, preState, exe.DepositRequests())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process deposit receipts")
+		return errors.Wrap(err, "could not process deposit receipts")
 	}
 	preState, err = electra.ProcessWithdrawalRequests(ctx, preState, exe.WithdrawalRequests())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
+		return errors.Wrap(err, "could not process execution layer withdrawal requests")
 	}
 	if err := electra.ProcessConsolidationRequests(ctx, preState, exe.ConsolidationRequests()); err != nil {
-		return nil, errors.Wrap(err, "could not process consolidation requests")
+		return errors.Wrap(err, "could not process consolidation requests")
 	}
 	if err := preState.SetLatestBlockHash(payload.BlockHash()); err != nil {
-		return nil, err
+		return err
 	}
 	if err := preState.SetLatestFullSlot(preState.Slot()); err != nil {
-		return nil, err
+		return err
 	}
+	return nil
+}
+
+func checkPostStateRoot(
+	ctx context.Context,
+	preState state.BeaconState,
+	envelope interfaces.ROExecutionPayloadEnvelope,
+) error {
 	stateRoot, err := preState.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	envelopeStateRoot, err := envelope.StateRoot()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if stateRoot != envelopeStateRoot {
-		return nil, errors.New("state root mismatch")
+		return errors.New("state root mismatch")
 	}
-	return preState, nil
+	return nil
+}
+
+func validatePayloadStateTransition(
+	ctx context.Context,
+	preState state.BeaconState,
+	envelope interfaces.ROExecutionPayloadEnvelope,
+) error {
+	blockHeader := preState.LatestBlockHeader()
+	if blockHeader == nil {
+		return errors.New("invalid nil latest block header")
+	}
+	if err := validateAgainstHeader(ctx, preState, blockHeader, envelope); err != nil {
+		return err
+	}
+	committedHeader, err := preState.LatestExecutionPayloadHeaderEPBS()
+	if err != nil {
+		return err
+	}
+	if err := validateAgainstCommittedBid(preState, committedHeader, envelope); err != nil {
+		return err
+	}
+	if err := processPayloadStateTransition(ctx, preState, envelope); err != nil {
+		return err
+	}
+	return checkPostStateRoot(ctx, preState, envelope)
 }
 
 // notifyNewPayload signals execution engine on a new payload.
