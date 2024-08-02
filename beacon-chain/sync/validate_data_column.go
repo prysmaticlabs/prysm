@@ -102,7 +102,9 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 	if err := vf.SidecarKzgProofVerified(); err != nil {
 		return pubsub.ValidationReject, err
 	}
-
+	if err := vf.ValidProposerSignature(ctx); err != nil {
+		return pubsub.ValidationReject, err
+	}
 	if err := vf.SidecarProposerExpected(ctx); err != nil {
 		return pubsub.ValidationReject, err
 	}
