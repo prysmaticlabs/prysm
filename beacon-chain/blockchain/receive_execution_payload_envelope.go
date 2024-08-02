@@ -103,7 +103,6 @@ func validateAgainstHeader(
 }
 
 func validateAgainstCommittedBid(
-	preState state.BeaconState,
 	committedHeader *enginev1.ExecutionPayloadHeaderEPBS,
 	envelope interfaces.ROExecutionPayloadEnvelope,
 ) error {
@@ -151,10 +150,7 @@ func processPayloadStateTransition(
 	if err := preState.SetLatestBlockHash(payload.BlockHash()); err != nil {
 		return err
 	}
-	if err := preState.SetLatestFullSlot(preState.Slot()); err != nil {
-		return err
-	}
-	return nil
+	return preState.SetLatestFullSlot(preState.Slot())
 }
 
 func checkPostStateRoot(
@@ -192,7 +188,7 @@ func validatePayloadStateTransition(
 	if err != nil {
 		return err
 	}
-	if err := validateAgainstCommittedBid(preState, committedHeader, envelope); err != nil {
+	if err := validateAgainstCommittedBid(committedHeader, envelope); err != nil {
 		return err
 	}
 	if err := processPayloadStateTransition(ctx, preState, envelope); err != nil {
