@@ -177,7 +177,7 @@ func (s *Service) RefreshPersistentSubnets() {
 
 	isCustodySubnetCountUpToDate := (custodySubnetCount == inRecordCustodySubnetCount && custodySubnetCount == inMetadataCustodySubnetCount)
 
-	if metadataVersion == version.Deneb && isBitVUpToDate && isBitSUpToDate && isCustodySubnetCountUpToDate {
+	if isBitVUpToDate && isBitSUpToDate && isCustodySubnetCountUpToDate {
 		// Nothing to do, return early.
 		return
 	}
