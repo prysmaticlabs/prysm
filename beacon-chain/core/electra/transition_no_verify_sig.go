@@ -84,16 +84,14 @@ func ProcessOperations(
 	if !ok {
 		return nil, errors.New("could not cast execution data to electra execution data")
 	}
-	st, err = ProcessWithdrawalRequests(ctx, st, exe.WithdrawalRequests())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
-	}
-
 	st, err = ProcessDepositRequests(ctx, st, exe.DepositRequests())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
-
+	st, err = ProcessWithdrawalRequests(ctx, st, exe.WithdrawalRequests())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
+	}
 	if err := ProcessConsolidationRequests(ctx, st, exe.ConsolidationRequests()); err != nil {
 		return nil, fmt.Errorf("could not process consolidation requests: %w", err)
 	}
