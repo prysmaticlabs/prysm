@@ -1029,7 +1029,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 
 	ctx := context.Background()
 	slot := primitives.Slot(0)
-	epochs := 10
+	epochs := primitives.Epoch(10)
 	numVals := uint64(10)
 
 	beaconDB := dbTest.SetupDB(t)
@@ -1065,7 +1065,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 	res, err := bs.ListValidators(context.Background(), req)
 	require.NoError(t, err)
-	assert.Equal(t, epochs, len(res.ValidatorList))
+	assert.Equal(t, int(numVals), len(res.ValidatorList))
 
 	vals := st.Validators()
 	want := make([]*ethpb.Validators_ValidatorContainer, 0)
@@ -1077,7 +1077,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 	req = &ethpb.ListValidatorsRequest{
 		QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
-			Epoch: 10,
+			Epoch: epochs,
 		},
 	}
 	res, err = bs.ListValidators(context.Background(), req)
