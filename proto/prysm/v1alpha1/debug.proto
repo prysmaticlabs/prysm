@@ -101,17 +101,18 @@ message DebugPeerResponse {
         // Metadata of the peer.
         MetaDataV0 metadataV0 = 1;
         MetaDataV1 metadataV1 = 2;
-        MetaDataV2 metadataV2 = 3;
         // List of protocols the peer supports.
-        repeated string protocols = 4;
+        repeated string protocols = 3;
         // Number of times peer has been penalised.
-        uint64 fault_count = 5;
+        uint64 fault_count = 4;
         // Protocol Version peer is running.
-        string protocol_version = 6;
+        string protocol_version = 5;
         // Agent Version peer is running.
-        string agent_version = 7;
+        string agent_version = 6;
         // Latency of responses from peer(in ms).
-        uint64 peer_latency = 8;
+        uint64 peer_latency = 7;
+        // Metadata of the peer.
+        MetaDataV2 metadataV2 = 8;
     }
     // Listening addresses know of the peer.
     repeated string listening_addresses = 1;
