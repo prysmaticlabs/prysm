@@ -96,3 +96,11 @@ func Test_EpbsBlock_IsBlinded(t *testing.T) {
 	bd := &BeaconBlockBody{version: version.EPBS}
 	require.Equal(t, false, bd.IsBlinded())
 }
+
+func Test_PreEPBS_Versions(t *testing.T) {
+	bb := &BeaconBlockBody{version: version.Electra}
+	_, err := bb.PayloadAttestations()
+	require.ErrorContains(t, "PayloadAttestations", err)
+	_, err = bb.SignedExecutionPayloadHeader()
+	require.ErrorContains(t, "SignedExecutionPayloadHeader", err)
+}

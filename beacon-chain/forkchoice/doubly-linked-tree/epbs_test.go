@@ -66,4 +66,14 @@ func TestStore_Insert_PayloadContent(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, n.isParentFull())
 	require.Equal(t, gfn, n.parent)
+
+	// Reinsert an empty node
+	ggfn2, err := s.insert(ctx, 3, ggfr, gr, fr, gp, 0, 0)
+	require.NoError(t, err)
+	require.Equal(t, ggfn, ggfn2)
+
+	// Reinsert a full node
+	n2, err := s.insert(ctx, 3, ggfr, gr, ggfp, gp, 0, 0)
+	require.NoError(t, err)
+	require.Equal(t, n, n2)
 }
