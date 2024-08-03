@@ -10,17 +10,13 @@ import (
 
 func TestGetAttestingIndices(t *testing.T) {
 	attestingIndices := []primitives.ValidatorIndex{1, 2, 3}
-	nilAttestingIndices := []primitives.ValidatorIndex{}
+	nilAttestingIndices := []primitives.ValidatorIndex(nil)
 	pa := &IndexedPayloadAttestation{
 		AttestingIndices: attestingIndices,
 	}
 	got := pa.GetAttestingIndices()
-	for i, v := range got {
-		require.Equal(t, attestingIndices[i], v)
-	}
-	pa = &IndexedPayloadAttestation{
-		AttestingIndices: nilAttestingIndices,
-	}
+	require.DeepEqual(t, attestingIndices, got)
+	pa = nil
 	got = pa.GetAttestingIndices()
 	require.DeepEqual(t, nilAttestingIndices, got)
 }
@@ -29,32 +25,28 @@ func TestGetData(t *testing.T) {
 	data := &eth.PayloadAttestationData{
 		Slot: 1,
 	}
-	nilData := &eth.PayloadAttestationData{}
+	nilData := (*eth.PayloadAttestationData)(nil)
 	pa := &IndexedPayloadAttestation{
 		Data: data,
 	}
 	got := pa.GetData()
 	require.Equal(t, data, got)
 
-	pa = &IndexedPayloadAttestation{
-		Data: nilData,
-	}
+	pa = nil
 	got = pa.GetData()
-	require.Equal(t, nilData, got)
+	require.DeepEqual(t, got, nilData)
 }
 
 func TestGetSignature(t *testing.T) {
 	sig := []byte{2}
-	nilSig := []byte{}
+	nilSig := []byte(nil)
 	pa := &IndexedPayloadAttestation{
 		Signature: sig,
 	}
 	got := pa.GetSignature()
 	require.DeepEqual(t, sig, got)
 
-	pa = &IndexedPayloadAttestation{
-		Signature: nilSig,
-	}
+	pa = nil
 	got = pa.GetSignature()
-	require.DeepEqual(t, nilSig, got)
+	require.DeepEqual(t, got, nilSig)
 }
