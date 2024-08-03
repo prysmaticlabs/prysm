@@ -1,6 +1,8 @@
 package epbs
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -9,7 +11,7 @@ import (
 )
 
 func TestGetAttestingIndices(t *testing.T) {
-	attestingIndices := []primitives.ValidatorIndex{1, 2, 3}
+	attestingIndices := []primitives.ValidatorIndex{primitives.ValidatorIndex(randomUint64(t)), primitives.ValidatorIndex(randomUint64(t)), primitives.ValidatorIndex(randomUint64(t))}
 	nilAttestingIndices := []primitives.ValidatorIndex(nil)
 	pa := &IndexedPayloadAttestation{
 		AttestingIndices: attestingIndices,
@@ -23,7 +25,7 @@ func TestGetAttestingIndices(t *testing.T) {
 
 func TestGetData(t *testing.T) {
 	data := &eth.PayloadAttestationData{
-		Slot: 1,
+		Slot: primitives.Slot(randomUint64(t)),
 	}
 	nilData := (*eth.PayloadAttestationData)(nil)
 	pa := &IndexedPayloadAttestation{
@@ -38,7 +40,7 @@ func TestGetData(t *testing.T) {
 }
 
 func TestGetSignature(t *testing.T) {
-	sig := []byte{2}
+	sig := randomBytes(32, t)
 	nilSig := []byte(nil)
 	pa := &IndexedPayloadAttestation{
 		Signature: sig,
@@ -49,4 +51,20 @@ func TestGetSignature(t *testing.T) {
 	pa = nil
 	got = pa.GetSignature()
 	require.DeepEqual(t, got, nilSig)
+}
+
+func randomUint64(t *testing.T) uint64 {
+	var num uint64
+	b := randomBytes(8, t)
+	num = binary.BigEndian.Uint64(b)
+	return num
+}
+
+func randomBytes(n int, t *testing.T) []byte {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		t.Fatalf("Failed to generate random bytes: %v", err)
+	}
+	return b
 }
