@@ -69,6 +69,8 @@ type ReadOnlyBeaconBlockBody interface {
 	Execution() (ExecutionData, error)
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 	BlobKzgCommitments() ([][]byte, error)
+	PayloadAttestations() ([]*ethpb.PayloadAttestation, error)
+	SignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error)
 }
 
 type ROBlockBodyEpbs interface {

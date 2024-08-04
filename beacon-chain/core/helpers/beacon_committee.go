@@ -295,7 +295,7 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 	if err := verifyAssignmentEpoch(epoch, state); err != nil {
 		return nil, err
 	}
-	startSlot, err := slots.EpochStart(epoch)
+	slot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -305,20 +305,16 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 	}
 	assignments := make(map[primitives.ValidatorIndex]*CommitteeAssignment)
 
-	activeValidatorCount, err := ActiveValidatorCount(ctx, state, epoch)
+	committees, err := BeaconCommittees(ctx, state, slot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not compute beacon committees")
 	}
-	ptcPerSlot, PtcMembersPerCommittee := PtcAllocation(activeValidatorCount)
-
+	ptcPerSlot, ptcMembersPerCommittee := PtcAllocation(len(committees))
 	// Compute committee assignments for each slot in the epoch.
-	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		committees, err := BeaconCommittees(ctx, state, slot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not compute beacon committees")
-		}
+	endSlot := slot + params.BeaconConfig().SlotsPerEpoch
+	for {
 		for j, committee := range committees {
-			for _, vIndex := range committee {
+			for i, vIndex := range committee {
 				if _, ok := vals[vIndex]; !ok { // Skip if the validator is not in the provided validators slice.
 					continue
 				}
@@ -328,12 +324,23 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 				assignments[vIndex].Committee = committee
 				assignments[vIndex].AttesterSlot = slot
 				assignments[vIndex].CommitteeIndex = primitives.CommitteeIndex(j)
+				if uint64(j) < ptcPerSlot && uint64(i) < ptcMembersPerCommittee {
+					assignments[vIndex].PtcSlot = slot
+				}
 			}
 
 			// We only need to assign PTC slots for the first `PTCPerSlot` committees of a given slot.
 			if uint64(j) < ptcPerSlot {
 				assignments = PTCAssignments(committee, assignments, PtcMembersPerCommittee, slot)
 			}
+		}
+		slot++
+		if slot == endSlot {
+			break
+		}
+		committees, err = BeaconCommittees(ctx, state, slot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute beacon committees")
 		}
 	}
 	return assignments, nil

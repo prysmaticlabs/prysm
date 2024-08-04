@@ -117,7 +117,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: root[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, root, st))
-	require.NoError(t, service.verifyBlkPreState(ctx, wsb.Block()))
+	require.NoError(t, service.verifyBlkPreState(ctx, wsb.Block().ParentRoot()))
 }
 
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {

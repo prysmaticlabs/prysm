@@ -208,7 +208,7 @@ func (*Validator) HasProposerSettings() bool {
 }
 
 // PushProposerSettings for mocking
-func (_ *Validator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager, _ primitives.Slot, _ time.Time) error {
+func (_ *Validator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager, _ primitives.Slot) error {
 	panic("implement me")
 }
 
