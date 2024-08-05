@@ -1098,7 +1098,7 @@ func (s *Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *cor
 			handler: server.GetValidatorPerformance,
 			methods: []string{http.MethodPost},
 		},
-    {
+		{
 			template: "/prysm/v1/validators/participation",
 			name:     namespace + ".GetValidatorParticipation",
 			middleware: []mux.MiddlewareFunc{
@@ -1107,14 +1107,14 @@ func (s *Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *cor
 			handler: server.GetValidatorParticipation,
 			methods: []string{http.MethodGet},
 		},
-    {
+		{
 			template: "/prysm/v1/validators/active_set_changes",
 			name:     namespace + ".GetValidatorActiveSetChanges",
 			middleware: []mux.MiddlewareFunc{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetValidatorActiveSetChanges,
-      methods: []string{http.MethodGet},
-    },
+			methods: []string{http.MethodGet},
+		},
 	}
 }
