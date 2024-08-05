@@ -290,3 +290,33 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	}
 	return count, nil
 }
+
+// UpdatePtcVote updates the PTC vote for a given block root.
+func (s *Store) UpdatePtcVote(root [fieldparams.RootLength]byte, index int, vote byte) error {
+	node, ok := s.nodeByRoot[root]
+	if !ok {
+		return errors.New("node not found")
+	}
+	node.UpdatePtcVote(index, vote)
+	return nil
+}
+
+// SetWithholdBoost sets the withhold boost for a given block root.
+func (s *Store) SetWithholdBoost(root [fieldparams.RootLength]byte, isFull bool) error {
+	node, ok := s.nodeByRoot[root]
+	if !ok {
+		return errors.New("node not found")
+	}
+	node.SetWithholdBoost(root, isFull)
+	return nil
+}
+
+// SetRevealBoost sets the reveal boost for a given block root.
+func (s *Store) SetRevealBoost(root [fieldparams.RootLength]byte) error {
+	node, ok := s.nodeByRoot[root]
+	if !ok {
+		return errors.New("node not found")
+	}
+	node.SetRevealBoost(root)
+	return nil
+}
