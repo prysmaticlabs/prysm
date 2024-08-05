@@ -88,19 +88,19 @@ func (s *Server) GetActiveSetChanges(w http.ResponseWriter, r *http.Request) {
 
 	response := &structs.ActiveSetChanges{
 		Epoch:               fmt.Sprintf("%d", as.Epoch),
-		ActivatedPublicKeys: byteArrayToString(as.ActivatedPublicKeys),
-		ActivatedIndices:    uint64ArrayToString(as.ActivatedIndices),
-		ExitedPublicKeys:    byteArrayToString(as.ExitedPublicKeys),
-		ExitedIndices:       uint64ArrayToString(as.ExitedIndices),
-		SlashedPublicKeys:   byteArrayToString(as.SlashedPublicKeys),
-		SlashedIndices:      uint64ArrayToString(as.SlashedIndices),
-		EjectedPublicKeys:   byteArrayToString(as.EjectedPublicKeys),
-		EjectedIndices:      uint64ArrayToString(as.EjectedIndices),
+		ActivatedPublicKeys: byteSlice2dToStringSlice(as.ActivatedPublicKeys),
+		ActivatedIndices:    uint64SliceToStringSlice(as.ActivatedIndices),
+		ExitedPublicKeys:    byteSlice2dToStringSlice(as.ExitedPublicKeys),
+		ExitedIndices:       uint64SliceToStringSlice(as.ExitedIndices),
+		SlashedPublicKeys:   byteSlice2dToStringSlice(as.SlashedPublicKeys),
+		SlashedIndices:      uint64SliceToStringSlice(as.SlashedIndices),
+		EjectedPublicKeys:   byteSlice2dToStringSlice(as.EjectedPublicKeys),
+		EjectedIndices:      uint64SliceToStringSlice(as.EjectedIndices),
 	}
 	httputil.WriteJson(w, response)
 }
 
-func byteArrayToString(byteArrays [][]byte) []string {
+func byteSlice2dToStringSlice(byteArrays [][]byte) []string {
 	s := make([]string, len(byteArrays))
 	for i, b := range byteArrays {
 		s[i] = hexutil.Encode(b)
@@ -108,7 +108,7 @@ func byteArrayToString(byteArrays [][]byte) []string {
 	return s
 }
 
-func uint64ArrayToString(indices []primitives.ValidatorIndex) []string {
+func uint64SliceToStringSlice(indices []primitives.ValidatorIndex) []string {
 	s := make([]string, len(indices))
 	for i, u := range indices {
 		s[i] = fmt.Sprintf("%d", u)
