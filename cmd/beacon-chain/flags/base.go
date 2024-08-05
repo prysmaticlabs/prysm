@@ -40,7 +40,7 @@ var (
 		Value: 0,
 	}
 	// MinBuilderDiff sets an absolute value for the difference between the
-	// builder's  bid  and the local block value that this node will accept
+	// builder's bid and the local block value that this node will accept
 	// without reverting to local building
 	MinBuilderDiff = &cli.Uint64Flag{
 		Name: "min-builder-to-local-difference",
