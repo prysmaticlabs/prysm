@@ -107,50 +107,57 @@ func ComputeFieldRootsForBlockBody(ctx context.Context, blockBody *BeaconBlockBo
 	}
 	copy(fieldRoots[7], root[:])
 
-	// Sync Aggregate
-	sa, err := blockBody.SyncAggregate()
-	if err != nil {
-		return nil, err
-	}
-	root, err = sa.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	copy(fieldRoots[8], root[:])
+	if blockBody.version >= version.Altair {
+		// Sync Aggregate
+		sa, err := blockBody.SyncAggregate()
+		if err != nil {
+			return nil, err
+		}
+		root, err = sa.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		copy(fieldRoots[8], root[:])
 
-	// Execution Payload
-	ep, err := blockBody.Execution()
-	if err != nil {
-		return nil, err
-	}
-	root, err = ep.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	copy(fieldRoots[9], root[:])
+		if blockBody.version >= version.Bellatrix {
+			// Execution Payload
+			ep, err := blockBody.Execution()
+			if err != nil {
+				return nil, err
+			}
+			root, err = ep.HashTreeRoot()
+			if err != nil {
+				return nil, err
+			}
+			copy(fieldRoots[9], root[:])
 
-	// BLS Changes
-	bls, err := blockBody.BLSToExecutionChanges()
-	if err != nil {
-		return nil, err
-	}
-	root, err = ssz.MerkleizeListSSZ(bls, params.BeaconConfig().MaxBlsToExecutionChanges)
-	if err != nil {
-		return nil, err
-	}
-	copy(fieldRoots[10], root[:])
+			if blockBody.version >= version.Capella {
+				// BLS Changes
+				bls, err := blockBody.BLSToExecutionChanges()
+				if err != nil {
+					return nil, err
+				}
+				root, err = ssz.MerkleizeListSSZ(bls, params.BeaconConfig().MaxBlsToExecutionChanges)
+				if err != nil {
+					return nil, err
+				}
+				copy(fieldRoots[10], root[:])
 
-	// KZG commitments
-	chunks, err := ssz.PackByChunk(blockBody.blobKzgCommitments)
-	if err != nil {
-		return nil, err
+				if blockBody.version >= version.Deneb {
+					// KZG commitments
+					chunks, err := ssz.PackByChunk(blockBody.blobKzgCommitments)
+					if err != nil {
+						return nil, err
+					}
+					var a [32]byte
+					a, err = ssz.BitwiseMerkleize(chunks, uint64(len(chunks)), uint64(len(chunks)))
+					if err != nil {
+						return nil, err
+					}
+					copy(fieldRoots[11], a[:])
+				}
+			}
+		}
 	}
-	var a [32]byte
-	a, err = ssz.BitwiseMerkleize(chunks, uint64(len(chunks)), uint64(len(chunks)))
-	if err != nil {
-		return nil, err
-	}
-	copy(fieldRoots[11], a[:])
-
 	return fieldRoots, nil
 }
