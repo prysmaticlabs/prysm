@@ -1044,7 +1044,7 @@ func TestProcessWithdrawals(t *testing.T) {
 				},
 			},
 			Control: control{
-				ExpectedError: true,
+				ExpectedError: false,
 			},
 		},	
 	}

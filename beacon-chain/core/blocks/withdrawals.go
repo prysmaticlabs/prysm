@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -121,9 +120,16 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 // Spec pseudocode definition:
 //
 //	def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
+//		if st.version() >= version.EPBS :
+//			if not is_parent_block_full(state):
+//		 		return
+//		
 //	    expected_withdrawals, partial_withdrawals_count = get_expected_withdrawals(state)  # [Modified in Electra:EIP7251]
 //
-//	    assert len(payload.withdrawals) == len(expected_withdrawals)
+//		if st.version() >= version.EPBS:
+//			state.latest_withdrawals_root = hash_tree_root(expected_withdrawals)
+//		else :	
+//	    	assert len(payload.withdrawals) == len(expected_withdrawals)
 //
 //	    for expected_withdrawal, withdrawal in zip(expected_withdrawals, payload.withdrawals):
 //	        assert withdrawal == expected_withdrawal
@@ -181,7 +187,7 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get withdrawals root")
 			}
-			wdRoot = bytesutil.ToBytes32(r)
+			copy(wdRoot[:], r)
 		} else {
 			wds, err := executionData.Withdrawals()
 			if err != nil {
