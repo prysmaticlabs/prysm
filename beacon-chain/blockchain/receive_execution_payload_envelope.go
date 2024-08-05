@@ -48,7 +48,7 @@ func (s *Service) ReceiveExecutionPayloadEnvelope(ctx context.Context, envelope 
 	var isValidPayload bool
 	eg.Go(func() error {
 		var err error
-		isValidPayload, err = s.validateExecutionOnEnvelope(ctx, envelope, root)
+		isValidPayload, err = s.validateExecutionOnEnvelope(ctx, envelope)
 		if err != nil {
 			return errors.Wrap(err, "could not notify the engine of the new payload")
 		}
@@ -119,19 +119,23 @@ func (s *Service) notifyNewEnvelope(ctx context.Context, envelope interfaces.ROE
 }
 
 // validateExecutionOnEnvelope notifies the engine of the incoming execution payload and returns true if the payload is valid
-func (s *Service) validateExecutionOnEnvelope(ctx context.Context, e interfaces.ROExecutionPayloadEnvelope, parentRoot [32]byte) (bool, error) {
+func (s *Service) validateExecutionOnEnvelope(ctx context.Context, e interfaces.ROExecutionPayloadEnvelope) (bool, error) {
 	isValidPayload, err := s.notifyNewEnvelope(ctx, e)
-	if err != nil {
-		blockRoot, rootErr := e.BeaconBlockRoot()
-		if rootErr != nil {
-			return false, err
-		}
-		s.cfg.ForkChoiceStore.Lock()
-		err = s.handleInvalidExecutionError(ctx, err, blockRoot, parentRoot)
-		s.cfg.ForkChoiceStore.Unlock()
-		return false, err
+	if err == nil {
+		return isValidPayload, nil
 	}
-	return isValidPayload, nil
+	blockRoot, rootErr := e.BeaconBlockRoot()
+	if rootErr != nil {
+		return false, errors.Wrap(rootErr, "could not get beacon block root")
+	}
+	parentRoot, rootErr := s.ParentRoot(blockRoot)
+	if rootErr != nil {
+		return false, errors.Wrap(rootErr, "could not get parent block root")
+	}
+	s.cfg.ForkChoiceStore.Lock()
+	err = s.handleInvalidExecutionError(ctx, err, blockRoot, parentRoot)
+	s.cfg.ForkChoiceStore.Unlock()
+	return false, err
 }
 
 func (s *Service) getPayloadEnvelopePrestate(ctx context.Context, e interfaces.ROExecutionPayloadEnvelope) (state.BeaconState, error) {
