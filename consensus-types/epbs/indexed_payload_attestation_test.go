@@ -19,7 +19,7 @@ func TestGetAttestingIndices(t *testing.T) {
 		},
 		{
 			name:             "Test 2",
-			attestingIndices: []primitives.ValidatorIndex{55,66,787},
+			attestingIndices: []primitives.ValidatorIndex{55, 66, 787},
 		},
 		{
 			name:             "Empty AttestingIndices",
@@ -65,7 +65,7 @@ func TestGetData(t *testing.T) {
 			},
 		},
 		{
-			name: "Nil AttestingIndices",
+			name: "Nil slot",
 			data: nil,
 		},
 	}
@@ -90,11 +90,11 @@ func TestGetSignature(t *testing.T) {
 			sig:  []byte{1, 2},
 		},
 		{
-			name: "Test 1",
+			name: "Test 2",
 			sig:  []byte{29, 100},
 		},
 		{
-			name: "Zero slot",
+			name: "Zero signature",
 			sig:  []byte{0},
 		},
 		{
