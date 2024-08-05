@@ -37,7 +37,7 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 	testCases := []struct {
 		name         string
 		path         string
-		urlParams    [] string
+		urlParams    []string
 		state        state.BeaconState
 		errorMessage string
 	}{
@@ -92,8 +92,8 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 			request := httptest.NewRequest("GET", testCase.path, nil)
 			if len(testCase.urlParams) != 0 {
 				request.SetPathValue(testCase.urlParams[0], testCase.urlParams[1])
-			}else{
-				request.SetPathValue("state_id","")
+			} else {
+				request.SetPathValue("state_id", "")
 			}
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}

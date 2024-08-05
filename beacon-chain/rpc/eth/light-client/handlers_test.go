@@ -62,7 +62,7 @@ func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
 	}
 
 	request := httptest.NewRequest("GET", "http://foo.com/", nil)
-	request.SetPathValue("block_root",hexutil.Encode(r[:]))
+	request.SetPathValue("block_root", hexutil.Encode(r[:]))
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
