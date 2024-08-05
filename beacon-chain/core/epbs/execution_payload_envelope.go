@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 func processPayloadStateTransition(
@@ -44,10 +43,13 @@ func processPayloadStateTransition(
 func validateAgainstHeader(
 	ctx context.Context,
 	preState state.BeaconState,
-	blockHeader *ethpb.BeaconBlockHeader,
 	envelope interfaces.ROExecutionPayloadEnvelope,
 ) error {
-	if blockHeader.StateRoot == nil || [32]byte(blockHeader.StateRoot) == [32]byte{} {
+	blockHeader := preState.LatestBlockHeader()
+	if blockHeader == nil {
+		return errors.New("invalid nil latest block header")
+	}
+	if len(blockHeader.StateRoot) == 0 || [32]byte(blockHeader.StateRoot) == [32]byte{} {
 		prevStateRoot, err := preState.HashTreeRoot(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not compute previous state root")
@@ -116,11 +118,7 @@ func ValidatePayloadStateTransition(
 	preState state.BeaconState,
 	envelope interfaces.ROExecutionPayloadEnvelope,
 ) error {
-	blockHeader := preState.LatestBlockHeader()
-	if blockHeader == nil {
-		return errors.New("invalid nil latest block header")
-	}
-	if err := validateAgainstHeader(ctx, preState, blockHeader, envelope); err != nil {
+	if err := validateAgainstHeader(ctx, preState, envelope); err != nil {
 		return err
 	}
 	committedHeader, err := preState.LatestExecutionPayloadHeaderEPBS()

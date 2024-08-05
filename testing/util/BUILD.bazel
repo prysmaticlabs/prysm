@@ -19,6 +19,7 @@ go_library(
         "electra.go",
         "electra_block.go",
         "electra_state.go",
+        "epbs_state.go",
         "helpers.go",
         "merge.go",
         "state.go",

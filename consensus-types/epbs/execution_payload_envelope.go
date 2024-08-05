@@ -85,7 +85,7 @@ func (p executionPayloadEnvelope) BuilderIndex() (primitives.ValidatorIndex, err
 
 // BeaconBlockRoot returns the wrapped value
 func (p executionPayloadEnvelope) BeaconBlockRoot() ([field_params.RootLength]byte, error) {
-	if p.IsNil() {
+	if p.IsNil() || len(p.p.BeaconBlockRoot) == 0 {
 		return [field_params.RootLength]byte{}, consensus_types.ErrNilObjectWrapped
 	}
 	return [field_params.RootLength]byte(p.p.BeaconBlockRoot), nil
@@ -114,7 +114,7 @@ func (p executionPayloadEnvelope) PayloadWithheld() (bool, error) {
 
 // StateRoot returns the wrapped value
 func (p executionPayloadEnvelope) StateRoot() ([field_params.RootLength]byte, error) {
-	if p.IsNil() {
+	if p.IsNil() || len(p.p.StateRoot) == 0 {
 		return [field_params.RootLength]byte{}, consensus_types.ErrNilObjectWrapped
 	}
 	return [field_params.RootLength]byte(p.p.StateRoot), nil
@@ -137,7 +137,7 @@ func (p executionPayloadEnvelope) VersionedHashes() ([]common.Hash, error) {
 
 // BlobKzgCommitmentsRoot returns the HTR of the KZG commitments in the payload
 func (p executionPayloadEnvelope) BlobKzgCommitmentsRoot() ([field_params.RootLength]byte, error) {
-	if p.IsNil() {
+	if p.IsNil() || p.p.BlobKzgCommitments == nil {
 		return [field_params.RootLength]byte{}, consensus_types.ErrNilObjectWrapped
 	}
 
