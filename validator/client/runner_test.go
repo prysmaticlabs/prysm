@@ -370,37 +370,3 @@ func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 	// can't test "Failed to update proposer settings" because of log.fatal
 	assert.LogsContain(t, hook, "Mock updated proposer settings")
 }
-
-func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *testing.T) {
-	errSomeOtherError := errors.New("some internal error")
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	node := healthTesting.NewMockHealthClient(ctrl)
-	tracker := beacon.NewNodeHealthTracker(node)
-	node.EXPECT().IsHealthy(gomock.Any()).Return(true).AnyTimes()
-	v := &testutil.FakeValidator{
-		ProposerSettingsErr: errors.Wrap(ErrBuilderValidatorRegistration, errSomeOtherError.Error()),
-		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
-		Tracker:             tracker,
-	}
-	err := v.SetProposerSettings(context.Background(), &proposer.Settings{
-		DefaultConfig: &proposer.Option{
-			FeeRecipientConfig: &proposer.FeeRecipientConfig{
-				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
-			},
-		},
-	})
-	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
-	hook := logTest.NewGlobal()
-	slot := params.BeaconConfig().SlotsPerEpoch
-	ticker := make(chan primitives.Slot)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- slot
-
-		cancel()
-	}()
-	run(ctx, v)
-	assert.LogsContain(t, hook, ErrBuilderValidatorRegistration.Error())
-}

@@ -135,7 +135,7 @@ func (al attList) aggregate(coverage bitfield.Bitlist) (*ethpb.Attestation, erro
 	}
 	return &ethpb.Attestation{
 		AggregationBits: coverage,
-		Data:            ethpb.CopyAttestationData(al[0].GetData()),
+		Data:            al[0].GetData().Copy(),
 		Signature:       aggregateSignatures(signs).Marshal(),
 	}, nil
 }
@@ -167,7 +167,7 @@ func aggregateAttestations(atts []ethpb.Att, keys []int, coverage *bitfield.Bitl
 		}
 		signs = append(signs, sig)
 		if i == 0 {
-			data = ethpb.CopyAttestationData(atts[idx].GetData())
+			data = atts[idx].GetData().Copy()
 			targetIdx = idx
 		}
 	}
