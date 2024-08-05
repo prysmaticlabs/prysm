@@ -15,11 +15,11 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// GetValidatorParticipation retrieves the validator participation information for a given epoch,
+// GetParticipation retrieves the validator participation information for a given epoch,
 // it returns the information about validator's participation rate in voting on the proof of stake
 // rules based on their balance compared to the total active validator balance.
-func (s *Server) GetValidatorParticipation(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.GetValidatorParticipation")
+func (s *Server) GetParticipation(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetParticipation")
 	defer span.End()
 
 	stateId := mux.Vars(r)["state_id"]
@@ -59,12 +59,12 @@ func (s *Server) GetValidatorParticipation(w http.ResponseWriter, r *http.Reques
 	httputil.WriteJson(w, response)
 }
 
-// GetValidatorActiveSetChanges retrieves the active set changes for a given epoch.
+// GetActiveSetChanges retrieves the active set changes for a given epoch.
 //
 // This data includes any activations, voluntary exits, and involuntary
 // ejections.
-func (s *Server) GetValidatorActiveSetChanges(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.GetValidatorActiveSetChanges")
+func (s *Server) GetActiveSetChanges(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetActiveSetChanges")
 	defer span.End()
 
 	stateId := mux.Vars(r)["state_id"]

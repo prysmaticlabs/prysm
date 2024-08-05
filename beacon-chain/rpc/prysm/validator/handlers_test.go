@@ -73,7 +73,7 @@ func TestServer_GetValidatorParticipation_NoState(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
-	s.GetValidatorParticipation(writer, request)
+	s.GetParticipation(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
 	require.StringContains(t, "state_id is required in URL params", writer.Body.String())
 }
@@ -154,7 +154,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
-	s.GetValidatorParticipation(writer, request)
+	s.GetParticipation(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
 
 	want := &structs.GetValidatorParticipationResponse{
@@ -254,7 +254,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
-	s.GetValidatorParticipation(writer, request)
+	s.GetParticipation(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
 
 	want := &structs.GetValidatorParticipationResponse{
@@ -384,7 +384,7 @@ func runGetValidatorParticipationCurrentEpoch(t *testing.T, genState state.Beaco
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
-	s.GetValidatorParticipation(writer, request)
+	s.GetParticipation(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
 
 	want := &structs.GetValidatorParticipationResponse{
@@ -434,7 +434,7 @@ func TestServer_GetValidatorActiveSetChanges_NoState(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
-	s.GetValidatorActiveSetChanges(writer, request)
+	s.GetActiveSetChanges(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
 	require.StringContains(t, "state_id is required in URL params", writer.Body.String())
 }
@@ -511,7 +511,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
-	s.GetValidatorActiveSetChanges(writer, request)
+	s.GetActiveSetChanges(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
 
 	wantedActive := []string{

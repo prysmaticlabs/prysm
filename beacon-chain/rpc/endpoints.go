@@ -1080,40 +1080,40 @@ func (s *Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *cor
 	return []endpoint{
 		{
 			template: "/prysm/validators/performance",
-			name:     namespace + ".GetValidatorPerformance",
+			name:     namespace + ".GetPerformance",
 			middleware: []mux.MiddlewareFunc{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
-			handler: server.GetValidatorPerformance,
+			handler: server.GetPerformance,
 			methods: []string{http.MethodPost},
 		},
 		{
 			template: "/prysm/v1/validators/performance",
-			name:     namespace + ".GetValidatorPerformance",
+			name:     namespace + ".GetPerformance",
 			middleware: []mux.MiddlewareFunc{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
-			handler: server.GetValidatorPerformance,
+			handler: server.GetPerformance,
 			methods: []string{http.MethodPost},
 		},
 		{
 			template: "/prysm/v1/validators/participation",
-			name:     namespace + ".GetValidatorParticipation",
+			name:     namespace + ".GetParticipation",
 			middleware: []mux.MiddlewareFunc{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
-			handler: server.GetValidatorParticipation,
+			handler: server.GetParticipation,
 			methods: []string{http.MethodGet},
 		},
 		{
 			template: "/prysm/v1/validators/active_set_changes",
-			name:     namespace + ".GetValidatorActiveSetChanges",
+			name:     namespace + ".GetActiveSetChanges",
 			middleware: []mux.MiddlewareFunc{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
-			handler: server.GetValidatorActiveSetChanges,
+			handler: server.GetActiveSetChanges,
 			methods: []string{http.MethodGet},
 		},
 	}
