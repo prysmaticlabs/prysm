@@ -328,6 +328,11 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 					assignments[vIndex].PtcSlot = slot
 				}
 			}
+
+			// We only need to assign PTC slots for the first `PTCPerSlot` committees of a given slot.
+			if uint64(j) < ptcPerSlot {
+				assignments = PTCAssignments(committee, assignments, PtcMembersPerCommittee, slot)
+			}
 		}
 		slot++
 		if slot == endSlot {
@@ -339,6 +344,39 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 		}
 	}
 	return assignments, nil
+}
+
+// PTCAssignments updates the PTC slot assignments for the given committee members.
+// committee: a slice of ValidatorIndex representing committee members.
+// assignments: a map of ValidatorIndex to CommitteeAssignment where assignments will be updated.
+// membersPerCommittee: the number of members to be assigned to the PTC committee.
+// slot: the slot to be assigned for PTC assignment.
+// Returns the updated assignments map.
+func PTCAssignments(committee []primitives.ValidatorIndex,
+	assignments map[primitives.ValidatorIndex]*CommitteeAssignment,
+	membersPerCommittee uint64,
+	slot primitives.Slot) map[primitives.ValidatorIndex]*CommitteeAssignment {
+	committeeLength := uint64(len(committee))
+	// If the number of PTC members is greater than Beacon members,
+	// return the current assignments without changes.
+	if membersPerCommittee > committeeLength {
+		return assignments
+	}
+
+	// Loop through the selected committee members for PTC assignments.
+	for i := uint64(0); i < membersPerCommittee; i++ {
+		vIndex := committee[i]
+
+		assignment, exists := assignments[vIndex]
+		if !exists {
+			assignment = &CommitteeAssignment{}
+			assignments[vIndex] = assignment
+		}
+
+		assignment.PtcSlot = slot
+	}
+
+	return assignments
 }
 
 // VerifyBitfieldLength verifies that a bitfield length matches the given committee size.

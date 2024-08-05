@@ -73,6 +73,12 @@ type ReadOnlyBeaconBlockBody interface {
 	SignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error)
 }
 
+type ROBlockBodyEpbs interface {
+	ReadOnlyBeaconBlockBody
+	PayloadAttestations() []*ethpb.PayloadAttestation
+	SignedExecutionPayloadHeader() *enginev1.SignedExecutionPayloadHeader
+}
+
 type SignedBeaconBlock interface {
 	ReadOnlySignedBeaconBlock
 	SetExecution(ExecutionData) error

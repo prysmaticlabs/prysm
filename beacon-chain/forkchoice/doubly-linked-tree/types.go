@@ -41,26 +41,33 @@ type Store struct {
 	highestReceivedNode           *Node                                      // The highest slot node.
 	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]primitives.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
 	allTipsAreInvalid             bool                                       // tracks if all tips are not viable for head
+	payloadWithholdBoostRoot      [fieldparams.RootLength]byte               // the root of the block that receives the withhold boost
+	payloadWithholdBoostFull      bool                                       // Indicator of whether the block receiving the withhold boost is full or empty
+	payloadRevealBoostRoot        [fieldparams.RootLength]byte               // the root of the block that receives the reveal boost
+	ptcVote                       map[[fieldparams.RootLength]byte][]byte    // tracks the Payload Timeliness Committee (PTC) votes for each block
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
 // This is used as an array based stateful DAG for efficient fork choice look up.
 type Node struct {
-	slot                     primitives.Slot              // slot of the block converted to the node.
-	root                     [fieldparams.RootLength]byte // root of the block converted to the node.
-	payloadHash              [fieldparams.RootLength]byte // payloadHash of the block converted to the node.
-	parent                   *Node                        // parent index of this node.
-	target                   *Node                        // target checkpoint for
-	children                 []*Node                      // the list of direct children of this Node
-	justifiedEpoch           primitives.Epoch             // justifiedEpoch of this node.
-	unrealizedJustifiedEpoch primitives.Epoch             // the epoch that would be justified if the block would be advanced to the next epoch.
-	finalizedEpoch           primitives.Epoch             // finalizedEpoch of this node.
-	unrealizedFinalizedEpoch primitives.Epoch             // the epoch that would be finalized if the block would be advanced to the next epoch.
-	balance                  uint64                       // the balance that voted for this node directly
-	weight                   uint64                       // weight of this node: the total balance including children
-	bestDescendant           *Node                        // bestDescendant node of this node.
-	optimistic               bool                         // whether the block has been fully validated or not
-	timestamp                uint64                       // The timestamp when the node was inserted.
+	slot                     primitives.Slot                         // slot of the block converted to the node.
+	root                     [fieldparams.RootLength]byte            // root of the block converted to the node.
+	payloadHash              [fieldparams.RootLength]byte            // payloadHash of the block converted to the node.
+	parent                   *Node                                   // parent index of this node.
+	target                   *Node                                   // target checkpoint for
+	children                 []*Node                                 // the list of direct children of this Node
+	justifiedEpoch           primitives.Epoch                        // justifiedEpoch of this node.
+	unrealizedJustifiedEpoch primitives.Epoch                        // the epoch that would be justified if the block would be advanced to the next epoch.
+	finalizedEpoch           primitives.Epoch                        // finalizedEpoch of this node.
+	unrealizedFinalizedEpoch primitives.Epoch                        // the epoch that would be finalized if the block would be advanced to the next epoch.
+	balance                  uint64                                  // the balance that voted for this node directly
+	weight                   uint64                                  // weight of this node: the total balance including children
+	bestDescendant           *Node                                   // bestDescendant node of this node.
+	optimistic               bool                                    // whether the block has been fully validated or not
+	timestamp                uint64                                  // The timestamp when the node was inserted.
+	latestBlockHash          [fieldparams.RootLength]byte            // Hash of the latest execution payload
+	latestFullSlot           primitives.Slot                         // Slot of the latest full block (with execution payload)
+	ptcVote                  map[[fieldparams.RootLength]byte][]byte // tracks the Payload Timeliness Committee (PTC) votes for each block
 }
 
 // Vote defines an individual validator's vote.
@@ -68,4 +75,11 @@ type Vote struct {
 	currentRoot [fieldparams.RootLength]byte // current voting root.
 	nextRoot    [fieldparams.RootLength]byte // next voting root.
 	slot        primitives.Slot              // slot of the last vote by this validator
+}
+
+// ChildNode represents a possible child of a Node in the fork choice store.
+type ChildNode struct {
+	root             [fieldparams.RootLength]byte
+	slot             primitives.Slot
+	isPayloadPresent bool
 }
