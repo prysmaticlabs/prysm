@@ -13,3 +13,6 @@ func (ini *Initializer) NewPayloadAttestationMsgVerifier(pa payloadattestation.R
 		pa:              pa,
 	}
 }
+// NewPayloadAttestationMsgVerifier  is a function signature that can be used by code that needs to be
+// able to mock Initializer.NewPayloadAttestationMsgVerifier without complex setup.
+type NewPayloadAttestationMsgVerifier func(pa payloadattestation.ROMessage, reqs []Requirement) PayloadAttMsgVerifier
