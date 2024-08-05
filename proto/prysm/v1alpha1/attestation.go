@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// TODO: Add constructor so that we don't have to recalculate ID
 // Att defines common functionality for all attestation types.
 type Att interface {
 	proto.Message

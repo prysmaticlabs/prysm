@@ -41,8 +41,7 @@ func (s *Service) prepareForkChoiceAtts() {
 			}
 			switch slotInterval.Interval {
 			case 0:
-				duration := time.Since(t)
-				batchForkChoiceAttsT1.Observe(float64(duration.Milliseconds()))
+				batchForkChoiceAttsT1.Observe(float64(time.Since(t).Milliseconds()))
 			case 1:
 				batchForkChoiceAttsT2.Observe(float64(time.Since(t).Milliseconds()))
 			}
@@ -57,10 +56,10 @@ func (s *Service) prepareForkChoiceAtts() {
 // pool. Then finds the common data, aggregate and batch them for fork choice.
 // The resulting attestations are saved in the fork choice pool.
 func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
+	_, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
 	defer span.End()
 
-	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.ForkchoiceAttestations()...)
+	atts := append(s.cfg.Cache.GetAll(), s.cfg.Pool.ForkchoiceAttestations()...)
 
 	attsById := make(map[attestation.Id][]ethpb.Att, len(atts))
 

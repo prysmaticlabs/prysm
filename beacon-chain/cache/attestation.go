@@ -45,6 +45,7 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 		group = &attGroup{
 			slot: att.GetData().Slot,
 		}
+		c.attestations[id] = group
 	}
 
 	if att.IsAggregated() {
@@ -56,7 +57,6 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 	local := c.attestations[id].local
 	if local == nil {
 		local = att.Clone()
-		return nil
 	}
 	bit := att.GetAggregationBits().BitIndices()[0]
 	if local.GetAggregationBits().BitAt(uint64(bit)) {
@@ -213,7 +213,7 @@ func (c *AttestationCache) AggregateIsRedundant(att ethpb.Att) (bool, error) {
 
 func GetBySlotAndCommitteeIndex[T ethpb.Att](c *AttestationCache, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []T {
 	c.Lock()
-	c.Unlock()
+	defer c.Unlock()
 
 	var result []T
 	for _, group := range c.attestations {

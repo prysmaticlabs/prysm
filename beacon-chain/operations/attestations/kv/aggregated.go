@@ -178,7 +178,6 @@ func (c *AttCaches) SaveAggregatedAttestations(atts []ethpb.Att) error {
 	return nil
 }
 
-// TODO
 // AggregatedAttestations returns the aggregated attestations in cache.
 func (c *AttCaches) AggregatedAttestations() []ethpb.Att {
 	c.aggregatedAttLock.RLock()
