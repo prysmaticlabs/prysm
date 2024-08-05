@@ -155,7 +155,6 @@ func (s *Service) updateCheckpoints(
 	cp ffgCheckpoints,
 	preState, postState state.BeaconState,
 	blockRoot [32]byte,
-
 ) error {
 	if coreTime.CurrentEpoch(postState) > cp.c && s.cfg.ForkChoiceStore.IsCanonical(blockRoot) {
 		headSt, err := s.HeadState(ctx)
