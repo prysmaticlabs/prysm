@@ -120,14 +120,14 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 // Spec pseudocode definition:
 //
 //	def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
-//		if st.version() >= version.EPBS :
-//			if not is_parent_block_full(state):
+//		if st.version() >= version.EPBS : 
+//			if not is_parent_block_full(state): # [New in EPBS:EIP7732]
 //		 		return
 //		
 //	    expected_withdrawals, partial_withdrawals_count = get_expected_withdrawals(state)  # [Modified in Electra:EIP7251]
 //
-//		if st.version() >= version.EPBS:
-//			state.latest_withdrawals_root = hash_tree_root(expected_withdrawals)
+//		if st.version() >= version.EPBS: 
+//			state.latest_withdrawals_root = hash_tree_root(expected_withdrawals) # [New in EPBS:EIP7732]
 //		else :	
 //	    	assert len(payload.withdrawals) == len(expected_withdrawals)
 //
