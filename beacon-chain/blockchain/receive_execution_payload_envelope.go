@@ -7,14 +7,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epbs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -42,7 +40,7 @@ func (s *Service) ReceiveExecutionPayloadEnvelope(ctx context.Context, envelope 
 	eg, _ := errgroup.WithContext(ctx)
 	var postState state.BeaconState
 	eg.Go(func() error {
-		if err := validatePayloadStateTransition(ctx, preState, envelope); err != nil {
+		if err := epbs.ValidatePayloadStateTransition(ctx, preState, envelope); err != nil {
 			return errors.Wrap(err, "failed to validate consensus state transition function")
 		}
 		return nil
@@ -72,131 +70,6 @@ func (s *Service) ReceiveExecutionPayloadEnvelope(ctx context.Context, envelope 
 	return nil
 }
 
-func validateAgainstHeader(
-	ctx context.Context,
-	preState state.BeaconState,
-	blockHeader *ethpb.BeaconBlockHeader,
-	envelope interfaces.ROExecutionPayloadEnvelope,
-) error {
-	if blockHeader.StateRoot == nil || [32]byte(blockHeader.StateRoot) == [32]byte{} {
-		prevStateRoot, err := preState.HashTreeRoot(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not compute previous state root")
-		}
-		blockHeader.StateRoot = prevStateRoot[:]
-		if err := preState.SetLatestBlockHeader(blockHeader); err != nil {
-			return errors.Wrap(err, "could not set latest block header")
-		}
-	}
-	blockHeaderRoot, err := blockHeader.HashTreeRoot()
-	if err != nil {
-		return err
-	}
-	beaconBlockRoot, err := envelope.BeaconBlockRoot()
-	if err != nil {
-		return err
-	}
-	if blockHeaderRoot != beaconBlockRoot {
-		return errors.New("beacon block root does not match previous header")
-	}
-	return nil
-}
-
-func validateAgainstCommittedBid(
-	committedHeader *enginev1.ExecutionPayloadHeaderEPBS,
-	envelope interfaces.ROExecutionPayloadEnvelope,
-) error {
-	builderIndex, err := envelope.BuilderIndex()
-	if err != nil {
-		return err
-	}
-	if committedHeader.BuilderIndex != builderIndex {
-		return errors.New("builder index does not match committed header")
-	}
-	kzgRoot, err := envelope.BlobKzgCommitmentsRoot()
-	if err != nil {
-		return err
-	}
-	if [32]byte(committedHeader.BlobKzgCommitmentsRoot) != kzgRoot {
-		return errors.New("blob KZG commitments root does not match committed header")
-	}
-	return nil
-}
-
-func processPayloadStateTransition(
-	ctx context.Context,
-	preState state.BeaconState,
-	envelope interfaces.ROExecutionPayloadEnvelope,
-) error {
-	payload, err := envelope.Execution()
-	if err != nil {
-		return err
-	}
-	exe, ok := payload.(interfaces.ExecutionDataElectra)
-	if !ok {
-		return errors.New("could not cast execution data to electra execution data")
-	}
-	preState, err = electra.ProcessDepositRequests(ctx, preState, exe.DepositRequests())
-	if err != nil {
-		return errors.Wrap(err, "could not process deposit receipts")
-	}
-	preState, err = electra.ProcessWithdrawalRequests(ctx, preState, exe.WithdrawalRequests())
-	if err != nil {
-		return errors.Wrap(err, "could not process execution layer withdrawal requests")
-	}
-	if err := electra.ProcessConsolidationRequests(ctx, preState, exe.ConsolidationRequests()); err != nil {
-		return errors.Wrap(err, "could not process consolidation requests")
-	}
-	if err := preState.SetLatestBlockHash(payload.BlockHash()); err != nil {
-		return err
-	}
-	return preState.SetLatestFullSlot(preState.Slot())
-}
-
-func checkPostStateRoot(
-	ctx context.Context,
-	preState state.BeaconState,
-	envelope interfaces.ROExecutionPayloadEnvelope,
-) error {
-	stateRoot, err := preState.HashTreeRoot(ctx)
-	if err != nil {
-		return err
-	}
-	envelopeStateRoot, err := envelope.StateRoot()
-	if err != nil {
-		return err
-	}
-	if stateRoot != envelopeStateRoot {
-		return errors.New("state root mismatch")
-	}
-	return nil
-}
-
-func validatePayloadStateTransition(
-	ctx context.Context,
-	preState state.BeaconState,
-	envelope interfaces.ROExecutionPayloadEnvelope,
-) error {
-	blockHeader := preState.LatestBlockHeader()
-	if blockHeader == nil {
-		return errors.New("invalid nil latest block header")
-	}
-	if err := validateAgainstHeader(ctx, preState, blockHeader, envelope); err != nil {
-		return err
-	}
-	committedHeader, err := preState.LatestExecutionPayloadHeaderEPBS()
-	if err != nil {
-		return err
-	}
-	if err := validateAgainstCommittedBid(committedHeader, envelope); err != nil {
-		return err
-	}
-	if err := processPayloadStateTransition(ctx, preState, envelope); err != nil {
-		return err
-	}
-	return checkPostStateRoot(ctx, preState, envelope)
-}
-
 // notifyNewPayload signals execution engine on a new payload.
 // It returns true if the EL has returned VALID for the block
 func (s *Service) notifyNewEnvelope(ctx context.Context, envelope interfaces.ROExecutionPayloadEnvelope) (bool, error) {
@@ -205,7 +78,7 @@ func (s *Service) notifyNewEnvelope(ctx context.Context, envelope interfaces.ROE
 
 	payload, err := envelope.Execution()
 	if err != nil {
-		return false, errors.Wrap(invalidBlock{error: err}, "could not get execution payload")
+		return false, errors.Wrap(err, "could not get execution payload")
 	}
 
 	var lastValidHash []byte
@@ -249,8 +122,8 @@ func (s *Service) notifyNewEnvelope(ctx context.Context, envelope interfaces.ROE
 func (s *Service) validateExecutionOnEnvelope(ctx context.Context, e interfaces.ROExecutionPayloadEnvelope, parentRoot [32]byte) (bool, error) {
 	isValidPayload, err := s.notifyNewEnvelope(ctx, e)
 	if err != nil {
-		blockRoot, err := e.BeaconBlockRoot()
-		if err != nil {
+		blockRoot, rootErr := e.BeaconBlockRoot()
+		if rootErr != nil {
 			return false, err
 		}
 		s.cfg.ForkChoiceStore.Lock()
