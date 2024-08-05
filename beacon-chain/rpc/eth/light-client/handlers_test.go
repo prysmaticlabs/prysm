@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -61,10 +60,9 @@ func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
 		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 	}
-	muxVars := make(map[string]string)
-	muxVars["block_root"] = hexutil.Encode(r[:])
+
 	request := httptest.NewRequest("GET", "http://foo.com/", nil)
-	request = mux.SetURLVars(request, muxVars)
+	request.SetPathValue("block_root",hexutil.Encode(r[:]))
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 

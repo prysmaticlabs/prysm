@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
@@ -1464,7 +1463,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		_, err = body.WriteString("[\"0\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1488,7 +1487,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		_, err = body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1500,7 +1499,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	})
 	t.Run("no body", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1516,7 +1515,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		_, err := body.WriteString("[]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1532,7 +1531,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		_, err := body.WriteString("[\"foo\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1547,7 +1546,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		_, err = body.WriteString("[\"0\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": strconv.FormatUint(uint64(slots.ToEpoch(bs.Slot())+1), 10)})
+		request.SetPathValue("epoch", strconv.FormatUint(uint64(slots.ToEpoch(bs.Slot())+1), 10))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1572,7 +1571,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
 		currentEpoch := slots.ToEpoch(bs.Slot())
-		request = mux.SetURLVars(request, map[string]string{"epoch": strconv.FormatUint(uint64(currentEpoch+2), 10)})
+		request.SetPathValue("epoch", strconv.FormatUint(uint64(currentEpoch+2), 10))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1588,7 +1587,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		_, err = body.WriteString(fmt.Sprintf("[\"%d\"]", len(pubKeys)))
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1604,7 +1603,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		_, err = body.WriteString(fmt.Sprintf("[\"%d\"]", len(pubKeys)-1))
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1642,7 +1641,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		_, err = body.WriteString("[\"0\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1664,7 +1663,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1721,7 +1720,7 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1763,7 +1762,7 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
+		request.SetPathValue("epoch", "1")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1807,7 +1806,7 @@ func TestGetProposerDuties(t *testing.T) {
 
 		currentEpoch := slots.ToEpoch(bs.Slot())
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": strconv.FormatUint(uint64(currentEpoch+2), 10)})
+		request.SetPathValue("epoch", strconv.FormatUint(uint64(currentEpoch+2), 10))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1845,7 +1844,7 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1867,7 +1866,7 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1923,7 +1922,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[\"1\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1946,7 +1945,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[\"1\",\"2\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1958,7 +1957,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	})
 	t.Run("no body", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1974,7 +1973,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -1990,7 +1989,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[\"foo\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2005,7 +2004,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[\"1\",\"10\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2021,7 +2020,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[\"0\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2038,7 +2037,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString(fmt.Sprintf("[\"%d\"]", numVals))
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2054,7 +2053,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[\"5\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": strconv.FormatUint(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod), 10)})
+		request.SetPathValue("epoch", strconv.FormatUint(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod), 10))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2111,7 +2110,8 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[\"8\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": strconv.FormatUint(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod), 10)})
+		request.SetPathValue("epoch", strconv.FormatUint(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod), 10))
+		request.SetPathValue("epoch", strconv.FormatUint(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod), 10))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2131,7 +2131,8 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[\"1\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
+		request.SetPathValue("epoch", "0")
+		request.SetPathValue("epoch", "1")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2151,7 +2152,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[\"5\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": strconv.FormatUint(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod*2), 10)})
+		request.SetPathValue("epoch", strconv.FormatUint(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod*2), 10))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2207,7 +2208,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err = body.WriteString("[\"1\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
+		request.SetPathValue("epoch", "1")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2229,7 +2230,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
+		request.SetPathValue("epoch", "1")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2453,7 +2454,7 @@ func TestGetLiveness(t *testing.T) {
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2472,7 +2473,7 @@ func TestGetLiveness(t *testing.T) {
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
+		request.SetPathValue("epoch", "1")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2491,7 +2492,7 @@ func TestGetLiveness(t *testing.T) {
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "2"})
+		request.SetPathValue("epoch", "2")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2510,7 +2511,7 @@ func TestGetLiveness(t *testing.T) {
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "3"})
+		request.SetPathValue("epoch", "3")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2541,7 +2542,7 @@ func TestGetLiveness(t *testing.T) {
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "foo"})
+		request.SetPathValue("epoch", "foo")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2554,7 +2555,7 @@ func TestGetLiveness(t *testing.T) {
 	})
 	t.Run("no body", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "3"})
+		request.SetPathValue("epoch", "3")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2570,7 +2571,7 @@ func TestGetLiveness(t *testing.T) {
 		_, err := body.WriteString("[]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "3"})
+		request.SetPathValue("epoch", "3")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2586,7 +2587,7 @@ func TestGetLiveness(t *testing.T) {
 		_, err := body.WriteString("[\"0\",\"1\",\"2\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		request.SetPathValue("epoch", "0")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 

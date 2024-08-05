@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
@@ -38,7 +37,7 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 	testCases := []struct {
 		name         string
 		path         string
-		urlParams    map[string]string
+		urlParams    [] string
 		state        state.BeaconState
 		errorMessage string
 	}{
@@ -46,14 +45,14 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 			name: "no state_id url params",
 			path: "/eth/v1/builder/states/{state_id}/expected_withdrawals?proposal_slot" +
 				strconv.FormatUint(uint64(currentSlot), 10),
-			urlParams:    map[string]string{},
+			urlParams:    []string{},
 			state:        nil,
 			errorMessage: "state_id is required in URL params",
 		},
 		{
 			name:         "invalid proposal slot value",
 			path:         "/eth/v1/builder/states/{state_id}/expected_withdrawals?proposal_slot=aaa",
-			urlParams:    map[string]string{"state_id": "head"},
+			urlParams:    []string{"state_id", "head"},
 			state:        st,
 			errorMessage: "invalid proposal slot value",
 		},
@@ -61,7 +60,7 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 			name: "proposal slot < Capella start slot",
 			path: "/eth/v1/builder/states/{state_id}/expected_withdrawals?proposal_slot=" +
 				strconv.FormatUint(uint64(capellaSlot)-1, 10),
-			urlParams:    map[string]string{"state_id": "head"},
+			urlParams:    []string{"state_id", "head"},
 			state:        st,
 			errorMessage: "expected withdrawals are not supported before Capella fork",
 		},
@@ -69,7 +68,7 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 			name: "proposal slot == Capella start slot",
 			path: "/eth/v1/builder/states/{state_id}/expected_withdrawals?proposal_slot=" +
 				strconv.FormatUint(uint64(capellaSlot), 10),
-			urlParams:    map[string]string{"state_id": "head"},
+			urlParams:    []string{"state_id", "head"},
 			state:        st,
 			errorMessage: "proposal slot must be bigger than state slot",
 		},
@@ -77,7 +76,7 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 			name: "Proposal slot >= 128 slots ahead of state slot",
 			path: "/eth/v1/builder/states/{state_id}/expected_withdrawals?proposal_slot=" +
 				strconv.FormatUint(uint64(currentSlot+128), 10),
-			urlParams:    map[string]string{"state_id": "head"},
+			urlParams:    []string{"state_id", "head"},
 			state:        st,
 			errorMessage: "proposal slot cannot be >= 128 slots ahead of state slot",
 		},
@@ -91,7 +90,11 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 				Stater:                &testutil.MockStater{BeaconState: testCase.state},
 			}
 			request := httptest.NewRequest("GET", testCase.path, nil)
-			request = mux.SetURLVars(request, testCase.urlParams)
+			if len(testCase.urlParams) != 0 {
+				request.SetPathValue(testCase.urlParams[0], testCase.urlParams[1])
+			}else{
+				request.SetPathValue("state_id","")
+			}
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
@@ -172,7 +175,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		request := httptest.NewRequest(
 			"GET", "/eth/v1/builder/states/{state_id}/expected_withdrawals?proposal_slot="+
 				strconv.FormatUint(uint64(currentSlot+params.BeaconConfig().SlotsPerEpoch), 10), nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
