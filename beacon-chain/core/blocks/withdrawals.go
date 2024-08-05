@@ -123,7 +123,7 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 //		if st.version() >= version.EPBS :
 //			if not is_parent_block_full(state): # [New in EPBS:EIP7732]
 //		 		return
-//		
+//
 //	    expected_withdrawals, partial_withdrawals_count = get_expected_withdrawals(state)  # [Modified in Electra:EIP7251]
 //
 //		if st.version() >= version.EPBS:
