@@ -452,7 +452,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
 
-		require.LogsContain(t, hook, "\"Proposer: using local execution payload because min bid not attained\" builderGweiValue=1 localGweiValue=2")
+		require.LogsContain(t, hook, "\"Proposer: using local execution payload because min bid not attained\" builderGweiValue=1 minBuilderBid=5")
 		cfg.MinBuilderBid = 0
 		params.OverrideBeaconConfig(cfg)
 	})
