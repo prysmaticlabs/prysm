@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
-	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
@@ -40,70 +38,119 @@ func ComputeFieldRootsForBlockBody(ctx context.Context, blockBody *BeaconBlockBo
 		return nil, fmt.Errorf("unknown block body version %s", version.String(blockBody.version))
 	}
 
-	chunks, err := ssz.PackByChunk([][]byte{blockBody.randaoReveal[:]})
+	// Randao Reveal
+	randao := blockBody.RandaoReveal()
+	root, err := ssz.MerkleizeByteSliceSSZ(randao[:])
 	if err != nil {
-		return nil, errors.Wrap(err, "could not pack randao reveal into chunks")
+		return nil, err
+	}
+	copy(fieldRoots[0], root[:])
+
+	// eth1_data
+	eth1 := blockBody.Eth1Data()
+	root, err = eth1.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[1], root[:])
+
+	// graffiti
+	root = blockBody.Graffiti()
+	copy(fieldRoots[2], root[:])
+
+	// Proposer slashings
+	ps := blockBody.ProposerSlashings()
+	root, err = ssz.MerkleizeListSSZ(ps, params.BeaconConfig().MaxProposerSlashings)
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[3], root[:])
+
+	// Attester slashings
+	as := blockBody.AttesterSlashings()
+	bodyVersion := blockBody.Version()
+	if bodyVersion < version.Electra {
+		root, err = ssz.MerkleizeListSSZ(as, params.BeaconConfig().MaxAttesterSlashings)
+	} else {
+		root, err = ssz.MerkleizeListSSZ(as, params.BeaconConfig().MaxAttesterSlashingsElectra)
+	}
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[4], root[:])
+
+	// Attestations
+	att := blockBody.Attestations()
+	if bodyVersion < version.Electra {
+		root, err = ssz.MerkleizeListSSZ(att, params.BeaconConfig().MaxAttestations)
+	} else {
+		root, err = ssz.MerkleizeListSSZ(att, params.BeaconConfig().MaxAttestationsElectra)
+	}
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[5], root[:])
+
+	// Deposits
+	dep := blockBody.Deposits()
+	root, err = ssz.MerkleizeListSSZ(dep, params.BeaconConfig().MaxDeposits)
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[6], root[:])
+
+	// Voluntary Exits
+	ve := blockBody.VoluntaryExits()
+	root, err = ssz.MerkleizeListSSZ(ve, params.BeaconConfig().MaxVoluntaryExits)
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[7], root[:])
+
+	// Sync Aggregate
+	sa, err := blockBody.SyncAggregate()
+	if err != nil {
+		return nil, err
+	}
+	root, err = sa.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[8], root[:])
+
+	// Execution Payload
+	ep, err := blockBody.Execution()
+	if err != nil {
+		return nil, err
+	}
+	root, err = ep.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[9], root[:])
+
+	// BLS Changes
+	bls, err := blockBody.BLSToExecutionChanges()
+	if err != nil {
+		return nil, err
+	}
+	root, err = ssz.MerkleizeListSSZ(bls, params.BeaconConfig().MaxBlsToExecutionChanges)
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[10], root[:])
+
+	// KZG commitments
+	chunks, err := ssz.PackByChunk(blockBody.blobKzgCommitments)
+	if err != nil {
+		return nil, err
 	}
 	var a [32]byte
 	a, err = ssz.BitwiseMerkleize(chunks, uint64(len(chunks)), uint64(len(chunks)))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not compute randao reveal merkleization")
+		return nil, err
 	}
-	fieldRoots[0] = a[:]
+	copy(fieldRoots[11], a[:])
 
-	eth1DataRoot, err := stateutil.Eth1Root(blockBody.eth1Data)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not compute eth1data merkleization")
-	}
-	fieldRoots[1] = eth1DataRoot[:]
-
-	var b [field_params.RootLength]byte
-	copy(b[:], blockBody.graffiti[:])
-	fieldRoots[2] = b[:]
-
-	proposerSlashingsRoot, err := ssz.SliceRoot(blockBody.proposerSlashings, field_params.MaxProposerSlashings)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not compute proposer slashings merkleization")
-	}
-	fieldRoots[3] = proposerSlashingsRoot[:]
-
-	if blockBody.version < version.Electra {
-		attesterSlashingsRoot, err := ssz.SliceRoot(blockBody.attesterSlashings, field_params.MaxAttesterSlashings)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not compute attester slashings merkleization")
-		}
-		fieldRoots[4] = attesterSlashingsRoot[:]
-	} else {
-		attesterSlashingsElectraRoot, err := ssz.SliceRoot(blockBody.attesterSlashingsElectra, field_params.MaxAttesterSlashingsElectra)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not compute attester slashings electra merkleization")
-		}
-		fieldRoots[4] = attesterSlashingsElectraRoot[:]
-	}
-
-	if blockBody.version < version.Electra {
-		attestationsRoot, err := ssz.SliceRoot(blockBody.attestations, field_params.MaxAttestations)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not compute attestations merkleization")
-		}
-		fieldRoots[5] = attestationsRoot[:]
-	} else {
-		attestationsElectraRoot, err := ssz.SliceRoot(blockBody.attestationsElectra, field_params.MaxAttestationsElectra)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not compute attestations electra merkleization")
-		}
-		fieldRoots[5] = attestationsElectraRoot[:]
-	}
-
-	depositsRoot, err := ssz.SliceRoot(blockBody.deposits, field_params.MaxDeposits)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not compute deposits merkleization")
-	}
-	fieldRoots[6] = depositsRoot[:]
-
-	voluntaryExitsRoot, err := ssz.SliceRoot(blockBody.voluntaryExits, field_params.MaxVoluntaryExits)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not compute voluntary exits merkleization")
-	}
-	fieldRoots[7] = voluntaryExitsRoot[:]
+	return fieldRoots, nil
 }
