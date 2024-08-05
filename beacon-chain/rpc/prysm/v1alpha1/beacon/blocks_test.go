@@ -8,6 +8,7 @@ import (
 
 	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -68,16 +69,19 @@ func TestServer_GetChainHead_NoGenesis(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(genBlock)
 		require.NoError(t, err)
 		bs := &Server{
-			BeaconDB:    db,
-			HeadFetcher: &chainMock.ChainService{Block: wsb, State: s},
-			FinalizationFetcher: &chainMock.ChainService{
-				FinalizedCheckPoint:         s.FinalizedCheckpoint(),
-				CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
-				PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
-			OptimisticModeFetcher: &chainMock.ChainService{},
+			CoreService: &core.Service{
+				BeaconDB:    db,
+				HeadFetcher: &chainMock.ChainService{Block: wsb, State: s},
+				FinalizedFetcher: &chainMock.ChainService{
+					FinalizedCheckPoint:         s.FinalizedCheckpoint(),
+					CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
+					PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint(),
+				},
+				OptimisticModeFetcher: &chainMock.ChainService{},
+			},
 		}
 		_, err = bs.GetChainHead(context.Background(), nil)
-		require.ErrorContains(t, "Could not get genesis block", err)
+		require.ErrorContains(t, "could not get genesis block", err)
 	}
 }
 
@@ -102,26 +106,30 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &chainMock.ChainService{Block: wsb, State: s},
-		FinalizationFetcher: &chainMock.ChainService{
-			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
-			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
-			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
-		OptimisticModeFetcher: &chainMock.ChainService{},
+		CoreService: &core.Service{
+			BeaconDB:    db,
+			HeadFetcher: &chainMock.ChainService{Block: wsb, State: s},
+			FinalizedFetcher: &chainMock.ChainService{
+				FinalizedCheckPoint:         s.FinalizedCheckpoint(),
+				CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
+				PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+			OptimisticModeFetcher: &chainMock.ChainService{},
+		},
 	}
 
 	_, err = bs.GetChainHead(context.Background(), nil)
-	require.ErrorContains(t, "Could not get finalized block", err)
+	require.ErrorContains(t, "could not get finalized block", err)
 }
 
 func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 	bs := &Server{
-		HeadFetcher:           &chainMock.ChainService{Block: nil},
-		OptimisticModeFetcher: &chainMock.ChainService{},
+		CoreService: &core.Service{
+			HeadFetcher:           &chainMock.ChainService{Block: nil},
+			OptimisticModeFetcher: &chainMock.ChainService{},
+		},
 	}
 	_, err := bs.GetChainHead(context.Background(), nil)
-	assert.ErrorContains(t, "Head block of chain was nil", err)
+	assert.ErrorContains(t, "head block of chain was nil", err)
 }
 
 func TestServer_GetChainHead(t *testing.T) {
@@ -172,13 +180,15 @@ func TestServer_GetChainHead(t *testing.T) {
 	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	bs := &Server{
-		BeaconDB:              db,
-		HeadFetcher:           &chainMock.ChainService{Block: wsb, State: s},
-		OptimisticModeFetcher: &chainMock.ChainService{},
-		FinalizationFetcher: &chainMock.ChainService{
-			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
-			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
-			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+		CoreService: &core.Service{
+			BeaconDB:              db,
+			HeadFetcher:           &chainMock.ChainService{Block: wsb, State: s},
+			OptimisticModeFetcher: &chainMock.ChainService{},
+			FinalizedFetcher: &chainMock.ChainService{
+				FinalizedCheckPoint:         s.FinalizedCheckpoint(),
+				CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
+				PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+		},
 	}
 
 	head, err := bs.GetChainHead(context.Background(), nil)

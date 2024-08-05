@@ -983,6 +983,15 @@ func (s *Service) prysmBeaconEndpoints(
 			handler: server.GetIndividualVotes,
 			methods: []string{http.MethodPost},
 		},
+		{
+			template: "/prysm/v1/beacon/chain_head",
+			name:     namespace + ".GetChainHead",
+			middleware: []mux.MiddlewareFunc{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetChainHead,
+			methods: []string{http.MethodGet},
+		},
 	}
 }
 
@@ -1060,10 +1069,11 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 	}
 }
 
-func (*Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *core.Service) []endpoint {
+func (s *Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *core.Service) []endpoint {
 	server := &validatorprysm.Server{
-		Stater:      stater,
-		CoreService: coreService,
+		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		Stater:           stater,
+		CoreService:      coreService,
 	}
 
 	const namespace = "prysm.validator"
@@ -1088,14 +1098,23 @@ func (*Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *core.
 			handler: server.GetValidatorPerformance,
 			methods: []string{http.MethodPost},
 		},
-		{
+    {
+			template: "/prysm/v1/validators/participation",
+			name:     namespace + ".GetValidatorParticipation",
+			middleware: []mux.MiddlewareFunc{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetValidatorParticipation,
+			methods: []string{http.MethodGet},
+		},
+    {
 			template: "/prysm/v1/validators/active_set_changes",
 			name:     namespace + ".GetValidatorActiveSetChanges",
 			middleware: []mux.MiddlewareFunc{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetValidatorActiveSetChanges,
-			methods: []string{http.MethodGet},
-		},
+      methods: []string{http.MethodGet},
+    },
 	}
 }

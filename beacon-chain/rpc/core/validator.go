@@ -754,6 +754,90 @@ func subnetsFromCommittee(pubkey []byte, comm *ethpb.SyncCommittee) []uint64 {
 	return positions
 }
 
+// ValidatorParticipation retrieves the validator participation information for a given epoch,
+// it returns the information about validator's participation rate in voting on the proof of stake
+// rules based on their balance compared to the total active validator balance.
+func (s *Service) ValidatorParticipation(
+	ctx context.Context,
+	requestedEpoch primitives.Epoch,
+) (
+	*ethpb.ValidatorParticipationResponse,
+	*RpcError,
+) {
+	currentSlot := s.GenesisTimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(currentSlot)
+
+	if requestedEpoch > currentEpoch {
+		return nil, &RpcError{
+			Err:    fmt.Errorf("cannot retrieve information about an epoch greater than current epoch, current epoch %d, requesting %d", currentEpoch, requestedEpoch),
+			Reason: BadRequest,
+		}
+	}
+	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
+	// This ensures that we don't miss previous attestations when input requested epochs.
+	endSlot, err := slots.EpochEnd(requestedEpoch)
+	if err != nil {
+		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get slot from requested epoch")}
+	}
+	// Get as close as we can to the end of the current epoch without going past the current slot.
+	// The above check ensures a future *epoch* isn't requested, but the end slot of the requested epoch could still
+	// be past the current slot. In that case, use the current slot as the best approximation of the requested epoch.
+	// Replayer will make sure the slot ultimately used is canonical.
+	if endSlot > currentSlot {
+		endSlot = currentSlot
+	}
+
+	// ReplayerBuilder ensures that a canonical chain is followed to the slot
+	beaconSt, err := s.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayBlocks(ctx)
+	if err != nil {
+		return nil, &RpcError{Reason: Internal, Err: errors.Wrapf(err, "error replaying blocks for state at slot %d", endSlot)}
+	}
+	var v []*precompute.Validator
+	var b *precompute.Balance
+
+	if beaconSt.Version() == version.Phase0 {
+		v, b, err = precompute.New(ctx, beaconSt)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not set up pre compute instance")}
+		}
+		_, b, err = precompute.ProcessAttestations(ctx, beaconSt, v, b)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not pre compute attestations")}
+		}
+	} else if beaconSt.Version() >= version.Altair {
+		v, b, err = altair.InitializePrecomputeValidators(ctx, beaconSt)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not set up altair pre compute instance")}
+		}
+		_, b, err = altair.ProcessEpochParticipation(ctx, beaconSt, b, v)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not pre compute attestations: %v")}
+		}
+	} else {
+		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("invalid state type retrieved with a version of %s", version.String(beaconSt.Version()))}
+	}
+
+	cp := s.FinalizedFetcher.FinalizedCheckpt()
+	p := &ethpb.ValidatorParticipationResponse{
+		Epoch:     requestedEpoch,
+		Finalized: requestedEpoch <= cp.Epoch,
+		Participation: &ethpb.ValidatorParticipation{
+			// TODO(7130): Remove these three deprecated fields.
+			GlobalParticipationRate:          float32(b.PrevEpochTargetAttested) / float32(b.ActivePrevEpoch),
+			VotedEther:                       b.PrevEpochTargetAttested,
+			EligibleEther:                    b.ActivePrevEpoch,
+			CurrentEpochActiveGwei:           b.ActiveCurrentEpoch,
+			CurrentEpochAttestingGwei:        b.CurrentEpochAttested,
+			CurrentEpochTargetAttestingGwei:  b.CurrentEpochTargetAttested,
+			PreviousEpochActiveGwei:          b.ActivePrevEpoch,
+			PreviousEpochAttestingGwei:       b.PrevEpochAttested,
+			PreviousEpochTargetAttestingGwei: b.PrevEpochTargetAttested,
+			PreviousEpochHeadAttestingGwei:   b.PrevEpochHeadAttested,
+		},
+	}
+	return p, nil
+}
+
 // ValidatorActiveSetChanges retrieves the active set changes for a given epoch.
 //
 // This data includes any activations, voluntary exits, and involuntary

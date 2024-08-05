@@ -7,8 +7,6 @@ import (
 	"strconv"
 
 	"github.com/prysmaticlabs/prysm/v5/api/pagination"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
@@ -416,7 +414,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
-	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	currentSlot := bs.CoreService.GenesisTimeFetcher.CurrentSlot()
 	currentEpoch := slots.ToEpoch(currentSlot)
 
 	var requestedEpoch primitives.Epoch
@@ -428,79 +426,11 @@ func (bs *Server) GetValidatorParticipation(
 	default:
 		requestedEpoch = currentEpoch
 	}
-
-	if requestedEpoch > currentEpoch {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch greater than current epoch, current epoch %d, requesting %d",
-			currentEpoch,
-			requestedEpoch,
-		)
-	}
-	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
-	// This ensures that we don't miss previous attestations when input requested epochs.
-	endSlot, err := slots.EpochEnd(requestedEpoch)
+	vp, err := bs.CoreService.ValidatorParticipation(ctx, requestedEpoch)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(core.ErrorReasonToGRPC(err.Reason), "Could not retrieve validator participation: %v", err.Err)
 	}
-	// Get as close as we can to the end of the current epoch without going past the current slot.
-	// The above check ensures a future *epoch* isn't requested, but the end slot of the requested epoch could still
-	// be past the current slot. In that case, use the current slot as the best approximation of the requested epoch.
-	// Replayer will make sure the slot ultimately used is canonical.
-	if endSlot > currentSlot {
-		endSlot = currentSlot
-	}
-
-	// ReplayerBuilder ensures that a canonical chain is followed to the slot
-	beaconState, err := bs.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayBlocks(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", endSlot, err))
-	}
-	var v []*precompute.Validator
-	var b *precompute.Balance
-
-	if beaconState.Version() == version.Phase0 {
-		v, b, err = precompute.New(ctx, beaconState)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
-		}
-		_, b, err = precompute.ProcessAttestations(ctx, beaconState, v, b)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
-		}
-	} else if beaconState.Version() >= version.Altair {
-		v, b, err = altair.InitializePrecomputeValidators(ctx, beaconState)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
-		}
-		_, b, err = altair.ProcessEpochParticipation(ctx, beaconState, b, v)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
-		}
-	} else {
-		return nil, status.Errorf(codes.Internal, "Invalid state type retrieved with a version of %d", beaconState.Version())
-	}
-
-	cp := bs.FinalizationFetcher.FinalizedCheckpt()
-	p := &ethpb.ValidatorParticipationResponse{
-		Epoch:     requestedEpoch,
-		Finalized: requestedEpoch <= cp.Epoch,
-		Participation: &ethpb.ValidatorParticipation{
-			// TODO(7130): Remove these three deprecated fields.
-			GlobalParticipationRate:          float32(b.PrevEpochTargetAttested) / float32(b.ActivePrevEpoch),
-			VotedEther:                       b.PrevEpochTargetAttested,
-			EligibleEther:                    b.ActivePrevEpoch,
-			CurrentEpochActiveGwei:           b.ActiveCurrentEpoch,
-			CurrentEpochAttestingGwei:        b.CurrentEpochAttested,
-			CurrentEpochTargetAttestingGwei:  b.CurrentEpochTargetAttested,
-			PreviousEpochActiveGwei:          b.ActivePrevEpoch,
-			PreviousEpochAttestingGwei:       b.PrevEpochAttested,
-			PreviousEpochTargetAttestingGwei: b.PrevEpochTargetAttested,
-			PreviousEpochHeadAttestingGwei:   b.PrevEpochHeadAttested,
-		},
-	}
-
-	return p, nil
+	return vp, nil
 }
 
 // GetValidatorQueue retrieves the current validator queue information.
