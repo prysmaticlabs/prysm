@@ -331,7 +331,7 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 
 			// We only need to assign PTC slots for the first `PTCPerSlot` committees of a given slot.
 			if uint64(j) < ptcPerSlot {
-				assignments = PTCAssignments(committee, assignments, PtcMembersPerCommittee, slot)
+				assignments = PTCAssignments(committee, assignments, ptcMembersPerCommittee, slot)
 			}
 		}
 		slot++
