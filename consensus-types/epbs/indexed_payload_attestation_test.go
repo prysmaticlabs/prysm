@@ -9,45 +9,106 @@ import (
 )
 
 func TestGetAttestingIndices(t *testing.T) {
-	attestingIndices := []primitives.ValidatorIndex{1, 2, 3}
-	
-	nilAttestingIndices := []primitives.ValidatorIndex(nil)
-	pa := &IndexedPayloadAttestation{
-		AttestingIndices: attestingIndices,
+	testCases := []struct {
+		name             string
+		attestingIndices []primitives.ValidatorIndex
+	}{
+		{
+			name:             "Test 1",
+			attestingIndices: []primitives.ValidatorIndex{1, 2, 3},
+		},
+		{
+			name:             "Test 2",
+			attestingIndices: []primitives.ValidatorIndex{55,66,787},
+		},
+		{
+			name:             "Empty AttestingIndices",
+			attestingIndices: []primitives.ValidatorIndex{},
+		},
+		{
+			name:             "Nil AttestingIndices",
+			attestingIndices: []primitives.ValidatorIndex(nil),
+		},
 	}
-	got := pa.GetAttestingIndices()
-	require.DeepEqual(t, attestingIndices, got)
-	pa = nil
-	got = pa.GetAttestingIndices()
-	require.DeepEqual(t, nilAttestingIndices, got)
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			pa := &IndexedPayloadAttestation{
+				AttestingIndices: tt.attestingIndices,
+			}
+			got := pa.GetAttestingIndices()
+			require.DeepEqual(t, tt.attestingIndices, got)
+		})
+	}
 }
 
 func TestGetData(t *testing.T) {
-	data := &eth.PayloadAttestationData{
-		Slot: primitives.Slot(1),
+	testCases := []struct {
+		name string
+		data *eth.PayloadAttestationData
+	}{
+		{
+			name: "Test 1",
+			data: &eth.PayloadAttestationData{
+				Slot: primitives.Slot(1),
+			},
+		},
+		{
+			name: "Test 2",
+			data: &eth.PayloadAttestationData{
+				Slot: primitives.Slot(100),
+			},
+		},
+		{
+			name: "Zero slot",
+			data: &eth.PayloadAttestationData{
+				Slot: primitives.Slot(0),
+			},
+		},
+		{
+			name: "Nil AttestingIndices",
+			data: nil,
+		},
 	}
-	nilData := (*eth.PayloadAttestationData)(nil)
-	pa := &IndexedPayloadAttestation{
-		Data: data,
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			pa := &IndexedPayloadAttestation{
+				Data: tt.data,
+			}
+			got := pa.GetData()
+			require.DeepEqual(t, tt.data, got)
+		})
 	}
-	got := pa.GetData()
-	require.Equal(t, data, got)
-
-	pa = nil
-	got = pa.GetData()
-	require.DeepEqual(t, got, nilData)
 }
 
 func TestGetSignature(t *testing.T) {
-	sig := []byte{1, 2, 3}
-	nilSig := []byte(nil)
-	pa := &IndexedPayloadAttestation{
-		Signature: sig,
+	testCases := []struct {
+		name string
+		sig  []byte
+	}{
+		{
+			name: "Test 1",
+			sig:  []byte{1, 2},
+		},
+		{
+			name: "Test 1",
+			sig:  []byte{29, 100},
+		},
+		{
+			name: "Zero slot",
+			sig:  []byte{0},
+		},
+		{
+			name: "Nil signature",
+			sig:  nil,
+		},
 	}
-	got := pa.GetSignature()
-	require.DeepEqual(t, sig, got)
-
-	pa = nil
-	got = pa.GetSignature()
-	require.DeepEqual(t, got, nilSig)
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			pa := &IndexedPayloadAttestation{
+				Signature: tt.sig,
+			}
+			got := pa.GetSignature()
+			require.DeepEqual(t, tt.sig, got)
+		})
+	}
 }
