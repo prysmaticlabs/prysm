@@ -975,7 +975,7 @@ func (s *Service) prysmBeaconEndpoints(
 		{
 			template: "/prysm/v1/beacon/individual_votes",
 			name:     namespace + ".GetIndividualVotes",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
