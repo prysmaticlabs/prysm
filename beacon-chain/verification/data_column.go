@@ -155,8 +155,7 @@ func (dv *RODataColumnVerifier) SlotAboveFinalized() (err error) {
 }
 
 // ValidProposerSignature represents the spec verification:
-// [REJECT] The proposer signature of data_column_sidecar.signed_block_header,
-// is valid with respect to the block_header.proposer_index pubkey.
+// [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
 func (dv *RODataColumnVerifier) ValidProposerSignature(ctx context.Context) (err error) {
 	defer dv.recordResult(RequireValidProposerSignature, &err)
 	sd := columnToSignatureData(dv.dataColumn)
