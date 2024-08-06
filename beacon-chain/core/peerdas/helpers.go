@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math"
 	"math/big"
+	"slices"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/holiman/uint256"
 	errors "github.com/pkg/errors"
 
-	kzg "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -193,6 +194,113 @@ func DataColumnSidecars(signedBlock interfaces.ReadOnlySignedBeaconBlock, blobs 
 	}
 
 	return sidecars, nil
+}
+
+// Blobs reconstructs  blobs from data column sidecars.
+// This is the reciprocal function of DataColumnSidecars.
+// `dataColumnsSidecar` must contain at least the first half of `fieldparams.NumberOfColumns` columns,
+// else the function will error. (It can contain more columns, but they be simply ignored.)
+func Blobs(dataColumnsSidecar []*ethpb.DataColumnSidecar) ([]*blocks.VerifiedROBlob, error) {
+	if len(dataColumnsSidecar) == 0 {
+		return nil, nil
+	}
+
+	columnCount := fieldparams.NumberOfColumns
+
+	neededColumnCount := columnCount / 2
+
+	// Check if all needed columns are present.
+	sliceIndexFromColumnIndex := make(map[uint64]int, len(dataColumnsSidecar))
+	for i := range dataColumnsSidecar {
+		dataColumnSideCar := dataColumnsSidecar[i]
+		columnIndex := dataColumnSideCar.ColumnIndex
+
+		if columnIndex < uint64(neededColumnCount) {
+			sliceIndexFromColumnIndex[columnIndex] = i
+		}
+	}
+
+	actualColumnCount := len(sliceIndexFromColumnIndex)
+
+	// Get missing columns.
+	if actualColumnCount < neededColumnCount {
+		missingColumns := make(map[int]bool, neededColumnCount-actualColumnCount)
+		for i := range neededColumnCount {
+			if _, ok := sliceIndexFromColumnIndex[uint64(i)]; !ok {
+				missingColumns[i] = true
+			}
+		}
+
+		missingColumnsSlice := make([]int, 0, len(missingColumns))
+		for i := range missingColumns {
+			missingColumnsSlice = append(missingColumnsSlice, i)
+		}
+
+		slices.Sort[[]int](missingColumnsSlice)
+		return nil, errors.Errorf("some columns are missing: %v", missingColumnsSlice)
+	}
+
+	// It is safe to retrieve the first column since we already checked that `dataColumnsSidecar` is not empty.
+	firstDataColumnSidecar := dataColumnsSidecar[0]
+
+	blobCount := len(firstDataColumnSidecar.DataColumn)
+
+	// Check all colums have te same length.
+	for i := range dataColumnsSidecar {
+		if len(dataColumnsSidecar[i].DataColumn) != blobCount {
+			return nil, errors.Errorf("mismatch in the length of the data columns, expected %d, got %d", blobCount, len(dataColumnsSidecar[i].DataColumn))
+		}
+	}
+
+	// Reconstruct verified RO blobs from columns.
+	verifiedROBlobs := make([]*blocks.VerifiedROBlob, 0, blobCount)
+
+	for blobIndex := range blobCount {
+		var blob kzg.Blob
+
+		// Compute the content of the blob.
+		for columnIndex := range neededColumnCount {
+			sliceIndex, ok := sliceIndexFromColumnIndex[uint64(columnIndex)]
+			if !ok {
+				return nil, errors.Errorf("missing column %d, this should never happen", columnIndex)
+			}
+
+			dataColumnSideCar := dataColumnsSidecar[sliceIndex]
+			cell := dataColumnSideCar.DataColumn[blobIndex]
+
+			for i := 0; i < len(cell); i++ {
+				blob[columnIndex*kzg.BytesPerCell+i] = cell[i]
+			}
+		}
+
+		// Retrieve the blob KZG commitment.
+		blobKZGCommitment := kzg.Commitment(firstDataColumnSidecar.KzgCommitments[blobIndex])
+
+		// Compute the blob KZG proof.
+		blobKzgProof, err := kzg.ComputeBlobKZGProof(&blob, blobKZGCommitment)
+		if err != nil {
+			return nil, errors.Wrap(err, "compute blob KZG proof")
+		}
+
+		blobSidecar := &ethpb.BlobSidecar{
+			Index:                    uint64(blobIndex),
+			Blob:                     blob[:],
+			KzgCommitment:            blobKZGCommitment[:],
+			KzgProof:                 blobKzgProof[:],
+			SignedBlockHeader:        firstDataColumnSidecar.SignedBlockHeader,
+			CommitmentInclusionProof: firstDataColumnSidecar.KzgCommitmentsInclusionProof,
+		}
+
+		roBlob, err := blocks.NewROBlob(blobSidecar)
+		if err != nil {
+			return nil, errors.Wrap(err, "new RO blob")
+		}
+
+		verifiedROBlob := blocks.NewVerifiedROBlob(roBlob)
+		verifiedROBlobs = append(verifiedROBlobs, &verifiedROBlob)
+	}
+
+	return verifiedROBlobs, nil
 }
 
 // DataColumnSidecarsForReconstruct is a TEMPORARY function until there is an official specification for it.

@@ -1,27 +1,38 @@
 package lookup
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
+	GoKZG "github.com/crate-crypto/go-kzg-4844"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/sirupsen/logrus"
 )
 
 func TestGetBlock(t *testing.T) {
@@ -152,6 +163,221 @@ func TestGetBlock(t *testing.T) {
 			require.Equal(t, true, ok)
 			if !reflect.DeepEqual(pbBlock, tt.want) {
 				t.Error("Expected blocks to equal")
+			}
+		})
+	}
+}
+
+func deterministicRandomness(seed int64) [32]byte {
+	// Converts an int64 to a byte slice
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, seed)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to write int64 to bytes buffer")
+		return [32]byte{}
+	}
+	bytes := buf.Bytes()
+
+	return sha256.Sum256(bytes)
+}
+
+// Returns a serialized random field element in big-endian
+func getRandFieldElement(seed int64) [32]byte {
+	bytes := deterministicRandomness(seed)
+	var r fr.Element
+	r.SetBytes(bytes[:])
+
+	return GoKZG.SerializeScalar(r)
+}
+
+// Returns a random blob using the passed seed as entropy
+func getRandBlob(seed int64) kzg.Blob {
+	var blob kzg.Blob
+	for i := 0; i < len(blob); i += 32 {
+		fieldElementBytes := getRandFieldElement(seed + int64(i))
+		copy(blob[i:i+32], fieldElementBytes[:])
+	}
+	return blob
+}
+
+func generateCommitmentAndProof(blob *kzg.Blob) (*kzg.Commitment, *kzg.Proof, error) {
+	commitment, err := kzg.BlobToKZGCommitment(blob)
+	if err != nil {
+		return nil, nil, err
+	}
+	proof, err := kzg.ComputeBlobKZGProof(blob, commitment)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &commitment, &proof, err
+}
+
+func generateRandomBlocSignedBeaconBlockkAndVerifiedRoBlobs(t *testing.T, blobCount int) (interfaces.SignedBeaconBlock, []*blocks.VerifiedROBlob) {
+	// Create a protobuf signed beacon block.
+	signedBeaconBlockPb := util.NewBeaconBlockDeneb()
+
+	// Generate random blobs and their corresponding commitments and proofs.
+	blobs := make([]kzg.Blob, 0, blobCount)
+	blobKzgCommitments := make([]*kzg.Commitment, 0, blobCount)
+	blobKzgProofs := make([]*kzg.Proof, 0, blobCount)
+
+	for blobIndex := range blobCount {
+		// Create a random blob.
+		blob := getRandBlob(int64(blobIndex))
+		blobs = append(blobs, blob)
+
+		// Generate a blobKZGCommitment for the blob.
+		blobKZGCommitment, proof, err := generateCommitmentAndProof(&blob)
+		require.NoError(t, err)
+
+		blobKzgCommitments = append(blobKzgCommitments, blobKZGCommitment)
+		blobKzgProofs = append(blobKzgProofs, proof)
+	}
+
+	// Set the commitments into the block.
+	blobZkgCommitmentsBytes := make([][]byte, 0, blobCount)
+	for _, blobKZGCommitment := range blobKzgCommitments {
+		blobZkgCommitmentsBytes = append(blobZkgCommitmentsBytes, blobKZGCommitment[:])
+	}
+
+	signedBeaconBlockPb.Block.Body.BlobKzgCommitments = blobZkgCommitmentsBytes
+
+	// Generate verified RO blobs.
+	verifiedROBlobs := make([]*blocks.VerifiedROBlob, 0, blobCount)
+
+	// Create a signed beacon block from the protobuf.
+	signedBeaconBlock, err := blocks.NewSignedBeaconBlock(signedBeaconBlockPb)
+	require.NoError(t, err)
+
+	commitmentInclusionProof, err := blocks.MerkleProofKZGCommitments(signedBeaconBlock.Block().Body())
+	require.NoError(t, err)
+
+	for blobIndex := range blobCount {
+		blob := blobs[blobIndex]
+		blobKZGCommitment := blobKzgCommitments[blobIndex]
+		blobKzgProof := blobKzgProofs[blobIndex]
+
+		// Get the signed beacon block header.
+		signedBeaconBlockHeader, err := signedBeaconBlock.Header()
+		require.NoError(t, err)
+
+		blobSidecar := &ethpb.BlobSidecar{
+			Index:                    uint64(blobIndex),
+			Blob:                     blob[:],
+			KzgCommitment:            blobKZGCommitment[:],
+			KzgProof:                 blobKzgProof[:],
+			SignedBlockHeader:        signedBeaconBlockHeader,
+			CommitmentInclusionProof: commitmentInclusionProof,
+		}
+
+		roBlob, err := blocks.NewROBlob(blobSidecar)
+		require.NoError(t, err)
+
+		verifiedROBlob := blocks.NewVerifiedROBlob(roBlob)
+		verifiedROBlobs = append(verifiedROBlobs, &verifiedROBlob)
+	}
+
+	return signedBeaconBlock, verifiedROBlobs
+}
+
+func TestBlobsFromDataColumns(t *testing.T) {
+	const blobCount = 5
+
+	var nilError *core.RpcError
+
+	testCases := []struct {
+		errorReason           core.ErrorReason
+		isError               bool
+		subscribeToAllSubnets bool
+		storedColumnCount     int
+		name                  string
+	}{
+		{
+			name:                  "Not subscribed to all subnets",
+			subscribeToAllSubnets: false,
+			isError:               true,
+			errorReason:           core.NotFound,
+		},
+		{
+			name:                  "Backfill not finished",
+			subscribeToAllSubnets: true,
+			storedColumnCount:     127,
+			isError:               true,
+			errorReason:           core.NotFound,
+		},
+		{
+			name:                  "Nominal",
+			subscribeToAllSubnets: true,
+			storedColumnCount:     128,
+			isError:               false,
+			errorReason:           core.NotFound,
+		},
+	}
+
+	// Load the trusted setup.
+	err := kzg.Start()
+	require.NoError(t, err)
+
+	// Create a dummy signed beacon blocks and dummy verified RO blobs.
+	signedBeaconBlock, verifiedRoBlobs := generateRandomBlocSignedBeaconBlockkAndVerifiedRoBlobs(t, blobCount)
+
+	// Extract the root from the signed beacon block.
+	blockRoot, err := signedBeaconBlock.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	// Extract blobs from verified RO blobs.
+	blobs := make([]kzg.Blob, 0, blobCount)
+	for _, verifiedRoBlob := range verifiedRoBlobs {
+		blob := verifiedRoBlob.BlobSidecar.Blob
+		blobs = append(blobs, kzg.Blob(blob))
+	}
+
+	// Convert blobs to data columns.
+	dataColumnSidecars, err := peerdas.DataColumnSidecars(signedBeaconBlock, blobs)
+	require.NoError(t, err)
+
+	// Create verified RO data columns.
+	verifiedRoDataColumns := make([]*blocks.VerifiedRODataColumn, 0, blobCount)
+	for _, dataColumnSidecar := range dataColumnSidecars {
+		roDataColumn, err := blocks.NewRODataColumn(dataColumnSidecar)
+		require.NoError(t, err)
+
+		verifiedRoDataColumn := blocks.NewVerifiedRODataColumn(roDataColumn)
+		verifiedRoDataColumns = append(verifiedRoDataColumns, &verifiedRoDataColumn)
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Set the subscription to all subnets flags.
+			params.SetupTestConfigCleanup(t)
+			gFlags := new(flags.GlobalFlags)
+			gFlags.SubscribeToAllSubnets = true
+			flags.Init(gFlags)
+
+			// Define a blob storage.
+			blobStorage := filesystem.NewEphemeralBlobStorage(t)
+
+			// Save the data columns in the store.
+			for i := range tc.storedColumnCount {
+				verifiedRoDataColumn := verifiedRoDataColumns[i]
+				err := blobStorage.SaveDataColumn(*verifiedRoDataColumn)
+				require.NoError(t, err)
+			}
+
+			// Define the blocker.
+			blocker := &BeaconDbBlocker{
+				BlobStorage: blobStorage,
+			}
+
+			// Get the blobs from the data columns.
+			actual, err := blocker.blobsFromDataColumns(nil, blockRoot[:])
+			if tc.isError {
+				require.Equal(t, tc.errorReason, err.Reason)
+			} else {
+				require.Equal(t, nilError, err)
+				expected := verifiedRoBlobs
+
+				require.DeepSSZEqual(t, expected, actual)
 			}
 		})
 	}
