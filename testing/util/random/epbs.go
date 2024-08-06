@@ -97,6 +97,7 @@ func Attestation(t *testing.T) *ethpb.AttestationElectra {
 		AggregationBits: bitfield.NewBitlist(123),
 		Data:            AttestationData(t),
 		Signature:       randomBytes(96, t),
+		CommitteeBits:   primitives.NewAttestationCommitteeBits(),
 	}
 }
 
