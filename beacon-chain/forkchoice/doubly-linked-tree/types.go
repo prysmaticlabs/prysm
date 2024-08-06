@@ -38,13 +38,13 @@ type Store struct {
 	slashedIndices                map[primitives.ValidatorIndex]bool     // the list of equivocating validator indices
 	originRoot                    [fieldparams.RootLength]byte           // The genesis block root
 	genesisTime                   uint64
-	highestReceivedNode           *Node                                      // The highest slot node.
-	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]primitives.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
-	allTipsAreInvalid             bool                                       // tracks if all tips are not viable for head
-	payloadWithholdBoostRoot      [fieldparams.RootLength]byte               // the root of the block that receives the withhold boost
-	payloadWithholdBoostFull      bool                                       // Indicator of whether the block receiving the withhold boost is full or empty
-	payloadRevealBoostRoot        [fieldparams.RootLength]byte               // the root of the block that receives the reveal boost
-	ptcVote                       map[[fieldparams.RootLength]byte][]byte    // tracks the Payload Timeliness Committee (PTC) votes for each block
+	highestReceivedNode           *Node                                                   // The highest slot node.
+	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]primitives.Slot              // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
+	allTipsAreInvalid             bool                                                    // tracks if all tips are not viable for head
+	payloadWithholdBoostRoot      [fieldparams.RootLength]byte                            // the root of the block that receives the withhold boost
+	payloadWithholdBoostFull      bool                                                    // Indicator of whether the block receiving the withhold boost is full or empty
+	payloadRevealBoostRoot        [fieldparams.RootLength]byte                            // the root of the block that receives the reveal boost
+	ptcVote                       map[[fieldparams.RootLength]byte][]primitives.PTCStatus // tracks the Payload Timeliness Committee (PTC) votes for each block
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.

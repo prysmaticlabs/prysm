@@ -719,7 +719,7 @@ func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
 func (s *Store) OnPayloadAttestationMessage(
 	ctx context.Context,
 	payloadAttestation *ethpb.PayloadAttestation,
-) error {
+	isFromBlock bool) error {
 	data := payloadAttestation.Data
 	blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
 
@@ -729,34 +729,35 @@ func (s *Store) OnPayloadAttestationMessage(
 		return errors.New("beacon block root unknown")
 	}
 
-	// Update the PTC vote for the block
-	s.updatePTCVote(blockRoot, payloadAttestation)
-
-	// Update payload boosts if necessary
-	s.updatePayloadBoosts(blockRoot, node, payloadAttestation)
-
-	return nil
-}
-
-func (s *Store) updatePTCVote(blockRoot [32]byte, payloadAttestation *ethpb.PayloadAttestation) {
-	ptcVote := s.ptcVote[blockRoot]
-	if ptcVote == nil {
-		ptcVote = make([]byte, fieldparams.PTCSize)
-	}
-
-	for i, vote := range payloadAttestation.AggregationBits {
-		if vote != byte(0) {
-			ptcVote[i] = byte(payloadAttestation.Data.PayloadStatus)
+	// Only update payload boosts with attestations from a block if the block is for the current slot and it's early
+	if isFromBlock {
+		currentSlot := slots.CurrentSlot(s.genesisTime)
+		if data.Slot+1 != currentSlot {
+			return nil
+		}
+		timeIntoSlot := (uint64(time.Now().Unix()) - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
+		if timeIntoSlot >= params.BeaconConfig().SecondsPerSlot/params.BeaconConfig().IntervalsPerSlot {
+			return nil
 		}
 	}
 
-	s.ptcVote[blockRoot] = ptcVote
-}
+	// Update the ptc vote for the block
+	ptcVote := s.ptcVote[blockRoot]
+	if ptcVote == nil {
+		ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
+	}
 
-func (s *Store) updatePayloadBoosts(blockRoot [32]byte, node *Node, payloadAttestation *ethpb.PayloadAttestation) {
+	for i, vote := range payloadAttestation.AggregationBits {
+		if vote == byte(0) {
+			ptcVote[i] = data.PayloadStatus
+		}
+	}
+	s.ptcVote[blockRoot] = ptcVote
+
+	// Update the payload boosts if threshold has been achieved
 	presentCount := 0
 	withheldCount := 0
-	for _, vote := range s.ptcVote[blockRoot] {
+	for _, vote := range ptcVote {
 		if primitives.PTCStatus(vote) == primitives.PAYLOAD_PRESENT {
 			presentCount++
 		} else if primitives.PTCStatus(vote) == primitives.PAYLOAD_WITHHELD {
@@ -765,10 +766,62 @@ func (s *Store) updatePayloadBoosts(blockRoot [32]byte, node *Node, payloadAttes
 	}
 
 	if presentCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
-		s.SetPayloadRevealBoostRoot(blockRoot)
+		s.payloadRevealBoostRoot = blockRoot
 	}
 	if withheldCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
-		s.SetPayloadWithholdBoostRoot(node.parent.root)
-		s.SetPayloadWithholdBoostFull(node.parent.isFullBlock)
+		s.payloadWithholdBoostRoot = node.parent.root
+		s.payloadWithholdBoostFull = s.isParentNodeFull(node)
 	}
+
+	// Update the PTC vote for the block
+	s.updatePTCVote(blockRoot, payloadAttestation)
+
+	// Update payload boosts if necessary
+	s.updatePayloadBoosts(blockRoot, node)
+
+	return nil
+}
+
+func (s *Store) updatePTCVote(blockRoot [32]byte, payloadAttestation *ethpb.PayloadAttestation) {
+	ptcVote := s.ptcVote[blockRoot]
+	if ptcVote == nil {
+		ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
+	}
+
+	for i, vote := range payloadAttestation.AggregationBits {
+		if vote == byte(0) {
+			ptcVote[i] = primitives.PTCStatus(payloadAttestation.Data.PayloadStatus)
+		}
+	}
+
+	s.ptcVote[blockRoot] = ptcVote
+}
+
+func (s *Store) updatePayloadBoosts(blockRoot [32]byte, node *Node) {
+	// ptcVote := s.ptcVote[blockRoot]
+
+	presentCount := 0
+	withheldCount := 0
+	for _, vote := range s.ptcVote[blockRoot] {
+		if primitives.PTCStatus(vote) == primitives.PAYLOAD_PRESENT {
+			presentCount++
+		} else if primitives.PTCStatus(vote) == primitives.PAYLOAD_ABSENT {
+			withheldCount++
+		}
+	}
+
+	if presentCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
+		s.payloadRevealBoostRoot = blockRoot
+	}
+	if withheldCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
+		s.payloadWithholdBoostRoot = node.parent.root
+		s.payloadWithholdBoostFull = s.isParentNodeFull(node)
+	}
+}
+
+func (s *Store) isParentNodeFull(node *Node) bool {
+	if node.parent == nil {
+		return true // Finalized checkpoint is considered full
+	}
+	return node.parent.payloadHash != [32]byte{}
 }
