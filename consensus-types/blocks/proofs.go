@@ -20,6 +20,7 @@ func ComputeFieldRootsForBlockBody(ctx context.Context, blockBody *BeaconBlockBo
 	if blockBody == nil {
 		return nil, errNilBlockBody
 	}
+
 	var fieldRoots [][]byte
 	switch blockBody.version {
 	case version.Phase0:
