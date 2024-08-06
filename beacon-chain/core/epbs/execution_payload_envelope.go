@@ -2,6 +2,7 @@ package epbs
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
@@ -9,6 +10,29 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 )
+
+// ValidatePayloadStateTransition performs the process_execution_payload
+// function.
+func ValidatePayloadStateTransition(
+	ctx context.Context,
+	preState state.BeaconState,
+	envelope interfaces.ROExecutionPayloadEnvelope,
+) error {
+	if err := validateAgainstHeader(ctx, preState, envelope); err != nil {
+		return err
+	}
+	committedHeader, err := preState.LatestExecutionPayloadHeaderEPBS()
+	if err != nil {
+		return err
+	}
+	if err := validateAgainstCommittedBid(committedHeader, envelope); err != nil {
+		return err
+	}
+	if err := processPayloadStateTransition(ctx, preState, envelope); err != nil {
+		return err
+	}
+	return checkPostStateRoot(ctx, preState, envelope)
+}
 
 func processPayloadStateTransition(
 	ctx context.Context,
@@ -68,7 +92,7 @@ func validateAgainstHeader(
 		return err
 	}
 	if blockHeaderRoot != beaconBlockRoot {
-		return errors.New("beacon block root does not match previous header")
+		return fmt.Errorf("beacon block root does not match previous header, got: %#x wanted: %#x", beaconBlockRoot, blockHeaderRoot)
 	}
 	return nil
 }
@@ -111,25 +135,4 @@ func checkPostStateRoot(
 		return errors.New("state root mismatch")
 	}
 	return nil
-}
-
-func ValidatePayloadStateTransition(
-	ctx context.Context,
-	preState state.BeaconState,
-	envelope interfaces.ROExecutionPayloadEnvelope,
-) error {
-	if err := validateAgainstHeader(ctx, preState, envelope); err != nil {
-		return err
-	}
-	committedHeader, err := preState.LatestExecutionPayloadHeaderEPBS()
-	if err != nil {
-		return err
-	}
-	if err := validateAgainstCommittedBid(committedHeader, envelope); err != nil {
-		return err
-	}
-	if err := processPayloadStateTransition(ctx, preState, envelope); err != nil {
-		return err
-	}
-	return checkPostStateRoot(ctx, preState, envelope)
 }

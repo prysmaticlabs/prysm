@@ -37,7 +37,10 @@ type BlockGenConfig struct {
 	NumVoluntaryExits    uint64
 	NumTransactions      uint64 // Only for post Bellatrix blocks
 	FullSyncAggregate    bool
-	NumBLSChanges        uint64 // Only for post Capella blocks
+	NumBLSChanges        uint64                    // Only for post Capella blocks
+	BuilderIndex         primitives.ValidatorIndex // Only for post EIP-7732 blocks.
+	PayloadValue         uint64                    // Only for post EIP-7732 blocks
+	NumKzgCommitmens     uint64                    // Only for post EIP-7732 blocks
 }
 
 // DefaultBlockGenConfig returns the block config that utilizes the
