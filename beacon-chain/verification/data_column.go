@@ -2,6 +2,7 @@ package verification
 
 import (
 	"context"
+	goErrors "errors"
 
 	"github.com/pkg/errors"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
@@ -109,7 +110,7 @@ func (dv *RODataColumnVerifier) recordResult(req Requirement, err *error) {
 // DataColumnIndexInBounds represents the follow spec verification:
 // [REJECT] The sidecar's index is consistent with NUMBER_OF_COLUMNS -- i.e. data_column_sidecar.index < NUMBER_OF_COLUMNS.
 func (dv *RODataColumnVerifier) DataColumnIndexInBounds() (err error) {
-	defer dv.recordResult(RequireBlobIndexInBounds, &err)
+	defer dv.recordResult(RequireDataColumnIndexInBounds, &err)
 	if dv.dataColumn.ColumnIndex >= fieldparams.NumberOfColumns {
 		log.WithFields(logging.DataColumnFields(dv.dataColumn)).Debug("Sidecar index >= NUMBER_OF_COLUMNS")
 		return columnErrBuilder(ErrColumnIndexInvalid)
@@ -327,5 +328,5 @@ func columnToSignatureData(d blocks.RODataColumn) SignatureData {
 }
 
 func columnErrBuilder(baseErr error) error {
-	return errors.Wrap(ErrColumnInvalid, baseErr.Error())
+	return goErrors.Join(ErrColumnInvalid, baseErr)
 }

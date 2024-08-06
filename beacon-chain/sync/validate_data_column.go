@@ -55,7 +55,7 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 	if err != nil {
 		return pubsub.ValidationReject, errors.Wrap(err, "roDataColumn conversion failure")
 	}
-	vf := s.newColumnVerifier(ds, verification.GossipBlobSidecarRequirements)
+	vf := s.newColumnVerifier(ds, verification.GossipColumnSidecarRequirements)
 
 	if err := vf.DataColumnIndexInBounds(); err != nil {
 		return pubsub.ValidationReject, err
