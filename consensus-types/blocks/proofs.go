@@ -10,8 +10,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func ComputeFieldRootsForBlockBody(ctx context.Context, blockBody *BeaconBlockBody) ([][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "blocks.ComputeFieldRootsForBlockBody")
+func ComputeBlockBodyFieldRoots(ctx context.Context, blockBody *BeaconBlockBody) ([][]byte, error) {
+	_, span := trace.StartSpan(ctx, "blocks.ComputeBlockBodyFieldRoots")
 	defer span.End()
 
 	if blockBody == nil {
