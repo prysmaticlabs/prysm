@@ -241,7 +241,7 @@ func SignExecutionPayloadHeader(
 }
 func generateKzgCommitments(n uint64) ([][]byte, error) {
 	kzgs := make([][]byte, n)
-	for i := range n {
+	for i := range kzgs {
 		kzgs[i] = make([]byte, 48)
 		_, err := rand.Read(kzgs[i])
 		if err != nil {
