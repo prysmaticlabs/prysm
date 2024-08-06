@@ -714,3 +714,61 @@ func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
 	}
 	return n.parent.root, nil
 }
+
+// OnPayloadAttestationMessage processes a new aggregated payload attestation message.
+func (s *Store) OnPayloadAttestationMessage(
+	ctx context.Context,
+	payloadAttestation *ethpb.PayloadAttestation,
+) error {
+	data := payloadAttestation.Data
+	blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
+
+	// Check if the block exists in the store
+	node, ok := s.nodeByRoot[blockRoot]
+	if !ok {
+		return errors.New("beacon block root unknown")
+	}
+
+	// Update the PTC vote for the block
+	s.updatePTCVote(blockRoot, payloadAttestation)
+
+	// Update payload boosts if necessary
+	s.updatePayloadBoosts(blockRoot, node, payloadAttestation)
+
+	return nil
+}
+
+func (s *Store) updatePTCVote(blockRoot [32]byte, payloadAttestation *ethpb.PayloadAttestation) {
+	ptcVote := s.ptcVote[blockRoot]
+	if ptcVote == nil {
+		ptcVote = make([]byte, fieldparams.PTCSize)
+	}
+
+	for i, vote := range payloadAttestation.AggregationBits {
+		if vote != byte(0) {
+			ptcVote[i] = byte(payloadAttestation.Data.PayloadStatus)
+		}
+	}
+
+	s.ptcVote[blockRoot] = ptcVote
+}
+
+func (s *Store) updatePayloadBoosts(blockRoot [32]byte, node *Node, payloadAttestation *ethpb.PayloadAttestation) {
+	presentCount := 0
+	withheldCount := 0
+	for _, vote := range s.ptcVote[blockRoot] {
+		if primitives.PTCStatus(vote) == primitives.PAYLOAD_PRESENT {
+			presentCount++
+		} else if primitives.PTCStatus(vote) == primitives.PAYLOAD_WITHHELD {
+			withheldCount++
+		}
+	}
+
+	if presentCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
+		s.SetPayloadRevealBoostRoot(blockRoot)
+	}
+	if withheldCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
+		s.SetPayloadWithholdBoostRoot(node.parent.root)
+		s.SetPayloadWithholdBoostFull(node.parent.isFullBlock)
+	}
+}

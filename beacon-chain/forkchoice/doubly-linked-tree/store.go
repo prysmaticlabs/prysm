@@ -290,3 +290,18 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	}
 	return count, nil
 }
+
+// SetPayloadRevealBoostRoot sets the root of the block that receives the reveal boost.
+func (s *Store) SetPayloadRevealBoostRoot(root [fieldparams.RootLength]byte) {
+	s.payloadRevealBoostRoot = root
+}
+
+// SetPayloadWithholdBoostRoot sets the root of the block that receives the withhold boost.
+func (s *Store) SetPayloadWithholdBoostRoot(root [fieldparams.RootLength]byte) {
+	s.payloadWithholdBoostRoot = root
+}
+
+// SetPayloadWithholdBoostFull sets whether the block receiving the withhold boost is full or empty.
+func (s *Store) SetPayloadWithholdBoostFull(isFull bool) {
+	s.payloadWithholdBoostFull = isFull
+}
