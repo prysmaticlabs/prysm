@@ -13,9 +13,6 @@ import (
 func ComputeFieldRootsForBlockBody(ctx context.Context, blockBody *BeaconBlockBody) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "ComputeFieldRootsForBlockBody")
 	defer span.End()
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
 
 	if blockBody == nil {
 		return nil, errNilBlockBody
