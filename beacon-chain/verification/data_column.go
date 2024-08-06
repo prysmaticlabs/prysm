@@ -240,7 +240,7 @@ func (dv *RODataColumnVerifier) SidecarDescendsFromFinalized() (err error) {
 }
 
 // SidecarInclusionProven represents the spec verification:
-// [REJECT] The sidecar's inclusion proof is valid as verified by verify_data_column_sidecar_inclusion_proof(data_column_sidecar).
+// [REJECT] The sidecar's kzg_commitments field inclusion proof is valid as verified by verify_data_column_sidecar_inclusion_proof(sidecar).
 func (dv *RODataColumnVerifier) SidecarInclusionProven() (err error) {
 	defer dv.recordResult(RequireSidecarInclusionProven, &err)
 	if err = blocks.VerifyKZGInclusionProofColumn(dv.dataColumn); err != nil {
@@ -251,8 +251,7 @@ func (dv *RODataColumnVerifier) SidecarInclusionProven() (err error) {
 }
 
 // SidecarKzgProofVerified represents the spec verification:
-// [REJECT] The sidecar's data column is valid as verified by
-// verify_data_column_kzg_proof(data_column_sidecar.dataColumn, data_column_sidecar.kzg_commitment, data_column_sidecar.kzg_proof).
+// [REJECT] The sidecar's column data is valid as verified by verify_data_column_sidecar_kzg_proofs(sidecar).
 func (dv *RODataColumnVerifier) SidecarKzgProofVerified() (err error) {
 	defer dv.recordResult(RequireSidecarKzgProofVerified, &err)
 	ok, err := dv.verifyDataColumnCommitment(dv.dataColumn)
