@@ -218,7 +218,7 @@ func GenerateFullBlockEpbs(
 	return &ethpb.SignedBeaconBlockEpbs{Block: block, Signature: signature.Marshal()}, nil
 }
 
-// SignedExecutionPayloadHeader generates a valid SignedExecutionPayloadHeader
+// SignExecutionPayloadHeader generates a valid SignedExecutionPayloadHeader
 func SignExecutionPayloadHeader(
 	st state.BeaconState,
 	priv bls.SecretKey,
