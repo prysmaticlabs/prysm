@@ -27,13 +27,6 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 	}
 	s.setSeenCommitteeIndicesSlot(data.Slot, data.CommitteeIndex, a.GetAggregationBits())
 
-	seen, err := s.cfg.attestationCache.Seen(a)
-	if err != nil {
-		log.WithError(err).Error("Could not determine if attestation was seen")
-	} else if seen {
-		return nil
-	}
-
 	return s.cfg.attestationCache.Add(a)
 }
 

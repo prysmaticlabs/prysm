@@ -159,33 +159,6 @@ func (c *AttestationCache) PruneBefore(slot primitives.Slot) uint64 {
 	return pruneCount
 }
 
-func (c *AttestationCache) Seen(att ethpb.Att) (bool, error) {
-	if att.IsAggregated() {
-		return true, errors.New("function does not accept aggregated attestations")
-	}
-
-	c.Lock()
-	defer c.Unlock()
-
-	id, err := attestation.NewId(att, attestation.Data)
-	if err != nil {
-		return true, errors.Wrapf(err, "could not create attestation ID")
-	}
-
-	group := c.attestations[id]
-	if group == nil || group.local == nil {
-		return false, nil
-	}
-
-	if seen, err := group.local.GetAggregationBits().Contains(att.GetAggregationBits()); err != nil {
-		return true, err
-	} else if seen {
-		return true, nil
-	}
-
-	return false, nil
-}
-
 func (c *AttestationCache) AggregateIsRedundant(att ethpb.Att) (bool, error) {
 	c.Lock()
 	defer c.Unlock()
