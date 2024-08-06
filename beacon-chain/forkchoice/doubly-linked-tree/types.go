@@ -65,7 +65,6 @@ type Node struct {
 	bestDescendant           *Node                        // bestDescendant node of this node.
 	optimistic               bool                         // whether the block has been fully validated or not
 	timestamp                uint64                       // The timestamp when the node was inserted.
-	isFullBlock              bool                         // indicates whether this block is a full block (true) or an empty block (false).
 }
 
 // Vote defines an individual validator's vote.

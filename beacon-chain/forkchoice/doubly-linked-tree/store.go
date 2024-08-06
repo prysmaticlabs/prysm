@@ -302,6 +302,6 @@ func (s *Store) SetPayloadWithholdBoostRoot(root [fieldparams.RootLength]byte) {
 }
 
 // SetPayloadWithholdBoostFull sets whether the block receiving the withhold boost is full or empty.
-func (s *Store) SetPayloadWithholdBoostFull(isFull bool) {
-	s.payloadWithholdBoostFull = isFull
+func (s *Store) SetPayloadWithholdBoostFull(full bool) {
+	s.payloadWithholdBoostFull = full
 }
