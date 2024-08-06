@@ -159,5 +159,6 @@ func ComputeFieldRootsForBlockBody(ctx context.Context, blockBody *BeaconBlockBo
 		}
 		copy(fieldRoots[11], a[:])
 	}
+
 	return fieldRoots, nil
 }
