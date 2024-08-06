@@ -119,6 +119,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	IntervalsPerSlotEPBS:            4,
 	PayloadWithholdBoost:            40,
 	PayloadRevealBoost:              40,
+	PayloadTimelyThreshold:          256, //  PTC_SIZE / 2.
 
 	// Ethereum PoW parameters.
 	DepositChainID:         1, // Chain ID of eth1 mainnet.

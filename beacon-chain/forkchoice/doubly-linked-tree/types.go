@@ -21,6 +21,8 @@ type ForkChoice struct {
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
+//
+//lint:ignore U1000 Ignore unused function temporarily for debugging
 type Store struct {
 	justifiedCheckpoint           *forkchoicetypes.Checkpoint            // latest justified epoch in store.
 	unrealizedJustifiedCheckpoint *forkchoicetypes.Checkpoint            // best unrealized justified checkpoint in store.
@@ -49,25 +51,35 @@ type Store struct {
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
 // This is used as an array based stateful DAG for efficient fork choice look up.
+//lint:ignore U1000 Ignore unused function temporarily
+
 type Node struct {
-	slot                     primitives.Slot                         // slot of the block converted to the node.
-	root                     [fieldparams.RootLength]byte            // root of the block converted to the node.
-	payloadHash              [fieldparams.RootLength]byte            // payloadHash of the block converted to the node.
-	parent                   *Node                                   // parent index of this node.
-	target                   *Node                                   // target checkpoint for
-	children                 []*Node                                 // the list of direct children of this Node
-	justifiedEpoch           primitives.Epoch                        // justifiedEpoch of this node.
-	unrealizedJustifiedEpoch primitives.Epoch                        // the epoch that would be justified if the block would be advanced to the next epoch.
-	finalizedEpoch           primitives.Epoch                        // finalizedEpoch of this node.
-	unrealizedFinalizedEpoch primitives.Epoch                        // the epoch that would be finalized if the block would be advanced to the next epoch.
-	balance                  uint64                                  // the balance that voted for this node directly
-	weight                   uint64                                  // weight of this node: the total balance including children
-	bestDescendant           *Node                                   // bestDescendant node of this node.
-	optimistic               bool                                    // whether the block has been fully validated or not
-	timestamp                uint64                                  // The timestamp when the node was inserted.
-	latestBlockHash          [fieldparams.RootLength]byte            // Hash of the latest execution payload
-	latestFullSlot           primitives.Slot                         // Slot of the latest full block (with execution payload)
-	ptcVote                  map[[fieldparams.RootLength]byte][]byte // tracks the Payload Timeliness Committee (PTC) votes for each block
+	slot                     primitives.Slot              // slot of the block converted to the node.
+	root                     [fieldparams.RootLength]byte // root of the block converted to the node.
+	payloadHash              [fieldparams.RootLength]byte // payloadHash of the block converted to the node.
+	parent                   *Node                        // parent index of this node.
+	target                   *Node                        // target checkpoint for
+	children                 []*Node                      // the list of direct children of this Node
+	justifiedEpoch           primitives.Epoch             // justifiedEpoch of this node.
+	unrealizedJustifiedEpoch primitives.Epoch             // the epoch that would be justified if the block would be advanced to the next epoch.
+	finalizedEpoch           primitives.Epoch             // finalizedEpoch of this node.
+	unrealizedFinalizedEpoch primitives.Epoch             // the epoch that would be finalized if the block would be advanced to the next epoch.
+	balance                  uint64                       // the balance that voted for this node directly
+	weight                   uint64                       // weight of this node: the total balance including children
+	bestDescendant           *Node                        // bestDescendant node of this node.
+	optimistic               bool                         // whether the block has been fully validated or not
+	timestamp                uint64                       // The timestamp when the node was inserted.
+	latestBlockHash          [fieldparams.RootLength]byte // Hash of the latest execution payload
+	latestFullSlot           primitives.Slot              // Slot of the latest full block (with execution payload)
+	isFullBlock              bool                         // indicates whether this block is a full block (true) or an empty block (false).
+}
+
+// LatestMessage represents the latest message from a validator.
+//
+//lint:ignore U1000 Ignore unused function temporarily
+type LatestMessage struct {
+	slot primitives.Slot              // the slot number of the latest message.
+	root [fieldparams.RootLength]byte // the root hash of the block referenced in the latest message.
 }
 
 // Vote defines an individual validator's vote.
@@ -78,8 +90,10 @@ type Vote struct {
 }
 
 // ChildNode represents a possible child of a Node in the fork choice store.
+//
+//lint:ignore U1000 Ignore unused function temporarily for debugging
 type ChildNode struct {
-	root             [fieldparams.RootLength]byte
-	slot             primitives.Slot
-	isPayloadPresent bool
+	root             [fieldparams.RootLength]byte // the root hash of this child node.
+	slot             primitives.Slot              // the slot number of this child node.
+	isPayloadPresent bool                         // indicates whether the execution payload is present for this child node.
 }
