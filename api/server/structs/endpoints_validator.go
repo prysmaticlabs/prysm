@@ -137,3 +137,15 @@ type ValidatorParticipation struct {
 	PreviousEpochTargetAttestingGwei string `json:"previous_epoch_target_attesting_gwei"`
 	PreviousEpochHeadAttestingGwei   string `json:"previous_epoch_head_attesting_gwei"`
 }
+
+type ActiveSetChanges struct {
+	Epoch               string   `json:"epoch"`
+	ActivatedPublicKeys []string `json:"activated_public_keys"`
+	ActivatedIndices    []string `json:"activated_indices"`
+	ExitedPublicKeys    []string `json:"exited_public_keys"`
+	ExitedIndices       []string `json:"exited_indices"`
+	SlashedPublicKeys   []string `json:"slashed_public_keys"`
+	SlashedIndices      []string `json:"slashed_indices"`
+	EjectedPublicKeys   []string `json:"ejected_public_keys"`
+	EjectedIndices      []string `json:"ejected_indices"`
+}

@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	beaconState "github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -835,4 +836,94 @@ func (s *Service) ValidatorParticipation(
 		},
 	}
 	return p, nil
+}
+
+// ValidatorActiveSetChanges retrieves the active set changes for a given epoch.
+//
+// This data includes any activations, voluntary exits, and involuntary
+// ejections.
+func (s *Service) ValidatorActiveSetChanges(
+	ctx context.Context,
+	requestedEpoch primitives.Epoch,
+) (
+	*ethpb.ActiveSetChanges,
+	*RpcError,
+) {
+	currentEpoch := slots.ToEpoch(s.GenesisTimeFetcher.CurrentSlot())
+	if requestedEpoch > currentEpoch {
+		return nil, &RpcError{
+			Err:    errors.Errorf("cannot retrieve information about an epoch in the future, current epoch %d, requesting %d", currentEpoch, requestedEpoch),
+			Reason: BadRequest,
+		}
+	}
+
+	slot, err := slots.EpochStart(requestedEpoch)
+	if err != nil {
+		return nil, &RpcError{Err: err, Reason: BadRequest}
+	}
+	requestedState, err := s.ReplayerBuilder.ReplayerForSlot(slot).ReplayBlocks(ctx)
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrapf(err, "error replaying blocks for state at slot %d", slot),
+			Reason: Internal,
+		}
+	}
+
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, requestedState, coreTime.CurrentEpoch(requestedState))
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrap(err, "could not get active validator count"),
+			Reason: Internal,
+		}
+	}
+	vs := requestedState.Validators()
+	activatedIndices := validators.ActivatedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
+	exitedIndices, err := validators.ExitedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs, activeValidatorCount)
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrap(err, "could not determine exited validator indices"),
+			Reason: Internal,
+		}
+	}
+	slashedIndices := validators.SlashedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
+	ejectedIndices, err := validators.EjectedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs, activeValidatorCount)
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrap(err, "could not determine ejected validator indices"),
+			Reason: Internal,
+		}
+	}
+
+	// Retrieve public keys for the indices.
+	activatedKeys := make([][]byte, len(activatedIndices))
+	exitedKeys := make([][]byte, len(exitedIndices))
+	slashedKeys := make([][]byte, len(slashedIndices))
+	ejectedKeys := make([][]byte, len(ejectedIndices))
+	for i, idx := range activatedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		activatedKeys[i] = pubkey[:]
+	}
+	for i, idx := range exitedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		exitedKeys[i] = pubkey[:]
+	}
+	for i, idx := range slashedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		slashedKeys[i] = pubkey[:]
+	}
+	for i, idx := range ejectedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		ejectedKeys[i] = pubkey[:]
+	}
+	return &ethpb.ActiveSetChanges{
+		Epoch:               requestedEpoch,
+		ActivatedPublicKeys: activatedKeys,
+		ActivatedIndices:    activatedIndices,
+		ExitedPublicKeys:    exitedKeys,
+		ExitedIndices:       exitedIndices,
+		SlashedPublicKeys:   slashedKeys,
+		SlashedIndices:      slashedIndices,
+		EjectedPublicKeys:   ejectedKeys,
+		EjectedIndices:      ejectedIndices,
+	}, nil
 }
