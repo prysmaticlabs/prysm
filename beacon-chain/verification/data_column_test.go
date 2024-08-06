@@ -293,7 +293,7 @@ func TestColumnSidecarParentValid(t *testing.T) {
 }
 
 func TestColumnSidecarParentSlotLower(t *testing.T) {
-	_, columns := util.GenerateTestDenebBlockWithColumns(t, [32]byte{}, 0, 1)
+	_, columns := util.GenerateTestDenebBlockWithColumns(t, [32]byte{}, 1, 1)
 	col := columns[0]
 	cases := []struct {
 		name   string
