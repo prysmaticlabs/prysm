@@ -22,7 +22,7 @@ type ForkChoice struct {
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
 //
-//lint:ignore U1000 Ignore unused function temporarily for debugging
+//lint:ignore U1000 Ignore unused function temporarily
 type Store struct {
 	justifiedCheckpoint           *forkchoicetypes.Checkpoint            // latest justified epoch in store.
 	unrealizedJustifiedCheckpoint *forkchoicetypes.Checkpoint            // best unrealized justified checkpoint in store.
@@ -91,7 +91,7 @@ type Vote struct {
 
 // ChildNode represents a possible child of a Node in the fork choice store.
 //
-//lint:ignore U1000 Ignore unused function temporarily for debugging
+//lint:ignore U1000 Ignore unused function temporarily
 type ChildNode struct {
 	root             [fieldparams.RootLength]byte // the root hash of this child node.
 	slot             primitives.Slot              // the slot number of this child node.
