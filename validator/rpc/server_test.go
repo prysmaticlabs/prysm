@@ -53,6 +53,8 @@ func TestServer_InitializeRoutes(t *testing.T) {
 			} else if method == http.MethodDelete {
 				_, path := s.router.Handler(r)
 				require.Equal(t, "DELETE "+route, path)
+			} else {
+				t.Errorf("Unsupported method %v", method)
 			}
 		}
 	}
