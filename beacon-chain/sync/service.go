@@ -158,6 +158,7 @@ type Service struct {
 	initialSyncComplete              chan struct{}
 	verifierWaiter                   *verification.InitializerWaiter
 	newBlobVerifier                  verification.NewBlobVerifier
+	newPayloadAttestationVerifier    verification.NewPayloadAttestationMsgVerifier
 	availableBlocker                 coverage.AvailableBlocker
 	ctxMap                           ContextByteVersions
 }
