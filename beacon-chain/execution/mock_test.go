@@ -121,7 +121,7 @@ func TestParseRequest(t *testing.T) {
 	ctx := context.Background()
 	cases := []struct {
 		method   string
-		uintArgs []uint64
+		hexArgs  []string // uint64 as hex
 		byteArgs []hexutil.Bytes
 	}{
 		{
@@ -139,12 +139,12 @@ func TestParseRequest(t *testing.T) {
 			},
 		},
 		{
-			method:   GetPayloadBodiesByRangeV1,
-			uintArgs: []uint64{0, 1},
+			method:  GetPayloadBodiesByRangeV1,
+			hexArgs: []string{hexutil.EncodeUint64(0), hexutil.EncodeUint64(1)},
 		},
 		{
-			method:   GetPayloadBodiesByRangeV2,
-			uintArgs: []uint64{math.MaxUint64, 1},
+			method:  GetPayloadBodiesByRangeV2,
+			hexArgs: []string{hexutil.EncodeUint64(math.MaxUint64), hexutil.EncodeUint64(1)},
 		},
 	}
 	for _, c := range cases {
@@ -156,9 +156,11 @@ func TestParseRequest(t *testing.T) {
 				if len(c.byteArgs) > 0 {
 					require.DeepEqual(t, c.byteArgs, mockParseHexByteList(t, msg.Params))
 				}
-				if len(c.uintArgs) > 0 {
+				if len(c.hexArgs) > 0 {
 					rang := mockParseUintList(t, msg.Params)
-					require.DeepEqual(t, c.uintArgs, rang)
+					for i, r := range rang {
+						require.Equal(t, c.hexArgs[i], hexutil.EncodeUint64(r))
+					}
 					nr = rang[1]
 				}
 				mockWriteResult(t, w, msg, make([]*pb.ExecutionPayloadBody, nr))
@@ -169,18 +171,18 @@ func TestParseRequest(t *testing.T) {
 			if len(c.byteArgs) > 0 {
 				args = []interface{}{c.byteArgs}
 			}
-			if len(c.uintArgs) > 0 {
-				args = make([]interface{}, len(c.uintArgs))
-				for i := range c.uintArgs {
-					args[i] = c.uintArgs[i]
+			if len(c.hexArgs) > 0 {
+				args = make([]interface{}, len(c.hexArgs))
+				for i := range c.hexArgs {
+					args[i] = c.hexArgs[i]
 				}
 			}
 			require.NoError(t, cli.CallContext(ctx, &result, c.method, args...))
 			if len(c.byteArgs) > 0 {
 				require.Equal(t, len(c.byteArgs), len(result))
 			}
-			if len(c.uintArgs) > 0 {
-				require.Equal(t, int(c.uintArgs[1]), len(result))
+			if len(c.hexArgs) > 0 {
+				require.Equal(t, int(hexutil.MustDecodeUint64(c.hexArgs[1])), len(result))
 			}
 		})
 	}
