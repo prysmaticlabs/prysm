@@ -370,7 +370,7 @@ func TestBlobsFromDataColumns(t *testing.T) {
 			}
 
 			// Get the blobs from the data columns.
-			actual, err := blocker.blobsFromDataColumns(nil, blockRoot[:])
+			actual, err := blocker.blobsFromStoredDataColumns(nil, blockRoot[:])
 			if tc.isError {
 				require.Equal(t, tc.errorReason, err.Reason)
 			} else {

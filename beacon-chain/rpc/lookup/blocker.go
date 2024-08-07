@@ -136,9 +136,9 @@ func (p *BeaconDbBlocker) Block(ctx context.Context, id []byte) (interfaces.Read
 	return blk, nil
 }
 
-// blobsFromBlobs retrieves blobs corresponding to `indices` and `root` from the store, expecting blobs to be
+// blobsFromStoredBlobs retrieves blobs corresponding to `indices` and `root` from the store, expecting blobs to be
 // stored directly (aka. no data columns).
-func (p *BeaconDbBlocker) blobsFromBlobs(indices map[uint64]bool, root []byte) ([]*blocks.VerifiedROBlob, *core.RpcError) {
+func (p *BeaconDbBlocker) blobsFromStoredBlobs(indices map[uint64]bool, root []byte) ([]*blocks.VerifiedROBlob, *core.RpcError) {
 	// If no indices are provided in the request, we fetch all available blobs for the block.
 	if len(indices) == 0 {
 		// Get all blob indices for the block.
@@ -172,11 +172,11 @@ func (p *BeaconDbBlocker) blobsFromBlobs(indices map[uint64]bool, root []byte) (
 	return blobs, nil
 }
 
-// blobsFromDataColumns retrieves data columns from the store, convert them to blobs, and return blobs corresponding to `indices` and `root` from the store,
+// blobsFromStoredDataColumns retrieves data columns from the store, convert them to blobs, and return blobs corresponding to `indices` and `root` from the store,
 // expecting data columns to be stored (aka. no blobs).
 // If not all data columns are available, the function returns a "not found" error.
 // This function expects the block associated with root has blobs.
-func (p *BeaconDbBlocker) blobsFromDataColumns(indices map[uint64]bool, rootBytes []byte) ([]*blocks.VerifiedROBlob, *core.RpcError) {
+func (p *BeaconDbBlocker) blobsFromStoredDataColumns(indices map[uint64]bool, rootBytes []byte) ([]*blocks.VerifiedROBlob, *core.RpcError) {
 	// Multiple implementations are possible here, depending on the data storage strategy.
 	// 1. If the `--subscribe-all-subnets` flag is not set, the respond with a "not found" error.
 	// 2. If all columns are available (either because the `--subscribe-all-subnets` flag is set or because we have all columns thanks to vaidator custody),
@@ -382,8 +382,8 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices map[uint
 	}
 
 	if !isPeerDASEnabledForBlock {
-		return p.blobsFromBlobs(indices, root)
+		return p.blobsFromStoredBlobs(indices, root)
 	}
 
-	return p.blobsFromDataColumns(indices, root)
+	return p.blobsFromStoredDataColumns(indices, root)
 }
