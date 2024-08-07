@@ -2,13 +2,11 @@ package transition_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
-	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -211,16 +209,4 @@ func TestProcessBlockDifferentVersion(t *testing.T) {
 	require.NoError(t, err)
 	_, _, err = transition.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, "state and block are different version. 0 != 1", err)
-}
-
-func TestVerifyBlobCommitmentCount(t *testing.T) {
-	b := &ethpb.BeaconBlockDeneb{Body: &ethpb.BeaconBlockBodyDeneb{}}
-	rb, err := blocks.NewBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, transition.VerifyBlobCommitmentCount(rb))
-
-	b = &ethpb.BeaconBlockDeneb{Body: &ethpb.BeaconBlockBodyDeneb{BlobKzgCommitments: make([][]byte, field_params.MaxBlobsPerBlock+1)}}
-	rb, err = blocks.NewBeaconBlock(b)
-	require.NoError(t, err)
-	require.ErrorContains(t, fmt.Sprintf("too many kzg commitments in block: %d", field_params.MaxBlobsPerBlock+1), transition.VerifyBlobCommitmentCount(rb))
 }
