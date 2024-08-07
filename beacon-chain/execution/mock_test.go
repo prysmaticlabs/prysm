@@ -150,7 +150,7 @@ func TestParseRequest(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.method, func(t *testing.T) {
 			cli, srv := newMockEngine(t)
-			srv.register(c.method, func(msg *jsonrpcMessage, w http.ResponseWriter, r *http.Request) {
+			srv.register(c.method, func(msg *jsonrpcMessage, w http.ResponseWriter, _ *http.Request) {
 				require.Equal(t, c.method, msg.Method)
 				nr := uint64(len(c.byteArgs))
 				if len(c.byteArgs) > 0 {
@@ -209,7 +209,7 @@ func TestCallCount(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.method, func(t *testing.T) {
 			cli, srv := newMockEngine(t)
-			srv.register(c.method, func(msg *jsonrpcMessage, w http.ResponseWriter, r *http.Request) {
+			srv.register(c.method, func(msg *jsonrpcMessage, w http.ResponseWriter, _ *http.Request) {
 				mockWriteResult(t, w, msg, nil)
 			})
 			for i := 0; i < c.count; i++ {
