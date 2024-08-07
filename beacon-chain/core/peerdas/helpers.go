@@ -196,15 +196,11 @@ func DataColumnSidecars(signedBlock interfaces.ReadOnlySignedBeaconBlock, blobs 
 	return sidecars, nil
 }
 
-// Blobs reconstructs  blobs from data column sidecars.
+// Blobs reconstructs blobs from data column sidecars.
 // This is the reciprocal function of DataColumnSidecars.
 // `dataColumnsSidecar` must contain at least the first half of `fieldparams.NumberOfColumns` columns,
 // else the function will error. (It can contain more columns, but they will be ignored.)
 func Blobs(dataColumnsSidecar []*ethpb.DataColumnSidecar) ([]*blocks.VerifiedROBlob, error) {
-	if len(dataColumnsSidecar) == 0 {
-		return nil, nil
-	}
-
 	columnCount := fieldparams.NumberOfColumns
 
 	neededColumnCount := columnCount / 2
