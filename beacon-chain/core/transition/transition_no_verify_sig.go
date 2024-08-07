@@ -46,7 +46,7 @@ import (
 func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
 	st state.BeaconState,
-	signed interfaces.ReadOnlySignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (*bls.SignatureBatch, state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
@@ -113,7 +113,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 func CalculateStateRoot(
 	ctx context.Context,
 	state state.BeaconState,
-	signed interfaces.ReadOnlySignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
 	defer span.End()
@@ -163,7 +163,7 @@ func CalculateStateRoot(
 func ProcessBlockNoVerifyAnySig(
 	ctx context.Context,
 	st state.BeaconState,
-	signed interfaces.ReadOnlySignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (*bls.SignatureBatch, state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
@@ -250,25 +250,25 @@ func ProcessBlockNoVerifyAnySig(
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state state.BeaconState,
-	beaconBlock interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+	beaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 	if beaconBlock == nil || beaconBlock.IsNil() {
 		return nil, blocks.ErrNilBeaconBlock
 	}
 
-	if _, err := VerifyOperationLengths(ctx, state, beaconBlock); err != nil {
+	if _, err := VerifyOperationLengths(ctx, state, beaconBlock.Block()); err != nil {
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
 	var err error
 	if beaconBlock.Version() == version.Phase0 {
-		state, err = phase0Operations(ctx, state, beaconBlock)
+		state, err = phase0Operations(ctx, state, beaconBlock.Block())
 		if err != nil {
 			return nil, err
 		}
 	} else if beaconBlock.Version() < version.Electra {
-		state, err = altairOperations(ctx, state, beaconBlock)
+		state, err = altairOperations(ctx, state, beaconBlock.Block())
 		if err != nil {
 			return nil, err
 		}
@@ -298,7 +298,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 func ProcessBlockForStateRoot(
 	ctx context.Context,
 	state state.BeaconState,
-	signed interfaces.ReadOnlySignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
 	defer span.End()
@@ -355,7 +355,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
-	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed.Block())
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")

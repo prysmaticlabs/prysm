@@ -112,7 +112,7 @@ func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
 		if bb.Body == nil {
 			continue
 		}
-		wb, err := blocks.NewBeaconBlock(bb)
+		wb, err := blocks.NewSignedBeaconBlock(bb)
 		require.NoError(t, err)
 		s, err := ProcessOperationsNoVerifyAttsSigs(ctx, state, wb)
 		if err != nil && s != nil {
