@@ -735,74 +735,37 @@ func (s *Store) OnPayloadAttestationMessage(
 		if data.Slot+1 != currentSlot {
 			return nil
 		}
-		timeIntoSlot := (uint64(time.Now().Unix()) - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
+		timeIntoSlot, err := slots.SecondsSinceSlotStart(currentSlot, s.genesisTime, uint64(time.Now().Unix()))
+		if err != nil {
+			log.WithError(err).Error("could not compute seconds since slot start")
+		}
 		if timeIntoSlot >= params.BeaconConfig().SecondsPerSlot/params.BeaconConfig().IntervalsPerSlot {
 			return nil
 		}
 	}
 
-	// Update the ptc vote for the block
-	ptcVote := s.ptcVote[blockRoot]
-	if ptcVote == nil {
-		ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
+	if node.ptcVote == nil {
+		node.ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
 	}
 
 	for i, vote := range payloadAttestation.AggregationBits {
 		if vote == byte(0) {
-			ptcVote[i] = data.PayloadStatus
+			node.ptcVote[i] = data.PayloadStatus
 		}
 	}
-	s.ptcVote[blockRoot] = ptcVote
-
-	// Update the payload boosts if threshold has been achieved
-	presentCount := 0
-	withheldCount := 0
-	for _, vote := range ptcVote {
-		if vote == primitives.PAYLOAD_PRESENT {
-			presentCount++
-		} else if vote == primitives.PAYLOAD_WITHHELD {
-			withheldCount++
-		}
-	}
-
-	if presentCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
-		s.payloadRevealBoostRoot = blockRoot
-	}
-	if withheldCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
-		s.payloadWithholdBoostRoot = node.parent.root
-		s.payloadWithholdBoostFull = s.isParentNodeFull(node)
-	}
-
-	// Update the PTC vote for the block
-	s.updatePTCVote(blockRoot, payloadAttestation)
 
 	// Update payload boosts if necessary
-	s.updatePayloadBoosts(blockRoot, node)
+	s.updatePayloadBoosts(node)
 
 	return nil
 }
 
-func (s *Store) updatePTCVote(blockRoot [32]byte, payloadAttestation *ethpb.PayloadAttestation) {
-	ptcVote := s.ptcVote[blockRoot]
-	if ptcVote == nil {
-		ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
-	}
-
-	for i, vote := range payloadAttestation.AggregationBits {
-		if vote == byte(0) {
-			ptcVote[i] = payloadAttestation.Data.PayloadStatus
-		}
-	}
-
-	s.ptcVote[blockRoot] = ptcVote
-}
-
-func (s *Store) updatePayloadBoosts(blockRoot [32]byte, node *Node) {
+func (s *Store) updatePayloadBoosts(node *Node) {
 	// ptcVote := s.ptcVote[blockRoot]
 
 	presentCount := 0
 	withheldCount := 0
-	for _, vote := range s.ptcVote[blockRoot] {
+	for _, vote := range node.ptcVote {
 		if vote == primitives.PAYLOAD_PRESENT {
 			presentCount++
 		} else if vote == primitives.PAYLOAD_ABSENT {
@@ -811,11 +774,13 @@ func (s *Store) updatePayloadBoosts(blockRoot [32]byte, node *Node) {
 	}
 
 	if presentCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
-		s.payloadRevealBoostRoot = blockRoot
+		s.payloadRevealBoostRoot = node.root
 	}
 	if withheldCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
-		s.payloadWithholdBoostRoot = node.parent.root
-		s.payloadWithholdBoostFull = s.isParentNodeFull(node)
+		if node.parent != nil {
+			s.payloadWithholdBoostRoot = node.parent.root
+			s.payloadWithholdBoostFull = node.parent.payloadHash != [32]byte{}
+		}
 	}
 }
 
