@@ -123,6 +123,19 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 				digest,
 			)
 		}
+		//TODO: feature flag everywhere
+		s.subscribe(
+			p2p.LightClientFinalityUpdateTopicFormat,
+			s.validateLightClientFinalityUpdate,
+			s.lightClientFinalityUpdateSubscriber,
+			digest,
+		)
+		s.subscribe(
+			p2p.LightClientOptimisticUpdateTopicFormat,
+			s.validateLightClientOptimisticUpdate,
+			s.lightClientOptimisticUpdateSubscriber,
+			digest,
+		)
 	}
 
 	// New Gossip Topic in Capella

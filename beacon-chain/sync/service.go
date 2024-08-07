@@ -39,6 +39,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
@@ -74,6 +75,11 @@ var (
 
 // Common type for functional p2p validation options.
 type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
+
+type lightClientFinalityUpdateInfo struct {
+	slot             primitives.Slot
+	hasSupermajority bool
+}
 
 // config to hold dependencies for the sync service.
 type config struct {
@@ -151,6 +157,8 @@ type Service struct {
 	badBlockLock                     sync.RWMutex
 	syncContributionBitsOverlapLock  sync.RWMutex
 	syncContributionBitsOverlapCache *lru.Cache
+	lightClientFinalityUpdateLock    sync.Mutex
+	bestLightClientFinalityUpdate    *lightClientFinalityUpdateInfo
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}

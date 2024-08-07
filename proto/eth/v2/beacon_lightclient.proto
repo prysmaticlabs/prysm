@@ -57,7 +57,7 @@ message LightClientFinalityUpdateWithVersion {
 message LightClientFinalityUpdate {
   LightClientHeader attested_header = 1;
   LightClientHeader finalized_header = 2;
-  repeated bytes finality_branch = 3;
+  repeated bytes finality_branch = 3 [(ethereum.eth.ext.ssz_size) = "6,32"];
   v1.SyncAggregate sync_aggregate = 4;
   uint64 signature_slot = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 }

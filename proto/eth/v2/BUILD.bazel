@@ -30,8 +30,8 @@ load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 ssz_gen_marshal(
     name = "ssz_generated_files",
-    go_proto = ":go_proto",
     out = "grpc.ssz.go",
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
         "//proto/engine/v1:go_default_library",
@@ -52,6 +52,8 @@ ssz_gen_marshal(
         "BeaconBlockContentsDeneb",
         "SyncCommittee",
         "BlobIdentifier",
+        "LightClientFinalityUpdate",
+        "LightClientOptimisticUpdate",
     ],
 )
 
