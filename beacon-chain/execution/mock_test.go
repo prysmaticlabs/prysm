@@ -84,11 +84,15 @@ func (s *mockEngine) callCount(method string) int {
 }
 
 func mockParseUintList(t *testing.T, data json.RawMessage) []uint64 {
-	var list []uint64
+	var list []string
 	if err := json.Unmarshal(data, &list); err != nil {
 		t.Fatalf("failed to parse uint list: %v", err)
 	}
-	return list
+	uints := make([]uint64, len(list))
+	for i, u := range list {
+		uints[i] = hexutil.MustDecodeUint64(u)
+	}
+	return uints
 }
 
 func mockParseHexByteList(t *testing.T, data json.RawMessage) []hexutil.Bytes {
