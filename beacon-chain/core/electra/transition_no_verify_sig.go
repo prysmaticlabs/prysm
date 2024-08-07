@@ -73,6 +73,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process bls-to-execution changes")
 	}
+	// new in epbs
 	st, err = ProcessPayloadAttestations(ctx, st, block)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process payload attestations")
