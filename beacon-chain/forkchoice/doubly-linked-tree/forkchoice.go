@@ -803,9 +803,9 @@ func (s *Store) updatePayloadBoosts(blockRoot [32]byte, node *Node) {
 	presentCount := 0
 	withheldCount := 0
 	for _, vote := range s.ptcVote[blockRoot] {
-		if primitives.PTCStatus(vote) == primitives.PAYLOAD_PRESENT {
+		if vote == primitives.PAYLOAD_PRESENT {
 			presentCount++
-		} else if primitives.PTCStatus(vote) == primitives.PAYLOAD_ABSENT {
+		} else if vote == primitives.PAYLOAD_ABSENT {
 			withheldCount++
 		}
 	}
