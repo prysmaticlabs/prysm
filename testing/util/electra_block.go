@@ -2,9 +2,9 @@ package util
 
 import (
 	"context"
-	crd "crypto/rand"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -270,7 +270,12 @@ func generateWithdrawalRequests(
 		if err != nil {
 			return nil, err
 		}
-		amount := uint64(rand.Intn(60000)) // random amount created
+		// Get a random index
+		nBig, err := rand.Int(rand.Reader, big.NewInt(60000))
+		if err != nil {
+			return nil, err
+		}
+		amount := nBig.Uint64() // random amount created
 		bal, err := bState.BalanceAtIndex(valIndex)
 		if err != nil {
 			return nil, err
@@ -279,7 +284,12 @@ func generateWithdrawalRequests(
 			amount, // some smaller amount
 			bal,    // the entire balance
 		}
-		randomIndex := rand.Intn(len(amounts))
+		// Get a random index
+		nBig, err = rand.Int(rand.Reader, big.NewInt(int64(len(amounts))))
+		if err != nil {
+			return nil, err
+		}
+		randomIndex := nBig.Uint64()
 		withdrawalRequests[i] = &v1.WithdrawalRequest{
 			ValidatorPubkey: privs[valIndex].PublicKey().Marshal(),
 			SourceAddress:   make([]byte, common.AddressLength),
@@ -300,10 +310,20 @@ func generateDepositRequests(
 		if err != nil {
 			return nil, err
 		}
-		amount := uint64(rand.Intn(60000)) // random amount created
+		// Get a random index
+		nBig, err := rand.Int(rand.Reader, big.NewInt(60000))
+		if err != nil {
+			return nil, err
+		}
+		amount := nBig.Uint64() // random amount created
 		prefixes := []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte, 0, params.BeaconConfig().BLSWithdrawalPrefixByte}
 		withdrawalCred := make([]byte, 32)
-		randPrefixIndex := rand.Intn(len(prefixes))
+		// Get a random index
+		nBig, err = rand.Int(rand.Reader, big.NewInt(int64(len(prefixes))))
+		if err != nil {
+			return nil, err
+		}
+		randPrefixIndex := nBig.Uint64()
 		withdrawalCred[0] = prefixes[randPrefixIndex]
 
 		depositMessage := &ethpb.DepositMessage{
@@ -361,7 +381,7 @@ func generateConsolidationRequests(
 
 func randomAddress() (common.Address, error) {
 	b := make([]byte, 20)
-	_, err := crd.Read(b)
+	_, err := rand.Read(b)
 	if err != nil {
 		return common.Address{}, err
 	}
