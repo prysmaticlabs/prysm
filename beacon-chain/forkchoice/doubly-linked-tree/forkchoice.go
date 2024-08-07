@@ -758,9 +758,9 @@ func (s *Store) OnPayloadAttestationMessage(
 	presentCount := 0
 	withheldCount := 0
 	for _, vote := range ptcVote {
-		if primitives.PTCStatus(vote) == primitives.PAYLOAD_PRESENT {
+		if vote == primitives.PAYLOAD_PRESENT {
 			presentCount++
-		} else if primitives.PTCStatus(vote) == primitives.PAYLOAD_WITHHELD {
+		} else if vote == primitives.PAYLOAD_WITHHELD {
 			withheldCount++
 		}
 	}
@@ -790,7 +790,7 @@ func (s *Store) updatePTCVote(blockRoot [32]byte, payloadAttestation *ethpb.Payl
 
 	for i, vote := range payloadAttestation.AggregationBits {
 		if vote == byte(0) {
-			ptcVote[i] = primitives.PTCStatus(payloadAttestation.Data.PayloadStatus)
+			ptcVote[i] = payloadAttestation.Data.PayloadStatus
 		}
 	}
 
