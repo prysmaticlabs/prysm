@@ -16,6 +16,7 @@ go_library(
         "log.go",
         "metrics.go",
         "options.go",
+        "payload_attestations.go",
         "pending_attestations_queue.go",
         "pending_blocks_queue.go",
         "rate_limiter.go",
