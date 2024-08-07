@@ -23,7 +23,7 @@ type PayloadAttestationCache struct {
 // Seen returns true if a vote for the given Beacon Block Root has already been processed
 // for this Payload Timeliness Committee index. This will return true even if
 // the Payload status differs.
-func (p *PayloadAttestationCache) Seen(root [32]byte, idx uint64) bool {
+func (p *PayloadAttestationCache) Seen(root [32]byte, idx primitives.ValidatorIndex) bool {
 	p.Lock()
 	defer p.Unlock()
 	if p.root != root {
@@ -33,7 +33,7 @@ func (p *PayloadAttestationCache) Seen(root [32]byte, idx uint64) bool {
 		if agg == nil {
 			continue
 		}
-		if agg.AggregationBits.BitAt(idx) {
+		if agg.AggregationBits.BitAt(uint64(idx)) {
 			return true
 		}
 	}
