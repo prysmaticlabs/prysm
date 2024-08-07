@@ -41,6 +41,9 @@ var (
 //      for_ops(body.deposits, process_deposit)  # [Modified in Electra:EIP7251]
 //      for_ops(body.voluntary_exits, process_voluntary_exit)  # [Modified in Electra:EIP7251]
 //      for_ops(body.bls_to_execution_changes, process_bls_to_execution_change)
+//		# Removed `process_deposit_request` in EIP-7732
+// 		# Removed `process_withdrawal_request` in EIP-7732
+// 		# Removed `process_consolidation_request` in EIP-7732
 //      for_ops(body.payload_attestations, process_payload_attestation)  # [New in EIP-7732]
 
 func ProcessOperations(
