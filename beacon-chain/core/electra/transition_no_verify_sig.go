@@ -2,7 +2,6 @@ package electra
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
@@ -16,6 +15,7 @@ var (
 	ProcessVoluntaryExits        = blocks.ProcessVoluntaryExits
 	ProcessAttesterSlashings     = blocks.ProcessAttesterSlashings
 	ProcessProposerSlashings     = blocks.ProcessProposerSlashings
+	ProcessPayloadAttestations   = blocks.ProcessAttestationsNoVerifySignature
 )
 
 // ProcessOperations
@@ -41,11 +41,7 @@ var (
 //      for_ops(body.deposits, process_deposit)  # [Modified in Electra:EIP7251]
 //      for_ops(body.voluntary_exits, process_voluntary_exit)  # [Modified in Electra:EIP7251]
 //      for_ops(body.bls_to_execution_changes, process_bls_to_execution_change)
-//      for_ops(body.execution_payload.deposit_requests, process_deposit_request)  # [New in Electra:EIP6110]
-//      # [New in Electra:EIP7002:EIP7251]
-//      for_ops(body.execution_payload.withdrawal_requests, process_withdrawal_request)
-//      # [New in Electra:EIP7251]
-//      for_ops(body.execution_payload.consolidation_requests, process_consolidation_request)
+//      for_ops(body.payload_attestations, process_payload_attestation)  # [New in EIP-7732]
 
 func ProcessOperations(
 	ctx context.Context,
@@ -77,25 +73,9 @@ func ProcessOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process bls-to-execution changes")
 	}
-	// new in electra
-	e, err := bb.Execution()
+	st, err = ProcessPayloadAttestations(ctx, st, block)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution data from block")
-	}
-	exe, ok := e.(interfaces.ExecutionDataElectra)
-	if !ok {
-		return nil, errors.New("could not cast execution data to electra execution data")
-	}
-	st, err = ProcessDepositRequests(ctx, st, exe.DepositRequests())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process deposit receipts")
-	}
-	st, err = ProcessWithdrawalRequests(ctx, st, exe.WithdrawalRequests())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
-	}
-	if err := ProcessConsolidationRequests(ctx, st, exe.ConsolidationRequests()); err != nil {
-		return nil, fmt.Errorf("could not process consolidation requests: %w", err)
+		return nil, errors.Wrap(err, "could not process payload attestations")
 	}
 	return st, nil
 }
