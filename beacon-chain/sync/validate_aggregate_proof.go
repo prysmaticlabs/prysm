@@ -275,7 +275,26 @@ func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnl
 		return result, err
 	}
 
-	committee, result, err := s.validateBitLength(ctx, bs, a.GetData().Slot, a.GetData().CommitteeIndex, a.GetAggregationBits())
+	var committeeIndex primitives.CommitteeIndex
+	if a.Version() >= version.Electra {
+		a, ok := a.(*ethpb.AttestationElectra)
+		// This will never fail in practice because we asserted the version
+		if !ok {
+			err := fmt.Errorf("attestation has wrong type (expected %T, got %T)", &ethpb.AttestationElectra{}, a)
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationIgnore, err
+		}
+		var validationRes pubsub.ValidationResult
+		committeeIndex, validationRes, err = validateCommitteeIndexElectra(ctx, a)
+		if validationRes != pubsub.ValidationAccept {
+			wrappedErr := errors.Wrapf(err, "could not validate committee index for Electra version")
+			tracing.AnnotateError(span, wrappedErr)
+			return validationRes, wrappedErr
+		}
+	} else {
+		committeeIndex = a.GetData().CommitteeIndex
+	}
+	committee, result, err := s.validateBitLength(ctx, bs, a.GetData().Slot, committeeIndex, a.GetAggregationBits())
 	if result != pubsub.ValidationAccept {
 		return result, err
 	}
