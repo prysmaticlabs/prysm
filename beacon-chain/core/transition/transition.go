@@ -319,13 +319,17 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.UpgradeState")
 	defer span.End()
+
 	var err error
+	upgraded := false
+
 	if time.CanUpgradeToAltair(state.Slot()) {
 		state, err = altair.UpgradeToAltair(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
+		upgraded = true
 	}
 
 	if time.CanUpgradeToBellatrix(state.Slot()) {
@@ -334,6 +338,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
+		upgraded = true
 	}
 
 	if time.CanUpgradeToCapella(state.Slot()) {
@@ -342,6 +347,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
+		upgraded = true
 	}
 
 	if time.CanUpgradeToDeneb(state.Slot()) {
@@ -350,6 +356,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
+		upgraded = true
 	}
 
 	if time.CanUpgradeToElectra(state.Slot()) {
@@ -358,9 +365,13 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
+		upgraded = true
 	}
 
-	log.Debugf("upgraded state to %s", version.String(state.Version()))
+	if upgraded {
+		log.Debugf("upgraded state to %s", version.String(state.Version()))
+	}
+
 	return state, nil
 }
 
