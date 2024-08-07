@@ -2,8 +2,9 @@ package util
 
 import (
 	"context"
+	rd "crypto/rand"
 	"fmt"
-	rd "math/rand"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -517,7 +518,12 @@ func generateWithdrawals(
 			amount, // some smaller amount
 			bal,    // the entire balance
 		}
-		randomIndex := rd.Intn(len(amounts))
+		// Get a random index
+		nBig, err := rd.Int(rd.Reader, big.NewInt(int64(len(amounts))))
+		if err != nil {
+			return nil, err
+		}
+		randomIndex := nBig.Uint64()
 		withdrawalRequests[i] = &enginev1.Withdrawal{
 			ValidatorIndex: valIndex,
 			Address:        make([]byte, common.AddressLength),
