@@ -13,6 +13,7 @@ import (
 
 type Service struct {
 	BeaconDB              db.ReadOnlyDatabase
+	ChainInfoFetcher      blockchain.ChainInfoFetcher
 	HeadFetcher           blockchain.HeadFetcher
 	FinalizedFetcher      blockchain.FinalizationFetcher
 	GenesisTimeFetcher    blockchain.TimeFetcher

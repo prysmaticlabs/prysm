@@ -54,11 +54,13 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(0))
 	bs := &Server{
-		GenesisTimeFetcher: &mock.ChainService{},
-		HeadFetcher: &mock.ChainService{
-			State: st,
+		CoreService: &core.Service{
+			BeaconDB:           beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{},
+			HeadFetcher: &mock.ChainService{
+				State: st,
+			},
 		},
-		BeaconDB: beaconDB,
 	}
 
 	wanted := errNoEpochInfoError
@@ -66,7 +68,7 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 		ctx,
 		&ethpb.GetValidatorActiveSetChangesRequest{
 			QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{
-				Epoch: slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: slots.ToEpoch(bs.CoreService.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -1283,10 +1285,12 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 
 	bs := &Server{
-		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
+		CoreService: &core.Service{
+			FinalizedFetcher: &mock.ChainService{
+				FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
+			},
+			GenesisTimeFetcher: &mock.ChainService{},
 		},
-		GenesisTimeFetcher: &mock.ChainService{},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 	res, err := bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{

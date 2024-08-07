@@ -125,9 +125,10 @@ func Test_endpoints(t *testing.T) {
 	}
 
 	prysmValidatorRoutes := map[string][]string{
-		"/prysm/validators/performance":      {http.MethodPost},
-		"/prysm/v1/validators/performance":   {http.MethodPost},
-		"/prysm/v1/validators/participation": {http.MethodGet},
+		"/prysm/validators/performance":           {http.MethodPost},
+		"/prysm/v1/validators/performance":        {http.MethodPost},
+		"/prysm/v1/validators/participation":      {http.MethodGet},
+		"/prysm/v1/validators/active_set_changes": {http.MethodGet},
 	}
 
 	s := &Service{cfg: &Config{}}
