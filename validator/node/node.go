@@ -144,7 +144,7 @@ func newRouter(cliCtx *cli.Context) *http.ServeMux {
 	r := http.NewServeMux()
 	chain := middleware.MiddlewareChain(middleware.NormalizeQueryValuesHandler, middleware.CorsHandler(allowedOrigins))
 	for _, url := range allowedOrigins {
-		http.Handle(url, chain(r))
+		r.Handle(url, chain(r))
 	}
 	return r
 }
