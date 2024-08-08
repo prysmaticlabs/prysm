@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/patrickmn/go-cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/forkchoice"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
@@ -21,8 +22,7 @@ type AttCaches struct {
 	aggregatedAtt      map[attestation.Id][]ethpb.Att
 	unAggregateAttLock sync.RWMutex
 	unAggregatedAtt    map[attestation.Id]ethpb.Att
-	forkchoiceAttLock  sync.RWMutex
-	forkchoiceAtt      map[attestation.Id]ethpb.Att
+	forkchoiceAtt      *forkchoice.Attestations
 	blockAttLock       sync.RWMutex
 	blockAtt           map[attestation.Id][]ethpb.Att
 	seenAtt            *cache.Cache
@@ -36,10 +36,35 @@ func NewAttCaches() *AttCaches {
 	pool := &AttCaches{
 		unAggregatedAtt: make(map[attestation.Id]ethpb.Att),
 		aggregatedAtt:   make(map[attestation.Id][]ethpb.Att),
-		forkchoiceAtt:   make(map[attestation.Id]ethpb.Att),
+		forkchoiceAtt:   forkchoice.New(),
 		blockAtt:        make(map[attestation.Id][]ethpb.Att),
 		seenAtt:         c,
 	}
 
 	return pool
+}
+
+// SaveForkchoiceAttestation saves a forkchoice attestation.
+func (c *AttCaches) SaveForkchoiceAttestation(att ethpb.Att) error {
+	return c.forkchoiceAtt.SaveForkchoiceAttestation(att)
+}
+
+// SaveForkchoiceAttestations saves forkchoice attestations.
+func (c *AttCaches) SaveForkchoiceAttestations(att []ethpb.Att) error {
+	return c.forkchoiceAtt.SaveForkchoiceAttestations(att)
+}
+
+// ForkchoiceAttestations returns all forkchoice attestations.
+func (c *AttCaches) ForkchoiceAttestations() []ethpb.Att {
+	return c.forkchoiceAtt.ForkchoiceAttestations()
+}
+
+// DeleteForkchoiceAttestation deletes a forkchoice attestation.
+func (c *AttCaches) DeleteForkchoiceAttestation(att ethpb.Att) error {
+	return c.forkchoiceAtt.DeleteForkchoiceAttestation(att)
+}
+
+// ForkchoiceAttestationCount returns the number of forkchoice attestation keys.
+func (c *AttCaches) ForkchoiceAttestationCount() int {
+	return c.forkchoiceAtt.ForkchoiceAttestationCount()
 }
