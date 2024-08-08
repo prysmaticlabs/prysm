@@ -29,8 +29,22 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
 	defer span.End()
 
-	atts := vs.AttestationCache.GetAll()
-	atts = vs.validateAndDeleteAttsInPool(ctx, latestState, atts)
+	var atts []ethpb.Att
+
+	if features.Get().EnableExperimentalAttestationPool {
+		atts = vs.AttestationCache.GetAll()
+		atts = vs.validateAndDeleteAttsInPool(ctx, latestState, atts)
+	} else {
+		atts = vs.AttPool.AggregatedAttestations()
+		atts = vs.validateAndDeleteAttsInPool(ctx, latestState, atts)
+
+		uAtts, err := vs.AttPool.UnaggregatedAttestations()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get unaggregated attestations")
+		}
+		uAtts = vs.validateAndDeleteAttsInPool(ctx, latestState, uAtts)
+		atts = append(atts, uAtts...)
+	}
 
 	// Checking the state's version here will give the wrong result if the last slot of Deneb is missed.
 	// The head state will still be in Deneb while we are trying to build an Electra block.
@@ -418,8 +432,20 @@ func (vs *Server) deleteAttsInPool(ctx context.Context, atts []ethpb.Att) error 
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if err := vs.AttestationCache.DeleteCovered(att); err != nil {
-			return errors.Wrap(err, "could not delete attestation")
+		if features.Get().EnableExperimentalAttestationPool {
+			if err := vs.AttestationCache.DeleteCovered(att); err != nil {
+				return errors.Wrap(err, "could not delete attestation")
+			}
+		} else {
+			if att.IsAggregated() {
+				if err := vs.AttPool.DeleteAggregatedAttestation(att); err != nil {
+					return err
+				}
+			} else {
+				if err := vs.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil

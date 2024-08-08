@@ -11,6 +11,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 )
 
@@ -60,7 +61,12 @@ func (s *Service) Start() {
 		return
 	}
 	go s.prepareForkChoiceAtts()
-	go s.pruneExpired()
+
+	if features.Get().EnableExperimentalAttestationPool {
+		go s.pruneExpiredExperimental()
+	} else {
+		go s.pruneExpired()
+	}
 }
 
 // waitForSync waits until the beacon node is synced to the latest head.

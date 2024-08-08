@@ -47,7 +47,19 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	attestations := s.AttestationCache.GetAll()
+	var attestations []eth.Att
+	if features.Get().EnableExperimentalAttestationPool {
+		attestations = s.AttestationCache.GetAll()
+	} else {
+		attestations = s.AttestationsPool.AggregatedAttestations()
+		unaggAtts, err := s.AttestationsPool.UnaggregatedAttestations()
+		if err != nil {
+			httputil.HandleError(w, "Could not get unaggregated attestations: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		attestations = append(attestations, unaggAtts...)
+	}
+
 	isEmptyReq := rawSlot == "" && rawCommitteeIndex == ""
 	if isEmptyReq {
 		allAtts := make([]*structs.Attestation, len(attestations))
@@ -153,9 +165,22 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 			log.WithError(err).Errorf("could not broadcast attestation at index %d", i)
 		}
 
-		if err = s.AttestationCache.Add(att); err != nil {
-			log.WithError(err).Error("could not save attestation")
+		if features.Get().EnableExperimentalAttestationPool {
+			if err = s.AttestationCache.Add(att); err != nil {
+				log.WithError(err).Error("could not save attestation")
+			}
+		} else {
+			if att.IsAggregated() {
+				if err = s.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
+					log.WithError(err).Error("could not save aggregated attestation")
+				}
+			} else {
+				if err = s.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
+					log.WithError(err).Error("could not save unaggregated attestation")
+				}
+			}
 		}
+
 	}
 	if len(failedBroadcasts) > 0 {
 		httputil.HandleError(

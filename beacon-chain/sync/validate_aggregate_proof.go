@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -109,17 +110,30 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, errors.New("bad block referenced in attestation data")
 	}
 
-	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-	// It is also possible that some aggregate in the pool already covers all bits
-	// of this aggregate, in which case we can ignore it too.
-	isRedundant, err := s.cfg.attestationCache.AggregateIsRedundant(aggregate)
-	if err != nil {
-		tracing.AnnotateError(span, err)
-		return pubsub.ValidationIgnore, err
+	if features.Get().EnableExperimentalAttestationPool {
+		// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
+		// It is also possible that some aggregate in the pool already covers all bits
+		// of this aggregate, in which case we can ignore it too.
+		isRedundant, err := s.cfg.attestationCache.AggregateIsRedundant(aggregate)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationIgnore, err
+		}
+		if isRedundant {
+			return pubsub.ValidationIgnore, nil
+		}
+	} else {
+		// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
+		seen, err := s.cfg.attPool.HasAggregatedAttestation(aggregate)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationIgnore, err
+		}
+		if seen {
+			return pubsub.ValidationIgnore, nil
+		}
 	}
-	if isRedundant {
-		return pubsub.ValidationIgnore, nil
-	}
+
 	if !s.validateBlockInAttestation(ctx, m) {
 		return pubsub.ValidationIgnore, nil
 	}

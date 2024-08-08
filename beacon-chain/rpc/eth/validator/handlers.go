@@ -22,6 +22,7 @@ import (
 	rpchelpers "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
@@ -55,11 +56,32 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	var match ethpbalpha.Att
 	var err error
 
-	match, err = matchingAtt(s.AttestationCache.GetAll(), primitives.Slot(slot), attDataRoot)
-	if err != nil {
-		httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
-		return
+	if features.Get().EnableExperimentalAttestationPool {
+		match, err = matchingAtt(s.AttestationCache.GetAll(), primitives.Slot(slot), attDataRoot)
+		if err != nil {
+			httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		match, err = matchingAtt(s.AttestationsPool.AggregatedAttestations(), primitives.Slot(slot), attDataRoot)
+		if err != nil {
+			httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if match == nil {
+			atts, err := s.AttestationsPool.UnaggregatedAttestations()
+			if err != nil {
+				httputil.HandleError(w, "Could not get unaggregated attestations: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			match, err = matchingAtt(atts, primitives.Slot(slot), attDataRoot)
+			if err != nil {
+				httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
 	}
+
 	if match == nil {
 		httputil.HandleError(w, "No matching attestation found", http.StatusNotFound)
 		return

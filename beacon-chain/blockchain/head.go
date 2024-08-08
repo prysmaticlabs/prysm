@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -404,8 +405,20 @@ func (s *Service) saveOrphanedOperations(ctx context.Context, orphanedRoot [32]b
 			if a.GetData().Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
 				continue
 			}
-			if err := s.cfg.AttestationCache.Add(a); err != nil {
-				return err
+			if features.Get().EnableExperimentalAttestationPool {
+				if err = s.cfg.AttestationCache.Add(a); err != nil {
+					return err
+				}
+			} else {
+				if a.IsAggregated() {
+					if err = s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
+						return err
+					}
+				} else {
+					if err = s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
+						return err
+					}
+				}
 			}
 			saveOrphanedAttCount.Inc()
 		}

@@ -10,8 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -305,7 +307,14 @@ func (bs *Server) ListIndexedAttestationsElectra(
 // attestations are processed and when they are no longer valid.
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
 func (bs *Server) AttestationPool(_ context.Context, req *ethpb.AttestationPoolRequest) (*ethpb.AttestationPoolResponse, error) {
-	atts, err := attestationsFromCache[*ethpb.Attestation](req.PageSize, bs.AttestationCache)
+	var atts []*ethpb.Attestation
+	var err error
+
+	if features.Get().EnableExperimentalAttestationPool {
+		atts, err = attestationsFromCache[*ethpb.Attestation](req.PageSize, bs.AttestationCache)
+	} else {
+		atts, err = attestationsFromPool[*ethpb.Attestation](req.PageSize, bs.AttestationsPool)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -332,10 +341,18 @@ func (bs *Server) AttestationPool(_ context.Context, req *ethpb.AttestationPoolR
 }
 
 func (bs *Server) AttestationPoolElectra(_ context.Context, req *ethpb.AttestationPoolRequest) (*ethpb.AttestationPoolElectraResponse, error) {
-	atts, err := attestationsFromCache[*ethpb.AttestationElectra](req.PageSize, bs.AttestationCache)
+	var atts []*ethpb.AttestationElectra
+	var err error
+
+	if features.Get().EnableExperimentalAttestationPool {
+		atts, err = attestationsFromCache[*ethpb.AttestationElectra](req.PageSize, bs.AttestationCache)
+	} else {
+		atts, err = attestationsFromPool[*ethpb.AttestationElectra](req.PageSize, bs.AttestationsPool)
+	}
 	if err != nil {
 		return nil, err
 	}
+
 	// If there are no attestations, we simply return a response specifying this.
 	// Otherwise, attempting to paginate 0 attestations below would result in an error.
 	if len(atts) == 0 {
@@ -442,6 +459,28 @@ func blockIndexedAttestations[T ethpb.IndexedAtt](
 	}
 
 	return indexed, nil
+}
+
+func attestationsFromPool[T ethpb.Att](pageSize int32, pool attestations.Pool) ([]T, error) {
+	if int(pageSize) > cmd.Get().MaxRPCPageSize {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Requested page size %d can not be greater than max size %d",
+			pageSize,
+			cmd.Get().MaxRPCPageSize,
+		)
+	}
+	poolAtts := pool.AggregatedAttestations()
+	atts := make([]T, 0, len(poolAtts))
+	for _, att := range poolAtts {
+		a, ok := att.(T)
+		if !ok {
+			var expected T
+			return nil, status.Errorf(codes.Internal, "Attestation is of the wrong type (expected %T, got %T)", expected, att)
+		}
+		atts = append(atts, a)
+	}
+	return atts, nil
 }
 
 func attestationsFromCache[T ethpb.Att](pageSize int32, c *cache.AttestationCache) ([]T, error) {

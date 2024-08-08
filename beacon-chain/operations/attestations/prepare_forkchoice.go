@@ -56,10 +56,19 @@ func (s *Service) prepareForkChoiceAtts() {
 // pool. Then finds the common data, aggregate and batch them for fork choice.
 // The resulting attestations are saved in the fork choice pool.
 func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
-	_, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
+	ctx, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
 	defer span.End()
 
-	atts := append(s.cfg.Cache.GetAll(), s.cfg.Pool.ForkchoiceAttestations()...)
+	var atts []ethpb.Att
+	if features.Get().EnableExperimentalAttestationPool {
+		atts = append(s.cfg.Cache.GetAll(), s.cfg.Cache.ForkchoiceAttestations()...)
+	} else {
+		if err := s.cfg.Pool.AggregateUnaggregatedAttestations(ctx); err != nil {
+			return err
+		}
+		atts = append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
+		atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
+	}
 
 	attsById := make(map[attestation.Id][]ethpb.Att, len(atts))
 
@@ -83,6 +92,14 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	for _, atts := range attsById {
 		if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
 			return err
+		}
+	}
+
+	if !features.Get().EnableExperimentalAttestationPool {
+		for _, a := range s.cfg.Pool.BlockAttestations() {
+			if err := s.cfg.Pool.DeleteBlockAttestation(a); err != nil {
+				return err
+			}
 		}
 	}
 
