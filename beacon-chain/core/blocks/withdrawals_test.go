@@ -681,6 +681,7 @@ func TestProcessWithdrawals(t *testing.T) {
 		PendingPartialWithdrawalIndices []primitives.ValidatorIndex
 		Withdrawals                     []*enginev1.Withdrawal
 		PendingPartialWithdrawals       []*ethpb.PendingPartialWithdrawal // Electra
+		LatestBlockHash					[]byte // EPBS
 	}
 	type control struct {
 		NextWithdrawalValidatorIndex primitives.ValidatorIndex
@@ -1039,10 +1040,12 @@ func TestProcessWithdrawals(t *testing.T) {
 				FullWithdrawalIndices:        []primitives.ValidatorIndex{7, 19, 28, 1},
 				Withdrawals: []*enginev1.Withdrawal{
 					fullWithdrawal(7, 22), fullWithdrawal(19, 23), fullWithdrawal(28, 25),
+				
 				},
+				LatestBlockHash: []byte{1,2,3},
 			},
 			Control: control{
-				ExpectedError: false,
+				ExpectedError: true,
 			},
 		},
 	}
@@ -1142,6 +1145,7 @@ func TestProcessWithdrawals(t *testing.T) {
 							NextWithdrawalValidatorIndex: test.Args.NextWithdrawalValidatorIndex,
 							NextWithdrawalIndex:          test.Args.NextWithdrawalIndex,
 							PendingPartialWithdrawals:    test.Args.PendingPartialWithdrawals,
+							LatestBlockHash: test.Args.LatestBlockHash,
 						}
 						st, err = state_native.InitializeFromProtoUnsafeEpbs(spb)
 						require.NoError(t, err)
