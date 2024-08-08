@@ -111,3 +111,15 @@ func AcceptHeaderHandler(serverAcceptedTypes []string) func(http.Handler) http.H
 		})
 	}
 }
+
+// m is a middleware type
+type m func(http.Handler) http.Handler
+
+func MiddlewareChain(middlewares ...m) m {
+	return func(handler http.Handler) http.Handler {
+		for i := len(middlewares) - 1; i >= 0; i-- {
+			handler = middlewares[i](handler)
+		}
+		return handler
+	}
+}

@@ -398,18 +398,6 @@ func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
 	}
 }
 
-// m is a middleware type
-type m func(http.Handler) http.Handler
-
-func middlewareChain(middlewares ...m) m {
-	return func(handler http.Handler) http.Handler {
-		for _, m := range middlewares {
-			handler = m(handler)
-		}
-		return handler
-	}
-}
-
 func newRouter(cliCtx *cli.Context) *http.ServeMux {
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
@@ -418,9 +406,11 @@ func newRouter(cliCtx *cli.Context) *http.ServeMux {
 		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 	r := http.NewServeMux()
-	chain := middlewareChain(middleware.NormalizeQueryValuesHandler, middleware.CorsHandler(allowedOrigins))
-	handler := chain(r)
-	return handler.(*http.ServeMux)
+	chain := middleware.MiddlewareChain(middleware.NormalizeQueryValuesHandler, middleware.CorsHandler(allowedOrigins))
+	for _, url := range allowedOrigins {
+		http.Handle(url, chain(r))
+	}
+	return r
 }
 
 // StateFeed implements statefeed.Notifier.

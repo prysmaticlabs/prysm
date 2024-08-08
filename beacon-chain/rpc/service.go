@@ -4,6 +4,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -307,10 +308,12 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 	endpoints := s.endpoints(s.cfg.EnableDebugRPCEndpoints, blocker, stater, rewardFetcher, validatorServer, coreService, ch)
 	for _, e := range endpoints {
-		s.cfg.Router.HandleFunc(
-			e.template,
-			e.handlerWithMiddleware(),
-		)
+		for i := range e.methods {
+			http.HandleFunc(
+				fmt.Sprintf("%s %s", e.methods[i], e.template),
+				e.handlerWithMiddleware(),
+			)
+		}
 	}
 
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
