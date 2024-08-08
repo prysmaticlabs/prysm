@@ -1,6 +1,7 @@
 package blocks_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
@@ -13,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -581,14 +583,18 @@ func Test_ProcessPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrappedPayload, err := consensusblocks.WrappedExecutionPayload(tt.payload)
+			body, err := consensusblocks.NewBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{
+				ExecutionPayload: tt.payload,
+			})
 			require.NoError(t, err)
-			st, err := blocks.ProcessPayload(st, wrappedPayload)
+			st, err := blocks.ProcessPayload(st, body)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
 				require.Equal(t, tt.err, err)
-				want, err := consensusblocks.PayloadToHeader(wrappedPayload)
+				payload, err := body.Execution()
+				require.NoError(t, err)
+				want, err := consensusblocks.PayloadToHeader(payload)
 				require.Equal(t, tt.err, err)
 				h, err := st.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
@@ -609,13 +615,15 @@ func Test_ProcessPayloadCapella(t *testing.T) {
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	require.NoError(t, err)
 	payload.PrevRandao = random
-	wrapped, err := consensusblocks.WrappedExecutionPayloadCapella(payload)
+	body, err := consensusblocks.NewBeaconBlockBody(&ethpb.BeaconBlockBodyCapella{
+		ExecutionPayload: payload,
+	})
 	require.NoError(t, err)
-	_, err = blocks.ProcessPayload(st, wrapped)
+	_, err = blocks.ProcessPayload(st, body)
 	require.NoError(t, err)
 }
 
-func Test_ProcessPayloadHeader(t *testing.T) {
+func Test_ProcessPayload_Blinded(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	require.NoError(t, err)
@@ -663,7 +671,13 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, err := blocks.ProcessPayloadHeader(st, tt.header)
+			p, ok := tt.header.Proto().(*enginev1.ExecutionPayloadHeader)
+			require.Equal(t, true, ok)
+			body, err := consensusblocks.NewBeaconBlockBody(&ethpb.BlindedBeaconBlockBodyBellatrix{
+				ExecutionPayloadHeader: p,
+			})
+			require.NoError(t, err)
+			st, err := blocks.ProcessPayload(st, body)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
@@ -728,7 +742,7 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = blocks.ValidatePayloadHeader(st, tt.header)
+			err = blocks.ValidatePayload(st, tt.header)
 			require.Equal(t, tt.err, err)
 		})
 	}
@@ -785,7 +799,7 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, tt.header)
+			err = blocks.ValidatePayloadWhenMergeCompletes(tt.state, tt.header)
 			require.Equal(t, tt.err, err)
 		})
 	}
@@ -905,4 +919,16 @@ func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
 		Transactions:  make([][]byte, 0),
 		Withdrawals:   make([]*enginev1.Withdrawal, 0),
 	}
+}
+
+func TestVerifyBlobCommitmentCount(t *testing.T) {
+	b := &ethpb.BeaconBlockDeneb{Body: &ethpb.BeaconBlockBodyDeneb{}}
+	rb, err := consensusblocks.NewBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, blocks.VerifyBlobCommitmentCount(rb.Body()))
+
+	b = &ethpb.BeaconBlockDeneb{Body: &ethpb.BeaconBlockBodyDeneb{BlobKzgCommitments: make([][]byte, fieldparams.MaxBlobsPerBlock+1)}}
+	rb, err = consensusblocks.NewBeaconBlock(b)
+	require.NoError(t, err)
+	require.ErrorContains(t, fmt.Sprintf("too many kzg commitments in block: %d", fieldparams.MaxBlobsPerBlock+1), blocks.VerifyBlobCommitmentCount(rb.Body()))
 }
