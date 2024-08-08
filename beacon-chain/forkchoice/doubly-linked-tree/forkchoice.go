@@ -763,7 +763,6 @@ func (s *Store) OnPayloadAttestationMessage(
 }
 
 func (s *Store) updatePayloadBoosts(node *Node) {
-
 	presentCount := 0
 	withheldCount := 0
 	for _, vote := range node.ptcVote {
