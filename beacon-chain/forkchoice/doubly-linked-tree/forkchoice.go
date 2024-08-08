@@ -717,7 +717,6 @@ func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
 
 // OnPayloadAttestationMessage processes a new aggregated payload attestation message.
 func (s *Store) OnPayloadAttestationMessage(
-	ctx context.Context,
 	payloadAttestation *ethpb.PayloadAttestation,
 	isFromBlock bool) error {
 	data := payloadAttestation.Data
@@ -749,13 +748,16 @@ func (s *Store) OnPayloadAttestationMessage(
 	}
 
 	for i, vote := range payloadAttestation.AggregationBits {
-		if vote == byte(0) {
+		if vote == byte(1) {
 			node.ptcVote[i] = data.PayloadStatus
 		}
 	}
 
-	// Update payload boosts if necessary
-	s.updatePayloadBoosts(node)
+	// Check if boost has already been applied
+	if s.payloadRevealBoostRoot != node.root && s.payloadWithholdBoostRoot != node.root {
+		// Update payload boosts if necessary
+		s.updatePayloadBoosts(node)
+	}
 
 	return nil
 }
@@ -782,11 +784,4 @@ func (s *Store) updatePayloadBoosts(node *Node) {
 			s.payloadWithholdBoostFull = node.parent.payloadHash != [32]byte{}
 		}
 	}
-}
-
-func (s *Store) isParentNodeFull(node *Node) bool {
-	if node.parent == nil {
-		return true // Finalized checkpoint is considered full
-	}
-	return node.parent.payloadHash != [32]byte{}
 }
