@@ -215,7 +215,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a eth.Att, b
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttTopic")
 	defer span.End()
 
-	valCount, result, err := s.validateCommitteeIndex(ctx, a, bs)
+	_, valCount, result, err := s.validateCommitteeIndex(ctx, a, bs)
 	if result != pubsub.ValidationAccept {
 		return result, err
 	}
@@ -233,16 +233,35 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a eth.Att, b
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateCommitteeIndex(ctx context.Context, a eth.Att, bs state.ReadOnlyBeaconState) (uint64, pubsub.ValidationResult, error) {
+func (s *Service) validateCommitteeIndex(
+	ctx context.Context,
+	a eth.Att,
+	bs state.ReadOnlyBeaconState,
+) (primitives.CommitteeIndex, uint64, pubsub.ValidationResult, error) {
 	valCount, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.GetData().Slot))
 	if err != nil {
-		return 0, pubsub.ValidationIgnore, err
+		return 0, 0, pubsub.ValidationIgnore, err
 	}
 	count := helpers.SlotCommitteeCount(valCount)
 	if uint64(a.GetData().CommitteeIndex) > count {
-		return 0, pubsub.ValidationReject, errors.Errorf("committee index %d > %d", a.GetData().CommitteeIndex, count)
+		return 0, 0, pubsub.ValidationReject, errors.Errorf("committee index %d > %d", a.GetData().CommitteeIndex, count)
 	}
-	return valCount, pubsub.ValidationAccept, nil
+
+	var ci primitives.CommitteeIndex
+	if a.Version() >= version.Electra {
+		dataCi := a.GetData().CommitteeIndex
+		if dataCi != 0 {
+			return 0, 0, pubsub.ValidationReject, fmt.Errorf("committee index must be 0 but was %d", dataCi)
+		}
+		indices := helpers.CommitteeIndices(a.CommitteeBitsVal())
+		if len(indices) != 1 {
+			return 0, 0, pubsub.ValidationReject, fmt.Errorf("exactly 1 committee index must be set but %d were set", len(indices))
+		}
+		ci = indices[0]
+	} else {
+		ci = a.GetData().CommitteeIndex
+	}
+	return ci, valCount, pubsub.ValidationAccept, nil
 }
 
 // This validates beacon unaggregated attestation using the given state, the validation consists of bitfield length and count consistency
