@@ -9,12 +9,12 @@ import (
 )
 
 func TestAttestationCache_RoundTrip(t *testing.T) {
-	c := cache.NewAttestationDataCache()
+	c := cache.NewAttestationCache()
 
 	a := c.Get()
 	require.Nil(t, a)
 
-	insert := &cache.AttestationVote{
+	insert := &cache.AttestationConsensusData{
 		Slot:     1,
 		HeadRoot: []byte{1},
 		Target: forkchoicetypes.Checkpoint{
@@ -32,7 +32,7 @@ func TestAttestationCache_RoundTrip(t *testing.T) {
 	a = c.Get()
 	require.Equal(t, insert, a)
 
-	insert = &cache.AttestationVote{
+	insert = &cache.AttestationConsensusData{
 		Slot:     6,
 		HeadRoot: []byte{7},
 		Target: forkchoicetypes.Checkpoint{
