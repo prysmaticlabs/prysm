@@ -72,6 +72,11 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 		return pubsub.ValidationIgnore, err
 	}
 
+	// [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index, sidecar.index) with valid header signature, sidecar inclusion proof, and kzg proof.
+	if s.hasSeenDataColumnIndex(ds.Slot(), ds.ProposerIndex(), ds.DataColumnSidecar.ColumnIndex) {
+		return pubsub.ValidationIgnore, nil
+	}
+
 	if err := vf.SlotAboveFinalized(); err != nil {
 		return pubsub.ValidationIgnore, err
 	}
@@ -129,6 +134,16 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 
 	msg.ValidatorData = verifiedRODataColumn
 	return pubsub.ValidationAccept, nil
+}
+
+// Returns true if the column with the same slot, proposer index, and column index has been seen before.
+func (s *Service) hasSeenDataColumnIndex(slot primitives.Slot, proposerIndex primitives.ValidatorIndex, index uint64) bool {
+	s.seenDataColumnLock.RLock()
+	defer s.seenDataColumnLock.RUnlock()
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(proposerIndex))...)
+	b = append(b, bytesutil.Bytes32(index)...)
+	_, seen := s.seenDataColumnCache.Get(string(b))
+	return seen
 }
 
 // Sets the data column with the same slot, proposer index, and data column index as seen.

@@ -473,6 +473,25 @@ func TestColumnSidecarProposerExpected(t *testing.T) {
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
 		require.NoError(t, v.results.result(RequireSidecarProposerExpected))
 	})
+
+	t.Run("not cached, proposer matches for next epoch", func(t *testing.T) {
+		_, newCols := util.GenerateTestDenebBlockWithColumns(t, [32]byte{}, 2*params.BeaconConfig().SlotsPerEpoch, 1)
+
+		newCol := newCols[0]
+		pc := &mockProposerCache{
+			ProposerCB: pcReturnsNotFound(),
+			ComputeProposerCB: func(ctx context.Context, root [32]byte, slot primitives.Slot, pst state.BeaconState) (primitives.ValidatorIndex, error) {
+				require.Equal(t, newCol.ParentRoot(), root)
+				require.Equal(t, newCol.Slot(), slot)
+				return col.ProposerIndex(), nil
+			},
+		}
+		ini := Initializer{shared: &sharedResources{sr: sbrForValOverride(newCol.ProposerIndex(), &ethpb.Validator{}), pc: pc, fc: &mockForkchoicer{TargetRootForEpochCB: fcReturnsTargetRoot([32]byte{})}}}
+		v := ini.NewColumnVerifier(newCol, GossipColumnSidecarRequirements)
+		require.NoError(t, v.SidecarProposerExpected(ctx))
+		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
+		require.NoError(t, v.results.result(RequireSidecarProposerExpected))
+	})
 	t.Run("not cached, proposer does not match", func(t *testing.T) {
 		pc := &mockProposerCache{
 			ProposerCB: pcReturnsNotFound(),
@@ -529,4 +548,29 @@ func TestColumnRequirementSatisfaction(t *testing.T) {
 	require.Equal(t, true, v.results.allSatisfied())
 	_, err = v.VerifiedRODataColumn()
 	require.NoError(t, err)
+}
+
+func TestStateCaching(t *testing.T) {
+	_, columns := util.GenerateTestDenebBlockWithColumns(t, [32]byte{}, 1, 1)
+	col := columns[0]
+	ini := Initializer{shared: &sharedResources{sr: sbrForValOverride(col.ProposerIndex(), &ethpb.Validator{})}}
+	v := ini.NewColumnVerifier(col, GossipColumnSidecarRequirements)
+	_, err := v.parentState(context.Background())
+	require.NoError(t, err)
+
+	// Utilize the cached state.
+	v.sr = nil
+	_, err = v.parentState(context.Background())
+	require.NoError(t, err)
+}
+
+func TestColumnSatisfyRequirement(t *testing.T) {
+	_, columns := util.GenerateTestDenebBlockWithColumns(t, [32]byte{}, 1, 1)
+	col := columns[0]
+	ini := Initializer{}
+	v := ini.NewColumnVerifier(col, GossipColumnSidecarRequirements)
+	require.Equal(t, false, v.results.executed(RequireDataColumnIndexInBounds))
+
+	v.SatisfyRequirement(RequireDataColumnIndexInBounds)
+	require.Equal(t, true, v.results.executed(RequireDataColumnIndexInBounds))
 }
