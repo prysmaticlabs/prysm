@@ -747,7 +747,7 @@ func (s *Store) OnPayloadAttestationMessage(
 		node.ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
 	}
 
-	for i := uint64(0); i < payloadAttestation.AggregationBits.Len(); i++ {
+	for i := uint64(0); i < fieldparams.PTCSize; i++ {
 		if !payloadAttestation.AggregationBits.BitAt(i) {
 			node.ptcVote[i] = data.PayloadStatus
 		}
