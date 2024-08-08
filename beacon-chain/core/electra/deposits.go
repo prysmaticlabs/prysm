@@ -108,7 +108,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 //
 //	# Increase balance by deposit amount
 //	index = ValidatorIndex(validator_pubkeys.index(pubkey))
-//	state.pending_balance_deposits.append(PendingBalanceDeposit(index=index, amount=amount))  # [Modified in Electra:EIP-7251]
+//	state.pending_deposits.append(PendingDeposit(index=index, amount=amount))  # [Modified in Electra:EIP-7251]
 //	# Check if valid deposit switch to compounding credentials
 //
 // if ( is_compounding_withdrawal_credential(withdrawal_credentials) and has_eth1_withdrawal_credential(state.validators[index])
@@ -136,7 +136,7 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 		}
 	} else {
 		// no validation on top-ups (phase0 feature). no validation before state change
-		if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
+		if err := beaconState.AppendPendingDeposit(index, amount); err != nil {
 			return nil, err
 		}
 		val, err := beaconState.ValidatorAtIndex(index)
@@ -185,17 +185,17 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error 
 	return deposit.VerifyDepositSignature(obj, domain)
 }
 
-// ProcessPendingBalanceDeposits implements the spec definition below. This method mutates the state.
+// ProcessPendingDeposits implements the spec definition below. This method mutates the state.
 //
 // Spec definition:
 //
-//	def process_pending_balance_deposits(state: BeaconState) -> None:
+//	def process_pending_deposits(state: BeaconState) -> None:
 //	    available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(state)
 //	    processed_amount = 0
 //	    next_deposit_index = 0
 //	    deposits_to_postpone = []
 //
-//	    for deposit in state.pending_balance_deposits:
+//	    for deposit in state.pending_deposits:
 //	        validator = state.validators[deposit.index]
 //	        # Validator is exiting, postpone the deposit until after withdrawable epoch
 //	        if validator.exit_epoch < FAR_FUTURE_EPOCH:
@@ -216,16 +216,16 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error 
 //	        # Regardless of how the deposit was handled, we move on in the queue.
 //	        next_deposit_index += 1
 //
-//	    state.pending_balance_deposits = state.pending_balance_deposits[next_deposit_index:]
+//	    state.pending_deposits = state.pending_deposits[next_deposit_index:]
 //
 //	    if len(state.pending_balance_deposits) == 0:
 //	        state.deposit_balance_to_consume = Gwei(0)
 //	    else:
 //	        state.deposit_balance_to_consume = available_for_processing - processed_amount
 //
-//	    state.pending_balance_deposits += deposits_to_postpone
-func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, activeBalance primitives.Gwei) error {
-	_, span := trace.StartSpan(ctx, "electra.ProcessPendingBalanceDeposits")
+//	    state.pending_deposits += deposits_to_postpone
+func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBalance primitives.Gwei) error {
+	_, span := trace.StartSpan(ctx, "electra.ProcessPendingDeposits")
 	defer span.End()
 
 	if st == nil || st.IsNil() {
@@ -241,7 +241,7 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	nextDepositIndex := 0
 	var depositsToPostpone []*eth.PendingBalanceDeposit
 
-	deposits, err := st.PendingBalanceDeposits()
+	deposits, err := st.PendingDeposits()
 	if err != nil {
 		return err
 	}
@@ -285,13 +285,13 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 	}
 
 	// Combined operation:
-	// - state.pending_balance_deposits = state.pending_balance_deposits[next_deposit_index:]
-	// - state.pending_balance_deposits += deposits_to_postpone
+	// - state.pending_deposits = state.pending_deposits[next_deposit_index:]
+	// - state.pending_deposits += deposits_to_postpone
 	// However, the number of remaining deposits must be maintained to properly update the deposit
 	// balance to consume.
 	numRemainingDeposits := len(deposits[nextDepositIndex:])
 	deposits = append(deposits[nextDepositIndex:], depositsToPostpone...)
-	if err := st.SetPendingBalanceDeposits(deposits); err != nil {
+	if err := st.SetPendingDeposits(deposits); err != nil {
 		return err
 	}
 

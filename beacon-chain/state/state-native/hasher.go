@@ -305,7 +305,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		eceRoot := ssz.Uint64Root(uint64(state.earliestConsolidationEpoch))
 		fieldRoots[types.EarliestConsolidationEpoch.RealPosition()] = eceRoot[:]
 
-		// PendingBalanceDeposits root.
+		// PendingDeposits root.
 		pbdRoot, err := stateutil.PendingBalanceDepositsRoot(state.pendingBalanceDeposits)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute pending balance deposits merkleization")

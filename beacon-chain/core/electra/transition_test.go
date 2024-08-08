@@ -64,7 +64,7 @@ func TestProcessEpoch_CanProcessElectra(t *testing.T) {
 			Index:  primitives.ValidatorIndex(i),
 		}
 	}
-	require.NoError(t, st.SetPendingBalanceDeposits(deps))
+	require.NoError(t, st.SetPendingDeposits(deps))
 	require.NoError(t, st.SetPendingConsolidations([]*ethpb.PendingConsolidation{
 		{
 			SourceIndex: 2,
@@ -108,7 +108,7 @@ func TestProcessEpoch_CanProcessElectra(t *testing.T) {
 	require.Equal(t, primitives.Gwei(100), res)
 
 	// Half of the balance deposits should have been processed.
-	remaining, err := st.PendingBalanceDeposits()
+	remaining, err := st.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 10, len(remaining))
 

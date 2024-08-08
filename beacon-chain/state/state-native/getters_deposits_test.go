@@ -33,7 +33,7 @@ func TestPendingBalanceDeposits(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	pbd, err := s.PendingBalanceDeposits()
+	pbd, err := s.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 2, len(pbd))
 	require.Equal(t, primitives.ValidatorIndex(1), pbd[0].Index)

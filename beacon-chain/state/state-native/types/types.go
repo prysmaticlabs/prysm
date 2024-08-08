@@ -259,7 +259,7 @@ const (
 	EarliestExitEpoch             // Electra: EIP-7251
 	ConsolidationBalanceToConsume // Electra: EIP-7251
 	EarliestConsolidationEpoch    // Electra: EIP-7251
-	PendingBalanceDeposits        // Electra: EIP-7251
+	PendingDeposits               // Electra: EIP-7251
 	PendingPartialWithdrawals     // Electra: EIP-7251
 	PendingConsolidations         // Electra: EIP-7251
 )

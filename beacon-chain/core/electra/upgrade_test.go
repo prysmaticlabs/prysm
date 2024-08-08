@@ -173,7 +173,7 @@ func TestUpgradeToElectra(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, helpers.ActivationExitEpoch(slots.ToEpoch(preForkState.Slot())), earliestConsolidationEpoch)
 
-	pendingBalanceDeposits, err := mSt.PendingBalanceDeposits()
+	pendingBalanceDeposits, err := mSt.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 2, len(pendingBalanceDeposits))
 	require.Equal(t, uint64(1000), pendingBalanceDeposits[1].Amount)

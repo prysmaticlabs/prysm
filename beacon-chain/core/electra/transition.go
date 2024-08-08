@@ -94,7 +94,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
 		return err
 	}
 
-	if err = ProcessPendingBalanceDeposits(ctx, state, primitives.Gwei(bp.ActiveCurrentEpoch)); err != nil {
+	if err = ProcessPendingDeposits(ctx, state, primitives.Gwei(bp.ActiveCurrentEpoch)); err != nil {
 		return err
 	}
 	if err = ProcessPendingConsolidations(ctx, state); err != nil {

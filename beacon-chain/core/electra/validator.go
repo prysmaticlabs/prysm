@@ -24,7 +24,7 @@ import (
 //	set_or_append_list(state.previous_epoch_participation, index, ParticipationFlags(0b0000_0000))
 //	set_or_append_list(state.current_epoch_participation, index, ParticipationFlags(0b0000_0000))
 //	set_or_append_list(state.inactivity_scores, index, uint64(0))
-//	state.pending_balance_deposits.append(PendingBalanceDeposit(index=index, amount=amount))  # [New in Electra:EIP7251]
+//	state.pending_deposits.append(PendingDeposit(index=index, amount=amount))  # [New in Electra:EIP7251]
 func AddValidatorToRegistry(beaconState state.BeaconState, pubKey []byte, withdrawalCredentials []byte, amount uint64) error {
 	val := ValidatorFromDeposit(pubKey, withdrawalCredentials)
 	if err := beaconState.AppendValidator(val); err != nil {
@@ -125,7 +125,7 @@ func QueueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex
 		if err := s.UpdateBalancesAtIndex(idx, params.BeaconConfig().MinActivationBalance); err != nil {
 			return err
 		}
-		return s.AppendPendingBalanceDeposit(idx, excessBalance)
+		return s.AppendPendingDeposit(idx, excessBalance)
 	}
 	return nil
 }
@@ -166,5 +166,5 @@ func QueueEntireBalanceAndResetValidator(s state.BeaconState, idx primitives.Val
 		return err
 	}
 
-	return s.AppendPendingBalanceDeposit(idx, bal)
+	return s.AppendPendingDeposit(idx, bal)
 }

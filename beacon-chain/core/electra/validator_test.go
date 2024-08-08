@@ -21,7 +21,7 @@ func TestAddValidatorToRegistry(t *testing.T) {
 	balances := st.Balances()
 	require.Equal(t, 1, len(balances))
 	require.Equal(t, uint64(0), balances[0])
-	pbds, err := st.PendingBalanceDeposits()
+	pbds, err := st.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pbds))
 	require.Equal(t, uint64(100), pbds[0].Amount)
@@ -60,7 +60,7 @@ func TestSwitchToCompoundingValidator(t *testing.T) {
 	b, err := s.BalanceAtIndex(1)
 	require.NoError(t, err)
 	require.Equal(t, params.BeaconConfig().MinActivationBalance, b, "balance was changed")
-	pbd, err := s.PendingBalanceDeposits()
+	pbd, err := s.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 0, len(pbd), "pending balance deposits should be empty")
 
@@ -69,7 +69,7 @@ func TestSwitchToCompoundingValidator(t *testing.T) {
 	b, err = s.BalanceAtIndex(2)
 	require.NoError(t, err)
 	require.Equal(t, params.BeaconConfig().MinActivationBalance, b, "balance was not changed")
-	pbd, err = s.PendingBalanceDeposits()
+	pbd, err = s.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pbd), "pending balance deposits should have one element")
 	require.Equal(t, uint64(100_000), pbd[0].Amount, "pending balance deposit amount is incorrect")
@@ -97,7 +97,7 @@ func TestQueueEntireBalanceAndResetValidator(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), v.EffectiveBalance, "effective balance was not reset")
 	require.Equal(t, params.BeaconConfig().FarFutureEpoch, v.ActivationEligibilityEpoch, "activation eligibility epoch was not reset")
-	pbd, err := s.PendingBalanceDeposits()
+	pbd, err := s.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pbd), "pending balance deposits should have one element")
 	require.Equal(t, params.BeaconConfig().MinActivationBalance+100_000, pbd[0].Amount, "pending balance deposit amount is incorrect")
@@ -114,7 +114,7 @@ func TestSwitchToCompoundingValidator_Ok(t *testing.T) {
 	require.NoError(t, st.SetBalances(bals))
 	require.NoError(t, electra.SwitchToCompoundingValidator(st, 0))
 
-	pbd, err := st.PendingBalanceDeposits()
+	pbd, err := st.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, uint64(1010), pbd[0].Amount) // appends it at the end
 	val, err := st.ValidatorAtIndex(0)
@@ -132,7 +132,7 @@ func TestQueueExcessActiveBalance_Ok(t *testing.T) {
 	err := electra.QueueExcessActiveBalance(st, 0)
 	require.NoError(t, err)
 
-	pbd, err := st.PendingBalanceDeposits()
+	pbd, err := st.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, uint64(1000), pbd[0].Amount) // appends it at the end
 
@@ -149,7 +149,7 @@ func TestQueueEntireBalanceAndResetValidator_Ok(t *testing.T) {
 	err := electra.QueueEntireBalanceAndResetValidator(st, 0)
 	require.NoError(t, err)
 
-	pbd, err := st.PendingBalanceDeposits()
+	pbd, err := st.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pbd))
 	require.Equal(t, params.BeaconConfig().MinActivationBalance-1000, pbd[0].Amount)

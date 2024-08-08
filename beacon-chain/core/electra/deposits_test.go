@@ -53,12 +53,11 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
 				deps := make([]*eth.PendingBalanceDeposit, 20)
 				for i := 0; i < len(deps); i += 1 {
-					deps[i] = &eth.PendingBalanceDeposit{
+					deps[i] = &eth.PendingDeposit{
 						Amount: uint64(amountAvailForProcessing) / 10,
-						Index:  primitives.ValidatorIndex(i),
 					}
 				}
-				require.NoError(t, st.SetPendingBalanceDeposits(deps))
+				require.NoError(t, st.SetPendingDeposits(deps))
 				return st
 			}(),
 			check: func(t *testing.T, st state.BeaconState) {
@@ -74,7 +73,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				}
 
 				// Half of the balance deposits should have been processed.
-				remaining, err := st.PendingBalanceDeposits()
+				remaining, err := st.PendingDeposits()
 				require.NoError(t, err)
 				require.Equal(t, 10, len(remaining))
 			},
@@ -92,7 +91,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 						Index:  primitives.ValidatorIndex(i),
 					}
 				}
-				require.NoError(t, st.SetPendingBalanceDeposits(deps))
+				require.NoError(t, st.SetPendingDeposits(deps))
 				return st
 			}(),
 			check: func(t *testing.T, st state.BeaconState) {
@@ -108,7 +107,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				}
 
 				// All of the balance deposits should have been processed.
-				remaining, err := st.PendingBalanceDeposits()
+				remaining, err := st.PendingDeposits()
 				require.NoError(t, err)
 				require.Equal(t, 0, len(remaining))
 			},
@@ -126,7 +125,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 						Index:  primitives.ValidatorIndex(i),
 					}
 				}
-				require.NoError(t, st.SetPendingBalanceDeposits(deps))
+				require.NoError(t, st.SetPendingDeposits(deps))
 				v, err := st.ValidatorAtIndex(0)
 				require.NoError(t, err)
 				v.ExitEpoch = 10
@@ -148,7 +147,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 
 				// All of the balance deposits should have been processed, except validator index 0 was
 				// added back to the pending deposits queue.
-				remaining, err := st.PendingBalanceDeposits()
+				remaining, err := st.PendingDeposits()
 				require.NoError(t, err)
 				require.Equal(t, 1, len(remaining))
 			},
@@ -157,14 +156,14 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 			name: "exited validator balance increased",
 			state: func() state.BeaconState {
 				st := stateWithActiveBalanceETH(t, 1_000)
-				deps := make([]*eth.PendingBalanceDeposit, 1)
+				deps := make([]*eth.PendingDeposit, 1)
 				for i := 0; i < len(deps); i += 1 {
-					deps[i] = &eth.PendingBalanceDeposit{
+					deps[i] = &eth.PendingDeposit{
 						Amount: 1_000_000,
 						Index:  primitives.ValidatorIndex(i),
 					}
 				}
-				require.NoError(t, st.SetPendingBalanceDeposits(deps))
+				require.NoError(t, st.SetPendingDeposits(deps))
 				v, err := st.ValidatorAtIndex(0)
 				require.NoError(t, err)
 				v.ExitEpoch = 2
@@ -182,7 +181,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				require.Equal(t, uint64(1_100_000), b)
 
 				// All of the balance deposits should have been processed.
-				remaining, err := st.PendingBalanceDeposits()
+				remaining, err := st.PendingDeposits()
 				require.NoError(t, err)
 				require.Equal(t, 0, len(remaining))
 			},
@@ -199,7 +198,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				tab, err = helpers.TotalActiveBalance(tt.state)
 			}
 			require.NoError(t, err)
-			err = electra.ProcessPendingBalanceDeposits(context.TODO(), tt.state, primitives.Gwei(tab))
+			err = electra.ProcessPendingDeposits(context.TODO(), tt.state, primitives.Gwei(tab))
 			require.Equal(t, tt.wantErr, err != nil, "wantErr=%v, got err=%s", tt.wantErr, err)
 			if tt.check != nil {
 				tt.check(t, tt.state)
@@ -230,7 +229,7 @@ func TestProcessDepositRequests(t *testing.T) {
 	bals := st.Balances()
 	bals[0] = params.BeaconConfig().MinActivationBalance + 2000
 	require.NoError(t, st.SetBalances(bals))
-	require.NoError(t, st.SetPendingBalanceDeposits(make([]*eth.PendingBalanceDeposit, 0))) // reset pbd as the determinitstic state populates this already
+	require.NoError(t, st.SetPendingDeposits(make([]*eth.PendingDeposit, 0))) // reset pbd as the determinitstic state populates this already
 	withdrawalCred := make([]byte, 32)
 	withdrawalCred[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
 	depositMessage := &eth.DepositMessage{
@@ -255,7 +254,7 @@ func TestProcessDepositRequests(t *testing.T) {
 	st, err = electra.ProcessDepositRequests(context.Background(), st, requests)
 	require.NoError(t, err)
 
-	pbd, err := st.PendingBalanceDeposits()
+	pbd, err := st.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 2, len(pbd))
 	require.Equal(t, uint64(1000), pbd[0].Amount)
@@ -286,7 +285,7 @@ func TestProcessDeposit_Electra_Simple(t *testing.T) {
 	require.NoError(t, err)
 	pdSt, err := electra.ProcessDeposits(context.Background(), st, deps)
 	require.NoError(t, err)
-	pbd, err := pdSt.PendingBalanceDeposits()
+	pbd, err := pdSt.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, params.BeaconConfig().MinActivationBalance, pbd[2].Amount)
 	require.Equal(t, 3, len(pbd))
@@ -361,7 +360,7 @@ func TestApplyDeposit_TopUps_WithBadSignature(t *testing.T) {
 	require.NoError(t, st.SetValidators(vals))
 	adSt, err := electra.ApplyDeposit(st, depositData, true)
 	require.NoError(t, err)
-	pbd, err := adSt.PendingBalanceDeposits()
+	pbd, err := adSt.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pbd))
 	require.Equal(t, topUpAmount, pbd[0].Amount)
@@ -392,7 +391,7 @@ func TestApplyDeposit_Electra_SwitchToCompoundingValidator(t *testing.T) {
 	depositData.Signature = sig.Marshal()
 	adSt, err := electra.ApplyDeposit(st, depositData, false)
 	require.NoError(t, err)
-	pbd, err := adSt.PendingBalanceDeposits()
+	pbd, err := adSt.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 2, len(pbd))
 	require.Equal(t, uint64(1000), pbd[0].Amount)

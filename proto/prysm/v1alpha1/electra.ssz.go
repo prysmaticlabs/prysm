@@ -2587,7 +2587,7 @@ func (b *BeaconStateElectra) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	// Field (33) 'EarliestConsolidationEpoch'
 	dst = ssz.MarshalUint64(dst, uint64(b.EarliestConsolidationEpoch))
 
-	// Offset (34) 'PendingBalanceDeposits'
+	// Offset (34) 'PendingDeposits'
 	dst = ssz.WriteOffset(dst, offset)
 	offset += len(b.PendingBalanceDeposits) * 16
 
@@ -2682,9 +2682,9 @@ func (b *BeaconStateElectra) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		}
 	}
 
-	// Field (34) 'PendingBalanceDeposits'
+	// Field (34) 'PendingDeposits'
 	if size := len(b.PendingBalanceDeposits); size > 134217728 {
-		err = ssz.ErrListTooBigFn("--.PendingBalanceDeposits", size, 134217728)
+		err = ssz.ErrListTooBigFn("--.PendingDeposits", size, 134217728)
 		return
 	}
 	for ii := 0; ii < len(b.PendingBalanceDeposits); ii++ {
@@ -2920,7 +2920,7 @@ func (b *BeaconStateElectra) UnmarshalSSZ(buf []byte) error {
 	// Field (33) 'EarliestConsolidationEpoch'
 	b.EarliestConsolidationEpoch = github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[2736693:2736701]))
 
-	// Offset (34) 'PendingBalanceDeposits'
+	// Offset (34) 'PendingDeposits'
 	if o34 = ssz.ReadOffset(buf[2736701:2736705]); o34 > size || o27 > o34 {
 		return ssz.ErrOffset
 	}
@@ -3066,7 +3066,7 @@ func (b *BeaconStateElectra) UnmarshalSSZ(buf []byte) error {
 		}
 	}
 
-	// Field (34) 'PendingBalanceDeposits'
+	// Field (34) 'PendingDeposits'
 	{
 		buf = tail[o34:o35]
 		num, err := ssz.DivideInt2(len(buf), 16, 134217728)
@@ -3156,7 +3156,7 @@ func (b *BeaconStateElectra) SizeSSZ() (size int) {
 	// Field (27) 'HistoricalSummaries'
 	size += len(b.HistoricalSummaries) * 64
 
-	// Field (34) 'PendingBalanceDeposits'
+	// Field (34) 'PendingDeposits'
 	size += len(b.PendingBalanceDeposits) * 16
 
 	// Field (35) 'PendingPartialWithdrawals'
@@ -3456,7 +3456,7 @@ func (b *BeaconStateElectra) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (33) 'EarliestConsolidationEpoch'
 	hh.PutUint64(uint64(b.EarliestConsolidationEpoch))
 
-	// Field (34) 'PendingBalanceDeposits'
+	// Field (34) 'PendingDeposits'
 	{
 		subIndx := hh.Index()
 		num := uint64(len(b.PendingBalanceDeposits))

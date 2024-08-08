@@ -597,12 +597,12 @@ func (summary *HistoricalSummary) Copy() *HistoricalSummary {
 }
 
 // Copy --
-func (pbd *PendingBalanceDeposit) Copy() *PendingBalanceDeposit {
+func (pbd *PendingDeposit) Copy() *PendingDeposit {
 	if pbd == nil {
 		return nil
 	}
 	return &PendingBalanceDeposit{
-		Index:  pbd.Index,
+
 		Amount: pbd.Amount,
 	}
 }

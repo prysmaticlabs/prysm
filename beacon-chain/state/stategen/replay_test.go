@@ -209,10 +209,9 @@ func TestReplayBlocks_ProcessEpoch_Electra(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisStateElectra(t, 1)
 	require.NoError(t, beaconState.SetDepositBalanceToConsume(100))
 	amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
-	require.NoError(t, beaconState.SetPendingBalanceDeposits([]*ethpb.PendingBalanceDeposit{
+	require.NoError(t, beaconState.SetPendingDeposits([]*ethpb.PendingDeposit{
 		{
 			Amount: uint64(amountAvailForProcessing) / 10,
-			Index:  primitives.ValidatorIndex(0),
 		},
 	}))
 	genesisBlock := util.NewBeaconBlockElectra()
@@ -238,7 +237,7 @@ func TestReplayBlocks_ProcessEpoch_Electra(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, primitives.Gwei(0), res)
 
-	remaining, err := newState.PendingBalanceDeposits()
+	remaining, err := newState.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 0, len(remaining))
 
