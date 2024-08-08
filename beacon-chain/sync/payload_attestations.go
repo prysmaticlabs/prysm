@@ -79,7 +79,7 @@ func (s *Service) validatePayloadAttestation(ctx context.Context, pid peer.ID, m
 		return pubsub.ValidationReject, err
 	}
 
-	if s.payloadAttestationCache.Seen(pa.BeaconBlockRoot(), pa.ValidatorIndex()) {
+	if s.payloadAttestationCache.Seen(pa.BeaconBlockRoot(), uint64(pa.ValidatorIndex())) {
 		return pubsub.ValidationIgnore, errAlreadySeenPayloadAttestation
 	}
 
@@ -107,7 +107,7 @@ func (s *Service) payloadAttestationSubscriber(ctx context.Context, msg proto.Me
 	if idx == -1 {
 		return errInvalidValidatorIndex
 	}
-	if s.payloadAttestationCache.Seen(root, primitives.ValidatorIndex(idx)) {
+	if s.payloadAttestationCache.Seen(root, uint64(primitives.ValidatorIndex(idx))) {
 		return nil
 	}
 
