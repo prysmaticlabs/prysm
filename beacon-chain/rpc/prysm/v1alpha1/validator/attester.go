@@ -49,14 +49,9 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 		return nil, err
 	}
 
-	// TODO: does it make sense to have a gourutine here when
-	// saving is super fast? (only bottleneck could be other atts being saved)
-	go func() {
-		if err = vs.AttestationCache.Add(att); err != nil {
-			log.WithError(err).Error("Could not save attestation")
-			return
-		}
-	}()
+	if err = vs.AttestationCache.Add(att); err != nil {
+		log.WithError(err).Error("Could not save attestation")
+	}
 
 	return resp, nil
 }
@@ -83,14 +78,9 @@ func (vs *Server) ProposeAttestationElectra(ctx context.Context, att *ethpb.Atte
 		return nil, err
 	}
 
-	// TODO: does it make sense to have a gourutine here when
-	// saving is super fast? (only bottleneck could be other atts being saved)
-	go func() {
-		if err = vs.AttestationCache.Add(att); err != nil {
-			log.WithError(err).Error("Could not save attestation")
-			return
-		}
-	}()
+	if err = vs.AttestationCache.Add(att); err != nil {
+		log.WithError(err).Error("Could not save attestation")
+	}
 
 	return resp, nil
 }

@@ -10,10 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 )
 
-// TODO: finer locking (we can lock after reading from the map)
-// TODO: after deleting atts a group may have 0 atts left; we should remove the map entry
-// TODO: add parameter validation
-
 type attGroup struct {
 	slot     primitives.Slot
 	local    ethpb.Att
@@ -22,7 +18,7 @@ type attGroup struct {
 
 type AttestationCache struct {
 	attestations map[attestation.Id]*attGroup
-	sync.Mutex
+	sync.RWMutex
 }
 
 func NewAttestationCache() *AttestationCache {
@@ -32,6 +28,10 @@ func NewAttestationCache() *AttestationCache {
 }
 
 func (c *AttestationCache) Add(att ethpb.Att) error {
+	if att.IsNil() {
+		return nil
+	}
+
 	c.Lock()
 	defer c.Unlock()
 
@@ -49,8 +49,7 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 	}
 
 	if att.IsAggregated() {
-		// TODO: save a copy?
-		group.external = append(group.external, att)
+		group.external = append(group.external, att.Clone())
 		return nil
 	}
 
@@ -74,11 +73,10 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 }
 
 func (c *AttestationCache) GetAll() []ethpb.Att {
-	c.Lock()
-	defer c.Unlock()
+	c.RLock()
+	defer c.RUnlock()
 
 	var result []ethpb.Att
-
 	for _, group := range c.attestations {
 		if group.local != nil {
 			result = append(result, group.local)
@@ -87,13 +85,12 @@ func (c *AttestationCache) GetAll() []ethpb.Att {
 			result = append(result, a)
 		}
 	}
-
 	return result
 }
 
 func (c *AttestationCache) Count() int {
-	c.Lock()
-	defer c.Unlock()
+	c.RLock()
+	defer c.RUnlock()
 
 	count := 0
 	for _, group := range c.attestations {
@@ -105,8 +102,11 @@ func (c *AttestationCache) Count() int {
 	return count
 }
 
-// TODO: change param name or/and name
 func (c *AttestationCache) DeleteCovered(att ethpb.Att) error {
+	if att.IsNil() {
+		return nil
+	}
+
 	c.Lock()
 	defer c.Unlock()
 
@@ -139,6 +139,10 @@ func (c *AttestationCache) DeleteCovered(att ethpb.Att) error {
 	}
 	group.external = attsToKeep
 
+	if group.local == nil && len(group.external) == 0 {
+		delete(c.attestations, id)
+	}
+
 	return nil
 }
 
@@ -160,8 +164,12 @@ func (c *AttestationCache) PruneBefore(slot primitives.Slot) uint64 {
 }
 
 func (c *AttestationCache) AggregateIsRedundant(att ethpb.Att) (bool, error) {
-	c.Lock()
-	defer c.Unlock()
+	if att.IsNil() {
+		return true, nil
+	}
+
+	c.RLock()
+	defer c.RUnlock()
 
 	id, err := attestation.NewId(att, attestation.Data)
 	if err != nil {
@@ -185,23 +193,36 @@ func (c *AttestationCache) AggregateIsRedundant(att ethpb.Att) (bool, error) {
 }
 
 func GetBySlotAndCommitteeIndex[T ethpb.Att](c *AttestationCache, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []T {
-	c.Lock()
-	defer c.Unlock()
+	c.RLock()
+	defer c.RUnlock()
 
 	var result []T
+
 	for _, group := range c.attestations {
-		// TODO local can be nil
 		local, ok := group.local.(T)
-		if ok && local.GetData().Slot == slot && local.CommitteeBitsVal().BitAt(uint64(committeeIndex)) {
-			result = append(result, local)
-			for _, a := range group.external {
-				a, ok := a.(T)
-				if ok {
-					result = append(result, a)
+		if ok {
+			if local.GetData().Slot == slot && local.CommitteeBitsVal().BitAt(uint64(committeeIndex)) {
+				result = append(result, local)
+				for _, a := range group.external {
+					a, ok := a.(T)
+					if ok {
+						result = append(result, a)
+					}
+				}
+			}
+		} else if len(group.external) > 0 {
+			a, ok := group.external[0].(T)
+			if ok && a.GetData().Slot == slot && a.CommitteeBitsVal().BitAt(uint64(committeeIndex)) {
+				for _, a := range group.external {
+					a, ok := a.(T)
+					if ok {
+						result = append(result, a)
+					}
 				}
 			}
 		}
 	}
+
 	return result
 }
 
