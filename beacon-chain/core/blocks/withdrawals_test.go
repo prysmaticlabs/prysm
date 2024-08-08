@@ -12,6 +12,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/epbs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -1144,7 +1145,15 @@ func TestProcessWithdrawals(t *testing.T) {
 						}
 						st, err = state_native.InitializeFromProtoUnsafeEpbs(spb)
 						require.NoError(t, err)
-						p = nil
+						pe := &enginev1.ExecutionPayloadEnvelope{
+							Payload: &enginev1.ExecutionPayloadElectra{
+								Withdrawals: test.Args.Withdrawals,
+							},
+						}
+						wp, err := epbs.WrappedROExecutionPayloadEnvelope(pe)
+						require.NoError(t, err)
+						p, err = wp.Execution()
+						require.NoError(t, err)
 					default:
 						t.Fatalf("Add a beacon state setup for version %s", version.String(fork))
 					}
