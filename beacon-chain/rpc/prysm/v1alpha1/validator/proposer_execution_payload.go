@@ -59,14 +59,27 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	slot := blk.Slot()
 	vIdx := blk.ProposerIndex()
 	headRoot := blk.ParentRoot()
-	logFields := logrus.Fields{
-		"validatorIndex": vIdx,
-		"slot":           slot,
-		"headRoot":       fmt.Sprintf("%#x", headRoot),
-	}
-	payloadId, ok := vs.PayloadIDCache.PayloadID(slot, headRoot)
 
-	val, tracked := vs.TrackedValidatorsCache.Validator(vIdx)
+	return vs.getLocalPayloadFromEngine(ctx, st, headRoot, slot, vIdx)
+}
+
+// This returns the local execution payload of a slot, proposer ID, and parent root assuming payload Is cached.
+// If the payload ID is not cached, the function will prepare a new payload through local EL engine and return it by using the head state.
+func (vs *Server) getLocalPayloadFromEngine(
+	ctx context.Context,
+	st state.BeaconState,
+	parentRoot [32]byte,
+	slot primitives.Slot,
+	proposerId primitives.ValidatorIndex) (*consensusblocks.GetPayloadResponse, error) {
+
+	logFields := logrus.Fields{
+		"validatorIndex": proposerId,
+		"slot":           slot,
+		"headRoot":       fmt.Sprintf("%#x", parentRoot),
+	}
+	payloadId, ok := vs.PayloadIDCache.PayloadID(slot, parentRoot)
+
+	val, tracked := vs.TrackedValidatorsCache.Validator(proposerId)
 	if !tracked {
 		logrus.WithFields(logFields).Warn("could not find tracked proposer index")
 	}
@@ -135,7 +148,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 			PrevRandao:            random,
 			SuggestedFeeRecipient: val.FeeRecipient[:],
 			Withdrawals:           withdrawals,
-			ParentBeaconBlockRoot: headRoot[:],
+			ParentBeaconBlockRoot: parentRoot[:],
 		})
 		if err != nil {
 			return nil, err
