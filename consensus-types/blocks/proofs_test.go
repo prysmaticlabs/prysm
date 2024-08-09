@@ -10,7 +10,12 @@ import (
 
 func TestComputeBlockBodyFieldRoots_Phase0(t *testing.T) {
 	blockBodyPhase0 := hydrateBeaconBlockBody()
-	blockBodyPhase0.ProposerSlashings = []*eth.ProposerSlashing{
+	i, err := NewBeaconBlockBody(blockBodyPhase0)
+	require.NoError(t, err)
+
+	b := i.(*BeaconBlockBody)
+
+	b.proposerSlashings = []*eth.ProposerSlashing{
 		{
 			Header_1: &eth.SignedBeaconBlockHeader{
 				Header: &eth.BeaconBlockHeader{
@@ -24,7 +29,8 @@ func TestComputeBlockBodyFieldRoots_Phase0(t *testing.T) {
 			},
 		},
 	}
-	blockBodyPhase0.AttesterSlashings = []*eth.AttesterSlashing{
+
+	b.attesterSlashings = []*eth.AttesterSlashing{
 		{
 			Attestation_1: &eth.IndexedAttestation{
 				AttestingIndices: []uint64{1, 2, 3},
@@ -42,7 +48,8 @@ func TestComputeBlockBodyFieldRoots_Phase0(t *testing.T) {
 			},
 		},
 	}
-	blockBodyPhase0.Attestations = []*eth.Attestation{
+
+	b.attestations = []*eth.Attestation{
 		{
 			AggregationBits: []byte{0b01111100, 0b1},
 			Data: &eth.AttestationData{
@@ -58,7 +65,8 @@ func TestComputeBlockBodyFieldRoots_Phase0(t *testing.T) {
 			Signature: make([]byte, 3),
 		},
 	}
-	blockBodyPhase0.Deposits = []*eth.Deposit{
+
+	b.deposits = []*eth.Deposit{
 		{
 			Proof: make([][]byte, 2),
 			Data: &eth.Deposit_Data{
@@ -78,7 +86,8 @@ func TestComputeBlockBodyFieldRoots_Phase0(t *testing.T) {
 			},
 		},
 	}
-	blockBodyPhase0.VoluntaryExits = []*eth.SignedVoluntaryExit{
+
+	b.voluntaryExits = []*eth.SignedVoluntaryExit{
 		{
 			Exit: &eth.VoluntaryExit{
 				Epoch:          1,
@@ -94,13 +103,12 @@ func TestComputeBlockBodyFieldRoots_Phase0(t *testing.T) {
 			Signature: make([]byte, 8),
 		},
 	}
-	body, err := NewBeaconBlockBody(blockBodyPhase0)
+
+	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
 	require.NoError(t, err)
 
-	ctx := context.Background()
-	fieldRoots, err := ComputeBlockBodyFieldRoots(ctx, (blockBodyPhase0))
+	correctFieldRoots, err := b.HashTreeRoot()
 	require.NoError(t, err)
-	correctRoots, err := body.HashTreeRoot()
-	require.NoError(t, err)
-	require.Equal(t, fieldRoots, correctRoots)
+
+	require.Equal(t, correctFieldRoots, fieldRoots)
 }
