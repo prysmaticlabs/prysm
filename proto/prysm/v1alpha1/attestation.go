@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -204,11 +203,12 @@ func (a *AttestationElectra) CommitteeBitsVal() bitfield.Bitfield {
 }
 
 func (a *AttestationElectra) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
-	indices := helpers.CommitteeIndices(a.CommitteeBits)
-	if len(indices) == 0 {
-		return 0, errors.New("empty committee indices")
+	indices := a.CommitteeBits.BitIndices()
+	committeeIndices := make([]primitives.CommitteeIndex, len(indices))
+	for i, ix := range indices {
+		committeeIndices[i] = primitives.CommitteeIndex(uint64(ix))
 	}
-	return helpers.CommitteeIndices(a.CommitteeBits)[0], nil
+	return committeeIndices[0], nil
 }
 
 // Version --

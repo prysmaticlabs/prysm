@@ -327,7 +327,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS + [
-        "//beacon-chain/core/helpers:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//math:go_default_library",
         "//proto/engine/v1:go_default_library",
