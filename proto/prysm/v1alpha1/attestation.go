@@ -203,6 +203,9 @@ func (a *AttestationElectra) CommitteeBitsVal() bitfield.Bitfield {
 }
 
 func (a *AttestationElectra) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	if a == nil || len(a.CommitteeBits) == 0 || len(a.CommitteeBits.BitIndices()) == 0 {
+		return 0, errors.New("nil attestation bit indices")
+	}
 	indices := a.CommitteeBits.BitIndices()
 	committeeIndices := make([]primitives.CommitteeIndex, len(indices))
 	for i, ix := range indices {
