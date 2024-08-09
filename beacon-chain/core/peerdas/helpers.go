@@ -394,6 +394,23 @@ func CustodySubnetCount() uint64 {
 	return count
 }
 
+// CustodyColumnCount returns the number of columns the node should custody.
+func CustodyColumnCount() uint64 {
+	// Get the number of subnets.
+	dataColumnSidecarSubnetCount := params.BeaconConfig().DataColumnSidecarSubnetCount
+
+	// Compute the number of columns per subnet.
+	columnsPerSubnet := fieldparams.NumberOfColumns / dataColumnSidecarSubnetCount
+
+	// Get the number of subnets we custody
+	custodySubnetCount := CustodySubnetCount()
+
+	// Finally, compute the number of columns we should custody.
+	custodyColumnCount := custodySubnetCount * columnsPerSubnet
+
+	return custodyColumnCount
+}
+
 // HypergeomCDF computes the hypergeometric cumulative distribution function.
 // https://en.wikipedia.org/wiki/Hypergeometric_distribution
 func HypergeomCDF(k, M, n, N uint64) float64 {

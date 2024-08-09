@@ -262,6 +262,20 @@ func TestCustodySubnetCount(t *testing.T) {
 	}
 }
 
+func TestCustodyColumnCount(t *testing.T) {
+	const expected uint64 = 8
+
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.DataColumnSidecarSubnetCount = 32
+	config.CustodyRequirement = 2
+	params.OverrideBeaconConfig(config)
+
+	actual := peerdas.CustodyColumnCount()
+	require.Equal(t, expected, actual)
+
+}
+
 func TestHypergeomCDF(t *testing.T) {
 	// Test case from https://en.wikipedia.org/wiki/Hypergeometric_distribution
 	// Population size: 1000, number of successes in population: 500, sample size: 10, number of successes in sample: 5
