@@ -1147,12 +1147,7 @@ func TestProcessWithdrawals(t *testing.T) {
 						}
 						st, err = state_native.InitializeFromProtoUnsafeEpbs(spb)
 						require.NoError(t, err)
-						pe := &enginev1.ExecutionPayloadEnvelope{
-							Payload: &enginev1.ExecutionPayloadElectra{
-								Withdrawals: test.Args.Withdrawals,
-							},
-						}
-						wp, err := epbs.WrappedROExecutionPayloadEnvelope(pe)
+						wp, err := epbs.WrappedROExecutionPayloadEnvelope(&enginev1.ExecutionPayloadEnvelope{Payload:&enginev1.ExecutionPayloadElectra{Withdrawals: test.Args.Withdrawals}})
 						require.NoError(t, err)
 						p, err = wp.Execution()
 						require.NoError(t, err)
