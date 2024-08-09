@@ -1034,7 +1034,7 @@ func TestProcessWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "failure Parent Node is not full",
+				Name:                         "Parent Node is not full",
 				NextWithdrawalIndex:          22,
 				NextWithdrawalValidatorIndex: 4,
 				FullWithdrawalIndices:        []primitives.ValidatorIndex{7, 19, 28, 1},
@@ -1044,7 +1044,7 @@ func TestProcessWithdrawals(t *testing.T) {
 				LatestBlockHash: []byte{1, 2, 3},
 			},
 			Control: control{
-				ExpectedError: true,
+				ExpectedError: false,
 			},
 		},
 	}
