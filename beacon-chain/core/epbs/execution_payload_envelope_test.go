@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
-	consensus_epbs "github.com/prysmaticlabs/prysm/v5/consensus-types/epbs"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -16,7 +16,7 @@ func TestProcessPayloadStateTransition(t *testing.T) {
 	bh := [32]byte{'h'}
 	payload := &enginev1.ExecutionPayloadElectra{BlockHash: bh[:]}
 	p := &enginev1.ExecutionPayloadEnvelope{Payload: payload}
-	e, err := consensus_epbs.WrappedROExecutionPayloadEnvelope(p)
+	e, err := blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 	stpb := &ethpb.BeaconStateEPBS{Slot: 3}
 	st, err := state_native.InitializeFromProtoUnsafeEpbs(stpb)
@@ -42,7 +42,7 @@ func Test_validateAgainstHeader(t *testing.T) {
 	bh := [32]byte{'h'}
 	payload := &enginev1.ExecutionPayloadElectra{BlockHash: bh[:]}
 	p := &enginev1.ExecutionPayloadEnvelope{Payload: payload}
-	e, err := consensus_epbs.WrappedROExecutionPayloadEnvelope(p)
+	e, err := blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 	stpb := &ethpb.BeaconStateEPBS{Slot: 3}
 	st, err := state_native.InitializeFromProtoUnsafeEpbs(stpb)
@@ -68,7 +68,7 @@ func Test_validateAgainstHeader(t *testing.T) {
 func Test_validateAgainstCommittedBid(t *testing.T) {
 	payload := &enginev1.ExecutionPayloadElectra{}
 	p := &enginev1.ExecutionPayloadEnvelope{Payload: payload, BuilderIndex: 1}
-	e, err := consensus_epbs.WrappedROExecutionPayloadEnvelope(p)
+	e, err := blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 	h := &enginev1.ExecutionPayloadHeaderEPBS{}
 	require.ErrorContains(t, "builder index does not match committed header", validateAgainstCommittedBid(h, e))
@@ -91,7 +91,7 @@ func Test_validateAgainstCommittedBid(t *testing.T) {
 func TestCheckPostStateRoot(t *testing.T) {
 	payload := &enginev1.ExecutionPayloadElectra{}
 	p := &enginev1.ExecutionPayloadEnvelope{Payload: payload, BuilderIndex: 1}
-	e, err := consensus_epbs.WrappedROExecutionPayloadEnvelope(p)
+	e, err := blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 	ctx := context.Background()
 	st, _ := util.DeterministicGenesisStateEpbs(t, 64)

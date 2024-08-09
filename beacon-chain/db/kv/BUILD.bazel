@@ -11,6 +11,7 @@ go_library(
         "checkpoint.go",
         "deposit_contract.go",
         "encoding.go",
+        "epbs.go",
         "error.go",
         "execution_chain.go",
         "finalized_block_roots.go",

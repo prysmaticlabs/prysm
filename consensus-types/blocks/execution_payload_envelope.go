@@ -1,10 +1,10 @@
-package epbs
+package blocks
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
@@ -16,7 +16,8 @@ type signedExecutionPayloadEnvelope struct {
 }
 
 type executionPayloadEnvelope struct {
-	p *enginev1.ExecutionPayloadEnvelope
+	p    *enginev1.ExecutionPayloadEnvelope
+	slot primitives.Slot
 }
 
 // WrappedROSignedExecutionPayloadEnvelope is a constructor which wraps a
@@ -45,16 +46,18 @@ func (s signedExecutionPayloadEnvelope) Envelope() (interfaces.ROExecutionPayloa
 }
 
 // Signature returns the wrapped value
-func (s signedExecutionPayloadEnvelope) Signature() ([field_params.BLSSignatureLength]byte, error) {
-	if s.IsNil() {
-		return [field_params.BLSSignatureLength]byte{}, consensus_types.ErrNilObjectWrapped
-	}
-	return [field_params.BLSSignatureLength]byte(s.s.Signature), nil
+func (s signedExecutionPayloadEnvelope) Signature() [field_params.BLSSignatureLength]byte {
+	return [field_params.BLSSignatureLength]byte(s.s.Signature)
 }
 
 // IsNil returns whether the wrapped value is nil
 func (s signedExecutionPayloadEnvelope) IsNil() bool {
 	return s.s == nil
+}
+
+// SigningRoot returns the signing root for the given domain
+func (s signedExecutionPayloadEnvelope) SigningRoot(domain []byte) (root [32]byte, err error) {
+	return signing.ComputeSigningRoot(s.s.Message, domain)
 }
 
 // IsNil returns whether the wrapped value is nil
@@ -72,67 +75,48 @@ func (p executionPayloadEnvelope) Execution() (interfaces.ExecutionData, error) 
 	if p.IsBlinded() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
-	return blocks.WrappedExecutionPayloadElectra(p.p.Payload)
+	return WrappedExecutionPayloadElectra(p.p.Payload)
 }
 
 // BuilderIndex returns the wrapped value
-func (p executionPayloadEnvelope) BuilderIndex() (primitives.ValidatorIndex, error) {
-	if p.IsNil() {
-		return 0, consensus_types.ErrNilObjectWrapped
-	}
-	return p.p.BuilderIndex, nil
+func (p executionPayloadEnvelope) BuilderIndex() primitives.ValidatorIndex {
+	return p.p.BuilderIndex
 }
 
 // BeaconBlockRoot returns the wrapped value
-func (p executionPayloadEnvelope) BeaconBlockRoot() ([field_params.RootLength]byte, error) {
-	if p.IsNil() || len(p.p.BeaconBlockRoot) == 0 {
-		return [field_params.RootLength]byte{}, consensus_types.ErrNilObjectWrapped
-	}
-	return [field_params.RootLength]byte(p.p.BeaconBlockRoot), nil
+func (p executionPayloadEnvelope) BeaconBlockRoot() [field_params.RootLength]byte {
+	return [field_params.RootLength]byte(p.p.BeaconBlockRoot)
 }
 
 // BlobKzgCommitments returns the wrapped value
-func (p executionPayloadEnvelope) BlobKzgCommitments() ([][]byte, error) {
-	if p.IsNil() {
-		return nil, consensus_types.ErrNilObjectWrapped
-	}
+func (p executionPayloadEnvelope) BlobKzgCommitments() [][]byte {
 	commitments := make([][]byte, len(p.p.BlobKzgCommitments))
 	for i, commit := range p.p.BlobKzgCommitments {
 		commitments[i] = make([]byte, len(commit))
 		copy(commitments[i], commit)
 	}
-	return commitments, nil
+	return commitments
 }
 
 // PayloadWithheld returns the wrapped value
-func (p executionPayloadEnvelope) PayloadWithheld() (bool, error) {
-	if p.IsBlinded() {
-		return false, consensus_types.ErrNilObjectWrapped
-	}
-	return p.p.PayloadWithheld, nil
+func (p executionPayloadEnvelope) PayloadWithheld() bool {
+	return p.p.PayloadWithheld
 }
 
 // StateRoot returns the wrapped value
-func (p executionPayloadEnvelope) StateRoot() ([field_params.RootLength]byte, error) {
-	if p.IsNil() || len(p.p.StateRoot) == 0 {
-		return [field_params.RootLength]byte{}, consensus_types.ErrNilObjectWrapped
-	}
-	return [field_params.RootLength]byte(p.p.StateRoot), nil
+func (p executionPayloadEnvelope) StateRoot() [field_params.RootLength]byte {
+	return [field_params.RootLength]byte(p.p.StateRoot)
 }
 
 // VersionedHashes returns the Versioned Hashes of the KZG commitments within
 // the envelope
-func (p executionPayloadEnvelope) VersionedHashes() ([]common.Hash, error) {
-	if p.IsNil() {
-		return nil, consensus_types.ErrNilObjectWrapped
-	}
-
+func (p executionPayloadEnvelope) VersionedHashes() []common.Hash {
 	commitments := p.p.BlobKzgCommitments
 	versionedHashes := make([]common.Hash, len(commitments))
 	for i, commitment := range commitments {
 		versionedHashes[i] = primitives.ConvertKzgCommitmentToVersionedHash(commitment)
 	}
-	return versionedHashes, nil
+	return versionedHashes
 }
 
 // BlobKzgCommitmentsRoot returns the HTR of the KZG commitments in the payload
@@ -142,4 +126,9 @@ func (p executionPayloadEnvelope) BlobKzgCommitmentsRoot() ([field_params.RootLe
 	}
 
 	return ssz.KzgCommitmentsRoot(p.p.BlobKzgCommitments)
+}
+
+// Slot returns the wrapped value
+func (p executionPayloadEnvelope) Slot() primitives.Slot {
+	return p.slot
 }
