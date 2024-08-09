@@ -136,8 +136,8 @@ func (p *BeaconDbBlocker) Block(ctx context.Context, id []byte) (interfaces.Read
 	return blk, nil
 }
 
-// blobsFromStoredBlobs retrieves blobs corresponding to `indices` and `root` from the store, expecting blobs to be
-// stored directly (aka. no data columns).
+// blobsFromStoredBlobs retrieves blobs corresponding to `indices` and `root` from the store.
+// This function expects blobs to be stored directly (aka. no data columns).
 func (p *BeaconDbBlocker) blobsFromStoredBlobs(indices map[uint64]bool, root []byte) ([]*blocks.VerifiedROBlob, *core.RpcError) {
 	// If no indices are provided in the request, we fetch all available blobs for the block.
 	if len(indices) == 0 {
@@ -172,82 +172,140 @@ func (p *BeaconDbBlocker) blobsFromStoredBlobs(indices map[uint64]bool, root []b
 	return blobs, nil
 }
 
-// blobsFromStoredDataColumns retrieves data columns from the store, convert them to blobs, and return blobs corresponding to `indices` and `root` from the store,
-// expecting data columns to be stored (aka. no blobs).
-// If not all data columns are available, the function returns a "not found" error.
-// This function expects the block associated with root has blobs.
+// blobsFromStoredDataColumns retrieves data columns from the store, reconstruct the whole matrix if needed, convert the matrix to blobs,
+// and then returns blobs corresponding to `indices` and `root` from the store,
+// This function expects data columns to be stored (aka. no blobs).
+// If not enough data columns are available to extract blobs from them (either directly or after reconstruction), an error is returned.
 func (p *BeaconDbBlocker) blobsFromStoredDataColumns(indices map[uint64]bool, rootBytes []byte) ([]*blocks.VerifiedROBlob, *core.RpcError) {
-	// Multiple implementations are possible here, depending on the data storage strategy.
-	// 1. If the `--subscribe-all-subnets` flag is not set, the respond with a "not found" error.
-	// 2. If all columns are available (either because the `--subscribe-all-subnets` flag is set or because we have all columns thanks to vaidator custody),
-	//    then respond with the blobs. In the contrary, we Haharespond with a "not found" error.
-	//    However, this strategy may confuse the requester, since the ability of the node to respond to the request will depend on the number of validators attached to the node.
-	//    So, sometimes the node will be able to respond, and sometimes not, which is not ideal.
-	// 3. If at least half of the columns are available, then we can reconstruct and respond with the blobs. As with `2.`, this strategy may confuse the requester because
-	//    the ability of the node to respond to the request will depend on the number of validators attached to the node.
-	//    So, sometimes the node will be able to respond, and sometimes not, which is not ideal.
-	// 4. If some columns are missing, we requests the missing columns to peers until we are able to reconstruct, then we reconstruct and respond with the blobs.
-	//    Unlike `2.` and `3.`, the node will always be able to respond to the request, but it will provoke possibly a lot of network traffic.
-	// ==> In this implementation, we choose the strategy `1.`.
-	if !flags.Get().SubscribeToAllSubnets {
-		return nil, &core.RpcError{
-			Err:    errors.Errorf("please start the beacon node with the `--%s` flag before querying this endpoint", flags.SubscribeToAllSubnets.Name),
-			Reason: core.NotFound,
-		}
-	}
-
+	// Get our count of columns we should custody.
 	root := bytesutil.ToBytes32(rootBytes)
 
-	// Check we effectively custody all data columns for this block.
-	storedDataColumns, err := p.BlobStorage.ColumnIndices(root)
+	// Get the number of columns we should custody.
+	custodyColumnsCount := peerdas.CustodyColumnCount()
+
+	// Determine if we are theoretically able to reconstruct the data columns.
+	canTheoreticallyReconstruct := peerdas.CanSelfReconstruct(custodyColumnsCount)
+
+	// Retrieve the data columns indice actually we store.
+	storedDataColumnsIndices, err := p.BlobStorage.ColumnIndices(root)
 	if err != nil {
 		log.WithField("blockRoot", hexutil.Encode(rootBytes)).Error(errors.Wrap(err, "Could not retrieve columns indices stored for block root"))
 		return nil, &core.RpcError{Err: errors.Wrap(err, "could not retrieve columns indices stored for block root"), Reason: core.Internal}
 	}
 
-	storedDataColumnsCount := len(storedDataColumns)
-	if storedDataColumnsCount != fieldparams.NumberOfColumns {
-		// The main reason for this error is that the node did not (yet) completed the backfill.
+	storedDataColumnsCount := uint64(len(storedDataColumnsIndices))
 
-		log.WithFields(log.Fields{
-			"blockRoot":           hexutil.Encode(rootBytes),
-			"custodyColumnsCount": storedDataColumnsCount,
-			"columnsCount":        fieldparams.NumberOfColumns,
-		}).Warning("not all data columns are available for this block")
+	// Determine is we acually able to reconstruct the data columns.
+	canActuallyReconstruct := peerdas.CanSelfReconstruct(storedDataColumnsCount)
 
+	if !canTheoreticallyReconstruct && !canActuallyReconstruct {
+		// There is no way to reconstruct the data columns.
 		return nil, &core.RpcError{
-			Err:    errors.Errorf("not all data columns are available for this blob. Wanted: %d, got: %d. Please retry later.", fieldparams.NumberOfColumns, storedDataColumnsCount),
+			Err:    errors.Errorf("the node does not custody enough data columns to reconstruct blobs. Please start the beacon node with the `--%s` flag to ensure this call to success.", flags.SubscribeToAllSubnets.Name),
 			Reason: core.NotFound,
 		}
 	}
 
-	columnsCount := fieldparams.NumberOfColumns
+	nonExtendedColumnsCount := uint64(fieldparams.NumberOfColumns / 2)
 
-	if columnsCount%2 != 0 {
-		log.WithField("columnsCount", columnsCount).Error("The number of columns must be even")
-		return nil, &core.RpcError{Err: errors.New("the number of columns must be even"), Reason: core.Internal}
+	if canTheoreticallyReconstruct && !canActuallyReconstruct {
+		// This case may happen if the node started recently with a big enough custody count, but did not (yet) backfill all the columns.
+		return nil, &core.RpcError{
+			Err:    errors.Errorf("not all data columns are available for this blob. Wanted: %d, got: %d. Please retry later.", nonExtendedColumnsCount, storedDataColumnsCount),
+			Reason: core.NotFound}
 	}
 
-	// Retrieve columns corresponding to the (non-extended) blobs.
-	blobColumnsCount := fieldparams.NumberOfColumns / 2
+	// - The case !canTheoreticallyReconstruct && canActuallyReconstruct may happen if the node used to custody enough columns,
+	//   but do not custody enough columns anymore. We are still able to reconstruct the data columns.
+	// - The case canTheoreticallyReconstruct && canActuallyReconstruct is the happy path.
 
-	dataColumnsSidecar := make([]*ethpb.DataColumnSidecar, 0, blobColumnsCount)
-	for i := range blobColumnsCount {
-		dataColumnSidecar, err := p.BlobStorage.GetColumn(root, uint64(i))
+	// Check if we store all the non extended columns. If so, we can respond without reconstructing.
+	missingColumns := make(map[uint64]bool)
+	for columnIndex := range nonExtendedColumnsCount {
+		if _, ok := storedDataColumnsIndices[columnIndex]; !ok {
+			missingColumns[columnIndex] = true
+		}
+	}
+
+	if len(missingColumns) == 0 {
+		// No need to reconstruct, this is the happy path.
+		// Load the data columns corresponding to the non-extended blobs.
+		storedDataColumnsSidecar := make([]*ethpb.DataColumnSidecar, 0, nonExtendedColumnsCount)
+		for index := range nonExtendedColumnsCount {
+			dataColumnSidecar, err := p.BlobStorage.GetColumn(root, index)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"blockRoot": hexutil.Encode(rootBytes),
+					"column":    index,
+				}).Error(errors.Wrapf(err, "could not retrieve column %d for block root %#x.", index, root))
+
+				return nil, &core.RpcError{
+					Err:    fmt.Errorf("could not retrieve column %d for block root %#x", index, root),
+					Reason: core.Internal,
+				}
+			}
+
+			storedDataColumnsSidecar = append(storedDataColumnsSidecar, dataColumnSidecar)
+		}
+
+		// Get verified RO blobs from the data columns.
+		verifiedROBlobs, err := peerdas.Blobs(storedDataColumnsSidecar)
+		if err != nil {
+			log.WithField("blockRoot", hexutil.Encode(rootBytes)).Error(errors.Wrap(err, "could not compute blobs from data columns"))
+			return nil, &core.RpcError{Err: errors.Wrap(err, "could not compute blobs from data columns"), Reason: core.Internal}
+		}
+
+		return verifiedROBlobs, nil
+	}
+
+	// Some non-extended data columns are missing, we need to reconstruct them.
+	// Load all the data columns we have in the store.
+	// Theoretically, we could only retrieve the minimum number of columns needed to reconstruct the missing ones,
+	// but here we make the assumption that the cost of loading all the columns from the store is negligible
+	// compared to the cost of reconstructing them.
+	storedDataColumnsSidecar := make([]*ethpb.DataColumnSidecar, 0, nonExtendedColumnsCount)
+	for index := range storedDataColumnsIndices {
+		dataColumnSidecar, err := p.BlobStorage.GetColumn(root, index)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"blockRoot": hexutil.Encode(rootBytes),
-				"column":    i,
-			}).Error(errors.Wrapf(err, "could not retrieve column %d for block root %#x", i, root))
+				"column":    index,
+			}).Error(errors.Wrapf(err, "could not retrieve column %d for block root %#x.", index, root))
 
-			return nil, &core.RpcError{Err: fmt.Errorf("could not retrieve column %d for block root %#x", i, root), Reason: core.Internal}
+			return nil, &core.RpcError{
+				Err:    fmt.Errorf("could not retrieve column %d for block root %#x", index, root),
+				Reason: core.Internal,
+			}
 		}
 
-		dataColumnsSidecar = append(dataColumnsSidecar, dataColumnSidecar)
+		storedDataColumnsSidecar = append(storedDataColumnsSidecar, dataColumnSidecar)
 	}
 
-	// Compute verified RO blobs from the data columns.
-	verifiedROBlobs, err := peerdas.Blobs(dataColumnsSidecar)
+	// Recover cells and proofs
+	recoveredCellsAndProofs, err := peerdas.RecoverCellsAndProofs(storedDataColumnsSidecar, root)
+	if err != nil {
+		log.WithField("blockRoot", hexutil.Encode(rootBytes)).Error(errors.Wrap(err, "could not recover cells and proofs"))
+		return nil, &core.RpcError{Err: errors.Wrap(err, "could not recover cells and proofs"), Reason: core.Internal}
+	}
+
+	// It is safe to retrieve the first element, since we already know there is at least one column in the store.
+	firstDataColumnSidecar := storedDataColumnsSidecar[0]
+
+	// Reconstruct the data columns sidecars.
+	reconstructedDataColumnSidecars, err := peerdas.DataColumnSidecarsForReconstruct(
+		firstDataColumnSidecar.KzgCommitments,
+		firstDataColumnSidecar.SignedBlockHeader,
+		firstDataColumnSidecar.KzgCommitmentsInclusionProof,
+		recoveredCellsAndProofs,
+	)
+
+	if err != nil {
+		log.WithField("blockRoot", hexutil.Encode(rootBytes)).Error(errors.Wrap(err, "could not reconstruct data columns sidecars"))
+		return nil, &core.RpcError{Err: errors.Wrap(err, "could not reconstruct data columns sidecars"), Reason: core.Internal}
+	}
+
+	// Get verified RO blobs from the data columns.
+	verifiedROBlobs, err := peerdas.Blobs(reconstructedDataColumnSidecars)
 	if err != nil {
 		log.WithField("blockRoot", hexutil.Encode(rootBytes)).Error(errors.Wrap(err, "could not compute blobs from data columns"))
 		return nil, &core.RpcError{Err: errors.Wrap(err, "could not compute blobs from data columns"), Reason: core.Internal}

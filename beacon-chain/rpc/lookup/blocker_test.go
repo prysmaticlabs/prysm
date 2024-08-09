@@ -23,12 +23,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -61,7 +61,7 @@ func TestGetBlock(t *testing.T) {
 	b4.Block.ParentRoot = bytesutil.PadTo([]byte{8}, 32)
 	util.SaveBlock(t, ctx, beaconDB, b4)
 
-	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
+	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpb.BeaconBlockContainer_Phase0Block).Phase0Block)
 	require.NoError(t, err)
 
 	fetcher := &BeaconDbBlocker{
@@ -70,7 +70,7 @@ func TestGetBlock(t *testing.T) {
 			DB:                  beaconDB,
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Root: blkContainers[64].BlockRoot},
 			CanonicalRoots:      canonicalRoots,
 		},
 	}
@@ -81,13 +81,13 @@ func TestGetBlock(t *testing.T) {
 	tests := []struct {
 		name    string
 		blockID []byte
-		want    *ethpbalpha.SignedBeaconBlock
+		want    *ethpb.SignedBeaconBlock
 		wantErr bool
 	}{
 		{
 			name:    "slot",
 			blockID: []byte("30"),
-			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			want:    blkContainers[30].Block.(*ethpb.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "bad formatting",
@@ -97,7 +97,7 @@ func TestGetBlock(t *testing.T) {
 		{
 			name:    "canonical",
 			blockID: []byte("30"),
-			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			want:    blkContainers[30].Block.(*ethpb.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "non canonical",
@@ -107,12 +107,12 @@ func TestGetBlock(t *testing.T) {
 		{
 			name:    "head",
 			blockID: []byte("head"),
-			want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			want:    headBlock.Block.(*ethpb.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "finalized",
 			blockID: []byte("finalized"),
-			want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			want:    blkContainers[64].Block.(*ethpb.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "genesis",
@@ -127,7 +127,7 @@ func TestGetBlock(t *testing.T) {
 		{
 			name:    "root",
 			blockID: blkContainers[20].BlockRoot,
-			want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			want:    blkContainers[20].Block.(*ethpb.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "non-existent root",
@@ -137,7 +137,7 @@ func TestGetBlock(t *testing.T) {
 		{
 			name:    "hex",
 			blockID: []byte(hexutil.Encode(blkContainers[20].BlockRoot)),
-			want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			want:    blkContainers[20].Block.(*ethpb.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "no block",
@@ -159,7 +159,7 @@ func TestGetBlock(t *testing.T) {
 			require.NoError(t, err)
 			pb, err := result.Proto()
 			require.NoError(t, err)
-			pbBlock, ok := pb.(*ethpbalpha.SignedBeaconBlock)
+			pbBlock, ok := pb.(*ethpb.SignedBeaconBlock)
 			require.Equal(t, true, ok)
 			if !reflect.DeepEqual(pbBlock, tt.want) {
 				t.Error("Expected blocks to equal")
@@ -280,37 +280,51 @@ func generateRandomBlocSignedBeaconBlockkAndVerifiedRoBlobs(t *testing.T, blobCo
 	return signedBeaconBlock, verifiedROBlobs
 }
 
-func TestBlobsFromDataColumns(t *testing.T) {
+func TestBlobsFromStoredDataColumns(t *testing.T) {
 	const blobCount = 5
-
 	var nilError *core.RpcError
+
+	noDataColumnsIndice := []int{}
+	allDataColumnsIndice := make([]int, 0, fieldparams.NumberOfColumns)
+	for i := range fieldparams.NumberOfColumns {
+		allDataColumnsIndice = append(allDataColumnsIndice, i)
+	}
+
+	originalColumnsIndice := allDataColumnsIndice[:fieldparams.NumberOfColumns/2]
+	extendedColumnsIndice := allDataColumnsIndice[fieldparams.NumberOfColumns/2:]
 
 	testCases := []struct {
 		errorReason           core.ErrorReason
 		isError               bool
 		subscribeToAllSubnets bool
-		storedColumnCount     int
+		storedColumnsIndice   []int
 		name                  string
 	}{
 		{
-			name:                  "Not subscribed to all subnets",
+			name:                  "Cannot theoretically nor actually reconstruct",
 			subscribeToAllSubnets: false,
+			storedColumnsIndice:   noDataColumnsIndice,
 			isError:               true,
 			errorReason:           core.NotFound,
 		},
 		{
-			name:                  "Backfill not finished",
+			name:                  "Can theoretically but not actually reconstruct",
 			subscribeToAllSubnets: true,
-			storedColumnCount:     127,
+			storedColumnsIndice:   noDataColumnsIndice,
 			isError:               true,
 			errorReason:           core.NotFound,
 		},
 		{
-			name:                  "Nominal",
+			name:                  "No need to reconstruct",
 			subscribeToAllSubnets: true,
-			storedColumnCount:     128,
+			storedColumnsIndice:   originalColumnsIndice,
 			isError:               false,
-			errorReason:           core.NotFound,
+		},
+		{
+			name:                  "Reconstruction needed",
+			subscribeToAllSubnets: false,
+			storedColumnsIndice:   extendedColumnsIndice,
+			isError:               false,
 		},
 	}
 
@@ -337,7 +351,7 @@ func TestBlobsFromDataColumns(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create verified RO data columns.
-	verifiedRoDataColumns := make([]*blocks.VerifiedRODataColumn, 0, blobCount)
+	verifiedRoDataColumns := make([]*blocks.VerifiedRODataColumn, 0, fieldparams.NumberOfColumns)
 	for _, dataColumnSidecar := range dataColumnSidecars {
 		roDataColumn, err := blocks.NewRODataColumn(dataColumnSidecar)
 		require.NoError(t, err)
@@ -349,17 +363,18 @@ func TestBlobsFromDataColumns(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Set the subscription to all subnets flags.
+			resetFlags := flags.Get()
 			params.SetupTestConfigCleanup(t)
 			gFlags := new(flags.GlobalFlags)
-			gFlags.SubscribeToAllSubnets = true
+			gFlags.SubscribeToAllSubnets = tc.subscribeToAllSubnets
 			flags.Init(gFlags)
 
 			// Define a blob storage.
 			blobStorage := filesystem.NewEphemeralBlobStorage(t)
 
 			// Save the data columns in the store.
-			for i := range tc.storedColumnCount {
-				verifiedRoDataColumn := verifiedRoDataColumns[i]
+			for _, columnIndex := range tc.storedColumnsIndice {
+				verifiedRoDataColumn := verifiedRoDataColumns[columnIndex]
 				err := blobStorage.SaveDataColumn(*verifiedRoDataColumn)
 				require.NoError(t, err)
 			}
@@ -377,8 +392,17 @@ func TestBlobsFromDataColumns(t *testing.T) {
 				require.Equal(t, nilError, err)
 				expected := verifiedRoBlobs
 
+				for i := range expected {
+					e := expected[i]
+					a := actual[i]
+					require.DeepSSZEqual(t, e, a)
+				}
+
 				require.DeepSSZEqual(t, expected, actual)
 			}
+
+			// Reset flags.
+			flags.Init(resetFlags)
 		})
 	}
 }
@@ -444,7 +468,7 @@ func TestGetBlob(t *testing.T) {
 	})
 	t.Run("finalized", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
-			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blockRoot[:]}},
+			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: blockRoot[:]}},
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
 			},
@@ -458,7 +482,7 @@ func TestGetBlob(t *testing.T) {
 	})
 	t.Run("justified", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
-			ChainInfoFetcher: &mockChain.ChainService{CurrentJustifiedCheckPoint: &ethpbalpha.Checkpoint{Root: blockRoot[:]}},
+			ChainInfoFetcher: &mockChain.ChainService{CurrentJustifiedCheckPoint: &ethpb.Checkpoint{Root: blockRoot[:]}},
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
 			},
@@ -496,7 +520,7 @@ func TestGetBlob(t *testing.T) {
 	})
 	t.Run("one blob only", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
-			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blockRoot[:]}},
+			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: blockRoot[:]}},
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
 			},
@@ -515,7 +539,7 @@ func TestGetBlob(t *testing.T) {
 	})
 	t.Run("no blobs returns an empty array", func(t *testing.T) {
 		blocker := &BeaconDbBlocker{
-			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blockRoot[:]}},
+			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: blockRoot[:]}},
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
 			},
