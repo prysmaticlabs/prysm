@@ -443,7 +443,7 @@ func TestReconstructionRoundTrip(t *testing.T) {
 
 	numberOfColumns := params.BeaconConfig().NumberOfColumns
 
-	noDataColumns := []*ethpb.DataColumnSidecar{}
+	var noDataColumns []*ethpb.DataColumnSidecar
 	dataColumnsWithDifferentLengths := []*ethpb.DataColumnSidecar{
 		{DataColumn: [][]byte{{}, {}}},
 		{DataColumn: [][]byte{{}}},

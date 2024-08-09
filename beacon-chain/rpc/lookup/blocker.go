@@ -172,6 +172,97 @@ func (p *BeaconDbBlocker) blobsFromStoredBlobs(indices map[uint64]bool, root []b
 	return blobs, nil
 }
 
+// blobsFromNonExtendedStoredDataColumns load the non-extended data columns from the store corresponding to `root` and returns the verified RO blobs.
+// This function assumes that all the non-extended data columns are available in the store.
+func (p *BeaconDbBlocker) blobsFromNonExtendedStoredDataColumns(root [fieldparams.RootLength]byte) ([]*blocks.VerifiedROBlob, *core.RpcError) {
+	nonExtendedColumnsCount := uint64(fieldparams.NumberOfColumns / 2)
+
+	// Load the data columns corresponding to the non-extended blobs.
+	storedDataColumnsSidecar := make([]*ethpb.DataColumnSidecar, 0, nonExtendedColumnsCount)
+	for index := range nonExtendedColumnsCount {
+		dataColumnSidecar, err := p.BlobStorage.GetColumn(root, index)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"blockRoot": hexutil.Encode(root[:]),
+				"column":    index,
+			}).Error(errors.Wrapf(err, "could not retrieve column %d for block root %#x.", index, root))
+
+			return nil, &core.RpcError{
+				Err:    fmt.Errorf("could not retrieve column %d for block root %#x", index, root),
+				Reason: core.Internal,
+			}
+		}
+
+		storedDataColumnsSidecar = append(storedDataColumnsSidecar, dataColumnSidecar)
+	}
+
+	// Get verified RO blobs from the data columns.
+	verifiedROBlobs, err := peerdas.Blobs(storedDataColumnsSidecar)
+	if err != nil {
+		log.WithField("blockRoot", hexutil.Encode(root[:])).Error(errors.Wrap(err, "could not compute blobs from data columns"))
+		return nil, &core.RpcError{Err: errors.Wrap(err, "could not compute blobs from data columns"), Reason: core.Internal}
+	}
+
+	return verifiedROBlobs, nil
+}
+
+// blobsFromReconstructedDataColumns retrieves data columns from the store, reconstruct the whole matrix and returns the verified RO blobs.
+func (p *BeaconDbBlocker) blobsFromReconstructedDataColumns(root [fieldparams.RootLength]byte, storedDataColumnsIndices map[uint64]bool) ([]*blocks.VerifiedROBlob, *core.RpcError) {
+	// Load all the data columns we have in the store.
+	// Theoretically, we could only retrieve the minimum number of columns needed to reconstruct the missing ones,
+	// but here we make the assumption that the cost of loading all the columns from the store is negligible
+	// compared to the cost of reconstructing them.
+	storedDataColumnsSidecar := make([]*ethpb.DataColumnSidecar, 0, len(storedDataColumnsIndices))
+	for index := range storedDataColumnsIndices {
+		dataColumnSidecar, err := p.BlobStorage.GetColumn(root, index)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"blockRoot": hexutil.Encode(root[:]),
+				"column":    index,
+			}).Error(errors.Wrapf(err, "could not retrieve column %d for block root %#x.", index, root))
+
+			return nil, &core.RpcError{
+				Err:    fmt.Errorf("could not retrieve column %d for block root %#x", index, root),
+				Reason: core.Internal,
+			}
+		}
+
+		storedDataColumnsSidecar = append(storedDataColumnsSidecar, dataColumnSidecar)
+	}
+
+	// Recover cells and proofs.
+	recoveredCellsAndProofs, err := peerdas.RecoverCellsAndProofs(storedDataColumnsSidecar, root)
+	if err != nil {
+		log.WithField("blockRoot", hexutil.Encode(root[:])).Error(errors.Wrap(err, "could not recover cells and proofs"))
+		return nil, &core.RpcError{Err: errors.Wrap(err, "could not recover cells and proofs"), Reason: core.Internal}
+	}
+
+	// It is safe to retrieve the first element, since we already know there is at least one column in the store.
+	firstDataColumnSidecar := storedDataColumnsSidecar[0]
+
+	// Reconstruct the data columns sidecars.
+	reconstructedDataColumnSidecars, err := peerdas.DataColumnSidecarsForReconstruct(
+		firstDataColumnSidecar.KzgCommitments,
+		firstDataColumnSidecar.SignedBlockHeader,
+		firstDataColumnSidecar.KzgCommitmentsInclusionProof,
+		recoveredCellsAndProofs,
+	)
+
+	if err != nil {
+		log.WithField("blockRoot", hexutil.Encode(root[:])).Error(errors.Wrap(err, "could not reconstruct data columns sidecars"))
+		return nil, &core.RpcError{Err: errors.Wrap(err, "could not reconstruct data columns sidecars"), Reason: core.Internal}
+	}
+
+	// Get verified RO blobs from the data columns.
+	verifiedROBlobs, err := peerdas.Blobs(reconstructedDataColumnSidecars)
+	if err != nil {
+		log.WithField("blockRoot", hexutil.Encode(root[:])).Error(errors.Wrap(err, "could not compute blobs from data columns"))
+		return nil, &core.RpcError{Err: errors.Wrap(err, "could not compute blobs from data columns"), Reason: core.Internal}
+	}
+
+	return verifiedROBlobs, nil
+}
+
 // blobsFromStoredDataColumns retrieves data columns from the store, reconstruct the whole matrix if needed, convert the matrix to blobs,
 // and then returns blobs corresponding to `indices` and `root` from the store,
 // This function expects data columns to be stored (aka. no blobs).
@@ -229,89 +320,103 @@ func (p *BeaconDbBlocker) blobsFromStoredDataColumns(indices map[uint64]bool, ro
 
 	if len(missingColumns) == 0 {
 		// No need to reconstruct, this is the happy path.
-		// Load the data columns corresponding to the non-extended blobs.
-		storedDataColumnsSidecar := make([]*ethpb.DataColumnSidecar, 0, nonExtendedColumnsCount)
-		for index := range nonExtendedColumnsCount {
-			dataColumnSidecar, err := p.BlobStorage.GetColumn(root, index)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"blockRoot": hexutil.Encode(rootBytes),
-					"column":    index,
-				}).Error(errors.Wrapf(err, "could not retrieve column %d for block root %#x.", index, root))
-
-				return nil, &core.RpcError{
-					Err:    fmt.Errorf("could not retrieve column %d for block root %#x", index, root),
-					Reason: core.Internal,
-				}
-			}
-
-			storedDataColumnsSidecar = append(storedDataColumnsSidecar, dataColumnSidecar)
-		}
-
-		// Get verified RO blobs from the data columns.
-		verifiedROBlobs, err := peerdas.Blobs(storedDataColumnsSidecar)
-		if err != nil {
-			log.WithField("blockRoot", hexutil.Encode(rootBytes)).Error(errors.Wrap(err, "could not compute blobs from data columns"))
-			return nil, &core.RpcError{Err: errors.Wrap(err, "could not compute blobs from data columns"), Reason: core.Internal}
-		}
-
-		return verifiedROBlobs, nil
+		return p.blobsFromNonExtendedStoredDataColumns(root)
 	}
 
 	// Some non-extended data columns are missing, we need to reconstruct them.
-	// Load all the data columns we have in the store.
-	// Theoretically, we could only retrieve the minimum number of columns needed to reconstruct the missing ones,
-	// but here we make the assumption that the cost of loading all the columns from the store is negligible
-	// compared to the cost of reconstructing them.
-	storedDataColumnsSidecar := make([]*ethpb.DataColumnSidecar, 0, nonExtendedColumnsCount)
-	for index := range storedDataColumnsIndices {
-		dataColumnSidecar, err := p.BlobStorage.GetColumn(root, index)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"blockRoot": hexutil.Encode(rootBytes),
-				"column":    index,
-			}).Error(errors.Wrapf(err, "could not retrieve column %d for block root %#x.", index, root))
+	return p.blobsFromReconstructedDataColumns(root, storedDataColumnsIndices)
+}
 
-			return nil, &core.RpcError{
-				Err:    fmt.Errorf("could not retrieve column %d for block root %#x", index, root),
-				Reason: core.Internal,
+// extractRootDefault extracts the block root from the given identifier for the default case.
+func (p *BeaconDbBlocker) extractRootDefault(ctx context.Context, id string) ([]byte, *core.RpcError) {
+	if bytesutil.IsHex([]byte(id)) {
+		root, err := hexutil.Decode(id)
+		if len(root) != fieldparams.RootLength {
+			return nil, &core.RpcError{Err: fmt.Errorf("invalid block root of length %d", len(root)), Reason: core.BadRequest}
+		}
+
+		if err != nil {
+			return nil, &core.RpcError{Err: NewBlockIdParseError(err), Reason: core.BadRequest}
+		}
+
+		return root, nil
+	} else {
+		slot, err := strconv.ParseUint(id, 10, 64)
+		if err != nil {
+			return nil, &core.RpcError{Err: NewBlockIdParseError(err), Reason: core.BadRequest}
+		}
+
+		denebStart, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+		if err != nil {
+			return nil, &core.RpcError{Err: errors.Wrap(err, "could not calculate Deneb start slot"), Reason: core.Internal}
+		}
+
+		if primitives.Slot(slot) < denebStart {
+			return nil, &core.RpcError{Err: errors.New("blobs are not supported before Deneb fork"), Reason: core.BadRequest}
+		}
+
+		ok, roots, err := p.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
+		if !ok {
+			return nil, &core.RpcError{Err: fmt.Errorf("block not found: no block roots at slot %d", slot), Reason: core.NotFound}
+		}
+		if err != nil {
+			return nil, &core.RpcError{Err: errors.Wrap(err, "failed to get block roots by slot"), Reason: core.Internal}
+		}
+
+		root := roots[0][:]
+		if len(roots) == 1 {
+			return root, nil
+		}
+
+		for _, blockRoot := range roots {
+			canonical, err := p.ChainInfoFetcher.IsCanonical(ctx, blockRoot)
+			if err != nil {
+				return nil, &core.RpcError{Err: errors.Wrap(err, "could not determine if block root is canonical"), Reason: core.Internal}
+			}
+
+			if canonical {
+				return blockRoot[:], nil
 			}
 		}
 
-		storedDataColumnsSidecar = append(storedDataColumnsSidecar, dataColumnSidecar)
+		return nil, &core.RpcError{Err: errors.Wrap(err, "could not find any canonical block for this slot"), Reason: core.NotFound}
 	}
+}
 
-	// Recover cells and proofs
-	recoveredCellsAndProofs, err := peerdas.RecoverCellsAndProofs(storedDataColumnsSidecar, root)
-	if err != nil {
-		log.WithField("blockRoot", hexutil.Encode(rootBytes)).Error(errors.Wrap(err, "could not recover cells and proofs"))
-		return nil, &core.RpcError{Err: errors.Wrap(err, "could not recover cells and proofs"), Reason: core.Internal}
+// extractRoot extracts the block root from the given identifier.
+func (p *BeaconDbBlocker) extractRoot(ctx context.Context, id string) ([]byte, *core.RpcError) {
+	switch id {
+	case "genesis":
+		return nil, &core.RpcError{Err: errors.New("blobs are not supported for Phase 0 fork"), Reason: core.BadRequest}
+
+	case "head":
+		var err error
+		root, err := p.ChainInfoFetcher.HeadRoot(ctx)
+		if err != nil {
+			return nil, &core.RpcError{Err: errors.Wrapf(err, "could not retrieve head root"), Reason: core.Internal}
+		}
+
+		return root, nil
+
+	case "finalized":
+		fcp := p.ChainInfoFetcher.FinalizedCheckpt()
+		if fcp == nil {
+			return nil, &core.RpcError{Err: errors.New("received nil finalized checkpoint"), Reason: core.Internal}
+		}
+
+		return fcp.Root, nil
+
+	case "justified":
+		jcp := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
+		if jcp == nil {
+			return nil, &core.RpcError{Err: errors.New("received nil justified checkpoint"), Reason: core.Internal}
+		}
+
+		return jcp.Root, nil
+
+	default:
+		return p.extractRootDefault(ctx, id)
 	}
-
-	// It is safe to retrieve the first element, since we already know there is at least one column in the store.
-	firstDataColumnSidecar := storedDataColumnsSidecar[0]
-
-	// Reconstruct the data columns sidecars.
-	reconstructedDataColumnSidecars, err := peerdas.DataColumnSidecarsForReconstruct(
-		firstDataColumnSidecar.KzgCommitments,
-		firstDataColumnSidecar.SignedBlockHeader,
-		firstDataColumnSidecar.KzgCommitmentsInclusionProof,
-		recoveredCellsAndProofs,
-	)
-
-	if err != nil {
-		log.WithField("blockRoot", hexutil.Encode(rootBytes)).Error(errors.Wrap(err, "could not reconstruct data columns sidecars"))
-		return nil, &core.RpcError{Err: errors.Wrap(err, "could not reconstruct data columns sidecars"), Reason: core.Internal}
-	}
-
-	// Get verified RO blobs from the data columns.
-	verifiedROBlobs, err := peerdas.Blobs(reconstructedDataColumnSidecars)
-	if err != nil {
-		log.WithField("blockRoot", hexutil.Encode(rootBytes)).Error(errors.Wrap(err, "could not compute blobs from data columns"))
-		return nil, &core.RpcError{Err: errors.Wrap(err, "could not compute blobs from data columns"), Reason: core.Internal}
-	}
-
-	return verifiedROBlobs, nil
 }
 
 // Blobs returns the blobs for a given block id identifier and blob indices. The identifier can be one of:
@@ -330,73 +435,11 @@ func (p *BeaconDbBlocker) blobsFromStoredDataColumns(indices map[uint64]bool, ro
 //     we are technically not supposed to import a block to forkchoice unless we have the blobs, so the nuance here is if we can't find the file and we are inside the protocol-defined retention period, then it's actually a 500.
 //   - block exists, has commitments, outside retention period (greater of protocol- or user-specified) - ie just like block exists, no commitment
 func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices map[uint64]bool) ([]*blocks.VerifiedROBlob, *core.RpcError) {
-	var root []byte
-	switch id {
-	case "genesis":
-		return nil, &core.RpcError{Err: errors.New("blobs are not supported for Phase 0 fork"), Reason: core.BadRequest}
-	case "head":
-		var err error
-		root, err = p.ChainInfoFetcher.HeadRoot(ctx)
-		if err != nil {
-			return nil, &core.RpcError{Err: errors.Wrapf(err, "could not retrieve head root"), Reason: core.Internal}
-		}
-	case "finalized":
-		fcp := p.ChainInfoFetcher.FinalizedCheckpt()
-		if fcp == nil {
-			return nil, &core.RpcError{Err: errors.New("received nil finalized checkpoint"), Reason: core.Internal}
-		}
-		root = fcp.Root
-	case "justified":
-		jcp := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
-		if jcp == nil {
-			return nil, &core.RpcError{Err: errors.New("received nil justified checkpoint"), Reason: core.Internal}
-		}
-		root = jcp.Root
-	default:
-		if bytesutil.IsHex([]byte(id)) {
-			var err error
-			root, err = hexutil.Decode(id)
-			if len(root) != fieldparams.RootLength {
-				return nil, &core.RpcError{Err: fmt.Errorf("invalid block root of length %d", len(root)), Reason: core.BadRequest}
-			}
-			if err != nil {
-				return nil, &core.RpcError{Err: NewBlockIdParseError(err), Reason: core.BadRequest}
-			}
-		} else {
-			slot, err := strconv.ParseUint(id, 10, 64)
-			if err != nil {
-				return nil, &core.RpcError{Err: NewBlockIdParseError(err), Reason: core.BadRequest}
-			}
-			denebStart, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
-			if err != nil {
-				return nil, &core.RpcError{Err: errors.Wrap(err, "could not calculate Deneb start slot"), Reason: core.Internal}
-			}
-			if primitives.Slot(slot) < denebStart {
-				return nil, &core.RpcError{Err: errors.New("blobs are not supported before Deneb fork"), Reason: core.BadRequest}
-			}
-			ok, roots, err := p.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
-			if !ok {
-				return nil, &core.RpcError{Err: fmt.Errorf("block not found: no block roots at slot %d", slot), Reason: core.NotFound}
-			}
-			if err != nil {
-				return nil, &core.RpcError{Err: errors.Wrap(err, "failed to get block roots by slot"), Reason: core.Internal}
-			}
-			root = roots[0][:]
-			if len(roots) == 1 {
-				break
-			}
-			for _, blockRoot := range roots {
-				canonical, err := p.ChainInfoFetcher.IsCanonical(ctx, blockRoot)
-				if err != nil {
-					return nil, &core.RpcError{Err: errors.Wrap(err, "could not determine if block root is canonical"), Reason: core.Internal}
-				}
-				if canonical {
-					root = blockRoot[:]
-					break
-				}
-			}
-		}
+	root, rpcErr := p.extractRoot(ctx, id)
+	if rpcErr != nil {
+		return nil, rpcErr
 	}
+
 	if !p.BeaconDB.HasBlock(ctx, bytesutil.ToBytes32(root)) {
 		return nil, &core.RpcError{Err: errors.New("block not found"), Reason: core.NotFound}
 	}

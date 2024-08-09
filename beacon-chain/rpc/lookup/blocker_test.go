@@ -282,9 +282,11 @@ func generateRandomBlocSignedBeaconBlockkAndVerifiedRoBlobs(t *testing.T, blobCo
 
 func TestBlobsFromStoredDataColumns(t *testing.T) {
 	const blobCount = 5
-	var nilError *core.RpcError
 
-	noDataColumnsIndice := []int{}
+	var (
+		nilError            *core.RpcError
+		noDataColumnsIndice []int
+	)
 	allDataColumnsIndice := make([]int, 0, fieldparams.NumberOfColumns)
 	for i := range fieldparams.NumberOfColumns {
 		allDataColumnsIndice = append(allDataColumnsIndice, i)
