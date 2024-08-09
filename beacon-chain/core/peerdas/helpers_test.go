@@ -250,6 +250,11 @@ func TestCustodySubnetCount(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Set flags.
+			resetFlags := flags.Get()
+			defer func() {
+				flags.Init(resetFlags)
+			}()
+
 			params.SetupTestConfigCleanup(t)
 			gFlags := new(flags.GlobalFlags)
 			gFlags.SubscribeToAllSubnets = tc.subscribeToAllSubnets
@@ -266,14 +271,13 @@ func TestCustodyColumnCount(t *testing.T) {
 	const expected uint64 = 8
 
 	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
+	config := params.BeaconConfig().Copy()
 	config.DataColumnSidecarSubnetCount = 32
 	config.CustodyRequirement = 2
 	params.OverrideBeaconConfig(config)
 
 	actual := peerdas.CustodyColumnCount()
 	require.Equal(t, expected, actual)
-
 }
 
 func TestHypergeomCDF(t *testing.T) {
@@ -376,7 +380,8 @@ func TestCanSelfReconstruct(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Set the total number of columns.
-			cfg := params.BeaconConfig()
+			params.SetupTestConfigCleanup(t)
+			cfg := params.BeaconConfig().Copy()
 			cfg.NumberOfColumns = tc.totalNumberOfColumns
 			params.OverrideBeaconConfig(cfg)
 
@@ -388,6 +393,8 @@ func TestCanSelfReconstruct(t *testing.T) {
 }
 
 func TestReconstructionRoundTrip(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
 	const blobCount = 5
 
 	var blockRoot [fieldparams.RootLength]byte
