@@ -71,7 +71,6 @@ func (vs *Server) getLocalPayloadFromEngine(
 	parentRoot [32]byte,
 	slot primitives.Slot,
 	proposerId primitives.ValidatorIndex) (*consensusblocks.GetPayloadResponse, error) {
-
 	logFields := logrus.Fields{
 		"validatorIndex": proposerId,
 		"slot":           slot,
