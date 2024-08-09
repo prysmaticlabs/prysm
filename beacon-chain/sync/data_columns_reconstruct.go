@@ -60,7 +60,7 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 	}
 
 	// Recover cells and proofs
-	recoveredCellsAndProofs, err := peerdas.RecoverCellsAndProofs(dataColumnSideCars, storedColumnsCount, blockRoot)
+	recoveredCellsAndProofs, err := peerdas.RecoverCellsAndProofs(dataColumnSideCars, blockRoot)
 	if err != nil {
 		return errors.Wrap(err, "recover cells and proofs")
 	}

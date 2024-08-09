@@ -486,12 +486,13 @@ func CanSelfReconstruct(numCol uint64) bool {
 // RecoverCellsAndProofs recovers the cells and proofs from the data column sidecars.
 func RecoverCellsAndProofs(
 	dataColumnSideCars []*ethpb.DataColumnSidecar,
-	columnsCount int,
 	blockRoot [fieldparams.RootLength]byte,
 ) ([]kzg.CellsAndProofs, error) {
 	var wg errgroup.Group
 
-	if len(dataColumnSideCars) == 0 {
+	dataColumnSideCarsCount := len(dataColumnSideCars)
+
+	if dataColumnSideCarsCount == 0 {
 		return nil, errors.New("no data column sidecars")
 	}
 
@@ -513,8 +514,8 @@ func RecoverCellsAndProofs(
 		wg.Go(func() error {
 			start := time.Now()
 
-			cellsIndices := make([]uint64, 0, columnsCount)
-			cells := make([]kzg.Cell, 0, columnsCount)
+			cellsIndices := make([]uint64, 0, dataColumnSideCarsCount)
+			cells := make([]kzg.Cell, 0, dataColumnSideCarsCount)
 
 			for _, sidecar := range dataColumnSideCars {
 				// Build the cell indices.

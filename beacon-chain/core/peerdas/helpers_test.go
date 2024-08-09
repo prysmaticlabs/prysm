@@ -388,10 +388,7 @@ func TestCanSelfReconstruct(t *testing.T) {
 }
 
 func TestReconstructionRoundTrip(t *testing.T) {
-	const (
-		columnCount = 128
-		blobCount   = 5
-	)
+	const blobCount = 5
 
 	var blockRoot [fieldparams.RootLength]byte
 
@@ -509,7 +506,7 @@ func TestReconstructionRoundTrip(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Recover cells and proofs from available data columns sidecars.
-			cellsAndProofs, err := peerdas.RecoverCellsAndProofs(tc.dataColumnsSidecar, columnCount, blockRoot)
+			cellsAndProofs, err := peerdas.RecoverCellsAndProofs(tc.dataColumnsSidecar, blockRoot)
 			isError := (err != nil)
 			require.Equal(t, tc.isError, isError)
 
