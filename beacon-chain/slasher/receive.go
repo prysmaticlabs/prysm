@@ -30,6 +30,10 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 	for {
 		select {
 		case att := <-indexedAttsChan:
+			if att == nil || att.SignatureValidationSet == nil {
+				log.Error("Received nil attestation or attestation with nil signature validation set")
+				continue
+			}
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
@@ -38,6 +42,16 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 				log.WithError(err).Error("Could not get hash tree root of attestation")
 				continue
 			}
+			verified, err := att.SignatureValidationSet.Verify()
+			if err != nil {
+				log.WithError(err).Error("Could not verify attestation signature")
+				continue
+			}
+			if !verified {
+				log.Error("Attestation signature did not verify")
+				continue
+			}
+			// Verify the attestation signature using the signature batch.
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
 				IndexedAttestation: att.IndexedAtt,
 				DataRoot:           dataRoot,

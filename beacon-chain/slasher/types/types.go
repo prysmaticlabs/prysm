@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
@@ -31,6 +32,7 @@ func (c ChunkKind) String() string {
 // which doesn't work well with interface types.
 type WrappedIndexedAtt struct {
 	ethpb.IndexedAtt
+	SignatureValidationSet *bls.SignatureBatch
 }
 
 // IndexedAttestationWrapper contains an indexed attestation with its
