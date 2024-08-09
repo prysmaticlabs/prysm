@@ -1158,18 +1158,17 @@ func TestProcessWithdrawals(t *testing.T) {
 						require.NoError(t, err)
 					default:
 						t.Fatalf("Add a beacon state setup for version %s", version.String(fork))
-						err = prepareValidators(st, test.Args)
-						require.NoError(t, err)
-						post, err := blocks.ProcessWithdrawals(st, p)
-						if test.Control.ExpectedError {
-							require.NotNil(t, err)
-						} else {
-							require.NoError(t, err)
-							checkPostState(t, test.Control, post)
-						}
-						params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = saved
 					}
-
+					err = prepareValidators(st, test.Args)
+					require.NoError(t, err)
+					post, err := blocks.ProcessWithdrawals(st, p)
+					if test.Control.ExpectedError {
+						require.NotNil(t, err)
+					} else {
+						require.NoError(t, err)
+						checkPostState(t, test.Control, post)
+					}
+					params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = saved
 				})
 			}
 		})
