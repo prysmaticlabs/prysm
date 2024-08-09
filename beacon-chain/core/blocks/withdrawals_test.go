@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 
-	// "github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -681,7 +680,7 @@ func TestProcessWithdrawals(t *testing.T) {
 		PendingPartialWithdrawalIndices []primitives.ValidatorIndex
 		Withdrawals                     []*enginev1.Withdrawal
 		PendingPartialWithdrawals       []*ethpb.PendingPartialWithdrawal // Electra
-		LatestBlockHash                 []byte                            // EPBS
+		LatestBlockHash                 []byte                            // EIP-7732
 	}
 	type control struct {
 		NextWithdrawalValidatorIndex primitives.ValidatorIndex
