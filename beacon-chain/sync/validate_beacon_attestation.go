@@ -113,46 +113,19 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		committeeIndex = data.CommitteeIndex
 	}
 
-	if features.Get().EnableSlasher {
-		// Feed the indexed attestation to slasher if enabled. This action
-		// is done in the background to avoid adding more load to this critical code path.
-		go func() {
-			// Using a different context to prevent timeouts as this operation can be expensive
-			// and we want to avoid affecting the critical code path.
-			ctx := context.TODO()
-			preState, err := s.cfg.chain.AttestationTargetState(ctx, data.Target)
-			if err != nil {
-				log.WithError(err).Error("Could not retrieve pre state")
-				tracing.AnnotateError(span, err)
-				return
-			}
-			committee, err := helpers.BeaconCommitteeFromState(ctx, preState, data.Slot, committeeIndex)
-			if err != nil {
-				log.WithError(err).Error("Could not get attestation committee")
-				tracing.AnnotateError(span, err)
-				return
-			}
-			indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
-			if err != nil {
-				log.WithError(err).Error("Could not convert to indexed attestation")
-				tracing.AnnotateError(span, err)
-				return
-			}
-			s.cfg.slasherAttestationsFeed.Send(&types.WrappedIndexedAtt{IndexedAtt: indexedAtt})
-		}()
-	}
+	if !features.Get().EnableSlasher {
+		// Verify this the first attestation received for the participating validator for the slot.
+		if s.hasSeenCommitteeIndicesSlot(data.Slot, data.CommitteeIndex, att.GetAggregationBits()) {
+			return pubsub.ValidationIgnore, nil
+		}
 
-	// Verify this the first attestation received for the participating validator for the slot.
-	if s.hasSeenCommitteeIndicesSlot(data.Slot, data.CommitteeIndex, att.GetAggregationBits()) {
-		return pubsub.ValidationIgnore, nil
-	}
-
-	// Reject an attestation if it references an invalid block.
-	if s.hasBadBlock(bytesutil.ToBytes32(data.BeaconBlockRoot)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(data.Target.Root)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(data.Source.Root)) {
-		attBadBlockCount.Inc()
-		return pubsub.ValidationReject, errors.New("attestation data references bad block root")
+		// Reject an attestation if it references an invalid block.
+		if s.hasBadBlock(bytesutil.ToBytes32(data.BeaconBlockRoot)) ||
+			s.hasBadBlock(bytesutil.ToBytes32(data.Target.Root)) ||
+			s.hasBadBlock(bytesutil.ToBytes32(data.Source.Root)) {
+			attBadBlockCount.Inc()
+			return pubsub.ValidationReject, errors.New("attestation data references bad block root")
+		}
 	}
 
 	// Verify the block being voted and the processed state is in beaconDB and the block has passed validation if it's in the beaconDB.
@@ -203,6 +176,35 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return validationRes, err
 	}
 
+	if features.Get().EnableSlasher {
+		// Feed the indexed attestation to slasher if enabled. This action
+		// is done in the background to avoid adding more load to this critical code path.
+		go func() {
+			// Using a different context to prevent timeouts as this operation can be expensive
+			// and we want to avoid affecting the critical code path.
+			ctx := context.TODO()
+			preState, err := s.cfg.chain.AttestationTargetState(ctx, data.Target)
+			if err != nil {
+				log.WithError(err).Error("Could not retrieve pre state")
+				tracing.AnnotateError(span, err)
+				return
+			}
+			committee, err := helpers.BeaconCommitteeFromState(ctx, preState, data.Slot, committeeIndex)
+			if err != nil {
+				log.WithError(err).Error("Could not get attestation committee")
+				tracing.AnnotateError(span, err)
+				return
+			}
+			indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
+			if err != nil {
+				log.WithError(err).Error("Could not convert to indexed attestation")
+				tracing.AnnotateError(span, err)
+				return
+			}
+			s.cfg.slasherAttestationsFeed.Send(&types.WrappedIndexedAtt{IndexedAtt: indexedAtt})
+		}()
+	}
+
 	s.setSeenCommitteeIndicesSlot(data.Slot, data.CommitteeIndex, att.GetAggregationBits())
 
 	msg.ValidatorData = att
@@ -215,7 +217,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a eth.Att, b
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttTopic")
 	defer span.End()
 
-	valCount, result, err := s.validateCommitteeIndex(ctx, a, bs)
+	_, valCount, result, err := s.validateCommitteeIndex(ctx, a, bs)
 	if result != pubsub.ValidationAccept {
 		return result, err
 	}
@@ -233,16 +235,35 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a eth.Att, b
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateCommitteeIndex(ctx context.Context, a eth.Att, bs state.ReadOnlyBeaconState) (uint64, pubsub.ValidationResult, error) {
+func (s *Service) validateCommitteeIndex(
+	ctx context.Context,
+	a eth.Att,
+	bs state.ReadOnlyBeaconState,
+) (primitives.CommitteeIndex, uint64, pubsub.ValidationResult, error) {
 	valCount, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.GetData().Slot))
 	if err != nil {
-		return 0, pubsub.ValidationIgnore, err
+		return 0, 0, pubsub.ValidationIgnore, err
 	}
 	count := helpers.SlotCommitteeCount(valCount)
 	if uint64(a.GetData().CommitteeIndex) > count {
-		return 0, pubsub.ValidationReject, errors.Errorf("committee index %d > %d", a.GetData().CommitteeIndex, count)
+		return 0, 0, pubsub.ValidationReject, errors.Errorf("committee index %d > %d", a.GetData().CommitteeIndex, count)
 	}
-	return valCount, pubsub.ValidationAccept, nil
+
+	var ci primitives.CommitteeIndex
+	if a.Version() >= version.Electra {
+		dataCi := a.GetData().CommitteeIndex
+		if dataCi != 0 {
+			return 0, 0, pubsub.ValidationReject, fmt.Errorf("committee index must be 0 but was %d", dataCi)
+		}
+		indices := helpers.CommitteeIndices(a.CommitteeBitsVal())
+		if len(indices) != 1 {
+			return 0, 0, pubsub.ValidationReject, fmt.Errorf("exactly 1 committee index must be set but %d were set", len(indices))
+		}
+		ci = indices[0]
+	} else {
+		ci = a.GetData().CommitteeIndex
+	}
+	return ci, valCount, pubsub.ValidationAccept, nil
 }
 
 // This validates beacon unaggregated attestation using the given state, the validation consists of bitfield length and count consistency
