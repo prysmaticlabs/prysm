@@ -116,7 +116,7 @@ func (p *PayloadAttestationCache) Get(root [32]byte, status primitives.PTCStatus
 	if p.root != root {
 		return nil
 	}
-	if uint64(status) >= uint64(len(p.attestations)) {
+	if status >= primitives.PAYLOAD_INVALID_STATUS {
 		return nil
 	}
 
