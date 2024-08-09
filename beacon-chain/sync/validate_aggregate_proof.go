@@ -167,31 +167,19 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.Signed
 		return pubsub.ValidationIgnore, err
 	}
 
+	committeeIndex, _, result, err := s.validateCommitteeIndex(ctx, aggregate, bs)
+	if result != pubsub.ValidationAccept {
+		wrappedErr := errors.Wrapf(err, "could not validate committee index")
+		tracing.AnnotateError(span, wrappedErr)
+		return result, err
+	}
+
 	// Verify validator index is within the beacon committee.
-	result, err := s.validateIndexInCommittee(ctx, bs, aggregate, aggregatorIndex)
+	result, err = s.validateIndexInCommittee(ctx, bs, aggregate, aggregatorIndex, committeeIndex)
 	if result != pubsub.ValidationAccept {
 		wrappedErr := errors.Wrapf(err, "could not validate index in committee")
 		tracing.AnnotateError(span, wrappedErr)
 		return result, wrappedErr
-	}
-
-	var committeeIndex primitives.CommitteeIndex
-	if signed.Version() >= version.Electra {
-		a, ok := aggregate.(*ethpb.AttestationElectra)
-		// This will never fail in practice because we asserted the version
-		if !ok {
-			err := fmt.Errorf("aggregate attestation has wrong type (expected %T, got %T)", &ethpb.AttestationElectra{}, aggregate)
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationIgnore, err
-		}
-		committeeIndex, result, err = validateCommitteeIndexElectra(ctx, a)
-		if result != pubsub.ValidationAccept {
-			wrappedErr := errors.Wrapf(err, "could not validate committee index for Electra version")
-			tracing.AnnotateError(span, wrappedErr)
-			return result, wrappedErr
-		}
-	} else {
-		committeeIndex = data.CommitteeIndex
 	}
 
 	// Verify selection proof reflects to the right validator.
@@ -266,17 +254,17 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch primitives.Epoch, aggregator
 //   - [REJECT] The aggregate attestation has participants -- that is, len(get_attesting_indices(state, aggregate.data, aggregate.aggregation_bits)) >= 1.
 //   - [REJECT] The aggregator's validator index is within the committee --
 //     i.e. `aggregate_and_proof.aggregator_index in get_beacon_committee(state, aggregate.data.slot, aggregate.data.index)`.
-//
-// Post-Electra:
-//   - [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate).
-//   - [REJECT] aggregate.data.index == 0
-func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a ethpb.Att, validatorIndex primitives.ValidatorIndex) (pubsub.ValidationResult, error) {
+func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a ethpb.Att, validatorIndex primitives.ValidatorIndex, committeeIndex primitives.CommitteeIndex) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
-	committeeIndex, _, result, err := s.validateCommitteeIndex(ctx, a, bs)
-	if result != pubsub.ValidationAccept {
-		return result, err
+	valCount, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.GetData().Slot))
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	count := helpers.SlotCommitteeCount(valCount)
+	if uint64(committeeIndex) > count {
+		return pubsub.ValidationReject, fmt.Errorf("committee index %d > %d", committeeIndex, count)
 	}
 
 	committee, result, err := s.validateBitLength(ctx, bs, a.GetData().Slot, committeeIndex, a.GetAggregationBits())

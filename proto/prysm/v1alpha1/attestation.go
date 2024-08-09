@@ -1,8 +1,10 @@
 package eth
 
 import (
+	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -21,6 +23,7 @@ type Att interface {
 	GetData() *AttestationData
 	CommitteeBitsVal() bitfield.Bitfield
 	GetSignature() []byte
+	GetCommitteeIndex() (primitives.CommitteeIndex, error)
 }
 
 // IndexedAtt defines common functionality for all indexed attestation types.
@@ -123,6 +126,14 @@ func (a *Attestation) CommitteeBitsVal() bitfield.Bitfield {
 	return cb
 }
 
+// GetCommitteeIndex --
+func (a *Attestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	if a == nil || a.Data == nil {
+		return 0, errors.New("nil attestation data")
+	}
+	return a.Data.CommitteeIndex, nil
+}
+
 // Version --
 func (a *PendingAttestation) Version() int {
 	return version.Phase0
@@ -156,6 +167,14 @@ func (a *PendingAttestation) GetSignature() []byte {
 	return nil
 }
 
+// GetCommitteeIndex --
+func (a *PendingAttestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	if a == nil || a.Data == nil {
+		return 0, errors.New("nil attestation data")
+	}
+	return a.Data.CommitteeIndex, nil
+}
+
 // Version --
 func (a *AttestationElectra) Version() int {
 	return version.Electra
@@ -182,6 +201,14 @@ func (att *AttestationElectra) Copy() *AttestationElectra {
 // CommitteeBitsVal --
 func (a *AttestationElectra) CommitteeBitsVal() bitfield.Bitfield {
 	return a.CommitteeBits
+}
+
+func (a *AttestationElectra) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	indices := helpers.CommitteeIndices(a.CommitteeBits)
+	if len(indices) == 0 {
+		return 0, errors.New("empty committee indices")
+	}
+	return helpers.CommitteeIndices(a.CommitteeBits)[0], nil
 }
 
 // Version --

@@ -96,14 +96,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	var committeeIndex primitives.CommitteeIndex
 	if att.Version() >= version.Electra {
-		a, ok := att.(*eth.AttestationElectra)
-		// This will never fail in practice because we asserted the version
-		if !ok {
-			err := fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.AttestationElectra{}, att)
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationIgnore, err
-		}
-		committeeIndex, validationRes, err = validateCommitteeIndexElectra(ctx, a)
+		committeeIndex, validationRes, err = validateCommitteeIndexElectra(ctx, att)
 		if validationRes != pubsub.ValidationAccept {
 			wrappedErr := errors.Wrapf(err, "could not validate committee index for Electra version")
 			tracing.AnnotateError(span, wrappedErr)
@@ -115,7 +108,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	if !features.Get().EnableSlasher {
 		// Verify this the first attestation received for the participating validator for the slot.
-		if s.hasSeenCommitteeIndicesSlot(data.Slot, data.CommitteeIndex, att.GetAggregationBits()) {
+		if s.hasSeenCommitteeIndicesSlot(data.Slot, committeeIndex, att.GetAggregationBits()) {
 			return pubsub.ValidationIgnore, nil
 		}
 
@@ -205,7 +198,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		}()
 	}
 
-	s.setSeenCommitteeIndicesSlot(data.Slot, data.CommitteeIndex, att.GetAggregationBits())
+	s.setSeenCommitteeIndicesSlot(data.Slot, committeeIndex, att.GetAggregationBits())
 
 	msg.ValidatorData = att
 
@@ -240,28 +233,24 @@ func (s *Service) validateCommitteeIndex(
 	a eth.Att,
 	bs state.ReadOnlyBeaconState,
 ) (primitives.CommitteeIndex, uint64, pubsub.ValidationResult, error) {
+	var ci primitives.CommitteeIndex
+	var pb pubsub.ValidationResult
+	var err error
+	if a.Version() >= version.Electra {
+		ci, pb, err = validateCommitteeIndexElectra(ctx, a)
+		if err != nil {
+			return 0, 0, pb, errors.Wrap(err, "failed to validate committee index")
+		}
+	} else {
+		ci = a.GetData().CommitteeIndex
+	}
 	valCount, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.GetData().Slot))
 	if err != nil {
 		return 0, 0, pubsub.ValidationIgnore, err
 	}
 	count := helpers.SlotCommitteeCount(valCount)
-	if uint64(a.GetData().CommitteeIndex) > count {
-		return 0, 0, pubsub.ValidationReject, errors.Errorf("committee index %d > %d", a.GetData().CommitteeIndex, count)
-	}
-
-	var ci primitives.CommitteeIndex
-	if a.Version() >= version.Electra {
-		dataCi := a.GetData().CommitteeIndex
-		if dataCi != 0 {
-			return 0, 0, pubsub.ValidationReject, fmt.Errorf("committee index must be 0 but was %d", dataCi)
-		}
-		indices := helpers.CommitteeIndices(a.CommitteeBitsVal())
-		if len(indices) != 1 {
-			return 0, 0, pubsub.ValidationReject, fmt.Errorf("exactly 1 committee index must be set but %d were set", len(indices))
-		}
-		ci = indices[0]
-	} else {
-		ci = a.GetData().CommitteeIndex
+	if uint64(ci) > count {
+		return 0, 0, pubsub.ValidationReject, fmt.Errorf("committee index %d > %d", a.GetData().CommitteeIndex, count)
 	}
 	return ci, valCount, pubsub.ValidationAccept, nil
 }

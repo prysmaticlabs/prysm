@@ -190,9 +190,13 @@ func (s *Service) processAttestations(ctx context.Context, disparity time.Durati
 		}
 
 		if err := s.receiveAttestationNoPubsub(ctx, a, disparity); err != nil {
+			ci, err := a.GetCommitteeIndex()
+			if err != nil {
+				log.WithError(err).Error("could not get committee index")
+			}
 			log.WithFields(logrus.Fields{
 				"slot":             a.GetData().Slot,
-				"committeeIndex":   a.GetData().CommitteeIndex,
+				"committeeIndex":   ci,
 				"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(a.GetData().BeaconBlockRoot)),
 				"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.GetData().Target.Root)),
 				"aggregationCount": a.GetAggregationBits().Count(),
