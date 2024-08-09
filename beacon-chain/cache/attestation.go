@@ -18,14 +18,14 @@ type attGroup struct {
 }
 
 type AttestationCache struct {
-	attestations map[attestation.Id]*attGroup
+	atts map[attestation.Id]*attGroup
 	sync.RWMutex
 	forkchoiceAtts *forkchoice.Attestations
 }
 
 func NewAttestationCache() *AttestationCache {
 	return &AttestationCache{
-		attestations:   make(map[attestation.Id]*attGroup),
+		atts:           make(map[attestation.Id]*attGroup),
 		forkchoiceAtts: forkchoice.New(),
 	}
 }
@@ -43,12 +43,12 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 		return errors.Wrapf(err, "could not create attestation ID")
 	}
 
-	group := c.attestations[id]
+	group := c.atts[id]
 	if group == nil {
 		group = &attGroup{
 			slot: att.GetData().Slot,
 		}
-		c.attestations[id] = group
+		c.atts[id] = group
 	}
 
 	if att.IsAggregated() {
@@ -56,7 +56,7 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 		return nil
 	}
 
-	local := c.attestations[id].local
+	local := c.atts[id].local
 	if local == nil {
 		local = att.Clone()
 	}
@@ -80,7 +80,7 @@ func (c *AttestationCache) GetAll() []ethpb.Att {
 	defer c.RUnlock()
 
 	var result []ethpb.Att
-	for _, group := range c.attestations {
+	for _, group := range c.atts {
 		if group.local != nil {
 			result = append(result, group.local)
 		}
@@ -96,7 +96,7 @@ func (c *AttestationCache) Count() int {
 	defer c.RUnlock()
 
 	count := 0
-	for _, group := range c.attestations {
+	for _, group := range c.atts {
 		if group.local != nil {
 			count++
 		}
@@ -118,7 +118,7 @@ func (c *AttestationCache) DeleteCovered(att ethpb.Att) error {
 		return errors.Wrapf(err, "could not create attestation ID")
 	}
 
-	group := c.attestations[id]
+	group := c.atts[id]
 	if group == nil {
 		return nil
 	}
@@ -143,7 +143,7 @@ func (c *AttestationCache) DeleteCovered(att ethpb.Att) error {
 	group.external = attsToKeep
 
 	if group.local == nil && len(group.external) == 0 {
-		delete(c.attestations, id)
+		delete(c.atts, id)
 	}
 
 	return nil
@@ -154,13 +154,13 @@ func (c *AttestationCache) PruneBefore(slot primitives.Slot) uint64 {
 	defer c.Unlock()
 
 	var pruneCount uint64
-	for id, group := range c.attestations {
+	for id, group := range c.atts {
 		if group.slot < slot {
 			if group.local != nil {
 				pruneCount++
 			}
 			pruneCount += uint64(len(group.external))
-			delete(c.attestations, id)
+			delete(c.atts, id)
 		}
 	}
 	return pruneCount
@@ -179,7 +179,7 @@ func (c *AttestationCache) AggregateIsRedundant(att ethpb.Att) (bool, error) {
 		return true, errors.Wrapf(err, "could not create attestation ID")
 	}
 
-	group := c.attestations[id]
+	group := c.atts[id]
 	if group == nil {
 		return false, nil
 	}
@@ -221,7 +221,7 @@ func GetBySlotAndCommitteeIndex[T ethpb.Att](c *AttestationCache, slot primitive
 
 	var result []T
 
-	for _, group := range c.attestations {
+	for _, group := range c.atts {
 		local, ok := group.local.(T)
 		if ok {
 			if local.GetData().Slot == slot && local.CommitteeBitsVal().BitAt(uint64(committeeIndex)) {
@@ -234,6 +234,8 @@ func GetBySlotAndCommitteeIndex[T ethpb.Att](c *AttestationCache, slot primitive
 				}
 			}
 		} else if len(group.external) > 0 {
+			// We can safely compare the first attestation because all attestations in a group
+			// must have the same slot and committee index, since they are under the same key.
 			a, ok := group.external[0].(T)
 			if ok && a.GetData().Slot == slot && a.CommitteeBitsVal().BitAt(uint64(committeeIndex)) {
 				for _, a := range group.external {

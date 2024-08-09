@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
-type AttestationVote struct {
+type AttestationConsensusData struct {
 	Slot     primitives.Slot
 	HeadRoot []byte
 	Target   forkchoicetypes.Checkpoint
@@ -17,7 +17,7 @@ type AttestationVote struct {
 
 // AttestationDataCache stores cached results of AttestationData requests.
 type AttestationDataCache struct {
-	a *AttestationVote
+	a *AttestationConsensusData
 	sync.RWMutex
 }
 
@@ -27,12 +27,12 @@ func NewAttestationDataCache() *AttestationDataCache {
 }
 
 // Get retrieves cached attestation data, recording a cache hit or miss. This method is lock free.
-func (c *AttestationDataCache) Get() *AttestationVote {
+func (c *AttestationDataCache) Get() *AttestationConsensusData {
 	return c.a
 }
 
 // Put adds a response to the cache. This method is lock free.
-func (c *AttestationDataCache) Put(a *AttestationVote) error {
+func (c *AttestationDataCache) Put(a *AttestationConsensusData) error {
 	if a == nil {
 		return errors.New("attestation cannot be nil")
 	}

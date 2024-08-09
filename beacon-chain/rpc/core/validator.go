@@ -572,7 +572,7 @@ func (s *Service) GetAttestationData(
 	}
 	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint()
 
-	if err = s.AttestationCache.Put(&cache.AttestationVote{
+	if err = s.AttestationCache.Put(&cache.AttestationConsensusData{
 		Slot:     req.Slot,
 		HeadRoot: headRoot,
 		Target: forkchoicetypes.Checkpoint{

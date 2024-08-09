@@ -266,6 +266,8 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		cfg.EnableExperimentalAttestationPool = true
 	}
 
+	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
+	Init(cfg)
 	return nil
 }
 

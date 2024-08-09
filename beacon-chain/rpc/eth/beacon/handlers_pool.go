@@ -180,7 +180,6 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-
 	}
 	if len(failedBroadcasts) > 0 {
 		httputil.HandleError(
