@@ -275,7 +275,7 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 		EarliestExitEpoch:             earliestExitEpoch,
 		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(primitives.Gwei(tab)),
 		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(beaconState.Slot())),
-		PendingBalanceDeposits:        make([]*ethpb.PendingBalanceDeposit, 0),
+		PendingDeposits:               make([]*ethpb.PendingDeposit, 0),
 		PendingPartialWithdrawals:     make([]*ethpb.PendingPartialWithdrawal, 0),
 		PendingConsolidations:         make([]*ethpb.PendingConsolidation, 0),
 	}

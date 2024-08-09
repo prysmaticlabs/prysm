@@ -106,7 +106,7 @@ var electraFields = append(
 	types.EarliestExitEpoch,
 	types.ConsolidationBalanceToConsume,
 	types.EarliestConsolidationEpoch,
-	types.PendingBalanceDeposits,
+	types.PendingDeposits,
 	types.PendingPartialWithdrawals,
 	types.PendingConsolidations,
 )
@@ -755,7 +755,7 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 		earliestExitEpoch:                   st.EarliestExitEpoch,
 		consolidationBalanceToConsume:       st.ConsolidationBalanceToConsume,
 		earliestConsolidationEpoch:          st.EarliestConsolidationEpoch,
-		pendingBalanceDeposits:              st.PendingBalanceDeposits,
+		pendingDeposits:                     st.PendingDeposits,
 		pendingPartialWithdrawals:           st.PendingPartialWithdrawals,
 		pendingConsolidations:               st.PendingConsolidations,
 
@@ -820,7 +820,7 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.LatestExecutionPayloadHeaderElectra] = stateutil.NewRef(1) // New in Electra.
 	b.sharedFieldReferences[types.HistoricalSummaries] = stateutil.NewRef(1)                 // New in Capella.
-	b.sharedFieldReferences[types.PendingBalanceDeposits] = stateutil.NewRef(1)              // New in Electra.
+	b.sharedFieldReferences[types.PendingDeposits] = stateutil.NewRef(1)                     // New in Electra.
 	b.sharedFieldReferences[types.PendingPartialWithdrawals] = stateutil.NewRef(1)           // New in Electra.
 	b.sharedFieldReferences[types.PendingConsolidations] = stateutil.NewRef(1)               // New in Electra.
 	if !features.Get().EnableExperimentalState {
@@ -898,7 +898,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		currentEpochParticipation:  b.currentEpochParticipation,
 		inactivityScores:           b.inactivityScores,
 		inactivityScoresMultiValue: b.inactivityScoresMultiValue,
-		pendingBalanceDeposits:     b.pendingBalanceDeposits,
+		pendingDeposits:            b.pendingDeposits,
 		pendingPartialWithdrawals:  b.pendingPartialWithdrawals,
 		pendingConsolidations:      b.pendingConsolidations,
 
@@ -1304,8 +1304,8 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return ssz.Uint64Root(uint64(b.consolidationBalanceToConsume)), nil
 	case types.EarliestConsolidationEpoch:
 		return ssz.Uint64Root(uint64(b.earliestConsolidationEpoch)), nil
-	case types.PendingBalanceDeposits:
-		return stateutil.PendingBalanceDepositsRoot(b.pendingBalanceDeposits)
+	case types.PendingDeposits:
+		return stateutil.PendingDepositsRoot(b.pendingDeposits)
 	case types.PendingPartialWithdrawals:
 		return stateutil.PendingPartialWithdrawalsRoot(b.pendingPartialWithdrawals)
 	case types.PendingConsolidations:

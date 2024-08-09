@@ -57,11 +57,10 @@ func TestProcessEpoch_CanProcessElectra(t *testing.T) {
 	require.NoError(t, st.SetSlot(10*params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, st.SetDepositBalanceToConsume(100))
 	amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
-	deps := make([]*ethpb.PendingBalanceDeposit, 20)
+	deps := make([]*ethpb.PendingDeposit, 20)
 	for i := 0; i < len(deps); i += 1 {
-		deps[i] = &ethpb.PendingBalanceDeposit{
+		deps[i] = &ethpb.PendingDeposit{
 			Amount: uint64(amountAvailForProcessing) / 10,
-			Index:  primitives.ValidatorIndex(i),
 		}
 	}
 	require.NoError(t, st.SetPendingDeposits(deps))

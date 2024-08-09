@@ -329,8 +329,8 @@ type WriteOnlyConsolidations interface {
 }
 
 type WriteOnlyDeposits interface {
-	AppendPendingDeposit(index primitives.ValidatorIndex, amount uint64) error
+	AppendPendingDeposit(pd *ethpb.PendingDeposit) error
 	SetDepositRequestsStartIndex(index uint64) error
-	SetPendingDeposits(val []*ethpb.PendingBalanceDeposit) error
+	SetPendingDeposits(val []*ethpb.PendingDeposit) error
 	SetDepositBalanceToConsume(primitives.Gwei) error
 }

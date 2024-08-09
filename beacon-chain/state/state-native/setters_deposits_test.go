@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
-func TestAppendPendingBalanceDeposit(t *testing.T) {
+func TestAppendPendingDeposit(t *testing.T) {
 	s, err := state_native.InitializeFromProtoElectra(&eth.BeaconStateElectra{})
 	require.NoError(t, err)
 	pbd, err := s.PendingDeposits()
@@ -19,7 +19,6 @@ func TestAppendPendingBalanceDeposit(t *testing.T) {
 	pbd, err = s.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pbd))
-	require.Equal(t, primitives.ValidatorIndex(1), pbd[0].Index)
 	require.Equal(t, uint64(10), pbd[0].Amount)
 
 	// Fails for versions older than electra

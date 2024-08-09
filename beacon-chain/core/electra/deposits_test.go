@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
-func TestProcessPendingBalanceDeposits(t *testing.T) {
+func TestProcessPendingDeposits(t *testing.T) {
 	tests := []struct {
 		name    string
 		state   state.BeaconState
@@ -51,7 +51,7 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				st := stateWithActiveBalanceETH(t, 1_000)
 				require.NoError(t, st.SetDepositBalanceToConsume(100))
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
-				deps := make([]*eth.PendingBalanceDeposit, 20)
+				deps := make([]*eth.PendingDeposit, 20)
 				for i := 0; i < len(deps); i += 1 {
 					deps[i] = &eth.PendingDeposit{
 						Amount: uint64(amountAvailForProcessing) / 10,
@@ -84,11 +84,10 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				st := stateWithActiveBalanceETH(t, 1_000)
 				require.NoError(t, st.SetDepositBalanceToConsume(0))
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
-				deps := make([]*eth.PendingBalanceDeposit, 5)
+				deps := make([]*eth.PendingDeposit, 5)
 				for i := 0; i < len(deps); i += 1 {
-					deps[i] = &eth.PendingBalanceDeposit{
+					deps[i] = &eth.PendingDeposit{
 						Amount: uint64(amountAvailForProcessing) / 5,
-						Index:  primitives.ValidatorIndex(i),
 					}
 				}
 				require.NoError(t, st.SetPendingDeposits(deps))
@@ -118,11 +117,10 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				st := stateWithActiveBalanceETH(t, 1_000)
 				require.NoError(t, st.SetDepositBalanceToConsume(0))
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
-				deps := make([]*eth.PendingBalanceDeposit, 5)
+				deps := make([]*eth.PendingDeposit, 5)
 				for i := 0; i < len(deps); i += 1 {
-					deps[i] = &eth.PendingBalanceDeposit{
+					deps[i] = &eth.PendingDeposit{
 						Amount: uint64(amountAvailForProcessing) / 5,
-						Index:  primitives.ValidatorIndex(i),
 					}
 				}
 				require.NoError(t, st.SetPendingDeposits(deps))
@@ -160,7 +158,6 @@ func TestProcessPendingBalanceDeposits(t *testing.T) {
 				for i := 0; i < len(deps); i += 1 {
 					deps[i] = &eth.PendingDeposit{
 						Amount: 1_000_000,
-						Index:  primitives.ValidatorIndex(i),
 					}
 				}
 				require.NoError(t, st.SetPendingDeposits(deps))

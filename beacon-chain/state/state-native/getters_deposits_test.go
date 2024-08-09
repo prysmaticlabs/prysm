@@ -25,20 +25,20 @@ func TestDepositBalanceToConsume(t *testing.T) {
 	require.ErrorContains(t, "not supported", err)
 }
 
-func TestPendingBalanceDeposits(t *testing.T) {
+func TestPendingDeposits(t *testing.T) {
 	s, err := state_native.InitializeFromProtoElectra(&eth.BeaconStateElectra{
-		PendingBalanceDeposits: []*eth.PendingBalanceDeposit{
-			{Index: 1, Amount: 2},
-			{Index: 3, Amount: 4},
+		PendingDeposits: []*eth.PendingDeposit{
+			{Amount: 2},
+			{Amount: 4},
 		},
 	})
 	require.NoError(t, err)
 	pbd, err := s.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 2, len(pbd))
-	require.Equal(t, primitives.ValidatorIndex(1), pbd[0].Index)
+
 	require.Equal(t, uint64(2), pbd[0].Amount)
-	require.Equal(t, primitives.ValidatorIndex(3), pbd[1].Index)
+
 	require.Equal(t, uint64(4), pbd[1].Amount)
 
 	// Fails for older than electra state

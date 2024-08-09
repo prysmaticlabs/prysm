@@ -195,7 +195,7 @@ func (b *BeaconState) MarshalJSON() ([]byte, error) {
 		EarliestExitEpoch:                   b.earliestExitEpoch,
 		ConsolidationBalanceToConsume:       b.consolidationBalanceToConsume,
 		EarliestConsolidationEpoch:          b.earliestConsolidationEpoch,
-		PendingBalanceDeposits:              b.pendingBalanceDeposits,
+		PendingDeposits:                     b.pendingDeposits,
 		PendingPartialWithdrawals:           b.pendingPartialWithdrawals,
 		PendingConsolidations:               b.pendingConsolidations,
 	}

@@ -108,8 +108,8 @@ func (f FieldIndex) String() string {
 		return "consolidationBalanceToConsume"
 	case EarliestConsolidationEpoch:
 		return "earliestConsolidationEpoch"
-	case PendingBalanceDeposits:
-		return "pendingBalanceDeposits"
+	case PendingDeposits:
+		return "pendingDeposits"
 	case PendingPartialWithdrawals:
 		return "pendingPartialWithdrawals"
 	case PendingConsolidations:
@@ -191,7 +191,7 @@ func (f FieldIndex) RealPosition() int {
 		return 32
 	case EarliestConsolidationEpoch:
 		return 33
-	case PendingBalanceDeposits:
+	case PendingDeposits:
 		return 34
 	case PendingPartialWithdrawals:
 		return 35

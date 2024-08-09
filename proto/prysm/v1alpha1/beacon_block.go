@@ -601,7 +601,7 @@ func (pbd *PendingDeposit) Copy() *PendingDeposit {
 	if pbd == nil {
 		return nil
 	}
-	return &PendingBalanceDeposit{
+	return &PendingDeposit{
 
 		Amount: pbd.Amount,
 	}

@@ -11,7 +11,7 @@ import (
 // AppendPendingDeposit is a mutating call to the beacon state to create and append a pending
 // balance deposit object on to the state. This method requires access to the Lock on the state and
 // only applies in electra or later.
-func (b *BeaconState) AppendPendingDeposit(index primitives.ValidatorIndex, amount uint64) error {
+func (b *BeaconState) AppendPendingDeposit(pd *ethpb.PendingDeposit) error {
 	if b.version < version.Electra {
 		return errNotSupported("AppendPendingDeposit", b.version)
 	}
@@ -21,7 +21,7 @@ func (b *BeaconState) AppendPendingDeposit(index primitives.ValidatorIndex, amou
 	b.sharedFieldReferences[types.PendingDeposits].MinusRef()
 	b.sharedFieldReferences[types.PendingDeposits] = stateutil.NewRef(1)
 
-	b.pendingDeposits = append(b.pendingDeposits, &ethpb.PendingDeposit{Index: index, Amount: amount})
+	b.pendingDeposits = append(b.pendingDeposits, pd)
 
 	b.markFieldAsDirty(types.PendingDeposits)
 	b.rebuildTrie[types.PendingDeposits] = true
