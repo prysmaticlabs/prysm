@@ -593,11 +593,6 @@ message BlockRequest {
     google.protobuf.UInt64Value builder_boost_factor = 5;
 }
 
-message InclusionListRequest {
-    // Slot for which the inclusion list should be retrieved.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
-}
-
 message ProposeResponse {
     // The block root of the successfully proposed beacon block.
     bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
