@@ -200,6 +200,36 @@ func DataColumnSidecars(signedBlock interfaces.ReadOnlySignedBeaconBlock, blobs 
 	return sidecars, nil
 }
 
+// populateAndFilterIndices returns a sorted slices of indices, setting all indices if none are provided,
+// and filtering out indices higher than the blob count.
+func populateAndFilterIndices(indices map[uint64]bool, blobCount uint64) []uint64 {
+	// If no indices are provided, provide all blobs.
+	if len(indices) == 0 {
+		for i := range blobCount {
+			indices[uint64(i)] = true
+		}
+	}
+
+	// Filter blobs index higher than the blob count.
+	filteredIndices := make(map[uint64]bool, len(indices))
+	for i := range indices {
+		if i < blobCount {
+			filteredIndices[i] = true
+		}
+	}
+
+	// Transform set to slice.
+	indicesSlice := make([]uint64, 0, len(filteredIndices))
+	for i := range filteredIndices {
+		indicesSlice = append(indicesSlice, i)
+	}
+
+	// Sort the indices.
+	slices.Sort[[]uint64](indicesSlice)
+
+	return indicesSlice
+}
+
 // Blobs extract blobs from `dataColumnsSidecar`.
 // This can be seen as the reciprocal function of DataColumnSidecars.
 // `dataColumnsSidecar` needs to contain the datacolumns corresponding to the non-extended matrix,
@@ -256,28 +286,8 @@ func Blobs(indices map[uint64]bool, dataColumnsSidecar []*ethpb.DataColumnSideca
 	// Reconstruct verified RO blobs from columns.
 	verifiedROBlobs := make([]*blocks.VerifiedROBlob, 0, blobCount)
 
-	// If no indices are provided, provide all blobs.
-	if len(indices) == 0 {
-		for i := range blobCount {
-			indices[uint64(i)] = true
-		}
-	}
-
-	// Filter blobs index higher than the blob count.
-	filteredIndices := make(map[uint64]bool, len(indices))
-	for i := range indices {
-		if i < blobCount {
-			filteredIndices[i] = true
-		}
-	}
-
-	// Sort blobs index.
-	indicesSlice := make([]uint64, 0, len(filteredIndices))
-	for i := range filteredIndices {
-		indicesSlice = append(indicesSlice, i)
-	}
-
-	slices.Sort[[]uint64](indicesSlice)
+	// Populate and filter indices.
+	indicesSlice := populateAndFilterIndices(indices, blobCount)
 
 	for _, blobIndex := range indicesSlice {
 		var blob kzg.Blob
