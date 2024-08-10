@@ -205,7 +205,7 @@ func DataColumnSidecars(signedBlock interfaces.ReadOnlySignedBeaconBlock, blobs 
 // `dataColumnsSidecar` needs to contain the datacolumns corresponding to the non-extended matrix,
 // else an error will be returned.
 // (`dataColumnsSidecar` can contain extra columns, but they will be ignored.)
-func Blobs(dataColumnsSidecar []*ethpb.DataColumnSidecar) ([]*blocks.VerifiedROBlob, error) {
+func Blobs(indices map[uint64]bool, dataColumnsSidecar []*ethpb.DataColumnSidecar) ([]*blocks.VerifiedROBlob, error) {
 	columnCount := fieldparams.NumberOfColumns
 
 	neededColumnCount := columnCount / 2
@@ -244,11 +244,11 @@ func Blobs(dataColumnsSidecar []*ethpb.DataColumnSidecar) ([]*blocks.VerifiedROB
 	// It is safe to retrieve the first column since we already checked that `dataColumnsSidecar` is not empty.
 	firstDataColumnSidecar := dataColumnsSidecar[0]
 
-	blobCount := len(firstDataColumnSidecar.DataColumn)
+	blobCount := uint64(len(firstDataColumnSidecar.DataColumn))
 
 	// Check all colums have te same length.
 	for i := range dataColumnsSidecar {
-		if len(dataColumnsSidecar[i].DataColumn) != blobCount {
+		if uint64(len(dataColumnsSidecar[i].DataColumn)) != blobCount {
 			return nil, errors.Errorf("mismatch in the length of the data columns, expected %d, got %d", blobCount, len(dataColumnsSidecar[i].DataColumn))
 		}
 	}
@@ -256,7 +256,30 @@ func Blobs(dataColumnsSidecar []*ethpb.DataColumnSidecar) ([]*blocks.VerifiedROB
 	// Reconstruct verified RO blobs from columns.
 	verifiedROBlobs := make([]*blocks.VerifiedROBlob, 0, blobCount)
 
-	for blobIndex := range blobCount {
+	// If no indices are provided, provide all blobs.
+	if len(indices) == 0 {
+		for i := range blobCount {
+			indices[uint64(i)] = true
+		}
+	}
+
+	// Filter blobs index higher than the blob count.
+	filteredIndices := make(map[uint64]bool, len(indices))
+	for i := range indices {
+		if i < blobCount {
+			filteredIndices[i] = true
+		}
+	}
+
+	// Sort blobs index.
+	indicesSlice := make([]uint64, 0, len(filteredIndices))
+	for i := range filteredIndices {
+		indicesSlice = append(indicesSlice, i)
+	}
+
+	slices.Sort[[]uint64](indicesSlice)
+
+	for _, blobIndex := range indicesSlice {
 		var blob kzg.Blob
 
 		// Compute the content of the blob.

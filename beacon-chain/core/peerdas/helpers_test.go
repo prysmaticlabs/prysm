@@ -106,6 +106,8 @@ func TestDataColumnSidecars(t *testing.T) {
 }
 
 func TestBlobs(t *testing.T) {
+	blobsIndice := map[uint64]bool{}
+
 	almostAllColumns := make([]*ethpb.DataColumnSidecar, 0, fieldparams.NumberOfColumns/2)
 	for i := 2; i < fieldparams.NumberOfColumns/2+2; i++ {
 		almostAllColumns = append(almostAllColumns, &ethpb.DataColumnSidecar{
@@ -135,7 +137,7 @@ func TestBlobs(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := peerdas.Blobs(tc.input)
+			actual, err := peerdas.Blobs(blobsIndice, tc.input)
 			if tc.err != nil {
 				require.Equal(t, tc.err.Error(), err.Error())
 			} else {
@@ -148,6 +150,7 @@ func TestBlobs(t *testing.T) {
 
 func TestDataColumnsSidecarsBlobsRoundtrip(t *testing.T) {
 	const blobCount = 5
+	blobsIndex := map[uint64]bool{}
 
 	// Start the trusted setup.
 	err := kzg.Start()
@@ -222,7 +225,7 @@ func TestDataColumnsSidecarsBlobsRoundtrip(t *testing.T) {
 	require.NoError(t, err)
 
 	// Compute the blobs from the data columns sidecar.
-	roundtripBlobs, err := peerdas.Blobs(dataColumnsSidecar)
+	roundtripBlobs, err := peerdas.Blobs(blobsIndex, dataColumnsSidecar)
 	require.NoError(t, err)
 
 	// Check that the blobs are the same.

@@ -283,6 +283,11 @@ func generateRandomBlocSignedBeaconBlockkAndVerifiedRoBlobs(t *testing.T, blobCo
 func TestBlobsFromStoredDataColumns(t *testing.T) {
 	const blobCount = 5
 
+	blobsIndex := make(map[uint64]bool, blobCount)
+	for i := range blobCount {
+		blobsIndex[uint64(i)] = true
+	}
+
 	var (
 		nilError            *core.RpcError
 		noDataColumnsIndice []int
@@ -387,19 +392,12 @@ func TestBlobsFromStoredDataColumns(t *testing.T) {
 			}
 
 			// Get the blobs from the data columns.
-			actual, err := blocker.blobsFromStoredDataColumns(nil, blockRoot[:])
+			actual, err := blocker.blobsFromStoredDataColumns(blobsIndex, blockRoot[:])
 			if tc.isError {
 				require.Equal(t, tc.errorReason, err.Reason)
 			} else {
 				require.Equal(t, nilError, err)
 				expected := verifiedRoBlobs
-
-				for i := range expected {
-					e := expected[i]
-					a := actual[i]
-					require.DeepSSZEqual(t, e, a)
-				}
-
 				require.DeepSSZEqual(t, expected, actual)
 			}
 
