@@ -715,10 +715,14 @@ func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
 	return n.parent.root, nil
 }
 
-// OnPayloadAttestationMessage processes a new aggregated payload attestation message.
-func (s *Store) OnPayloadAttestationMessage(
+// UpdateVoteOnPayloadAttestation processes a new aggregated
+// payload attestation message and updates
+// the Payload Timeliness Committee (PTC) votes for the corresponding block.
+// It may update payload boost roots based on the attestation data.
+func (s *Store) UpdateVoteOnPayloadAttestation(
 	payloadAttestation *ethpb.PayloadAttestation,
 	isFromBlock bool) error {
+	// Extract the attestation data and convert the beacon block root to a 32-byte array
 	data := payloadAttestation.Data
 	blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
 
@@ -731,9 +735,12 @@ func (s *Store) OnPayloadAttestationMessage(
 	// Only update payload boosts with attestations from a block if the block is for the current slot and it's early
 	if isFromBlock {
 		currentSlot := slots.CurrentSlot(s.genesisTime)
+		// Only process if the attestation is for the previous slot
 		if data.Slot+1 != currentSlot {
 			return nil
 		}
+		// Only process if we're still in the early part of the slot
+		// This check ensures we only boost timely attestations
 		timeIntoSlot, err := slots.SecondsSinceSlotStart(currentSlot, s.genesisTime, uint64(time.Now().Unix()))
 		if err != nil {
 			log.WithError(err).Error("could not compute seconds since slot start")
@@ -743,17 +750,23 @@ func (s *Store) OnPayloadAttestationMessage(
 		}
 	}
 
+	// Initialize the PTC vote for this node if it doesn't exist
+	// The size is set to PTCSize, which is a preset constant
 	if node.ptcVote == nil {
 		node.ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
 	}
 
+	// Update the PTC votes based on the attestation
+	// We iterate through each bit in the AggregationBits
+	// If a bit is not already set, we update the corresponding PTC vote
 	for i := uint64(0); i < fieldparams.PTCSize; i++ {
 		if !payloadAttestation.AggregationBits.BitAt(i) {
 			node.ptcVote[i] = data.PayloadStatus
 		}
 	}
 
-	// Check if boost has already been applied
+	// Only update payload boosts if they haven't been applied to this node yet
+	// This check prevents unnecessary computations
 	if s.payloadRevealBoostRoot != node.root && s.payloadWithholdBoostRoot != node.root {
 		// Update payload boosts if necessary
 		s.updatePayloadBoosts(node)
@@ -762,9 +775,13 @@ func (s *Store) OnPayloadAttestationMessage(
 	return nil
 }
 
+// updatePayloadBoosts checks the PTC votes for a given node and updates
+// the payload reveal and withhold boost roots if the necessary thresholds are met.
 func (s *Store) updatePayloadBoosts(node *Node) {
 	presentCount := 0
 	withheldCount := 0
+
+	// Count the number of PRESENT and WITHHELD votes
 	for _, vote := range node.ptcVote {
 		if vote == primitives.PAYLOAD_PRESENT {
 			presentCount++
@@ -773,12 +790,17 @@ func (s *Store) updatePayloadBoosts(node *Node) {
 		}
 	}
 
+	// If the number of PRESENT votes exceeds the threshold,
+	// update the payload reveal boost root
 	if presentCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
 		s.payloadRevealBoostRoot = node.root
 	}
+	// If the number of PRESENT votes exceeds the threshold,
+	// update the payload reveal boost root
 	if withheldCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
 		if node.parent != nil {
 			s.payloadWithholdBoostRoot = node.parent.root
+			// A node is considered "full" if it has a non-zero payload hash
 			s.payloadWithholdBoostFull = node.parent.payloadHash != [32]byte{}
 		}
 	}
