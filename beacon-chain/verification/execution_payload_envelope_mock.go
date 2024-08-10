@@ -3,6 +3,7 @@ package verification
 import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 type MockExecutionPayloadEnvelope struct {
@@ -34,6 +35,10 @@ func (e *MockExecutionPayloadEnvelope) VerifyPayloadHash(_ interfaces.ROExecutio
 
 func (e *MockExecutionPayloadEnvelope) VerifySignature(_ state.BeaconState) error {
 	return e.ErrSignatureInvalid
+}
+
+func (e *MockExecutionPayloadEnvelope) SetSlot(_ primitives.Slot) error {
+	return nil
 }
 
 func (e *MockExecutionPayloadEnvelope) SatisfyRequirement(_ Requirement) {}

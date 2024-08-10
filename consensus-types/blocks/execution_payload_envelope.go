@@ -33,7 +33,7 @@ func WrappedROSignedExecutionPayloadEnvelope(s *enginev1.SignedExecutionPayloadE
 // WrappedROExecutionPayloadEnvelope is a constructor which wraps a
 // protobuf execution payload envelope into an interface.
 func WrappedROExecutionPayloadEnvelope(p *enginev1.ExecutionPayloadEnvelope) (interfaces.ROExecutionPayloadEnvelope, error) {
-	w := executionPayloadEnvelope{p: p}
+	w := &executionPayloadEnvelope{p: p}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -52,7 +52,14 @@ func (s signedExecutionPayloadEnvelope) Signature() [field_params.BLSSignatureLe
 
 // IsNil returns whether the wrapped value is nil
 func (s signedExecutionPayloadEnvelope) IsNil() bool {
-	return s.s == nil
+	if s.s == nil {
+		return true
+	}
+	if len(s.s.Signature) != field_params.BLSSignatureLength {
+		return true
+	}
+	w := executionPayloadEnvelope{p: s.s.Message}
+	return w.IsNil()
 }
 
 // SigningRoot returns the signing root for the given domain
@@ -61,17 +68,32 @@ func (s signedExecutionPayloadEnvelope) SigningRoot(domain []byte) (root [32]byt
 }
 
 // IsNil returns whether the wrapped value is nil
-func (p executionPayloadEnvelope) IsNil() bool {
-	return p.p == nil
+func (p *executionPayloadEnvelope) IsNil() bool {
+	if p.p == nil {
+		return true
+	}
+	if p.p.Payload == nil {
+		return true
+	}
+	if len(p.p.BeaconBlockRoot) != field_params.RootLength {
+		return true
+	}
+	if p.p.BlobKzgCommitments == nil {
+		return true
+	}
+	if p.p.StateRoot == nil {
+		return true
+	}
+	return false
 }
 
 // IsBlinded returns whether the wrapped value is blinded
-func (p executionPayloadEnvelope) IsBlinded() bool {
+func (p *executionPayloadEnvelope) IsBlinded() bool {
 	return !p.IsNil() && p.p.Payload == nil
 }
 
 // Execution returns the wrapped payload as an interface
-func (p executionPayloadEnvelope) Execution() (interfaces.ExecutionData, error) {
+func (p *executionPayloadEnvelope) Execution() (interfaces.ExecutionData, error) {
 	if p.IsBlinded() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -79,17 +101,17 @@ func (p executionPayloadEnvelope) Execution() (interfaces.ExecutionData, error) 
 }
 
 // BuilderIndex returns the wrapped value
-func (p executionPayloadEnvelope) BuilderIndex() primitives.ValidatorIndex {
+func (p *executionPayloadEnvelope) BuilderIndex() primitives.ValidatorIndex {
 	return p.p.BuilderIndex
 }
 
 // BeaconBlockRoot returns the wrapped value
-func (p executionPayloadEnvelope) BeaconBlockRoot() [field_params.RootLength]byte {
+func (p *executionPayloadEnvelope) BeaconBlockRoot() [field_params.RootLength]byte {
 	return [field_params.RootLength]byte(p.p.BeaconBlockRoot)
 }
 
 // BlobKzgCommitments returns the wrapped value
-func (p executionPayloadEnvelope) BlobKzgCommitments() [][]byte {
+func (p *executionPayloadEnvelope) BlobKzgCommitments() [][]byte {
 	commitments := make([][]byte, len(p.p.BlobKzgCommitments))
 	for i, commit := range p.p.BlobKzgCommitments {
 		commitments[i] = make([]byte, len(commit))
@@ -99,18 +121,18 @@ func (p executionPayloadEnvelope) BlobKzgCommitments() [][]byte {
 }
 
 // PayloadWithheld returns the wrapped value
-func (p executionPayloadEnvelope) PayloadWithheld() bool {
+func (p *executionPayloadEnvelope) PayloadWithheld() bool {
 	return p.p.PayloadWithheld
 }
 
 // StateRoot returns the wrapped value
-func (p executionPayloadEnvelope) StateRoot() [field_params.RootLength]byte {
+func (p *executionPayloadEnvelope) StateRoot() [field_params.RootLength]byte {
 	return [field_params.RootLength]byte(p.p.StateRoot)
 }
 
 // VersionedHashes returns the Versioned Hashes of the KZG commitments within
 // the envelope
-func (p executionPayloadEnvelope) VersionedHashes() []common.Hash {
+func (p *executionPayloadEnvelope) VersionedHashes() []common.Hash {
 	commitments := p.p.BlobKzgCommitments
 	versionedHashes := make([]common.Hash, len(commitments))
 	for i, commitment := range commitments {
@@ -120,7 +142,7 @@ func (p executionPayloadEnvelope) VersionedHashes() []common.Hash {
 }
 
 // BlobKzgCommitmentsRoot returns the HTR of the KZG commitments in the payload
-func (p executionPayloadEnvelope) BlobKzgCommitmentsRoot() ([field_params.RootLength]byte, error) {
+func (p *executionPayloadEnvelope) BlobKzgCommitmentsRoot() ([field_params.RootLength]byte, error) {
 	if p.IsNil() || p.p.BlobKzgCommitments == nil {
 		return [field_params.RootLength]byte{}, consensus_types.ErrNilObjectWrapped
 	}
@@ -128,7 +150,12 @@ func (p executionPayloadEnvelope) BlobKzgCommitmentsRoot() ([field_params.RootLe
 	return ssz.KzgCommitmentsRoot(p.p.BlobKzgCommitments)
 }
 
+// SetSlot initializes the internal member variable
+func (p *executionPayloadEnvelope) SetSlot(slot primitives.Slot) {
+	p.slot = slot
+}
+
 // Slot returns the wrapped value
-func (p executionPayloadEnvelope) Slot() primitives.Slot {
+func (p *executionPayloadEnvelope) Slot() primitives.Slot {
 	return p.slot
 }

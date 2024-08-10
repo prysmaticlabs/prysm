@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/epbs/payload-attestation"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
 // PayloadAttestationMsgVerifier defines the methods implemented by the ROPayloadAttestation.
@@ -33,6 +34,7 @@ type ExecutionPayloadEnvelopeVerifier interface {
 	VerifyBuilderValid(interfaces.ROExecutionPayloadHeaderEPBS) error
 	VerifyPayloadHash(interfaces.ROExecutionPayloadHeaderEPBS) error
 	VerifySignature(state.BeaconState) error
+	SetSlot(primitives.Slot) error
 	SatisfyRequirement(Requirement)
 }
 

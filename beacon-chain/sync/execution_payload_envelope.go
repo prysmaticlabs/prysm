@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"go.opencensus.io/trace"
@@ -39,7 +40,7 @@ func (s *Service) validateExecutionPayloadEnvelope(ctx context.Context, pid peer
 		log.WithError(err).Error("failed to create read only signed payload execution envelope")
 		return pubsub.ValidationIgnore, err
 	}
-	v := s.newExecutionPayloadEnvelopeVerifier(e, verification.GossipPayloadAttestationMessageRequirements)
+	v := s.newExecutionPayloadEnvelopeVerifier(e, verification.GossipExecutionPayloadEnvelopeRequirements)
 
 	if err := v.VerifyBlockRootSeen(s.seenBlockRoot); err != nil {
 		return pubsub.ValidationIgnore, err
@@ -56,15 +57,9 @@ func (s *Service) validateExecutionPayloadEnvelope(ctx context.Context, pid peer
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	header, err := signedHeader.Header()
+	res, err := verifyAgainstHeader(v, signedHeader)
 	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
-	if err := v.VerifyBuilderValid(header); err != nil {
-		return pubsub.ValidationReject, err
-	}
-	if err := v.VerifyPayloadHash(header); err != nil {
-		return pubsub.ValidationReject, err
+		return res, err
 	}
 	st, err := s.cfg.stateGen.StateByRoot(ctx, root)
 	if err != nil {
@@ -77,6 +72,23 @@ func (s *Service) validateExecutionPayloadEnvelope(ctx context.Context, pid peer
 	return pubsub.ValidationAccept, nil
 }
 
+func verifyAgainstHeader(v verification.ExecutionPayloadEnvelopeVerifier, signed interfaces.ROSignedExecutionPayloadHeader) (pubsub.ValidationResult, error) {
+	header, err := signed.Header()
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	if err := v.SetSlot(header.Slot()); err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	if err := v.VerifyBuilderValid(header); err != nil {
+		return pubsub.ValidationReject, err
+	}
+	if err := v.VerifyPayloadHash(header); err != nil {
+		return pubsub.ValidationReject, err
+	}
+	return pubsub.ValidationAccept, nil
+}
+
 func (s *Service) executionPayloadEnvelopeSubscriber(ctx context.Context, msg proto.Message) error {
 	e, ok := msg.(*v1.SignedExecutionPayloadEnvelope)
 	if !ok {
@@ -86,6 +98,5 @@ func (s *Service) executionPayloadEnvelopeSubscriber(ctx context.Context, msg pr
 	if err != nil {
 		return err
 	}
-
 	return s.cfg.chain.ReceiveExecutionPayloadEnvelope(ctx, env, nil)
 }

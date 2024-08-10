@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	log "github.com/sirupsen/logrus"
@@ -26,7 +27,6 @@ var ExecutionPayloadEnvelopeGossipRequirements = []Requirement{
 	RequireBuilderValid,
 	RequirePayloadHashValid,
 	RequireSignatureValid,
-	RequireMessageNotSeen,
 }
 
 // GossipExecutionPayloadEnvelopeRequirements is a requirement list for gossip payload attestation messages.
@@ -133,6 +133,17 @@ func (v *EnvelopeVerifier) VerifySignature(st state.BeaconState) (err error) {
 	return nil
 }
 
+// SetSlot initializes the internal slot member of the execution payload
+// envelope
+func (v *EnvelopeVerifier) SetSlot(slot primitives.Slot) error {
+	env, err := v.e.Envelope()
+	if err != nil {
+		return err
+	}
+	env.SetSlot(slot)
+	return nil
+}
+
 // SatisfyRequirement allows the caller to manually mark a requirement as satisfied.
 func (v *EnvelopeVerifier) SatisfyRequirement(req Requirement) {
 	v.record(req, nil)
@@ -141,7 +152,6 @@ func (v *EnvelopeVerifier) SatisfyRequirement(req Requirement) {
 // envelopeLogFields returns log fields for a ROExecutionPayloadEnvelope instance.
 func envelopeLogFields(e interfaces.ROExecutionPayloadEnvelope) log.Fields {
 	return log.Fields{
-		"slot":            e.Slot(),
 		"builderIndex":    e.BuilderIndex(),
 		"beaconBlockRoot": fmt.Sprintf("%#x", e.BeaconBlockRoot()),
 		"PayloadWithheld": e.PayloadWithheld(),

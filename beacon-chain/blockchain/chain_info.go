@@ -120,7 +120,7 @@ type OptimisticModeFetcher interface {
 
 // ExecutionPayloadFetcher defines a common interface that returns forkchoice
 // information about payload block hashes
-type ExecutionPayloadFether interface {
+type ExecutionPayloadFetcher interface {
 	HashInForkchoice([32]byte) bool
 }
 

@@ -22,6 +22,7 @@ type ROExecutionPayloadEnvelope interface {
 	VersionedHashes() []common.Hash
 	PayloadWithheld() bool
 	StateRoot() [field_params.RootLength]byte
+	SetSlot(primitives.Slot)
 	Slot() primitives.Slot
 	IsBlinded() bool
 	IsNil() bool

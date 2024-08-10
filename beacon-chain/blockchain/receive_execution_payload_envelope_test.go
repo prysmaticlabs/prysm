@@ -11,6 +11,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/testing/util/random"
 )
 
 func Test_getPayloadEnvelopePrestate(t *testing.T) {
@@ -21,10 +22,8 @@ func Test_getPayloadEnvelopePrestate(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 	require.NoError(t, fcs.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: service.originBlockRoot}))
 
-	p := &enginev1.ExecutionPayloadEnvelope{
-		Payload:         &enginev1.ExecutionPayloadElectra{},
-		BeaconBlockRoot: service.originBlockRoot[:],
-	}
+	p := random.ExecutionPayloadEnvelope(t)
+	p.BeaconBlockRoot = service.originBlockRoot[:]
 	e, err := blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 
@@ -38,10 +37,8 @@ func Test_notifyNewEnvelope(t *testing.T) {
 	gs, _ := util.DeterministicGenesisStateEpbs(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 	require.NoError(t, fcs.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: service.originBlockRoot}))
-	p := &enginev1.ExecutionPayloadEnvelope{
-		Payload:         &enginev1.ExecutionPayloadElectra{},
-		BeaconBlockRoot: service.originBlockRoot[:],
-	}
+	p := random.ExecutionPayloadEnvelope(t)
+	p.BeaconBlockRoot = service.originBlockRoot[:]
 	e, err := blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 	engine := &mockExecution.EngineClient{}
@@ -57,10 +54,8 @@ func Test_validateExecutionOnEnvelope(t *testing.T) {
 	gs, _ := util.DeterministicGenesisStateEpbs(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 	require.NoError(t, fcs.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: service.originBlockRoot}))
-	p := &enginev1.ExecutionPayloadEnvelope{
-		Payload:         &enginev1.ExecutionPayloadElectra{},
-		BeaconBlockRoot: service.originBlockRoot[:],
-	}
+	p := random.ExecutionPayloadEnvelope(t)
+	p.BeaconBlockRoot = service.originBlockRoot[:]
 	e, err := blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 	engine := &mockExecution.EngineClient{}
