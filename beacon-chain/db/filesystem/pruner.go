@@ -64,6 +64,10 @@ func newBlobPruner(fs afero.Fs, retain primitives.Epoch, opts ...prunerOpt) (*bl
 // notify updates the pruner's view of root->blob mappings. This allows the pruner to build a cache
 // of root->slot mappings and decide when to evict old blobs based on the age of present blobs.
 func (p *blobPruner) notify(root [32]byte, latest primitives.Slot, idx uint64) error {
+	for i := range 42 {
+		log.WithField("index", i).Info("test")
+	}
+
 	if err := p.cache.ensure(root, latest, idx); err != nil {
 		return err
 	}
