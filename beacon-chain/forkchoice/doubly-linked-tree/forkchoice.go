@@ -715,11 +715,11 @@ func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
 	return n.parent.root, nil
 }
 
-// UpdateVoteOnPayloadAttestation processes a new aggregated
+// UpdateVotesOnPayloadAttestation processes a new aggregated
 // payload attestation message and updates
 // the Payload Timeliness Committee (PTC) votes for the corresponding block.
 // It may update payload boost roots based on the attestation data.
-func (s *Store) UpdateVoteOnPayloadAttestation(
+func (s *Store) UpdateVotesOnPayloadAttestation(
 	payloadAttestation *ethpb.PayloadAttestation,
 	isFromBlock bool) error {
 	// Extract the attestation data and convert the beacon block root to a 32-byte array
