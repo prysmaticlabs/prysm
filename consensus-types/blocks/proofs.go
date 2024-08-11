@@ -36,6 +36,10 @@ func ComputeBlockBodyFieldRoots(ctx context.Context, blockBody *BeaconBlockBody)
 		return nil, fmt.Errorf("unknown block body version %s", version.String(blockBody.version))
 	}
 
+	for i := range fieldRoots {
+		fieldRoots[i] = make([]byte, 32)
+	}
+
 	// Randao Reveal
 	randao := blockBody.RandaoReveal()
 	root, err := ssz.MerkleizeByteSliceSSZ(randao[:])
