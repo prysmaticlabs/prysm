@@ -30,41 +30,46 @@ option php_namespace = "Ethereum\\Eth\\v2";
 // Beacon LightClient API related messages.
 
 message LightClientBootstrap {
-    v1.BeaconBlockHeader header = 1;
-    SyncCommittee current_sync_committee = 2;
-    repeated bytes current_sync_committee_branch = 3;
+  v1.BeaconBlockHeader header = 1;
+  SyncCommittee current_sync_committee = 2;
+  repeated bytes current_sync_committee_branch = 3;
 }
 
 message LightClientUpdate {
-    v1.BeaconBlockHeader attested_header = 1;
-    SyncCommittee next_sync_committee = 2;
-    repeated bytes next_sync_committee_branch = 3;
-    v1.BeaconBlockHeader finalized_header = 4;
-    repeated bytes finality_branch = 5;
-    v1.SyncAggregate sync_aggregate = 6;
-    uint64 signature_slot = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+  v1.BeaconBlockHeader attested_header = 1;
+  SyncCommittee next_sync_committee = 2;
+  repeated bytes next_sync_committee_branch = 3;
+  v1.BeaconBlockHeader finalized_header = 4;
+  repeated bytes finality_branch = 5;
+  v1.SyncAggregate sync_aggregate = 6;
+  uint64 signature_slot = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 }
 
 message LightClientFinalityUpdateWithVersion {
-    v2.Version version = 1;
-    LightClientFinalityUpdate data = 2;
+  v2.Version version = 1;
+  LightClientFinalityUpdate data = 2;
 }
 
 message LightClientFinalityUpdate {
-    v1.BeaconBlockHeader attested_header = 1;
-    v1.BeaconBlockHeader finalized_header = 2;
-    repeated bytes finality_branch = 3;
-    v1.SyncAggregate sync_aggregate = 4;
-    uint64 signature_slot = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+  v1.BeaconBlockHeader attested_header = 1;
+  v1.BeaconBlockHeader finalized_header = 2;
+  repeated bytes finality_branch = 3;
+  v1.SyncAggregate sync_aggregate = 4;
+  uint64 signature_slot = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
 }
 
 message LightClientOptimisticUpdateWithVersion {
-    v2.Version version = 1;
-    LightClientOptimisticUpdate data = 2;
+  v2.Version version = 1;
+  LightClientOptimisticUpdate data = 2;
 }
 
 message LightClientOptimisticUpdate {
-    v1.BeaconBlockHeader attested_header = 1;
-    v1.SyncAggregate sync_aggregate = 2;
-    uint64 signature_slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+  v1.BeaconBlockHeader attested_header = 1;
+  v1.SyncAggregate sync_aggregate = 2;
+  uint64 signature_slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+}
+
+message LightClientUpdateWithVersion {
+  v2.Version version = 1;
+  LightClientUpdate data = 2;
 }
