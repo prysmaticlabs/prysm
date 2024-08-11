@@ -18,6 +18,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -748,4 +749,28 @@ func TestAttestationCommittees(t *testing.T) {
 		assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(committees[0])))
 		assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(committees[1])))
 	})
+}
+
+func TestBeaconCommittees(t *testing.T) {
+	prevConfig := params.BeaconConfig().Copy()
+	defer params.OverrideBeaconConfig(prevConfig)
+	c := params.BeaconConfig().Copy()
+	c.MinGenesisActiveValidatorCount = 128
+	c.SlotsPerEpoch = 4
+	c.TargetCommitteeSize = 16
+	params.OverrideBeaconConfig(c)
+
+	state, _ := util.DeterministicGenesisState(t, 256)
+
+	activeCount, err := helpers.ActiveValidatorCount(context.Background(), state, 0)
+	require.NoError(t, err)
+	committeesPerSlot := helpers.SlotCommitteeCount(activeCount)
+	committees, err := helpers.BeaconCommittees(context.Background(), state, 0)
+	require.NoError(t, err)
+	require.Equal(t, committeesPerSlot, uint64(len(committees)))
+	for idx := primitives.CommitteeIndex(0); idx < primitives.CommitteeIndex(len(committees)); idx++ {
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, 0, idx)
+		require.NoError(t, err)
+		require.DeepEqual(t, committees[idx], committee)
+	}
 }

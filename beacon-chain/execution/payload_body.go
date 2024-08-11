@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -160,7 +161,7 @@ func computeRanges(hbns []hashBlockNumber) []byRangeReq {
 
 func (r *blindedBlockReconstructor) requestBodiesByRange(ctx context.Context, client RPCClient, method string, req byRangeReq) error {
 	result := make([]*pb.ExecutionPayloadBody, 0)
-	if err := client.CallContext(ctx, &result, method, req.start, req.count); err != nil {
+	if err := client.CallContext(ctx, &result, method, hexutil.EncodeUint64(req.start), hexutil.EncodeUint64(req.count)); err != nil {
 		return err
 	}
 	if uint64(len(result)) != req.count {
