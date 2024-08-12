@@ -11,6 +11,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// validateCommitteeIndexElectra implements the following checks from the spec:
+//   - [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(attestation).
+//   - [REJECT] attestation.data.index == 0
 func validateCommitteeIndexElectra(ctx context.Context, a *ethpb.AttestationElectra) (primitives.CommitteeIndex, pubsub.ValidationResult, error) {
 	_, span := trace.StartSpan(ctx, "sync.validateCommitteeIndexElectra")
 	defer span.End()

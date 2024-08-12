@@ -13,9 +13,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// GetValidatorPerformance is an HTTP handler for GetValidatorPerformance.
-func (s *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.GetValidatorPerformance")
+// GetPerformance is an HTTP handler for GetPerformance.
+func (s *Server) GetPerformance(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetPerformance")
 	defer span.End()
 
 	var req structs.GetValidatorPerformanceRequest

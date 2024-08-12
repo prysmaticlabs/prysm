@@ -65,6 +65,16 @@ type FakeValidator struct {
 	BlockProposed                     chan interface{}
 }
 
+func (fv *FakeValidator) ProposeLocalInclusionList(ctx context.Context, slot primitives.Slot, pubKey [48]byte) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (fv *FakeValidator) EvaluateAggregatedInclusionList(ctx context.Context, slot primitives.Slot, pubKey [48]byte) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // Done for mocking.
 func (fv *FakeValidator) Done() {
 	fv.DoneCalled = true
@@ -254,10 +264,7 @@ func (*FakeValidator) HasProposerSettings() bool {
 }
 
 // PushProposerSettings for mocking
-func (fv *FakeValidator) PushProposerSettings(ctx context.Context, _ keymanager.IKeymanager, _ primitives.Slot, deadline time.Time) error {
-	nctx, cancel := context.WithDeadline(ctx, deadline)
-	ctx = nctx
-	defer cancel()
+func (fv *FakeValidator) PushProposerSettings(ctx context.Context, _ keymanager.IKeymanager, _ primitives.Slot) error {
 	time.Sleep(fv.ProposerSettingWait)
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		log.Error("deadline exceeded")
