@@ -912,7 +912,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 	}{
 		{
 			name:       "Unknown block root",
-			setupStore: func(s *Store) {},
+			setupStore: func(_ *Store) {},
 			payloadAttestation: &ethpb.PayloadAttestation{
 				Data: &ethpb.PayloadAttestationData{
 					BeaconBlockRoot: []byte{1, 2, 3},
