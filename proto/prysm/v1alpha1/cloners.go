@@ -74,7 +74,7 @@ func CopySignedBeaconBlockEPBS(sigBlock *SignedBeaconBlockEpbs) *SignedBeaconBlo
 	}
 }
 
-// CopyBeaconBlockEPBS copies the provided CopyBeaconBlockEPBS.
+// CopyBeaconBlockEPBS copies the provided BeaconBlockEPBS.
 func CopyBeaconBlockEPBS(block *BeaconBlockEpbs) *BeaconBlockEpbs {
 	if block == nil {
 		return nil
@@ -88,7 +88,7 @@ func CopyBeaconBlockEPBS(block *BeaconBlockEpbs) *BeaconBlockEpbs {
 	}
 }
 
-// CopyBeaconBlockBodyEPBS copies the provided CopyBeaconBlockBodyEPBS.
+// CopyBeaconBlockBodyEPBS copies the provided BeaconBlockBodyEPBS.
 func CopyBeaconBlockBodyEPBS(body *BeaconBlockBodyEpbs) *BeaconBlockBodyEpbs {
 	if body == nil {
 		return nil
@@ -144,11 +144,7 @@ func CopyPayloadAttestations(attestations []*PayloadAttestation) []*PayloadAttes
 	}
 	newAttestations := make([]*PayloadAttestation, len(attestations))
 	for i, att := range attestations {
-		newAttestations[i] = &PayloadAttestation{
-			AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
-			Data:            CopyPayloadAttestationData(att.Data),
-			Signature:       bytesutil.SafeCopyBytes(att.Signature),
-		}
+		newAttestations[i] = CopyPayloadAttestation(att)
 	}
 	return newAttestations
 }
