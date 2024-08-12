@@ -472,7 +472,11 @@ func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconSt
 	seen := make(map[uint64]bool)
 
 	for _, att := range atts {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
+		committeeIndex, err := att.GetCommitteeIndex()
+		if err != nil {
+			return nil, errors.Wrap(err, "unslashed attesting indices")
+		}
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, committeeIndex)
 		if err != nil {
 			return nil, err
 		}

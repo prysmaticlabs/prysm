@@ -256,7 +256,12 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a eth.At
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttWithState")
 	defer span.End()
 
-	committee, result, err := s.validateBitLength(ctx, bs, a.GetData().Slot, a.GetData().CommitteeIndex, a.GetAggregationBits())
+	committeeIndex, err := a.GetCommitteeIndex()
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+
+	committee, result, err := s.validateBitLength(ctx, bs, a.GetData().Slot, committeeIndex, a.GetAggregationBits())
 	if result != pubsub.ValidationAccept {
 		return result, err
 	}

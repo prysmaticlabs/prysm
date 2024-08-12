@@ -50,12 +50,13 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	assert.NoError(t, err)
 	indices, err := attestation.AttestingIndices(att, committee)
 	require.NoError(t, err)
-	result, err := service.validateIndexInCommittee(ctx, s, att, primitives.ValidatorIndex(indices[0]), att.Data.CommitteeIndex)
+
+	result, err := service.validateIndexInCommittee(ctx, att, primitives.ValidatorIndex(indices[0]), committee)
 	require.NoError(t, err)
 	assert.Equal(t, pubsub.ValidationAccept, result)
 
 	wanted := "validator index 1000 is not within the committee"
-	result, err = service.validateIndexInCommittee(ctx, s, att, 1000, att.Data.CommitteeIndex)
+	result, err = service.validateIndexInCommittee(ctx, att, 1000, committee)
 	assert.ErrorContains(t, wanted, err)
 	assert.Equal(t, pubsub.ValidationReject, result)
 }
@@ -78,28 +79,30 @@ func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 	att.AggregationBits = bl
 
 	service := &Service{}
-	result, err := service.validateIndexInCommittee(ctx, s, att, committee[0], att.Data.CommitteeIndex)
+	result, err := service.validateIndexInCommittee(ctx, att, committee[0], committee)
 	require.ErrorContains(t, "no attesting indices", err)
 	assert.Equal(t, pubsub.ValidationReject, result)
 
 	att.AggregationBits.SetBitAt(0, true)
 
-	result, err = service.validateIndexInCommittee(ctx, s, att, committee[0], att.Data.CommitteeIndex)
+	result, err = service.validateIndexInCommittee(ctx, att, committee[0], committee)
 	require.NoError(t, err)
 	assert.Equal(t, pubsub.ValidationAccept, result)
 
 	wanted := "validator index 1000 is not within the committee"
-	result, err = service.validateIndexInCommittee(ctx, s, att, 1000, att.Data.CommitteeIndex)
+	result, err = service.validateIndexInCommittee(ctx, att, 1000, committee)
 	assert.ErrorContains(t, wanted, err)
 	assert.Equal(t, pubsub.ValidationReject, result)
 
 	att.AggregationBits = bitfield.NewBitlist(1)
-	result, err = service.validateIndexInCommittee(ctx, s, att, committee[0], att.Data.CommitteeIndex)
+	committeeIndex, err := att.GetCommitteeIndex()
+	require.NoError(t, err)
+	_, result, err = service.validateBitLength(ctx, s, att.Data.Slot, committeeIndex, att.AggregationBits)
 	require.ErrorContains(t, "wanted participants bitfield length 4, got: 1", err)
 	assert.Equal(t, pubsub.ValidationReject, result)
 
 	att.Data.CommitteeIndex = 10000
-	result, err = service.validateIndexInCommittee(ctx, s, att, committee[0], att.Data.CommitteeIndex)
+	_, _, result, err = service.validateCommitteeIndexAndCount(ctx, att, s)
 	require.ErrorContains(t, "committee index 10000 > 2", err)
 	assert.Equal(t, pubsub.ValidationReject, result)
 }
@@ -117,7 +120,7 @@ func TestVerifyIndexInCommittee_Electra(t *testing.T) {
 	bl.SetBitAt(0, true)
 	att.AggregationBits = bl
 
-	result, err := service.validateIndexInCommittee(ctx, s, att, committee[0], att.Data.CommitteeIndex)
+	result, err := service.validateIndexInCommittee(ctx, att, committee[0], committee)
 	require.NoError(t, err)
 	assert.Equal(t, pubsub.ValidationAccept, result)
 }

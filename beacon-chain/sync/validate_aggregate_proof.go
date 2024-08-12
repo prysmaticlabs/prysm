@@ -174,8 +174,13 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.Signed
 		return result, err
 	}
 
+	committee, result, err := s.validateBitLength(ctx, bs, aggregate.GetData().Slot, committeeIndex, aggregate.GetAggregationBits())
+	if result != pubsub.ValidationAccept {
+		return result, err
+	}
+
 	// Verify validator index is within the beacon committee.
-	result, err = s.validateIndexInCommittee(ctx, bs, aggregate, aggregatorIndex, committeeIndex)
+	result, err = s.validateIndexInCommittee(ctx, aggregate, aggregatorIndex, committee)
 	if result != pubsub.ValidationAccept {
 		wrappedErr := errors.Wrapf(err, "could not validate index in committee")
 		tracing.AnnotateError(span, wrappedErr)
@@ -254,23 +259,9 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch primitives.Epoch, aggregator
 //   - [REJECT] The aggregate attestation has participants -- that is, len(get_attesting_indices(state, aggregate.data, aggregate.aggregation_bits)) >= 1.
 //   - [REJECT] The aggregator's validator index is within the committee --
 //     i.e. `aggregate_and_proof.aggregator_index in get_beacon_committee(state, aggregate.data.slot, aggregate.data.index)`.
-func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a ethpb.Att, validatorIndex primitives.ValidatorIndex, committeeIndex primitives.CommitteeIndex) (pubsub.ValidationResult, error) {
+func (s *Service) validateIndexInCommittee(ctx context.Context, a ethpb.Att, validatorIndex primitives.ValidatorIndex, committee []primitives.ValidatorIndex) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
-
-	valCount, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.GetData().Slot))
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
-	count := helpers.SlotCommitteeCount(valCount)
-	if uint64(committeeIndex) > count {
-		return pubsub.ValidationReject, fmt.Errorf("committee index %d > %d", committeeIndex, count)
-	}
-
-	committee, result, err := s.validateBitLength(ctx, bs, a.GetData().Slot, committeeIndex, a.GetAggregationBits())
-	if result != pubsub.ValidationAccept {
-		return result, err
-	}
 
 	if a.GetAggregationBits().Count() == 0 {
 		return pubsub.ValidationReject, errors.New("no attesting indices")
