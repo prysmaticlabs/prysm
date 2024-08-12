@@ -240,7 +240,6 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 			nextValidatorIndex = 0
 		}
 	}
-
 	if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
 		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
 	}
