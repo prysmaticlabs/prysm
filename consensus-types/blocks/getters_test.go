@@ -503,6 +503,21 @@ func hydrateBeaconBlockBody() *eth.BeaconBlockBody {
 	}
 }
 
+func hydrateBeaconBlockBodyAltair() *eth.BeaconBlockBodyAltair {
+	return &eth.BeaconBlockBodyAltair{
+		RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+		Graffiti:     make([]byte, fieldparams.RootLength),
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		},
+		SyncAggregate: &eth.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+	}
+}
+
 func TestPreElectraFailsInterfaceAssertion(t *testing.T) {
 	var epd interfaces.ExecutionData = &executionPayloadDeneb{}
 	_, ok := epd.(interfaces.ExecutionDataElectra)

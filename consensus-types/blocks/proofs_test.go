@@ -29,3 +29,25 @@ func TestComputeBlockBodyFieldRoots_Phase0(t *testing.T) {
 
 	require.DeepEqual(t, correctHash[:], hash)
 }
+
+func TestComputeBlockBodyFieldRoots_Altair(t *testing.T) {
+	blockBodyAltair := hydrateBeaconBlockBodyAltair()
+	i, err := NewBeaconBlockBody(blockBodyAltair)
+	require.NoError(t, err)
+
+	b := i.(*BeaconBlockBody)
+
+	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
+	require.NoError(t, err)
+	trie, err := trie.GenerateTrieFromItems(fieldRoots, 3)
+	require.NoError(t, err)
+	layers := trie.ToProto().GetLayers()
+
+	hash := layers[len(layers)-1].Layer[0]
+	require.NoError(t, err)
+
+	correctHash, err := b.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.DeepEqual(t, correctHash[:], hash)
+}
