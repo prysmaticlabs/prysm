@@ -758,13 +758,6 @@ func (s *Store) UpdateVotesOnPayloadAttestation(
 		}
 	}
 
-	// Only update payload boosts if they haven't been applied to this node yet
-	// This check prevents unnecessary computations
-	if s.payloadRevealBoostRoot != node.root && s.payloadWithholdBoostRoot != node.root {
-		// Update payload boosts if necessary
-		s.updatePayloadBoosts(node)
-	}
-
 	return nil
 }
 
