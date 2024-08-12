@@ -94,16 +94,11 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	var validationRes pubsub.ValidationResult
 
-	var committeeIndex primitives.CommitteeIndex
-	if att.Version() >= version.Electra {
-		committeeIndex, validationRes, err = validateCommitteeIndexElectra(ctx, att)
-		if validationRes != pubsub.ValidationAccept {
-			wrappedErr := errors.Wrapf(err, "could not validate committee index for Electra version")
-			tracing.AnnotateError(span, wrappedErr)
-			return validationRes, wrappedErr
-		}
-	} else {
-		committeeIndex = data.CommitteeIndex
+	committeeIndex, result, err := s.validateCommitteeIndex(ctx, att)
+	if result != pubsub.ValidationAccept {
+		wrappedErr := errors.Wrapf(err, "could not validate committee index for %s version", version.String(att.Version()))
+		tracing.AnnotateError(span, wrappedErr)
+		return result, wrappedErr
 	}
 
 	if !features.Get().EnableSlasher {
@@ -210,7 +205,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a eth.Att, b
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttTopic")
 	defer span.End()
 
-	_, valCount, result, err := s.validateCommitteeIndex(ctx, a, bs)
+	_, valCount, result, err := s.validateCommitteeIndexAndCount(ctx, a, bs)
 	if result != pubsub.ValidationAccept {
 		return result, err
 	}
@@ -228,21 +223,14 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a eth.Att, b
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateCommitteeIndex(
+func (s *Service) validateCommitteeIndexAndCount(
 	ctx context.Context,
 	a eth.Att,
 	bs state.ReadOnlyBeaconState,
 ) (primitives.CommitteeIndex, uint64, pubsub.ValidationResult, error) {
-	var ci primitives.CommitteeIndex
-	var pb pubsub.ValidationResult
-	var err error
-	if a.Version() >= version.Electra {
-		ci, pb, err = validateCommitteeIndexElectra(ctx, a)
-		if err != nil {
-			return 0, 0, pb, errors.Wrap(err, "failed to validate committee index")
-		}
-	} else {
-		ci = a.GetData().CommitteeIndex
+	ci, result, err := s.validateCommitteeIndex(ctx, a)
+	if result != pubsub.ValidationAccept {
+		return 0, 0, result, err
 	}
 	valCount, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.GetData().Slot))
 	if err != nil {
@@ -253,6 +241,13 @@ func (s *Service) validateCommitteeIndex(
 		return 0, 0, pubsub.ValidationReject, fmt.Errorf("committee index %d > %d", a.GetData().CommitteeIndex, count)
 	}
 	return ci, valCount, pubsub.ValidationAccept, nil
+}
+
+func (s *Service) validateCommitteeIndex(ctx context.Context, a eth.Att) (primitives.CommitteeIndex, pubsub.ValidationResult, error) {
+	if a.Version() >= version.Electra {
+		return validateCommitteeIndexElectra(ctx, a)
+	}
+	return a.GetData().CommitteeIndex, pubsub.ValidationAccept, nil
 }
 
 // This validates beacon unaggregated attestation using the given state, the validation consists of bitfield length and count consistency
