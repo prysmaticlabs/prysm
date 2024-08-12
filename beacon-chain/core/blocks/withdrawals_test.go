@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
-
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
