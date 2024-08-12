@@ -19,7 +19,6 @@ linters:
     - ifshort
     - interfacer
     - maligned
-    - intrange
     - nosnakecase
     - scopelint
     - structcheck
