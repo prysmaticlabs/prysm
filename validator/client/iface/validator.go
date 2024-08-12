@@ -31,6 +31,10 @@ const (
 	RoleSyncCommittee
 	// RoleSyncCommitteeAggregator means the validator should aggregate sync committee messages and submit a sync committee contribution.
 	RoleSyncCommitteeAggregator
+	// RoleInclusionListProposer means that validator should submit a message with list of transactions that must get included in the next slot
+	RoleInclusionListProposer
+	// RoleInclusionListAttestor means that validator should evaluate the aggregated list of current slot
+	RoleInclusionListAttestor
 )
 
 // Validator interface defines the primary methods of a validator client.
@@ -70,6 +74,8 @@ type Validator interface {
 	HealthTracker() *beacon.NodeHealthTracker
 	Host() string
 	ChangeHost()
+	ProposeLocalInclusionList(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	EvaluateAggregatedInclusionList(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
 }
 
 // SigningFunc interface defines a type for the function that signs a message

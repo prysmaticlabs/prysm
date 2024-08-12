@@ -242,6 +242,10 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 					v.SubmitSyncCommitteeMessage(slotCtx, slot, pubKey)
 				case iface.RoleSyncCommitteeAggregator:
 					v.SubmitSignedContributionAndProof(slotCtx, slot, pubKey)
+				case iface.RoleInclusionListProposer:
+					v.ProposeLocalInclusionList(slotCtx, slot, pubKey)
+				case iface.RoleInclusionListAttestor:
+					v.EvaluateAggregatedInclusionList(slotCtx, slot, pubKey)
 				case iface.RoleUnknown:
 					log.WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
 				default:
