@@ -732,7 +732,6 @@ func (s *Store) UpdateVotesOnPayloadAttestation(
 		return errors.New("beacon block root unknown")
 	}
 
-	// Only update payload boosts with attestations from a block if the block is for the current slot and it's early
 	if isFromBlock {
 		currentSlot := slots.CurrentSlot(s.genesisTime)
 		// Only process if the attestation is for the previous slot
@@ -748,12 +747,6 @@ func (s *Store) UpdateVotesOnPayloadAttestation(
 		if timeIntoSlot >= params.BeaconConfig().SecondsPerSlot/params.BeaconConfig().IntervalsPerSlot {
 			return nil
 		}
-	}
-
-	// Initialize the PTC vote for this node if it doesn't exist
-	// The size is set to PTCSize, which is a preset constant
-	if node.ptcVote == nil {
-		node.ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
 	}
 
 	// Update the PTC votes based on the attestation
@@ -785,7 +778,7 @@ func (s *Store) updatePayloadBoosts(node *Node) {
 	for _, vote := range node.ptcVote {
 		if vote == primitives.PAYLOAD_PRESENT {
 			presentCount++
-		} else if vote == primitives.PAYLOAD_ABSENT {
+		} else if vote == primitives.PAYLOAD_WITHHELD {
 			withheldCount++
 		}
 	}
