@@ -39,7 +39,95 @@ func TestComputeBlockBodyFieldRoots_Altair(t *testing.T) {
 
 	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
 	require.NoError(t, err)
-	trie, err := trie.GenerateTrieFromItems(fieldRoots, 3)
+	trie, err := trie.GenerateTrieFromItems(fieldRoots, 4)
+	require.NoError(t, err)
+	layers := trie.ToProto().GetLayers()
+
+	hash := layers[len(layers)-1].Layer[0]
+	require.NoError(t, err)
+
+	correctHash, err := b.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.DeepEqual(t, correctHash[:], hash)
+}
+
+func TestComputeBlockBodyFieldRoots_Bellatrix(t *testing.T) {
+	blockBodyBellatrix := hydrateBeaconBlockBodyBellatrix()
+	i, err := NewBeaconBlockBody(blockBodyBellatrix)
+	require.NoError(t, err)
+
+	b := i.(*BeaconBlockBody)
+
+	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
+	require.NoError(t, err)
+	trie, err := trie.GenerateTrieFromItems(fieldRoots, 4)
+	require.NoError(t, err)
+	layers := trie.ToProto().GetLayers()
+
+	hash := layers[len(layers)-1].Layer[0]
+	require.NoError(t, err)
+
+	correctHash, err := b.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.DeepEqual(t, correctHash[:], hash)
+}
+
+func TestComputeBlockBodyFieldRoots_Capella(t *testing.T) {
+	blockBodyCapella := hydrateBeaconBlockBodyCapella()
+	i, err := NewBeaconBlockBody(blockBodyCapella)
+	require.NoError(t, err)
+
+	b := i.(*BeaconBlockBody)
+
+	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
+	require.NoError(t, err)
+	trie, err := trie.GenerateTrieFromItems(fieldRoots, 4)
+	require.NoError(t, err)
+	layers := trie.ToProto().GetLayers()
+
+	hash := layers[len(layers)-1].Layer[0]
+	require.NoError(t, err)
+
+	correctHash, err := b.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.DeepEqual(t, correctHash[:], hash)
+}
+
+func TestComputeBlockBodyFieldRoots_Deneb(t *testing.T) {
+	blockBodyDeneb := hydrateBeaconBlockBodyDeneb()
+	i, err := NewBeaconBlockBody(blockBodyDeneb)
+	require.NoError(t, err)
+
+	b := i.(*BeaconBlockBody)
+
+	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
+	require.NoError(t, err)
+	trie, err := trie.GenerateTrieFromItems(fieldRoots, 4)
+	require.NoError(t, err)
+	layers := trie.ToProto().GetLayers()
+
+	hash := layers[len(layers)-1].Layer[0]
+	require.NoError(t, err)
+
+	correctHash, err := b.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.DeepEqual(t, correctHash[:], hash)
+}
+
+func TestComputeBlockBodyFieldRoots_Electra(t *testing.T) {
+	blockBodyElectra := hydrateBeaconBlockBodyElectra()
+	i, err := NewBeaconBlockBody(blockBodyElectra)
+	require.NoError(t, err)
+
+	b := i.(*BeaconBlockBody)
+
+	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
+	require.NoError(t, err)
+	trie, err := trie.GenerateTrieFromItems(fieldRoots, 4)
 	require.NoError(t, err)
 	layers := trie.ToProto().GetLayers()
 
