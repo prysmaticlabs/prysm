@@ -1521,6 +1521,7 @@ func TestProcessWithdrawalsEPBS(t *testing.T) {
 			require.NoError(t, err)
 			post, err := blocks.ProcessWithdrawals(st, p)
 			if test.Args.Name == "Parent Node is not full" {
+				require.IsNil(t, post)
 				require.IsNil(t, err)
 			} else {
 				require.NoError(t, err)
