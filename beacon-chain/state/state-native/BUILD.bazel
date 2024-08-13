@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "beacon_state_mainnet.go",
+        "beacon_state.go",
         "beacon_state_minimal.go",  # keep
         "doc.go",
         "error.go",
