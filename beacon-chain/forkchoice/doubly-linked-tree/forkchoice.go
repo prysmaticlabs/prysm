@@ -750,10 +750,10 @@ func (s *Store) UpdateVotesOnPayloadAttestation(
 	}
 
 	// Update the PTC votes based on the attestation
-	// We iterate through each bit in the AggregationBits
-	// If a bit is not already set, we update the corresponding PTC vote
+	// We only set the vote if it hasn't been set before
+	// to handle potential equivocations
 	for i := uint64(0); i < fieldparams.PTCSize; i++ {
-		if !payloadAttestation.AggregationBits.BitAt(i) {
+		if payloadAttestation.AggregationBits.BitAt(i) && node.ptcVote[i] == primitives.PAYLOAD_ABSENT {
 			node.ptcVote[i] = data.PayloadStatus
 		}
 	}
