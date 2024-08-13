@@ -2,9 +2,11 @@ package blocks
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
@@ -150,16 +152,22 @@ func ComputeBlockBodyFieldRoots(ctx context.Context, blockBody *BeaconBlockBody)
 
 	if blockBody.version >= version.Deneb {
 		// KZG commitments
-		chunks, err := ssz.PackByChunk(blockBody.blobKzgCommitments)
+		roots := make([][32]byte, len(blockBody.blobKzgCommitments))
+		for i, commitment := range blockBody.blobKzgCommitments {
+			chunks, err := ssz.PackByChunk([][]byte{commitment})
+			if err != nil {
+				return nil, err
+			}
+			roots[i] = htr.VectorizedSha256(chunks)[0]
+		}
+		commitmentsRoot, err := ssz.BitwiseMerkleize(roots, uint64(len(roots)), 4096)
 		if err != nil {
 			return nil, err
 		}
-		var a [32]byte
-		a, err = ssz.BitwiseMerkleize(chunks, uint64(len(chunks)), uint64(len(chunks)))
-		if err != nil {
-			return nil, err
-		}
-		copy(fieldRoots[11], a[:])
+		length := make([]byte, 32)
+		binary.LittleEndian.PutUint64(length[:8], uint64(len(roots)))
+		root = ssz.MixInLength(commitmentsRoot, length)
+		copy(fieldRoots[11], root[:])
 	}
 
 	return fieldRoots, nil
