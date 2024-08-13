@@ -13,7 +13,8 @@ func TestComputeBlockBodyFieldRoots_Phase0(t *testing.T) {
 	i, err := NewBeaconBlockBody(blockBodyPhase0)
 	require.NoError(t, err)
 
-	b := i.(*BeaconBlockBody)
+	b, ok := i.(*BeaconBlockBody)
+	require.Equal(t, true, ok)
 
 	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
 	require.NoError(t, err)
@@ -35,7 +36,8 @@ func TestComputeBlockBodyFieldRoots_Altair(t *testing.T) {
 	i, err := NewBeaconBlockBody(blockBodyAltair)
 	require.NoError(t, err)
 
-	b := i.(*BeaconBlockBody)
+	b, ok := i.(*BeaconBlockBody)
+	require.Equal(t, true, ok)
 
 	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
 	require.NoError(t, err)
@@ -57,7 +59,8 @@ func TestComputeBlockBodyFieldRoots_Bellatrix(t *testing.T) {
 	i, err := NewBeaconBlockBody(blockBodyBellatrix)
 	require.NoError(t, err)
 
-	b := i.(*BeaconBlockBody)
+	b, ok := i.(*BeaconBlockBody)
+	require.Equal(t, true, ok)
 
 	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
 	require.NoError(t, err)
@@ -79,7 +82,8 @@ func TestComputeBlockBodyFieldRoots_Capella(t *testing.T) {
 	i, err := NewBeaconBlockBody(blockBodyCapella)
 	require.NoError(t, err)
 
-	b := i.(*BeaconBlockBody)
+	b, ok := i.(*BeaconBlockBody)
+	require.Equal(t, true, ok)
 
 	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
 	require.NoError(t, err)
@@ -101,7 +105,8 @@ func TestComputeBlockBodyFieldRoots_Deneb(t *testing.T) {
 	i, err := NewBeaconBlockBody(blockBodyDeneb)
 	require.NoError(t, err)
 
-	b := i.(*BeaconBlockBody)
+	b, ok := i.(*BeaconBlockBody)
+	require.Equal(t, true, ok)
 
 	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
 	require.NoError(t, err)
@@ -123,7 +128,8 @@ func TestComputeBlockBodyFieldRoots_Electra(t *testing.T) {
 	i, err := NewBeaconBlockBody(blockBodyElectra)
 	require.NoError(t, err)
 
-	b := i.(*BeaconBlockBody)
+	b, ok := i.(*BeaconBlockBody)
+	require.Equal(t, true, ok)
 
 	fieldRoots, err := ComputeBlockBodyFieldRoots(context.Background(), b)
 	require.NoError(t, err)
