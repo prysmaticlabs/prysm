@@ -23,49 +23,10 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
-	if vs.SyncChecker.Syncing() {
-		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
-	}
-
-	// An optimistic validator MUST NOT participate in attestation
-	// (i.e., sign across the DOMAIN_BEACON_ATTESTER, DOMAIN_SELECTION_PROOF or DOMAIN_AGGREGATE_AND_PROOF domains).
-	if err := vs.optimisticStatus(ctx); err != nil {
-		return nil, err
-	}
-
-	st, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
-	}
-
-	validatorIndex, exists := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
-	if !exists {
-		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
-	}
-
-	epoch := slots.ToEpoch(req.Slot)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(ctx, st, epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
-	}
-	seed, err := helpers.Seed(st, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get seed: %v", err)
-	}
-	committee, err := helpers.BeaconCommittee(ctx, activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
+	indexInCommittee, validatorIndex, err := vs.aggregateSelection(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-
-	// Check if the validator is an aggregator
-	isAggregator, err := helpers.IsAggregator(uint64(len(committee)), req.SlotSignature)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get aggregator status: %v", err)
-	}
-	if !isAggregator {
-		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
-	}
-
 	atts := vs.AttPool.AggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex)
 	// Filter out the best aggregated attestation (ie. the one with the most aggregated bits).
 	if len(atts) == 0 {
@@ -74,14 +35,6 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 			return nil, status.Errorf(codes.NotFound, "Could not find attestation for slot and committee in pool")
 		}
 	}
-
-	var indexInCommittee uint64
-	for i, idx := range committee {
-		if idx == validatorIndex {
-			indexInCommittee = uint64(i)
-		}
-	}
-
 	best := bestAggregate(atts, req.CommitteeIndex, indexInCommittee)
 	attAndProof := &ethpb.AggregateAttestationAndProof{
 		Aggregate:       best,
@@ -102,55 +55,68 @@ func (vs *Server) SubmitAggregateSelectionProofElectra(
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
-	if vs.SyncChecker.Syncing() {
-		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
-	}
-
-	// An optimistic validator MUST NOT participate in attestation
-	// (i.e., sign across the DOMAIN_BEACON_ATTESTER, DOMAIN_SELECTION_PROOF or DOMAIN_AGGREGATE_AND_PROOF domains).
-	if err := vs.optimisticStatus(ctx); err != nil {
-		return nil, err
-	}
-
-	st, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
-	}
-
-	validatorIndex, exists := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
-	if !exists {
-		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
-	}
-
-	epoch := slots.ToEpoch(req.Slot)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(ctx, st, epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
-	}
-	seed, err := helpers.Seed(st, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get seed: %v", err)
-	}
-	committee, err := helpers.BeaconCommittee(ctx, activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
+	indexInCommittee, validatorIndex, err := vs.aggregateSelection(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-
-	// Check if the validator is an aggregator
-	isAggregator, err := helpers.IsAggregator(uint64(len(committee)), req.SlotSignature)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get aggregator status: %v", err)
-	}
-	if !isAggregator {
-		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
-	}
-
 	atts := vs.AttPool.AggregatedAttestationsBySlotIndexElectra(ctx, req.Slot, req.CommitteeIndex)
 	if len(atts) == 0 {
 		atts = vs.AttPool.UnaggregatedAttestationsBySlotIndexElectra(ctx, req.Slot, req.CommitteeIndex)
 		if len(atts) == 0 {
 			return nil, status.Errorf(codes.NotFound, "No attestations found in pool")
 		}
+	}
+	best := bestAggregate(atts, req.CommitteeIndex, indexInCommittee)
+	attAndProof := &ethpb.AggregateAttestationAndProofElectra{
+		Aggregate:       best,
+		SelectionProof:  req.SlotSignature,
+		AggregatorIndex: validatorIndex,
+	}
+	return &ethpb.AggregateSelectionElectraResponse{AggregateAndProof: attAndProof}, nil
+}
+
+func (vs *Server) aggregateSelection(ctx context.Context, req *ethpb.AggregateSelectionRequest) (uint64, primitives.ValidatorIndex, error) {
+	if vs.SyncChecker.Syncing() {
+		return 0, 0, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	// An optimistic validator MUST NOT participate in attestation
+	// (i.e., sign across the DOMAIN_BEACON_ATTESTER, DOMAIN_SELECTION_PROOF or DOMAIN_AGGREGATE_AND_PROOF domains).
+	if err := vs.optimisticStatus(ctx); err != nil {
+		return 0, 0, err
+	}
+
+	st, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
+	if err != nil {
+		return 0, 0, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
+	}
+
+	validatorIndex, exists := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
+	if !exists {
+		return 0, 0, status.Error(codes.Internal, "Could not locate validator index in DB")
+	}
+
+	epoch := slots.ToEpoch(req.Slot)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(ctx, st, epoch)
+	if err != nil {
+		return 0, 0, status.Errorf(codes.Internal, "Could not get validators: %v", err)
+	}
+	seed, err := helpers.Seed(st, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return 0, 0, status.Errorf(codes.Internal, "Could not get seed: %v", err)
+	}
+	committee, err := helpers.BeaconCommittee(ctx, activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// Check if the validator is an aggregator
+	isAggregator, err := helpers.IsAggregator(uint64(len(committee)), req.SlotSignature)
+	if err != nil {
+		return 0, 0, status.Errorf(codes.Internal, "Could not get aggregator status: %v", err)
+	}
+	if !isAggregator {
+		return 0, 0, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
 	var indexInCommittee uint64
@@ -159,14 +125,7 @@ func (vs *Server) SubmitAggregateSelectionProofElectra(
 			indexInCommittee = uint64(i)
 		}
 	}
-
-	best := bestAggregate(atts, req.CommitteeIndex, indexInCommittee)
-	attAndProof := &ethpb.AggregateAttestationAndProofElectra{
-		Aggregate:       best,
-		SelectionProof:  req.SlotSignature,
-		AggregatorIndex: validatorIndex,
-	}
-	return &ethpb.AggregateSelectionElectraResponse{AggregateAndProof: attAndProof}, nil
+	return indexInCommittee, validatorIndex, nil
 }
 
 // SubmitSignedAggregateSelectionProof is called by a validator to broadcast a signed
