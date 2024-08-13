@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
@@ -114,6 +115,81 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 	return val, nil
 }
 
+func checkWithdrawalsAgainstPayload(
+	executionData interfaces.ExecutionData,
+	numExpected int,
+	expectedRoot [32]byte,
+) error {
+	var wdRoot [32]byte
+	if executionData.IsBlinded() {
+		r, err := executionData.WithdrawalsRoot()
+		if err != nil {
+			return errors.Wrap(err, "could not get withdrawals root")
+		}
+		copy(wdRoot[:], r)
+	} else {
+		wds, err := executionData.Withdrawals()
+		if err != nil {
+			return errors.Wrap(err, "could not get withdrawals")
+		}
+
+		if len(wds) != numExpected {
+			return fmt.Errorf("execution payload header has %d withdrawals when %d were expected", len(wds), numExpected)
+		}
+
+		wdRoot, err = ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
+		if err != nil {
+			return errors.Wrap(err, "could not get withdrawals root")
+		}
+	}
+	if expectedRoot != wdRoot {
+		return fmt.Errorf("expected withdrawals root %#x, got %#x", expectedRoot, wdRoot)
+	}
+	return nil
+}
+
+func processWithdrawalStateTransition(
+	st state.BeaconState,
+	expectedWithdrawals []*enginev1.Withdrawal,
+	partialWithdrawalsCount uint64,
+) (err error) {
+	for _, withdrawal := range expectedWithdrawals {
+		err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
+		if err != nil {
+			return errors.Wrap(err, "could not decrease balance")
+		}
+	}
+	if st.Version() >= version.Electra {
+		if err := st.DequeuePartialWithdrawals(partialWithdrawalsCount); err != nil {
+			return fmt.Errorf("unable to dequeue partial withdrawals from state: %w", err)
+		}
+	}
+
+	if len(expectedWithdrawals) > 0 {
+		if err := st.SetNextWithdrawalIndex(expectedWithdrawals[len(expectedWithdrawals)-1].Index + 1); err != nil {
+			return errors.Wrap(err, "could not set next withdrawal index")
+		}
+	}
+	var nextValidatorIndex primitives.ValidatorIndex
+	if uint64(len(expectedWithdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
+		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
+		if err != nil {
+			return errors.Wrap(err, "could not get next withdrawal validator index")
+		}
+		nextValidatorIndex += primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
+		nextValidatorIndex = nextValidatorIndex % primitives.ValidatorIndex(st.NumValidators())
+	} else {
+		nextValidatorIndex = expectedWithdrawals[len(expectedWithdrawals)-1].ValidatorIndex + 1
+		if nextValidatorIndex == primitives.ValidatorIndex(st.NumValidators()) {
+			nextValidatorIndex = 0
+		}
+	}
+	if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
+		return errors.Wrap(err, "could not set next withdrawal validator index")
+	}
+	return nil
+}
+
 // ProcessWithdrawals processes the validator withdrawals from the provided execution payload
 // into the beacon state.
 //
@@ -181,67 +257,12 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 			return nil, errors.Wrap(err, "could not set withdrawals root")
 		}
 	} else {
-		var wdRoot [32]byte
-		if executionData.IsBlinded() {
-			r, err := executionData.WithdrawalsRoot()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get withdrawals root")
-			}
-			copy(wdRoot[:], r)
-		} else {
-			wds, err := executionData.Withdrawals()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get withdrawals")
-			}
-
-			if len(wds) != len(expectedWithdrawals) {
-				return nil, fmt.Errorf("execution payload header has %d withdrawals when %d were expected", len(wds), len(expectedWithdrawals))
-			}
-
-			wdRoot, err = ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get withdrawals root")
-			}
-		}
-		if expectedRoot != wdRoot {
-			return nil, fmt.Errorf("expected withdrawals root %#x, got %#x", expectedRoot, wdRoot)
+		if err := checkWithdrawalsAgainstPayload(executionData, len(expectedWithdrawals), expectedRoot); err != nil {
+			return nil, err
 		}
 	}
-
-	for _, withdrawal := range expectedWithdrawals {
-		err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not decrease balance")
-		}
-	}
-
-	if st.Version() >= version.Electra {
-		if err := st.DequeuePartialWithdrawals(partialWithdrawalsCount); err != nil {
-			return nil, fmt.Errorf("unable to dequeue partial withdrawals from state: %w", err)
-		}
-	}
-
-	if len(expectedWithdrawals) > 0 {
-		if err := st.SetNextWithdrawalIndex(expectedWithdrawals[len(expectedWithdrawals)-1].Index + 1); err != nil {
-			return nil, errors.Wrap(err, "could not set next withdrawal index")
-		}
-	}
-	var nextValidatorIndex primitives.ValidatorIndex
-	if uint64(len(expectedWithdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
-		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
-		}
-		nextValidatorIndex += primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
-		nextValidatorIndex = nextValidatorIndex % primitives.ValidatorIndex(st.NumValidators())
-	} else {
-		nextValidatorIndex = expectedWithdrawals[len(expectedWithdrawals)-1].ValidatorIndex + 1
-		if nextValidatorIndex == primitives.ValidatorIndex(st.NumValidators()) {
-			nextValidatorIndex = 0
-		}
-	}
-	if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
-		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
+	if err := processWithdrawalStateTransition(st, expectedWithdrawals, partialWithdrawalsCount); err != nil {
+		return nil, err
 	}
 	return st, nil
 }
