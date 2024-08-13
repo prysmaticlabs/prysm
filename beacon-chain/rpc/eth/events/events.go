@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
@@ -217,7 +217,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, BlobSidecarTopic)
 		}
-		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.KzgCommitment)
+		versionedHash := primitives.ConvertKzgCommitmentToVersionedHash(blobData.Blob.KzgCommitment)
 		blobEvent := &structs.BlobSidecarEvent{
 			BlockRoot:     hexutil.Encode(blobData.Blob.BlockRootSlice()),
 			Index:         fmt.Sprintf("%d", blobData.Blob.Index),
