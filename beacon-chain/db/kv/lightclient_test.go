@@ -2,7 +2,7 @@ package kv_test
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/kv"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"testing"
@@ -116,7 +116,7 @@ func TestStore_LightclientUpdate_CanSaveRetrieve(t *testing.T) {
 
 	l := newTestLc(t).setupTest()
 
-	update, err := blockchain.NewLightClientOptimisticUpdateFromBeaconState(l.ctx, l.state, l.block, l.attestedState)
+	update, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(l.ctx, l.state, l.block, l.attestedState)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
