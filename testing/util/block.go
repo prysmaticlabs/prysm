@@ -2,8 +2,11 @@ package util
 
 import (
 	"context"
+	rd "crypto/rand"
 	"fmt"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
@@ -30,30 +33,38 @@ import (
 // BlockGenConfig is used to define the requested conditions
 // for block generation.
 type BlockGenConfig struct {
-	NumProposerSlashings uint64
-	NumAttesterSlashings uint64
-	NumAttestations      uint64
-	NumDeposits          uint64
-	NumVoluntaryExits    uint64
-	NumTransactions      uint64 // Only for post Bellatrix blocks
-	FullSyncAggregate    bool
-	NumBLSChanges        uint64                    // Only for post Capella blocks
-	BuilderIndex         primitives.ValidatorIndex // Only for post EIP-7732 blocks.
-	PayloadValue         uint64                    // Only for post EIP-7732 blocks
-	NumKzgCommitmens     uint64                    // Only for post EIP-7732 blocks
+	NumProposerSlashings     uint64
+	NumAttesterSlashings     uint64
+	NumAttestations          uint64
+	NumDeposits              uint64
+	NumVoluntaryExits        uint64
+	NumTransactions          uint64 // Only for post Bellatrix blocks
+	FullSyncAggregate        bool
+	NumBLSChanges            uint64 // Only for post Capella blocks
+	NumWithdrawals           uint64
+	NumDepositRequests       uint64                    // Only for post Electra blocks
+	NumWithdrawalRequests    uint64                    // Only for post Electra blocks
+	NumConsolidationRequests uint64                    // Only for post Electra blocks
+	BuilderIndex             primitives.ValidatorIndex // Only for post EIP-7732 blocks.
+	PayloadValue             uint64                    // Only for post EIP-7732 blocks
+	NumKzgCommitmens         uint64                    // Only for post EIP-7732 blocks
 }
 
 // DefaultBlockGenConfig returns the block config that utilizes the
 // current params in the beacon config.
 func DefaultBlockGenConfig() *BlockGenConfig {
 	return &BlockGenConfig{
-		NumProposerSlashings: 0,
-		NumAttesterSlashings: 0,
-		NumAttestations:      1,
-		NumDeposits:          0,
-		NumVoluntaryExits:    0,
-		NumTransactions:      0,
-		NumBLSChanges:        0,
+		NumProposerSlashings:     0,
+		NumAttesterSlashings:     0,
+		NumAttestations:          1,
+		NumDeposits:              0,
+		NumVoluntaryExits:        0,
+		NumTransactions:          0,
+		NumBLSChanges:            0,
+		NumWithdrawals:           0,
+		NumConsolidationRequests: 0,
+		NumWithdrawalRequests:    0,
+		NumDepositRequests:       0,
 	}
 }
 
@@ -488,6 +499,41 @@ func randValIndex(bState state.BeaconState) (primitives.ValidatorIndex, error) {
 		return 0, err
 	}
 	return primitives.ValidatorIndex(rand.NewGenerator().Uint64() % activeCount), nil
+}
+
+func generateWithdrawals(
+	bState state.BeaconState,
+	privs []bls.SecretKey,
+	numWithdrawals uint64,
+) ([]*enginev1.Withdrawal, error) {
+	withdrawalRequests := make([]*enginev1.Withdrawal, numWithdrawals)
+	for i := uint64(0); i < numWithdrawals; i++ {
+		valIndex, err := randValIndex(bState)
+		if err != nil {
+			return nil, err
+		}
+		amount := uint64(10000)
+		bal, err := bState.BalanceAtIndex(valIndex)
+		if err != nil {
+			return nil, err
+		}
+		amounts := []uint64{
+			amount, // some smaller amount
+			bal,    // the entire balance
+		}
+		// Get a random index
+		nBig, err := rd.Int(rd.Reader, big.NewInt(int64(len(amounts))))
+		if err != nil {
+			return nil, err
+		}
+		randomIndex := nBig.Uint64()
+		withdrawalRequests[i] = &enginev1.Withdrawal{
+			ValidatorIndex: valIndex,
+			Address:        make([]byte, common.AddressLength),
+			Amount:         amounts[randomIndex],
+		}
+	}
+	return withdrawalRequests, nil
 }
 
 // HydrateSignedBeaconHeader hydrates a signed beacon block header with correct field length sizes
