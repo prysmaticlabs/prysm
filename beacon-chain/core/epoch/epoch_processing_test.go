@@ -6,7 +6,6 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
@@ -23,131 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/protobuf/proto"
 )
-
-func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
-	// Generate 2 attestations.
-	atts := make([]*ethpb.PendingAttestation, 2)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
-			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
-			},
-			AggregationBits: bitfield.Bitlist{0x00, 0xFF, 0xFF, 0xFF},
-		}
-	}
-
-	// Generate validators and state for the 2 attestations.
-	validatorCount := 1000
-	validators := make([]*ethpb.Validator, validatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	base := &ethpb.BeaconState{
-		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
-	require.NoError(t, err)
-
-	indices, err := epoch.UnslashedAttestingIndices(context.Background(), beaconState, atts)
-	require.NoError(t, err)
-	for i := 0; i < len(indices)-1; i++ {
-		if indices[i] >= indices[i+1] {
-			t.Error("sorted indices not sorted or duplicated")
-		}
-	}
-
-	// Verify the slashed validator is filtered.
-	slashedValidator := indices[0]
-	validators = beaconState.Validators()
-	validators[slashedValidator].Slashed = true
-	require.NoError(t, beaconState.SetValidators(validators))
-	indices, err = epoch.UnslashedAttestingIndices(context.Background(), beaconState, atts)
-	require.NoError(t, err)
-	for i := 0; i < len(indices); i++ {
-		assert.NotEqual(t, slashedValidator, indices[i], "Slashed validator %d is not filtered", slashedValidator)
-	}
-}
-
-func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
-	// Generate 5 of the same attestations.
-	atts := make([]*ethpb.PendingAttestation, 5)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
-			Data: &ethpb.AttestationData{Source: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-				Target: &ethpb.Checkpoint{Epoch: 0}},
-			AggregationBits: bitfield.Bitlist{0x00, 0xFF, 0xFF, 0xFF},
-		}
-	}
-
-	// Generate validators and state for the 5 attestations.
-	validatorCount := 1000
-	validators := make([]*ethpb.Validator, validatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	base := &ethpb.BeaconState{
-		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
-	require.NoError(t, err)
-
-	indices, err := epoch.UnslashedAttestingIndices(context.Background(), beaconState, atts)
-	require.NoError(t, err)
-
-	for i := 0; i < len(indices)-1; i++ {
-		if indices[i] >= indices[i+1] {
-			t.Error("sorted indices not sorted or duplicated")
-		}
-	}
-}
-
-func TestAttestingBalance_CorrectBalance(t *testing.T) {
-	helpers.ClearCache()
-	// Generate 2 attestations.
-	atts := make([]*ethpb.PendingAttestation, 2)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.PendingAttestation{
-			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-				Source: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-				Slot:   primitives.Slot(i),
-			},
-			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01},
-		}
-	}
-
-	// Generate validators with balances and state for the 2 attestations.
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	balances := make([]uint64, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
-		}
-		balances[i] = params.BeaconConfig().MaxEffectiveBalance
-	}
-	base := &ethpb.BeaconState{
-		Slot:        2,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-
-		Validators: validators,
-		Balances:   balances,
-	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
-	require.NoError(t, err)
-
-	balance, err := epoch.AttestingBalance(context.Background(), beaconState, atts)
-	require.NoError(t, err)
-	wanted := 256 * params.BeaconConfig().MaxEffectiveBalance
-	assert.Equal(t, wanted, balance)
-}
 
 func TestProcessSlashings_NotSlashed(t *testing.T) {
 	base := &ethpb.BeaconState{
