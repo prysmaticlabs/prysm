@@ -117,7 +117,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: root[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, root, st))
-	require.NoError(t, service.verifyBlkPreState(ctx, wsb.Block()))
+	require.NoError(t, service.verifyBlkPreState(ctx, wsb.Block().ParentRoot()))
 }
 
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
@@ -2044,7 +2044,11 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 
 		st, err = service.HeadState(ctx)
 		require.NoError(t, err)
-		b, err := util.GenerateFullBlockElectra(st, keys, util.DefaultBlockGenConfig(), 1)
+		defaultConfig := util.DefaultBlockGenConfig()
+		defaultConfig.NumWithdrawalRequests = 1
+		defaultConfig.NumDepositRequests = 2
+		defaultConfig.NumConsolidationRequests = 1
+		b, err := util.GenerateFullBlockElectra(st, keys, defaultConfig, 1)
 		require.NoError(t, err)
 		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -2059,7 +2063,7 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 
 		st, err = service.HeadState(ctx)
 		require.NoError(t, err)
-		b, err = util.GenerateFullBlockElectra(st, keys, util.DefaultBlockGenConfig(), 2)
+		b, err = util.GenerateFullBlockElectra(st, keys, defaultConfig, 2)
 		require.NoError(t, err)
 		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -2067,7 +2071,7 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 		// prepare another block that is not inserted
 		st3, err := transition.ExecuteStateTransition(ctx, st, wsb)
 		require.NoError(t, err)
-		b3, err := util.GenerateFullBlockElectra(st3, keys, util.DefaultBlockGenConfig(), 3)
+		b3, err := util.GenerateFullBlockElectra(st3, keys, defaultConfig, 3)
 		require.NoError(t, err)
 		wsb3, err := consensusblocks.NewSignedBeaconBlock(b3)
 		require.NoError(t, err)

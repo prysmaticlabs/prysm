@@ -48,7 +48,7 @@ func (b *BeaconState) SetPendingConsolidations(val []*ethpb.PendingConsolidation
 	return nil
 }
 
-// SetEarliestConsolidationEpoch is a mutating call to the beacon state which sets the earlest
+// SetEarliestConsolidationEpoch is a mutating call to the beacon state which sets the earliest
 // consolidation epoch value. This method requires access to the Lock on the state and only applies
 // in electra or later.
 func (b *BeaconState) SetEarliestConsolidationEpoch(epoch primitives.Epoch) error {

@@ -225,3 +225,19 @@ type IndividualVote struct {
 	InclusionDistance                string `json:"inclusion_distance"`
 	InactivityScore                  string `json:"inactivity_score"`
 }
+
+type ChainHead struct {
+	HeadSlot                   string `json:"head_slot"`
+	HeadEpoch                  string `json:"head_epoch"`
+	HeadBlockRoot              string `json:"head_block_root"`
+	FinalizedSlot              string `json:"finalized_slot"`
+	FinalizedEpoch             string `json:"finalized_epoch"`
+	FinalizedBlockRoot         string `json:"finalized_block_root"`
+	JustifiedSlot              string `json:"justified_slot"`
+	JustifiedEpoch             string `json:"justified_epoch"`
+	JustifiedBlockRoot         string `json:"justified_block_root"`
+	PreviousJustifiedSlot      string `json:"previous_justified_slot"`
+	PreviousJustifiedEpoch     string `json:"previous_justified_epoch"`
+	PreviousJustifiedBlockRoot string `json:"previous_justified_block_root"`
+	OptimisticStatus           bool   `json:"optimistic_status"`
+}

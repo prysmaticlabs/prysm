@@ -131,6 +131,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EngineEndpointTimeoutSeconds,
 			flags.SlasherDirFlag,
 			flags.LocalBlockValueBoost,
+			flags.MinBuilderBid,
+			flags.MinBuilderDiff,
 			flags.JwtId,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,
