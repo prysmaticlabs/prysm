@@ -773,14 +773,6 @@ func WithdrawalFromConsensus(w *enginev1.Withdrawal) *Withdrawal {
 	}
 }
 
-func DepositRequestsFromConsensus(ds []*enginev1.DepositRequest) []*DepositRequest {
-	result := make([]*DepositRequest, len(ds))
-	for i, d := range ds {
-		result[i] = DepositRequestFromConsensus(d)
-	}
-	return result
-}
-
 func WithdrawalRequestsFromConsensus(ws []*enginev1.WithdrawalRequest) []*WithdrawalRequest {
 	result := make([]*WithdrawalRequest, len(ws))
 	for i, w := range ws {
@@ -795,6 +787,26 @@ func WithdrawalRequestFromConsensus(w *enginev1.WithdrawalRequest) *WithdrawalRe
 		ValidatorPubkey: hexutil.Encode(w.ValidatorPubkey),
 		Amount:          fmt.Sprintf("%d", w.Amount),
 	}
+}
+
+func (w *WithdrawalRequest) ToConsensus() (*enginev1.WithdrawalRequest, error) {
+	src, err := bytesutil.DecodeHexWithLength(w.SourceAddress, common.AddressLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "SourceAddress")
+	}
+	pubkey, err := bytesutil.DecodeHexWithLength(w.ValidatorPubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "ValidatorPubkey")
+	}
+	amount, err := strconv.ParseUint(w.Amount, 10, 64)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Amount")
+	}
+	return &enginev1.WithdrawalRequest{
+		SourceAddress:   src,
+		ValidatorPubkey: pubkey,
+		Amount:          amount,
+	}, nil
 }
 
 func ConsolidationRequestsFromConsensus(cs []*enginev1.ConsolidationRequest) []*ConsolidationRequest {
@@ -813,6 +825,34 @@ func ConsolidationRequestFromConsensus(c *enginev1.ConsolidationRequest) *Consol
 	}
 }
 
+func (c *ConsolidationRequest) ToConsensus() (*enginev1.ConsolidationRequest, error) {
+	srcAddress, err := bytesutil.DecodeHexWithLength(c.SourceAddress, common.AddressLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "SourceAddress")
+	}
+	srcPubkey, err := bytesutil.DecodeHexWithLength(c.SourcePubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "SourcePubkey")
+	}
+	targetPubkey, err := bytesutil.DecodeHexWithLength(c.TargetPubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "TargetPubkey")
+	}
+	return &enginev1.ConsolidationRequest{
+		SourceAddress: srcAddress,
+		SourcePubkey:  srcPubkey,
+		TargetPubkey:  targetPubkey,
+	}, nil
+}
+
+func DepositRequestsFromConsensus(ds []*enginev1.DepositRequest) []*DepositRequest {
+	result := make([]*DepositRequest, len(ds))
+	for i, d := range ds {
+		result[i] = DepositRequestFromConsensus(d)
+	}
+	return result
+}
+
 func DepositRequestFromConsensus(d *enginev1.DepositRequest) *DepositRequest {
 	return &DepositRequest{
 		Pubkey:                hexutil.Encode(d.Pubkey),
@@ -821,6 +861,36 @@ func DepositRequestFromConsensus(d *enginev1.DepositRequest) *DepositRequest {
 		Signature:             hexutil.Encode(d.Signature),
 		Index:                 fmt.Sprintf("%d", d.Index),
 	}
+}
+
+func (d *DepositRequest) ToConsensus() (*enginev1.DepositRequest, error) {
+	pubkey, err := bytesutil.DecodeHexWithLength(d.Pubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Pubkey")
+	}
+	withdrawalCredentials, err := bytesutil.DecodeHexWithLength(d.WithdrawalCredentials, fieldparams.RootLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "WithdrawalCredentials")
+	}
+	amount, err := strconv.ParseUint(d.Amount, 10, 64)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Amount")
+	}
+	sig, err := bytesutil.DecodeHexWithLength(d.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Signature")
+	}
+	index, err := strconv.ParseUint(d.Index, 10, 64)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Index")
+	}
+	return &enginev1.DepositRequest{
+		Pubkey:                pubkey,
+		WithdrawalCredentials: withdrawalCredentials,
+		Amount:                amount,
+		Signature:             sig,
+		Index:                 index,
+	}, nil
 }
 
 func ProposerSlashingsToConsensus(src []*ProposerSlashing) ([]*eth.ProposerSlashing, error) {

@@ -2090,74 +2090,25 @@ func (b *BeaconBlockElectra) ToConsensus() (*eth.BeaconBlockElectra, error) {
 
 	depositRequests := make([]*enginev1.DepositRequest, len(b.Body.ExecutionPayload.DepositRequests))
 	for i, d := range b.Body.ExecutionPayload.DepositRequests {
-		pubkey, err := bytesutil.DecodeHexWithLength(d.Pubkey, fieldparams.BLSPubkeyLength)
+		depositRequests[i], err = d.ToConsensus()
 		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.DepositRequests[%d].Pubkey", i))
-		}
-		withdrawalCredentials, err := bytesutil.DecodeHexWithLength(d.WithdrawalCredentials, fieldparams.RootLength)
-		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.DepositRequests[%d].WithdrawalCredentials", i))
-		}
-		amount, err := strconv.ParseUint(d.Amount, 10, 64)
-		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.DepositRequests[%d].Amount", i))
-		}
-		sig, err := bytesutil.DecodeHexWithLength(d.Signature, fieldparams.BLSSignatureLength)
-		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.DepositRequests[%d].Signature", i))
-		}
-		index, err := strconv.ParseUint(d.Index, 10, 64)
-		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.DepositRequests[%d].Index", i))
-		}
-		depositRequests[i] = &enginev1.DepositRequest{
-			Pubkey:                pubkey,
-			WithdrawalCredentials: withdrawalCredentials,
-			Amount:                amount,
-			Signature:             sig,
-			Index:                 index,
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.DepositRequests[%d]", i))
 		}
 	}
 
 	withdrawalRequests := make([]*enginev1.WithdrawalRequest, len(b.Body.ExecutionPayload.WithdrawalRequests))
 	for i, w := range b.Body.ExecutionPayload.WithdrawalRequests {
-		src, err := bytesutil.DecodeHexWithLength(w.SourceAddress, common.AddressLength)
+		withdrawalRequests[i], err = w.ToConsensus()
 		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.WithdrawalRequests[%d].SourceAddress", i))
-		}
-		pubkey, err := bytesutil.DecodeHexWithLength(w.ValidatorPubkey, fieldparams.BLSPubkeyLength)
-		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.WithdrawalRequests[%d].ValidatorPubkey", i))
-		}
-		amount, err := strconv.ParseUint(w.Amount, 10, 64)
-		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.WithdrawalRequests[%d].Amount", i))
-		}
-		withdrawalRequests[i] = &enginev1.WithdrawalRequest{
-			SourceAddress:   src,
-			ValidatorPubkey: pubkey,
-			Amount:          amount,
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.WithdrawalRequests[%d]", i))
 		}
 	}
 
 	consolidationRequests := make([]*enginev1.ConsolidationRequest, len(b.Body.ExecutionPayload.ConsolidationRequests))
 	for i, c := range b.Body.ExecutionPayload.ConsolidationRequests {
-		srcAddress, err := bytesutil.DecodeHexWithLength(c.SourceAddress, common.AddressLength)
+		consolidationRequests[i], err = c.ToConsensus()
 		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.ConsolidationRequests[%d].SourceAddress", i))
-		}
-		srcPubkey, err := bytesutil.DecodeHexWithLength(c.SourcePubkey, fieldparams.BLSPubkeyLength)
-		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.ConsolidationRequests[%d].SourcePubkey", i))
-		}
-		targetPubkey, err := bytesutil.DecodeHexWithLength(c.TargetPubkey, fieldparams.BLSPubkeyLength)
-		if err != nil {
-			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.ConsolidationRequests[%d].TargetPubkey", i))
-		}
-		consolidationRequests[i] = &enginev1.ConsolidationRequest{
-			SourceAddress: srcAddress,
-			SourcePubkey:  srcPubkey,
-			TargetPubkey:  targetPubkey,
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.ConsolidationRequests[%d]", i))
 		}
 	}
 
