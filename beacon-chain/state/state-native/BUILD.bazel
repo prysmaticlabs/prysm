@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "beacon_state.go",
-        "beacon_state_minimal.go",  # keep
         "doc.go",
         "error.go",
         "getters_attestation.go",
