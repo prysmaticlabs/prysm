@@ -1,18 +1,16 @@
 package util
 
 import (
+	"context"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"testing"
-
-	"context"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/kv"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 type TestLightClient struct {
@@ -97,16 +95,6 @@ func (l *TestLightClient) SetupTest() *TestLightClient {
 	l.Ctx = ctx
 
 	return l
-}
-
-// SetupDB setupDB instantiates and returns a Store instance.
-func SetupDB(t testing.TB) *kv.Store {
-	db, err := kv.NewKVStore(context.Background(), t.TempDir())
-	require.NoError(t, err, "Failed to instantiate DB")
-	t.Cleanup(func() {
-		require.NoError(t, db.Close(), "Failed to close database")
-	})
-	return db
 }
 
 func (l *TestLightClient) CheckAttestedHeader(update *ethpbv2.LightClientUpdate) {
