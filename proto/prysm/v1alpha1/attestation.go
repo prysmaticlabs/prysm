@@ -213,7 +213,7 @@ func (a *AttestationElectra) GetCommitteeIndex() (primitives.CommitteeIndex, err
 		return 0, errors.New("no committee bits found in attestation")
 	}
 	if a.Data.CommitteeIndex != 0 {
-		return 0, fmt.Errorf("committee index must be 0 but was %d", a.Data.CommitteeIndex)
+		return 0, fmt.Errorf("attestation data's committee index must be 0 but was %d", a.Data.CommitteeIndex)
 	}
 	indices := a.CommitteeBits.BitIndices()
 	if len(indices) != 1 {
