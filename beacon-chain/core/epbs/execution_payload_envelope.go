@@ -87,10 +87,7 @@ func validateAgainstHeader(
 	if err != nil {
 		return err
 	}
-	beaconBlockRoot, err := envelope.BeaconBlockRoot()
-	if err != nil {
-		return err
-	}
+	beaconBlockRoot := envelope.BeaconBlockRoot()
 	if blockHeaderRoot != beaconBlockRoot {
 		return fmt.Errorf("beacon block root does not match previous header, got: %#x wanted: %#x", beaconBlockRoot, blockHeaderRoot)
 	}
@@ -101,10 +98,7 @@ func validateAgainstCommittedBid(
 	committedHeader *enginev1.ExecutionPayloadHeaderEPBS,
 	envelope interfaces.ROExecutionPayloadEnvelope,
 ) error {
-	builderIndex, err := envelope.BuilderIndex()
-	if err != nil {
-		return err
-	}
+	builderIndex := envelope.BuilderIndex()
 	if committedHeader.BuilderIndex != builderIndex {
 		return errors.New("builder index does not match committed header")
 	}
@@ -127,10 +121,7 @@ func checkPostStateRoot(
 	if err != nil {
 		return err
 	}
-	envelopeStateRoot, err := envelope.StateRoot()
-	if err != nil {
-		return err
-	}
+	envelopeStateRoot := envelope.StateRoot()
 	if stateRoot != envelopeStateRoot {
 		return errors.New("state root mismatch")
 	}
