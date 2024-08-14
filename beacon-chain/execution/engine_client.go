@@ -616,7 +616,6 @@ func fullPayloadFromPayloadBody(
 		if err != nil {
 			return nil, err
 		}
-		//TODO: ElectraPayload is an extension on interfaces.ExecutionData and so this function needs to be redesigned to have that type accounted for
 		return blocks.WrappedExecutionPayloadElectra(
 			&pb.ExecutionPayloadElectra{
 				ParentHash:            header.ParentHash(),
