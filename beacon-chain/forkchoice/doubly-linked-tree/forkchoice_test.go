@@ -908,6 +908,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 		isFromBlock        bool
 		wantErr            bool
 		expectedPTCVotes   []primitives.PTCStatus
+		expectedBoosts     func(*Store) bool
 	}{
 		{
 			name:       "Unknown block root",
@@ -920,41 +921,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "From block, wrong slot",
-			setupStore: func(s *Store) {
-				s.genesisTime = uint64(time.Now().Unix()) - params.BeaconConfig().SecondsPerSlot
-				root := [32]byte{1, 2, 3}
-				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
-			},
-			payloadAttestation: &ethpb.PayloadAttestation{
-				Data: &ethpb.PayloadAttestationData{
-					Slot:            0,
-					BeaconBlockRoot: []byte{1, 2, 3},
-				},
-				AggregationBits: bitfield.NewBitvector512(),
-			},
-			isFromBlock:      true,
-			expectedPTCVotes: make([]primitives.PTCStatus, fieldparams.PTCSize),
-		},
-		{
-			name: "From block, correct slot, late in slot",
-			setupStore: func(s *Store) {
-				s.genesisTime = uint64(time.Now().Unix()) - params.BeaconConfig().SecondsPerSlot + 1
-				root := [32]byte{1, 2, 3}
-				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
-			},
-			payloadAttestation: &ethpb.PayloadAttestation{
-				Data: &ethpb.PayloadAttestationData{
-					Slot:            0,
-					BeaconBlockRoot: []byte{1, 2, 3},
-				},
-				AggregationBits: bitfield.NewBitvector512(),
-			},
-			isFromBlock:      true,
-			expectedPTCVotes: make([]primitives.PTCStatus, fieldparams.PTCSize),
-		},
-		{
-			name: "Not from block, should process",
+			name: "Update PTC votes - not from block",
 			setupStore: func(s *Store) {
 				root := [32]byte{1, 2, 3}
 				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
@@ -974,40 +941,69 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 				}
 				return votes
 			}(),
+			expectedBoosts: func(s *Store) bool {
+				return s.payloadRevealBoostRoot == [32]byte{} &&
+					s.payloadWithholdBoostRoot == [32]byte{} &&
+					!s.payloadWithholdBoostFull
+			},
 		},
 		{
-			name: "Update only PAYLOAD_ABSENT votes",
+			name: "Update PTC votes and boosts - from block, early",
 			setupStore: func(s *Store) {
 				root := [32]byte{1, 2, 3}
-				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
-				for i := range votes {
-					if i%2 == 0 {
-						votes[i] = primitives.PAYLOAD_WITHHELD
-					} else {
-						votes[i] = primitives.PAYLOAD_ABSENT
-					}
-				}
-				s.nodeByRoot[root] = &Node{root: root, ptcVote: votes}
+				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
+				s.genesisTime = uint64(time.Now().Unix()) - 1200
 			},
 			payloadAttestation: &ethpb.PayloadAttestation{
 				Data: &ethpb.PayloadAttestationData{
+					Slot:            99,
 					BeaconBlockRoot: []byte{1, 2, 3},
 					PayloadStatus:   primitives.PAYLOAD_PRESENT,
 				},
 				AggregationBits: setAllBits(bitfield.NewBitvector512()),
 			},
-			isFromBlock: false,
+			isFromBlock: true,
 			expectedPTCVotes: func() []primitives.PTCStatus {
 				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
 				for i := range votes {
-					if i%2 == 0 {
-						votes[i] = primitives.PAYLOAD_WITHHELD
-					} else {
-						votes[i] = primitives.PAYLOAD_PRESENT
-					}
+					votes[i] = primitives.PAYLOAD_PRESENT
 				}
 				return votes
 			}(),
+			expectedBoosts: func(s *Store) bool {
+				return s.payloadRevealBoostRoot == [32]byte{1, 2, 3} &&
+					s.payloadWithholdBoostRoot == [32]byte{} &&
+					!s.payloadWithholdBoostFull
+			},
+		},
+		{
+			name: "Update PTC votes but not boosts - from block, late",
+			setupStore: func(s *Store) {
+				root := [32]byte{1, 2, 3}
+				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
+				s.genesisTime = uint64(time.Now().Unix()) - params.BeaconConfig().SecondsPerSlot + 1
+			},
+			payloadAttestation: &ethpb.PayloadAttestation{
+				Data: &ethpb.PayloadAttestationData{
+					Slot:            0,
+					BeaconBlockRoot: []byte{1, 2, 3},
+					PayloadStatus:   primitives.PAYLOAD_PRESENT,
+				},
+				AggregationBits: setAllBits(bitfield.NewBitvector512()),
+			},
+			isFromBlock: true,
+			expectedPTCVotes: func() []primitives.PTCStatus {
+				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
+				for i := range votes {
+					votes[i] = primitives.PAYLOAD_PRESENT
+				}
+				return votes
+			}(),
+			expectedBoosts: func(s *Store) bool {
+				return s.payloadRevealBoostRoot == [32]byte{} &&
+					s.payloadWithholdBoostRoot == [32]byte{} &&
+					!s.payloadWithholdBoostFull
+			},
 		},
 	}
 
@@ -1018,7 +1014,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			}
 			tt.setupStore(s)
 
-			err := s.UpdateVotesOnPayloadAttestation(tt.payloadAttestation, tt.isFromBlock)
+			err := s.updateVotesOnPayloadAttestation(tt.payloadAttestation, tt.isFromBlock)
 
 			if tt.wantErr {
 				require.NotNil(t, err, "Expected an error but got none")
@@ -1027,6 +1023,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 				require.NoError(t, err)
 				node := s.nodeByRoot[bytesutil.ToBytes32(tt.payloadAttestation.Data.BeaconBlockRoot)]
 				assert.DeepEqual(t, tt.expectedPTCVotes, node.ptcVote, "Unexpected PTC votes")
+				assert.Equal(t, tt.expectedBoosts(s), true, "Unexpected boost values")
 			}
 		})
 	}

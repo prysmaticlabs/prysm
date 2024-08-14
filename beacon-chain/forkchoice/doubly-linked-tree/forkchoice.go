@@ -726,7 +726,7 @@ func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
 // payload attestation message and updates
 // the Payload Timeliness Committee (PTC) votes for the corresponding block.
 // It may update payload boost roots based on the attestation data.
-func (s *Store) UpdateVotesOnPayloadAttestation(
+func (s *Store) updateVotesOnPayloadAttestation(
 	payloadAttestation *ethpb.PayloadAttestation,
 	isFromBlock bool) error {
 	// Extract the attestation data and convert the beacon block root to a 32-byte array
@@ -737,6 +737,15 @@ func (s *Store) UpdateVotesOnPayloadAttestation(
 	node, ok := s.nodeByRoot[blockRoot]
 	if !ok {
 		return errors.New("beacon block root unknown")
+	}
+
+	// Update the PTC votes based on the attestation
+	// We only set the vote if it hasn't been set before
+	// to handle potential equivocations
+	for i := uint64(0); i < fieldparams.PTCSize; i++ {
+		if payloadAttestation.AggregationBits.BitAt(i) && node.ptcVote[i] == primitives.PAYLOAD_ABSENT {
+			node.ptcVote[i] = data.PayloadStatus
+		}
 	}
 
 	if isFromBlock {
@@ -751,17 +760,8 @@ func (s *Store) UpdateVotesOnPayloadAttestation(
 		if err != nil {
 			log.WithError(err).Error("could not compute seconds since slot start")
 		}
-		if timeIntoSlot >= params.BeaconConfig().SecondsPerSlot/params.BeaconConfig().IntervalsPerSlot {
-			return nil
-		}
-	}
-
-	// Update the PTC votes based on the attestation
-	// We only set the vote if it hasn't been set before
-	// to handle potential equivocations
-	for i := uint64(0); i < fieldparams.PTCSize; i++ {
-		if payloadAttestation.AggregationBits.BitAt(i) && node.ptcVote[i] == primitives.PAYLOAD_ABSENT {
-			node.ptcVote[i] = data.PayloadStatus
+		if timeIntoSlot < params.BeaconConfig().SecondsPerSlot/params.BeaconConfig().IntervalsPerSlot {
+			s.updatePayloadBoosts(node)
 		}
 	}
 
