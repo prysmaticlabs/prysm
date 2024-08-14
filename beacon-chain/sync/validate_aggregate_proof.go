@@ -291,7 +291,7 @@ func validateSelectionIndex(
 	validatorIndex primitives.ValidatorIndex,
 	proof []byte,
 ) (*bls.SignatureBatch, error) {
-	ctx, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
+	_, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 
 	aggregator, err := helpers.IsAggregator(uint64(len(committee)), proof)
