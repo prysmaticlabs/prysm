@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -176,7 +177,7 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 		}
 	}
 
-	update, err := NewLightClientFinalityUpdateFromBeaconState(
+	update, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(
 		ctx,
 		postState,
 		signed,
@@ -191,7 +192,7 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 	// Return the result
 	result := &ethpbv2.LightClientFinalityUpdateWithVersion{
 		Version: ethpbv2.Version(signed.Version()),
-		Data:    CreateLightClientFinalityUpdate(update),
+		Data:    lightclient.CreateLightClientFinalityUpdate(update),
 	}
 
 	// Send event
@@ -211,7 +212,7 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 		return 0, errors.Wrap(err, "could not get attested state")
 	}
 
-	update, err := NewLightClientOptimisticUpdateFromBeaconState(
+	update, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(
 		ctx,
 		postState,
 		signed,
@@ -225,7 +226,7 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 	// Return the result
 	result := &ethpbv2.LightClientOptimisticUpdateWithVersion{
 		Version: ethpbv2.Version(signed.Version()),
-		Data:    CreateLightClientOptimisticUpdate(update),
+		Data:    lightclient.CreateLightClientOptimisticUpdate(update),
 	}
 
 	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
