@@ -56,6 +56,8 @@ const (
 	GetPayloadMethodV2 = "engine_getPayloadV2"
 	// GetPayloadMethodV3 v3 request string for JSON-RPC.
 	GetPayloadMethodV3 = "engine_getPayloadV3"
+	// GetPayloadMethodV4 v3 request string for JSON-RPC.
+	GetPayloadMethodV4 = "engine_getPayloadV4"
 )
 
 var (
@@ -100,6 +102,14 @@ type ExecHeaderResponseDeneb struct {
 	Data    struct {
 		Signature hexutil.Bytes               `json:"signature"`
 		Message   *builderAPI.BuilderBidDeneb `json:"message"`
+	} `json:"data"`
+}
+
+type ExecHeaderResponseElectra struct {
+	Version string `json:"version"`
+	Data    struct {
+		Signature hexutil.Bytes                 `json:"signature"`
+		Message   *builderAPI.BuilderBidElectra `json:"message"`
 	} `json:"data"`
 }
 
@@ -609,14 +619,14 @@ func (p *Builder) handleHeaderRequestElectra(w http.ResponseWriter) {
 		copiedC := c
 		commitments = append(commitments, copiedC)
 	}
-	wrappedHdr := &builderAPI.ExecutionPayloadHeaderDeneb{ExecutionPayloadHeaderDeneb: hdr}
-	bid := &builderAPI.BuilderBidDeneb{
+	wrappedHdr := &builderAPI.ExecutionPayloadHeaderElectra{ExecutionPayloadHeaderElectra: hdr}
+	bid := &builderAPI.BuilderBidElectra{
 		Header:             wrappedHdr,
 		BlobKzgCommitments: commitments,
 		Value:              val,
 		Pubkey:             secKey.PublicKey().Marshal(),
 	}
-	sszBid := &eth.BuilderBidDeneb{
+	sszBid := &eth.BuilderBidElectra{
 		Header:             hdr,
 		BlobKzgCommitments: b.BlobsBundle.KzgCommitments,
 		Value:              val.SSZBytes(),
@@ -637,11 +647,11 @@ func (p *Builder) handleHeaderRequestElectra(w http.ResponseWriter) {
 		return
 	}
 	sig := secKey.Sign(rt[:])
-	hdrResp := &ExecHeaderResponseDeneb{
-		Version: "deneb",
+	hdrResp := &ExecHeaderResponseElectra{
+		Version: "electra",
 		Data: struct {
-			Signature hexutil.Bytes               `json:"signature"`
-			Message   *builderAPI.BuilderBidDeneb `json:"message"`
+			Signature hexutil.Bytes                 `json:"signature"`
+			Message   *builderAPI.BuilderBidElectra `json:"message"`
 		}{
 			Signature: sig.Marshal(),
 			Message:   bid,
@@ -769,8 +779,34 @@ func (p *Builder) retrievePendingBlockDeneb() (*v1.ExecutionPayloadDenebWithValu
 }
 
 func (p *Builder) retrievePendingBlockElectra() (*v1.ExecutionPayloadElectraWithValueAndBlobsBundle, error) {
-	//TODO: when engine version includes new envelope type
-	return nil, nil
+	// TODO: update based on electra ExecutionPayloadEnvelope
+	result := &engine.ExecutionPayloadEnvelope{}
+	if p.currId == nil {
+		return nil, errors.New("no payload id is cached")
+	}
+	err := p.execClient.CallContext(context.Background(), result, GetPayloadMethodV4, *p.currId)
+	if err != nil {
+		return nil, err
+	}
+	if p.prevBeaconRoot == nil {
+		p.cfg.logger.Errorf("previous root is nil")
+	}
+	// TODO: probably need to modify the function below for electra
+	payloadEnv, err := modifyExecutionPayload(*result.ExecutionPayload, result.BlockValue, p.prevBeaconRoot)
+	if err != nil {
+		return nil, err
+	}
+	payloadEnv.BlobsBundle = result.BlobsBundle
+	marshalledOutput, err := payloadEnv.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	electraPayload := &v1.ExecutionPayloadElectraWithValueAndBlobsBundle{}
+	if err = json.Unmarshal(marshalledOutput, electraPayload); err != nil {
+		return nil, err
+	}
+	p.currId = nil
+	return electraPayload, nil
 }
 
 func (p *Builder) sendHttpRequest(req *http.Request, requestBytes []byte) (*http.Response, error) {
