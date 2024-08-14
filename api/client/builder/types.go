@@ -607,12 +607,15 @@ type BlobBundler interface {
 func (r *ExecutionPayloadResponse) ParsePayload() (ParsedPayload, error) {
 	var toProto ParsedPayload
 	switch r.Version {
-	case version.String(version.Bellatrix):
-		toProto = &ExecutionPayload{}
-	case version.String(version.Capella):
-		toProto = &ExecutionPayloadCapella{}
+	case version.String(version.Electra):
+		toProto = &ExecutionPayloadElectraAndBlobsBundle{}
 	case version.String(version.Deneb):
 		toProto = &ExecutionPayloadDenebAndBlobsBundle{}
+	case version.String(version.Capella):
+		toProto = &ExecutionPayloadCapella{}
+	case version.String(version.Bellatrix):
+		toProto = &ExecutionPayload{}
+
 	default:
 		return nil, consensusblocks.ErrUnsupportedVersion
 	}
@@ -1303,6 +1306,330 @@ func (p *ExecutionPayloadDeneb) ToProto() (*v1.ExecutionPayloadDeneb, error) {
 		Withdrawals:   withdrawals,
 		BlobGasUsed:   uint64(p.BlobGasUsed),
 		ExcessBlobGas: uint64(p.ExcessBlobGas),
+	}, nil
+}
+
+// ExecHeaderResponseElectra is the header response for builder API /eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}.
+type ExecHeaderResponseElectra struct {
+	Data struct {
+		Signature hexutil.Bytes      `json:"signature"`
+		Message   *BuilderBidElectra `json:"message"`
+	} `json:"data"`
+}
+
+// ToProto creates a SignedBuilderBidDeneb Proto from ExecHeaderResponseDeneb.
+func (ehr *ExecHeaderResponseElectra) ToProto() (*eth.SignedBuilderBidElectra, error) {
+	bb, err := ehr.Data.Message.ToProto()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.SignedBuilderBidElectra{
+		Message:   bb,
+		Signature: bytesutil.SafeCopyBytes(ehr.Data.Signature),
+	}, nil
+}
+
+// ToProto creates a BuilderBidElectra Proto from BuilderBidElectra.
+func (bb *BuilderBidElectra) ToProto() (*eth.BuilderBidElectra, error) {
+	header, err := bb.Header.ToProto()
+	if err != nil {
+		return nil, err
+	}
+	if len(bb.BlobKzgCommitments) > fieldparams.MaxBlobsPerBlock {
+		return nil, fmt.Errorf("too many blob commitments: %d", len(bb.BlobKzgCommitments))
+	}
+	kzgCommitments := make([][]byte, len(bb.BlobKzgCommitments))
+	for i, commit := range bb.BlobKzgCommitments {
+		if len(commit) != fieldparams.BLSPubkeyLength {
+			return nil, fmt.Errorf("commitment length %d is not %d", len(commit), fieldparams.BLSPubkeyLength)
+		}
+		kzgCommitments[i] = bytesutil.SafeCopyBytes(commit)
+	}
+	return &eth.BuilderBidElectra{
+		Header:             header,
+		BlobKzgCommitments: kzgCommitments,
+		// Note that SSZBytes() reverses byte order for the little-endian representation.
+		// Uint256.Bytes() is big-endian, SSZBytes takes this value and reverses it.
+		Value:  bytesutil.SafeCopyBytes(bb.Value.SSZBytes()),
+		Pubkey: bytesutil.SafeCopyBytes(bb.Pubkey),
+	}, nil
+}
+
+// BuilderBidElectra is a field of ExecHeaderResponseElectra.
+type BuilderBidElectra struct {
+	Header             *ExecutionPayloadHeaderElectra `json:"header"`
+	BlobKzgCommitments []hexutil.Bytes                `json:"blob_kzg_commitments"`
+	Value              Uint256                        `json:"value"`
+	Pubkey             hexutil.Bytes                  `json:"pubkey"`
+}
+
+// ExecutionPayloadHeaderElectra a field part of the BuilderBidElectra.
+type ExecutionPayloadHeaderElectra struct {
+	ParentHash                hexutil.Bytes `json:"parent_hash"`
+	FeeRecipient              hexutil.Bytes `json:"fee_recipient"`
+	StateRoot                 hexutil.Bytes `json:"state_root"`
+	ReceiptsRoot              hexutil.Bytes `json:"receipts_root"`
+	LogsBloom                 hexutil.Bytes `json:"logs_bloom"`
+	PrevRandao                hexutil.Bytes `json:"prev_randao"`
+	BlockNumber               Uint64String  `json:"block_number"`
+	GasLimit                  Uint64String  `json:"gas_limit"`
+	GasUsed                   Uint64String  `json:"gas_used"`
+	Timestamp                 Uint64String  `json:"timestamp"`
+	ExtraData                 hexutil.Bytes `json:"extra_data"`
+	BaseFeePerGas             Uint256       `json:"base_fee_per_gas"`
+	BlockHash                 hexutil.Bytes `json:"block_hash"`
+	TransactionsRoot          hexutil.Bytes `json:"transactions_root"`
+	WithdrawalsRoot           hexutil.Bytes `json:"withdrawals_root"`
+	BlobGasUsed               Uint64String  `json:"blob_gas_used"`               // new in deneb
+	ExcessBlobGas             Uint64String  `json:"excess_blob_gas"`             // new in deneb
+	DepositRequestsRoot       hexutil.Bytes `json:"deposit_requests_root"`       // new in electra
+	WithdrawalRequestsRoot    hexutil.Bytes `json:"withdrawal_requests_root"`    // new in electra
+	ConsolidationRequestsRoot hexutil.Bytes `json:"consolidation_requests_root"` // new in electra
+	*v1.ExecutionPayloadHeaderElectra
+}
+
+// MarshalJSON returns a JSON byte array representing the ExecutionPayloadHeaderElectra struct.
+func (h *ExecutionPayloadHeaderElectra) MarshalJSON() ([]byte, error) {
+	type MarshalCaller ExecutionPayloadHeaderElectra
+	baseFeePerGas, err := sszBytesToUint256(h.ExecutionPayloadHeaderElectra.BaseFeePerGas)
+	if err != nil {
+		return []byte{}, errors.Wrapf(err, "invalid BaseFeePerGas")
+	}
+	return json.Marshal(&MarshalCaller{
+		ParentHash:                h.ExecutionPayloadHeaderElectra.ParentHash,
+		FeeRecipient:              h.ExecutionPayloadHeaderElectra.FeeRecipient,
+		StateRoot:                 h.ExecutionPayloadHeaderElectra.StateRoot,
+		ReceiptsRoot:              h.ExecutionPayloadHeaderElectra.ReceiptsRoot,
+		LogsBloom:                 h.ExecutionPayloadHeaderElectra.LogsBloom,
+		PrevRandao:                h.ExecutionPayloadHeaderElectra.PrevRandao,
+		BlockNumber:               Uint64String(h.ExecutionPayloadHeaderElectra.BlockNumber),
+		GasLimit:                  Uint64String(h.ExecutionPayloadHeaderElectra.GasLimit),
+		GasUsed:                   Uint64String(h.ExecutionPayloadHeaderElectra.GasUsed),
+		Timestamp:                 Uint64String(h.ExecutionPayloadHeaderElectra.Timestamp),
+		ExtraData:                 h.ExecutionPayloadHeaderElectra.ExtraData,
+		BaseFeePerGas:             baseFeePerGas,
+		BlockHash:                 h.ExecutionPayloadHeaderElectra.BlockHash,
+		TransactionsRoot:          h.ExecutionPayloadHeaderElectra.TransactionsRoot,
+		WithdrawalsRoot:           h.ExecutionPayloadHeaderElectra.WithdrawalsRoot,
+		BlobGasUsed:               Uint64String(h.ExecutionPayloadHeaderElectra.BlobGasUsed),
+		ExcessBlobGas:             Uint64String(h.ExecutionPayloadHeaderElectra.ExcessBlobGas),
+		DepositRequestsRoot:       h.ExecutionPayloadHeaderElectra.DepositRequestsRoot,
+		WithdrawalRequestsRoot:    h.ExecutionPayloadHeaderElectra.WithdrawalRequestsRoot,
+		ConsolidationRequestsRoot: h.ExecutionPayloadHeaderElectra.ConsolidationRequestsRoot,
+	})
+}
+
+// UnmarshalJSON takes in a byte array and unmarshals the value into ExecutionPayloadHeaderElectra.
+func (h *ExecutionPayloadHeaderElectra) UnmarshalJSON(b []byte) error {
+	type UnmarshalCaller ExecutionPayloadHeaderElectra
+	uc := &UnmarshalCaller{}
+	if err := json.Unmarshal(b, uc); err != nil {
+		return err
+	}
+	ep := ExecutionPayloadHeaderElectra(*uc)
+	*h = ep
+	var err error
+	h.ExecutionPayloadHeaderElectra, err = h.ToProto()
+	return err
+}
+
+// ToProto returns a ExecutionPayloadHeaderElectra Proto object.
+func (h *ExecutionPayloadHeaderElectra) ToProto() (*v1.ExecutionPayloadHeaderElectra, error) {
+	return &v1.ExecutionPayloadHeaderElectra{
+		ParentHash:                bytesutil.SafeCopyBytes(h.ParentHash),
+		FeeRecipient:              bytesutil.SafeCopyBytes(h.FeeRecipient),
+		StateRoot:                 bytesutil.SafeCopyBytes(h.StateRoot),
+		ReceiptsRoot:              bytesutil.SafeCopyBytes(h.ReceiptsRoot),
+		LogsBloom:                 bytesutil.SafeCopyBytes(h.LogsBloom),
+		PrevRandao:                bytesutil.SafeCopyBytes(h.PrevRandao),
+		BlockNumber:               uint64(h.BlockNumber),
+		GasLimit:                  uint64(h.GasLimit),
+		GasUsed:                   uint64(h.GasUsed),
+		Timestamp:                 uint64(h.Timestamp),
+		ExtraData:                 bytesutil.SafeCopyBytes(h.ExtraData),
+		BaseFeePerGas:             bytesutil.SafeCopyBytes(h.BaseFeePerGas.SSZBytes()),
+		BlockHash:                 bytesutil.SafeCopyBytes(h.BlockHash),
+		TransactionsRoot:          bytesutil.SafeCopyBytes(h.TransactionsRoot),
+		WithdrawalsRoot:           bytesutil.SafeCopyBytes(h.WithdrawalsRoot),
+		BlobGasUsed:               uint64(h.BlobGasUsed),
+		ExcessBlobGas:             uint64(h.ExcessBlobGas),
+		DepositRequestsRoot:       bytesutil.SafeCopyBytes(h.DepositRequestsRoot),
+		WithdrawalRequestsRoot:    bytesutil.SafeCopyBytes(h.WithdrawalRequestsRoot),
+		ConsolidationRequestsRoot: bytesutil.SafeCopyBytes(h.ConsolidationRequestsRoot),
+	}, nil
+}
+
+// ExecPayloadResponseElectra the response to the build API /eth/v1/builder/blinded_blocks that includes the version, execution payload object , and blobs bundle object.
+type ExecPayloadResponseElectra struct {
+	Version string                                 `json:"version"`
+	Data    *ExecutionPayloadElectraAndBlobsBundle `json:"data"`
+}
+
+// ExecutionPayloadElectraAndBlobsBundle the main field used in ExecPayloadResponseElectra.
+type ExecutionPayloadElectraAndBlobsBundle struct {
+	ExecutionPayload *ExecutionPayloadElectra `json:"execution_payload"`
+	BlobsBundle      *BlobsBundle             `json:"blobs_bundle"`
+}
+
+// ExecutionPayloadElectra is a field used in ExecutionPayloadElectraAndBlobsBundle.
+type ExecutionPayloadElectra struct {
+	ParentHash            hexutil.Bytes            `json:"parent_hash"`
+	FeeRecipient          hexutil.Bytes            `json:"fee_recipient"`
+	StateRoot             hexutil.Bytes            `json:"state_root"`
+	ReceiptsRoot          hexutil.Bytes            `json:"receipts_root"`
+	LogsBloom             hexutil.Bytes            `json:"logs_bloom"`
+	PrevRandao            hexutil.Bytes            `json:"prev_randao"`
+	BlockNumber           Uint64String             `json:"block_number"`
+	GasLimit              Uint64String             `json:"gas_limit"`
+	GasUsed               Uint64String             `json:"gas_used"`
+	Timestamp             Uint64String             `json:"timestamp"`
+	ExtraData             hexutil.Bytes            `json:"extra_data"`
+	BaseFeePerGas         Uint256                  `json:"base_fee_per_gas"`
+	BlockHash             hexutil.Bytes            `json:"block_hash"`
+	Transactions          []hexutil.Bytes          `json:"transactions"`
+	Withdrawals           []Withdrawal             `json:"withdrawals"`
+	BlobGasUsed           Uint64String             `json:"blob_gas_used"`         // new in deneb
+	ExcessBlobGas         Uint64String             `json:"excess_blob_gas"`       // new in deneb
+	WithdrawalRequests    []WithdrawalRequestV1    `json:"withdrawalRequests"`    // new in electra
+	DepositRequests       []DepositRequestV1       `json:"depositRequests"`       // new in electra
+	ConsolidationRequests []ConsolidationRequestV1 `json:"consolidationRequests"` // new in electra
+}
+
+// WithdrawalRequestV1 is a field of ExecutionPayloadElectra.
+type WithdrawalRequestV1 struct {
+	SourceAddress   hexutil.Bytes `json:"sourceAddress"`
+	ValidatorPubkey hexutil.Bytes `json:"validatorPubkey"`
+	Amount          Uint256       `json:"amount"`
+}
+
+// DepositRequestV1 is a field of ExecutionPayloadElectra.
+type DepositRequestV1 struct {
+	PubKey hexutil.Bytes `json:"pubkey"`
+	// withdrawalCredentials: DATA, 32 Bytes
+	WithdrawalCredentials hexutil.Bytes `json:"withdrawalCredentials"`
+	// amount: QUANTITY, 64 Bits
+	Amount Uint256 `json:"amount"`
+	// signature: DATA, 96 Bytes
+	Signature hexutil.Bytes `json:"signature"`
+	// index: QUANTITY, 64 Bits
+	Index Uint256 `json:"index"`
+}
+
+// ConsolidationRequestV1 is a field of ExecutionPayloadElectra.
+type ConsolidationRequestV1 struct {
+	// sourceAddress: DATA, 20 Bytes
+	SourceAddress hexutil.Bytes `json:"sourceAddress"`
+	// sourcePubkey: DATA, 48 Bytes
+	SourcePubkey hexutil.Bytes `json:"sourcePubkey"`
+	// targetPubkey: DATA, 48 Bytes
+	TargetPubkey hexutil.Bytes `json:"targetPubkey"`
+}
+
+// ToProto returns ExecutionPayloadElectra Proto and BlobsBundle Proto separately.
+func (r *ExecPayloadResponseElectra) ToProto() (*v1.ExecutionPayloadElectra, *v1.BlobsBundle, error) {
+	if r.Data == nil {
+		return nil, nil, errors.New("data field in response is empty")
+	}
+	if r.Data.ExecutionPayload == nil {
+		return nil, nil, errors.Wrap(consensusblocks.ErrNilObject, "nil execution payload")
+	}
+	if r.Data.BlobsBundle == nil {
+		return nil, nil, errors.Wrap(consensusblocks.ErrNilObject, "nil blobs bundle")
+	}
+	payload, err := r.Data.ExecutionPayload.ToProto()
+	if err != nil {
+		return nil, nil, err
+	}
+	bundle, err := r.Data.BlobsBundle.ToProto()
+	if err != nil {
+		return nil, nil, err
+	}
+	return payload, bundle, nil
+}
+
+func (r *ExecutionPayloadElectraAndBlobsBundle) PayloadProto() (proto.Message, error) {
+	if r.ExecutionPayload == nil {
+		return nil, errors.Wrap(consensusblocks.ErrNilObject, "nil execution payload in combined deneb payload")
+	}
+	pb, err := r.ExecutionPayload.ToProto()
+	return pb, err
+}
+
+func (r *ExecutionPayloadElectraAndBlobsBundle) BundleProto() (*v1.BlobsBundle, error) {
+	if r.BlobsBundle == nil {
+		return nil, errors.Wrap(consensusblocks.ErrNilObject, "nil blobs bundle")
+	}
+	return r.BlobsBundle.ToProto()
+}
+
+// ToProto returns the ExecutionPayloadElectra Proto.
+func (p *ExecutionPayloadElectra) ToProto() (*v1.ExecutionPayloadElectra, error) {
+	if p == nil {
+		return nil, errors.Wrap(consensusblocks.ErrNilObject, "nil execution payload")
+	}
+	txs := make([][]byte, len(p.Transactions))
+	for i := range p.Transactions {
+		txs[i] = bytesutil.SafeCopyBytes(p.Transactions[i])
+	}
+	withdrawals := make([]*v1.Withdrawal, len(p.Withdrawals))
+	for i, w := range p.Withdrawals {
+		withdrawals[i] = &v1.Withdrawal{
+			Index:          w.Index.Uint64(),
+			ValidatorIndex: types.ValidatorIndex(w.ValidatorIndex.Uint64()),
+			Address:        bytesutil.SafeCopyBytes(w.Address),
+			Amount:         w.Amount.Uint64(),
+		}
+	}
+	depositRequests := make([]*v1.DepositRequest, len(p.DepositRequests))
+	for i, d := range p.DepositRequests {
+		depositRequests[i] = &v1.DepositRequest{
+			Pubkey:                bytesutil.SafeCopyBytes(d.PubKey),
+			WithdrawalCredentials: bytesutil.SafeCopyBytes(d.WithdrawalCredentials),
+			Amount:                d.Amount.Uint64(),
+			Signature:             bytesutil.SafeCopyBytes(d.Signature),
+			Index:                 d.Index.Uint64(),
+		}
+	}
+
+	withdrawalRequests := make([]*v1.WithdrawalRequest, len(p.WithdrawalRequests))
+	for i, w := range p.WithdrawalRequests {
+		withdrawalRequests[i] = &v1.WithdrawalRequest{
+			SourceAddress:   bytesutil.SafeCopyBytes(w.SourceAddress),
+			ValidatorPubkey: bytesutil.SafeCopyBytes(w.ValidatorPubkey),
+			Amount:          w.Amount.Uint64(),
+		}
+	}
+
+	consolidationRequests := make([]*v1.ConsolidationRequest, len(p.ConsolidationRequests))
+	for i, c := range p.ConsolidationRequests {
+		consolidationRequests[i] = &v1.ConsolidationRequest{
+			SourceAddress: bytesutil.SafeCopyBytes(c.SourceAddress),
+			SourcePubkey:  bytesutil.SafeCopyBytes(c.SourcePubkey),
+			TargetPubkey:  bytesutil.SafeCopyBytes(c.TargetPubkey),
+		}
+	}
+
+	return &v1.ExecutionPayloadElectra{
+		ParentHash:            bytesutil.SafeCopyBytes(p.ParentHash),
+		FeeRecipient:          bytesutil.SafeCopyBytes(p.FeeRecipient),
+		StateRoot:             bytesutil.SafeCopyBytes(p.StateRoot),
+		ReceiptsRoot:          bytesutil.SafeCopyBytes(p.ReceiptsRoot),
+		LogsBloom:             bytesutil.SafeCopyBytes(p.LogsBloom),
+		PrevRandao:            bytesutil.SafeCopyBytes(p.PrevRandao),
+		BlockNumber:           uint64(p.BlockNumber),
+		GasLimit:              uint64(p.GasLimit),
+		GasUsed:               uint64(p.GasUsed),
+		Timestamp:             uint64(p.Timestamp),
+		ExtraData:             bytesutil.SafeCopyBytes(p.ExtraData),
+		BaseFeePerGas:         bytesutil.SafeCopyBytes(p.BaseFeePerGas.SSZBytes()),
+		BlockHash:             bytesutil.SafeCopyBytes(p.BlockHash),
+		Transactions:          txs,
+		Withdrawals:           withdrawals,
+		BlobGasUsed:           uint64(p.BlobGasUsed),
+		ExcessBlobGas:         uint64(p.ExcessBlobGas),
+		DepositRequests:       depositRequests,
+		WithdrawalRequests:    withdrawalRequests,
+		ConsolidationRequests: consolidationRequests,
 	}, nil
 }
 

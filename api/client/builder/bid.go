@@ -290,3 +290,90 @@ func (b signedBuilderBidDeneb) Version() int {
 func (b signedBuilderBidDeneb) IsNil() bool {
 	return b.p == nil
 }
+
+type builderBidElectra struct {
+	p *ethpb.BuilderBidElectra
+}
+
+// WrappedBuilderBidElectra is a constructor which wraps a protobuf bid into an interface.
+func WrappedBuilderBidElectra(p *ethpb.BuilderBidElectra) (Bid, error) {
+	w := builderBidElectra{p: p}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// Version --
+func (b builderBidElectra) Version() int {
+	return version.Electra
+}
+
+// Value --
+func (b builderBidElectra) Value() primitives.Wei {
+	return primitives.LittleEndianBytesToWei(b.p.Value)
+}
+
+// Pubkey --
+func (b builderBidElectra) Pubkey() []byte {
+	return b.p.Pubkey
+}
+
+// IsNil --
+func (b builderBidElectra) IsNil() bool {
+	return b.p == nil
+}
+
+// HashTreeRoot --
+func (b builderBidElectra) HashTreeRoot() ([32]byte, error) {
+	return b.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (b builderBidElectra) HashTreeRootWith(hh *ssz.Hasher) error {
+	return b.p.HashTreeRootWith(hh)
+}
+
+// Header --
+func (b builderBidElectra) Header() (interfaces.ExecutionData, error) {
+	// We have to convert big endian to little endian because the value is coming from the execution layer.
+	return blocks.WrappedExecutionPayloadHeaderElectra(b.p.Header)
+}
+
+// BlobKzgCommitments --
+func (b builderBidElectra) BlobKzgCommitments() ([][]byte, error) {
+	return b.p.BlobKzgCommitments, nil
+}
+
+type signedBuilderBidElectra struct {
+	p *ethpb.SignedBuilderBidElectra
+}
+
+// WrappedSignedBuilderBidElectra is a constructor which wraps a protobuf signed bit into an interface.
+func WrappedSignedBuilderBidElectra(p *ethpb.SignedBuilderBidElectra) (SignedBid, error) {
+	w := signedBuilderBidElectra{p: p}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// Message --
+func (b signedBuilderBidElectra) Message() (Bid, error) {
+	return WrappedBuilderBidElectra(b.p.Message)
+}
+
+// Signature --
+func (b signedBuilderBidElectra) Signature() []byte {
+	return b.p.Signature
+}
+
+// Version --
+func (b signedBuilderBidElectra) Version() int {
+	return version.Electra
+}
+
+// IsNil --
+func (b signedBuilderBidElectra) IsNil() bool {
+	return b.p == nil
+}

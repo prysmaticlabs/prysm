@@ -321,6 +321,11 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	}
 	ax := types.Slot(slot)
 	currEpoch := types.Epoch(ax / params.BeaconConfig().SlotsPerEpoch)
+	if currEpoch >= params.BeaconConfig().ElectraForkEpoch {
+		p.handleHeaderRequestElectra(w)
+		return
+	}
+
 	if currEpoch >= params.BeaconConfig().DenebForkEpoch {
 		p.handleHeaderRequestDeneb(w)
 		return
@@ -568,6 +573,92 @@ func (p *Builder) handleHeaderRequestDeneb(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (p *Builder) handleHeaderRequestElectra(w http.ResponseWriter) {
+	b, err := p.retrievePendingBlockElectra()
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not retrieve pending block")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	secKey, err := bls.RandKey()
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not retrieve secret key")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
+	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
+	v = v.Mul(v, big.NewInt(2))
+	wObj, err := blocks.WrappedExecutionPayloadElectra(b.Payload)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not wrap execution payload")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	hdr, err := blocks.PayloadToHeaderElectra(wObj)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not make payload into header")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	val := builderAPI.Uint256{Int: v}
+	var commitments []hexutil.Bytes
+	for _, c := range b.BlobsBundle.KzgCommitments {
+		copiedC := c
+		commitments = append(commitments, copiedC)
+	}
+	wrappedHdr := &builderAPI.ExecutionPayloadHeaderDeneb{ExecutionPayloadHeaderDeneb: hdr}
+	bid := &builderAPI.BuilderBidDeneb{
+		Header:             wrappedHdr,
+		BlobKzgCommitments: commitments,
+		Value:              val,
+		Pubkey:             secKey.PublicKey().Marshal(),
+	}
+	sszBid := &eth.BuilderBidDeneb{
+		Header:             hdr,
+		BlobKzgCommitments: b.BlobsBundle.KzgCommitments,
+		Value:              val.SSZBytes(),
+		Pubkey:             secKey.PublicKey().Marshal(),
+	}
+	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
+		nil, /* fork version */
+		nil /* genesis val root */)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not compute the domain")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	rt, err := signing.ComputeSigningRoot(sszBid, d)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not compute the signing root")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sig := secKey.Sign(rt[:])
+	hdrResp := &ExecHeaderResponseDeneb{
+		Version: "deneb",
+		Data: struct {
+			Signature hexutil.Bytes               `json:"signature"`
+			Message   *builderAPI.BuilderBidDeneb `json:"message"`
+		}{
+			Signature: sig.Marshal(),
+			Message:   bid,
+		},
+	}
+
+	err = json.NewEncoder(w).Encode(hdrResp)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not encode response")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	p.currPayload = wObj
+	p.blobBundle = b.BlobsBundle
+	w.WriteHeader(http.StatusOK)
+}
+
 func (p *Builder) handleBlindedBlock(w http.ResponseWriter, req *http.Request) {
 	sb := &builderAPI.SignedBlindedBeaconBlockBellatrix{
 		SignedBlindedBeaconBlockBellatrix: &eth.SignedBlindedBeaconBlockBellatrix{},
@@ -675,6 +766,11 @@ func (p *Builder) retrievePendingBlockDeneb() (*v1.ExecutionPayloadDenebWithValu
 	}
 	p.currId = nil
 	return denebPayload, nil
+}
+
+func (p *Builder) retrievePendingBlockElectra() (*v1.ExecutionPayloadElectraWithValueAndBlobsBundle, error) {
+	//TODO: when engine version includes new envelope type
+	return nil, nil
 }
 
 func (p *Builder) sendHttpRequest(req *http.Request, requestBytes []byte) (*http.Response, error) {

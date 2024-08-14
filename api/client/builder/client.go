@@ -219,6 +219,16 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
 	}
 	switch strings.ToLower(v.Version) {
+	case strings.ToLower(version.String(version.Electra)):
+		hr := &ExecHeaderResponseElectra{}
+		if err := json.Unmarshal(hb, hr); err != nil {
+			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+		}
+		p, err := hr.ToProto()
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not extract proto message from header")
+		}
+		return WrappedSignedBuilderBidElectra(p)
 	case strings.ToLower(version.String(version.Deneb)):
 		hr := &ExecHeaderResponseDeneb{}
 		if err := json.Unmarshal(hb, hr); err != nil {

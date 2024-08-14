@@ -152,6 +152,7 @@ ssz_electra_objs = [
     "SignedBeaconBlockElectra",
     "SignedBlindedBeaconBlockElectra",
     "SignedConsolidation",
+    "BuilderBidElectra",
 ]
 
 ssz_gen_marshal(
