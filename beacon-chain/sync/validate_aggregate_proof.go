@@ -192,7 +192,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.Signed
 		ctx,
 		bs,
 		data.Slot,
-		committeeIndex,
+		committee,
 		aggregatorIndex,
 		aggregateAndProof.GetSelectionProof(),
 	)
@@ -287,17 +287,13 @@ func validateSelectionIndex(
 	ctx context.Context,
 	bs state.ReadOnlyBeaconState,
 	slot primitives.Slot,
-	committeeIndex primitives.CommitteeIndex,
+	committee []primitives.ValidatorIndex,
 	validatorIndex primitives.ValidatorIndex,
 	proof []byte,
 ) (*bls.SignatureBatch, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 
-	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, slot, committeeIndex)
-	if err != nil {
-		return nil, err
-	}
 	aggregator, err := helpers.IsAggregator(uint64(len(committee)), proof)
 	if err != nil {
 		return nil, err

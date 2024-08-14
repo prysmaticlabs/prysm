@@ -134,8 +134,9 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 
 	sig := privKeys[0].Sign([]byte{'A'})
 	data := util.HydrateAttestationData(&ethpb.AttestationData{})
-
-	_, err := validateSelectionIndex(ctx, beaconState, data.Slot, data.CommitteeIndex, 0, sig.Marshal())
+	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, data.Slot, data.CommitteeIndex)
+	require.NoError(t, err)
+	_, err = validateSelectionIndex(ctx, beaconState, data.Slot, committee, 0, sig.Marshal())
 	wanted := "validator is not an aggregator for slot"
 	assert.ErrorContains(t, wanted, err)
 }
