@@ -66,18 +66,12 @@ func (vs *Server) ProposeAttestationElectra(ctx context.Context, att *ethpb.Atte
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.ProposeAttestationElectra")
 	defer span.End()
 
-	if att.GetData().CommitteeIndex != 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Committee index must be set to 0")
-	}
-	committeeIndices := helpers.CommitteeIndices(att.CommitteeBits)
-	if len(committeeIndices) == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Committee bits has no bit set")
-	}
-	if len(committeeIndices) > 1 {
-		return nil, status.Errorf(codes.InvalidArgument, "Committee bits has more than one bit set")
+	committeeIndex, err := att.GetCommitteeIndex()
+	if err != nil {
+		return nil, err
 	}
 
-	resp, err := vs.proposeAtt(ctx, att, committeeIndices[0])
+	resp, err := vs.proposeAtt(ctx, att, committeeIndex)
 	if err != nil {
 		return nil, err
 	}
