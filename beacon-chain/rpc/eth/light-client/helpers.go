@@ -3,12 +3,12 @@ package lightclient
 import (
 	"context"
 	"fmt"
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"reflect"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -152,7 +152,7 @@ func createLightClientUpdate(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientUpdate, error) {
-	result, err := blockchain.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	result, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func newLightClientFinalityUpdateFromBeaconState(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientUpdate, error) {
-	result, err := blockchain.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	result, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +223,7 @@ func newLightClientOptimisticUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState) (*structs.LightClientUpdate, error) {
-	result, err := blockchain.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState)
+	result, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState)
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +319,7 @@ func IsSyncCommitteeUpdate(update *v2.LightClientUpdate) bool {
 }
 
 func IsFinalityUpdate(update *v2.LightClientUpdate) bool {
-	finalityBranch := make([][]byte, blockchain.FinalityBranchNumOfLeaves)
+	finalityBranch := make([][]byte, lightclient.FinalityBranchNumOfLeaves)
 	return !reflect.DeepEqual(update.FinalityBranch, finalityBranch)
 }
 
