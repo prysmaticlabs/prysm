@@ -114,6 +114,22 @@ func (f FieldIndex) String() string {
 		return "pendingPartialWithdrawals"
 	case PendingConsolidations:
 		return "pendingConsolidations"
+	case PreviousInclusionListProposer: // ePBS fields start here
+		return "PreviousInclusionListProposer"
+	case PreviousInclusionListSlot:
+		return "PreviousInclusionListSlot"
+	case LatestInclusionListProposer:
+		return "LatestInclusionListProposer"
+	case LatestInclusionListSlot:
+		return "LatestInclusionListSlot"
+	case LatestBlockHash:
+		return "LatestBlockHash"
+	case LatestFullSlot:
+		return "LatestFullSlot"
+	case ExecutionPayloadHeader:
+		return "ExecutionPayloadHeader"
+	case LastWithdrawalsRoot:
+		return "LastWithdrawalsRoot"
 	default:
 		return fmt.Sprintf("unknown field index number: %d", f)
 	}
@@ -171,7 +187,8 @@ func (f FieldIndex) RealPosition() int {
 		return 22
 	case NextSyncCommittee:
 		return 23
-	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella, LatestExecutionPayloadHeaderDeneb, LatestExecutionPayloadHeaderElectra:
+		// ExecutionPayloadHeader is from ePBS.
+	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella, LatestExecutionPayloadHeaderDeneb, LatestExecutionPayloadHeaderElectra, ExecutionPayloadHeader:
 		return 24
 	case NextWithdrawalIndex:
 		return 25
@@ -197,6 +214,20 @@ func (f FieldIndex) RealPosition() int {
 		return 35
 	case PendingConsolidations:
 		return 36
+	case PreviousInclusionListProposer: // ePBS fields start here
+		return 37
+	case PreviousInclusionListSlot:
+		return 38
+	case LatestInclusionListProposer:
+		return 39
+	case LatestInclusionListSlot:
+		return 40
+	case LatestBlockHash:
+		return 41
+	case LatestFullSlot:
+		return 42
+	case LastWithdrawalsRoot:
+		return 43
 	default:
 		return -1
 	}
@@ -262,6 +293,14 @@ const (
 	PendingBalanceDeposits        // Electra: EIP-7251
 	PendingPartialWithdrawals     // Electra: EIP-7251
 	PendingConsolidations         // Electra: EIP-7251
+	PreviousInclusionListProposer // ePBS fields start here
+	PreviousInclusionListSlot
+	LatestInclusionListProposer
+	LatestInclusionListSlot
+	LatestBlockHash
+	LatestFullSlot
+	ExecutionPayloadHeader
+	LastWithdrawalsRoot
 )
 
 // Enumerator keeps track of the number of states created since the node's start.
