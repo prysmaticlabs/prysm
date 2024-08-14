@@ -61,9 +61,8 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Warn("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
-	deadline := time.Now().Add(5 * time.Minute)
-	if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
-		log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
+	if err := v.PushProposerSettings(ctx, km, headSlot); err != nil {
+		log.WithError(err).Fatal("Failed to update proposer settings")
 	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -97,7 +96,7 @@ func run(ctx context.Context, v iface.Validator) {
 			// call push proposer settings often to account for the following edge cases:
 			// proposer is activated at the start of epoch and tries to propose immediately
 			// account has changed in the middle of an epoch
-			if err := v.PushProposerSettings(ctx, km, slot, deadline); err != nil {
+			if err := v.PushProposerSettings(ctx, km, slot); err != nil {
 				log.WithError(err).Warn("Failed to update proposer settings")
 			}
 
@@ -316,8 +315,7 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 					log.WithError(err).Error("Could not get canonical head slot")
 					return
 				}
-				deadline := time.Now().Add(5 * time.Minute) // Should consider changing to a constant
-				if err := v.PushProposerSettings(ctx, km, slot, deadline); err != nil {
+				if err := v.PushProposerSettings(ctx, km, slot); err != nil {
 					log.WithError(err).Warn("Failed to update proposer settings")
 				}
 			}

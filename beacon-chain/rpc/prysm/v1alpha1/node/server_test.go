@@ -125,13 +125,12 @@ func TestNodeServer_GetPeer(t *testing.T) {
 	}
 	ethpb.RegisterNodeServer(server, ns)
 	reflection.Register(server)
-	firstPeer := peersProvider.Peers().All()[0]
 
-	res, err := ns.GetPeer(context.Background(), &ethpb.PeerRequest{PeerId: firstPeer.String()})
+	res, err := ns.GetPeer(context.Background(), &ethpb.PeerRequest{PeerId: mockP2p.MockRawPeerId0})
 	require.NoError(t, err)
-	assert.Equal(t, firstPeer.String(), res.PeerId, "Unexpected peer ID")
+	assert.Equal(t, "16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR" /* first peer's raw id */, res.PeerId, "Unexpected peer ID")
 	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(res.Direction), "Expected 1st peer to be an inbound connection")
-	assert.Equal(t, ethpb.ConnectionState_CONNECTED, res.ConnectionState, "Expected peer to be connected")
+	assert.Equal(t, int(ethpb.ConnectionState_CONNECTED), int(res.ConnectionState), "Expected peer to be connected")
 }
 
 func TestNodeServer_ListPeers(t *testing.T) {
@@ -146,8 +145,25 @@ func TestNodeServer_ListPeers(t *testing.T) {
 	res, err := ns.ListPeers(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(res.Peers))
-	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(res.Peers[0].Direction))
-	assert.Equal(t, ethpb.PeerDirection_OUTBOUND, res.Peers[1].Direction)
+
+	var (
+		firstPeer  *ethpb.Peer
+		secondPeer *ethpb.Peer
+	)
+
+	for _, p := range res.Peers {
+		if p.PeerId == mockP2p.MockRawPeerId0 {
+			firstPeer = p
+		}
+		if p.PeerId == mockP2p.MockRawPeerId1 {
+			secondPeer = p
+		}
+	}
+
+	assert.NotNil(t, firstPeer)
+	assert.NotNil(t, secondPeer)
+	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(firstPeer.Direction))
+	assert.Equal(t, int(ethpb.PeerDirection_OUTBOUND), int(secondPeer.Direction))
 }
 
 func TestNodeServer_GetETH1ConnectionStatus(t *testing.T) {
