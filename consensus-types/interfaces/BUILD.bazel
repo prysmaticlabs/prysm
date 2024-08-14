@@ -6,6 +6,7 @@ go_library(
         "beacon_block.go",
         "error.go",
         "execution_payload_envelope.go",
+        "signed_execution_payload_header.go",
         "utils.go",
         "validator.go",
     ],
