@@ -167,31 +167,24 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.Signed
 		return pubsub.ValidationIgnore, err
 	}
 
+	committeeIndex, _, result, err := s.validateCommitteeIndexAndCount(ctx, aggregate, bs)
+	if result != pubsub.ValidationAccept {
+		wrappedErr := errors.Wrapf(err, "could not validate committee index")
+		tracing.AnnotateError(span, wrappedErr)
+		return result, err
+	}
+
+	committee, result, err := s.validateBitLength(ctx, bs, aggregate.GetData().Slot, committeeIndex, aggregate.GetAggregationBits())
+	if result != pubsub.ValidationAccept {
+		return result, err
+	}
+
 	// Verify validator index is within the beacon committee.
-	result, err := s.validateIndexInCommittee(ctx, bs, aggregate, aggregatorIndex)
+	result, err = s.validateIndexInCommittee(ctx, aggregate, aggregatorIndex, committee)
 	if result != pubsub.ValidationAccept {
 		wrappedErr := errors.Wrapf(err, "could not validate index in committee")
 		tracing.AnnotateError(span, wrappedErr)
 		return result, wrappedErr
-	}
-
-	var committeeIndex primitives.CommitteeIndex
-	if signed.Version() >= version.Electra {
-		a, ok := aggregate.(*ethpb.AttestationElectra)
-		// This will never fail in practice because we asserted the version
-		if !ok {
-			err := fmt.Errorf("aggregate attestation has wrong type (expected %T, got %T)", &ethpb.AttestationElectra{}, aggregate)
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationIgnore, err
-		}
-		committeeIndex, result, err = validateCommitteeIndexElectra(ctx, a)
-		if result != pubsub.ValidationAccept {
-			wrappedErr := errors.Wrapf(err, "could not validate committee index for Electra version")
-			tracing.AnnotateError(span, wrappedErr)
-			return result, wrappedErr
-		}
-	} else {
-		committeeIndex = data.CommitteeIndex
 	}
 
 	// Verify selection proof reflects to the right validator.
@@ -199,7 +192,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed ethpb.Signed
 		ctx,
 		bs,
 		data.Slot,
-		committeeIndex,
+		committee,
 		aggregatorIndex,
 		aggregateAndProof.GetSelectionProof(),
 	)
@@ -266,23 +259,9 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch primitives.Epoch, aggregator
 //   - [REJECT] The aggregate attestation has participants -- that is, len(get_attesting_indices(state, aggregate.data, aggregate.aggregation_bits)) >= 1.
 //   - [REJECT] The aggregator's validator index is within the committee --
 //     i.e. `aggregate_and_proof.aggregator_index in get_beacon_committee(state, aggregate.data.slot, aggregate.data.index)`.
-//
-// Post-Electra:
-//   - [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate).
-//   - [REJECT] aggregate.data.index == 0
-func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a ethpb.Att, validatorIndex primitives.ValidatorIndex) (pubsub.ValidationResult, error) {
-	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
+func (s *Service) validateIndexInCommittee(ctx context.Context, a ethpb.Att, validatorIndex primitives.ValidatorIndex, committee []primitives.ValidatorIndex) (pubsub.ValidationResult, error) {
+	_, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
-
-	committeeIndex, _, result, err := s.validateCommitteeIndex(ctx, a, bs)
-	if result != pubsub.ValidationAccept {
-		return result, err
-	}
-
-	committee, result, err := s.validateBitLength(ctx, bs, a.GetData().Slot, committeeIndex, a.GetAggregationBits())
-	if result != pubsub.ValidationAccept {
-		return result, err
-	}
 
 	if a.GetAggregationBits().Count() == 0 {
 		return pubsub.ValidationReject, errors.New("no attesting indices")
@@ -308,17 +287,13 @@ func validateSelectionIndex(
 	ctx context.Context,
 	bs state.ReadOnlyBeaconState,
 	slot primitives.Slot,
-	committeeIndex primitives.CommitteeIndex,
+	committee []primitives.ValidatorIndex,
 	validatorIndex primitives.ValidatorIndex,
 	proof []byte,
 ) (*bls.SignatureBatch, error) {
-	ctx, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
+	_, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 
-	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, slot, committeeIndex)
-	if err != nil {
-		return nil, err
-	}
 	aggregator, err := helpers.IsAggregator(uint64(len(committee)), proof)
 	if err != nil {
 		return nil, err
