@@ -11,5 +11,8 @@ func (s *Store) SignedExecutionPayloadHeader(ctx context.Context, blockRoot [32]
 	if err != nil {
 		return nil, err
 	}
+	if b.IsNil() {
+		return nil, ErrNotFound
+	}
 	return b.Block().Body().SignedExecutionPayloadHeader()
 }
