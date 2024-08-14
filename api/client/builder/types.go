@@ -413,6 +413,76 @@ func FromProtoDeneb(payload *v1.ExecutionPayloadDeneb) (ExecutionPayloadDeneb, e
 	}, nil
 }
 
+func FromProtoElectra(payload *v1.ExecutionPayloadElectra) (ExecutionPayloadElectra, error) {
+	bFee, err := sszBytesToUint256(payload.BaseFeePerGas)
+	if err != nil {
+		return ExecutionPayloadElectra{}, err
+	}
+	txs := make([]hexutil.Bytes, len(payload.Transactions))
+	for i := range payload.Transactions {
+		txs[i] = bytesutil.SafeCopyBytes(payload.Transactions[i])
+	}
+	withdrawals := make([]Withdrawal, len(payload.Withdrawals))
+	for i, w := range payload.Withdrawals {
+		withdrawals[i] = Withdrawal{
+			Index:          Uint256{Int: big.NewInt(0).SetUint64(w.Index)},
+			ValidatorIndex: Uint256{Int: big.NewInt(0).SetUint64(uint64(w.ValidatorIndex))},
+			Address:        bytesutil.SafeCopyBytes(w.Address),
+			Amount:         Uint256{Int: big.NewInt(0).SetUint64(w.Amount)},
+		}
+	}
+	depositRequests := make([]DepositRequestV1, len(payload.DepositRequests))
+	for i, d := range payload.DepositRequests {
+		depositRequests[i] = DepositRequestV1{
+			PubKey:                bytesutil.SafeCopyBytes(d.Pubkey),
+			WithdrawalCredentials: bytesutil.SafeCopyBytes(d.WithdrawalCredentials),
+			Amount:                Uint256{Int: big.NewInt(0).SetUint64(d.Amount)},
+			Signature:             bytesutil.SafeCopyBytes(d.Signature),
+			Index:                 Uint256{Int: big.NewInt(0).SetUint64(d.Index)},
+		}
+	}
+
+	withdrawalRequests := make([]WithdrawalRequestV1, len(payload.WithdrawalRequests))
+	for i, w := range payload.WithdrawalRequests {
+		withdrawalRequests[i] = WithdrawalRequestV1{
+			SourceAddress:   bytesutil.SafeCopyBytes(w.SourceAddress),
+			ValidatorPubkey: bytesutil.SafeCopyBytes(w.ValidatorPubkey),
+			Amount:          Uint256{Int: big.NewInt(0).SetUint64(w.Amount)},
+		}
+	}
+
+	consolidationRequests := make([]ConsolidationRequestV1, len(payload.ConsolidationRequests))
+	for i, c := range payload.ConsolidationRequests {
+		consolidationRequests[i] = ConsolidationRequestV1{
+			SourceAddress: bytesutil.SafeCopyBytes(c.SourceAddress),
+			SourcePubkey:  bytesutil.SafeCopyBytes(c.SourcePubkey),
+			TargetPubkey:  bytesutil.SafeCopyBytes(c.TargetPubkey),
+		}
+	}
+	return ExecutionPayloadElectra{
+		ParentHash:            bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:          bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:             bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:          bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:             bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:            bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:           Uint64String(payload.BlockNumber),
+		GasLimit:              Uint64String(payload.GasLimit),
+		GasUsed:               Uint64String(payload.GasUsed),
+		Timestamp:             Uint64String(payload.Timestamp),
+		ExtraData:             bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:         bFee,
+		BlockHash:             bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:          txs,
+		Withdrawals:           withdrawals,
+		BlobGasUsed:           Uint64String(payload.BlobGasUsed),
+		ExcessBlobGas:         Uint64String(payload.ExcessBlobGas),
+		DepositRequests:       depositRequests,
+		WithdrawalRequests:    withdrawalRequests,
+		ConsolidationRequests: consolidationRequests,
+	}, nil
+}
+
 var errInvalidTypeConversion = errors.New("unable to translate between api and foreign type")
 
 // ExecutionPayloadResponseFromData converts an ExecutionData interface value to a payload response.
@@ -423,17 +493,15 @@ func ExecutionPayloadResponseFromData(ed interfaces.ExecutionData, bundle *v1.Bl
 	var err error
 	var ver string
 	switch pbStruct := pb.(type) {
-	case *v1.ExecutionPayload:
-		ver = version.String(version.Bellatrix)
-		data, err = FromProto(pbStruct)
+	case *v1.ExecutionPayloadElectra:
+		ver = version.String(version.Electra)
+		payloadStruct, err := FromProtoElectra(pbStruct)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert a Bellatrix ExecutionPayload to an API response")
+			return nil, errors.Wrap(err, "failed to convert a Deneb ExecutionPayload to an API response")
 		}
-	case *v1.ExecutionPayloadCapella:
-		ver = version.String(version.Capella)
-		data, err = FromProtoCapella(pbStruct)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert a Capella ExecutionPayload to an API response")
+		data = &ExecutionPayloadElectraAndBlobsBundle{
+			ExecutionPayload: &payloadStruct,
+			BlobsBundle:      FromBundleProto(bundle),
 		}
 	case *v1.ExecutionPayloadDeneb:
 		ver = version.String(version.Deneb)
@@ -444,6 +512,18 @@ func ExecutionPayloadResponseFromData(ed interfaces.ExecutionData, bundle *v1.Bl
 		data = &ExecutionPayloadDenebAndBlobsBundle{
 			ExecutionPayload: &payloadStruct,
 			BlobsBundle:      FromBundleProto(bundle),
+		}
+	case *v1.ExecutionPayloadCapella:
+		ver = version.String(version.Capella)
+		data, err = FromProtoCapella(pbStruct)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert a Capella ExecutionPayload to an API response")
+		}
+	case *v1.ExecutionPayload:
+		ver = version.String(version.Bellatrix)
+		data, err = FromProto(pbStruct)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert a Bellatrix ExecutionPayload to an API response")
 		}
 	default:
 		return nil, errInvalidTypeConversion
