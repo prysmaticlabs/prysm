@@ -22,7 +22,6 @@ go_library(
         "//consensus-types/primitives:go_default_library",
         "//math:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v1alpha1/attestation:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
@@ -53,7 +52,6 @@ go_test(
         "//testing/util:go_default_library",
         "@com_github_google_go_cmp//cmp:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
